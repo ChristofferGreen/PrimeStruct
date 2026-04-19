@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1166
+- TODO-1167
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1166
+- TODO-1167
 
 ### Priority Lanes (Current)
 
-- VM user vector reserve call-expression shadow skip debt: TODO-1166
+- VM user vector clear call-expression shadow skip debt: TODO-1167
 
 ### Execution Queue (Recommended)
 
-1. TODO-1166
+1. TODO-1167
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM vector call-expression shadow skipped-test debt | TODO-1166 |
+| VM vector call-expression shadow skipped-test debt | TODO-1167 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1166 |
+| VM compile-run skipped-test debt | TODO-1167 |
 
 ### Task Blocks
 
-- [ ] TODO-1166: Audit VM user vector reserve call-expression shadow skip debt
+- [ ] TODO-1167: Audit VM user vector clear call-expression shadow skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM user-vector `reserve(values, capacity)` call-expression shadow coverage, and lock the current VM contract when `/vector/reserve` competes with builtin reserve lowering in expression position.
+  - scope: Re-enable or delete the skipped VM user-vector `clear(values)` call-expression shadow coverage, and lock the current VM contract when `/vector/clear` competes with builtin clear lowering in expression position.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp` no longer carries the skipped VM user-vector `reserve(values, capacity)` call-expression shadow case in stale form.
+    - `tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp` no longer carries the skipped VM user-vector `clear(values)` call-expression shadow case in stale form.
     - The VM test locks the actual current contract for the expression-shadow surface, whether that remains the current direct return-value runtime path or another stable VM-side outcome.
-  - stop_rule: Stop after the VM user-vector `reserve(values, capacity)` expression-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+  - stop_rule: Stop after the VM user-vector `clear(values)` expression-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

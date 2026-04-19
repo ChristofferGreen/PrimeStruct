@@ -106,7 +106,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm user vector reserve call expression shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm user vector reserve call expression shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/reserve([vector<i32> mut] values, [i32] capacity) {
