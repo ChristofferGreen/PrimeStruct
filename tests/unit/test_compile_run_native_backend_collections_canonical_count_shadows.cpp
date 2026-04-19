@@ -429,7 +429,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native slash-method vector access string count fallback" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native slash-method vector access string count fallback") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
