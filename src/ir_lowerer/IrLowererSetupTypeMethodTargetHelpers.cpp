@@ -53,6 +53,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       normalizedOriginalMethodName.rfind("std/collections/vector/", 0) == 0;
   const bool isExplicitArrayVectorMethod =
       normalizedOriginalMethodName.rfind("array/", 0) == 0;
+  const bool isExplicitSoaAliasMethod =
+      normalizedOriginalMethodName.rfind("soa_vector/", 0) == 0;
+  const bool isExplicitCanonicalSoaMethod =
+      normalizedOriginalMethodName.rfind("std/collections/soa_vector/", 0) == 0;
   std::string normalizedTypeName = typeName;
   if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
     normalizedTypeName.erase(normalizedTypeName.begin());
@@ -120,6 +124,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
             normalizedMethodName == "clear" || normalizedMethodName == "remove_at" ||
             normalizedMethodName == "remove_swap");
   };
+  auto shouldPreferCanonicalSoaPath = [&](const std::string &candidate) {
+    return !isExplicitSoaAliasMethod && isRawBuiltinSoaVectorReceiverTarget(candidate) &&
+           (isExplicitCanonicalSoaMethod || normalizedMethodName == "get" ||
+            normalizedMethodName == "ref");
+  };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
     if (!isRawBuiltinSoaVectorReceiverTarget(candidate)) {
       return false;
@@ -170,10 +179,12 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/std/collections/soa_vector/").size());
-      const std::string samePathAlias = "/soa_vector/" + suffix;
-      defIt = defMap.find(samePathAlias);
-      if (defIt != defMap.end()) {
-        return defIt->second;
+      if (suffix != "get" && suffix != "ref") {
+        const std::string samePathAlias = "/soa_vector/" + suffix;
+        defIt = defMap.find(samePathAlias);
+        if (defIt != defMap.end()) {
+          return defIt->second;
+        }
       }
       if (suffix == "to_aos") {
         defIt = defMap.find("/to_aos");
@@ -260,9 +271,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     const std::string resolvedBase =
         (shouldPreferCanonicalVectorPath(resolvedTypeWithoutSlash)
              ? "/std/collections/vector"
+             : (shouldPreferCanonicalSoaPath(resolvedTypeWithoutSlash)
+                    ? "/std/collections/soa_vector"
              : (shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
                     ? "/std/collections/map"
-                    : normalizedResolvedTypePath));
+                    : normalizedResolvedTypePath)));
     const std::string resolved = resolvedBase + "/" + normalizedMethodName;
     if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut.clear();
@@ -320,9 +333,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   const std::string resolvedBase =
       (shouldPreferCanonicalVectorPath(normalizedTypeName)
            ? "/std/collections/vector"
+           : (shouldPreferCanonicalSoaPath(normalizedTypeName)
+                  ? "/std/collections/soa_vector"
            : (shouldPreferCanonicalMapPath(normalizedTypeName)
                   ? "/std/collections/map"
-                  : "/" + normalizedTypeName));
+                  : "/" + normalizedTypeName)));
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
   if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) {
     errorOut.clear();

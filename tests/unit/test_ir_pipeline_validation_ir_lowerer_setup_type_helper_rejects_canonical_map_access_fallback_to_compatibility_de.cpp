@@ -453,19 +453,19 @@ TEST_CASE("ir lowerer setup type helper keeps labeled named access receiver lead
   CHECK(resolveCalls == 1);
 }
 
-TEST_CASE("ir lowerer setup type helper resolves soa get/ref call method return kinds") {
+TEST_CASE("ir lowerer setup type helper resolves canonical soa get/ref call method return kinds") {
   primec::Definition getDef;
-  getDef.fullPath = "/soa_vector/get";
+  getDef.fullPath = "/std/collections/soa_vector/get";
   primec::Definition refDef;
-  refDef.fullPath = "/soa_vector/ref";
+  refDef.fullPath = "/std/collections/soa_vector/ref";
 
   std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
   primec::ir_lowerer::ReturnInfo scalarInfo;
   scalarInfo.returnsVoid = false;
   scalarInfo.returnsArray = false;
   scalarInfo.kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
-  infoByPath.emplace("/soa_vector/get", scalarInfo);
-  infoByPath.emplace("/soa_vector/ref", scalarInfo);
+  infoByPath.emplace("/std/collections/soa_vector/get", scalarInfo);
+  infoByPath.emplace("/std/collections/soa_vector/ref", scalarInfo);
 
   auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
     auto it = infoByPath.find(path);
