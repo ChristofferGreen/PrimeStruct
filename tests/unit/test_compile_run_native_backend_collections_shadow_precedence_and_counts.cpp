@@ -339,7 +339,7 @@ main() {
   CHECK(runCommand(exePath) == 243);
 }
 
-TEST_CASE("compiles and runs native explicit canonical map helper calls through same-path helpers" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native explicit canonical map helper calls through same-path helpers") {
   const std::string source = R"(
 Marker {
   [i32] value
