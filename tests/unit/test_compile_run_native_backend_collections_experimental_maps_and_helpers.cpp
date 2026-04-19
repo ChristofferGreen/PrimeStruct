@@ -3282,7 +3282,7 @@ TEST_CASE("rejects native experimental map ownership-sensitive values") {
   expectExperimentalMapOwnershipConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map inserts on explicit experimental map bindings" * doctest::skip(true)) {
+TEST_CASE("rejects native canonical namespaced map inserts on explicit experimental map bindings") {
   expectCanonicalMapNamespaceExperimentalInsertConformance("native");
 }
 
