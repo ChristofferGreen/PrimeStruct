@@ -1043,11 +1043,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(adapter.semanticIndex.onErrorFactsByDefinitionId, definition)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionId.reserve(onErrorFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.onErrorFactsByDefinitionPath.reserve(semanticProgram->onErrorFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("const auto onErrorFacts = semanticProgramOnErrorFactView(*adapter.semanticProgram);") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("if (entry->definitionPathId == *definitionPathId)") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definition.fullPath)") !=
         std::string::npos);

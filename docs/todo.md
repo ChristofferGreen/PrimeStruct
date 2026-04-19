@@ -55,8 +55,7 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1009
-2. TODO-0405
+1. TODO-0405
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -65,15 +64,14 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- P1 Semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0402, TODO-1009, TODO-0405, TODO-0406
+- P1 Semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0402, TODO-0405, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (semantic memory/perf):
-1. TODO-1009
-2. TODO-0405
-3. TODO-0406
+1. TODO-0405
+2. TODO-0406
 
 Wave B (queue hygiene):
 1. TODO-0403
@@ -82,7 +80,7 @@ Wave B (queue hygiene):
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic memory footprint and multithread compile substrate | TODO-0402, TODO-1009 |
+| Semantic memory footprint and multithread compile substrate | TODO-0402 |
 | Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
 | TODO queue quality gates and dependency/coverage synchronization | TODO-0403 |
 
@@ -90,24 +88,12 @@ Wave B (queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0402, TODO-1009, TODO-0405, TODO-0406 |
-| Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402, TODO-1009 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0402, TODO-0405, TODO-0406 |
+| Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
-
-- [ ] TODO-1009: Index on_error facts by definition path in the shared semantic-product adapter index
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 15
-  - scope: Extend the shared `SemanticProductIndex` builder so on-error fact lookup resolves both semantic-node and definition-path matches without rebuilding or scanning the on-error fact view in lowerer adapter helpers.
-  - acceptance:
-    - `SemanticProductIndexBuilder` populates `onErrorFactsByDefinitionPathId` from `semanticProgramOnErrorFactView(...)` while preserving the existing semantic-node lookup.
-    - `findSemanticProductOnErrorFact(...)` resolves definition-path matches through the shared semantic index without a fallback scan over on-error facts (baseline: one adapter-side definition-path scan remains today; target: zero).
-    - Focused lowerer adapter runtime and source-lock coverage pins the new path-id indexing and the deleted fallback scan.
-  - stop_rule: If path-id indexing also requires changing semantic-product emission/layout contracts, split that storage change into a separate leaf before continuing.
-  - notes: Follow-on to archived child `TODO-1008`, which moved return-fact definition-path lookup into the shared semantic-product adapter index.
 
 - [ ] TODO-0406: Split production semantics APIs from testing snapshots
   - owner: ai
@@ -159,4 +145,4 @@ Wave B (queue hygiene):
     - Each new leaf includes concrete validation commands, including release build/test and focused benchmark or memory checks.
     - Completed Group 15 leaves are moved to `docs/todo_finished.md` with evidence notes.
   - stop_rule: If a leaf cannot demonstrate measurable impact within one code-affecting commit, split it into smaller measurable leaves before implementation.
-  - notes: Prior Group 15 slices `[P0-17]` through `[P0-28]`, `[P1-01]` through `[P1-03]`, and `[P2-14]` through `[P2-42]` are already archived in `docs/todo_finished.md` (April 12-13, 2026). Archived child `TODO-1008` moved return-fact definition-path lookup into the shared semantic-product adapter index, and active child `TODO-1009` now targets the parallel on-error fact path-id indexing cleanup.
+  - notes: Prior Group 15 slices `[P0-17]` through `[P0-28]`, `[P1-01]` through `[P1-03]`, and `[P2-14]` through `[P2-42]` are already archived in `docs/todo_finished.md` (April 12-13, 2026). Archived children `TODO-1008` and `TODO-1009` moved return-fact and on-error definition-path lookup into the shared semantic-product adapter index.

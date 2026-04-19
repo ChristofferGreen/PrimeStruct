@@ -170,9 +170,18 @@ struct SemanticProductIndexBuilder {
   void buildOnErrorIndex(SemanticProductIndex &index) const {
     const auto onErrorFacts = semanticProgramOnErrorFactView(*semanticProgram);
     index.onErrorFactsByDefinitionId.reserve(onErrorFacts.size());
+    index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size());
     for (const auto *entry : onErrorFacts) {
       if (entry->semanticNodeId != 0) {
         index.onErrorFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
+      }
+      if (entry->definitionPathId == InvalidSymbolId) {
+        continue;
+      }
+      const std::string_view definitionPath =
+          semanticProgramResolveCallTargetString(*semanticProgram, entry->definitionPathId);
+      if (!definitionPath.empty()) {
+        index.onErrorFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
       }
     }
   }
@@ -413,12 +422,6 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticP
   if (const auto it = adapter.semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
       it != adapter.semanticIndex.onErrorFactsByDefinitionPathId.end()) {
     return it->second;
-  }
-  const auto onErrorFacts = semanticProgramOnErrorFactView(*adapter.semanticProgram);
-  for (const auto *entry : onErrorFacts) {
-    if (entry->definitionPathId == *definitionPathId) {
-      return entry;
-    }
   }
   return nullptr;
 }
