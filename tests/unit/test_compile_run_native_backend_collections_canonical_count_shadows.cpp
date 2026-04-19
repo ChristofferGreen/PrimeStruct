@@ -867,7 +867,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects native user vector capacity call shadow" * doctest::skip(true)) {
+TEST_CASE("rejects native user vector capacity call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
