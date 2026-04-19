@@ -4356,3 +4356,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4085`, whose remaining inferred-binding cleanup now continues as `TODO-4087`, `TODO-4088`, and `TODO-4089`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the obvious repeated-type local bindings in the pre-PNG helper region and `/std/image/ppm` read/write path in `stdlib/std/image/image.prime` to concise inferred forms such as `status{...}`, `file{...}`, `pixelCountWide{...}`, and `[mut] parsedWidth{...}` while leaving PNG-specific helper stacks untouched; added a focused `/std/image` PPM inferred-binding source lock in `tests/unit/test_compile_run_examples_docs_locks.cpp`; and updated `docs/todo.md` to retire oversized `TODO-4085` in favor of the new bounded follow-up leaves `TODO-4087`, `TODO-4088`, and `TODO-4089`, with `TODO-4087` now next in the queue behind the completed `TODO-4086` slice.
+
+- [x] TODO-4087: Adopt concise inferred local bindings in `/std/image/png` prelude and write-preparation helpers where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4076
+  - scope: Continue the split inferred-local cleanup by converting the obvious repeated-type local bindings in the `/std/image/png` chunk/prelude and write-preparation helpers to concise inferred bindings where the initializer already establishes the type clearly, without mixing in codec-behavior changes.
+  - acceptance:
+    - Obvious `/std/image/png` prelude and write-preparation helper bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - Behavior-sensitive or readability-sensitive sites remain explicit only when needed instead of by default.
+  - stop_rule: Stop once the obvious `/std/image/png` prelude/write-preparation inferred-binding opportunities are converted; leave broader codec changes separate.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the obvious repeated-type local bindings across the `/std/image/png` prelude and write-preparation helper band in `stdlib/std/image/image.prime`, including chunk readers, CRC helpers, sizing helpers, and PNG write-preparation paths such as `pngWriteIhdrChunk`, `pngWriteStoredDataByte`, `pngWriteIdatChunk`, and `pngWriteIendChunk`, while leaving the later scanline/bitstream/inflate and top-level read/write orchestration slices for follow-up TODOs; added a focused PNG-prelude inferred-local source lock in `tests/unit/test_compile_run_examples_docs_locks.cpp`; and updated `docs/todo.md` so `TODO-4088` is now the top ready inferred-binding follow-up.

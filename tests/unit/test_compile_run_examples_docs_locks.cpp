@@ -679,6 +679,85 @@ TEST_CASE("ppm image workflows stay source locked to inferred locals") {
   CHECK(ppmHelpersBody.find("[File<Write>] file{File<Write>(path)?}") == std::string::npos);
 }
 
+TEST_CASE("png prelude image workflows stay source locked to inferred locals") {
+  std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
+  if (!std::filesystem::exists(imageStdlibPath)) {
+    imageStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "image" / "image.prime";
+  }
+  REQUIRE(std::filesystem::exists(imageStdlibPath));
+
+  const std::string imageStdlib = readFile(imageStdlibPath.string());
+  const size_t pngStart = imageStdlib.find("namespace png");
+  const size_t pngDecodeStart = imageStdlib.find("pngPaethPredictor");
+  REQUIRE(pngStart != std::string::npos);
+  REQUIRE(pngDecodeStart != std::string::npos);
+  REQUIRE(pngDecodeStart > pngStart);
+  const std::string pngPreludeBody = imageStdlib.substr(pngStart, pngDecodeStart - pngStart);
+
+  CHECK(pngPreludeBody.find("[mut] index{0i32}") != std::string::npos);
+  CHECK(pngPreludeBody.find("status{ppmReadByteStatus(file, byte)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("statusA{ppmReadByteStatus(file, a)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("[mut] byte{0i32}") != std::string::npos);
+  CHECK(pngPreludeBody.find("[mut] parsedWidth{0i32}") != std::string::npos);
+  CHECK(pngPreludeBody.find("widthStatus{pngReadU32Be(file, parsedWidth)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("[mut] currentLeft{left}") != std::string::npos);
+  CHECK(pngPreludeBody.find("leftBit{pngModU64(currentLeft, 2u64)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("[mut] crc{4294967295u64}") != std::string::npos);
+  CHECK(pngPreludeBody.find("byteA{divide(value, 16777216i32)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("lengthStatus{pngWriteU32Be(file, length)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("[mut] pixelCount{0i32}") != std::string::npos);
+  CHECK(pngPreludeBody.find("rawByteCountWide{convert<i64>(pixelCount) + convert<i64>(height)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("status0{pngWriteByte(file, 137i32)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("openStatus{pngWriteChunkOpen(file, 13i32, 73i32, 72i32, 68i32, 82i32, crc)}") !=
+        std::string::npos);
+  CHECK(pngPreludeBody.find("lenLow{pngMod(blockByteCount, 256i32)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("[mut] nextBlockCount{65535i32}") != std::string::npos);
+  CHECK(pngPreludeBody.find("isFinalBlock{if(equal(nextBlockCount, rawRemaining), then() { 1i32 }, else() { 0i32 })}") !=
+        std::string::npos);
+  CHECK(pngPreludeBody.find(
+            "filterStatus{pngWriteStoredDataByte(file, 0i32, rawRemaining, blockRemaining, crc, adlerA, adlerB)}") !=
+        std::string::npos);
+  CHECK(pngPreludeBody.find(
+            "redStatus{pngWriteStoredDataByte(file, pixels[pixelOffset], rawRemaining, blockRemaining, crc, adlerA, "
+            "adlerB)}") != std::string::npos);
+  CHECK(pngPreludeBody.find("adlerStatus0{pngWriteChunkPayloadByte(file, divide(adlerB, 256i32), crc)}") !=
+        std::string::npos);
+  CHECK(pngPreludeBody.find("openStatus{pngWriteChunkOpen(file, 0i32, 73i32, 69i32, 78i32, 68i32, crc)}") !=
+        std::string::npos);
+
+  CHECK(pngPreludeBody.find("[i32 mut] index{0i32}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] status{ppmReadByteStatus(file, byte)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] statusA{ppmReadByteStatus(file, a)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32 mut] byte{0i32}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32 mut] parsedWidth{0i32}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] widthStatus{pngReadU32Be(file, parsedWidth)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[u64 mut] currentLeft{left}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[u64] leftBit{pngModU64(currentLeft, 2u64)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[u64 mut] crc{4294967295u64}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] byteA{divide(value, 16777216i32)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] lengthStatus{pngWriteU32Be(file, length)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32 mut] pixelCount{0i32}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i64] rawByteCountWide{convert<i64>(pixelCount) + convert<i64>(height)}") ==
+        std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] status0{pngWriteByte(file, 137i32)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] openStatus{pngWriteChunkOpen(file, 13i32, 73i32, 72i32, 68i32, 82i32, crc)}") ==
+        std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] lenLow{pngMod(blockByteCount, 256i32)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32 mut] nextBlockCount{65535i32}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] isFinalBlock{if(equal(nextBlockCount, rawRemaining), then() { 1i32 }, else() { "
+                            "0i32 })}") == std::string::npos);
+  CHECK(pngPreludeBody.find(
+            "[i32] filterStatus{pngWriteStoredDataByte(file, 0i32, rawRemaining, blockRemaining, crc, adlerA, "
+            "adlerB)}") == std::string::npos);
+  CHECK(pngPreludeBody.find(
+            "[i32] redStatus{pngWriteStoredDataByte(file, pixels[pixelOffset], rawRemaining, blockRemaining, crc, "
+            "adlerA, adlerB)}") == std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] adlerStatus0{pngWriteChunkPayloadByte(file, divide(adlerB, 256i32), crc)}") ==
+        std::string::npos);
+  CHECK(pngPreludeBody.find("[i32] openStatus{pngWriteChunkOpen(file, 0i32, 73i32, 69i32, 78i32, 68i32, crc)}") ==
+        std::string::npos);
+}
+
 TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   if (!std::filesystem::exists(gfxStdlibPath)) {
