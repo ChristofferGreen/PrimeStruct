@@ -930,7 +930,7 @@ main() {
         "30\n");
 }
 
-TEST_CASE("rejects vm png read for dynamic-huffman literal rgb inputs deterministically" * doctest::skip(true)) {
+TEST_CASE("runs vm png read for dynamic-huffman literal rgb inputs deterministically") {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_dynamic_literal.png").string();
   {
@@ -985,8 +985,17 @@ main() {
   const std::string outPath =
       (testScratchPath("") / "primec_vm_image_read_dynamic_literal_png.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
-  CHECK(runCommand(runCmd) == 1);
-  CHECK(readFile(outPath) == "image_invalid_operation\n");
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath) ==
+        "2\n"
+        "1\n"
+        "6\n"
+        "10\n"
+        "20\n"
+        "30\n"
+        "40\n"
+        "50\n"
+        "60\n");
 }
 
 TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs deterministically" * doctest::skip(true)) {
