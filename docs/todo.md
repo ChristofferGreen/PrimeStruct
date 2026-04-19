@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1160
+- TODO-1161
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1160
+- TODO-1161
 
 ### Priority Lanes (Current)
 
-- VM user vector count call-shadow skip debt: TODO-1160
+- VM user vector capacity call-shadow skip debt: TODO-1161
 
 ### Execution Queue (Recommended)
 
-1. TODO-1160
+1. TODO-1161
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM canonical vector access skipped-test debt | TODO-1160 |
+| VM canonical vector access skipped-test debt | TODO-1161 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1160 |
+| VM compile-run skipped-test debt | TODO-1161 |
 
 ### Task Blocks
 
-- [ ] TODO-1160: Audit VM user vector count call-shadow skip debt
+- [ ] TODO-1161: Audit VM user vector capacity call-shadow skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM user-vector `count(values)` call-shadow coverage, and lock the current VM contract when `/vector/count` competes with builtin count lowering on `vector<i32>`.
+  - scope: Re-enable or delete the skipped VM user-vector `capacity(values)` call-shadow coverage, and lock the current VM contract when `/vector/capacity` competes with builtin capacity lowering on `vector<i32>`.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM user-vector `count(values)` call-shadow case in stale form.
-    - The VM test locks the actual current contract for the call-shadow surface, whether that remains the current builtin-count diagnostic or another stable VM-side outcome.
-  - stop_rule: Stop after the VM user-vector `count(values)` call-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM user-vector `capacity(values)` call-shadow case in stale form.
+    - The VM test locks the actual current contract for the call-shadow surface, whether that remains the current builtin-capacity diagnostic or another stable VM-side outcome.
+  - stop_rule: Stop after the VM user-vector `capacity(values)` call-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
