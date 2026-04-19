@@ -56,43 +56,30 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1071
+- none
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1071
+- none
 
 ### Priority Lanes (Current)
 
-- Example surface parity: TODO-1071
+- none
 
 ### Execution Queue (Recommended)
 
-Wave A:
-1. TODO-1071
+- none
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Example surface parity | TODO-1071 |
+| No active TODOs | none |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Parser and docs example parity | TODO-1071 |
+| No active TODOs | none |
 
 ### Task Blocks
-
-- [ ] TODO-1071: Restore omitted parameter-type helper compile-run parity
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Example surface parity
-  - scope: support omitted parameter types for concise free-standing helper definitions, or make the surface rejection explicit and fully aligned across docs/examples if the shorthand is intentionally unsupported.
-  - acceptance:
-    - `run_countdown(start) { ... }` either compiles and runs as documented shorthand or is rejected with a deliberate stable diagnostic backed by docs
-    - compile-run or parser coverage locks the intended behavior for omitted parameter-type helper definitions
-    - `docs/CodeExamples.md` stays aligned with the intended supported shorthand surface in the same change
-  - stop_rule: stop after omitted parameter-type helper behavior is deliberate and documented; do not broaden to unrelated type-inference features in the same change
-  - notes: current parser failure is `definition missing return statement [PSC1003]` for omitted parameter-type helper shorthand

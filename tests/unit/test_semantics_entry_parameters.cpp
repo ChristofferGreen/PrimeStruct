@@ -53,6 +53,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("omitted parameter envelopes are inferred through parser shorthand") {
+  const std::string source = R"(
+[return<auto>]
+identity(value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(7i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("omitted parameter envelopes reject templated definitions through parser shorthand") {
+  const std::string source = R"(
+[return<auto>]
+identity<T>(value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(identity(7i32))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit auto parameters are only supported on non-templated definitions") !=
+        std::string::npos);
+}
+
 TEST_CASE("parameter restrict matches binding type") {
   const std::string source = R"(
 [return<int>]

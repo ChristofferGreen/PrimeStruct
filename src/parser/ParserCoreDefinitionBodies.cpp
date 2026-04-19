@@ -164,7 +164,6 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   int braceDepth = 0;
   bool identifiersOnly = true;
   bool sawBindingSyntax = false;
-  bool sawIdentifier = false;
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
@@ -200,7 +199,6 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
             sawBindingSyntax = true;
           }
         } else if (kind == TokenKind::Identifier) {
-          sawIdentifier = true;
           const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
           if (atArgStart && isVariadicIdentifierParam(tokens_, index)) {
             identifiersOnly = false;
@@ -227,9 +225,6 @@ bool Parser::isDefinitionSignature(bool *paramsAreIdentifiers) const {
   if (!identifiersOnly && !sawBindingSyntax) {
     return false;
   }
-  if (!sawBindingSyntax && sawIdentifier) {
-    return false;
-  }
   size_t braceIndex = skipCommentTokens(tokens_, index + 1);
   braceIndex = skipDefinitionTailTransforms(tokens_, braceIndex, allowSurfaceSyntax_);
   if (braceIndex >= tokens_.size()) {
@@ -244,7 +239,6 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
   int braceDepth = 0;
   bool identifiersOnly = true;
   bool sawBindingSyntax = false;
-  bool sawIdentifier = false;
   TokenKind prevAtDepth1 = TokenKind::LParen;
   while (index < tokens_.size()) {
     TokenKind kind = tokens_[index].kind;
@@ -280,7 +274,6 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
             sawBindingSyntax = true;
           }
         } else if (kind == TokenKind::Identifier) {
-          sawIdentifier = true;
           const bool atArgStart = (prevAtDepth1 == TokenKind::LParen || prevAtDepth1 == TokenKind::Comma);
           if (atArgStart && isVariadicIdentifierParam(tokens_, index)) {
             identifiersOnly = false;
@@ -302,9 +295,6 @@ bool Parser::isDefinitionSignatureAllowNoReturn(bool *paramsAreIdentifiers) cons
     *paramsAreIdentifiers = identifiersOnly;
   }
   if (depth != 0 || (!identifiersOnly && !sawBindingSyntax)) {
-    return false;
-  }
-  if (!sawBindingSyntax && sawIdentifier) {
     return false;
   }
   size_t braceIndex = skipCommentTokens(tokens_, index + 1);
@@ -416,16 +406,15 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
     return false;
   }
 
-  bool paramsAreIdentifiers = false;
   bool isDefinition = false;
   const bool copyShorthand =
       allowSurfaceSyntax_ && name.text == "Copy" && isCopyConstructorShorthandSignature();
   if (hasReturnTransform) {
     isDefinition = true;
   } else if (hasStructTransform) {
-    isDefinition = isDefinitionSignatureAllowNoReturn(&paramsAreIdentifiers);
+    isDefinition = isDefinitionSignatureAllowNoReturn(nullptr);
   } else {
-    isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
+    isDefinition = isDefinitionSignature(nullptr);
   }
   if (copyShorthand) {
     isDefinition = true;

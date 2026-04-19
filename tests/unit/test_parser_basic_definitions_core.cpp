@@ -27,6 +27,30 @@ main() {
   CHECK(program.definitions[0].fullPath == "/main");
 }
 
+TEST_CASE("parses definition with omitted parameter envelopes") {
+  const std::string source = R"(
+run_countdown(start) {
+  [int mut] current{start}
+
+  while(current > 0) {
+    current = current - 1
+  }
+
+  return(current)
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  CHECK(program.definitions[0].fullPath == "/run_countdown");
+  REQUIRE(program.definitions[0].parameters.size() == 1);
+  const auto &parameter = program.definitions[0].parameters[0];
+  CHECK(parameter.isBinding);
+  CHECK(parameter.name == "start");
+  CHECK(parameter.transforms.empty());
+  CHECK(parameter.args.empty());
+}
+
 TEST_CASE("parses definition without parameter list") {
   const std::string source = R"(
 [return<int>]

@@ -238,16 +238,15 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (!expect(TokenKind::LParen, "expected '(' after identifier")) {
     return false;
   }
-  bool paramsAreIdentifiers = false;
   bool isDefinition = false;
   const bool copyShorthand =
       allowSurfaceSyntax_ && name.text == "Copy" && isCopyConstructorShorthandSignature();
   if (hasReturnTransform) {
     isDefinition = true;
   } else if (hasStructTransform) {
-    isDefinition = isDefinitionSignatureAllowNoReturn(&paramsAreIdentifiers);
+    isDefinition = isDefinitionSignatureAllowNoReturn(nullptr);
   } else {
-    isDefinition = isDefinitionSignature(&paramsAreIdentifiers);
+    isDefinition = isDefinitionSignature(nullptr);
   }
   if (copyShorthand) {
     isDefinition = true;
@@ -301,10 +300,6 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     }
     defs.push_back(std::move(def));
     return true;
-  }
-
-  if (paramsAreIdentifiers && definitionHasReturnBeforeClose()) {
-    return fail("definition missing return statement");
   }
 
   std::vector<Expr> arguments;

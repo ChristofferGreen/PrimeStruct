@@ -438,6 +438,40 @@ bool Parser::parseParameterList(std::vector<Expr> &out,
         implicitTemplateArgsOut->push_back(packTransform.templateArgs.front());
         packParam.transforms.push_back(std::move(packTransform));
         param = std::move(packParam);
+      } else if (next < tokens_.size() &&
+                 (tokens_[next].kind == TokenKind::LBrace ||
+                  tokens_[next].kind == TokenKind::Comma ||
+                  tokens_[next].kind == TokenKind::Semicolon ||
+                  tokens_[next].kind == TokenKind::RParen)) {
+        Token name = consumeRaw(TokenKind::Identifier, "expected parameter identifier");
+        if (name.kind == TokenKind::End) {
+          return false;
+        }
+        std::string nameError;
+        if (!validateIdentifierText(name.text, nameError)) {
+          return fail(nameError);
+        }
+        if (matchRaw(TokenKind::LAngle)) {
+          return fail("parameter identifiers do not accept template arguments");
+        }
+        Expr bareParam;
+        bareParam.kind = Expr::Kind::Call;
+        bareParam.name = name.text;
+        bareParam.namespacePrefix = namespacePrefix;
+        bareParam.sourceLine = name.line;
+        bareParam.sourceColumn = name.column;
+        bareParam.isBinding = true;
+        if (matchRaw(TokenKind::LBrace)) {
+          if (!parseBindingInitializerList(bareParam.args, bareParam.argNames, namespacePrefix)) {
+            return false;
+          }
+          for (const auto &nameLabel : bareParam.argNames) {
+            if (nameLabel.has_value()) {
+              return fail("parameter defaults do not accept named arguments");
+            }
+          }
+        }
+        param = std::move(bareParam);
       } else if (!matchRaw(TokenKind::LBracket)) {
         return fail("expected '[' to start parameter");
       }

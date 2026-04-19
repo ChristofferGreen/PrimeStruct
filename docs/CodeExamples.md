@@ -71,7 +71,7 @@ Use mutable locals only when needed, and keep the loop body small.
 
 ```prime
 [int]
-run_countdown([int] start) {
+run_countdown(start) {
   [int mut] current{start}
 
   while(current > 0) {
@@ -337,9 +337,8 @@ Current note:
   method-sugar, and direct indexing examples.
 - Concise bindings such as `[vector<int>] values{4, 8, 15}` are now part of the
   verified current style for examples that use wildcard collection imports.
-- Omitted parameter-type shorthand on free-standing definitions is currently
-  unsupported in the verified surface; spell helper parameters explicitly in
-  examples.
+- Omitted parameter envelopes on free-standing definitions are part of the
+  verified current surface and are treated as implicit `auto` parameters.
 - Labeled struct-literal local bindings such as
   `[Pair] pair{[left] 4, [right] 8}` are part of the verified current surface
   and are preferred over constructor-wrapper spellings when the binding already
