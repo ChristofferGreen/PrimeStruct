@@ -1382,7 +1382,7 @@ namespace std {
     if(not_equal(pngMod(divide(flg, 32i32), 2i32), 0i32),
        then() { return(false) },
        else() { })
-    return(equal(pngMod(plus(multiply(cmf, 256i32), flg), 31i32), 0i32))
+    return(equal(pngMod(multiply(cmf, 256i32) + flg, 31i32), 0i32))
   }
 
   [effects(file_read, heap_alloc), return<int>]
@@ -1398,7 +1398,7 @@ namespace std {
          then() { return(status) },
          else() { })
       /std/collections/vector/push(bytes, byte)
-      assign(remaining, minus(remaining, 1i32))
+      remaining = remaining - 1i32
     })
     return(0i32)
   }
@@ -1410,8 +1410,8 @@ namespace std {
     [i32] len{count(bytes)}
     [i32 mut] index{0i32}
     while(less_than(index, len), do() {
-      assign(a, pngMod(plus(a, bytes[index]), 65521i32))
-      assign(b, pngMod(plus(b, a), 65521i32))
+      a = pngMod(a + bytes[index], 65521i32)
+      b = pngMod(b + a, 65521i32)
       increment(index)
     })
     return(and(and(equal(divide(b, 256i32), bHigh), equal(pngMod(b, 256i32), bLow)),
@@ -1420,7 +1420,7 @@ namespace std {
 
   [return<i32>]
   pngReadBits([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32] countBits, [i32 mut] value) {
-    assign(value, 0i32)
+    value = 0i32
     [i32] len{count(bytes)}
     [i32 mut] factor{1i32}
     [i32 mut] readCount{0i32}
@@ -1431,16 +1431,16 @@ namespace std {
       [i32 mut] shifted{bytes[byteIndex]}
       [i32 mut] shiftCount{0i32}
       while(less_than(shiftCount, bitIndex), do() {
-        assign(shifted, divide(shifted, 2i32))
+        shifted = divide(shifted, 2i32)
         increment(shiftCount)
       })
-      assign(value, plus(value, multiply(pngMod(shifted, 2i32), factor)))
-      assign(factor, multiply(factor, 2i32))
-      assign(bitIndex, plus(bitIndex, 1i32))
+      value = value + multiply(pngMod(shifted, 2i32), factor)
+      factor = multiply(factor, 2i32)
+      bitIndex = bitIndex + 1i32
       if(equal(bitIndex, 8i32),
          then() {
-           assign(bitIndex, 0i32)
-           assign(byteIndex, plus(byteIndex, 1i32))
+           bitIndex = 0i32
+           byteIndex = byteIndex + 1i32
          },
          else() { })
       increment(readCount)
@@ -1454,9 +1454,9 @@ namespace std {
     [i32 mut] remaining{bitCount}
     [i32 mut] current{value}
     while(greater_than(remaining, 0i32), do() {
-      assign(reversed, plus(multiply(reversed, 2i32), pngMod(current, 2i32)))
-      assign(current, divide(current, 2i32))
-      assign(remaining, minus(remaining, 1i32))
+      reversed = multiply(reversed, 2i32) + pngMod(current, 2i32)
+      current = divide(current, 2i32)
+      remaining = remaining - 1i32
     })
     return(reversed)
   }
@@ -1485,7 +1485,7 @@ namespace std {
     [i32 mut] code{0i32}
     [i32 mut] length{1i32}
     while(less_than(length, targetLength), do() {
-      assign(code, multiply(plus(code, pngCountCodeLength(lengths, length)), 2i32))
+      code = multiply(code + pngCountCodeLength(lengths, length), 2i32)
       increment(length)
     })
 
@@ -1497,13 +1497,13 @@ namespace std {
          else() { })
       increment(index)
     })
-    return(plus(code, offset))
+    return(code + offset)
   }
 
   [return<i32>]
   pngHuffmanDecodeSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32>] lengths,
                          [i32] maxBits, [i32 mut] symbolOut) {
-    assign(symbolOut, 0i32)
+    symbolOut = 0i32
     [i32] symbolCount{count(lengths)}
     [i32 mut] code{0i32}
     [i32 mut] factor{1i32}
@@ -1514,8 +1514,8 @@ namespace std {
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
-      assign(code, plus(code, multiply(bit, factor)))
-      assign(factor, multiply(factor, 2i32))
+      code = code + multiply(bit, factor)
+      factor = multiply(factor, 2i32)
       increment(bitsRead)
 
       [i32 mut] symbolIndex{0i32}
@@ -1525,7 +1525,7 @@ namespace std {
              [i32] canonicalCode{pngCanonicalCodeForSymbol(lengths, symbolIndex)}
              if(equal(pngReverseBits(canonicalCode, bitsRead), code),
                 then() {
-                  assign(symbolOut, symbolIndex)
+                  symbolOut = symbolIndex
                   return(0i32)
                 },
                 else() { })
@@ -1544,14 +1544,14 @@ namespace std {
     while(less_than(symbol, 288i32), do() {
       [i32 mut] codeLength{8i32}
       if(less_than(symbol, 144i32),
-         then() { assign(codeLength, 8i32) },
+         then() { codeLength = 8i32 },
          else() {
            if(less_than(symbol, 256i32),
-              then() { assign(codeLength, 9i32) },
+              then() { codeLength = 9i32 },
               else() {
                 if(less_than(symbol, 280i32),
-                   then() { assign(codeLength, 7i32) },
-                   else() { assign(codeLength, 8i32) })
+                   then() { codeLength = 7i32 },
+                   else() { codeLength = 8i32 })
               })
          })
       /std/collections/vector/push(lengths, codeLength)
@@ -1575,7 +1575,7 @@ namespace std {
     [i32 mut] index{0i32}
     while(less_than(index, count(lengths)), do() {
       if(greater_than(lengths[index], maxBits),
-         then() { assign(maxBits, lengths[index]) },
+         then() { maxBits = lengths[index] },
          else() { })
       increment(index)
     })
@@ -1671,7 +1671,7 @@ namespace std {
       if(not_equal(lengthStatus, 0i32),
          then() { return(1i32) },
          else() { })
-      assign(codeLengthLengths[codeLengthSymbol], lengthValue)
+      codeLengthLengths[codeLengthSymbol] = lengthValue
       increment(orderIndex)
     })
 
@@ -1680,7 +1680,7 @@ namespace std {
        then() { return(1i32) },
        else() { })
 
-    [i32] totalCodeCount{plus(literalCount, distanceCount)}
+    [i32] totalCodeCount{literalCount + distanceCount}
     [i32 mut] position{0i32}
     [i32 mut] previousLength{0i32}
     while(less_than(position, totalCodeCount), do() {
@@ -1699,7 +1699,7 @@ namespace std {
                    else() { /std/collections/vector/push(literalLengthsHigh, symbol) })
               },
               else() { /std/collections/vector/push(distanceLengths, symbol) })
-           assign(previousLength, symbol)
+           previousLength = symbol
            increment(position)
          },
          else() {
@@ -1713,8 +1713,8 @@ namespace std {
                 if(not_equal(repeatStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
-                [i32] repeatCount{plus(3i32, repeatExtra)}
-                if(greater_than(plus(position, repeatCount), totalCodeCount),
+                [i32] repeatCount{3i32 + repeatExtra}
+                if(greater_than(position + repeatCount, totalCodeCount),
                    then() { return(1i32) },
                    else() { })
                 [i32 mut] repeatIndex{0i32}
@@ -1738,8 +1738,8 @@ namespace std {
                      if(not_equal(repeatStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
-                     [i32] repeatCount{plus(3i32, repeatExtra)}
-                     if(greater_than(plus(position, repeatCount), totalCodeCount),
+                     [i32] repeatCount{3i32 + repeatExtra}
+                     if(greater_than(position + repeatCount, totalCodeCount),
                         then() { return(1i32) },
                         else() { })
                      [i32 mut] repeatIndex{0i32}
@@ -1751,7 +1751,7 @@ namespace std {
                                else() { /std/collections/vector/push(literalLengthsHigh, 0i32) })
                           },
                           else() { /std/collections/vector/push(distanceLengths, 0i32) })
-                       assign(previousLength, 0i32)
+                       previousLength = 0i32
                        increment(position)
                        increment(repeatIndex)
                      })
@@ -1764,8 +1764,8 @@ namespace std {
                           if(not_equal(repeatStatus, 0i32),
                              then() { return(1i32) },
                              else() { })
-                          [i32] repeatCount{plus(11i32, repeatExtra)}
-                          if(greater_than(plus(position, repeatCount), totalCodeCount),
+                          [i32] repeatCount{11i32 + repeatExtra}
+                          if(greater_than(position + repeatCount, totalCodeCount),
                              then() { return(1i32) },
                              else() { })
                           [i32 mut] repeatIndex{0i32}
@@ -1777,7 +1777,7 @@ namespace std {
                                     else() { /std/collections/vector/push(literalLengthsHigh, 0i32) })
                                },
                                else() { /std/collections/vector/push(distanceLengths, 0i32) })
-                            assign(previousLength, 0i32)
+                            previousLength = 0i32
                             increment(position)
                             increment(repeatIndex)
                           })
@@ -1788,7 +1788,7 @@ namespace std {
          })
     })
 
-    if(not_equal(plus(count(literalLengthsLow), count(literalLengthsHigh)), literalCount),
+    if(not_equal(count(literalLengthsLow) + count(literalLengthsHigh), literalCount),
        then() { return(1i32) },
        else() { })
     if(not_equal(count(distanceLengths), distanceCount),
@@ -1806,7 +1806,7 @@ namespace std {
     if(less_than(symbol, count(literalLengthsLow)),
        then() { return(literalLengthsLow[symbol]) },
        else() { })
-    [i32] highIndex{minus(symbol, count(literalLengthsLow))}
+    [i32] highIndex{symbol - count(literalLengthsLow)}
     if(or(less_than(highIndex, 0i32), not(less_than(highIndex, count(literalLengthsHigh)))),
        then() { return(-1i32) },
        else() { })
@@ -1824,7 +1824,7 @@ namespace std {
          else() { })
       increment(index)
     })
-    assign(index, 0i32)
+    index = 0i32
     [i32] highCount{count(literalLengthsHigh)}
     while(less_than(index, highCount), do() {
       if(equal(literalLengthsHigh[index], targetLength),
@@ -1845,20 +1845,20 @@ namespace std {
     [i32 mut] code{0i32}
     [i32 mut] length{1i32}
     while(less_than(length, targetLength), do() {
-      assign(code, multiply(plus(code, pngCountSplitLiteralLength(literalLengthsLow, literalLengthsHigh, length)), 2i32))
+      code = multiply(code + pngCountSplitLiteralLength(literalLengthsLow, literalLengthsHigh, length), 2i32)
       increment(length)
     })
 
     [i32 mut] offset{0i32}
     [i32 mut] index{0i32}
-    [i32] symbolCount{plus(count(literalLengthsLow), count(literalLengthsHigh))}
+    [i32] symbolCount{count(literalLengthsLow) + count(literalLengthsHigh)}
     while(less_than(index, targetSymbol), do() {
       if(equal(pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, index), targetLength),
          then() { increment(offset) },
          else() { })
       increment(index)
     })
-    return(plus(code, offset))
+    return(code + offset)
   }
 
   [return<i32>]
@@ -1874,8 +1874,8 @@ namespace std {
   pngHuffmanDecodeSplitLiteralSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex,
                                      [vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh,
                                      [i32] maxBits, [i32 mut] symbolOut) {
-    assign(symbolOut, 0i32)
-    [i32] symbolCount{plus(count(literalLengthsLow), count(literalLengthsHigh))}
+    symbolOut = 0i32
+    [i32] symbolCount{count(literalLengthsLow) + count(literalLengthsHigh)}
     [i32 mut] code{0i32}
     [i32 mut] factor{1i32}
     [i32 mut] bitsRead{0i32}
@@ -1885,8 +1885,8 @@ namespace std {
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
-      assign(code, plus(code, multiply(bit, factor)))
-      assign(factor, multiply(factor, 2i32))
+      code = code + multiply(bit, factor)
+      factor = multiply(factor, 2i32)
       increment(bitsRead)
 
       [i32 mut] symbolIndex{0i32}
@@ -1896,7 +1896,7 @@ namespace std {
              [i32] canonicalCode{pngCanonicalCodeForSplitLiteralSymbol(literalLengthsLow, literalLengthsHigh, symbolIndex)}
              if(equal(pngReverseBits(canonicalCode, bitsRead), code),
                 then() {
-                  assign(symbolOut, symbolIndex)
+                  symbolOut = symbolIndex
                   return(0i32)
                 },
                 else() { })
@@ -1910,20 +1910,20 @@ namespace std {
 
   [return<int>]
   pngLengthInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
-    assign(baseOut, 0i32)
-    assign(extraBitsOut, 0i32)
+    baseOut = 0i32
+    extraBitsOut = 0i32
     if(less_than(symbol, 257i32),
        then() { return(1i32) },
        else() { })
     if(less_equal(symbol, 264i32),
        then() {
-         assign(baseOut, plus(3i32, minus(symbol, 257i32)))
+         baseOut = 3i32 + (symbol - 257i32)
          return(0i32)
        },
        else() { })
     if(equal(symbol, 285i32),
        then() {
-         assign(baseOut, 258i32)
+         baseOut = 258i32
          return(0i32)
        },
        else() { })
@@ -1935,27 +1935,27 @@ namespace std {
     [i32 mut] currentSymbol{265i32}
     [i32 mut] step{2i32}
     [i32 mut] extraBits{1i32}
-    while(greater_than(symbol, plus(currentSymbol, 3i32)), do() {
-      assign(base, plus(base, multiply(step, 4i32)))
-      assign(currentSymbol, plus(currentSymbol, 4i32))
-      assign(step, multiply(step, 2i32))
+    while(greater_than(symbol, currentSymbol + 3i32), do() {
+      base = base + multiply(step, 4i32)
+      currentSymbol = currentSymbol + 4i32
+      step = multiply(step, 2i32)
       increment(extraBits)
     })
-    assign(baseOut, plus(base, multiply(minus(symbol, currentSymbol), step)))
-    assign(extraBitsOut, extraBits)
+    baseOut = base + multiply(symbol - currentSymbol, step)
+    extraBitsOut = extraBits
     return(0i32)
   }
 
   [return<int>]
   pngDistanceInfo([i32] symbol, [i32 mut] baseOut, [i32 mut] extraBitsOut) {
-    assign(baseOut, 0i32)
-    assign(extraBitsOut, 0i32)
+    baseOut = 0i32
+    extraBitsOut = 0i32
     if(or(less_than(symbol, 0i32), greater_than(symbol, 29i32)),
        then() { return(1i32) },
        else() { })
     if(less_equal(symbol, 3i32),
        then() {
-         assign(baseOut, plus(symbol, 1i32))
+         baseOut = symbol + 1i32
          return(0i32)
        },
        else() { })
@@ -1964,17 +1964,17 @@ namespace std {
     [i32 mut] currentSymbol{4i32}
     [i32 mut] span{4i32}
     [i32 mut] extraBits{1i32}
-    while(greater_than(symbol, plus(currentSymbol, 1i32)), do() {
-      assign(base, plus(base, span))
-      assign(currentSymbol, plus(currentSymbol, 2i32))
-      assign(span, multiply(span, 2i32))
+    while(greater_than(symbol, currentSymbol + 1i32), do() {
+      base = base + span
+      currentSymbol = currentSymbol + 2i32
+      span = multiply(span, 2i32)
       increment(extraBits)
     })
-    if(equal(minus(symbol, currentSymbol), 1i32),
-       then() { assign(base, plus(base, divide(span, 2i32))) },
+    if(equal(symbol - currentSymbol, 1i32),
+       then() { base = base + divide(span, 2i32) },
        else() { })
-    assign(baseOut, base)
-    assign(extraBitsOut, extraBits)
+    baseOut = base
+    extraBitsOut = extraBits
     return(0i32)
   }
 

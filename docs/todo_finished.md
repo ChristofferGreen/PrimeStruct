@@ -4253,3 +4253,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4077`, whose remaining PNG bitstream/Huffman, inflate, and read-path helper-spelling cleanup continues as `TODO-4079`, `TODO-4080`, and `TODO-4081` before the inferred-binding follow-ups starting at `TODO-4029`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the decode/scanline helper lane from `pngPaethPredictor` through `pngDecodeRows` in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, left the later bitstream, Huffman, inflate, and `namespace png` read-path helpers untouched for the follow-up slices, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the `pngScanlineBody` operator-form spellings while pinning representative `pngInflateReadBody` helper-form spellings, and updated `docs/todo.md` so oversized `TODO-4077` is retired in favor of `TODO-4079`, `TODO-4080`, and `TODO-4081`.
+
+- [x] TODO-4079: Align `/std/image/png` bitstream and Huffman arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074, TODO-4076, TODO-4078
+  - scope: Continue the split `/std/image/png` style cleanup after the completed decode/scanline slice and rewrite the remaining bitstream, Huffman-table, code-length, fixed/dynamic symbol, and length/distance metadata helpers away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in inflate execution or top-level `namespace png` read-path rewrites.
+  - acceptance:
+    - The remaining PNG bitstream and Huffman helper lane stops using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - Any remaining helper-form arithmetic or assignment in that helper lane is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
+    - Focused source-lock coverage drops the temporary bitstream/Huffman helper-form carve-out once the follow-up rewrite lands.
+  - stop_rule: Stop once the PNG bitstream and Huffman helper lane uses readable surface arithmetic and assignment by default; leave inflate orchestration and top-level read-path rewrites separate.
+  - notes: Split from oversized `TODO-4077`, whose remaining PNG helper-spelling cleanup now continues as `TODO-4080` for inflate execution and `TODO-4081` for the top-level read path.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the `pngZlibHeaderValid` through `pngDistanceInfo` helper lane in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, including the bit reader, canonical/Huffman helpers, dynamic-code-length expansion, and length/distance metadata helpers; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the new `pngBitstreamBody` operator-form spellings while leaving representative helper-form expectations only in the remaining inflate/read carve-out; and updated `docs/todo.md` to remove `TODO-4079` from the live queue while promoting `TODO-4080` as the next active PNG surface-style leaf.
