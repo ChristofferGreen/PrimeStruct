@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4037
+- TODO-4038
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -66,48 +66,46 @@ Task template:
 - TODO-4033
 - TODO-4034
 - TODO-4035
-- TODO-4038
 - TODO-4039
 - TODO-4040
 
 ### Priority Lanes (Current)
 
 - Stdlib surface-style alignment: TODO-4030 through TODO-4035
-- Stdlib bridge consolidation: TODO-4037 through TODO-4041
+- Stdlib bridge consolidation: TODO-4038 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4037
-2. TODO-4038
-3. TODO-4039
-4. TODO-4040
-5. TODO-4041
-6. TODO-4042
-7. TODO-4051
-8. TODO-4043
-9. TODO-4044
-10. TODO-4045
-11. TODO-4046
-12. TODO-4047
-13. TODO-4048
-14. TODO-4049
-15. TODO-4050
-16. TODO-4052
-17. TODO-4058
-18. TODO-4053
-19. TODO-4055
-20. TODO-4054
-21. TODO-4056
-22. TODO-4057
-23. TODO-4059
-24. TODO-4030
-25. TODO-4031
-26. TODO-4032
-27. TODO-4033
-28. TODO-4034
-29. TODO-4035
+1. TODO-4038
+2. TODO-4039
+3. TODO-4040
+4. TODO-4041
+5. TODO-4042
+6. TODO-4051
+7. TODO-4043
+8. TODO-4044
+9. TODO-4045
+10. TODO-4046
+11. TODO-4047
+12. TODO-4048
+13. TODO-4049
+14. TODO-4050
+15. TODO-4052
+16. TODO-4058
+17. TODO-4053
+18. TODO-4055
+19. TODO-4054
+20. TODO-4056
+21. TODO-4057
+22. TODO-4059
+23. TODO-4030
+24. TODO-4031
+25. TODO-4032
+26. TODO-4033
+27. TODO-4034
+28. TODO-4035
 
 ### PrimeStruct Coverage Snapshot
 
@@ -115,7 +113,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -331,7 +329,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4043, TODO-4037
+  - depends_on: TODO-4043
   - scope: Refactor vector/map import-time alias exposure so collection aliases come from the shared collection bridge metadata rather than exact-import and wildcard-import special cases scattered through semantics code.
   - acceptance:
     - Vector/map import alias construction is driven by shared collection bridge metadata.
@@ -403,25 +401,13 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib Bridge Consolidation
-  - depends_on: TODO-4037
+  - depends_on: none
   - scope: Move file helper resolution and file/error-surface method targeting onto shared stdlib bridge queries so those surfaces no longer rely on scattered direct stdlib path matching in semantics.
   - acceptance:
     - File helper and error-surface method resolution uses shared bridge metadata instead of local hard-coded stdlib path tables.
     - Existing file/error helper diagnostics and successful resolution behavior remain covered by parity tests after the migration.
     - The refactor leaves runtime/backing behavior unchanged and limits itself to centralizing resolution authority.
   - stop_rule: Stop once file/error-surface method resolution is bridge-driven; split any unrelated API cleanup or runtime behavior work into separate leaves.
-
-- [ ] TODO-4037: Route stdlib import alias construction through shared bridge metadata
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Bridge Consolidation
-  - depends_on: TODO-4036
-  - scope: Refactor stdlib import alias construction so import-time alias exposure for file, collections, and gfx comes from shared bridge metadata instead of hand-maintained special cases spread through parser/semantics code.
-  - acceptance:
-    - Stdlib import alias construction for the bridged surfaces is driven by the shared bridge metadata.
-    - Existing exact-import and wildcard-import alias behavior remains covered by focused parity tests.
-    - Import alias behavior no longer requires duplicating the same stdlib path knowledge in multiple production files for the migrated surfaces.
-  - stop_rule: Stop once import alias construction for the targeted stdlib surfaces is bridge-backed; split any packaging/root-discovery follow-up out of this item.
 
 - [ ] TODO-4035: Audit canonical /std/gfx wrappers for readable surface syntax without changing hybrid runtime boundaries
   - owner: ai

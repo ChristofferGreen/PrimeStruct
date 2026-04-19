@@ -4398,3 +4398,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the obvious top-level `/std/image/png` orchestration inferred-binding opportunities are converted; leave broader API or codec changes separate.
   - finished_at: 2026-04-20
   - evidence: Rewrote the obvious repeated-type local bindings across the remaining `/std/image/png` orchestration surface in `stdlib/std/image/image.prime`, including `pngDecodeScanlines`, the chunk-loop/state machine in `png::readImpl`, and the public `png::read`, `png::writeImpl`, and `png::write` wrappers; added a focused top-level PNG read/write inferred-local source lock in `tests/unit/test_compile_run_examples_docs_locks.cpp`; and updated `docs/todo.md` to remove `TODO-4089`, leaving the stdlib bridge-consolidation lane headed by `TODO-4037` as the next ready queue item.
+
+- [x] TODO-4037: Route stdlib import alias construction through shared bridge metadata
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Bridge Consolidation
+  - depends_on: TODO-4036
+  - scope: Refactor stdlib import alias construction so import-time alias exposure for file, collections, and gfx comes from shared bridge metadata instead of hand-maintained special cases spread through parser/semantics code.
+  - acceptance:
+    - Stdlib import alias construction for the bridged surfaces is driven by the shared bridge metadata.
+    - Existing exact-import and wildcard-import alias behavior remains covered by focused parity tests.
+    - Import alias behavior no longer requires duplicating the same stdlib path knowledge in multiple production files for the migrated surfaces.
+  - stop_rule: Stop once import alias construction for the targeted stdlib surfaces is bridge-backed; split any packaging/root-discovery follow-up out of this item.
+  - finished_at: 2026-04-20
+  - evidence: Replaced the old vector-only exact-import special case in `src/semantics/SemanticsValidatorBuildImports.cpp` with shared-registry-backed alias target selection for the bridged file, collections, and gfx surfaces, including constructor-priority routing for `/std/collections/map`; added focused exact-import parity coverage in `tests/unit/test_semantics_imports.cpp`, an exact-map compile-run regression in `tests/unit/test_compile_run_imports_operations.cpp`, and a source-lock guard in `tests/unit/test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp`; and updated `docs/todo.md` to remove `TODO-4037`, promote `TODO-4038`, and clear the now-satisfied dependency references to `TODO-4037`.

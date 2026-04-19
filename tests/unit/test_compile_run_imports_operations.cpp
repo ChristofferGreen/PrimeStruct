@@ -118,6 +118,26 @@ main() {
   CHECK(runCommand(exePath) == 22);
 }
 
+TEST_CASE("exact map import runs explicit stdlib surface in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/map
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 8i32)}
+  return(plus(/std/collections/map/count(values),
+      /std/collections/map/at_unsafe(values, 2i32)))
+}
+)";
+  const std::string srcPath = writeTemp("compile_exact_map_import_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "compile_exact_map_import_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
+}
+
 TEST_CASE("concise vector binding example runs in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

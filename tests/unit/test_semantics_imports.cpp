@@ -634,6 +634,60 @@ main() {
   CHECK(error.find("unknown call target: second") != std::string::npos);
 }
 
+TEST_CASE("exact file imports keep bare bridge aliases") {
+  const std::string source = R"(
+import /std/file/File
+import /std/file/FileError
+
+[effects(file_read), return<int>]
+main() {
+  [File<Read>] file{File<Read>("in.txt"utf8)?}
+  [FileError] err{FileError.eof()}
+  [Result<FileError>] status{FileError.status(err)}
+  return(count(Result.why(status)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("exact collection imports keep bare bridge aliases") {
+  const std::string source = R"(
+import /std/collections/map
+import /std/collections/ContainerError
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 7i32, 2i32, 11i32)}
+  [ContainerError] err{ContainerError.missing_key()}
+  return(plus(/std/collections/map/count(values),
+      count(Result.why(ContainerError.status(err)))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("exact gfx imports keep bare bridge aliases") {
+  const std::string source = R"(
+import /std/gfx/Buffer
+import /std/gfx/GfxError
+
+[return<int>]
+main() {
+  [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
+  [GfxError] err{GfxError.queue_submit_failed()}
+  [string] whyText{GfxError.why(err)}
+  return(plus(buffer.count(), count(whyText)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 #include "test_semantics_imports_gfx.h"
 
 TEST_SUITE_END();

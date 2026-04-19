@@ -1603,6 +1603,27 @@ TEST_CASE("semantics validator build import publication stays stable") {
   CHECK(buildImportsSource.find(
             "registerCanonicalSoaVectorWildcardAliases(prefix)") !=
         std::string::npos);
+  CHECK(buildImportsSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "const StdlibSurfaceMetadata *findStdlibSurfaceImportAliasMetadata(") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "std::string resolveStdlibSurfaceImportAliasTarget(") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find("StdlibSurfaceId::CollectionsVectorHelpers") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find("StdlibSurfaceId::CollectionsMapConstructors") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find("StdlibSurfaceId::FileHelpers") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find("StdlibSurfaceId::GfxBufferHelpers") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "const std::string aliasTargetPath = resolveStdlibSurfaceImportAliasTarget(importPath);") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find("if (importPath == \"/std/collections/vector\"") ==
+        std::string::npos);
   CHECK(buildImportsSource.find(
             "registerExperimentalSoaVectorConversionWildcardAliases(") ==
         std::string::npos);

@@ -1,10 +1,49 @@
 #include "SemanticsValidator.h"
 
+#include "primec/StdlibSurfaceRegistry.h"
+
 #include <algorithm>
 #include <cctype>
 #include <unordered_set>
 
 namespace primec::semantics {
+namespace {
+
+bool stdlibSurfaceMatchesImportAliasPath(const StdlibSurfaceMetadata &metadata,
+                                         const std::string_view importPath) {
+  return metadata.canonicalPath == importPath ||
+         std::find(metadata.importAliasSpellings.begin(), metadata.importAliasSpellings.end(), importPath) !=
+             metadata.importAliasSpellings.end();
+}
+
+const StdlibSurfaceMetadata *findStdlibSurfaceImportAliasMetadata(const std::string_view importPath) {
+  static constexpr std::array SurfaceImportAliasIds = {
+      StdlibSurfaceId::FileHelpers,
+      StdlibSurfaceId::FileErrorHelpers,
+      StdlibSurfaceId::CollectionsVectorHelpers,
+      StdlibSurfaceId::CollectionsMapConstructors,
+      StdlibSurfaceId::CollectionsContainerErrorHelpers,
+      StdlibSurfaceId::GfxBufferHelpers,
+      StdlibSurfaceId::GfxErrorHelpers,
+  };
+  for (const StdlibSurfaceId surfaceId : SurfaceImportAliasIds) {
+    const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadata(surfaceId);
+    if (metadata != nullptr && stdlibSurfaceMatchesImportAliasPath(*metadata, importPath)) {
+      return metadata;
+    }
+  }
+  return nullptr;
+}
+
+std::string resolveStdlibSurfaceImportAliasTarget(const std::string_view importPath) {
+  const StdlibSurfaceMetadata *metadata = findStdlibSurfaceImportAliasMetadata(importPath);
+  if (metadata == nullptr) {
+    return std::string(importPath);
+  }
+  return std::string(metadata->canonicalPath);
+}
+
+} // namespace
 
 bool SemanticsValidator::buildImportAliases() {
   importAliases_.clear();
@@ -116,12 +155,6 @@ bool SemanticsValidator::buildImportAliases() {
     return false;
   };
 
-  const auto resolveSingleImportAliasTarget = [](const std::string &importPath) {
-    if (importPath == "/std/collections/vector") {
-      return std::string("/std/collections/vector/vector");
-    }
-    return importPath;
-  };
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
     if (importPath == "/std/math") {
@@ -231,13 +264,14 @@ bool SemanticsValidator::buildImportAliases() {
         isMathBuiltinImport = true;
       }
     }
-    const std::string aliasTargetPath = resolveSingleImportAliasTarget(importPath);
-    if (importPath == "/std/collections/vector" &&
+    const std::string aliasTargetPath = resolveStdlibSurfaceImportAliasTarget(importPath);
+    if (findStdlibSurfaceImportAliasMetadata(importPath) != nullptr &&
         defMap_.find(aliasTargetPath) == defMap_.end() &&
         hasPublicDefinitionUnderPrefix(importPath)) {
-      auto [it, inserted] = importAliases_.emplace("vector", aliasTargetPath);
+      const std::string aliasName = importPath.substr(importPath.find_last_of('/') + 1);
+      auto [it, inserted] = importAliases_.emplace(aliasName, aliasTargetPath);
       if (!inserted && it->second != aliasTargetPath) {
-        if (!addImportDiagnostic("import creates name conflict: vector")) {
+        if (!addImportDiagnostic("import creates name conflict: " + aliasName)) {
           return false;
         }
       }
@@ -336,7 +370,7 @@ bool SemanticsValidator::buildImportAliases() {
         }
         return;
       }
-      const std::string aliasTargetPath = resolveSingleImportAliasTarget(importPath);
+      const std::string aliasTargetPath = resolveStdlibSurfaceImportAliasTarget(importPath);
       auto defIt = defMap_.find(aliasTargetPath);
       if (defIt == defMap_.end() || publicDefinitions_.count(aliasTargetPath) == 0) {
         return;
