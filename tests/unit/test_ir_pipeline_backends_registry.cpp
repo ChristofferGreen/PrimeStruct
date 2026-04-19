@@ -2181,6 +2181,104 @@ main() {
   CHECK(std::filesystem::file_size(nativeConformance.outputPath) > 0);
 }
 
+TEST_CASE("backend conformance keeps auto-bound Result combinator facts aligned across backends") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [auto] mapped{ Result.map(Result.ok(2i32), []([i32] value) { return(multiply(value, 4i32)) }) }
+  [auto] chained{ Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(plus(value, 3i32))) }) }
+  [auto] summed{
+    Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) { return(plus(left, right)) })
+  }
+  [i32] first{try(mapped)}
+  [i32] second{try(chained)}
+  [i32] third{try(summed)}
+  return(first + second + third)
+}
+)";
+
+  auto runConformance = [&](std::string_view emitKind) {
+    primec::testing::CompilePipelineBackendConformance conformance;
+    std::string error;
+    REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
+        source, "/main", emitKind, conformance, error));
+    CHECK(error.empty());
+    CHECK(conformance.output.hasSemanticProgram);
+    return conformance;
+  };
+
+  const auto cppConformance = runConformance("cpp-ir");
+  const auto vmConformance = runConformance("vm");
+  const auto nativeConformance = runConformance("native");
+
+  auto requireLocalAutoFact = [](const primec::SemanticProgram &semanticProgram,
+                                 std::string_view bindingName) {
+    const auto *localAuto = findSemanticEntry(
+        primec::semanticProgramLocalAutoFactView(semanticProgram),
+        [bindingName](const primec::SemanticProgramLocalAutoFact &entry) {
+          return entry.scopePath == "/main" && entry.bindingName == bindingName;
+        });
+    REQUIRE(localAuto != nullptr);
+    return localAuto;
+  };
+
+  auto checkLocalAutoFact = [&](std::string_view bindingName) {
+    const auto *cppLocalAuto = requireLocalAutoFact(cppConformance.output.semanticProgram, bindingName);
+    const auto *vmLocalAuto = requireLocalAutoFact(vmConformance.output.semanticProgram, bindingName);
+    const auto *nativeLocalAuto = requireLocalAutoFact(nativeConformance.output.semanticProgram, bindingName);
+
+    CHECK(cppLocalAuto->bindingTypeText == "Result<i32, FileError>");
+    CHECK(vmLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
+    CHECK(nativeLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
+
+    const std::string_view cppResolved =
+        primec::semanticProgramLocalAutoFactInitializerResolvedPath(
+            cppConformance.output.semanticProgram, *cppLocalAuto);
+    const std::string_view vmResolved =
+        primec::semanticProgramLocalAutoFactInitializerResolvedPath(
+            vmConformance.output.semanticProgram, *vmLocalAuto);
+    const std::string_view nativeResolved =
+        primec::semanticProgramLocalAutoFactInitializerResolvedPath(
+            nativeConformance.output.semanticProgram, *nativeLocalAuto);
+    CHECK(!cppResolved.empty());
+    CHECK(vmResolved == cppResolved);
+    CHECK(nativeResolved == cppResolved);
+  };
+
+  checkLocalAutoFact("mapped");
+  checkLocalAutoFact("chained");
+  checkLocalAutoFact("summed");
+
+  const auto *cppReturn = findSemanticEntry(primec::semanticProgramReturnFactView(cppConformance.output.semanticProgram),
+      [&cppConformance](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(
+                   cppConformance.output.semanticProgram, entry) == "/main";
+      });
+  const auto *vmReturn = findSemanticEntry(primec::semanticProgramReturnFactView(vmConformance.output.semanticProgram),
+      [&vmConformance](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(
+                   vmConformance.output.semanticProgram, entry) == "/main";
+      });
+  const auto *nativeReturn = findSemanticEntry(primec::semanticProgramReturnFactView(nativeConformance.output.semanticProgram),
+      [&nativeConformance](const primec::SemanticProgramReturnFact &entry) {
+        return primec::semanticProgramReturnFactDefinitionPath(
+                   nativeConformance.output.semanticProgram, entry) == "/main";
+      });
+  REQUIRE(cppReturn != nullptr);
+  REQUIRE(vmReturn != nullptr);
+  REQUIRE(nativeReturn != nullptr);
+  CHECK(cppReturn->bindingTypeText == "i32");
+  CHECK(vmReturn->bindingTypeText == cppReturn->bindingTypeText);
+  CHECK(nativeReturn->bindingTypeText == cppReturn->bindingTypeText);
+}
+
 TEST_CASE("compile pipeline preserves semantic product on post-semantics failure") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {

@@ -3646,3 +3646,16 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: If contract wiring requires broad cross-module generator work, land a minimal verifier over existing data first and split generator work into follow-up leaves.
   - finished_at: 2026-04-13
   - evidence: Added `SemanticProgram.contractVersion` + v1 manifest wiring in lowerer preflight, added deterministic mismatch/index-overflow negatives, and added vm emit-path backend conformance coverage asserting contract version `v1`.
+
+- [x] TODO-1024: Replace stale auto-bound Result rejection tests with runtime coverage
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: One-off correctness coverage
+  - scope: Replace the stale skipped VM/native negative tests for `[auto]` direct `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` locals followed by `try(...)` with active positive runtime coverage, and add semantic-product conformance checks that those auto bindings keep `Result<i32, FileError>` metadata aligned across `cpp-ir`, `vm`, and `native`.
+  - acceptance:
+    - VM compile-run coverage proves `[auto]` direct combinator locals can be consumed by `try(...)`.
+    - Native compile-run coverage proves the same path compiles and runs on IR-backed native output.
+    - Semantic-product/backend conformance coverage proves the auto-bound combinator locals keep matching `Result` binding metadata across backends.
+  - stop_rule: Stop once the stale skipped rejection cases are replaced by active positive coverage and the semantic-product guardrail is in place; leave unrelated docs cleanup as separate future work.
+  - finished_at: 2026-04-19
+  - evidence: Replaced the skipped VM/native rejection tests with active positive runtime cases and added backend-conformance checks that `mapped`, `chained`, and `summed` auto locals keep `Result<i32, FileError>` metadata plus matching non-empty initializer resolved paths across `cpp-ir`, `vm`, and `native`.

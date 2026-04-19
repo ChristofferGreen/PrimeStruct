@@ -410,7 +410,7 @@ main() {
   CHECK(readFile(outPath) == "3\n1\n3\n3\n");
 }
 
-TEST_CASE("vm rejects auto-bound direct Result combinator try consumers" * doctest::skip(true)) {
+TEST_CASE("vm supports auto-bound direct Result combinator try consumers") {
   const std::string source = R"(
 import /std/file/*
 
@@ -432,11 +432,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_result_auto_bound_combinators.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_result_auto_bound_combinators_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("try requires Result argument") != std::string::npos);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_result_auto_bound_combinators_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 5);
+  CHECK(readFile(outPath) == "8\n5\n");
 }
 
 

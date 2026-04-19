@@ -535,7 +535,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("native backend rejects auto-bound direct Result combinator try consumers" * doctest::skip(true)) {
+TEST_CASE("native backend supports auto-bound direct Result combinator try consumers") {
   const std::string source = R"(
 import /std/file/*
 
@@ -557,13 +557,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_result_auto_bound_combinators.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_result_auto_bound_combinators_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_result_auto_bound_combinators").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_result_auto_bound_combinators_out.txt").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("try requires Result argument") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 5);
+  CHECK(readFile(outPath) == "8\n5\n");
 }
 
 TEST_CASE("compiles and runs native direct type namespace string helpers") {

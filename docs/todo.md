@@ -85,3 +85,5 @@ Wave A:
 ### Task Blocks
 
 No open tasks currently tracked; archived history lives in `docs/todo_finished.md`.
+When the queue is empty, one-off gap closures discovered during repo scans should be archived directly in
+`docs/todo_finished.md` after landing instead of leaving completed items here.
