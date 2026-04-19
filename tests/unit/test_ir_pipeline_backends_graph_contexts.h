@@ -1609,6 +1609,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(buildSemanticProgramBody.find("auto publicationSurface =") != std::string::npos);
   CHECK(buildSemanticProgramBody.find("validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig)") !=
         std::string::npos);
+  CHECK(buildSemanticProgramBody.find("semantics::buildSemanticProgramFromPublicationSurface(") !=
+        std::string::npos);
   CHECK(buildSemanticProgramBody.find("validator.takeCollectedDirectCallTargetsForSemanticProduct()") ==
         std::string::npos);
   CHECK(buildSemanticProgramBody.find("validator.takeCollectedMethodCallTargetsForSemanticProduct()") ==
@@ -1634,6 +1636,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(buildSemanticProgramBody.find("validator.onErrorFactSnapshotForSemanticProduct()") ==
         std::string::npos);
+  CHECK(buildSemanticProgramBody.find("ensureModuleResolvedArtifacts(") == std::string::npos);
+  CHECK(buildSemanticProgramBody.find("semanticProgram.moduleResolvedArtifacts.reserve(") ==
+        std::string::npos);
+  CHECK(buildSemanticProgramBody.find("std::sort(semanticProgram.moduleResolvedArtifacts.begin(),") ==
+        std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") ==
         std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);") !=
@@ -1651,6 +1658,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
     return readTextFile(fullPath);
   };
 
+  const std::string cmake = readRepoFile("CMakeLists.txt");
   const std::string semanticProduct = readRepoFile("include/primec/SemanticProduct.h");
   const std::string compilePipelineHeader = readRepoFile("include/primec/CompilePipeline.h");
   const std::string semanticsHeader = readRepoFile("include/primec/Semantics.h");
@@ -1660,6 +1668,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irPreparationSource = readRepoFile("src/IrPreparation.cpp");
   const std::string irLowererEntrySetup =
       readRepoFile("src/ir_lowerer/IrLowererLowerSetupEntryEffects.h");
+  const std::string semanticPublicationBuildersHeader =
+      readRepoFile("src/semantics/SemanticPublicationBuilders.h");
+  const std::string semanticPublicationBuildersSource =
+      readRepoFile("src/semantics/SemanticPublicationBuilders.cpp");
   const std::string semanticsValidate = readRepoFile("src/semantics/SemanticsValidate.cpp");
   const std::string semanticsSnapshots = readRepoFile("src/semantics/SemanticsValidatorSnapshots.cpp");
   const std::string semanticTargetAdapterHeader =
@@ -1748,48 +1760,91 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irPreparationSource.find("semantic product is required for IR preparation") != std::string::npos);
   CHECK(irLowererEntrySetup.find("semantic product is required for IR lowering") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticPublicationBuilders.cpp") != std::string::npos);
 
   CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") !=
         std::string::npos);
   CHECK(compilePipelineSource.find("output.hasSemanticProgram = true;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.failure.stage = stage;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.failure.message = message;") != std::string::npos);
+  CHECK(semanticPublicationBuildersHeader.find("buildSemanticProgramFromPublicationSurface(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("struct SemanticPublicationBuilderState {") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("initializeSemanticProgramPublicationShell(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishDirectCallTargetFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishMethodCallTargetFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishBridgePathChoiceFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishCallableSummaryFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishSemanticRoutingFamilies(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishTypeMetadataFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishStructFieldMetadataFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishSemanticMetadataFamilies(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishBindingFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishReturnFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishLocalAutoFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishQueryFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishTryFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishOnErrorFacts(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishSemanticScopedFactFamilies(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("finalizeSemanticModuleArtifacts(") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("semanticModuleKeyForPath(") != std::string::npos);
-  CHECK(semanticsValidate.find("semanticProgram.moduleResolvedArtifacts.reserve(") != std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(") != std::string::npos);
-  CHECK(semanticsValidate.find("std::sort(semanticProgram.moduleResolvedArtifacts.begin(),") !=
+  CHECK(semanticsValidate.find("#include \"SemanticPublicationBuilders.h\"") != std::string::npos);
+  CHECK(semanticsValidate.find("buildSemanticProgramFromPublicationSurface(") != std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("semanticModuleKeyForPath(") != std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("semanticProgram.moduleResolvedArtifacts.reserve(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).directCallTargetIndices.push_back(") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).methodCallTargetIndices.push_back(") !=
+  CHECK(semanticPublicationBuildersSource.find("std::sort(state.semanticProgram.moduleResolvedArtifacts.begin(),") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).bridgePathChoiceIndices.push_back(") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath)\n        .directCallTargetIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaryIndices.push_back(") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath)\n        .methodCallTargetIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath)\n        .bridgePathChoiceIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.fullPath)\n        .callableSummaryIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(") !=
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(") !=
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("auto &module = ensureModuleResolvedArtifacts(moduleScopePath);") !=
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("module.bindingFactIndices.push_back(entryIndex);") !=
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);") ==
+  CHECK(semanticPublicationBuildersSource.find("auto &module = state.ensureModuleResolvedArtifacts(moduleScopePath);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(entry.scopePath).methodCallTargets.push_back(entry);") ==
+  CHECK(semanticPublicationBuildersSource.find("module.bindingFactIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).bridgePathChoices.push_back(storedEntry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaries.push_back(") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(entry.scopePath).methodCallTargets.push_back(entry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).bindingFacts.push_back(storedEntry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).bridgePathChoices.push_back(storedEntry);") ==
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.fullPath).callableSummaries.push_back(") ==
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).bindingFacts.push_back(storedEntry);") ==
         std::string::npos);
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") != std::string::npos);
   CHECK(semanticsSnapshots.find("collectPilotRoutingSemanticProductFacts()") !=
@@ -1807,31 +1862,31 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("semantics::assignSemanticNodeIds(program);") <
         semanticsValidate.find("validator.invalidatePilotRoutingSemanticCollectors();"));
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(entryIndex);") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFactIndices.push_back(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFactIndices.push_back(entryIndex);") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFactIndices.push_back(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("module.queryFactIndices.push_back(entryIndex);") !=
+  CHECK(semanticPublicationBuildersSource.find("module.queryFactIndices.push_back(entryIndex);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).onErrorFactIndices.push_back(entryIndex);") !=
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).onErrorFactIndices.push_back(") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFacts.push_back(entry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).returnFacts.push_back(entry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFacts.push_back(entry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFacts.push_back(entry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).queryFacts.push_back(entry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath).queryFacts.push_back(entry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).returnFacts.push_back(storedEntry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).returnFacts.push_back(storedEntry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).localAutoFacts.push_back(storedEntry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).localAutoFacts.push_back(storedEntry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).queryFacts.push_back(storedEntry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).queryFacts.push_back(storedEntry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).tryFacts.push_back(storedEntry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(storedEntry.scopePath).tryFacts.push_back(storedEntry);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).onErrorFacts.push_back(storedEntry);") ==
+  CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(storedEntry.definitionPath).onErrorFacts.push_back(storedEntry);") ==
         std::string::npos);
 
   CHECK(semanticTargetAdapterHeader.find("struct SemanticProductTargetAdapter") != std::string::npos);

@@ -56,21 +56,19 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4005
+- TODO-4008
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4008
+- none
 
 ### Priority Lanes (Current)
 
 - Semantic ownership cutover: TODO-4008
-- Semantic-product publication shaping: TODO-4005
 
 ### Execution Queue (Recommended)
 
-1. TODO-4005
-2. TODO-4008
+1. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -78,7 +76,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4008 |
 | Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | TODO-4005 |
+| Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -92,7 +90,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4008 |
-| Semantic-product publication parity and deterministic ordering | TODO-4005 |
+| Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
@@ -115,16 +113,3 @@ Task template:
     - `docs/todo.md` is refreshed so any still-open adapter retirement work outside the retired slice remains as explicit follow-up instead of staying implicit.
   - stop_rule: Stop once one covered production adapter slice is retired end to end and any remaining slices are written down as separate follow-up work; do not use this leaf as an umbrella cleanup.
   - notes: Primary seams are `src/IrPreparation.cpp`, `src/primevm_main.cpp`, `src/main.cpp`, and the remaining adapter/fallback helpers under `src/ir_lowerer/`; choose one fact-family slice first and only keep neighboring retirements together when they share the same production entrypoints.
-
-- [ ] TODO-4005: Split semantic publication into scoped builders
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Semantic Product Publication
-  - depends_on: none
-  - scope: Reorganize semantic-product publication around definition/module-scoped builders so fact publication, lookup indexing, and transient-cache release happen in smaller ownership-bounded stages.
-  - acceptance:
-    - Publication code is split into dedicated builder units by fact family or module scope instead of one broad `buildSemanticProgram(...)` sweep.
-    - Module artifact population and fact ordering remain deterministic while avoiding repeated whole-program traversals where equivalent scoped data already exists.
-    - Release validation and semantic-product dump coverage pass unchanged except for intentional contract updates.
-  - stop_rule: Stop once semantic-product publication is partitioned into smaller builders with clear ownership and no new broad whole-program collector sweeps are introduced.
-  - notes: This starts after TODO-4002 lands and should focus on `src/semantics/SemanticsValidate.cpp`; keep routing/callable-summary publication and graph-backed inference publication as the first candidate split if the builder breakup does not fit one commit.

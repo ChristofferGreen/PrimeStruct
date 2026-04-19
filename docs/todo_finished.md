@@ -4032,3 +4032,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Primary verification seams are `prepareIrModule(...)`, `IrLowerer::lower(...)`, and the backend-registry / graph-context conformance tests that already pin semantic-product entry contracts.
   - finished_at: 2026-04-19
   - evidence: Added semantic-id-only semantic-product fact lookup helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, rewired production lowering to use those stricter helpers for local-auto, query, `try(...)`, and `on_error` handling, stopped semantic-product-backed call resolution from reconstructing direct/method targets from scope when published routing is absent, added focused regressions that reject definition-path/resolved-path/operand-path compatibility fallback in production mode, added a `prepareIrModule(...)` regression for local-auto fallback rejection, and refreshed graph-context source-lock coverage so production lowerer code stays pinned to the stricter semantic-id path.
+
+- [x] TODO-4005: Split semantic publication into scoped builders
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Semantic Product Publication
+  - depends_on: none
+  - scope: Reorganize semantic-product publication around definition/module-scoped builders so fact publication, lookup indexing, and transient-cache release happen in smaller ownership-bounded stages.
+  - acceptance:
+    - Publication code is split into dedicated builder units by fact family or module scope instead of one broad `buildSemanticProgram(...)` sweep.
+    - Module artifact population and fact ordering remain deterministic while avoiding repeated whole-program traversals where equivalent scoped data already exists.
+    - Release validation and semantic-product dump coverage pass unchanged except for intentional contract updates.
+  - stop_rule: Stop once semantic-product publication is partitioned into smaller builders with clear ownership and no new broad whole-program collector sweeps are introduced.
+  - notes: This starts after TODO-4002 lands and should focus on `src/semantics/SemanticsValidate.cpp`; keep routing/callable-summary publication and graph-backed inference publication as the first candidate split if the builder breakup does not fit one commit.
+  - finished_at: 2026-04-19
+  - evidence: Added `src/semantics/SemanticPublicationBuilders.{h,cpp}` so semantic-product shell setup, routing publication, metadata publication, scoped fact-family publication, and module finalization now build through named helpers instead of one `buildSemanticProgram(...)` sweep, rewired `SemanticsValidate.cpp` to hand the unified publication surface into that builder module, updated `CMakeLists.txt` to compile the new unit, and refreshed graph-context source-lock coverage so the builder module owns module indexing, routing lookup publication, and fact-family staging.
