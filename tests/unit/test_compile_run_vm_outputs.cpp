@@ -464,7 +464,7 @@ main() {
         "128\n");
 }
 
-TEST_CASE("rejects invalid vm ppm write inputs deterministically" * doctest::skip(true)) {
+TEST_CASE("rejects invalid vm ppm write inputs deterministically") {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write_invalid.ppm";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
