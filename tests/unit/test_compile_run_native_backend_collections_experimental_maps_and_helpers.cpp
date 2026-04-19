@@ -3147,7 +3147,7 @@ TEST_CASE("compiles and runs native wrapper map constructors through explicit ex
   expectWrapperMapConstructorExperimentalReturnConformance("native");
 }
 
-TEST_CASE("compiles and runs native wrapper map constructors through explicit experimental map parameters" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native wrapper map constructors through explicit experimental map parameters") {
   expectWrapperMapConstructorExperimentalParameterConformance("native");
 }
 
