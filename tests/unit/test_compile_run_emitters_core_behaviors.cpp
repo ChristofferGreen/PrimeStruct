@@ -38,7 +38,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("C++ emitter runs experimental map custom comparable struct keys") {
+TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -71,12 +71,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_experimental_map_custom_comparable_key.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_experimental_map_custom_comparable_key.exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_experimental_map_custom_comparable_key_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 21);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports numeric/bool map values") !=
+        std::string::npos);
 }
 
 TEST_CASE("executions are ignored by C++ emitter") {

@@ -4,6 +4,17 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `native-borrowed-experimental-map-ref-rejects`:
+  native canonical `/std/collections/map/*_ref` helpers on borrowed
+  experimental-map values currently stop at a backend compile-time rejection,
+  so native coverage should lock that diagnostic instead of expecting a
+  runtime path.
+  Evidence: `TODO-1116` re-enabled the native
+  `expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("native")`
+  case in
+  `test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp`,
+  and the full `./scripts/compile.sh --release` gate passed with that test
+  active.
 - `native-indexed-vector-assign-needs-collections-import`:
   native compile-run coverage for `assign(values[index], 7i32)` must import
   `/std/collections/*`, because indexed vector assignment lowers through the

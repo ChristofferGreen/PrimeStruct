@@ -477,7 +477,7 @@ inline void expectCanonicalVectorPopNamedArgsConformance(const std::string &emit
 }
 
 inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &emitMode) {
-  if (emitMode == "exe" || emitMode == "vm") {
+  if (emitMode == "exe" || emitMode == "vm" || emitMode == "native") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorDiscardOwnershipConformanceSource(),
         "vector_discard_canonical_ownership_" + emitMode,

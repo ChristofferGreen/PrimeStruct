@@ -256,14 +256,16 @@ main() {
       writeTemp("compile_native_canonical_soa_vector_get_slash_method.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_native_canonical_soa_vector_get_slash_method_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_canonical_soa_vector_get_slash_method_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") !=
-        std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("native canonical soa_vector to_aos slash-method keeps canonical reject") {
+TEST_CASE("native canonical soa_vector to_aos slash-method lowers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -285,12 +287,13 @@ main() {
       writeTemp("compile_native_canonical_soa_vector_to_aos_slash_method.prime", source);
   const std::string errPath =
       (testScratchPath("") / "primec_native_canonical_soa_vector_to_aos_slash_method_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_canonical_soa_vector_to_aos_slash_method_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
-  CHECK(readFile(errPath).find("/std/collections/experimental_soa_vector/SoaVector__") !=
-        std::string::npos);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs native canonical soa_vector ref helper") {
@@ -3255,7 +3258,7 @@ TEST_CASE("rejects native canonical namespaced map helpers on borrowed experimen
   expectCanonicalMapNamespaceExperimentalReferenceConformance("native");
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map _ref helpers on borrowed experimental map values" * doctest::skip(true)) {
+TEST_CASE("rejects native canonical namespaced map _ref helpers on borrowed experimental map values") {
   expectCanonicalMapNamespaceExperimentalBorrowedRefConformance("native");
 }
 
@@ -3331,7 +3334,7 @@ TEST_CASE("compiles and runs native experimental map bracket access") {
   expectExperimentalMapIndexConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map custom comparable struct keys") {
+TEST_CASE("rejects native experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -3364,12 +3367,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_experimental_map_custom_comparable_key.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_map_custom_comparable_key.exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_experimental_map_custom_comparable_key_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 21);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports numeric/bool map values") !=
+        std::string::npos);
 }
 
 TEST_CASE("covers native shared vector harness contracts") {

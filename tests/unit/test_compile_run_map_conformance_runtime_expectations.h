@@ -2,7 +2,8 @@
 
 inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::string &emitMode) {
   const std::string expectedOutput =
-      emitMode == "exe" ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n" : "4\n\n2\n4\n7\n1\n2\n";
+      (emitMode == "exe" || emitMode == "native") ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n"
+                                                  : "4\n\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalValueConformanceSource(),
                                             "map_namespace_canonical_experimental_value",
                                             emitMode,
@@ -12,7 +13,8 @@ inline void expectCanonicalMapNamespaceExperimentalValueConformance(const std::s
 
 inline void expectCanonicalMapNamespaceExperimentalConstructorConformance(const std::string &emitMode) {
   const std::string expectedOutput =
-      emitMode == "exe" ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n" : "4\n\n2\n4\n7\n1\n2\n";
+      (emitMode == "exe" || emitMode == "native") ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n"
+                                                  : "4\n\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeCanonicalMapNamespaceExperimentalConstructorConformanceSource(),
                                             "map_namespace_canonical_experimental_constructor",
                                             emitMode,
@@ -62,7 +64,8 @@ inline void expectCanonicalMapNamespaceExperimentalParameterConformance(const st
 
 inline void expectWrapperMapConstructorExperimentalBindingConformance(const std::string &emitMode) {
   const std::string expectedOutput =
-      emitMode == "exe" ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n" : "4\n\n2\n4\n7\n1\n2\n";
+      (emitMode == "exe" || emitMode == "native") ? "4\ncontainer missing key\n2\n4\n7\n1\n2\n"
+                                                  : "4\n\n2\n4\n7\n1\n2\n";
   expectMapConformanceProgramRunsWithOutput(makeWrapperMapConstructorExperimentalBindingConformanceSource(),
                                             "map_wrapper_constructor_experimental_binding",
                                             emitMode,
