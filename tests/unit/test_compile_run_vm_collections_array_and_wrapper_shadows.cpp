@@ -121,7 +121,7 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user map count call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user map count call shadow") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
