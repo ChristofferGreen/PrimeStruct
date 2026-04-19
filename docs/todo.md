@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1117
+- TODO-1118
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1117
+- TODO-1118
 
 ### Priority Lanes (Current)
 
-- Native borrowed experimental map helper skip debt: TODO-1117
+- Native borrowed experimental map method skip debt: TODO-1118
 
 ### Execution Queue (Recommended)
 
-1. TODO-1117
+1. TODO-1118
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native borrowed experimental map helper skipped-test debt | TODO-1117 |
+| Native borrowed experimental map method skipped-test debt | TODO-1118 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1117 |
+| Native compile-run skipped-test debt | TODO-1118 |
 
 ### Task Blocks
 
-- [ ] TODO-1117: Audit native borrowed experimental map helper skip debt
+- [ ] TODO-1118: Audit native borrowed experimental map method skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native borrowed experimental-map helper coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native borrowed experimental-map method coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native borrowed experimental-map helper case in stale form.
-    - The native test locks the actual current contract for borrowed experimental-map helpers, whether that is a successful runtime path or a stable diagnostic.
-  - stop_rule: Stop after the native borrowed experimental-map helper surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native borrowed experimental-map method case in stale form.
+    - The native test locks the actual current contract for borrowed experimental-map methods, whether that is a successful runtime path or a stable diagnostic.
+  - stop_rule: Stop after the native borrowed experimental-map method surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

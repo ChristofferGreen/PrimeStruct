@@ -3266,7 +3266,7 @@ TEST_CASE("compiles and runs native experimental map methods") {
   expectExperimentalMapMethodConformance("native");
 }
 
-TEST_CASE("compiles and runs native borrowed experimental map helpers" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native borrowed experimental map helpers") {
   expectExperimentalMapReferenceHelperConformance("native");
 }
 
