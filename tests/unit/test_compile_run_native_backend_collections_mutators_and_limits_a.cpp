@@ -296,7 +296,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector remove_swap call shadow" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native user vector remove_swap call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
