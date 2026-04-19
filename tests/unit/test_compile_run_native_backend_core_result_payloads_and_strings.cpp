@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths" * doctest::skip(true)) {
+TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*

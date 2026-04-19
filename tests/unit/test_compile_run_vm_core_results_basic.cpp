@@ -310,7 +310,7 @@ main() {
   CHECK(readFile(outPath) == "8\n5\n");
 }
 
-TEST_CASE("vm supports direct packed ContainerError and ImageError Result payloads on IR-backed paths" * doctest::skip(true)) {
+TEST_CASE("vm supports direct packed ContainerError and ImageError Result payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
@@ -336,7 +336,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("vm supports packed error struct Result combinator payloads on IR-backed paths" * doctest::skip(true)) {
+TEST_CASE("vm supports packed error struct Result combinator payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*
 import /std/collections/*
