@@ -864,6 +864,101 @@ TEST_CASE("png scanline bitstream and inflate helpers stay source locked to infe
   CHECK(pngInflateExecBody.find("[i32] adlerBHigh{compressed[byteIndex]}") == std::string::npos);
 }
 
+TEST_CASE("png top-level read write workflows stay source locked to inferred locals") {
+  std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
+  if (!std::filesystem::exists(imageStdlibPath)) {
+    imageStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "image" / "image.prime";
+  }
+  REQUIRE(std::filesystem::exists(imageStdlibPath));
+
+  const std::string imageStdlib = readFile(imageStdlibPath.string());
+  const size_t pngReadStart = imageStdlib.find("pngDecodeScanlines");
+  const size_t pngWriteStart = imageStdlib.rfind(
+      "[effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]\n    writeImpl");
+  REQUIRE(pngReadStart != std::string::npos);
+  REQUIRE(pngWriteStart != std::string::npos);
+  REQUIRE(pngWriteStart > pngReadStart);
+
+  const std::string pngReadBody = imageStdlib.substr(pngReadStart, pngWriteStart - pngReadStart);
+  const std::string pngWriteBody = imageStdlib.substr(pngWriteStart);
+
+  CHECK(pngReadBody.find("[mut] offset{0i32}") != std::string::npos);
+  CHECK(pngReadBody.find("rowStatus{pngDecodeRows(rawBytes, offset, width, height, bitDepth, colorType, paletteBytes, pixels)}") !=
+        std::string::npos);
+  CHECK(pngReadBody.find("initStatus{pngInitRgbPixels(width, height, pixels)}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] passPixels{vector<i32>()}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] passIndex{0i32}") != std::string::npos);
+  CHECK(pngReadBody.find("passStartX{pngAdam7PassStartX(passIndex)}") != std::string::npos);
+  CHECK(pngReadBody.find("passStatus{pngDecodeRows(rawBytes, offset, passWidth, passHeight, bitDepth, colorType, paletteBytes, passPixels)}") !=
+        std::string::npos);
+  CHECK(pngReadBody.find("[mut] passRow{0i32}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] passColumn{0i32}") != std::string::npos);
+  CHECK(pngReadBody.find("imageX{passStartX + multiply(passColumn, passStepX)}") != std::string::npos);
+  CHECK(pngReadBody.find("targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}") != std::string::npos);
+  CHECK(pngReadBody.find("file{File<Read>(path)?}") != std::string::npos);
+  CHECK(pngReadBody.find("signatureStatus{pngValidateSignature(file)}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] sawIhdr{0i32}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] idatBytes{vector<i32>()}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] chunkLength{0i32}") != std::string::npos);
+  CHECK(pngReadBody.find("lengthStatus{pngReadU32Be(file, chunkLength)}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] typeA{0i32}") != std::string::npos);
+  CHECK(pngReadBody.find("ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}") !=
+        std::string::npos);
+  CHECK(pngReadBody.find("[mut] ihdrBytes{vector<i32>()}") != std::string::npos);
+  CHECK(pngReadBody.find("[mut] chunkBytes{vector<i32>()}") != std::string::npos);
+  CHECK(pngReadBody.find("inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}") != std::string::npos);
+  CHECK(pngReadBody.find("decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, plteBytes, pixels)}") !=
+        std::string::npos);
+  CHECK(pngReadBody.find("status{readImpl(width, height, pixels, path)}") != std::string::npos);
+
+  CHECK(pngReadBody.find("[i32 mut] offset{0i32}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] rowStatus{pngDecodeRows(rawBytes, offset, width, height, bitDepth, colorType, paletteBytes, pixels)}") ==
+        std::string::npos);
+  CHECK(pngReadBody.find("[i32] initStatus{pngInitRgbPixels(width, height, pixels)}") == std::string::npos);
+  CHECK(pngReadBody.find("[vector<i32> mut] passPixels{vector<i32>()}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32 mut] passIndex{0i32}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] passStartX{pngAdam7PassStartX(passIndex)}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] passStatus{pngDecodeRows(rawBytes, offset, passWidth, passHeight, bitDepth, colorType, paletteBytes, passPixels)}") ==
+        std::string::npos);
+  CHECK(pngReadBody.find("[i32 mut] passRow{0i32}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32 mut] passColumn{0i32}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] imageX{passStartX + multiply(passColumn, passStepX)}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}") == std::string::npos);
+  CHECK(pngReadBody.find("[File<Read>] file{File<Read>(path)?}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] signatureStatus{pngValidateSignature(file)}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32 mut] sawIhdr{0i32}") == std::string::npos);
+  CHECK(pngReadBody.find("[vector<i32> mut] idatBytes{vector<i32>()}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32 mut] chunkLength{0i32}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] lengthStatus{pngReadU32Be(file, chunkLength)}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32 mut] typeA{0i32}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}") ==
+        std::string::npos);
+  CHECK(pngReadBody.find("[vector<i32> mut] ihdrBytes{vector<i32>()}") == std::string::npos);
+  CHECK(pngReadBody.find("[vector<i32> mut] chunkBytes{vector<i32>()}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}") == std::string::npos);
+  CHECK(pngReadBody.find("[i32] decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, plteBytes, pixels)}") ==
+        std::string::npos);
+  CHECK(pngReadBody.find("[i32] status{readImpl(width, height, pixels, path)}") == std::string::npos);
+
+  CHECK(pngWriteBody.find("[mut] rawByteCount{0i32}") != std::string::npos);
+  CHECK(pngWriteBody.find("[mut] payloadLength{0i32}") != std::string::npos);
+  CHECK(pngWriteBody.find("file{File<Write>(path)?}") != std::string::npos);
+  CHECK(pngWriteBody.find("signatureStatus{pngWriteSignature(file)}") != std::string::npos);
+  CHECK(pngWriteBody.find("ihdrStatus{pngWriteIhdrChunk(file, width, height)}") != std::string::npos);
+  CHECK(pngWriteBody.find("idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}") !=
+        std::string::npos);
+  CHECK(pngWriteBody.find("status{writeImpl(path, width, height, pixels)}") != std::string::npos);
+
+  CHECK(pngWriteBody.find("[i32 mut] rawByteCount{0i32}") == std::string::npos);
+  CHECK(pngWriteBody.find("[i32 mut] payloadLength{0i32}") == std::string::npos);
+  CHECK(pngWriteBody.find("[File<Write>] file{File<Write>(path)?}") == std::string::npos);
+  CHECK(pngWriteBody.find("[i32] signatureStatus{pngWriteSignature(file)}") == std::string::npos);
+  CHECK(pngWriteBody.find("[i32] ihdrStatus{pngWriteIhdrChunk(file, width, height)}") == std::string::npos);
+  CHECK(pngWriteBody.find("[i32] idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}") ==
+        std::string::npos);
+  CHECK(pngWriteBody.find("[i32] status{writeImpl(path, width, height, pixels)}") == std::string::npos);
+}
+
 TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   if (!std::filesystem::exists(gfxStdlibPath)) {

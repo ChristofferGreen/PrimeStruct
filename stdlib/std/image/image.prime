@@ -2466,10 +2466,10 @@ namespace std {
        },
        else() { })
 
-    [i32 mut] offset{0i32}
+    [mut] offset{0i32}
     if(equal(interlace, 0i32),
        then() {
-         [i32] rowStatus{pngDecodeRows(rawBytes, offset, width, height, bitDepth, colorType, paletteBytes, pixels)}
+         rowStatus{pngDecodeRows(rawBytes, offset, width, height, bitDepth, colorType, paletteBytes, pixels)}
          if(not_equal(rowStatus, 0i32),
             then() {
               /std/collections/vector/clear(pixels)
@@ -2481,39 +2481,39 @@ namespace std {
 	         if(not_equal(interlace, 1i32),
 	            then() { return(2i32) },
 	            else() { })
-	         [i32] initStatus{pngInitRgbPixels(width, height, pixels)}
+	         initStatus{pngInitRgbPixels(width, height, pixels)}
 	         if(not_equal(initStatus, 0i32),
 	            then() {
 	              /std/collections/vector/clear(pixels)
 	              return(1i32)
 	            },
 	            else() { })
-	         [vector<i32> mut] passPixels{vector<i32>()}
-         [i32 mut] passIndex{0i32}
+	         [mut] passPixels{vector<i32>()}
+         [mut] passIndex{0i32}
          while(less_than(passIndex, 7i32), do() {
-           [i32] passStartX{pngAdam7PassStartX(passIndex)}
-           [i32] passStartY{pngAdam7PassStartY(passIndex)}
-           [i32] passStepX{pngAdam7PassStepX(passIndex)}
-           [i32] passStepY{pngAdam7PassStepY(passIndex)}
-           [i32] passWidth{pngAdam7PassSpan(width, passStartX, passStepX)}
-           [i32] passHeight{pngAdam7PassSpan(height, passStartY, passStepY)}
+           passStartX{pngAdam7PassStartX(passIndex)}
+           passStartY{pngAdam7PassStartY(passIndex)}
+           passStepX{pngAdam7PassStepX(passIndex)}
+           passStepY{pngAdam7PassStepY(passIndex)}
+           passWidth{pngAdam7PassSpan(width, passStartX, passStepX)}
+           passHeight{pngAdam7PassSpan(height, passStartY, passStepY)}
            if(and(greater_than(passWidth, 0i32), greater_than(passHeight, 0i32)),
               then() {
-                [i32] passStatus{pngDecodeRows(rawBytes, offset, passWidth, passHeight, bitDepth, colorType, paletteBytes, passPixels)}
+                passStatus{pngDecodeRows(rawBytes, offset, passWidth, passHeight, bitDepth, colorType, paletteBytes, passPixels)}
                 if(not_equal(passStatus, 0i32),
                    then() {
                      /std/collections/vector/clear(pixels)
                      return(passStatus)
                    },
                    else() { })
-                [i32 mut] passRow{0i32}
+                [mut] passRow{0i32}
                 while(less_than(passRow, passHeight), do() {
-                  [i32 mut] passColumn{0i32}
+                  [mut] passColumn{0i32}
                   while(less_than(passColumn, passWidth), do() {
-                    [i32] imageX{passStartX + multiply(passColumn, passStepX)}
-                    [i32] imageY{passStartY + multiply(passRow, passStepY)}
-                    [i32] sourceOffset{multiply(multiply(passRow, passWidth) + passColumn, 3i32)}
-                    [i32] targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}
+                    imageX{passStartX + multiply(passColumn, passStepX)}
+                    imageY{passStartY + multiply(passRow, passStepY)}
+                    sourceOffset{multiply(multiply(passRow, passWidth) + passColumn, 3i32)}
+                    targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}
                     pixels[targetOffset] = passPixels[sourceOffset]
                     pixels[targetOffset + 1i32] = passPixels[sourceOffset + 1i32]
                     pixels[targetOffset + 2i32] = passPixels[sourceOffset + 2i32]
@@ -2675,36 +2675,36 @@ namespace std {
   namespace png {
     [effects(file_read, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
     readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
-      [File<Read>] file{File<Read>(path)?}
-      [i32] signatureStatus{pngValidateSignature(file)}
+      file{File<Read>(path)?}
+      signatureStatus{pngValidateSignature(file)}
       if(not_equal(signatureStatus, 0i32),
          then() { return(1i32) },
          else() { })
 
-      [i32 mut] sawIhdr{0i32}
-      [i32 mut] sawIdat{0i32}
-      [i32 mut] sawPlte{0i32}
-      [i32 mut] sawPostIdatChunk{0i32}
-      [i32 mut] parsedWidth{0i32}
-      [i32 mut] parsedHeight{0i32}
-      [i32 mut] bitDepth{0i32}
-      [i32 mut] colorType{0i32}
-      [i32 mut] interlace{0i32}
-      [vector<i32> mut] idatBytes{vector<i32>()}
-      [vector<i32> mut] plteBytes{vector<i32>()}
-      [vector<i32> mut] rawBytes{vector<i32>()}
+      [mut] sawIhdr{0i32}
+      [mut] sawIdat{0i32}
+      [mut] sawPlte{0i32}
+      [mut] sawPostIdatChunk{0i32}
+      [mut] parsedWidth{0i32}
+      [mut] parsedHeight{0i32}
+      [mut] bitDepth{0i32}
+      [mut] colorType{0i32}
+      [mut] interlace{0i32}
+      [mut] idatBytes{vector<i32>()}
+      [mut] plteBytes{vector<i32>()}
+      [mut] rawBytes{vector<i32>()}
       while(true, do() {
-        [i32 mut] chunkLength{0i32}
-        [i32] lengthStatus{pngReadU32Be(file, chunkLength)}
+        [mut] chunkLength{0i32}
+        lengthStatus{pngReadU32Be(file, chunkLength)}
         if(or(not_equal(lengthStatus, 0i32), less_than(chunkLength, 0i32)),
            then() { return(1i32) },
            else() { })
 
-        [i32 mut] typeA{0i32}
-        [i32 mut] typeB{0i32}
-        [i32 mut] typeC{0i32}
-        [i32 mut] typeD{0i32}
-        [i32] typeStatus{pngReadChunkType(file, typeA, typeB, typeC, typeD)}
+        [mut] typeA{0i32}
+        [mut] typeB{0i32}
+        [mut] typeC{0i32}
+        [mut] typeD{0i32}
+        typeStatus{pngReadChunkType(file, typeA, typeB, typeC, typeD)}
         if(not_equal(typeStatus, 0i32),
            then() { return(1i32) },
            else() { })
@@ -2715,19 +2715,19 @@ namespace std {
                 then() { return(1i32) },
                 else() { })
              sawIhdr = 1i32
-             [i32] ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}
+             ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}
              if(not_equal(ihdrStatus, 0i32),
                 then() { return(1i32) },
                 else() { })
-             [i32 mut] ihdrCrcA{0i32}
-             [i32 mut] ihdrCrcB{0i32}
-             [i32 mut] ihdrCrcC{0i32}
-             [i32 mut] ihdrCrcD{0i32}
-             [i32] ihdrCrcStatus{pngReadChunkType(file, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)}
+             [mut] ihdrCrcA{0i32}
+             [mut] ihdrCrcB{0i32}
+             [mut] ihdrCrcC{0i32}
+             [mut] ihdrCrcD{0i32}
+             ihdrCrcStatus{pngReadChunkType(file, ihdrCrcA, ihdrCrcB, ihdrCrcC, ihdrCrcD)}
              if(not_equal(ihdrCrcStatus, 0i32),
                 then() { return(1i32) },
                 else() { })
-             [vector<i32> mut] ihdrBytes{vector<i32>()}
+             [mut] ihdrBytes{vector<i32>()}
              pngAppendU32Be(parsedWidth, ihdrBytes)
              pngAppendU32Be(parsedHeight, ihdrBytes)
              /std/collections/vector/push(ihdrBytes, bitDepth)
@@ -2760,16 +2760,16 @@ namespace std {
                             not(pngChunkIsAncillary(typeA))))),
                 then() { return(1i32) },
                 else() { })
-             [vector<i32> mut] chunkBytes{vector<i32>()}
-             [i32] payloadStatus{pngAppendBytes(file, chunkLength, chunkBytes)}
+             [mut] chunkBytes{vector<i32>()}
+             payloadStatus{pngAppendBytes(file, chunkLength, chunkBytes)}
              if(not_equal(payloadStatus, 0i32),
                 then() { return(1i32) },
                 else() { })
-             [i32 mut] crcA{0i32}
-             [i32 mut] crcB{0i32}
-             [i32 mut] crcC{0i32}
-             [i32 mut] crcD{0i32}
-             [i32] crcStatus{pngReadChunkType(file, crcA, crcB, crcC, crcD)}
+             [mut] crcA{0i32}
+             [mut] crcB{0i32}
+             [mut] crcC{0i32}
+             [mut] crcD{0i32}
+             crcStatus{pngReadChunkType(file, crcA, crcB, crcC, crcD)}
              if(not_equal(crcStatus, 0i32),
                 then() { return(1i32) },
                 else() { })
@@ -2801,7 +2801,7 @@ namespace std {
                   if(or(not_equal(chunkLength, 0i32), equal(sawIdat, 0i32)),
                      then() { return(1i32) },
                      else() {
-                       [i32] inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}
+                       inflateStatus{pngInflateDeflateBlocks(idatBytes, rawBytes)}
                        if(equal(inflateStatus, 1i32),
                           then() { return(1i32) },
                           else() { })
@@ -2813,7 +2813,7 @@ namespace std {
                           then() { return(1i32) },
                           else() { })
 
-                       [i32] decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, plteBytes, pixels)}
+                       decodeStatus{pngDecodeScanlines(rawBytes, parsedWidth, parsedHeight, bitDepth, colorType, interlace, plteBytes, pixels)}
                        if(equal(decodeStatus, 1i32),
                           then() {
                             resetReadOutputs(width, height, pixels)
@@ -2841,7 +2841,7 @@ namespace std {
     [public return<Result<ImageError>> effects(file_read, heap_alloc)]
     read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       resetReadOutputs(width, height, pixels)
-      [i32] status{readImpl(width, height, pixels, path)}
+      status{readImpl(width, height, pixels, path)}
       if(equal(status, 1i32),
          then() {
            resetReadOutputs(width, height, pixels)
@@ -2862,22 +2862,22 @@ namespace std {
       if(not(ppmWriteInputValid(width, height, pixels)),
          then() { return(1i32) },
          else() { })
-      [i32 mut] rawByteCount{0i32}
-      [i32 mut] payloadLength{0i32}
+      [mut] rawByteCount{0i32}
+      [mut] payloadLength{0i32}
       if(not(pngWriteSizingValid(width, height, rawByteCount, payloadLength)),
          then() { return(1i32) },
          else() { })
 
-      [File<Write>] file{File<Write>(path)?}
-      [i32] signatureStatus{pngWriteSignature(file)}
+      file{File<Write>(path)?}
+      signatureStatus{pngWriteSignature(file)}
       if(not_equal(signatureStatus, 0i32),
          then() { return(signatureStatus) },
          else() { })
-      [i32] ihdrStatus{pngWriteIhdrChunk(file, width, height)}
+      ihdrStatus{pngWriteIhdrChunk(file, width, height)}
       if(not_equal(ihdrStatus, 0i32),
          then() { return(ihdrStatus) },
          else() { })
-      [i32] idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}
+      idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}
       if(not_equal(idatStatus, 0i32),
          then() { return(idatStatus) },
          else() { })
@@ -2886,7 +2886,7 @@ namespace std {
 
     [public return<Result<ImageError>> effects(file_write)]
     write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
-      [i32] status{writeImpl(path, width, height, pixels)}
+      status{writeImpl(path, width, height, pixels)}
       if(not_equal(status, 0i32),
          then() { return(invalidOperation()) },
          else() { })
