@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1037: Reactivate VM `Up`-filter PNG read lock. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on a stored/no-compression RGBA input with filter-`2` (`Up`) is live again and now locks the documented PNG decoder subset plus the flattened RGB output contract for that filter path.
 - ✓ TODO-1036: Reactivate VM `Sub`-filter PNG read lock. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on a stored/no-compression RGBA input with filter-`1` (`Sub`) is live again and now locks the documented PNG decoder subset plus the flattened RGB output contract for that filter path.
 - ✓ TODO-1035: Reactivate VM stored-RGBA PNG read lock. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on a stored/no-compression RGBA input is live again and now locks the documented PNG read subset plus the flattened RGB output contract for a one-pixel image.
 - ✓ TODO-1034: Reactivate VM PNG write output lock. Completed: the skipped VM compile-run case for `/std/image/png/write(...)` is live again and now locks the documented deterministic non-interlaced RGB PNG output contract for a simple payload.
