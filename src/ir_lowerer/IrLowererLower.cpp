@@ -125,29 +125,12 @@ bool IrLowerer::lower(const Program &program,
   bool entryHasResultInfo = entryReturnConfig.hasResultInfo;
 
   const auto &runtimeErrorAndStringLiteralSetup = setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup;
-  const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
-  auto internString = stringLiteralHelpers.internString;
-  const auto &runtimeErrorEmitters = runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters;
-  auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
-  auto emitPointerIndexOutOfBounds = runtimeErrorEmitters.emitPointerIndexOutOfBounds;
-  auto emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
-  auto emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
-  auto emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
-  auto emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
-  auto emitVectorReserveNegative = runtimeErrorEmitters.emitVectorReserveNegative;
-  auto emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
-  auto emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
-  auto emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
-  auto emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
+  (void)runtimeErrorAndStringLiteralSetup;
 
   const auto &entryCountAccessSetup = setupLocalsOrchestration.entryCountAccessSetup;
-  const bool hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
-  const std::string &entryArgsName = entryCountAccessSetup.entryArgsName;
   const auto &countAccessClassifiers = entryCountAccessSetup.classifiers;
-  auto isEntryArgsName = countAccessClassifiers.isEntryArgsName;
   auto isArrayCountCall = countAccessClassifiers.isArrayCountCall;
   auto isVectorCapacityCall = countAccessClassifiers.isVectorCapacityCall;
-  auto resolveStringTableTarget = stringLiteralHelpers.resolveStringTableTarget;
   auto isStringCountCall = countAccessClassifiers.isStringCountCall;
 
   const auto &entryCallOnErrorSetup = setupLocalsOrchestration.entryCallOnErrorSetup;
@@ -160,7 +143,7 @@ bool IrLowerer::lower(const Program &program,
   OnErrorByDefinition onErrorByDef = entryCallOnErrorSetup.onErrorByDefinition;
 
   const auto &setupMathResolvers = setupLocalsOrchestration.setupMathResolvers;
-  auto getMathConstantName = setupMathResolvers.getMathConstantName;
+  (void)setupMathResolvers;
 
   const auto &bindingTypeAdapters = setupLocalsOrchestration.bindingTypeAdapters;
   auto isBindingMutable = bindingTypeAdapters.isBindingMutable;
@@ -177,23 +160,16 @@ bool IrLowerer::lower(const Program &program,
   auto bindingValueKind = bindingTypeAdapters.bindingValueKind;
 
   const auto &setupTypeAndStructTypeAdapters = setupLocalsOrchestration.setupTypeAndStructTypeAdapters;
-  auto valueKindFromTypeName = setupTypeAndStructTypeAdapters.valueKindFromTypeName;
-  const auto &structTypeResolutionAdapters = setupTypeAndStructTypeAdapters.structTypeResolutionAdapters;
-  auto resolveStructTypeName = structTypeResolutionAdapters.resolveStructTypeName;
+  (void)setupTypeAndStructTypeAdapters;
 
-  using StructSlotFieldInfo = ir_lowerer::StructSlotFieldInfo;
   const auto &structArrayInfoAdapters = setupLocalsOrchestration.structArrayInfoAdapters;
   auto applyStructArrayInfo = structArrayInfoAdapters.applyStructArrayInfo;
 
-  using StructSlotLayout = ir_lowerer::StructSlotLayoutInfo;
   const auto &structSlotResolutionAdapters = setupLocalsOrchestration.structSlotResolutionAdapters;
   auto resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
-  auto resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 
   const auto &uninitializedResolutionAdapters = setupLocalsOrchestration.uninitializedResolutionAdapters;
-  auto resolveUninitializedTypeInfo = uninitializedResolutionAdapters.resolveUninitializedTypeInfo;
-  auto resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
-  auto inferStructExprPath = uninitializedResolutionAdapters.inferStructExprPath;
+  (void)uninitializedResolutionAdapters;
 
   auto applyStructValueInfo = setupLocalsOrchestration.applyStructValueInfo;
 
@@ -210,31 +186,19 @@ bool IrLowerer::lower(const Program &program,
 
   auto &getReturnInfo = setupStage.inferenceSetupBootstrap.getReturnInfo;
   auto &inferExprKind = setupStage.inferenceSetupBootstrap.inferExprKind;
-  auto &inferArrayElementKind = setupStage.inferenceSetupBootstrap.inferArrayElementKind;
   auto &resolveMethodCallDefinition = setupStage.inferenceSetupBootstrap.resolveMethodCallDefinition;
 
-  auto &activeInlineContext = returnEmitStage.activeInlineContext;
-  auto &inlineStack = returnEmitStage.inlineStack;
-  auto &appendInstructionSourceRange = returnEmitStage.appendInstructionSourceRange;
   auto &emitExpr = returnEmitStage.emitExpr;
   auto &emitStatement = returnEmitStage.emitStatement;
   auto &allocTempLocal = returnEmitStage.allocTempLocal;
-  auto &emitStructCopyFromPtrs = returnEmitStage.emitStructCopyFromPtrs;
-  auto &emitStructCopySlots = returnEmitStage.emitStructCopySlots;
+  auto &activeInlineContext = returnEmitStage.activeInlineContext;
+  auto &inlineStack = returnEmitStage.inlineStack;
+  auto &appendInstructionSourceRange = returnEmitStage.appendInstructionSourceRange;
   auto &emitFileScopeCleanup = returnEmitStage.emitFileScopeCleanup;
-  auto &emitFileScopeCleanupAll = returnEmitStage.emitFileScopeCleanupAll;
   auto &pushFileScope = returnEmitStage.pushFileScope;
   auto &popFileScope = returnEmitStage.popFileScope;
-  auto &emitBlock = returnEmitStage.emitBlock;
-  auto &emitCompareToZero = returnEmitStage.emitCompareToZero;
   auto &resolveDefinitionCall = returnEmitStage.resolveDefinitionCall;
-  auto &resolveResultExprInfo = returnEmitStage.resolveResultExprInfo;
   auto &emitInlineDefinitionCall = returnEmitStage.emitInlineDefinitionCall;
-
-#include "IrLowererLowerOperators.h"
-#include "IrLowererLowerStatementsExpr.h"
-#include "IrLowererLowerStatementsBindings.h"
-#include "IrLowererLowerStatementsLoops.h"
 
   if (!ir_lowerer::runLowerStatementsCallsStage(
           {

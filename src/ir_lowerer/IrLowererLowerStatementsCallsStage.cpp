@@ -32,31 +32,6 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
     return false;
   }
 
-  auto emitStatementCall = [&](const Expr &stmt, const LocalMap &localsIn) -> bool {
-    return runLowerStatementsCallsStep(
-        {
-            .inferExprKind = input.inferExprKind,
-            .emitExpr = input.emitExpr,
-            .allocTempLocal = input.allocTempLocal,
-            .resolveExprPath = input.resolveExprPath,
-            .findDefinitionByPath = [&](const std::string &path) -> const Definition * {
-              auto it = input.defMap->find(path);
-              return it == input.defMap->end() ? nullptr : it->second;
-            },
-            .isArrayCountCall = input.isArrayCountCall,
-            .isStringCountCall = input.isStringCountCall,
-            .isVectorCapacityCall = input.isVectorCapacityCall,
-            .resolveMethodCallDefinition = input.resolveMethodCallDefinition,
-            .resolveDefinitionCall = input.resolveDefinitionCall,
-            .getReturnInfo = input.getReturnInfo,
-            .emitInlineDefinitionCall = input.emitInlineDefinitionCall,
-            .instructions = &input.function->instructions,
-        },
-        stmt,
-        localsIn,
-        errorOut);
-  };
-
   auto emitEntryStatement = [&](const Expr &stmt) -> bool {
     return runLowerStatementsEntryStatementStep(
         {

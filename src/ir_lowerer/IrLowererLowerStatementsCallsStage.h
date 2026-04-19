@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "IrLowererOnErrorHelpers.h"
 #include "IrLowererLowerStatementsSourceMapStep.h"
 #include "IrLowererStatementCallHelpers.h"
 

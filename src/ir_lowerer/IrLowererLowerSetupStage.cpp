@@ -1,6 +1,7 @@
 #include "IrLowererLowerSetupStage.h"
 
 #include "IrLowererHelpers.h"
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererLowerEntrySetup.h"
 #include "IrLowererLowerImportsStructsSetup.h"
 #include "IrLowererLowerLocalsSetup.h"

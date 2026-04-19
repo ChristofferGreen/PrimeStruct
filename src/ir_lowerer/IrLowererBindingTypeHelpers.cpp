@@ -380,6 +380,9 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram) {
   BindingTypeAdapters adapters;
   const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  adapters.isBindingMutable = [](const Expr &expr) {
+    return ir_lowerer::isBindingMutable(expr);
+  };
   adapters.bindingKind = [semanticProgram, semanticIndex](const Expr &expr) {
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);

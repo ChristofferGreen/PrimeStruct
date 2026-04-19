@@ -1,6 +1,10 @@
 #include "IrLowererLowerReturnEmitStage.h"
 
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererFileWriteHelpers.h"
+#include "IrLowererFlowHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
 #include "IrLowererInlineCallContextHelpers.h"
 #include "IrLowererInlineParamHelpers.h"
@@ -12,7 +16,25 @@
 #include "IrLowererLowerInlineCallReturnValueStep.h"
 #include "IrLowererLowerInlineCallStatementStep.h"
 #include "IrLowererOnErrorHelpers.h"
+#include "IrLowererOperatorArithmeticHelpers.h"
+#include "IrLowererOperatorArcHyperbolicHelpers.h"
+#include "IrLowererOperatorClampMinMaxTrigHelpers.h"
+#include "IrLowererOperatorComparisonHelpers.h"
+#include "IrLowererOperatorConversionsAndCallsHelpers.h"
+#include "IrLowererOperatorPowAbsSignHelpers.h"
+#include "IrLowererOperatorSaturateRoundingRootsHelpers.h"
+#include "IrLowererReturnInferenceHelpers.h"
+#include "IrLowererSetupMathHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
+#include "IrLowererStatementBindingHelpers.h"
+#include "IrLowererStatementCallHelpers.h"
+#include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererStructLayoutHelpers.h"
+#include "IrLowererStructReturnPathHelpers.h"
+#include "IrLowererStructTypeHelpers.h"
+#include "IrLowererStringLiteralHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
+#include "IrLowererUninitializedTypeHelpers.h"
 
 #include <cstring>
 #include <limits>
@@ -33,7 +55,9 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   LowerSetupStageState &setupStage = *input.setupStage;
   auto &defMap = setupStage.defMap;
   auto &structNames = setupStage.structNames;
+  auto &structFieldInfoByName = setupStage.structFieldInfoByName;
   IrFunction &function = setupStage.function;
+  bool &sawReturn = setupStage.sawReturn;
   int32_t &nextLocal = setupStage.nextLocal;
   int32_t &onErrorTempCounter = setupStage.onErrorTempCounter;
   auto &loweredCallTargets = setupStage.loweredCallTargets;
@@ -58,8 +82,12 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
   auto &emitVectorReserveNegative = runtimeErrorEmitters.emitVectorReserveNegative;
   auto &emitVectorReserveExceeded = runtimeErrorEmitters.emitVectorReserveExceeded;
+  auto &emitLoopCountNegative = runtimeErrorEmitters.emitLoopCountNegative;
   auto &emitPowNegativeExponent = runtimeErrorEmitters.emitPowNegativeExponent;
   auto &emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
+
+  const auto &entryReturnConfig = setupLocalsOrchestration.entryReturnConfig;
+  bool returnsVoid = entryReturnConfig.returnsVoid;
 
   const auto &entryCountAccessSetup = setupLocalsOrchestration.entryCountAccessSetup;
   const bool &hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
@@ -108,12 +136,16 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 
   const auto &uninitializedResolutionAdapters = setupLocalsOrchestration.uninitializedResolutionAdapters;
+  auto &resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
   auto &inferStructExprPath = uninitializedResolutionAdapters.inferStructExprPath;
 
   auto &applyStructValueInfo = setupLocalsOrchestration.applyStructValueInfo;
+  const bool hasMathImport = setupStage.hasMathImport;
+  auto &combineNumericKinds = setupTypeAndStructTypeAdapters.combineNumericKinds;
 
   auto &getReturnInfo = setupStage.inferenceSetupBootstrap.getReturnInfo;
   auto &inferExprKind = setupStage.inferenceSetupBootstrap.inferExprKind;
+  auto &inferArrayElementKind = setupStage.inferenceSetupBootstrap.inferArrayElementKind;
   auto &resolveMethodCallDefinition = setupStage.inferenceSetupBootstrap.resolveMethodCallDefinition;
 
   auto &appendInstructionSourceRange = stateOut.appendInstructionSourceRange;
@@ -167,6 +199,10 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 #include "IrLowererLowerReturnInfo.h"
 #include "IrLowererLowerInlineCalls.h"
 #include "IrLowererLowerEmitExpr.h"
+#include "IrLowererLowerOperators.h"
+#include "IrLowererLowerStatementsExpr.h"
+#include "IrLowererLowerStatementsBindings.h"
+#include "IrLowererLowerStatementsLoops.h"
 
   return true;
 }

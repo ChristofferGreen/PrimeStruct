@@ -380,11 +380,9 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string lowererSource = readText(lowererPath);
 
   const std::vector<std::string> stageIncludes = {
+      "#include \"IrLowererLowerSetupStage.h\"",
       "#include \"IrLowererLowerReturnEmitStage.h\"",
-      "#include \"IrLowererLowerOperators.h\"",
-      "#include \"IrLowererLowerStatementsExpr.h\"",
-      "#include \"IrLowererLowerStatementsBindings.h\"",
-      "#include \"IrLowererLowerStatementsLoops.h\"",
+      "#include \"IrLowererLowerStatementsCallsStage.h\"",
   };
 
   size_t cursor = 0;
@@ -400,6 +398,10 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(lowererSource.find("#include \"IrLowererLowerSetupStage.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerReturnEmitStage.h\"") != std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerStatementsCallsStage.h\"") != std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerOperators.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsExpr.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsBindings.h\"") == std::string::npos);
+  CHECK(lowererSource.find("#include \"IrLowererLowerStatementsLoops.h\"") == std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerReturnAndCalls.h\"") == std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerSetupEntryEffects.h\"") == std::string::npos);
   CHECK(lowererSource.find("#include \"IrLowererLowerSetupImportsStructs.h\"") == std::string::npos);
@@ -448,6 +450,10 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(returnEmitStageSource.find("#include \"IrLowererLowerReturnInfo.h\"") != std::string::npos);
   CHECK(returnEmitStageSource.find("#include \"IrLowererLowerInlineCalls.h\"") != std::string::npos);
   CHECK(returnEmitStageSource.find("#include \"IrLowererLowerEmitExpr.h\"") != std::string::npos);
+  CHECK(returnEmitStageSource.find("#include \"IrLowererLowerOperators.h\"") != std::string::npos);
+  CHECK(returnEmitStageSource.find("#include \"IrLowererLowerStatementsExpr.h\"") != std::string::npos);
+  CHECK(returnEmitStageSource.find("#include \"IrLowererLowerStatementsBindings.h\"") != std::string::npos);
+  CHECK(returnEmitStageSource.find("#include \"IrLowererLowerStatementsLoops.h\"") != std::string::npos);
   CHECK(returnEmitStageSource.find("#include \"IrLowererLowerInlineCallActiveContextStep.h\"") !=
         std::string::npos);
   CHECK(returnEmitStageSource.find("#include \"IrLowererLowerInlineCallCleanupStep.h\"") !=

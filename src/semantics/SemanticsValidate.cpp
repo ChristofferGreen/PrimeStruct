@@ -96,28 +96,6 @@ uint64_t hashSemanticNodePath(const std::string &path) {
   return hash == 0 ? 1 : hash;
 }
 
-uint64_t makeSemanticProvenanceHandle(uint64_t semanticNodeId) {
-  if (semanticNodeId == 0) {
-    return 0;
-  }
-
-  constexpr uint64_t FnvOffsetBasis = 14695981039346656037ull;
-  constexpr uint64_t FnvPrime = 1099511628211ull;
-  constexpr std::string_view Domain = "semantic_provenance";
-
-  uint64_t hash = FnvOffsetBasis;
-  for (unsigned char ch : Domain) {
-    hash ^= static_cast<uint64_t>(ch);
-    hash *= FnvPrime;
-  }
-  for (size_t i = 0; i < sizeof(semanticNodeId); ++i) {
-    const auto byte = static_cast<unsigned char>((semanticNodeId >> (i * 8u)) & 0xffu);
-    hash ^= static_cast<uint64_t>(byte);
-    hash *= FnvPrime;
-  }
-  return hash == 0 ? 1 : hash;
-}
-
 std::string makeIndexedSemanticNodePath(const std::string &base, const char *segment, size_t index) {
   return base + "/" + segment + "[" + std::to_string(index) + "]";
 }
