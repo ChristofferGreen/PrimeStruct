@@ -124,7 +124,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("runs vm with user vector clear call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user vector clear call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
