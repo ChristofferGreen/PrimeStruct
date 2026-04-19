@@ -240,6 +240,10 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     if (helperName != "write" && helperName != "write_line" && helperName != "close") {
       return builtinPath;
     }
+    if ((helperName == "write" || helperName == "write_line") &&
+        expr.args.size() > 10) {
+      return builtinPath;
+    }
     if (receiver.kind == Expr::Kind::Name && receiver.name == "self") {
       return builtinPath;
     }

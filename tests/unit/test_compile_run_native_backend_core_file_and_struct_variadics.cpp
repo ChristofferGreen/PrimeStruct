@@ -267,7 +267,7 @@ TEST_CASE("native uses stdlib File string helper wrappers") {
   CHECK(readFile(outPath) == "alphaomega\n");
 }
 
-TEST_CASE("native uses stdlib File nine-value helper wrappers") {
+TEST_CASE("native uses stdlib File helper wrappers and broader fallback arities") {
   const std::string outPath =
       (testScratchPath("") / "primec_native_stdlib_file_multi_helpers.txt").string();
   auto escape = [](const std::string &text) {
@@ -287,10 +287,10 @@ TEST_CASE("native uses stdlib File nine-value helper wrappers") {
       "[return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]\n"
       "main() {\n"
       "  [File<Write>] file{ File<Write>(\"" + escapedPath + "\"utf8)? }\n"
-      "  /File/write<Write, string, i32, string, i32, string, i32, string, i32, string>(file, \"prefix\"utf8, 1i32, \"-\"utf8, 2i32, \"-\"utf8, 3i32, \"=\"utf8, 4i32, \".\"utf8)?\n"
-      "  /File/write_line<Write, string, i32, string, i32, string, i32, string, i32, string>(file, \"alpha\"utf8, 7i32, \"omega\"utf8, 8i32, \"delta\"utf8, 9i32, \"!\"utf8, 10i32, \"?\"utf8)?\n"
-      "  file.write(\"left\"utf8, 1i32, \"mid\"utf8, 2i32, \"right\"utf8, 3i32, \".\"utf8, 4i32, \"!\"utf8)?\n"
-      "  file.write_line(4i32, \" \"utf8, 5i32, \" \"utf8, 6i32, \"?\"utf8, 7i32, \"!\"utf8, 8i32)?\n"
+      "  /File/write<Write, string, i32, string, i32, string, i32, string, i32, string, i32>(file, \"prefix\"utf8, 1i32, \"-\"utf8, 2i32, \"-\"utf8, 3i32, \"=\"utf8, 4i32, \".\"utf8, 5i32)?\n"
+      "  /File/write_line<Write, string, i32, string, i32, string, i32, string, i32, string, i32>(file, \"alpha\"utf8, 7i32, \"omega\"utf8, 8i32, \"delta\"utf8, 9i32, \"!\"utf8, 10i32, \"?\"utf8, 11i32)?\n"
+      "  file.write(\"left\"utf8, 1i32, \"mid\"utf8, 2i32, \"right\"utf8, 3i32, \".\"utf8, 4i32, \"!\"utf8, 5i32)?\n"
+      "  file.write_line(4i32, \" \"utf8, 5i32, \" \"utf8, 6i32, \"?\"utf8, 7i32, \"!\"utf8, 8i32, \"#\"utf8)?\n"
       "  file.close()?\n"
       "  return(Result.ok())\n"
       "}\n"
@@ -298,14 +298,14 @@ TEST_CASE("native uses stdlib File nine-value helper wrappers") {
       "log_file_error([FileError] err) {\n"
       "  print_line_error(FileError.why(err))\n"
       "}\n";
-  const std::string srcPath = writeTemp("native_stdlib_file_nine_value_helpers.prime", source);
+  const std::string srcPath = writeTemp("native_stdlib_file_broad_helpers.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_stdlib_file_multi_helpers_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 0);
-  CHECK(readFile(outPath) == "prefix1-2-3=4.alpha7omega8delta9!10?\nleft1mid2right3.4!4 5 6?7!8\n");
+  CHECK(readFile(outPath) == "prefix1-2-3=4.5alpha7omega8delta9!10?11\nleft1mid2right3.4!54 5 6?7!8#\n");
 }
 
 TEST_CASE("native resolves templated helper overload families by exact arity") {

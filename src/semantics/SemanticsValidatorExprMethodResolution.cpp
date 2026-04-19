@@ -50,33 +50,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
            returnsMapCollectionType(inferredTypeText);
   };
-  auto isFileBinding = [&](const BindingInfo &binding) {
-    const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
-    if (normalizedType == "File") {
-      return true;
-    }
-    if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
-        !binding.typeTemplateArg.empty()) {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(binding.typeTemplateArg, base, argText)) {
-        return false;
-      }
-      return normalizeBindingTypeName(base) == "File";
-    }
-    return false;
-  };
-  auto isFileReceiverExpr = [&](const Expr &target) {
-    if (target.kind != Expr::Kind::Name) {
-      return false;
-    }
-    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-      return isFileBinding(*paramBinding);
-    }
-    auto it = locals.find(target.name);
-    return it != locals.end() && isFileBinding(it->second);
-  };
-
   const bool isVectorCompatibilityMethod =
       isVectorCompatibilityHelperName(expr.name);
   if (expr.namespacePrefix.empty() &&
@@ -142,12 +115,6 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   }
   if (expr.args.empty()) {
     return failMethodResolutionDiagnostic("method call missing receiver");
-  }
-  if (expr.args.size() > 10 &&
-      (expr.name == "write" || expr.name == "write_line") &&
-      isFileReceiverExpr(expr.args.front())) {
-    return failMethodResolutionDiagnostic(
-        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
   }
   usedMethodTarget = true;
   hasMethodReceiverIndex = true;
@@ -320,9 +287,11 @@ bool SemanticsValidator::validateExprMethodCallTarget(
            path == "/std/file/File/write" || path == "/std/file/File/write_line";
   };
   if (!isBuiltinMethod && isStdlibFileWriteFacadeResolvedPath(resolved) &&
-      expr.args.size() > 10) {
-    return failMethodResolutionDiagnostic(
-        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
+      expr.args.size() > 10 &&
+      (expr.name == "write" || expr.name == "write_line") &&
+      !hasDeclaredDefinitionPath(resolved)) {
+    resolved = "/file/" + expr.name;
+    isBuiltinMethod = true;
   }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
       isVectorBuiltinName(expr, "capacity")) {

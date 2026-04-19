@@ -327,6 +327,28 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr.templateArgs.clear();
         return true;
       }
+      const bool isBroaderStdlibFileWriteFacade =
+          expr.name == "/File/write" || expr.name == "/File/write_line" ||
+          expr.name == "/std/file/File/write" ||
+          expr.name == "/std/file/File/write_line";
+      const bool hasVisibleBroaderStdlibFileWriteFacade =
+          hasImportedDefinitionPath(expr.name) ||
+          (expr.name == "/std/file/File/write" &&
+           hasImportedDefinitionPath("/File/write")) ||
+          (expr.name == "/std/file/File/write_line" &&
+           hasImportedDefinitionPath("/File/write_line"));
+      if (isBroaderStdlibFileWriteFacade &&
+          expr.args.size() > 10 &&
+          hasVisibleBroaderStdlibFileWriteFacade) {
+        expr.isMethodCall = true;
+        expr.name =
+            (expr.name == "/File/write" || expr.name == "/std/file/File/write")
+                ? "write"
+                : "write_line";
+        expr.namespacePrefix.clear();
+        expr.templateArgs.clear();
+        return true;
+      }
       if (expr.name == "/File/write_byte" && hasImportedDefinitionPath("/File/write_byte")) {
         expr.isMethodCall = true;
         expr.name = "write_byte";

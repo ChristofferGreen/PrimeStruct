@@ -2262,11 +2262,10 @@ sum_two_files([string] a, [string] b) {
     Imported constructor-shaped `File<Mode>(path)` calls now route through those `.prime`
     mode-specific open wrappers, and imported method/free-call sugar now prefers the same stdlib
     layer for `read_byte`, `write`, `write_line`, `write_byte`, `write_bytes`, `flush`, and
-    `close` across that current zero-to-nine-value overload family, while the underlying host
-    open/read/write/close substrate plus wider multi-value `write(...)` / `write_line(...)`
-    arities stay intentionally capped there for now: ten-plus values now produce an explicit
-    stdlib-facade diagnostic instead of extending the fixed overload ladder further before
-    concrete `[args<T>]` runtime support lands.
+    `close` across that current zero-to-nine-value overload family. Once `write(...)` or
+    `write_line(...)` exceeds the fixed wrapper ladder, imported broader slash-calls and method
+    sugar now fall back to the builtin variadic `/file/*` surface instead of extending the stdlib
+    overload family further.
   - The stdlib file layer defines `FileError.why(err)` as the public type-owned wrapper over the intrinsic
     file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned helper
     surface while platform-specific code-to-string translation stays builtin substrate. It also defines

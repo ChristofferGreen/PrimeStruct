@@ -348,24 +348,39 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib File broader slash-call wrappers diagnose the nine-value stdlib cap") {
+TEST_CASE("stdlib File broader helper calls fall back to builtin variadics") {
   const std::string source = R"(
 import /std/file/*
 
 [effects(file_write), return<void>]
 write_out([File<Write>] file) {
-  /File/write_line<Write, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32>(
+  [Result<FileError>] directWrite{/File/write<Write, string, i32, string, i32, string, i32, string, i32, string, i32>(
       file,
+      "alpha"utf8,
       1i32,
+      "-"utf8,
       2i32,
+      "-"utf8,
       3i32,
+      "="utf8,
       4i32,
-      5i32,
-      6i32,
-      7i32,
-      8i32,
-      9i32,
+      "."utf8,
       10i32)
+  [Result<FileError>] directWriteLine{/File/write_line<Write, i32, string, i32, string, i32, string, i32, string, i32, string>(
+      file,
+      4i32,
+      " "utf8,
+      5i32,
+      " "utf8,
+      6i32,
+      "?"utf8,
+      7i32,
+      "!"utf8,
+      8i32,
+      "#"utf8)}
+  [Result<FileError>] methodWrite{file.write("left"utf8, 1i32, "mid"utf8, 2i32, "right"utf8, 3i32, "."utf8, 4i32, "!"utf8, 5i32)}
+  [Result<FileError>] methodWriteLine{file.write_line(4i32, " "utf8, 5i32, " "utf8, 6i32, "?"utf8, 7i32, "!"utf8, 8i32, "#"utf8)}
+  return()
 }
 
 [return<void>]
@@ -374,28 +389,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("stdlib File write/write_line currently support up to nine values") != std::string::npos);
-  CHECK(error.find("[args<T>] runtime support") != std::string::npos);
-}
-
-TEST_CASE("stdlib File broader method-call wrappers diagnose the nine-value stdlib cap") {
-  const std::string source = R"(
-import /std/file/*
-
-[effects(file_write), return<void>]
-write_out([File<Write>] file) {
-  file.write_line(1i32, 2i32, 3i32, 4i32, 5i32, 6i32, 7i32, 8i32, 9i32, 10i32)
-}
-
-[return<void>]
-main() {
-  return()
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("stdlib File write/write_line currently support up to nine values") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib File text slash-call helpers require stdlib import") {

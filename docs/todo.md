@@ -84,4 +84,4 @@ Wave A:
 
 ### Task Blocks
 
-No open tasks currently tracked.
+No open tasks currently tracked; archived history lives in `docs/todo_finished.md`.

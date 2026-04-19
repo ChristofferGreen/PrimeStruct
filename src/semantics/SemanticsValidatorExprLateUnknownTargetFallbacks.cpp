@@ -207,57 +207,6 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     }
   }
 
-  auto isFileBinding = [&](const BindingInfo &binding) {
-    const std::string normalizedType = normalizeBindingTypeName(binding.typeName);
-    if (normalizedType == "File") {
-      return true;
-    }
-    if ((normalizedType == "Reference" || normalizedType == "Pointer") &&
-        !binding.typeTemplateArg.empty()) {
-      std::string base;
-      std::string argText;
-      if (!splitTemplateTypeName(binding.typeTemplateArg, base, argText)) {
-        return false;
-      }
-      return normalizeBindingTypeName(base) == "File";
-    }
-    return false;
-  };
-  auto isFileReceiverExpr = [&](const Expr &target) {
-    if (target.kind != Expr::Kind::Name) {
-      return false;
-    }
-    if (const BindingInfo *paramBinding = findParamBinding(params, target.name)) {
-      return isFileBinding(*paramBinding);
-    }
-    auto it = locals.find(target.name);
-    return it != locals.end() && isFileBinding(it->second);
-  };
-  auto isStdlibFileWriteFacadeName = [&](const std::string &name) {
-    return name == "/File/write" || name == "/File/write_line" ||
-           name == "/std/file/File/write" || name == "/std/file/File/write_line";
-  };
-  auto isBroaderStdlibFileWriteFacadeCall = [&]() {
-    if (expr.args.size() <= 10) {
-      return false;
-    }
-    if (expr.isMethodCall &&
-        (expr.name == "write" || expr.name == "write_line") &&
-        !expr.args.empty() && isFileReceiverExpr(expr.args.front())) {
-      return true;
-    }
-    if (!expr.isMethodCall && isStdlibFileWriteFacadeName(expr.name)) {
-      return true;
-    }
-    const std::string resolvedTarget = resolveCalleePath(expr);
-    return !expr.isMethodCall && isStdlibFileWriteFacadeName(resolvedTarget);
-  };
-  if (isBroaderStdlibFileWriteFacadeCall()) {
-    handledOut = true;
-    return failLateUnknownTargetDiagnostic(
-        "stdlib File write/write_line currently support up to nine values; broader arities await [args<T>] runtime support");
-  }
-
   const std::string resolvedTarget = resolveCalleePath(expr);
   if (splitSoaFieldViewHelperPath(resolvedTarget)) {
     handledOut = true;

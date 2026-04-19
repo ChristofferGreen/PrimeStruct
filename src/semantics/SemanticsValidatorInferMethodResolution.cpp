@@ -1039,6 +1039,12 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return returnWithMethodTargetMemo(true);
     }
   }
+  if (typeName == "File" &&
+      (normalizedMethodName == "write" || normalizedMethodName == "write_line") &&
+      expr.args.size() > 10) {
+    resolvedOut = "/file/" + normalizedMethodName;
+    return returnWithMethodTargetMemo(true);
+  }
   if (typeName == "FileError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
        normalizedMethodName == "status" || normalizedMethodName == "result")) {

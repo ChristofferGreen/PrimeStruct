@@ -194,9 +194,9 @@ log_file_error([FileError] err) {
   CHECK(readFile(filePath) == "alphaomega\n");
 }
 
-TEST_CASE("vm uses stdlib File nine-value helper wrappers") {
+TEST_CASE("vm uses stdlib File helper wrappers and broader fallback arities") {
   const std::string filePath =
-      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_nine_value_helpers.txt").string();
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_file_broad_helpers.txt").string();
   const auto escape = [](const std::string &text) {
     std::string out;
     out.reserve(text.size());
@@ -214,7 +214,7 @@ import /std/file/*
 [return<Result<FileError>> effects(file_write) on_error<FileError, /log_file_error>]
 main() {
   [File<Write>] file{ File<Write>("__PATH__"utf8)? }
-  /File/write<Write, string, i32, string, i32, string, i32, string, i32, string>(
+  /File/write<Write, string, i32, string, i32, string, i32, string, i32, string, i32>(
       file,
       "prefix"utf8,
       1i32,
@@ -224,8 +224,9 @@ main() {
       3i32,
       "="utf8,
       4i32,
-      "."utf8)?
-  /File/write_line<Write, string, i32, string, i32, string, i32, string, i32, string>(
+      "."utf8,
+      5i32)?
+  /File/write_line<Write, string, i32, string, i32, string, i32, string, i32, string, i32>(
       file,
       "alpha"utf8,
       7i32,
@@ -235,9 +236,10 @@ main() {
       9i32,
       "!"utf8,
       10i32,
-      "?"utf8)?
-  file.write("left"utf8, 1i32, "mid"utf8, 2i32, "right"utf8, 3i32, "."utf8, 4i32, "!"utf8)?
-  file.write_line(4i32, " "utf8, 5i32, " "utf8, 6i32, "?"utf8, 7i32, "!"utf8, 8i32)?
+      "?"utf8,
+      11i32)?
+  file.write("left"utf8, 1i32, "mid"utf8, 2i32, "right"utf8, 3i32, "."utf8, 4i32, "!"utf8, 5i32)?
+  file.write_line(4i32, " "utf8, 5i32, " "utf8, 6i32, "?"utf8, 7i32, "!"utf8, 8i32, "#"utf8)?
   file.close()?
   return(Result.ok())
 }
@@ -252,10 +254,10 @@ log_file_error([FileError] err) {
   const size_t pathPos = program.find(placeholder);
   REQUIRE(pathPos != std::string::npos);
   program.replace(pathPos, placeholder.size(), escape(filePath));
-  const std::string srcPath = writeTemp("vm_stdlib_file_nine_value_helpers.prime", program);
+  const std::string srcPath = writeTemp("vm_stdlib_file_broad_helpers.prime", program);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(filePath) == "prefix1-2-3=4.alpha7omega8delta9!10?\nleft1mid2right3.4!4 5 6?7!8\n");
+  CHECK(readFile(filePath) == "prefix1-2-3=4.5alpha7omega8delta9!10?11\nleft1mid2right3.4!54 5 6?7!8#\n");
 }
 
 TEST_CASE("vm resolves templated helper overload families by exact arity") {
