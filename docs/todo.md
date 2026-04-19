@@ -56,43 +56,58 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1065
+1. TODO-1072
+2. TODO-1071
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1065
+1. TODO-1072
+2. TODO-1071
 
 ### Priority Lanes (Current)
 
-- Pilot semantic boundary ownership: TODO-1065
+- Example surface parity: TODO-1072, TODO-1071
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1065
+1. TODO-1072
+2. TODO-1071
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Pilot semantic ownership boundary | TODO-1065 |
+| Example surface parity | TODO-1072, TODO-1071 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Lowering conformance and fallback deletion | TODO-1065 |
+| Parser and docs example parity | TODO-1072, TODO-1071 |
 
 ### Task Blocks
 
-- [ ] TODO-1065: Delete remaining lowering-side AST semantic fallbacks for migrated families
+- [ ] TODO-1072: Restore labeled struct-literal local binding compile-run parity
   - owner: ai
   - created_at: 2026-04-19
-  - phase: Architecture boundary hardening
-  - depends_on: TODO-1064
-  - scope: remove residual lowering paths that still reconstruct semantic meaning from AST state for the migrated pilot routing slice whenever a semantic product is present, turning gaps into explicit contract failures instead.
+  - phase: Example surface parity
+  - scope: support labeled struct-literal local bindings in the concise `[Type] name{[field] value, ...}` form and replace the constructor-wrapper workaround in docs once the surface compiles and runs.
   - acceptance:
-    - the migrated pilot routing families consume semantic-product facts only and no longer parse equivalent meaning back out of AST nodes
-    - negative tests fail deterministically when required semantic-product fields are absent or inconsistent
-    - at least one compatibility fallback or adapter-only reconstruction path is deleted for each migrated pilot routing family
-  - stop_rule: stop after the pilot routing slice is semantic-product-only; do not broaden to untouched fact families in the same change
+    - `[Pair] pair{[left] 4, [right] 8}` parses and compiles through the supported release toolchain surface
+    - lowering routes the concise local binding through the same effective construction path as `pair{Pair([left] 4, [right] 8)}`
+    - `docs/CodeExamples.md` switches the current `Pair` example to the concise labeled struct-literal local binding form with matching coverage
+  - stop_rule: stop after labeled struct-literal local bindings compile and the docs example is updated; do not broaden to unrelated local-binding sugar in the same change
+  - notes: current parser failure is `PSC1003 expected identifier` at the first labeled field inside the binding
+
+- [ ] TODO-1071: Restore omitted parameter-type helper compile-run parity
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Example surface parity
+  - scope: support omitted parameter types for concise free-standing helper definitions, or make the surface rejection explicit and fully aligned across docs/examples if the shorthand is intentionally unsupported.
+  - acceptance:
+    - `run_countdown(start) { ... }` either compiles and runs as documented shorthand or is rejected with a deliberate stable diagnostic backed by docs
+    - compile-run or parser coverage locks the intended behavior for omitted parameter-type helper definitions
+    - `docs/CodeExamples.md` stays aligned with the intended supported shorthand surface in the same change
+  - stop_rule: stop after omitted parameter-type helper behavior is deliberate and documented; do not broaden to unrelated type-inference features in the same change
+  - notes: current parser failure is `definition missing return statement [PSC1003]` for omitted parameter-type helper shorthand

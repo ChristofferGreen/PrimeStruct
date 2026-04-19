@@ -132,7 +132,6 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   static const std::unordered_map<std::string, std::string> noImportAliases;
   const auto &semanticAwareImportAliases =
       semanticProductTargets != nullptr ? noImportAliases : importAliases;
-  std::string semanticTargetLookupError;
 
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding) {
     return nullptr;
@@ -163,9 +162,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (defIt != defMap.end() && defIt->second != nullptr) {
       return defIt->second;
     }
-    semanticTargetLookupError =
+    errorOut =
         "semantic-product method-call target missing lowered definition: " +
         resolvedPath;
+    return nullptr;
   }
 
   std::string accessName;
@@ -218,11 +218,6 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                      errorOut)) {
     if (allowBuiltinFallback) {
       errorOut = priorError;
-      if (errorOut.empty() && !semanticTargetLookupError.empty()) {
-        errorOut = semanticTargetLookupError;
-      }
-    } else if (errorOut.empty() && !semanticTargetLookupError.empty()) {
-      errorOut = semanticTargetLookupError;
     }
     return nullptr;
   }
@@ -287,18 +282,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                    errorOut)) {
     if (allowBuiltinFallback) {
       errorOut = priorError;
-      if (errorOut.empty() && !semanticTargetLookupError.empty()) {
-        errorOut = semanticTargetLookupError;
-      }
-    } else if (errorOut.empty() && !semanticTargetLookupError.empty()) {
-      errorOut = semanticTargetLookupError;
     }
     return nullptr;
   }
   std::string lookupError;
-  if (!semanticTargetLookupError.empty()) {
-    lookupError = semanticTargetLookupError;
-  }
   const Definition *resolvedDef = resolveMethodDefinitionFromReceiverTarget(
       callExpr.name, typeName, resolvedTypePath, defMap, lookupError);
   auto resolveMethodDefinitionFromTypeNameWithAliasFallback = [&](const std::string &receiverTypeName,
@@ -584,13 +571,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         typeName == "vector";
     if (allowBuiltinFallback && !blocksBuiltinBareVectorCountMethod &&
         !blocksBuiltinBareVectorAccessMethod && !blocksBuiltinBareVectorMutatorMethod) {
-      errorOut = semanticTargetLookupError.empty() ? priorError : semanticTargetLookupError;
+      errorOut = priorError;
       return nullptr;
     }
     errorOut = std::move(lookupError);
-    if (errorOut.empty() && !semanticTargetLookupError.empty()) {
-      errorOut = semanticTargetLookupError;
-    }
     return nullptr;
   }
   return resolvedDef;

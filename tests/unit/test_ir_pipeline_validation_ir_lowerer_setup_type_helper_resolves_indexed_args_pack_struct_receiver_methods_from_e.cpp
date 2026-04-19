@@ -240,6 +240,66 @@ TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets 
   CHECK(error == "semantic-product method-call target missing lowered definition: /std/collections/map/contains");
 }
 
+TEST_CASE("ir lowerer setup type helper does not reconstruct method targets from receivers when semantic-product defs are missing") {
+  primec::Definition canonicalContainsDef;
+  canonicalContainsDef.fullPath = "/std/collections/map/contains";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalContainsDef.fullPath, &canonicalContainsDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "contains";
+  methodCall.isMethodCall = true;
+  methodCall.semanticNodeId = 133;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  locals.emplace("values", valuesLocal);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "contains",
+      .receiverTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 133,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/semantic/method/contains"),
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticTargets,
+      defMap,
+      error);
+  CHECK(resolved == nullptr);
+  CHECK(error == "semantic-product method-call target missing lowered definition: /semantic/method/contains");
+}
+
 TEST_CASE("ir lowerer setup type helper rejects alias receiver call return fallback to canonical stdlib defs") {
   primec::Definition canonicalAtDef;
   canonicalAtDef.fullPath = "/std/collections/vector/at";

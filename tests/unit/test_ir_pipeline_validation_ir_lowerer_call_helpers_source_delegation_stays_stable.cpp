@@ -907,7 +907,7 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets"
   CHECK(populatedResolveExprPath(callExpr) == "/callee");
 }
 
-TEST_CASE("ir lowerer call helpers remap unresolved rooted semantic operator targets through imports") {
+TEST_CASE("ir lowerer call helpers keep unresolved rooted semantic operator targets authoritative") {
   primec::Definition importedMultiply;
   importedMultiply.fullPath = "/std/math/multiply";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -935,8 +935,11 @@ TEST_CASE("ir lowerer call helpers remap unresolved rooted semantic operator tar
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
+  const auto resolveDefinitionCall =
+      primec::ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);
 
-  CHECK(resolveExprPath(callExpr) == "/std/math/multiply");
+  CHECK(resolveExprPath(callExpr) == "/multiply");
+  CHECK(resolveDefinitionCall(callExpr) == nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers keep semantic-product direct-call targets authoritative over rooted rewritten expr names") {
