@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1149
+- TODO-1150
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1149
+- TODO-1150
 
 ### Priority Lanes (Current)
 
-- Native slash-method vector access primitive count diagnostics skip debt: TODO-1149
+- Native user vector count call-shadow skip debt: TODO-1150
 
 ### Execution Queue (Recommended)
 
-1. TODO-1149
+1. TODO-1150
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native slash-method vector access skipped-test debt | TODO-1149 |
+| Native user vector call-shadow skipped-test debt | TODO-1150 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1149 |
+| Native compile-run skipped-test debt | TODO-1150 |
 
 ### Task Blocks
 
-- [ ] TODO-1149: Audit native slash-method vector access primitive count diagnostics skip debt
+- [ ] TODO-1150: Audit native user vector count call-shadow skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native slash-method vector access primitive-count diagnostic coverage, and lock the current native contract for `values./vector/at(0i32).count()` plus `values./std/collections/vector/at_unsafe(0i32).count()` on `vector<i32>`.
+  - scope: Re-enable or delete the skipped native user vector `count(values)` call-shadow coverage, and lock the current native contract when `/vector/count` competes with canonical `count(values)` lowering.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native slash-method vector access primitive-count diagnostic case in stale form.
-    - The native test locks the actual current diagnostic contract for the slash-method primitive-count surface, whether that remains the current `/vector/at` unknown-target reject or another stable native-side diagnostic.
-  - stop_rule: Stop after the native slash-method vector access primitive-count diagnostic surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native user vector `count(values)` call-shadow case in stale form.
+    - The native test locks the actual current contract for the call-shadow surface, whether that remains the current `/std/collections/vector/count` unknown-target reject or another stable native-side diagnostic.
+  - stop_rule: Stop after the native user vector `count(values)` call-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

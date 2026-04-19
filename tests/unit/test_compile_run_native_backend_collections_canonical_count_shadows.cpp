@@ -465,7 +465,7 @@ main() {
   CHECK(runCommand(exePath) == 182);
 }
 
-TEST_CASE("native keeps slash-method vector access primitive count diagnostics" * doctest::skip(true)) {
+TEST_CASE("native keeps slash-method vector access primitive count diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
