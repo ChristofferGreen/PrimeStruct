@@ -1088,3 +1088,74 @@ main() {
   CHECK(viaStd.initializerDirectCallResolvedPath == "/std/collections/vector/count");
   CHECK(viaStd.initializerDirectCallReturnKindText == "i32");
 }
+
+TEST_CASE("type resolution local binding snapshot rejects imported rooted soa_vector to_aos helper return without same-path helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [auto] viaRoot{/to_aos(holder.cloneValues())}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  CHECK_FALSE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
+}
+
+TEST_CASE("type resolution local binding snapshot keeps rooted soa_vector to_aos helper return with same-path helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+Holder() {}
+
+[return<soa_vector<Particle>>]
+/Holder/cloneValues([Holder] self) {
+  return(soa_vector<Particle>())
+}
+
+[return<i32>]
+/to_aos([soa_vector<Particle>] values) {
+  return(29i32)
+}
+
+[return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [auto] viaRoot{/to_aos(holder.cloneValues())}
+  return(viaRoot)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionLocalBindingSnapshot snapshot;
+  REQUIRE(primec::semantics::computeTypeResolutionLocalBindingSnapshotForTesting(
+      parseProgram(source), "/main", error, snapshot));
+  CHECK(error.empty());
+
+  const auto &viaRoot = requireLocalBindingSnapshotEntry(snapshot, "/main", "viaRoot");
+  CHECK(viaRoot.bindingTypeText == "i32");
+  CHECK(viaRoot.initializerDirectCallResolvedPath == "/to_aos");
+  CHECK(viaRoot.initializerDirectCallReturnKindText == "i32");
+}

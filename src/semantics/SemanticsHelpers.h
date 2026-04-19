@@ -138,6 +138,7 @@ std::string canonicalizeLegacySoaToAosHelperPath(std::string_view path);
 std::string canonicalizeLegacySoaRefHelperPath(std::string_view path);
 std::string canonicalizeLegacySoaGetHelperPath(std::string_view path);
 bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view helperName);
+bool isCanonicalStdlibSoaHelperPath(std::string_view path, std::string_view helperName);
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path);
 bool isExperimentalSoaBorrowedHelperPath(std::string_view path);
 bool isExperimentalSoaGetLikeHelperPath(std::string_view path);

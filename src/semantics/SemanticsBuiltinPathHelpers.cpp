@@ -492,6 +492,16 @@ bool isLegacyOrCanonicalSoaHelperPath(std::string_view path, std::string_view he
   return false;
 }
 
+bool isCanonicalStdlibSoaHelperPath(std::string_view path, std::string_view helperName) {
+  std::string canonicalPath(path);
+  const size_t specializationSuffix = canonicalPath.find("__");
+  if (specializationSuffix != std::string::npos) {
+    canonicalPath.erase(specializationSuffix);
+  }
+  return canonicalPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+         isLegacyOrCanonicalSoaHelperPath(canonicalPath, helperName);
+}
+
 bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
   return path == "/std/collections/soa_vector/ref" ||
          path == "/std/collections/soa_vector/ref_ref";

@@ -506,16 +506,13 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         }
         return false;
       }
-      const std::string resolvedSoaToAosCanonical =
-          canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target));
+      const std::string resolvedTarget = resolveCalleePath(target);
       const bool matchesSoaToAosTarget =
           (!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
-          isLegacyOrCanonicalSoaHelperPath(
-              resolvedSoaToAosCanonical, "to_aos");
+          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
       const bool matchesBorrowedSoaToAosTarget =
           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref")) ||
-          isLegacyOrCanonicalSoaHelperPath(
-              resolvedSoaToAosCanonical, "to_aos_ref");
+          isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
       if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
           target.args.size() == 1) {
         return lockedState->resolveSoaVectorTarget(target.args.front(), elemType);
