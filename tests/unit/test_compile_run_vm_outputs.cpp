@@ -491,7 +491,7 @@ main() {
   CHECK(!std::filesystem::exists(outPath));
 }
 
-TEST_CASE("runs vm png write for deterministic rgb outputs" * doctest::skip(true)) {
+TEST_CASE("runs vm png write for deterministic rgb outputs") {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write.png";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);

@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1034: Reactivate VM PNG write output lock. Completed: the skipped VM compile-run case for `/std/image/png/write(...)` is live again and now locks the documented deterministic non-interlaced RGB PNG output contract for a simple payload.
 - ✓ TODO-1033: Reactivate VM invalid PPM write guardrail. Completed: the skipped VM compile-run case for invalid `/std/image/ppm/write(...)` payload shape is live again and now locks the documented `image_invalid_operation` result plus the no-output-file behavior for malformed write inputs.
 - ✓ TODO-1032: Reactivate VM PPM write output lock. Completed: the skipped VM compile-run case for `/std/image/ppm/write(...)` is live again and now locks the documented ASCII `P3` output contract for a simple RGB payload.
 - ✓ TODO-1031: Reactivate VM invalid PNG write guardrail. Completed: the skipped VM compile-run case for invalid `/std/image/png/write(...)` payload shape is live again and now locks the documented `image_invalid_operation` result plus the no-output-file behavior for malformed write inputs.
