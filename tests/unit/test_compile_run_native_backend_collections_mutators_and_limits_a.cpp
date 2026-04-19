@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native auto-inferred named access helper receiver precedence" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native auto-inferred named access helper receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/get([vector<i32>] values, [string] index) {
@@ -41,7 +41,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("rejects native auto-inferred std namespaced access helper compatibility alias precedence" * doctest::skip(true)) {
+TEST_CASE("rejects native auto-inferred std namespaced access helper compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
