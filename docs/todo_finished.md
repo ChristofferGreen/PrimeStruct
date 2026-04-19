@@ -4268,3 +4268,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4077`, whose remaining PNG helper-spelling cleanup now continues as `TODO-4080` for inflate execution and `TODO-4081` for the top-level read path.
   - finished_at: 2026-04-19
   - evidence: Rewrote the `pngZlibHeaderValid` through `pngDistanceInfo` helper lane in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, including the bit reader, canonical/Huffman helpers, dynamic-code-length expansion, and length/distance metadata helpers; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the new `pngBitstreamBody` operator-form spellings while leaving representative helper-form expectations only in the remaining inflate/read carve-out; and updated `docs/todo.md` to remove `TODO-4079` from the live queue while promoting `TODO-4080` as the next active PNG surface-style leaf.
+
+- [x] TODO-4080: Align `/std/image/png` inflate execution arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074, TODO-4076, TODO-4078
+  - scope: Rewrite the remaining PNG inflate execution helpers away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, limited to backreference copying, stored/fixed/dynamic block execution, and deflate-block orchestration.
+  - acceptance:
+    - The PNG inflate execution helpers stop using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - Any remaining helper-form arithmetic or assignment in the inflate execution lane is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
+    - Focused source-lock coverage drops the temporary inflate-execution helper-form carve-out once the follow-up rewrite lands.
+  - stop_rule: Stop once the PNG inflate execution lane uses readable surface arithmetic and assignment by default; leave the top-level `namespace png` read-path rewrite separate.
+  - notes: Split from oversized `TODO-4077`, whose remaining PNG helper-spelling cleanup now continues only as `TODO-4081` for the top-level read/decode path.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the `pngInflateCopyFromOutput` through `pngInflateDeflateBlocks` execution lane in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, including stored-block reads, fixed/dynamic Huffman block execution, fixed-symbol decode helpers, backreference copies, and final deflate-block/adler orchestration; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the new `pngInflateExecBody` operator-form spellings while leaving representative helper-form expectations only in the remaining `pngReadBody` decode/read carve-out; and updated `docs/todo.md` to remove `TODO-4080` from the live queue while promoting `TODO-4081` as the next active PNG surface-style leaf.

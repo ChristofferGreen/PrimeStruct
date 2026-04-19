@@ -1985,7 +1985,7 @@ namespace std {
        else() { })
     [i32 mut] copyIndex{0i32}
     while(less_than(copyIndex, length), do() {
-      /std/collections/vector/push(output, output[minus(count(output), distance)])
+      /std/collections/vector/push(output, output[count(output) - distance])
       increment(copyIndex)
     })
     return(0i32)
@@ -1995,32 +1995,32 @@ namespace std {
   pngInflateStoredBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32> mut] output) {
     if(not_equal(bitIndex, 0i32),
        then() {
-         assign(bitIndex, 0i32)
-         assign(byteIndex, plus(byteIndex, 1i32))
+         bitIndex = 0i32
+         byteIndex = byteIndex + 1i32
        },
        else() { })
 
-    [i32] trailerStart{minus(count(compressed), 4i32)}
-    if(greater_than(plus(byteIndex, 4i32), trailerStart),
+    [i32] trailerStart{count(compressed) - 4i32}
+    if(greater_than(byteIndex + 4i32, trailerStart),
        then() { return(1i32) },
        else() { })
 
-    [i32] blockLen{plus(compressed[byteIndex], multiply(compressed[plus(byteIndex, 1i32)], 256i32))}
-    [i32] blockNlen{plus(compressed[plus(byteIndex, 2i32)], multiply(compressed[plus(byteIndex, 3i32)], 256i32))}
-    if(not_equal(plus(blockLen, blockNlen), 65535i32),
+    [i32] blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}
+    [i32] blockNlen{compressed[byteIndex + 2i32] + multiply(compressed[byteIndex + 3i32], 256i32)}
+    if(not_equal(blockLen + blockNlen, 65535i32),
        then() { return(1i32) },
        else() { })
-    assign(byteIndex, plus(byteIndex, 4i32))
+    byteIndex = byteIndex + 4i32
 
-    if(greater_than(plus(byteIndex, blockLen), trailerStart),
+    if(greater_than(byteIndex + blockLen, trailerStart),
        then() { return(1i32) },
        else() { })
     [i32 mut] blockIndex{0i32}
     while(less_than(blockIndex, blockLen), do() {
-      /std/collections/vector/push(output, compressed[plus(byteIndex, blockIndex)])
+      /std/collections/vector/push(output, compressed[byteIndex + blockIndex])
       increment(blockIndex)
     })
-    assign(byteIndex, plus(byteIndex, blockLen))
+    byteIndex = byteIndex + blockLen
     return(0i32)
   }
 
@@ -2065,7 +2065,7 @@ namespace std {
                         else() { })
                    },
                    else() { })
-                [i32] matchLength{plus(lengthBase, lengthExtraValue)}
+                [i32] matchLength{lengthBase + lengthExtraValue}
 
                 [i32 mut] distanceSymbol{0i32}
                 [i32] distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
@@ -2091,7 +2091,7 @@ namespace std {
                    },
                    else() { })
 
-                [i32] copyStatus{pngInflateCopyFromOutput(output, plus(distanceBase, distanceExtraValue), matchLength)}
+                [i32] copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
                 if(not_equal(copyStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
@@ -2103,7 +2103,7 @@ namespace std {
 
   [return<int>]
   pngDecodeFixedLiteralSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32 mut] symbolOut) {
-    assign(symbolOut, 0i32)
+    symbolOut = 0i32
     [i32 mut] code{0i32}
     [i32 mut] factor{1i32}
     [i32 mut] bitsRead{0i32}
@@ -2113,17 +2113,17 @@ namespace std {
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
-      assign(code, plus(code, multiply(bit, factor)))
-      assign(factor, multiply(factor, 2i32))
+      code = code + multiply(bit, factor)
+      factor = multiply(factor, 2i32)
       increment(bitsRead)
 
       if(equal(bitsRead, 7i32),
          then() {
            [i32 mut] symbol{256i32}
            while(less_than(symbol, 280i32), do() {
-             if(equal(pngReverseBits(minus(symbol, 256i32), 7i32), code),
+             if(equal(pngReverseBits(symbol - 256i32, 7i32), code),
                 then() {
-                  assign(symbolOut, symbol)
+                  symbolOut = symbol
                   return(0i32)
                 },
                 else() { })
@@ -2136,19 +2136,19 @@ namespace std {
          then() {
            [i32 mut] symbol{0i32}
            while(less_than(symbol, 144i32), do() {
-             if(equal(pngReverseBits(plus(48i32, symbol), 8i32), code),
+             if(equal(pngReverseBits(48i32 + symbol, 8i32), code),
                 then() {
-                  assign(symbolOut, symbol)
+                  symbolOut = symbol
                   return(0i32)
                 },
                 else() { })
              increment(symbol)
            })
-           assign(symbol, 280i32)
+           symbol = 280i32
            while(less_than(symbol, 288i32), do() {
-             if(equal(pngReverseBits(plus(192i32, minus(symbol, 280i32)), 8i32), code),
+             if(equal(pngReverseBits(192i32 + (symbol - 280i32), 8i32), code),
                 then() {
-                  assign(symbolOut, symbol)
+                  symbolOut = symbol
                   return(0i32)
                 },
                 else() { })
@@ -2161,9 +2161,9 @@ namespace std {
          then() {
            [i32 mut] symbol{144i32}
            while(less_than(symbol, 256i32), do() {
-             if(equal(pngReverseBits(plus(400i32, minus(symbol, 144i32)), 9i32), code),
+             if(equal(pngReverseBits(400i32 + (symbol - 144i32), 9i32), code),
                 then() {
-                  assign(symbolOut, symbol)
+                  symbolOut = symbol
                   return(0i32)
                 },
                 else() { })
@@ -2177,7 +2177,7 @@ namespace std {
 
   [return<int>]
   pngDecodeFixedDistanceSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32 mut] symbolOut) {
-    assign(symbolOut, 0i32)
+    symbolOut = 0i32
     [i32 mut] code{0i32}
     [i32 mut] factor{1i32}
     [i32 mut] bitsRead{0i32}
@@ -2187,8 +2187,8 @@ namespace std {
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
-      assign(code, plus(code, multiply(bit, factor)))
-      assign(factor, multiply(factor, 2i32))
+      code = code + multiply(bit, factor)
+      factor = multiply(factor, 2i32)
       increment(bitsRead)
 
       if(equal(bitsRead, 5i32),
@@ -2197,7 +2197,7 @@ namespace std {
            while(less_than(symbol, 32i32), do() {
              if(equal(pngReverseBits(symbol, 5i32), code),
                 then() {
-                  assign(symbolOut, symbol)
+                  symbolOut = symbol
                   return(0i32)
                 },
                 else() { })
@@ -2240,7 +2240,7 @@ namespace std {
                         else() { })
                    },
                    else() { })
-                [i32] matchLength{plus(lengthBase, lengthExtraValue)}
+                [i32] matchLength{lengthBase + lengthExtraValue}
 
                 [i32 mut] distanceSymbol{0i32}
                 [i32] distanceStatus{pngDecodeFixedDistanceSymbol(compressed, byteIndex, bitIndex, distanceSymbol)}
@@ -2265,7 +2265,7 @@ namespace std {
                    },
                    else() { })
 
-                [i32] copyStatus{pngInflateCopyFromOutput(output, plus(distanceBase, distanceExtraValue), matchLength)}
+                [i32] copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
                 if(not_equal(copyStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
@@ -2297,8 +2297,8 @@ namespace std {
     [vector<i32> mut] literalLengthsLow{vector<i32>()}
     [vector<i32> mut] literalLengthsHigh{vector<i32>()}
     [vector<i32> mut] distanceLengths{vector<i32>()}
-    [i32] lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, plus(hclenBits, 4i32),
-                                                    plus(hlitBits, 257i32), plus(hdistBits, 1i32), literalLengthsLow,
+    [i32] lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, hclenBits + 4i32,
+                                                    hlitBits + 257i32, hdistBits + 1i32, literalLengthsLow,
                                                     literalLengthsHigh, distanceLengths)}
     if(not_equal(lengthStatus, 0i32),
        then() { return(lengthStatus) },
@@ -2341,7 +2341,7 @@ namespace std {
                         else() { })
                    },
                    else() { })
-                [i32] matchLength{plus(lengthBase, lengthExtraValue)}
+                [i32] matchLength{lengthBase + lengthExtraValue}
 
                 [i32 mut] distanceSymbol{0i32}
                 [i32] distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
@@ -2367,7 +2367,7 @@ namespace std {
                    },
                    else() { })
 
-                [i32] copyStatus{pngInflateCopyFromOutput(output, plus(distanceBase, distanceExtraValue), matchLength)}
+                [i32] copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
                 if(not_equal(copyStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
@@ -2406,13 +2406,13 @@ namespace std {
 
       [i32 mut] inflateStatus{0i32}
       if(equal(blockType, 0i32),
-         then() { assign(inflateStatus, pngInflateStoredBlock(compressed, byteIndex, bitIndex, output)) },
+         then() { inflateStatus = pngInflateStoredBlock(compressed, byteIndex, bitIndex, output) },
          else() {
            if(equal(blockType, 1i32),
-              then() { assign(inflateStatus, pngInflateFixedHuffmanBlock(compressed, byteIndex, bitIndex, output)) },
+              then() { inflateStatus = pngInflateFixedHuffmanBlock(compressed, byteIndex, bitIndex, output) },
               else() {
                 if(equal(blockType, 2i32),
-                   then() { assign(inflateStatus, pngInflateDynamicHuffmanBlock(compressed, byteIndex, bitIndex, output)) },
+                   then() { inflateStatus = pngInflateDynamicHuffmanBlock(compressed, byteIndex, bitIndex, output) },
                    else() { return(1i32) })
               })
          })
@@ -2424,17 +2424,17 @@ namespace std {
          then() {
            if(not_equal(bitIndex, 0i32),
               then() {
-                assign(bitIndex, 0i32)
-                assign(byteIndex, plus(byteIndex, 1i32))
+                bitIndex = 0i32
+                byteIndex = byteIndex + 1i32
               },
               else() { })
-	          if(not_equal(minus(compressedCount, byteIndex), 4i32),
+	          if(not_equal(compressedCount - byteIndex, 4i32),
 	             then() { return(1i32) },
 	             else() { })
 	          [i32] adlerBHigh{compressed[byteIndex]}
-	          [i32] adlerBLow{compressed[plus(byteIndex, 1i32)]}
-	          [i32] adlerAHigh{compressed[plus(byteIndex, 2i32)]}
-	          [i32] adlerALow{compressed[plus(byteIndex, 3i32)]}
+	          [i32] adlerBLow{compressed[byteIndex + 1i32]}
+	          [i32] adlerAHigh{compressed[byteIndex + 2i32]}
+	          [i32] adlerALow{compressed[byteIndex + 3i32]}
 	          if(not(pngAdlerValid(output, adlerBHigh, adlerBLow, adlerAHigh, adlerALow)),
 	             then() { return(1i32) },
 	             else() { })
