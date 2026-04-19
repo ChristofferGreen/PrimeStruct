@@ -304,6 +304,8 @@ TEST_CASE("semantic memory budget policy artifacts are checked in") {
   CHECK(note.find("semantic_product_index_family_counts") != std::string::npos);
   CHECK(note.find("definition_validation_worker_mode_deltas") != std::string::npos);
   CHECK(note.find("semantic_product_index_parity_evidence.json") != std::string::npos);
+  CHECK(note.find("semantic_product_index_math_star_repro_report.json") != std::string::npos);
+  CHECK(note.find("--fixtures math_star_repro") != std::string::npos);
   CHECK(note.find("--definition-validation-workers both") != std::string::npos);
 }
 
@@ -375,6 +377,76 @@ TEST_CASE("semantic memory semantic-product index parity evidence artifact is ch
           "  print(json.dumps(artifact, indent=2, sort_keys=True))\n"
           "sys.exit(0 if ok else 1)\n") +
       " " + quoteShellArg(evidencePath.string()) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
+TEST_CASE("semantic memory semantic-product index measured report artifact is checked in") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path reportPath =
+      repoRoot / "benchmarks" / "semantic_memory" / "semantic_product_index_math_star_repro_report.json";
+  const std::string report = readFile(reportPath.string());
+  REQUIRE_FALSE(report.empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_index_measured_report_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_index_measured_report_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "required = {\n"
+          "  'direct_call_targets', 'method_call_targets', 'bridge_path_choices',\n"
+          "  'binding_facts', 'return_facts', 'local_auto_facts',\n"
+          "  'query_facts', 'try_facts', 'on_error_facts'\n"
+          "}\n"
+          "rows = report.get('results', [])\n"
+          "deltas = report.get('definition_validation_worker_mode_deltas', [])\n"
+          "fixtures = report.get('fixtures', [])\n"
+          "ok = report.get('schema') == 'primestruct_semantic_memory_report_v1'\n"
+          "ok = ok and report.get('runs') == 3\n"
+          "ok = ok and report.get('phases') == ['semantic-product']\n"
+          "ok = ok and len(fixtures) == 1 and fixtures[0].get('name') == 'math_star_repro'\n"
+          "ok = ok and len(rows) == 2 and len(deltas) == 1\n"
+          "if ok:\n"
+          "  worker_modes = sorted(row.get('definition_validation_workers') for row in rows)\n"
+          "  ok = ok and worker_modes == [1, 2]\n"
+          "  row_counts = []\n"
+          "  for row in rows:\n"
+          "    counts = row.get('semantic_product_index_family_counts')\n"
+          "    ok = ok and row.get('fixture') == 'math_star_repro'\n"
+          "    ok = ok and row.get('phase') == 'semantic-product'\n"
+          "    ok = ok and row.get('semantic_product_force') == 'auto'\n"
+          "    ok = ok and row.get('runs') == 3\n"
+          "    ok = ok and isinstance(counts, dict)\n"
+          "    if isinstance(counts, dict):\n"
+          "      ok = ok and set(counts.keys()) == required\n"
+          "      ok = ok and counts.get('binding_facts') == 3\n"
+          "      ok = ok and counts.get('direct_call_targets') == 4\n"
+          "      ok = ok and counts.get('query_facts') == 4\n"
+          "      ok = ok and counts.get('return_facts') == 4\n"
+          "      row_counts.append(counts)\n"
+          "  delta = deltas[0]\n"
+          "  single = delta.get('semantic_product_index_family_counts_single_worker')\n"
+          "  dual = delta.get('semantic_product_index_family_counts_dual_worker')\n"
+          "  ok = ok and delta.get('fixture') == 'math_star_repro'\n"
+          "  ok = ok and delta.get('phase') == 'semantic-product'\n"
+          "  ok = ok and bool(delta.get('dump_sha256_identical'))\n"
+          "  ok = ok and bool(delta.get('semantic_product_index_family_counts_identical'))\n"
+          "  ok = ok and isinstance(single, dict) and isinstance(dual, dict)\n"
+          "  if isinstance(single, dict) and isinstance(dual, dict):\n"
+          "    ok = ok and set(single.keys()) == required and set(dual.keys()) == required\n"
+          "    ok = ok and len(row_counts) == 2 and row_counts[0] == row_counts[1] == single == dual\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath.string()) +
       " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
   CHECK(runCommand(validateCmd) == 0);
   CHECK(readFile(validateErrPath).empty());

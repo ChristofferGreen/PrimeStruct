@@ -1,0 +1,205 @@
+{
+  "benchmark_options": {
+    "definition_validation_workers": "both",
+    "fact_families": "auto",
+    "graph_local_auto_dependency_scratch_mode": "pmr",
+    "graph_local_auto_key_mode": "compact",
+    "graph_local_auto_side_channel_mode": "flat",
+    "method_target_memoization": "on",
+    "no_fact_emission": false,
+    "repeat_compile_leak_check_runs": 0,
+    "semantic_allocation_counters": false,
+    "semantic_phase_counters": false,
+    "semantic_product_force": "auto",
+    "semantic_rss_checkpoints": false,
+    "semantic_validation_without_fact_emission": "off"
+  },
+  "definition_validation_worker_mode_deltas": [
+    {
+      "dual_worker_dump_sha256": "50a4cf81cc595a92fffe6866e1777b4a35d5daf7c550b2da676a79aa6150d38a",
+      "dump_sha256_identical": true,
+      "fact_families": "auto",
+      "fixture": "math_star_repro",
+      "graph_local_auto_dependency_scratch_mode": "pmr",
+      "graph_local_auto_key_mode": "compact",
+      "graph_local_auto_side_channel_mode": "flat",
+      "median_peak_rss_bytes_dual_minus_single": 0,
+      "median_peak_rss_bytes_dual_worker": 9060352,
+      "median_peak_rss_bytes_single_worker": 9060352,
+      "median_wall_seconds_dual_minus_single": 0.0007106239991117036,
+      "median_wall_seconds_dual_worker": 0.02168295799947373,
+      "median_wall_seconds_single_worker": 0.020972334000362025,
+      "method_target_memoization": "on",
+      "no_fact_emission": false,
+      "phase": "semantic-product",
+      "semantic_product_force": "auto",
+      "semantic_product_index_family_counts_dual_worker": {
+        "binding_facts": 3,
+        "bridge_path_choices": 0,
+        "direct_call_targets": 4,
+        "local_auto_facts": 0,
+        "method_call_targets": 0,
+        "on_error_facts": 0,
+        "query_facts": 4,
+        "return_facts": 4,
+        "try_facts": 0
+      },
+      "semantic_product_index_family_counts_identical": true,
+      "semantic_product_index_family_counts_single_worker": {
+        "binding_facts": 3,
+        "bridge_path_choices": 0,
+        "direct_call_targets": 4,
+        "local_auto_facts": 0,
+        "method_call_targets": 0,
+        "on_error_facts": 0,
+        "query_facts": 4,
+        "return_facts": 4,
+        "try_facts": 0
+      },
+      "single_worker_dump_sha256": "50a4cf81cc595a92fffe6866e1777b4a35d5daf7c550b2da676a79aa6150d38a",
+      "worst_peak_rss_bytes_dual_minus_single": 0,
+      "worst_peak_rss_bytes_dual_worker": 9060352,
+      "worst_peak_rss_bytes_single_worker": 9060352,
+      "worst_wall_seconds_dual_minus_single": -0.45923025000047346,
+      "worst_wall_seconds_dual_worker": 0.021911415999966266,
+      "worst_wall_seconds_single_worker": 0.4811416660004397
+    }
+  ],
+  "entry": "/bench/main",
+  "expensive_offenders": [],
+  "expensive_thresholds": {
+    "max_peak_rss_bytes": 524288000,
+    "max_wall_seconds": 3.0
+  },
+  "fixtures": [
+    {
+      "group": "primary",
+      "name": "math_star_repro",
+      "scale_factor": null,
+      "source": "benchmarks/semantic_memory/fixtures/math_star_repro.prime"
+    }
+  ],
+  "graph_local_auto_dependency_scratch_mode_deltas": [],
+  "graph_local_auto_key_mode_deltas": [],
+  "graph_local_auto_side_channel_mode_deltas": [],
+  "method_target_memoization_deltas": [],
+  "phases": [
+    "semantic-product"
+  ],
+  "platform": {
+    "machine": "arm64",
+    "release": "25.2.0",
+    "system": "Darwin"
+  },
+  "primec": "build-release/primec",
+  "repo_root": ".",
+  "results": [
+    {
+      "definition_validation_workers": 1,
+      "dump_sha256": "50a4cf81cc595a92fffe6866e1777b4a35d5daf7c550b2da676a79aa6150d38a",
+      "dump_size_bytes": 5884,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "math_star_repro",
+      "graph_local_auto_dependency_scratch_mode": "pmr",
+      "graph_local_auto_key_mode": "compact",
+      "graph_local_auto_side_channel_mode": "flat",
+      "group": "primary",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 4,
+        "distinct_method_call_target_keys": 0,
+        "max_target_key_length": 19
+      },
+      "median_peak_rss_bytes": 9060352,
+      "median_wall_seconds": 0.020972334000362025,
+      "method_target_memoization": "on",
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        9060352,
+        9060352,
+        9060352
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "semantic_product_index_family_counts": {
+        "binding_facts": 3,
+        "bridge_path_choices": 0,
+        "direct_call_targets": 4,
+        "local_auto_facts": 0,
+        "method_call_targets": 0,
+        "on_error_facts": 0,
+        "query_facts": 4,
+        "return_facts": 4,
+        "try_facts": 0
+      },
+      "source": "benchmarks/semantic_memory/fixtures/math_star_repro.prime",
+      "wall_seconds": [
+        0.4811416660004397,
+        0.0208202080002593,
+        0.020972334000362025
+      ],
+      "worst_peak_rss_bytes": 9060352,
+      "worst_wall_seconds": 0.4811416660004397
+    },
+    {
+      "definition_validation_workers": 2,
+      "dump_sha256": "50a4cf81cc595a92fffe6866e1777b4a35d5daf7c550b2da676a79aa6150d38a",
+      "dump_size_bytes": 5884,
+      "entry": "/bench/main",
+      "exceeds_expensive_rss_threshold": false,
+      "exceeds_expensive_runtime_threshold": false,
+      "fact_families": "auto",
+      "fixture": "math_star_repro",
+      "graph_local_auto_dependency_scratch_mode": "pmr",
+      "graph_local_auto_key_mode": "compact",
+      "graph_local_auto_side_channel_mode": "flat",
+      "group": "primary",
+      "is_expensive_threshold_offender": false,
+      "key_cardinality": {
+        "distinct_direct_call_target_keys": 4,
+        "distinct_method_call_target_keys": 0,
+        "max_target_key_length": 19
+      },
+      "median_peak_rss_bytes": 9060352,
+      "median_wall_seconds": 0.02168295799947373,
+      "method_target_memoization": "on",
+      "no_fact_emission": false,
+      "peak_rss_bytes": [
+        9060352,
+        9060352,
+        9060352
+      ],
+      "phase": "semantic-product",
+      "runs": 3,
+      "semantic_product_force": "auto",
+      "semantic_product_index_family_counts": {
+        "binding_facts": 3,
+        "bridge_path_choices": 0,
+        "direct_call_targets": 4,
+        "local_auto_facts": 0,
+        "method_call_targets": 0,
+        "on_error_facts": 0,
+        "query_facts": 4,
+        "return_facts": 4,
+        "try_facts": 0
+      },
+      "source": "benchmarks/semantic_memory/fixtures/math_star_repro.prime",
+      "wall_seconds": [
+        0.021911415999966266,
+        0.021276792000207934,
+        0.02168295799947373
+      ],
+      "worst_peak_rss_bytes": 9060352,
+      "worst_wall_seconds": 0.021911415999966266
+    }
+  ],
+  "runs": 3,
+  "scale_slopes": [],
+  "schema": "primestruct_semantic_memory_report_v1",
+  "semantic_product_force_deltas": [],
+  "semantic_validation_without_fact_emission_deltas": []
+}

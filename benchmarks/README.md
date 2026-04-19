@@ -163,6 +163,12 @@ Initial checked-in baseline report:
   locks the checked-in semantic-product index-family count and
   definition-worker parity field shape until the canonical baseline report is
   refreshed with `--definition-validation-workers both`.
+- `benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json`
+  is the checked-in measured worker-parity report for the primary
+  `math_star_repro` `semantic-product` fixture, generated with
+  `--definition-validation-workers both` to record real
+  `semantic_product_index_family_counts` and
+  `definition_validation_worker_mode_deltas` payloads.
 - `benchmarks/semantic_memory_phase_one_success_criteria.json` defines the
   phase-one success target tied to the primary `/std/math/*` fixture
   (`math_star_repro`, `semantic-product`) using a reduction-vs-cap rule.

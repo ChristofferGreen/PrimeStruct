@@ -109,6 +109,12 @@ mode:
 - `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json`
   is the paired checked-in evidence artifact that locks those family-count and
   worker-parity fields before the next canonical baseline refresh lands.
+- `benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json`
+  is the checked-in measured report for the primary `math_star_repro`
+  `semantic-product` fixture, generated with
+  `--definition-validation-workers both` so the worker-parity family-count
+  payload already exists in repository history before the full baseline refresh
+  lands.
 - Use those family-count fields to confirm the direct-call, method-call,
   bridge-path, binding, return, local-auto, query, try, and `on_error` index
   families remain populated and worker-parity-identical while comparing RSS and
@@ -118,6 +124,15 @@ The current checked-in baseline source predates those worker-parity family-count
 fields, so the next canonical report refresh should be generated with
 `--definition-validation-workers both` and recorded alongside the same policy
 update that relies on those counts.
+
+The checked-in primary-fixture measured artifact was generated with:
+
+```bash
+python3 scripts/semantic_memory_benchmark.py --repo-root . \
+  --primec build-release/primec --runs 3 --fixtures math_star_repro \
+  --phases semantic-product --definition-validation-workers both \
+  --report-json benchmarks/semantic_memory/semantic_product_index_math_star_repro_report.json
+```
 
 The CI artifact wrapper forwards this mode via:
 
