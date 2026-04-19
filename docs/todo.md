@@ -56,40 +56,30 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1143
+- none
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1143
+- none
 
 ### Priority Lanes (Current)
 
-- VM wrapper-returned canonical map reference method-sugar key diagnostics skip debt: TODO-1143
+- none
 
 ### Execution Queue (Recommended)
 
-1. TODO-1143
+1. none
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM wrapper-returned canonical map reference method-sugar skipped-test debt | TODO-1143 |
+| none | none |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1143 |
+| none | none |
 
 ### Task Blocks
-
-- [ ] TODO-1143: Audit VM wrapper-returned canonical map reference method-sugar key diagnostics skip debt
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM key-type diagnostic coverage for wrapper-returned canonical map reference method sugar, and lock the current VM contract for `borrowMap(location(values)).at(true)`.
-  - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM wrapper-returned canonical map reference method-sugar key-diagnostic case in stale form.
-    - The VM test locks the actual current diagnostic contract for `borrowMap(location(values)).at(true)`, whether that stays as a key-typing reject or another stable VM-side diagnostic.
-  - stop_rule: Stop after the VM wrapper-returned canonical map reference method-sugar key-diagnostic surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

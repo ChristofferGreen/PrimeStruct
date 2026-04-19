@@ -769,7 +769,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("vm keeps key diagnostics on wrapper-returned canonical map reference method sugar" * doctest::skip(true)) {
+TEST_CASE("vm keeps key diagnostics on wrapper-returned canonical map reference method sugar") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
