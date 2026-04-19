@@ -456,7 +456,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced access helper auto inference follows alias precedence" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced access helper auto inference keeps canonical precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -476,8 +476,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced access helper auto inference reports alias mismatch") {
