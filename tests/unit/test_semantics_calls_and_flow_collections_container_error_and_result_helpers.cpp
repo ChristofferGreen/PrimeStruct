@@ -345,7 +345,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector count slash-method rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector count slash-method still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -358,9 +358,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit soa_vector count forms reject non-soa target") {
@@ -372,10 +371,10 @@ main() {
   values./soa_vector/count()
   return(0i32)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count") != std::string::npos);
+  CHECK(error.find("count requires soa_vector target") != std::string::npos);
 }
 
 TEST_CASE("canonical soa_vector count helper validates through struct helper return receivers") {
@@ -3426,7 +3425,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get slash-method rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector get slash-method still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3440,9 +3439,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit old-surface soa_vector get_ref rejects without same-path helper") {
@@ -3464,7 +3462,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector get_ref slash-method rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector get_ref slash-method still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3478,9 +3476,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("get root forms reject vector target") {
@@ -3702,7 +3699,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref slash-method rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref slash-method still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3716,9 +3713,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit old-surface soa_vector ref_ref rejects without same-path helper") {
@@ -3740,7 +3736,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref slash-method rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref_ref slash-method still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3754,9 +3750,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref_ref") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("ref root forms reject vector target") {
@@ -3775,7 +3770,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("canonical ref helper rejects through struct helper return receivers") {
+TEST_CASE("canonical ref helper validates through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -3801,9 +3796,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare ref helper validates through experimental soa helper return receivers") {

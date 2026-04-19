@@ -68,7 +68,7 @@ main() {
   CHECK(runCommand(exePath) == 73);
 }
 
-TEST_CASE("compiles and runs native canonical map access helpers on wrapper slash return receiver") {
+TEST_CASE("native canonical map access direct calls override wrapper slash return receiver while method sugar stays builtin") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -104,7 +104,7 @@ main() {
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(outPath).empty());
-  CHECK(runCommand(exePath) == 166);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects native canonical map access helper key mismatch on wrapper slash return receiver") {

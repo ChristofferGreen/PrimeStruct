@@ -63,6 +63,26 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
   return true;
 }
 
+bool applySemanticQueryFactResultInfo(const Expr &expr,
+                                      const SemanticProductTargetAdapter *semanticProductTargets,
+                                      ResultExprInfo &out) {
+  if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
+      expr.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *queryFact = findSemanticProductQueryFact(*semanticProductTargets, expr);
+  if (queryFact == nullptr || !queryFact->hasResultType) {
+    return false;
+  }
+  out.isResult = true;
+  out.hasValue = queryFact->resultTypeHasValue;
+  out.errorType = queryFact->resultErrorType;
+  if (!out.hasValue) {
+    return true;
+  }
+  return applySemanticResultValueTypeText(queryFact->resultValueType, out);
+}
+
 } // namespace
 
 bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *semanticProgram,
@@ -219,7 +239,7 @@ bool resolveResultExprInfo(const Expr &expr,
     return true;
   }
 
-  if (expr.isMethodCall && !expr.args.empty()) {
+  if (!expr.args.empty()) {
     if (expr.args.front().kind == Expr::Kind::Name) {
       if (expr.args.front().name == "Result" && expr.name == "ok") {
         out.isResult = true;
@@ -232,6 +252,11 @@ bool resolveResultExprInfo(const Expr &expr,
         }
         return true;
       }
+    }
+  }
+
+  if (expr.isMethodCall && !expr.args.empty()) {
+    if (expr.args.front().kind == Expr::Kind::Name) {
       const LocalResultInfo local = lookupLocal(expr.args.front().name);
       if (local.found && local.isFileHandle) {
         if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
@@ -495,7 +520,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = (expr.args.size() > 1);
     if (out.hasValue && expr.args.size() == 2) {
-      applyDirectResultValueMetadata(expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, out);
+      applyDirectResultValueMetadata(
+          expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, semanticProductTargets, out);
     }
     return true;
   }
@@ -535,7 +561,14 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     out.isResult = true;
     out.hasValue = true;
-    applyDirectResultValueMetadata(*mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, out);
+    applyDirectResultValueMetadata(
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProductTargets, out);
+    if (out.valueCollectionKind == LocalInfo::Kind::Value &&
+        out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
+        out.valueStructType.empty() &&
+        !out.valueIsFileHandle) {
+      applySemanticQueryFactResultInfo(expr, semanticProductTargets, out);
+    }
     out.errorType = sourceResultInfo.errorType;
     return true;
   }
@@ -588,6 +621,16 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
     if (chainedResultInfo.errorType.empty()) {
       chainedResultInfo.errorType = sourceResultInfo.errorType;
+    }
+    if (chainedResultInfo.hasValue &&
+        chainedResultInfo.valueCollectionKind == LocalInfo::Kind::Value &&
+        chainedResultInfo.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
+        chainedResultInfo.valueStructType.empty() &&
+        !chainedResultInfo.valueIsFileHandle) {
+      applySemanticQueryFactResultInfo(expr, semanticProductTargets, chainedResultInfo);
+      if (chainedResultInfo.errorType.empty()) {
+        chainedResultInfo.errorType = sourceResultInfo.errorType;
+      }
     }
     out = std::move(chainedResultInfo);
     return true;
@@ -648,7 +691,14 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
 
     out.isResult = true;
     out.hasValue = true;
-    applyDirectResultValueMetadata(*mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, out);
+    applyDirectResultValueMetadata(
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProductTargets, out);
+    if (out.valueCollectionKind == LocalInfo::Kind::Value &&
+        out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
+        out.valueStructType.empty() &&
+        !out.valueIsFileHandle) {
+      applySemanticQueryFactResultInfo(expr, semanticProductTargets, out);
+    }
     out.errorType = !leftResultInfo.errorType.empty() ? leftResultInfo.errorType : rightResultInfo.errorType;
     return true;
   }

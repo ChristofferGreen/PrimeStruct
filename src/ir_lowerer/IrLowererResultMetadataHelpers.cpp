@@ -7,6 +7,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -411,51 +412,109 @@ bool mergeControlFlowResultInfos(const ResultExprInfo &first,
   return true;
 }
 
+namespace {
+
+bool inferPackedErrorStructPathText(const std::string &callNameText, std::string &pathOut) {
+  pathOut.clear();
+  if (callNameText.empty()) {
+    return false;
+  }
+  std::string normalized = trimTemplateTypeText(callNameText);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  std::string baseName = normalized;
+  const size_t lastSlash = baseName.rfind('/');
+  if (lastSlash != std::string::npos) {
+    baseName.erase(0, lastSlash + 1);
+  }
+  const size_t generatedSuffix = baseName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    baseName.erase(generatedSuffix);
+  }
+  if (normalized == "FileError" || normalized == "std/file/FileError" || baseName == "FileError") {
+    pathOut = "/std/file/FileError";
+    return true;
+  }
+  if (normalized == "ImageError" || normalized == "std/image/ImageError" || baseName == "ImageError") {
+    pathOut = "/std/image/ImageError";
+    return true;
+  }
+  if (normalized == "ContainerError" || normalized == "std/collections/ContainerError" ||
+      baseName == "ContainerError") {
+    pathOut = "/std/collections/ContainerError";
+    return true;
+  }
+  if (normalized == "GfxError" || normalized == "std/gfx/GfxError" ||
+      normalized == "std/gfx/experimental/GfxError" || baseName == "GfxError") {
+    pathOut = normalized.find("experimental/GfxError") != std::string::npos
+                  ? "/std/gfx/experimental/GfxError"
+                  : "/std/gfx/GfxError";
+    return true;
+  }
+  return false;
+}
+
+bool inferPackedErrorStructPath(const Expr &expr, std::string &pathOut) {
+  pathOut.clear();
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+
+  if (inferPackedErrorStructPathText(expr.name, pathOut)) {
+    return true;
+  }
+
+  if (!expr.namespacePrefix.empty()) {
+    std::string qualifiedName = expr.namespacePrefix;
+    if (!qualifiedName.empty() && qualifiedName.back() != '/') {
+      qualifiedName.push_back('/');
+    }
+    qualifiedName += expr.name;
+    if (inferPackedErrorStructPathText(qualifiedName, pathOut)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInfo &out) {
+  const std::string trimmedType = trimTemplateTypeText(typeText);
+  if (trimmedType.empty()) {
+    return false;
+  }
+  out.valueCollectionKind = LocalInfo::Kind::Value;
+  out.valueKind = LocalInfo::ValueKind::Unknown;
+  out.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+  out.valueIsFileHandle = false;
+  out.valueStructType.clear();
+  if (resolveSupportedResultCollectionType(
+          trimmedType, out.valueCollectionKind, out.valueKind, &out.valueMapKeyKind)) {
+    return true;
+  }
+  if (isFileHandleTypeText(trimmedType)) {
+    out.valueKind = LocalInfo::ValueKind::Int64;
+    out.valueIsFileHandle = true;
+    return true;
+  }
+  out.valueKind = valueKindFromTypeName(trimmedType);
+  if (out.valueKind != LocalInfo::ValueKind::Unknown) {
+    return true;
+  }
+  out.valueStructType = trimmedType;
+  if (!out.valueStructType.empty() && out.valueStructType.front() != '/') {
+    out.valueStructType.insert(out.valueStructType.begin(), '/');
+  }
+  return true;
+}
+
+} // namespace
+
 bool inferDirectResultValueStructType(const Expr &expr,
                                       const LocalMap &localsIn,
                                       const ResolveCallDefinitionFn &resolveDefinitionCall,
                                       std::string &structTypeOut) {
-  auto inferPackedErrorStructPath = [](const std::string &callName, std::string &pathOut) {
-    pathOut.clear();
-    if (callName.empty()) {
-      return false;
-    }
-    std::string normalized = trimTemplateTypeText(callName);
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
-    std::string baseName = normalized;
-    const size_t lastSlash = baseName.rfind('/');
-    if (lastSlash != std::string::npos) {
-      baseName.erase(0, lastSlash + 1);
-    }
-    const size_t generatedSuffix = baseName.find("__");
-    if (generatedSuffix != std::string::npos) {
-      baseName.erase(generatedSuffix);
-    }
-    if (normalized == "FileError" || normalized == "std/file/FileError" || baseName == "FileError") {
-      pathOut = "/std/file/FileError";
-      return true;
-    }
-    if (normalized == "ImageError" || normalized == "std/image/ImageError" || baseName == "ImageError") {
-      pathOut = "/std/image/ImageError";
-      return true;
-    }
-    if (normalized == "ContainerError" || normalized == "std/collections/ContainerError" ||
-        baseName == "ContainerError") {
-      pathOut = "/std/collections/ContainerError";
-      return true;
-    }
-    if (normalized == "GfxError" || normalized == "std/gfx/GfxError" ||
-        normalized == "std/gfx/experimental/GfxError" || baseName == "GfxError") {
-      pathOut = normalized.find("experimental/GfxError") != std::string::npos
-                    ? "/std/gfx/experimental/GfxError"
-                    : "/std/gfx/GfxError";
-      return true;
-    }
-    return false;
-  };
-
   structTypeOut.clear();
   if (expr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(expr.name);
@@ -475,12 +534,16 @@ bool inferDirectResultValueStructType(const Expr &expr,
     return false;
   }
 
+  if (inferPackedErrorStructPath(expr, structTypeOut)) {
+    return true;
+  }
+
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(expr) : nullptr;
   if (callee != nullptr && isStructDefinition(*callee)) {
     structTypeOut = callee->fullPath;
     return true;
   }
-  return inferPackedErrorStructPath(expr.name, structTypeOut);
+  return inferPackedErrorStructPathText(expr.name, structTypeOut);
 }
 
 bool inferDirectResultValueCollectionInfo(const Expr &expr,
@@ -796,6 +859,7 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const LocalMap &localsIn,
                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
                                     const InferExprKindWithLocalsFn &inferExprKind,
+                                    const SemanticProductTargetAdapter *semanticProductTargets,
                                     ResultExprInfo &out) {
   if (valueExpr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(valueExpr.name);
@@ -829,6 +893,19 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
     out.valueKind = LocalInfo::ValueKind::Unknown;
     out.valueIsFileHandle = false;
     return;
+  }
+  if (semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct &&
+      valueExpr.semanticNodeId != 0) {
+    if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, valueExpr);
+        bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
+        applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
+      return;
+    }
+    if (const auto *queryFact = findSemanticProductQueryFact(*semanticProductTargets, valueExpr);
+        queryFact != nullptr && !queryFact->bindingTypeText.empty() &&
+        applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
+      return;
+    }
   }
   if (inferExprKind) {
     out.valueKind = inferExprKind(valueExpr, localsIn);

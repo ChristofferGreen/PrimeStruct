@@ -117,21 +117,34 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
 
 bool applyErrorTypeMetadata(const std::string &typeText, LocalInfo &infoOut) {
   const std::string normalized = trimTemplateTypeText(typeText);
-  if (normalized != "FileError" && normalized != "ImageError" &&
-      normalized != "ContainerError" && normalized != "GfxError") {
+  if (normalized != "FileError" && normalized != "/std/file/FileError" &&
+      normalized != "ImageError" && normalized != "/std/image/ImageError" &&
+      normalized != "ContainerError" && normalized != "/std/collections/ContainerError" &&
+      normalized != "GfxError" && normalized != "/std/gfx/GfxError" &&
+      normalized != "/std/gfx/experimental/GfxError") {
     return false;
   }
 
-  infoOut.errorTypeName = normalized;
-  infoOut.valueKind = LocalInfo::ValueKind::Int32;
-  if (normalized == "FileError") {
+  if (normalized == "FileError" || normalized == "/std/file/FileError") {
+    infoOut.errorTypeName = "FileError";
     infoOut.isFileError = true;
     infoOut.errorHelperNamespacePath = "/std/file/FileError";
-  } else if (normalized == "ImageError") {
+  } else if (normalized == "ImageError" || normalized == "/std/image/ImageError") {
+    infoOut.errorTypeName = "ImageError";
     infoOut.errorHelperNamespacePath = "/std/image/ImageError";
-  } else if (normalized == "ContainerError") {
+    infoOut.structTypeName = "/std/image/ImageError";
+  } else if (normalized == "ContainerError" || normalized == "/std/collections/ContainerError") {
+    infoOut.errorTypeName = "ContainerError";
     infoOut.errorHelperNamespacePath = "/std/collections/ContainerError";
+    infoOut.structTypeName = "/std/collections/ContainerError";
+  } else {
+    infoOut.errorTypeName = "GfxError";
+    infoOut.errorHelperNamespacePath =
+        normalized == "/std/gfx/experimental/GfxError" ? "/std/gfx/experimental/GfxError"
+                                                        : "/std/gfx/GfxError";
+    infoOut.structTypeName = infoOut.errorHelperNamespacePath;
   }
+  infoOut.valueKind = LocalInfo::ValueKind::Int32;
   return true;
 }
 

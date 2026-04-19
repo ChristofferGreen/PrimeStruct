@@ -54,6 +54,112 @@
             }
             return true;
           };
+          auto applySemanticOperandResultType = [&](const Expr &operandExpr,
+                                                    ResultExprInfo &resultInfoOut) {
+            if (!callResolutionAdapters.semanticProductTargets.hasSemanticProduct ||
+                operandExpr.semanticNodeId == 0) {
+              return false;
+            }
+            const auto *queryFact =
+                findSemanticProductQueryFact(callResolutionAdapters.semanticProductTargets, operandExpr);
+            if (queryFact == nullptr || !queryFact->hasResultType) {
+              return false;
+            }
+            resultInfoOut.isResult = true;
+            resultInfoOut.hasValue = queryFact->resultTypeHasValue;
+            resultInfoOut.errorType = queryFact->resultErrorType;
+            if (!resultInfoOut.hasValue) {
+              return true;
+            }
+            return applySemanticTryValueType(queryFact->resultValueType, resultInfoOut);
+          };
+          auto resolveLambdaReturnedValueExpr = [&](const Expr &lambdaExpr,
+                                                    const Expr *&valueExprOut) {
+            valueExprOut = nullptr;
+            if (!lambdaExpr.isLambda) {
+              return false;
+            }
+            for (size_t i = 0; i < lambdaExpr.bodyArguments.size(); ++i) {
+              const Expr &bodyExpr = lambdaExpr.bodyArguments[i];
+              const bool isLast = (i + 1 == lambdaExpr.bodyArguments.size());
+              if (bodyExpr.isBinding || !isLast) {
+                continue;
+              }
+              if (isSimpleCallName(bodyExpr, "return")) {
+                if (bodyExpr.args.size() != 1) {
+                  return false;
+                }
+                valueExprOut = &bodyExpr.args.front();
+                return true;
+              }
+              valueExprOut = &bodyExpr;
+              return true;
+            }
+            return false;
+          };
+          auto applyBuiltinCombinatorStructFallback = [&](const Expr &operandExpr,
+                                                          ResultExprInfo &resultInfoOut) {
+            if (operandExpr.kind != Expr::Kind::Call) {
+              return false;
+            }
+            const Expr *candidateValueExpr = nullptr;
+            if ((operandExpr.name == "map" && operandExpr.args.size() == 3) ||
+                (operandExpr.name == "and_then" && operandExpr.args.size() == 3)) {
+              if (!resolveLambdaReturnedValueExpr(operandExpr.args[2], candidateValueExpr)) {
+                return false;
+              }
+            } else if (operandExpr.name == "map2" && operandExpr.args.size() == 4) {
+              if (!resolveLambdaReturnedValueExpr(operandExpr.args[3], candidateValueExpr)) {
+                return false;
+              }
+            } else {
+              return false;
+            }
+            if (candidateValueExpr == nullptr) {
+              return false;
+            }
+            const auto isResultOkCall = [&](const Expr &candidateExpr) {
+              return candidateExpr.kind == Expr::Kind::Call &&
+                     candidateExpr.name == "ok" &&
+                     candidateExpr.args.size() == 2 &&
+                     candidateExpr.args.front().kind == Expr::Kind::Name &&
+                     candidateExpr.args.front().name == "Result";
+            };
+            if (operandExpr.name == "and_then" && isResultOkCall(*candidateValueExpr)) {
+              candidateValueExpr = &candidateValueExpr->args[1];
+            }
+            if (candidateValueExpr->kind != Expr::Kind::Call) {
+              return false;
+            }
+            std::string valueStructType;
+            const Definition *valueDef = resolveDefinitionCall(*candidateValueExpr);
+            if (valueDef != nullptr && isStructDefinition(*valueDef)) {
+              valueStructType = valueDef->fullPath;
+            } else if (candidateValueExpr->name == "ContainerError" ||
+                       candidateValueExpr->name == "/std/collections/ContainerError") {
+              valueStructType = "/std/collections/ContainerError";
+            } else if (candidateValueExpr->name == "ImageError" ||
+                       candidateValueExpr->name == "/std/image/ImageError") {
+              valueStructType = "/std/image/ImageError";
+            } else if (candidateValueExpr->name == "GfxError" ||
+                       candidateValueExpr->name == "/std/gfx/GfxError" ||
+                       candidateValueExpr->name == "/std/gfx/experimental/GfxError") {
+              valueStructType = candidateValueExpr->name == "/std/gfx/experimental/GfxError"
+                                    ? "/std/gfx/experimental/GfxError"
+                                    : "/std/gfx/GfxError";
+            }
+            if (valueStructType.empty()) {
+              return false;
+            }
+            resultInfoOut.isResult = true;
+            resultInfoOut.hasValue = true;
+            resultInfoOut.valueCollectionKind = LocalInfo::Kind::Value;
+            resultInfoOut.valueKind = LocalInfo::ValueKind::Unknown;
+            resultInfoOut.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+            resultInfoOut.valueIsFileHandle = false;
+            resultInfoOut.valueStructType = std::move(valueStructType);
+            return true;
+          };
           if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0) {
             const auto *tryFact =
                 findSemanticProductTryFact(callResolutionAdapters.semanticProductTargets, expr);
@@ -145,6 +251,16 @@
                                                     : "try requires Result argument";
             }
             return false;
+          }
+          if (resultInfo.isResult && resultInfo.hasValue &&
+              resultInfo.valueCollectionKind == LocalInfo::Kind::Value &&
+              resultInfo.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
+              resultInfo.valueStructType.empty() &&
+              !resultInfo.valueIsFileHandle) {
+            (void)applySemanticOperandResultType(expr.args.front(), resultInfo);
+            if (resultInfo.valueStructType.empty()) {
+              (void)applyBuiltinCombinatorStructFallback(expr.args.front(), resultInfo);
+            }
           }
           auto normalizeSpecializedMapResultInfo = [&](ResultExprInfo &valueResultInfo) {
             if (valueResultInfo.valueCollectionKind != LocalInfo::Kind::Value ||

@@ -78,6 +78,8 @@ main() {
 
 TEST_CASE("compiles and runs native map literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
@@ -93,6 +95,8 @@ main() {
 
 TEST_CASE("compiles and runs native map count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -109,6 +113,8 @@ main() {
 
 TEST_CASE("compiles and runs native map method call") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /map/size([map<i32, i32>] items) {
   return(count(items))
@@ -131,6 +137,8 @@ main() {
 
 TEST_CASE("compiles and runs native map at helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -147,6 +155,8 @@ main() {
 
 TEST_CASE("compiles and runs native map indexing sugar") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -163,6 +173,8 @@ main() {
 
 TEST_CASE("compiles and runs native map at_unsafe helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -179,6 +191,8 @@ main() {
 
 TEST_CASE("compiles and runs native bool map access helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<bool, i32>] values{map<bool, i32>{true=1i32, false=2i32}}
@@ -195,6 +209,8 @@ main() {
 
 TEST_CASE("compiles and runs native u64 map access helpers") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<u64, i32>] values{map<u64, i32>{2u64=7i32, 11u64=5i32}}
@@ -211,6 +227,8 @@ main() {
 
 TEST_CASE("compiles and runs native map at missing key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -284,8 +302,10 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native string-valued map literals on builtin path") {
+TEST_CASE("compiles and runs native string-valued map literals on builtin path") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, string>] values{map<i32, string>(1i32, "abc"raw_utf8, 2i32, "de"raw_utf8)}
@@ -300,14 +320,15 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find(
-            "map literal requires relocation-trivial map value type until container move/reallocation semantics "
-            "are implemented: string") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(exePath) == 5);
 }
 
 TEST_CASE("compiles and runs native string-keyed map literals") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
@@ -327,6 +348,8 @@ main() {
 
 TEST_CASE("compiles and runs native map literal string binding key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [string] key{"b"raw_utf8}
@@ -345,6 +368,8 @@ main() {
 
 TEST_CASE("compiles and runs native string-keyed map indexing sugar") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
@@ -362,6 +387,8 @@ main() {
 
 TEST_CASE("compiles and runs native string-keyed map indexing binding key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}

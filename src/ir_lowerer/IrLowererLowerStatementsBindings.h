@@ -357,7 +357,33 @@
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
-
+      if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty()) {
+        for (const auto &transform : bindingTypeExprRef.transforms) {
+          if (transform.name == "effects" || transform.name == "capabilities" ||
+              isBindingQualifierName(transform.name) || !transform.arguments.empty()) {
+            continue;
+          }
+          std::string resolvedStructPath;
+          if (resolveStructTypeName(transform.name, stmt.namespacePrefix, resolvedStructPath)) {
+            info.structTypeName = std::move(resolvedStructPath);
+          } else if (transform.name == "ImageError" || transform.name == "/std/image/ImageError") {
+            info.structTypeName = "/std/image/ImageError";
+          } else if (transform.name == "ContainerError" ||
+                     transform.name == "/std/collections/ContainerError") {
+            info.structTypeName = "/std/collections/ContainerError";
+          } else if (transform.name == "GfxError" ||
+                     transform.name == "/std/gfx/GfxError" ||
+                     transform.name == "/std/gfx/experimental/GfxError") {
+            info.structTypeName =
+                transform.name == "/std/gfx/experimental/GfxError" ? "/std/gfx/experimental/GfxError"
+                                                                    : "/std/gfx/GfxError";
+          }
+          break;
+        }
+        if (!info.structTypeName.empty()) {
+          info.valueKind = LocalInfo::ValueKind::Int64;
+        }
+      }
       if ((info.kind == LocalInfo::Kind::Value || info.kind == LocalInfo::Kind::Map) &&
           !info.structTypeName.empty()) {
         std::string initStruct = inferStructExprPath(init, localsIn);
@@ -482,7 +508,7 @@
           localsIn.emplace(stmt.name, info);
           return true;
         }
-        const int32_t srcPtrLocal = allocTempLocal();
+        int32_t srcPtrLocal = allocTempLocal();
         bool emittedStructArgsPackAccessInit = false;
         std::string accessName;
         if (init.kind == Expr::Kind::Call &&
@@ -521,6 +547,36 @@
         }
         if (!emittedStructArgsPackAccessInit && !emitExpr(init, localsIn)) {
           return false;
+        }
+        if (!emittedStructArgsPackAccessInit &&
+            init.kind == Expr::Kind::Call &&
+            !init.isMethodCall &&
+            isSimpleCallName(init, "try") &&
+            init.args.size() == 1 &&
+            init.args.front().kind == Expr::Kind::Call &&
+            (init.args.front().name == "map" ||
+             init.args.front().name == "and_then" ||
+             init.args.front().name == "map2")) {
+          ir_lowerer::PackedResultStructPayloadInfo payloadInfo;
+          if (ir_lowerer::resolvePackedResultStructPayloadInfo(
+                  info.structTypeName,
+                  [&](const std::string &structPath, StructSlotLayoutInfo &layoutOut) {
+                    return resolveStructSlotLayout(structPath, layoutOut);
+                  },
+                  payloadInfo) &&
+              payloadInfo.isPackedSingleSlot) {
+            const int32_t packedBaseLocal = nextLocal;
+            nextLocal += payloadInfo.slotCount;
+            const int32_t packedPtrLocal = allocTempLocal();
+            function.instructions.push_back(
+                {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(payloadInfo.slotCount - 1))});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedBaseLocal)});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(packedBaseLocal + payloadInfo.fieldOffset)});
+            function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(packedBaseLocal)});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(packedPtrLocal)});
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(packedPtrLocal)});
+          }
         }
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
         if (!emitStructCopySlots(baseLocal, srcPtrLocal, layout.totalSlots)) {

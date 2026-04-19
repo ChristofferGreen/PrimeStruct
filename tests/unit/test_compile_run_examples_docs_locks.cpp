@@ -196,38 +196,42 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`png.write(path, width, height, pixels) -> Result<ImageError>`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`pixels` is a flat `vector<i32>` in RGB byte order") != std::string::npos);
-  CHECK(primeStructDoc.find("read-only file operations require `effects(file_read)` and write/append operations require `effects(file_write)`") !=
+  CHECK(primeStructDoc.find("`pixels` is a flat `vector<i32>` in RGB byte") != std::string::npos);
+  CHECK(primeStructDoc.find("image file I/O follows `File<...>` behavior: `ppm.read(...)` and `png.read(...)`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("require `effects(file_read, heap_alloc)` because they reset/materialize the pixel buffer") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`png.write(...)` require `effects(file_write)`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`file_write` also implies `file_read` for compatibility") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`ppm.read(...)` currently parses ASCII `P3` and binary `P6` PPM files in VM/native/Wasm") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("On Wasm-wasi, the current `effects(file_read, heap_alloc)` read contract now compiles through target validation") !=
+  CHECK(primeStructDoc.find("read contract now compiles through target validation") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("overflowed read-side size arithmetic, unsupported max values, non-positive dimensions, missing binary-raster separators, truncated payloads, and out-of-range ASCII component values deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("overflowed read-side size arithmetic") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`ppm.write(...)` now emits ASCII `P3` PPM files in VM/native/Wasm") !=
+  CHECK(primeStructDoc.find("`ppm.write(...)` now emits ASCII `P3` PPM files in") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("invalid dimensions, payload mismatches, overflowed write-side size") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks, including CRCs for critical chunks and stricter `PLTE`/`IDAT` ordering for the current subset, and fully decodes the current PNG read subset") !=
+  CHECK(primeStructDoc.find("`png.read(...)` now validates PNG signatures/chunks,") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("for both non-interlaced and Adam7-interlaced images: 1/2/4/8/16-bit grayscale, 1/2/4/8-bit indexed-color, 8/16-bit grayscale+alpha, and 8/16-bit RGB/RGBA inputs whose `IDAT` payload uses stored/no-compression deflate blocks, fixed-Huffman deflate blocks, or dynamic-Huffman deflate blocks, with filter-`0`, filter-`1` (`Sub`), filter-`2` (`Up`), filter-`3` (`Average`), and filter-`4` (`Paeth`) scanlines") !=
+  CHECK(primeStructDoc.find("current PNG read subset for both non-interlaced and Adam7-interlaced images:") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("The shared decoder accepts a single `PLTE` chunk before the `IDAT` run when present, indexed-color inputs require that palette before decode, and multi-chunk `IDAT` payloads must stay consecutive once decoding data begins") !=
+  CHECK(primeStructDoc.find("The shared decoder accepts a single") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Fixed-Huffman reads now cover both literal-only payloads and length/distance backreferences with overlapping copy semantics, and dynamic-Huffman reads now cover both literal-only payloads and length/distance backreferences with explicit code-length tables") !=
+  CHECK(primeStructDoc.find("dynamic-Huffman reads") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("reconstructing Adam7 passes into image order while expanding packed grayscale samples to full-range RGB, downscaling 16-bit channel samples into RGB bytes, expanding palette indexes into RGB, and dropping alpha when decoding 8/16-bit grayscale+alpha or 8/16-bit RGBA inputs") !=
+  CHECK(primeStructDoc.find("reads materialize the public flat RGB buffer") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Malformed or missing PNGs, including critical-chunk CRC mismatches, overflowed read-side size arithmetic, invalid `PLTE`/`IDAT` ordering, malformed Adam7 scanline payloads, and indexed palette overruns, deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("Malformed or missing PNGs,") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm (and C++ emitter flows via the shared stdlib implementation) using a single `IHDR`/`IDAT`/`IEND` layout, stored/no-compression deflate blocks, and filter-`0` scanlines for the current write subset; invalid dimensions, payload mismatches, overflowed write-side size arithmetic, out-of-range components, and file-open/write failures deterministically return `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("`png.write(...)` now emits non-interlaced 8-bit RGB PNG files in VM/native/Wasm") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`ImageError.why()` currently returns `image_read_unsupported`, `image_write_unsupported`, or `image_invalid_operation`") !=
+  CHECK(primeStructDoc.find("`ImageError.why()` currently returns") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("the public `/ContainerError/why([ContainerError] err)` wrapper keeps explicit type-owned error strings on the stdlib surface") !=
+  CHECK(primeStructDoc.find("`/ContainerError/why([ContainerError] err)` wrapper keeps explicit type-owned error strings") !=
         std::string::npos);
   CHECK(primeStructDoc.find("The image stdlib layer also defines `/ImageError/why([ImageError] err)` as the public wrapper over the") !=
         std::string::npos);

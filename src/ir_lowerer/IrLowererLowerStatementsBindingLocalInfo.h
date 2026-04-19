@@ -136,6 +136,33 @@
       applySpecializedWrappedMapBindingInfo(bindingTypeExprRef, info);
       applyStructArrayInfo(bindingTypeExprRef, info);
       applyStructValueInfo(bindingTypeExprRef, info);
+      if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty()) {
+        for (const auto &transform : bindingTypeExprRef.transforms) {
+          if (transform.name == "effects" || transform.name == "capabilities" ||
+              isBindingQualifierName(transform.name) || !transform.arguments.empty()) {
+            continue;
+          }
+          if (transform.name == "ImageError" || transform.name == "/std/image/ImageError") {
+            info.errorTypeName = "ImageError";
+            info.errorHelperNamespacePath = "/std/image/ImageError";
+            info.structTypeName = "/std/image/ImageError";
+          } else if (transform.name == "ContainerError" ||
+                     transform.name == "/std/collections/ContainerError") {
+            info.errorTypeName = "ContainerError";
+            info.errorHelperNamespacePath = "/std/collections/ContainerError";
+            info.structTypeName = "/std/collections/ContainerError";
+          } else if (transform.name == "GfxError" ||
+                     transform.name == "/std/gfx/GfxError" ||
+                     transform.name == "/std/gfx/experimental/GfxError") {
+            info.errorTypeName = "GfxError";
+            info.errorHelperNamespacePath =
+                transform.name == "/std/gfx/experimental/GfxError" ? "/std/gfx/experimental/GfxError"
+                                                                    : "/std/gfx/GfxError";
+            info.structTypeName = info.errorHelperNamespacePath;
+          }
+          break;
+        }
+      }
       if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty() &&
           callResolutionAdapters.semanticProductTargets.hasSemanticProduct && stmt.semanticNodeId != 0) {
         if (const SemanticProgramBindingFact *bindingFact =

@@ -34,6 +34,7 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const LocalMap &localsIn,
                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
                                     const InferExprKindWithLocalsFn &inferExprKind,
+                                    const SemanticProductTargetAdapter *semanticProductTargets,
                                     ResultExprInfo &out);
 bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
                                const LocalMap &localsIn,
