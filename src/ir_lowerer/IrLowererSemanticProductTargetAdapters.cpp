@@ -438,63 +438,89 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const Seman
 }
 
 const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr) {
+  return findExpressionScopedSemanticFact(semanticIndex.queryFactsByExpr, expr);
+}
+
+const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
     const SemanticProductTargetAdapter &adapter,
     const Expr &expr) {
-  return findExpressionScopedSemanticFact(adapter.semanticIndex.queryFactsByExpr, expr);
+  return findSemanticProductQueryFactBySemanticId(adapter.semanticIndex, expr);
+}
+
+const SemanticProgramQueryFact *findSemanticProductQueryFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr) {
+  if (const auto *fact = findSemanticProductQueryFactBySemanticId(semanticIndex, expr);
+      fact != nullptr) {
+    return fact;
+  }
+  if (semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return nullptr;
+  }
+  const auto callNameId =
+      semanticProgramLookupCallTargetStringId(*semanticProgram, expr.name);
+  if (!callNameId.has_value()) {
+    return nullptr;
+  }
+  const auto resolvedPathId = resolveSemanticExprPathId(semanticProgram, expr);
+  if (!resolvedPathId.has_value()) {
+    return nullptr;
+  }
+  if (const auto it = semanticIndex.queryFactsByResolvedPathAndCallNameId.find(
+          makeQueryFactResolvedPathCallNameKey(*resolvedPathId, *callNameId));
+      it != semanticIndex.queryFactsByResolvedPathAndCallNameId.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
                                                             const Expr &expr) {
-  if (const auto *fact = findSemanticProductQueryFactBySemanticId(adapter, expr);
-      fact != nullptr) {
-    return fact;
-  }
-  if (adapter.semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return nullptr;
-  }
-  const auto callNameId =
-      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, expr.name);
-  if (!callNameId.has_value()) {
-    return nullptr;
-  }
-  const auto resolvedPathId = resolveSemanticExprPathId(adapter, expr);
-  if (!resolvedPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.find(
-          makeQueryFactResolvedPathCallNameKey(*resolvedPathId, *callNameId));
-      it != adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findSemanticProductQueryFact(adapter.semanticProgram, adapter.semanticIndex, expr);
+}
+
+const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr) {
+  return findExpressionScopedSemanticFact(semanticIndex.tryFactsByExpr, expr);
 }
 
 const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(
     const SemanticProductTargetAdapter &adapter,
     const Expr &expr) {
-  return findExpressionScopedSemanticFact(adapter.semanticIndex.tryFactsByExpr, expr);
+  return findSemanticProductTryFactBySemanticId(adapter.semanticIndex, expr);
+}
+
+const SemanticProgramTryFact *findSemanticProductTryFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr) {
+  if (const auto *fact = findSemanticProductTryFactBySemanticId(semanticIndex, expr);
+      fact != nullptr) {
+    return fact;
+  }
+  if (semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name != "try" ||
+      expr.args.empty() || expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
+    return nullptr;
+  }
+  const auto operandPathId = resolveSemanticExprPathId(semanticProgram, expr.args.front());
+  if (!operandPathId.has_value()) {
+    return nullptr;
+  }
+  if (const auto it = semanticIndex.tryFactsByOperandPathAndSource.find(
+          makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));
+      it != semanticIndex.tryFactsByOperandPathAndSource.end()) {
+    return it->second;
+  }
+  return nullptr;
 }
 
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,
                                                         const Expr &expr) {
-  if (const auto *fact = findSemanticProductTryFactBySemanticId(adapter, expr);
-      fact != nullptr) {
-    return fact;
-  }
-  if (adapter.semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name != "try" ||
-      expr.args.empty() || expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
-    return nullptr;
-  }
-  const auto operandPathId = resolveSemanticExprPathId(adapter, expr.args.front());
-  if (!operandPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto it = adapter.semanticIndex.tryFactsByOperandPathAndSource.find(
-          makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));
-      it != adapter.semanticIndex.tryFactsByOperandPathAndSource.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findSemanticProductTryFact(adapter.semanticProgram, adapter.semanticIndex, expr);
 }
 
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductIndex &semanticIndex,

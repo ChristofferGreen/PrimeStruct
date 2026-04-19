@@ -75,8 +75,22 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,
     const Expr &expr);
+const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
+const SemanticProgramQueryFact *findSemanticProductQueryFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
 const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
                                                             const Expr &expr);
+const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
+const SemanticProgramTryFact *findSemanticProductTryFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,
                                                         const Expr &expr);
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductIndex &semanticIndex,

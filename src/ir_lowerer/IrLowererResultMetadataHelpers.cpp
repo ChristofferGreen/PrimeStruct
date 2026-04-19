@@ -254,7 +254,18 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                  const LookupReturnInfoFn &lookupReturnInfo,
                                  const InferExprKindWithLocalsFn &inferExprKind,
                                  const SemanticProductTargetAdapter *semanticProductTargets,
+                                 const SemanticProgram *semanticProgram,
+                                 const SemanticProductIndex *semanticIndex,
                                  std::string *errorOut) {
+  const SemanticProgram *effectiveSemanticProgram =
+      semanticProgram != nullptr
+          ? semanticProgram
+          : (semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram);
+  const SemanticProductIndex *effectiveSemanticIndex =
+      semanticIndex != nullptr
+          ? semanticIndex
+          : (semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex);
+
   if (bindingExpr.name.empty() || bindingExpr.args.empty()) {
     return false;
   }
@@ -301,7 +312,8 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                         lookupReturnInfo,
                                         inferExprKind,
                                         tryResultInfo,
-                                        semanticProductTargets,
+                                        effectiveSemanticProgram,
+                                        effectiveSemanticIndex,
                                         errorOut) &&
         tryResultInfo.isResult && tryResultInfo.hasValue && tryResultInfo.valueIsFileHandle) {
       bindingInfo.isFileHandle = true;
@@ -319,7 +331,8 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                       lookupReturnInfo,
                                       inferExprKind,
                                       bindingResultInfo,
-                                      semanticProductTargets,
+                                      effectiveSemanticProgram,
+                                      effectiveSemanticIndex,
                                       errorOut) &&
       bindingResultInfo.isResult) {
     const std::string declaredErrorType = bindingInfo.resultErrorType;
@@ -860,7 +873,15 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
                                     const InferExprKindWithLocalsFn &inferExprKind,
                                     const SemanticProductTargetAdapter *semanticProductTargets,
+                                    const SemanticProgram *semanticProgram,
+                                    const SemanticProductIndex *semanticIndex,
                                     ResultExprInfo &out) {
+  (void)semanticProgram;
+  const SemanticProductIndex *effectiveSemanticIndex =
+      semanticIndex != nullptr
+          ? semanticIndex
+          : (semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex);
+
   if (valueExpr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(valueExpr.name);
     if (localIt != localsIn.end() && localIt->second.isFileHandle) {
@@ -894,17 +915,20 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
     out.valueIsFileHandle = false;
     return;
   }
-  if (semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct &&
-      valueExpr.semanticNodeId != 0) {
-    if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, valueExpr);
-        bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
-        applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
-      return;
+  if (valueExpr.semanticNodeId != 0) {
+    if (semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct) {
+      if (const auto *bindingFact = findSemanticProductBindingFact(*semanticProductTargets, valueExpr);
+          bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
+          applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
+        return;
+      }
     }
-    if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, valueExpr);
-        queryFact != nullptr && !queryFact->bindingTypeText.empty() &&
-        applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
-      return;
+    if (effectiveSemanticIndex != nullptr) {
+      if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*effectiveSemanticIndex, valueExpr);
+          queryFact != nullptr && !queryFact->bindingTypeText.empty() &&
+          applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
+        return;
+      }
     }
   }
   if (inferExprKind) {
@@ -920,7 +944,18 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
                                const InferExprKindWithLocalsFn &inferExprKind,
                                ResultExprInfo &out,
                                const SemanticProductTargetAdapter *semanticProductTargets,
+                               const SemanticProgram *semanticProgram,
+                               const SemanticProductIndex *semanticIndex,
                                std::string *errorOut) {
+  const SemanticProgram *effectiveSemanticProgram =
+      semanticProgram != nullptr
+          ? semanticProgram
+          : (semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram);
+  const SemanticProductIndex *effectiveSemanticIndex =
+      semanticIndex != nullptr
+          ? semanticIndex
+          : (semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex);
+
   out = ResultExprInfo{};
   LocalMap bodyLocals = localsIn;
 
@@ -936,6 +971,8 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
               lookupReturnInfo,
               inferExprKind,
               semanticProductTargets,
+              effectiveSemanticProgram,
+              effectiveSemanticIndex,
               errorOut)) {
         return false;
       }
@@ -962,7 +999,8 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
         lookupReturnInfo,
         inferExprKind,
         out,
-        semanticProductTargets,
+        effectiveSemanticProgram,
+        effectiveSemanticIndex,
         errorOut);
   }
 
@@ -977,7 +1015,18 @@ bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
                                              const InferExprKindWithLocalsFn &inferExprKind,
                                              const Expr *&valueExprOut,
                                              const SemanticProductTargetAdapter *semanticProductTargets,
+                                             const SemanticProgram *semanticProgram,
+                                             const SemanticProductIndex *semanticIndex,
                                              std::string *errorOut) {
+  const SemanticProgram *effectiveSemanticProgram =
+      semanticProgram != nullptr
+          ? semanticProgram
+          : (semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram);
+  const SemanticProductIndex *effectiveSemanticIndex =
+      semanticIndex != nullptr
+          ? semanticIndex
+          : (semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex);
+
   valueExprOut = nullptr;
   if (!lambdaExpr.isLambda || (!lambdaExpr.hasBodyArguments && lambdaExpr.bodyArguments.empty())) {
     return false;
@@ -995,6 +1044,8 @@ bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
               lookupReturnInfo,
               inferExprKind,
               semanticProductTargets,
+              effectiveSemanticProgram,
+              effectiveSemanticIndex,
               errorOut)) {
         return false;
       }
@@ -1018,6 +1069,5 @@ bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
 
   return valueExprOut != nullptr;
 }
-
 
 } // namespace primec::ir_lowerer

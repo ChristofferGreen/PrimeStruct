@@ -88,7 +88,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       std::string semanticTryFactError;
       if (semanticProductTargets != nullptr && semanticProductTargets->hasSemanticProduct &&
           tryExpr.semanticNodeId != 0) {
-        const auto *tryFact = findSemanticProductTryFactBySemanticId(*semanticProductTargets, tryExpr);
+        const auto *tryFact =
+            findSemanticProductTryFactBySemanticId(semanticProductTargets->semanticIndex, tryExpr);
         if (tryFact != nullptr) {
           kindOut = valueKindFromTypeName(tryFact->valueType);
           if (kindOut == LocalInfo::ValueKind::Unknown && !tryFact->valueType.empty()) {

@@ -811,7 +811,8 @@
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return inferExprKind(valueExpr, valueLocals);
             },
-            &callResolutionAdapters.semanticProductTargets,
+            callResolutionAdapters.semanticProgram,
+            &callResolutionAdapters.semanticProductTargets.semanticIndex,
             &error),
         [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferArrayElementKind(valueExpr, valueLocals); },
         [&]() { emitFileScopeCleanupAll(); },

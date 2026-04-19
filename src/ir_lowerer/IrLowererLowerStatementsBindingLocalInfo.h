@@ -10,7 +10,8 @@
                 [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
                 inferredResultInfo,
-                &callResolutionAdapters.semanticProductTargets,
+                callResolutionAdapters.semanticProgram,
+                &callResolutionAdapters.semanticProductTargets.semanticIndex,
                 &error) &&
             inferredResultInfo.isResult) {
           info.isResult = true;
@@ -61,7 +62,8 @@
                 [&](const std::string &path, ReturnInfo &infoOut) { return getReturnInfo(path, infoOut); },
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
                 inferredTryResultInfo,
-                &callResolutionAdapters.semanticProductTargets,
+                callResolutionAdapters.semanticProgram,
+                &callResolutionAdapters.semanticProductTargets.semanticIndex,
                 &error) ||
             !inferredTryResultInfo.isResult || !inferredTryResultInfo.hasValue || !inferredTryResultInfo.valueIsFileHandle) {
           if (!error.empty()) {

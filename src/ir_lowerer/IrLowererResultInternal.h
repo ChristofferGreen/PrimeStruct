@@ -13,6 +13,8 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
                                  const LookupReturnInfoFn &lookupReturnInfo,
                                  const InferExprKindWithLocalsFn &inferExprKind,
                                  const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                                 const SemanticProgram *semanticProgram = nullptr,
+                                 const SemanticProductIndex *semanticIndex = nullptr,
                                  std::string *errorOut = nullptr);
 bool isInlineBodyBlockEnvelope(const Expr &candidate, const ResolveCallDefinitionFn &resolveDefinitionCall);
 bool isInlineBodyValueEnvelope(const Expr &candidate, const ResolveCallDefinitionFn &resolveDefinitionCall);
@@ -35,6 +37,8 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
                                     const InferExprKindWithLocalsFn &inferExprKind,
                                     const SemanticProductTargetAdapter *semanticProductTargets,
+                                    const SemanticProgram *semanticProgram,
+                                    const SemanticProductIndex *semanticIndex,
                                     ResultExprInfo &out);
 bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
                                const LocalMap &localsIn,
@@ -44,6 +48,8 @@ bool resolveBodyResultExprInfo(const std::vector<Expr> &bodyExprs,
                                const InferExprKindWithLocalsFn &inferExprKind,
                                ResultExprInfo &out,
                                const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                               const SemanticProgram *semanticProgram = nullptr,
+                               const SemanticProductIndex *semanticIndex = nullptr,
                                std::string *errorOut = nullptr);
 bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
                                              LocalMap &lambdaLocals,
@@ -53,6 +59,8 @@ bool resolveResultLambdaValueExprForMetadata(const Expr &lambdaExpr,
                                              const InferExprKindWithLocalsFn &inferExprKind,
                                              const Expr *&valueExprOut,
                                              const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                                             const SemanticProgram *semanticProgram = nullptr,
+                                             const SemanticProductIndex *semanticIndex = nullptr,
                                              std::string *errorOut = nullptr);
 
 } // namespace primec::ir_lowerer

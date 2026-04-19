@@ -64,13 +64,13 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
 }
 
 bool applySemanticQueryFactResultInfo(const Expr &expr,
-                                      const SemanticProductTargetAdapter *semanticProductTargets,
+                                      const SemanticProgram *semanticProgram,
+                                      const SemanticProductIndex *semanticIndex,
                                       ResultExprInfo &out) {
-  if (semanticProductTargets == nullptr || !semanticProductTargets->hasSemanticProduct ||
-      expr.semanticNodeId == 0) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
-  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr);
+  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
   if (queryFact == nullptr || !queryFact->hasResultType) {
     return false;
   }
@@ -302,7 +302,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const LookupReturnInfoFn &lookupReturnInfo,
                                      const InferExprKindWithLocalsFn &inferExprKind,
                                      ResultExprInfo &out,
-                                     const SemanticProductTargetAdapter *semanticProductTargets,
+                                     const SemanticProgram *semanticProgram,
+                                     const SemanticProductIndex *semanticIndex,
                                      std::string *errorOut) {
   out = ResultExprInfo{};
   auto isIndexedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
@@ -481,7 +482,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
             lookupReturnInfo,
             inferExprKind,
             branchOut,
-            semanticProductTargets,
+            semanticProgram,
+            semanticIndex,
             errorOut);
       }
       return resolveResultExprInfoFromLocals(
@@ -492,7 +494,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
           lookupReturnInfo,
           inferExprKind,
           branchOut,
-          semanticProductTargets,
+          semanticProgram,
+          semanticIndex,
           errorOut);
     };
 
@@ -512,7 +515,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         lookupReturnInfo,
         inferExprKind,
         out,
-        semanticProductTargets,
+        semanticProgram,
+        semanticIndex,
         errorOut);
   }
   if (expr.kind == Expr::Kind::Call && !expr.args.empty() &&
@@ -521,7 +525,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.hasValue = (expr.args.size() > 1);
     if (out.hasValue && expr.args.size() == 2) {
       applyDirectResultValueMetadata(
-          expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, semanticProductTargets, out);
+          expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, nullptr, semanticProgram, semanticIndex, out);
     }
     return true;
   }
@@ -534,7 +538,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          lookupReturnInfo,
                                          inferExprKind,
                                          sourceResultInfo,
-                                         semanticProductTargets,
+                                         semanticProgram,
+                                         semanticIndex,
                                          errorOut) ||
         !sourceResultInfo.isResult || !sourceResultInfo.hasValue || !expr.args[2].isLambda || expr.args[2].args.size() != 1) {
       return false;
@@ -554,7 +559,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
             lookupReturnInfo,
             inferExprKind,
             mappedValueExpr,
-            semanticProductTargets,
+            semanticProgram,
+            semanticIndex,
             errorOut)) {
       return false;
     }
@@ -562,12 +568,12 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = true;
     applyDirectResultValueMetadata(
-        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProductTargets, out);
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, nullptr, semanticProgram, semanticIndex, out);
     if (out.valueCollectionKind == LocalInfo::Kind::Value &&
         out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
         out.valueStructType.empty() &&
         !out.valueIsFileHandle) {
-      applySemanticQueryFactResultInfo(expr, semanticProductTargets, out);
+      applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, out);
     }
     out.errorType = sourceResultInfo.errorType;
     return true;
@@ -581,7 +587,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          lookupReturnInfo,
                                          inferExprKind,
                                          sourceResultInfo,
-                                         semanticProductTargets,
+                                         semanticProgram,
+                                         semanticIndex,
                                          errorOut) ||
         !sourceResultInfo.isResult || !sourceResultInfo.hasValue || !expr.args[2].isLambda || expr.args[2].args.size() != 1) {
       return false;
@@ -601,7 +608,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
             lookupReturnInfo,
             inferExprKind,
             chainedResultExpr,
-            semanticProductTargets,
+            semanticProgram,
+            semanticIndex,
             errorOut)) {
       return false;
     }
@@ -614,7 +622,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          lookupReturnInfo,
                                          inferExprKind,
                                          chainedResultInfo,
-                                         semanticProductTargets,
+                                         semanticProgram,
+                                         semanticIndex,
                                          errorOut) ||
         !chainedResultInfo.isResult) {
       return false;
@@ -627,7 +636,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
         chainedResultInfo.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
         chainedResultInfo.valueStructType.empty() &&
         !chainedResultInfo.valueIsFileHandle) {
-      applySemanticQueryFactResultInfo(expr, semanticProductTargets, chainedResultInfo);
+      applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, chainedResultInfo);
       if (chainedResultInfo.errorType.empty()) {
         chainedResultInfo.errorType = sourceResultInfo.errorType;
       }
@@ -645,7 +654,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          lookupReturnInfo,
                                          inferExprKind,
                                          leftResultInfo,
-                                         semanticProductTargets,
+                                         semanticProgram,
+                                         semanticIndex,
                                          errorOut) ||
         !resolveResultExprInfoFromLocals(expr.args[2],
                                          localsIn,
@@ -654,7 +664,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                          lookupReturnInfo,
                                          inferExprKind,
                                          rightResultInfo,
-                                         semanticProductTargets,
+                                         semanticProgram,
+                                         semanticIndex,
                                          errorOut) ||
         !leftResultInfo.isResult || !leftResultInfo.hasValue || !rightResultInfo.isResult || !rightResultInfo.hasValue ||
         !expr.args[3].isLambda || expr.args[3].args.size() != 2) {
@@ -684,7 +695,8 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
             lookupReturnInfo,
             inferExprKind,
             mappedValueExpr,
-            semanticProductTargets,
+            semanticProgram,
+            semanticIndex,
             errorOut)) {
       return false;
     }
@@ -692,12 +704,12 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = true;
     applyDirectResultValueMetadata(
-        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProductTargets, out);
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, nullptr, semanticProgram, semanticIndex, out);
     if (out.valueCollectionKind == LocalInfo::Kind::Value &&
         out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
         out.valueStructType.empty() &&
         !out.valueIsFileHandle) {
-      applySemanticQueryFactResultInfo(expr, semanticProductTargets, out);
+      applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, out);
     }
     out.errorType = !leftResultInfo.errorType.empty() ? leftResultInfo.errorType : rightResultInfo.errorType;
     return true;
@@ -756,9 +768,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       return true;
     }
   }
-  if (expr.kind == Expr::Kind::Call && semanticProductTargets != nullptr &&
-      semanticProductTargets->hasSemanticProduct && expr.semanticNodeId != 0) {
-    const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr);
+  if (expr.kind == Expr::Kind::Call && semanticProgram != nullptr &&
+      semanticIndex != nullptr && expr.semanticNodeId != 0) {
+    const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
     if (queryFact == nullptr) {
       assignSemanticResultError(
           errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
@@ -785,14 +797,37 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       expr, lookupLocal, resolveMethod, resolveDefinitionCall, lookupDefinitionResult, out);
 }
 
+bool resolveResultExprInfoFromLocals(const Expr &expr,
+                                     const LocalMap &localsIn,
+                                     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                     const LookupReturnInfoFn &lookupReturnInfo,
+                                     const InferExprKindWithLocalsFn &inferExprKind,
+                                     ResultExprInfo &out,
+                                     const SemanticProductTargetAdapter *semanticProductTargets,
+                                     std::string *errorOut) {
+  return resolveResultExprInfoFromLocals(
+      expr,
+      localsIn,
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out,
+      semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
+      semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex,
+      errorOut);
+}
+
 ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo,
     const InferExprKindWithLocalsFn &inferExprKind,
-    const SemanticProductTargetAdapter *semanticProductTargets,
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex,
     std::string *errorOut) {
-  return [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, semanticProductTargets, errorOut](
+  return [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, semanticProgram, semanticIndex, errorOut](
              const Expr &expr, const LocalMap &localsIn, ResultExprInfo &out) {
     return resolveResultExprInfoFromLocals(
         expr,
@@ -802,9 +837,27 @@ ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
         lookupReturnInfo,
         inferExprKind,
         out,
-        semanticProductTargets,
+        semanticProgram,
+        semanticIndex,
         errorOut);
   };
+}
+
+ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
+    const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
+    const LookupReturnInfoFn &lookupReturnInfo,
+    const InferExprKindWithLocalsFn &inferExprKind,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    std::string *errorOut) {
+  return makeResolveResultExprInfoFromLocals(
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
+      semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex,
+      errorOut);
 }
 
 

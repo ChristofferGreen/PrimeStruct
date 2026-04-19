@@ -436,7 +436,8 @@ bool inferExprBindingTypeInfo(const Expr &expr,
                                       noopLookupReturnInfo,
                                       inferExprKind,
                                       resultInfo,
-                                      semanticProductTargets) &&
+                                      semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
+                                      semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex) &&
       resultInfo.isResult) {
     infoOut.kind = LocalInfo::Kind::Value;
     infoOut.valueKind =
@@ -701,7 +702,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
             resolveDefinitionCall,
             getReturnInfo,
             inferredResultInfo,
-            semanticProductTargets) &&
+            semanticProductTargets == nullptr ? nullptr : semanticProductTargets->semanticProgram,
+            semanticProductTargets == nullptr ? nullptr : &semanticProductTargets->semanticIndex) &&
         inferredResultInfo.isResult) {
       infoOut.isResult = true;
       infoOut.resultHasValue = inferredResultInfo.hasValue;

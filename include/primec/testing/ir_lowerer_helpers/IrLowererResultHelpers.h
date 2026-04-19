@@ -3,6 +3,8 @@
 
 
 struct ReturnInfo;
+struct SemanticProgram;
+struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 struct StructSlotLayoutInfo;
 
@@ -58,14 +60,32 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const LookupReturnInfoFn &lookupReturnInfo,
                                      const InferExprKindWithLocalsFn &inferExprKind,
                                      ResultExprInfo &out,
-                                     const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+                                     const SemanticProgram *semanticProgram = nullptr,
+                                     const SemanticProductIndex *semanticIndex = nullptr,
+                                     std::string *errorOut = nullptr);
+bool resolveResultExprInfoFromLocals(const Expr &expr,
+                                     const LocalMap &localsIn,
+                                     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+                                     const ResolveCallDefinitionFn &resolveDefinitionCall,
+                                     const LookupReturnInfoFn &lookupReturnInfo,
+                                     const InferExprKindWithLocalsFn &inferExprKind,
+                                     ResultExprInfo &out,
+                                     const SemanticProductTargetAdapter *semanticProductTargets,
                                      std::string *errorOut = nullptr);
 ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
     const ResolveMethodCallWithLocalsFn &resolveMethodCall,
     const ResolveCallDefinitionFn &resolveDefinitionCall,
     const LookupReturnInfoFn &lookupReturnInfo,
     const InferExprKindWithLocalsFn &inferExprKind,
-    const SemanticProductTargetAdapter *semanticProductTargets = nullptr,
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr,
+    std::string *errorOut = nullptr);
+ResolveResultExprInfoWithLocalsFn makeResolveResultExprInfoFromLocals(
+    const ResolveMethodCallWithLocalsFn &resolveMethodCall,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
+    const LookupReturnInfoFn &lookupReturnInfo,
+    const InferExprKindWithLocalsFn &inferExprKind,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::string *errorOut = nullptr);
 bool validateSemanticProductResultMetadataCompleteness(const primec::SemanticProgram *semanticProgram,
                                                        std::string &error);

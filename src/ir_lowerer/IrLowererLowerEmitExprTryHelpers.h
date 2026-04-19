@@ -62,7 +62,7 @@
             }
             const auto *queryFact =
                 findSemanticProductQueryFactBySemanticId(
-                    callResolutionAdapters.semanticProductTargets,
+                    callResolutionAdapters.semanticProductTargets.semanticIndex,
                     operandExpr);
             if (queryFact == nullptr || !queryFact->hasResultType) {
               return false;
@@ -165,7 +165,7 @@
           if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0) {
             const auto *tryFact =
                 findSemanticProductTryFactBySemanticId(
-                    callResolutionAdapters.semanticProductTargets,
+                    callResolutionAdapters.semanticProductTargets.semanticIndex,
                     expr);
             if (tryFact != nullptr) {
               resultInfo.isResult = true;
@@ -246,7 +246,8 @@
                      return inferExprKind(valueExpr, valueLocals);
                    },
                    resultInfo,
-                   &callResolutionAdapters.semanticProductTargets,
+                   callResolutionAdapters.semanticProgram,
+                   &callResolutionAdapters.semanticProductTargets.semanticIndex,
                    &error)) ||
                !resultInfo.isResult) &&
               !resolveResultFieldInfo(expr.args.front(), resultInfo)) {

@@ -214,7 +214,8 @@ bool inferCallParameterDefaultResultInfo(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     ResultExprInfo &infoOut,
-    const SemanticProductTargetAdapter *semanticProductTargets) {
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex *semanticIndex) {
   const auto resolveMethodCall = resolveMethodCallDefinition
                                      ? resolveMethodCallDefinition
                                      : [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
@@ -230,7 +231,8 @@ bool inferCallParameterDefaultResultInfo(
       lookupReturnInfo,
       [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
       infoOut,
-      semanticProductTargets);
+      semanticProgram,
+      semanticIndex);
 }
 
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut) {

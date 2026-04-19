@@ -2,7 +2,13 @@
 
 #include "IrLowererStatementBindingHelpers.h"
 
+namespace primec {
+struct SemanticProgram;
+}
+
 namespace primec::ir_lowerer {
+
+struct SemanticProductIndex;
 
 bool applyErrorTypeMetadata(const std::string &typeText, LocalInfo &infoOut);
 bool isFileHandleTypeText(const std::string &typeText);
@@ -18,7 +24,8 @@ bool inferCallParameterDefaultResultInfo(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     ResultExprInfo &infoOut,
-    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
+    const SemanticProgram *semanticProgram = nullptr,
+    const SemanticProductIndex *semanticIndex = nullptr);
 void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOut);
 void applyArgsPackElementStructMetadata(const Expr &param,
                                         const std::string &elementTypeText,

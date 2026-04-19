@@ -4107,3 +4107,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4021` so the tighter definition-scoped fact slice could land independently before the remaining expression-scoped semantic threading work.
   - finished_at: 2026-04-19
   - evidence: Added direct `SemanticProgram + SemanticProductIndex` helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}` for definition-scoped return and `on_error` fact lookup, rewired `src/ir_lowerer/IrLowererOnErrorHelpers.cpp` and `src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp` to use direct semantic-program/index readers instead of constructing a broad adapter, updated `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp` so semantic return-info building consumes `SemanticProgram` plus `SemanticProductIndex` directly even when broader inference state still carries the adapter for other families, added focused regression coverage in `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp` for direct return/on_error index lookups, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock the new definition-scoped seam, and replaced the live queue item with follow-up `TODO-4023` for the remaining expression-scoped fact threading.
+
+- [x] TODO-4024: Retire semantic query/try adapter slice
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Architecture Stabilization
+  - depends_on: TODO-4022
+  - scope: Remove broad `SemanticProductTargetAdapter` mediation from the direct query/`try(...)` semantic fact readers by adding `SemanticProgram + SemanticProductIndex` entrypoints and rewiring the central result-inference and try-kind readers to use that narrower seam while leaving binding-fact-aware statement metadata for follow-up work.
+  - acceptance:
+    - Direct semantic query and `try(...)` fact lookup support is available through `SemanticProgram` plus `SemanticProductIndex`.
+    - Central production result-inference and lower-inference `try(...)` readers use the narrower query/`try(...)` seam instead of adapter-only helper entrypoints.
+    - The remaining binding-fact-aware semantic threading stays explicit in `docs/todo.md`.
+  - stop_rule: Stop once the direct query/`try(...)` readers and their central production consumers no longer depend on adapter-only lookup entrypoints; leave binding-fact-aware statement metadata threading for follow-up work instead of widening this slice.
+  - notes: Split from oversized `TODO-4023` so the direct query/`try(...)` fact reader slice could land independently before the remaining statement-binding teardown.
+  - finished_at: 2026-04-19
+  - evidence: Added direct `SemanticProgram + SemanticProductIndex` query and `try(...)` helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, rewired the central result helper and lower-inference try reader paths in `src/ir_lowerer/IrLowererResultHelpers.cpp`, `src/ir_lowerer/IrLowererLowerInferenceDispatchSetup.cpp`, `src/ir_lowerer/IrLowererLowerEmitExprTryHelpers.h`, `src/ir_lowerer/IrLowererLowerReturnInfo.h`, and adjacent statement local-info plumbing to use the narrower query/`try(...)` seam, added direct regression coverage in `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp` for query and `try(...)` index lookup without the broad adapter, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock the new direct query/`try(...)` surface, and replaced the live queue item with follow-up `TODO-4025` for the remaining binding-fact-aware semantic threading.

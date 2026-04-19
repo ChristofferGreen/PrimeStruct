@@ -475,7 +475,9 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
         std::string::npos);
   CHECK(resultHelpers.find("using InferExprKindWithLocalsFn") != std::string::npos);
   CHECK(resultHelpers.find("struct PackedResultStructPayloadInfo") != std::string::npos);
-  CHECK(resultHelpers.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
+  CHECK(resultHelpers.find("const SemanticProgram *semanticProgram = nullptr,") !=
+        std::string::npos);
+  CHECK(resultHelpers.find("const SemanticProductIndex *semanticIndex = nullptr,") !=
         std::string::npos);
   CHECK(resultHelpers.find("std::string *errorOut = nullptr") != std::string::npos);
   CHECK(resultHelpers.find("inferPackedResultStructType(") != std::string::npos);
@@ -1075,9 +1077,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(\n    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramQueryFact *findSemanticProductQueryFact(\n    const SemanticProgram *semanticProgram,\n    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByOperandPathAndSource;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(\n    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramTryFact *findSemanticProductTryFact(\n    const SemanticProgram *semanticProgram,\n    const SemanticProductIndex &semanticIndex,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(") !=
         std::string::npos);
@@ -1492,12 +1502,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(resultHelpersHeader.find("struct Definition;") != std::string::npos);
   CHECK(resultHelpersHeader.find("struct ReturnInfo;") != std::string::npos);
   CHECK(resultHelpersHeader.find("struct StructSlotLayoutInfo;") != std::string::npos);
-  CHECK(resultHelpersHeader.find("const SemanticProductTargetAdapter *semanticProductTargets = nullptr") !=
+  CHECK(resultHelpersHeader.find("struct SemanticProductIndex;") != std::string::npos);
+  CHECK(resultHelpersHeader.find("const SemanticProgram *semanticProgram = nullptr,") !=
+        std::string::npos);
+  CHECK(resultHelpersHeader.find("const SemanticProductIndex *semanticIndex = nullptr,") !=
         std::string::npos);
   CHECK(resultHelpersHeader.find("std::string *errorOut = nullptr") != std::string::npos);
   CHECK(resultHelpersHeader.find("bool validateSemanticProductResultMetadataCompleteness(") !=
         std::string::npos);
-  CHECK(resultHelpersSource.find("findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)") !=
+  CHECK(resultHelpersSource.find("findSemanticProductQueryFactBySemanticId(*semanticIndex, expr)") !=
         std::string::npos);
   CHECK(resultHelpersSource.find("missing semantic-product query fact: ") != std::string::npos);
   CHECK(resultHelpersSource.find("missing semantic-product callable result metadata: ") !=
@@ -1506,16 +1519,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(resultHelpersSource.find("incomplete semantic-product query fact: ") != std::string::npos);
   CHECK(resultHelpersSource.find("incomplete semantic-product try fact: try") != std::string::npos);
-  CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFactBySemanticId(*semanticProductTargets, tryExpr)") !=
+  CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFactBySemanticId(semanticProductTargets->semanticIndex, tryExpr)") !=
         std::string::npos);
   CHECK(lowerInferenceDispatchSource.find("missing semantic-product try fact: try") !=
         std::string::npos);
   CHECK(lowerEmitExprTryHelpers.find(
-            "findSemanticProductTryFactBySemanticId(callResolutionAdapters.semanticProductTargets, expr)") !=
+            "findSemanticProductTryFactBySemanticId(callResolutionAdapters.semanticProductTargets.semanticIndex, expr)") !=
         std::string::npos);
   CHECK(lowerEmitExprTryHelpers.find(
             "findSemanticProductQueryFactBySemanticId(\n"
-            "                    callResolutionAdapters.semanticProductTargets,\n"
+            "                    callResolutionAdapters.semanticProductTargets.semanticIndex,\n"
             "                    operandExpr)") != std::string::npos);
 
   const auto runtimeErrorHelpersHeader =

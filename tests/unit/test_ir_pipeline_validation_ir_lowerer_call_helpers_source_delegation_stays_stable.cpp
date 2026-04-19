@@ -2030,6 +2030,53 @@ TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches
   CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
 }
 
+TEST_CASE("ir lowerer semantic-product index resolves query facts without broad adapter") {
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.semanticNodeId = 8101;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 15,
+      .sourceColumn = 5,
+      .semanticNodeId = 8101,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  const primec::SymbolId callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "lookup");
+  const primec::SymbolId resolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 15,
+      .sourceColumn = 5,
+      .semanticNodeId = 0,
+      .callNameId = callNameId,
+      .resolvedPathId = resolvedPathId,
+  });
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  CHECK(semanticIndex.queryFactsByExpr.empty());
+  CHECK(semanticIndex.queryFactsByResolvedPathAndCallNameId.count(
+            (static_cast<uint64_t>(resolvedPathId) << 32) | static_cast<uint64_t>(callNameId)) == 1);
+  const auto *queryFact =
+      primec::ir_lowerer::findSemanticProductQueryFact(&semanticProgram, semanticIndex, queryExpr);
+  REQUIRE(queryFact != nullptr);
+  CHECK(queryFact->resolvedPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *queryFact) == "/lookup");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter indexes try facts by operand path and source") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
@@ -2150,6 +2197,63 @@ TEST_CASE("ir lowerer semantic-product adapter prefers try semantic-id matches o
   REQUIRE(tryFact != nullptr);
   CHECK(tryFact->semanticNodeId == 9202);
   CHECK(tryFact->valueType == "i32");
+}
+
+TEST_CASE("ir lowerer semantic-product index resolves try facts without broad adapter") {
+  primec::Expr operandExpr;
+  operandExpr.kind = primec::Expr::Kind::Call;
+  operandExpr.name = "lookup";
+  operandExpr.semanticNodeId = 9101;
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {operandExpr};
+  tryExpr.semanticNodeId = 0;
+  tryExpr.sourceLine = 33;
+  tryExpr.sourceColumn = 9;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 33,
+      .sourceColumn = 9,
+      .semanticNodeId = 9101,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  const primec::SymbolId operandResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "i32",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 33,
+      .sourceColumn = 9,
+      .semanticNodeId = 0,
+      .operandResolvedPathId = operandResolvedPathId,
+  });
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const uint64_t tryKey =
+      (static_cast<uint64_t>(operandResolvedPathId) << 32) ^
+      (static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceLine)) * 1315423911ULL) ^
+      static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceColumn));
+  CHECK(semanticIndex.tryFactsByExpr.empty());
+  CHECK(semanticIndex.tryFactsByOperandPathAndSource.count(tryKey) == 1);
+  const auto *tryFact =
+      primec::ir_lowerer::findSemanticProductTryFact(&semanticProgram, semanticIndex, tryExpr);
+  REQUIRE(tryFact != nullptr);
+  CHECK(tryFact->operandResolvedPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *tryFact) == "/lookup");
 }
 
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {
