@@ -75,13 +75,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
            normalized == "std/collections/experimental_vector/Vector" ||
            normalized.rfind("std/collections/experimental_vector/Vector<", 0) == 0;
   };
-  auto isSoaVectorReceiverTarget = [&](const std::string &candidate) {
-    const std::string normalized = stripReceiverPrefix(candidate);
-    return normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
-           normalized == "std/collections/soa_vector" ||
-           normalized.rfind("std/collections/soa_vector<", 0) == 0 ||
-           semantics::isExperimentalSoaVectorTypePath(normalized);
-  };
   auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);
     return normalized == "soa_vector" || normalized.rfind("soa_vector<", 0) == 0 ||
@@ -98,10 +91,6 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   };
   auto isBufferReceiverTarget = [&](const std::string &candidate) {
     return candidate == "Buffer" || candidate == "std/gfx/Buffer" || candidate == "std/gfx/experimental/Buffer";
-  };
-  auto soaToAosMismatchError = [&]() {
-    return std::string("struct parameter type mismatch for /std/collections/soa_vector/to_aos parameter values: "
-                       "expected /std/collections/experimental_soa_vector/SoaVector__ specialization");
   };
   auto soaCanonicalHelperMismatchError = [&](const std::string &helperName) {
     return std::string("struct parameter type mismatch for /std/collections/soa_vector/") + helperName +

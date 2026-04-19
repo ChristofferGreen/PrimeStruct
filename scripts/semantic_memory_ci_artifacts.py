@@ -219,7 +219,8 @@ def main() -> int:
     copied_trend_report = copy_if_exists(trend_report, run_dir)
 
     copied_history_report: Optional[str] = None
-    if benchmark_exit_code == 0 and benchmark_report.is_file():
+    history_is_clean = not trend_requested or trend_exit_code == 0
+    if benchmark_exit_code == 0 and history_is_clean and benchmark_report.is_file():
         history_dir.mkdir(parents=True, exist_ok=True)
         history_file = history_dir / f"semantic_memory_report_{run_id}.json"
         history_file.write_bytes(benchmark_report.read_bytes())

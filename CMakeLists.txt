@@ -1398,7 +1398,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(
     PrimeStruct_semantic_memory_benchmark
-    PROPERTIES TIMEOUT 1800)
+    PROPERTIES
+      RUN_SERIAL TRUE
+      TIMEOUT 1800)
 
   add_custom_target(
     primestruct_semantic_memory_definition_worker_parity
@@ -1441,7 +1443,9 @@ if(PRIMESTRUCT_BUILD_TESTS)
   )
   set_tests_properties(
     PrimeStruct_semantic_memory_definition_worker_parity
-    PROPERTIES TIMEOUT 1800)
+    PROPERTIES
+      RUN_SERIAL TRUE
+      TIMEOUT 1800)
 
   add_custom_target(
     primestruct_semantic_memory_trend_check

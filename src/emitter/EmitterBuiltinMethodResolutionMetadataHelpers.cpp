@@ -151,13 +151,16 @@ void pruneMapAccessStructReturnCompatibilityCandidates(
   };
   if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
-    if (suffix == "at" || suffix == "at_unsafe") {
+    if (suffix == "contains" || suffix == "tryAt" ||
+        suffix == "at" || suffix == "at_unsafe") {
+      eraseCandidate("/map/" + suffix);
       eraseCandidate("/std/collections/map/" + suffix);
     }
   } else if (normalizedPath.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix =
         normalizedPath.substr(std::string("/std/collections/map/").size());
-    if (suffix == "at" || suffix == "at_unsafe") {
+    if (suffix == "contains" || suffix == "tryAt" ||
+        suffix == "at" || suffix == "at_unsafe") {
       eraseCandidate("/map/" + suffix);
     }
   }

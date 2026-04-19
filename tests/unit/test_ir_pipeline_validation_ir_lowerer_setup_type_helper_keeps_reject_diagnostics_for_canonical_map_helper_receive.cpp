@@ -265,8 +265,8 @@ TEST_CASE("ir lowerer setup type helper rejects alias receiver fallback when exp
       },
       defMap,
       error);
-  CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(resolved == &markerTagDef);
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics when expr path is unavailable") {
@@ -330,7 +330,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics when expr path 
             },
             defMap,
             error) == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /Marker/tag");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps auto-wrapper primitive diagnostics for vector alias receiver calls") {

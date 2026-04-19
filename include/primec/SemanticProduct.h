@@ -414,6 +414,9 @@ std::string_view semanticProgramQueryFactResolvedPath(
 std::string_view semanticProgramTryFactOperandResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramTryFact &entry);
+std::string_view semanticProgramOnErrorFactDefinitionPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramOnErrorFact &entry);
 std::string_view semanticProgramOnErrorFactHandlerPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramOnErrorFact &entry);

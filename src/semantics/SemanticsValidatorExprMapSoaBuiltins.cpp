@@ -49,7 +49,8 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           }
           return expr.namespacePrefix == "/" && expr.name == helper;
         }
-        return expr.namespacePrefix == "/" && expr.name == helper;
+        return expr.name == samePath ||
+               (expr.namespacePrefix == "/" && expr.name == helper);
       };
   auto failMapSoaBuiltinDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));

@@ -406,7 +406,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_count_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 97);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with canonical slash vector count same-path helper on map receiver") {
@@ -494,8 +494,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_capacity_method_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 77);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_capacity_method_shadow.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("name=capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm user vector count call shadow" * doctest::skip(true)) {

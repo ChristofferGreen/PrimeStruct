@@ -59,9 +59,9 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack struct receiv
 
 TEST_CASE("ir lowerer setup type helper resolves soa_vector receiver method definitions from expressions") {
   primec::Definition soaPushDef;
-  soaPushDef.fullPath = "/soa_vector/push";
+  soaPushDef.fullPath = "/std/collections/soa_vector/push";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/soa_vector/push", &soaPushDef},
+      {"/std/collections/soa_vector/push", &soaPushDef},
   };
 
   primec::Expr receiverExpr;
@@ -102,9 +102,9 @@ TEST_CASE("ir lowerer setup type helper resolves soa_vector receiver method defi
 
 TEST_CASE("ir lowerer setup type helper requires semantic-product method targets") {
   primec::Definition soaPushDef;
-  soaPushDef.fullPath = "/soa_vector/push";
+  soaPushDef.fullPath = "/std/collections/soa_vector/push";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
-      {"/soa_vector/push", &soaPushDef},
+      {"/std/collections/soa_vector/push", &soaPushDef},
   };
 
   primec::Expr receiverExpr;
@@ -158,7 +158,8 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
       .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "push"),
       .resolvedPathId =
-          primec::semanticProgramInternCallTargetString(semanticProgram, "/soa_vector/push"),
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/soa_vector/push"),
   });
   const auto populatedTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

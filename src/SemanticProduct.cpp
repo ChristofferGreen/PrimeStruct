@@ -175,6 +175,12 @@ std::string_view semanticProgramTryFactOperandResolvedPath(
   return semanticProgramResolveCallTargetString(semanticProgram, entry.operandResolvedPathId);
 }
 
+std::string_view semanticProgramOnErrorFactDefinitionPath(
+    const SemanticProgram &semanticProgram,
+    const SemanticProgramOnErrorFact &entry) {
+  return semanticProgramResolveCallTargetString(semanticProgram, entry.definitionPathId);
+}
+
 std::string_view semanticProgramOnErrorFactHandlerPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramOnErrorFact &entry) {

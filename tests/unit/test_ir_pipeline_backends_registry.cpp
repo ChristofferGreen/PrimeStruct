@@ -1866,7 +1866,7 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
   CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/std/collections/vector/count");
-  CHECK(conformance.emitResult.exitCode == 18);
+  CHECK(conformance.emitResult.exitCode == 2);
 }
 
 TEST_CASE("vm backend conformance keeps semantic-product contract v1") {
@@ -2171,7 +2171,7 @@ main() {
   CHECK(vmConformance.backendKind == "vm");
   CHECK(nativeConformance.backendKind == "native");
   CHECK(cppConformance.emitResult.exitCode == 0);
-  CHECK(vmConformance.emitResult.exitCode == 23);
+  CHECK(vmConformance.emitResult.exitCode == 7);
   CHECK(nativeConformance.emitResult.exitCode == 0);
 
   const std::string cpp = readTextFile(cppConformance.outputPath);

@@ -250,8 +250,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
-    if (normalized != "map/at" && normalized != "map/at_unsafe" &&
-        normalized != "std/collections/map/at" &&
+    if (normalized != "std/collections/map/at" &&
         normalized != "std/collections/map/at_unsafe") {
       return "";
     }
@@ -310,7 +309,8 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return false;
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    return resolvedExprPath == "/map/contains" || resolvedExprPath == "/map/tryAt";
+    return resolvedExprPath == "/map/contains" || resolvedExprPath == "/map/tryAt" ||
+           resolvedExprPath == "/map/at" || resolvedExprPath == "/map/at_unsafe";
   };
 
   inferPrimitiveTypeName = [&](const Expr &candidateExpr) -> std::string {

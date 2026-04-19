@@ -271,28 +271,10 @@ SemanticsValidator::returnResolutionSnapshotForTesting() const {
 
 std::vector<SemanticsValidator::LocalAutoBindingSnapshotEntry>
 SemanticsValidator::localAutoBindingSnapshotForTesting() const {
-  auto explicitBindingTypeName = [](const Expr &expr) -> std::optional<std::string> {
-    for (const auto &transform : expr.transforms) {
-      if (transform.name == "effects" || transform.name == "capabilities") {
-        continue;
-      }
-      if (isBindingAuxTransformName(transform.name) || !transform.arguments.empty()) {
-        continue;
-      }
-      return transform.name;
-    }
-    return std::nullopt;
-  };
-
-  auto isLocalAutoCandidate = [&](const Expr &expr) {
-    const std::optional<std::string> typeName = explicitBindingTypeName(expr);
-    return !typeName.has_value() || normalizeBindingTypeName(*typeName) == "auto";
-  };
-
   std::vector<LocalAutoBindingSnapshotEntry> entries;
   std::function<void(const std::string &, const Expr &)> visitExpr;
   visitExpr = [&](const std::string &scopePath, const Expr &expr) {
-    if (expr.isBinding && isLocalAutoCandidate(expr)) {
+    if (expr.isBinding) {
       const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
       const GraphLocalAutoKey bindingKey =
           graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn);

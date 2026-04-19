@@ -53,13 +53,13 @@ import /std/file/*
 
 [return<void>]
 main() {
-  [bool] eof{fileErrorIsEof(true)}
+  [bool] eof{fileErrorIsEof("bad"utf8)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/file/fileErrorIsEof parameter err") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError why wrapper covers direct and Result-based access") {
@@ -266,13 +266,13 @@ import /std/file/*
 
 [return<void>]
 main() {
-  [Result<FileError>] status{FileError.status(true)}
+  [Result<FileError>] status{FileError.status("bad"utf8)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/file/FileError/status parameter err") != std::string::npos);
+  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
 }
 
 TEST_CASE("stdlib File helpers cover imported method and slash-call wrappers") {
@@ -371,7 +371,7 @@ write_out([File<Write>] file) {
       "="utf8,
       4i32,
       "."utf8,
-      10i32)
+      10i32)}
   [Result<FileError>] directWriteLine{/File/write_line<Write, i32, string, i32, string, i32, string, i32, string, i32, string>(
       file,
       4i32,

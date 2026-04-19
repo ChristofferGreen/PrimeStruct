@@ -239,7 +239,7 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
   CHECK(readFile(validateErrPath).empty());
 }
 
-TEST_CASE("semantic memory ctest targets keep dependency ordering") {
+TEST_CASE("semantic memory ctest targets keep dependency ordering and serialization") {
   if (!hasPython3()) {
     INFO("python3 not available");
     return;
@@ -272,7 +272,13 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering") {
           ")\n"
           "benchmark_timeout_guard = re.search(\n"
           "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_benchmark\\s*'\n"
-          "  r'PROPERTIES\\s*TIMEOUT 1800\\s*\\)',\n"
+          "  r'PROPERTIES\\s*RUN_SERIAL TRUE\\s*TIMEOUT 1800\\s*\\)',\n"
+          "  cmake_text,\n"
+          "  re.S,\n"
+          ") is not None\n"
+          "parity_timeout_guard = re.search(\n"
+          "  r'set_tests_properties\\(\\s*PrimeStruct_semantic_memory_definition_worker_parity\\s*'\n"
+          "  r'PROPERTIES\\s*RUN_SERIAL TRUE\\s*TIMEOUT 1800\\s*\\)',\n"
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"
@@ -283,16 +289,15 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering") {
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"
-          "no_run_serial = 'RUN_SERIAL' not in cmake_text\n"
-          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_timeout_guard and trend_timeout_guard and no_run_serial\n"
+          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_timeout_guard and parity_timeout_guard and trend_timeout_guard\n"
           "if not ok:\n"
           "  print(json.dumps({\n"
           "    'thresholds': thresholds,\n"
           "    'offender_count': len(offenders) if isinstance(offenders, list) else -1,\n"
           "    'offender_exceeds': offender_exceeds,\n"
           "    'benchmark_timeout_guard': benchmark_timeout_guard,\n"
+          "    'parity_timeout_guard': parity_timeout_guard,\n"
           "    'trend_timeout_guard': trend_timeout_guard,\n"
-          "    'no_run_serial': no_run_serial,\n"
           "  }, indent=2, sort_keys=True))\n"
           "sys.exit(0 if ok else 1)\n") +
       " " + quoteShellArg(baselinePath.string()) +
@@ -3282,6 +3287,20 @@ TEST_CASE("semantic memory ci artifact wrapper benchmark mode runs budget gate")
   CHECK(manifest.find("\"trend_skipped\": false") != std::string::npos);
   CHECK(manifest.find("\"budget_report\": \"semantic_memory_budget_report.json\"") != std::string::npos);
   CHECK(manifest.find("\"trend_report\": \"semantic_memory_trend_report.json\"") != std::string::npos);
+
+  bool sawHistory = false;
+  for (const auto &entry : std::filesystem::directory_iterator(historyDir)) {
+    if (!entry.is_regular_file()) {
+      continue;
+    }
+    const std::string filename = entry.path().filename().string();
+    if (filename.rfind("semantic_memory_report_test_benchmark_mode_", 0) == 0 &&
+        entry.path().extension() == ".json") {
+      sawHistory = true;
+      break;
+    }
+  }
+  CHECK(sawHistory);
 }
 
 TEST_CASE("semantic memory ci artifact wrapper benchmark mode fails on budget gate") {
@@ -3356,6 +3375,11 @@ TEST_CASE("semantic memory ci artifact wrapper benchmark mode fails on budget ga
   CHECK(manifest.find("\"trend_skipped\": false") != std::string::npos);
   CHECK(manifest.find("\"benchmark_report\": \"semantic_memory_report.json\"") != std::string::npos);
   CHECK(manifest.find("\"budget_report\": null") != std::string::npos);
+  CHECK(manifest.find("\"history_report\": null") != std::string::npos);
+  const bool historyDirIsEmpty =
+      !std::filesystem::exists(historyDir) ||
+      std::filesystem::directory_iterator(historyDir) == std::filesystem::directory_iterator{};
+  CHECK(historyDirIsEmpty);
 }
 
 TEST_CASE("semantic memory ci artifact wrapper writes failure artifacts") {

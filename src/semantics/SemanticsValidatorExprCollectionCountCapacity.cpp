@@ -59,7 +59,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       };
   const auto promoteUnknownCapacityMethodToBuiltinValidation =
       [&](const Expr &receiverExpr,
-          const std::string &methodTargetPath,
+          std::string &methodTargetPath,
           bool isBuiltinMethod) {
         const bool lacksVisibleCapacityMethodTargetBeforePromotion =
             lacksVisibleResolvedMethodTarget(methodTargetPath, isBuiltinMethod);

@@ -61,7 +61,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "unknown method: /vector/count");
+  CHECK(error == "unknown method: /std/collections/vector/count");
 
   methodCall.name = "capacity";
   methodCall.args = {vectorReceiverExpr};
@@ -80,7 +80,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "unknown method: /vector/capacity");
+  CHECK(error == "unknown method: /std/collections/vector/capacity");
 
   methodCall.name = "at";
   primec::Expr indexArg;
@@ -103,7 +103,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "unknown method: /vector/at");
+  CHECK(error == "unknown method: /std/collections/vector/at");
 
   methodCall.name = "at_unsafe";
   methodCall.args = {vectorReceiverExpr, indexArg};
@@ -122,7 +122,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "unknown method: /vector/at_unsafe");
+  CHECK(error == "unknown method: /std/collections/vector/at_unsafe");
 
   auto expectUnknownVectorMutatorMethod = [&](const char *methodName, const std::vector<primec::Expr> &args) {
     methodCall.name = methodName;
@@ -142,7 +142,7 @@ TEST_CASE("ir lowerer setup type helper keeps builtin array count fallback and r
               [](const primec::Expr &) { return std::string(); },
               {},
               error) == nullptr);
-    CHECK(error == std::string("unknown method: /vector/") + methodName);
+    CHECK(error == std::string("unknown method: /std/collections/vector/") + methodName);
   };
 
   expectUnknownVectorMutatorMethod("push", {vectorReceiverExpr, indexArg});
@@ -232,7 +232,7 @@ TEST_CASE("ir lowerer setup type helper reports unknown vector mutators when no 
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "unknown method: /vector/push");
+  CHECK(error == "unknown method: /std/collections/vector/push");
 
   methodCall.name = "pop";
   methodCall.args = {receiverExpr};
@@ -251,7 +251,7 @@ TEST_CASE("ir lowerer setup type helper reports unknown vector mutators when no 
             [](const primec::Expr &) { return std::string(); },
             {},
             error) == nullptr);
-  CHECK(error == "unknown method: /vector/pop");
+  CHECK(error == "unknown method: /std/collections/vector/pop");
 }
 
 TEST_CASE("ir lowerer setup type helper reports method call definition diagnostics from expressions") {

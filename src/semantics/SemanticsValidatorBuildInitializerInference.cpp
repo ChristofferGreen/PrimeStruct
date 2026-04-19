@@ -28,8 +28,33 @@ bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const 
   if (normalizedType == "array" && binding.typeTemplateArg.empty()) {
     return false;
   }
+  std::string scopeNamespace;
+  const auto scopeIt = defMap_.find(currentValidationState_.context.definitionPath);
+  if (scopeIt != defMap_.end() && scopeIt->second != nullptr) {
+    scopeNamespace = scopeIt->second->namespacePrefix;
+  }
   if (!binding.typeTemplateArg.empty()) {
     return true;
+  }
+  std::string normalizedTypeBase = normalizedType;
+  std::string normalizedTypeArgText;
+  if (splitTemplateTypeName(normalizedType, normalizedTypeBase, normalizedTypeArgText) &&
+      !normalizedTypeArgText.empty()) {
+    if (normalizedTypeBase == "Result" || normalizedTypeBase == "Pointer" ||
+        normalizedTypeBase == "Reference") {
+      return true;
+    }
+    if (returnKindForTypeName(normalizedTypeBase) != ReturnKind::Unknown) {
+      return true;
+    }
+    if (structNames_.count(normalizedTypeBase) > 0) {
+      return true;
+    }
+    if (!resolveStructTypePath(normalizedTypeBase, scopeNamespace, structNames_).empty()) {
+      return true;
+    }
+    const auto importIt = importAliases_.find(normalizedTypeBase);
+    return importIt != importAliases_.end() && structNames_.count(importIt->second) > 0;
   }
   if (normalizedType == "Result" || normalizedType == "Pointer" || normalizedType == "Reference") {
     return true;
@@ -39,11 +64,6 @@ bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const 
   }
   if (structNames_.count(binding.typeName) > 0) {
     return true;
-  }
-  std::string scopeNamespace;
-  const auto scopeIt = defMap_.find(currentValidationState_.context.definitionPath);
-  if (scopeIt != defMap_.end() && scopeIt->second != nullptr) {
-    scopeNamespace = scopeIt->second->namespacePrefix;
   }
   if (!resolveStructTypePath(normalizedType, scopeNamespace, structNames_).empty()) {
     return true;

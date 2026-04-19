@@ -434,18 +434,27 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     if (isStructFieldOmittedEnvelope) {
       return true;
     }
-    const size_t *dependencyCount = dependencyCountFind(bindingKey);
-    if (dependencyCount == nullptr) {
-      return false;
-    }
     if (bindingExpr.args.size() != 1) {
-      return true;
+      return dependencyCountFind(bindingKey) != nullptr;
     }
     const Expr &initializer = bindingExpr.args.front();
     if (initializer.kind != Expr::Kind::Call || initializer.isBinding) {
       return true;
     }
     if (isIfCall(initializer) || isMatchCall(initializer) || isBuiltinBlockCall(initializer)) {
+      return true;
+    }
+    if (initializer.isMethodCall && !initializer.args.empty()) {
+      const Expr &receiver = initializer.args.front();
+      if (receiver.kind == Expr::Kind::Name &&
+          normalizeBindingTypeName(receiver.name) == "Result" &&
+          (initializer.name == "map" || initializer.name == "and_then" ||
+           initializer.name == "map2")) {
+        return true;
+      }
+    }
+    const size_t *dependencyCount = dependencyCountFind(bindingKey);
+    if (dependencyCount == nullptr) {
       return true;
     }
     return *dependencyCount == 1;
@@ -483,6 +492,18 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     return restrictMatchesBinding(
         *restrictType, bindingOut.typeName, bindingOut.typeTemplateArg, hasTemplate, namespacePrefix);
   };
+  auto isLocalAutoCandidate = [&](const Expr &bindingExpr) {
+    for (const auto &transform : bindingExpr.transforms) {
+      if (transform.name == "effects" || transform.name == "capabilities") {
+        continue;
+      }
+      if (isBindingAuxTransformName(transform.name) || !transform.arguments.empty()) {
+        continue;
+      }
+      return normalizeBindingTypeName(transform.name) == "auto";
+    }
+    return true;
+  };
 
   std::function<void(const Definition &, const std::vector<ParameterInfo> &, const Expr &, ActiveLocalBindings &)>
       visitExpr;
@@ -516,7 +537,8 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
       if (!inferBindingForLocals(def, defParams, activeLocals.bindings, expr, binding)) {
         return;
       }
-      if (shouldCaptureGraphBinding(def, expr) && graphBindingIsUsable(binding)) {
+      if (isLocalAutoCandidate(expr) && shouldCaptureGraphBinding(def, expr) &&
+          graphBindingIsUsable(binding)) {
         const auto [sourceLine, sourceColumn] = graphLocalAutoSourceLocation(expr);
         const GraphLocalAutoKey bindingKey =
             graphLocalAutoBindingKey(def.fullPath, sourceLine, sourceColumn);

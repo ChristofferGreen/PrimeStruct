@@ -296,22 +296,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "normalizedReceiverStruct.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
         std::string::npos);
   CHECK(setupTypeMethodTargetHelpersSource.find(
-            "semantics::isExperimentalSoaVectorTypePath(normalized)") !=
+            "auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate)") !=
         std::string::npos);
   CHECK(setupTypeMethodTargetHelpersSource.find(
-            "normalized == \"SoaVector\" || normalized.rfind(\"SoaVector<\", 0) == 0") ==
-        std::string::npos);
-  CHECK(setupTypeMethodTargetHelpersSource.find(
-            "normalized == \"std/collections/experimental_soa_vector/SoaVector\"") ==
-        std::string::npos);
-  CHECK(setupTypeMethodTargetHelpersSource.find(
-            "normalized.rfind(\"std/collections/experimental_soa_vector/SoaVector<\", 0) == 0") ==
-        std::string::npos);
-  CHECK(setupTypeMethodTargetHelpersSource.find(
-            "normalized.rfind(\"SoaVector__\", 0) == 0") ==
-        std::string::npos);
-  CHECK(setupTypeMethodTargetHelpersSource.find(
-            "normalized.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
+            "semantics::isExperimentalSoaVectorTypePath(normalized)") ==
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path)") ==
