@@ -56,25 +56,23 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1073
-2. TODO-1074
-3. TODO-1062
-4. TODO-1070
+1. TODO-1074
+2. TODO-1062
+3. TODO-1070
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1073
-2. TODO-1074
-3. TODO-1062
-4. TODO-1070
-5. TODO-1066
-6. TODO-1063
-7. TODO-1064
-8. TODO-1065
+1. TODO-1074
+2. TODO-1062
+3. TODO-1070
+4. TODO-1066
+5. TODO-1063
+6. TODO-1064
+7. TODO-1065
 
 ### Priority Lanes (Current)
 
-- Disabled test audit: TODO-1073, TODO-1074
+- Disabled test audit: TODO-1074
 - Pilot semantic boundary ownership: TODO-1062, TODO-1063, TODO-1064, TODO-1065
 - Parallel-ready validation state: TODO-1066
 - Frontend/docs correctness parity: TODO-1070
@@ -82,14 +80,13 @@ Task template:
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1073
-2. TODO-1074
-3. TODO-1062
-4. TODO-1070
+1. TODO-1074
+2. TODO-1062
+3. TODO-1070
 
 Wave B:
-1. TODO-1063
-2. TODO-1066
+1. TODO-1066
+2. TODO-1063
 
 Wave C:
 1. TODO-1064
@@ -99,7 +96,7 @@ Wave C:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Disabled test audit | TODO-1073, TODO-1074 |
+| Disabled test audit | TODO-1074 |
 | Pilot semantic ownership boundary | TODO-1062, TODO-1063, TODO-1064, TODO-1065 |
 | Parallel-ready validation architecture | TODO-1066 |
 | Frontend/docs correctness parity | TODO-1070 |
@@ -108,7 +105,6 @@ Wave C:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM canonical map helper disabled-test audit | TODO-1073 |
 | C++ emitter canonical map helper disabled-test audit | TODO-1074 |
 | Semantic-product publication parity | TODO-1062, TODO-1063, TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
@@ -128,18 +124,6 @@ Wave C:
     - the file ends with no unexplained `doctest::skip(true)` map-helper cases
   - stop_rule: stop after the 5 skipped canonical-map helper cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp` are either active or deleted; do not broaden into unrelated emitter skip debt in the same change
   - notes: keep the outcome bounded to the current map-helper surface in that file and prefer behavior-level locks over source-shape assumptions
-
-- [ ] TODO-1073: Audit VM canonical map helper skip debt
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Test suite hygiene
-  - scope: resolve the remaining map-helper `doctest::skip(true)` cases in `test_compile_run_vm_collections_core_aliases.cpp` by re-enabling supported canonical helper behavior, converting stale expectations into current rejection locks, or deleting cases that no longer match the supported VM map-helper surface.
-  - acceptance:
-    - the skipped VM map-helper cases for explicit canonical helper calls, wrapper-return receiver access, bare-map `count`, bare-map `at`, and no-import canonical rejection are active again or explicitly deleted if stale
-    - any retained negative coverage in that file asserts the current canonical diagnostic surface instead of older compatibility assumptions
-    - the targeted map-helper subset ends with no unexplained `doctest::skip(true)` coverage
-  - stop_rule: stop after the map-helper subset of skipped cases in `test_compile_run_vm_collections_core_aliases.cpp` is resolved; leave wrapper-string and other non-map alias skip debt for separate follow-up if needed
-  - notes: this task targets the map-helper subset only, not the older wrapper-string compatibility skips at the top of the file
 
 - [ ] TODO-1070: Restore frontend/docs compile-run parity for current examples
   - owner: ai

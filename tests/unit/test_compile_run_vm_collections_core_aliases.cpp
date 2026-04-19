@@ -437,7 +437,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("runs vm explicit map helper calls through same-path aliases" * doctest::skip(true)) {
+TEST_CASE("runs vm explicit map helper count/contains/tryAt through same-path aliases while direct access stays builtin") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -488,11 +488,11 @@ main() {
        "primec_vm_direct_map_alias_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 243);
+  CHECK(runCommand(runCmd) == 162);
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm explicit canonical map helper calls through same-path helpers" * doctest::skip(true)) {
+TEST_CASE("rejects vm explicit canonical map helper overrides in expressions during lowering") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -550,8 +550,9 @@ main() {
        "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 243);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("VM lowering error") != std::string::npos);
+  CHECK(readFile(outPath).find("call=/std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("runs vm stdlib namespaced map helpers on canonical map references") {
@@ -603,7 +604,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("runs vm canonical map access helpers on wrapper slash return receiver" * doctest::skip(true)) {
+TEST_CASE("runs vm canonical map access direct calls on wrapper slash return receiver while method sugar stays builtin") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -633,7 +634,7 @@ main() {
        "primec_vm_canonical_map_access_helpers_wrapper_slash_return_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 166);
+  CHECK(runCommand(runCmd) == 91);
   CHECK(readFile(outPath).empty());
 }
 
@@ -728,7 +729,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
-TEST_CASE("rejects vm stdlib namespaced map at fallback without import" * doctest::skip(true)) {
+TEST_CASE("rejects vm stdlib namespaced map at fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -750,11 +751,11 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_namespaced_map_at_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm stdlib namespaced map at unsafe fallback without import" * doctest::skip(true)) {
+TEST_CASE("rejects vm stdlib namespaced map at unsafe fallback without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<map<i32, i32>>]
 wrapMap() {
@@ -777,11 +778,11 @@ main() {
        "primec_vm_stdlib_namespaced_map_at_unsafe_alias_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 4);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("runs vm bare map count through canonical helper" * doctest::skip(true)) {
+TEST_CASE("keeps vm bare map count builtin even with canonical helper present") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -799,7 +800,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_unnamespaced_count_builtin_fallback_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 17);
+  CHECK(runCommand(runCmd) == 1);
   CHECK(readFile(outPath).empty());
 }
 
@@ -822,7 +823,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm bare map at through canonical helper" * doctest::skip(true)) {
+TEST_CASE("keeps vm bare map at builtin even with canonical helper present") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -840,7 +841,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_bare_map_at_with_canonical_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 17);
+  CHECK(runCommand(runCmd) == 4);
   CHECK(readFile(outPath).empty());
 }
 

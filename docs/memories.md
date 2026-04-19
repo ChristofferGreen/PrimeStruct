@@ -1848,6 +1848,19 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: Group 9 extracted the monomorph setup block from `monomorphizeTemplates(...)` into
   `initializeTemplateMonomorphSourceDefinitions(...)`.
 
+### vm-canonical-map-helper-routing-precedence
+- Updated: 2026-04-19
+- Tags: vm, collections, tests
+- Fact: VM canonical map helper routing currently keeps direct `/map/count`, `/map/contains`, and `/map/tryAt`
+  same-path overrides active, but leaves bare-map `count(...)` and `at(...)` on builtin behavior even with
+  canonical helpers present, rejects explicit `/std/collections/map/at(...)` expression overrides during lowering,
+  and keeps wrapper-return map method sugar on builtin access even when direct helper calls override.
+- Evidence: `TODO-1073` re-enabled the skipped VM map-helper cases in
+  `tests/unit/test_compile_run_vm_collections_core_aliases.cpp`, locking the observed `162` partial-override
+  result, the `91` direct-call-versus-method-sugar wrapper result, the lowering-time `/std/collections/map/at`
+  rejection, and the builtin-precedence outcomes for bare-map `count(...)` and `at(...)`; the full release gate
+  passed afterward.
+
 ## Maintenance Notes
 
 - Keep entries sorted by slug within the section.
