@@ -845,7 +845,7 @@ main() {
   CHECK(readFile(errPath).find("name=capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects native user vector count call shadow" * doctest::skip(true)) {
+TEST_CASE("rejects native user vector count call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
