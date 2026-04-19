@@ -1,37 +1,23 @@
-  struct InlineContext {
-    std::string defPath;
-    bool returnsVoid = false;
-    bool returnsArray = false;
-    LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
-    int32_t returnLocal = -1;
-    std::vector<size_t> returnJumps;
-  };
-
-  InlineContext *activeInlineContext = nullptr;
-  std::unordered_set<std::string> inlineStack;
-
-  std::function<bool(const Expr &, const LocalMap &)> emitExpr;
-  std::function<bool(const Expr &, LocalMap &)> emitStatement;
-  auto allocTempLocal = [&]() -> int32_t {
+  allocTempLocal = [&]() -> int32_t {
     return nextLocal++;
   };
-  auto emitStructCopyFromPtrs = [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
+  emitStructCopyFromPtrs = [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
     return ir_lowerer::emitStructCopyFromPtrs(function.instructions, destPtrLocal, srcPtrLocal, slotCount);
   };
-  auto emitStructCopySlots = [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
+  emitStructCopySlots = [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) -> bool {
     return ir_lowerer::emitStructCopySlots(
         function.instructions, destBaseLocal, srcPtrLocal, slotCount, [&]() { return allocTempLocal(); });
   };
-  auto emitFileScopeCleanup = [&](const std::vector<int32_t> &scope) {
+  emitFileScopeCleanup = [&](const std::vector<int32_t> &scope) {
     ir_lowerer::emitFileScopeCleanup(function.instructions, scope);
   };
-  auto emitFileScopeCleanupAll = [&]() {
+  emitFileScopeCleanupAll = [&]() {
     ir_lowerer::emitAllFileScopeCleanup(function.instructions, fileScopeStack);
   };
-  auto pushFileScope = [&]() { fileScopeStack.emplace_back(); };
-  auto popFileScope = [&]() { fileScopeStack.pop_back(); };
+  pushFileScope = [&]() { fileScopeStack.emplace_back(); };
+  popFileScope = [&]() { fileScopeStack.pop_back(); };
 
-  auto emitBlock = [&](const Expr &blockExpr, LocalMap &blockLocals) -> bool {
+  emitBlock = [&](const Expr &blockExpr, LocalMap &blockLocals) -> bool {
     if (blockExpr.kind != Expr::Kind::Call) {
       error = "native backend expects if branch blocks to be calls";
       return false;
@@ -52,16 +38,16 @@
     return true;
   };
 
-  auto emitFloatLiteral = [&](const Expr &expr) -> bool {
+  emitFloatLiteral = [&](const Expr &expr) -> bool {
     return ir_lowerer::emitFloatLiteral(function.instructions, expr, error);
   };
 
-  auto emitCompareToZero = [&](LocalInfo::ValueKind kind, bool equals) -> bool {
+  emitCompareToZero = [&](LocalInfo::ValueKind kind, bool equals) -> bool {
     return ir_lowerer::emitCompareToZero(function.instructions, kind, equals, error);
   };
 
-  auto resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);
-  auto resolveResultExprInfo = ir_lowerer::makeResolveResultExprInfoFromLocals(
+  resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);
+  resolveResultExprInfo = ir_lowerer::makeResolveResultExprInfoFromLocals(
       [&](const Expr &callExpr, const LocalMap &localsForCall) -> const Definition * {
         return resolveMethodCallDefinition(callExpr, localsForCall);
       },
@@ -75,11 +61,11 @@
       &callResolutionAdapters.semanticProductTargets,
       &error);
 
-  auto emitStringValueForCall = [&](const Expr &arg,
-                                    const LocalMap &callerLocals,
-                                    LocalInfo::StringSource &sourceOut,
-                                    int32_t &stringIndexOut,
-                                    bool &argvCheckedOut) -> bool {
+  emitStringValueForCall = [&](const Expr &arg,
+                               const LocalMap &callerLocals,
+                               LocalInfo::StringSource &sourceOut,
+                               int32_t &stringIndexOut,
+                               bool &argvCheckedOut) -> bool {
     return ir_lowerer::emitStringValueForCallFromLocals(
         arg,
         callerLocals,

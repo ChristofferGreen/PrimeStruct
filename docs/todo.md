@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4016
 - TODO-4007
 - TODO-4003
 - TODO-4004
@@ -68,19 +67,17 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Lowerer architecture: TODO-4016
 - Semantic ownership cutover: TODO-4004, TODO-4008
 - Validator/publication simplification: TODO-4003, TODO-4005
 - Build and validation ergonomics: TODO-4007
 
 ### Execution Queue (Recommended)
 
-1. TODO-4016
-2. TODO-4007
-3. TODO-4003
-4. TODO-4004
-5. TODO-4005
-6. TODO-4008
+1. TODO-4007
+2. TODO-4003
+3. TODO-4004
+4. TODO-4005
+5. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
@@ -89,7 +86,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | TODO-4004, TODO-4008 |
 | Validator entrypoint and benchmark-plumbing split | TODO-4003 |
 | Semantic-product publication by module and fact family | TODO-4005 |
-| IR lowerer compile-unit breakup | TODO-4016 |
+| IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | TODO-4007 |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
@@ -103,7 +100,7 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4004, TODO-4008 |
 | Semantic-product publication parity and deterministic ordering | TODO-4005 |
-| Lowerer/source-composition contract coverage | TODO-4016 |
+| Lowerer/source-composition contract coverage | none |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4007 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
@@ -112,19 +109,6 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Task Blocks
-
-- [ ] TODO-4016: Extract lowerer return/emit lane from mega translation unit
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Lowerer Architecture
-  - depends_on: none
-  - scope: Replace the remaining `IrLowererLowerReturnAndCalls.h` include ownership in `IrLowererLower.cpp` with an ordinary compiled orchestration unit for return-info, inline-call, and expression-emission setup while preserving the current step-helper split and inline-call bookkeeping behavior.
-  - acceptance:
-    - `IrLowererLower.cpp` no longer includes `IrLowererLowerReturnAndCalls.h` directly; the return/emit lane builds through a named `.cpp` orchestration unit.
-    - Existing return-info, inline-call, and expression-emission step helpers remain the detailed behavior owners, with source-lock coverage pinning the new orchestration seam instead of the old include body.
-    - Release validation and focused lowerer architecture coverage pass after the lane extraction.
-  - stop_rule: Stop once the return/emit lane is compiled as a normal `.cpp` orchestration unit and the old include-owner seam is gone; leave operator or binding/loop lane breakup as separate follow-up work.
-  - notes: Start with `src/ir_lowerer/IrLowererLowerReturnAndCalls.h`, `src/ir_lowerer/IrLowererLowerReturnInfo.h`, `src/ir_lowerer/IrLowererLowerInlineCalls.h`, and `src/ir_lowerer/IrLowererLowerEmitExpr.h`; keep the existing step-unit boundaries intact and avoid widening into operator or statement-lane rewrites.
 
 - [ ] TODO-4008: Retire first covered production semantic adapter slice
   - owner: ai

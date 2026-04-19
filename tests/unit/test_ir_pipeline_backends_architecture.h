@@ -340,6 +340,8 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         std::string::npos);
   CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerSetupStage.h\"") !=
         std::string::npos);
+  CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererLowerReturnEmitStage.h\"") !=
+        std::string::npos);
   CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererFlowHelpers.h\"") !=
         std::string::npos);
   CHECK(irLowererTestApi.find("#include \"primec/testing/ir_lowerer_helpers/IrLowererStringCallHelpers.h\"") !=

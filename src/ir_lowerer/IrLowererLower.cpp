@@ -15,14 +15,7 @@
 #include "IrLowererInlineStructArgHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
-#include "IrLowererLowerInlineCallActiveContextStep.h"
-#include "IrLowererLowerInlineCallCleanupStep.h"
-#include "IrLowererLowerInlineCallContextSetupStep.h"
-#include "IrLowererLowerInlineCallGpuLocalsStep.h"
-#include "IrLowererLowerInlineCallReturnValueStep.h"
-#include "IrLowererLowerInlineCallStatementStep.h"
-#include "IrLowererLowerExprEmitSetup.h"
-#include "IrLowererLowerReturnCallsSetup.h"
+#include "IrLowererLowerReturnEmitStage.h"
 #include "IrLowererLowerSetupStage.h"
 #include "IrLowererLowerStatementsCallsStage.h"
 #include "IrLowererOnErrorHelpers.h"
@@ -121,24 +114,6 @@ bool IrLowerer::lower(const Program &program,
   auto &stringTable = setupStage.stringTable;
   auto &loweredCallTargets = setupStage.loweredCallTargets;
   auto &instructionSourceRangesByFunction = setupStage.instructionSourceRangesByFunction;
-  auto appendInstructionSourceRange = [&](const std::string &functionName,
-                                          const Expr &expr,
-                                          size_t beginIndex,
-                                          size_t endIndex) {
-    if (functionName.empty() || endIndex <= beginIndex) {
-      return;
-    }
-    InstructionSourceRange range;
-    range.beginIndex = beginIndex;
-    range.endIndex = endIndex;
-    if (expr.sourceLine > 0) {
-      range.line = static_cast<uint32_t>(expr.sourceLine);
-    }
-    if (expr.sourceColumn > 0) {
-      range.column = static_cast<uint32_t>(expr.sourceColumn);
-    }
-    instructionSourceRangesByFunction[functionName].push_back(range);
-  };
   auto &fileScopeStack = setupStage.fileScopeStack;
   auto &currentOnError = setupStage.currentOnError;
   auto &currentReturnResult = setupStage.currentReturnResult;
@@ -152,7 +127,6 @@ bool IrLowerer::lower(const Program &program,
   const auto &runtimeErrorAndStringLiteralSetup = setupLocalsOrchestration.runtimeErrorAndStringLiteralSetup;
   const auto &stringLiteralHelpers = runtimeErrorAndStringLiteralSetup.stringLiteralHelpers;
   auto internString = stringLiteralHelpers.internString;
-
   const auto &runtimeErrorEmitters = runtimeErrorAndStringLiteralSetup.runtimeErrorEmitters;
   auto emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
   auto emitPointerIndexOutOfBounds = runtimeErrorEmitters.emitPointerIndexOutOfBounds;
@@ -223,12 +197,40 @@ bool IrLowerer::lower(const Program &program,
 
   auto applyStructValueInfo = setupLocalsOrchestration.applyStructValueInfo;
 
+  ir_lowerer::LowerReturnEmitStageState returnEmitStage;
+  if (!ir_lowerer::runLowerReturnEmitStage(
+          {
+              .setupStage = &setupStage,
+              .onErrorByDef = &onErrorByDef,
+          },
+          returnEmitStage,
+          error)) {
+    return false;
+  }
+
   auto &getReturnInfo = setupStage.inferenceSetupBootstrap.getReturnInfo;
   auto &inferExprKind = setupStage.inferenceSetupBootstrap.inferExprKind;
   auto &inferArrayElementKind = setupStage.inferenceSetupBootstrap.inferArrayElementKind;
   auto &resolveMethodCallDefinition = setupStage.inferenceSetupBootstrap.resolveMethodCallDefinition;
 
-#include "IrLowererLowerReturnAndCalls.h"
+  auto &activeInlineContext = returnEmitStage.activeInlineContext;
+  auto &inlineStack = returnEmitStage.inlineStack;
+  auto &appendInstructionSourceRange = returnEmitStage.appendInstructionSourceRange;
+  auto &emitExpr = returnEmitStage.emitExpr;
+  auto &emitStatement = returnEmitStage.emitStatement;
+  auto &allocTempLocal = returnEmitStage.allocTempLocal;
+  auto &emitStructCopyFromPtrs = returnEmitStage.emitStructCopyFromPtrs;
+  auto &emitStructCopySlots = returnEmitStage.emitStructCopySlots;
+  auto &emitFileScopeCleanup = returnEmitStage.emitFileScopeCleanup;
+  auto &emitFileScopeCleanupAll = returnEmitStage.emitFileScopeCleanupAll;
+  auto &pushFileScope = returnEmitStage.pushFileScope;
+  auto &popFileScope = returnEmitStage.popFileScope;
+  auto &emitBlock = returnEmitStage.emitBlock;
+  auto &emitCompareToZero = returnEmitStage.emitCompareToZero;
+  auto &resolveDefinitionCall = returnEmitStage.resolveDefinitionCall;
+  auto &resolveResultExprInfo = returnEmitStage.resolveResultExprInfo;
+  auto &emitInlineDefinitionCall = returnEmitStage.emitInlineDefinitionCall;
+
 #include "IrLowererLowerOperators.h"
 #include "IrLowererLowerStatementsExpr.h"
 #include "IrLowererLowerStatementsBindings.h"

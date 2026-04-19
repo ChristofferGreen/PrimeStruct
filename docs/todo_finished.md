@@ -3972,3 +3972,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start from `src/ir_lowerer/IrLowererLower.cpp` and the source-lock tests that still read that file directly; take call lowering before statement lowering, and if both do not fit after entry/setup, write the remaining lane down as explicit follow-up work.
   - finished_at: 2026-04-19
   - evidence: Added `IrLowererLowerSetupStage.{h,cpp}` so entry/setup now builds through one ordinary compiled orchestration unit, added `IrLowererLowerStatementsCallsStage.{h,cpp}` so the statements/calls lane no longer lives in an include-composed owner, rewired `IrLowererLower.cpp` to call those stage units instead of including the old setup and `StatementsCalls` bodies directly, updated the lowerer testing umbrella and source-lock coverage to pin the new stage seams, and wrote down `TODO-4016` for the remaining return/emit include lane.
+
+- [x] TODO-4016: Extract lowerer return/emit lane from mega translation unit
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Lowerer Architecture
+  - depends_on: none
+  - scope: Replace the remaining `IrLowererLowerReturnAndCalls.h` include ownership in `IrLowererLower.cpp` with an ordinary compiled orchestration unit for return-info, inline-call, and expression-emission setup while preserving the current step-helper split and inline-call bookkeeping behavior.
+  - acceptance:
+    - `IrLowererLower.cpp` no longer includes `IrLowererLowerReturnAndCalls.h` directly; the return/emit lane builds through a named `.cpp` orchestration unit.
+    - Existing return-info, inline-call, and expression-emission step helpers remain the detailed behavior owners, with source-lock coverage pinning the new orchestration seam instead of the old include body.
+    - Release validation and focused lowerer architecture coverage pass after the lane extraction.
+  - stop_rule: Stop once the return/emit lane is compiled as a normal `.cpp` orchestration unit and the old include-owner seam is gone; leave operator or binding/loop lane breakup as separate follow-up work.
+  - notes: Start with `src/ir_lowerer/IrLowererLowerReturnAndCalls.h`, `src/ir_lowerer/IrLowererLowerReturnInfo.h`, `src/ir_lowerer/IrLowererLowerInlineCalls.h`, and `src/ir_lowerer/IrLowererLowerEmitExpr.h`; keep the existing step-unit boundaries intact and avoid widening into operator or statement-lane rewrites.
+  - finished_at: 2026-04-19
+  - evidence: Added `IrLowererLowerReturnEmitStage.{h,cpp}` so the remaining return-info/inline-call/expression-emission lane now builds through one ordinary compiled orchestration unit, deleted the old `IrLowererLowerReturnAndCalls.h` wrapper, rewired `IrLowererLower.cpp` to consume the new stage state instead of the include-owner seam, extended the lowerer testing umbrella with `IrLowererLowerReturnEmitStage.h`, and refreshed source-lock coverage to pin the new stage source and helper-header contract.

@@ -60,6 +60,7 @@ namespace primec::ir_lowerer {
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerLocalsSetup.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerSetupStage.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerReturnCallsSetup.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerReturnEmitStage.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStep.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryExecutionStep.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryStatementStep.h"

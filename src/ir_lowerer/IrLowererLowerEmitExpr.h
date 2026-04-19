@@ -1,4 +1,4 @@
-  ir_lowerer::LowerReturnCallsEmitFileErrorWhyFn emitFileErrorWhy;
+  emitFileErrorWhy = {};
   if (!ir_lowerer::runLowerReturnCallsSetup(
           {
               .function = &function,
@@ -8,9 +8,9 @@
           error)) {
     return false;
   }
-  ir_lowerer::LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
-  ir_lowerer::LowerExprEmitUploadPassthroughCallFn emitUploadPassthroughCall;
-  ir_lowerer::LowerExprEmitReadbackPassthroughCallFn emitReadbackPassthroughCall;
+  emitMovePassthroughCall = {};
+  emitUploadPassthroughCall = {};
+  emitReadbackPassthroughCall = {};
   if (!ir_lowerer::runLowerExprEmitSetup(
           {},
           emitMovePassthroughCall,

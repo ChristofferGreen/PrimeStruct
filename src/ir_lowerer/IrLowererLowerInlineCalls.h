@@ -1,7 +1,7 @@
-  auto emitInlineDefinitionCall = [&](const Expr &callExpr,
-                                      const Definition &callee,
-                                      const LocalMap &callerLocals,
-                                      bool requireValue) -> bool {
+  emitInlineDefinitionCall = [&](const Expr &callExpr,
+                                 const Definition &callee,
+                                 const LocalMap &callerLocals,
+                                 bool requireValue) -> bool {
     ir_lowerer::InlineDefinitionCallContextSetup callSetup;
     if (!ir_lowerer::prepareInlineDefinitionCallContext(
             callee,
