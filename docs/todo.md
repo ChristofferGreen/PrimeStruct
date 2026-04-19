@@ -56,30 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- none
+- TODO-1155
 
 ### Immediate Next 10 (After Ready Now)
 
-- none
+- TODO-1155
 
 ### Priority Lanes (Current)
 
-- none
+- VM direct wrapper-returned canonical map access string receiver typing skip debt: TODO-1155
 
 ### Execution Queue (Recommended)
 
-1. none
+1. TODO-1155
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| none | none |
+| VM wrapper-returned canonical map access skipped-test debt | TODO-1155 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| none | none |
+| VM compile-run skipped-test debt | TODO-1155 |
 
 ### Task Blocks
+
+- [ ] TODO-1155: Audit VM direct wrapper-returned canonical map access string receiver typing skip debt
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Backend skip-debt cleanup
+  - scope: Re-enable or delete the skipped VM direct wrapper-returned canonical map access string-receiver typing coverage, and lock the current VM contract for `count(/std/collections/map/at(wrapMap(), 1i32))`.
+  - acceptance:
+    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM direct wrapper-returned canonical map access string-receiver typing case in stale form.
+    - The VM test locks the actual current contract for `count(/std/collections/map/at(wrapMap(), 1i32))`, whether that remains the current successful `3` exit path or another stable VM-side outcome.
+  - stop_rule: Stop after the VM direct wrapper-returned canonical map access string-receiver typing surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

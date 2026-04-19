@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("vm keeps non-string diagnostics on wrapper-returned canonical map access count shadow" * doctest::skip(true)) {
+TEST_CASE("vm keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
