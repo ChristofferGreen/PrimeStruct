@@ -4370,3 +4370,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the obvious `/std/image/png` prelude/write-preparation inferred-binding opportunities are converted; leave broader codec changes separate.
   - finished_at: 2026-04-19
   - evidence: Rewrote the obvious repeated-type local bindings across the `/std/image/png` prelude and write-preparation helper band in `stdlib/std/image/image.prime`, including chunk readers, CRC helpers, sizing helpers, and PNG write-preparation paths such as `pngWriteIhdrChunk`, `pngWriteStoredDataByte`, `pngWriteIdatChunk`, and `pngWriteIendChunk`, while leaving the later scanline/bitstream/inflate and top-level read/write orchestration slices for follow-up TODOs; added a focused PNG-prelude inferred-local source lock in `tests/unit/test_compile_run_examples_docs_locks.cpp`; and updated `docs/todo.md` so `TODO-4088` is now the top ready inferred-binding follow-up.
+
+- [x] TODO-4088: Adopt concise inferred local bindings in `/std/image/png` scanline, bitstream, and inflate helpers where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4078, TODO-4079, TODO-4080
+  - scope: Continue the split inferred-local cleanup by converting the obvious repeated-type local bindings in the `/std/image/png` scanline decode, bitstream, and inflate helper stack to concise inferred bindings where the initializer already establishes the type clearly, without mixing in codec-behavior changes.
+  - acceptance:
+    - Obvious `/std/image/png` scanline, bitstream, and inflate helper bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - Behavior-sensitive or readability-sensitive sites remain explicit only when needed instead of by default.
+  - stop_rule: Stop once the obvious `/std/image/png` scanline/bitstream/inflate inferred-binding opportunities are converted; leave broader codec changes separate.
+  - finished_at: 2026-04-20
+  - evidence: Rewrote the obvious repeated-type local bindings across the `/std/image/png` helper stack from `pngPaethPredictor` through `pngInflateDeflateBlocks` in `stdlib/std/image/image.prime`, including scanline decode locals, bitstream/Huffman metadata locals, fixed and dynamic inflate locals, and deflate trailer bookkeeping, while leaving `pngDecodeScanlines` and the top-level read/write orchestration for the follow-up slice; updated the existing PNG docs-lock section plus added a focused inferred-local source-lock regression in `tests/unit/test_compile_run_examples_docs_locks.cpp`; and advanced `docs/todo.md` so `TODO-4089` is now the top ready inferred-binding follow-up.

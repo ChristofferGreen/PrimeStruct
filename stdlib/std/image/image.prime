@@ -1000,10 +1000,10 @@ namespace std {
 
   [return<i32>]
   pngPaethPredictor([i32] left, [i32] up, [i32] upLeft) {
-    [i32] predictor{left + up - upLeft}
-    [i32] leftDistance{abs(predictor - left)}
-    [i32] upDistance{abs(predictor - up)}
-    [i32] upLeftDistance{abs(predictor - upLeft)}
+    predictor{left + up - upLeft}
+    leftDistance{abs(predictor - left)}
+    upDistance{abs(predictor - up)}
+    upLeftDistance{abs(predictor - upLeft)}
     if(and(less_equal(leftDistance, upDistance), less_equal(leftDistance, upLeftDistance)),
        then() { return(left) },
        else() { })
@@ -1060,12 +1060,12 @@ namespace std {
     if(less_equal(width, 0i32),
        then() { return(false) },
        else() { })
-    [i64] scanlineBitsWide{
+    scanlineBitsWide{
         multiply(multiply(convert<i64>(width), convert<i64>(pngColorTypeSamplesPerPixel(colorType))), convert<i64>(bitDepth))}
     if(or(less_equal(scanlineBitsWide, 0i64), greater_than(scanlineBitsWide, 17179869176i64)),
        then() { return(false) },
        else() { })
-    [i64] scanlineBytesWide{divide(scanlineBitsWide + 7i64, 8i64)}
+    scanlineBytesWide{divide(scanlineBitsWide + 7i64, 8i64)}
     if(greater_than(scanlineBytesWide, 2147483647i64),
        then() { return(false) },
        else() { })
@@ -1075,8 +1075,8 @@ namespace std {
 
   [return<i32>]
   pngSampleValueCount([i32] bitDepth) {
-    [i32 mut] valueCount{1i32}
-    [i32 mut] shift{0i32}
+    [mut] valueCount{1i32}
+    [mut] shift{0i32}
     while(less_than(shift, bitDepth), do() {
       valueCount = multiply(valueCount, 2i32)
       increment(shift)
@@ -1086,12 +1086,12 @@ namespace std {
 
   [return<i32>]
   pngPackedSampleAt([vector<i32>] rowBytes, [i32] pixelIndex, [i32] bitDepth) {
-    [i32] samplesPerByte{divide(8i32, bitDepth)}
-    [i32] byteIndex{divide(pixelIndex, samplesPerByte)}
-    [i32] sampleIndex{pngMod(pixelIndex, samplesPerByte)}
-    [i32] shiftAmount{multiply(samplesPerByte - 1i32 - sampleIndex, bitDepth)}
-    [i32 mut] shifted{rowBytes[byteIndex]}
-    [i32 mut] shiftCount{0i32}
+    samplesPerByte{divide(8i32, bitDepth)}
+    byteIndex{divide(pixelIndex, samplesPerByte)}
+    sampleIndex{pngMod(pixelIndex, samplesPerByte)}
+    shiftAmount{multiply(samplesPerByte - 1i32 - sampleIndex, bitDepth)}
+    [mut] shifted{rowBytes[byteIndex]}
+    [mut] shiftCount{0i32}
     while(less_than(shiftCount, shiftAmount), do() {
       shifted = divide(shifted, 2i32)
       increment(shiftCount)
@@ -1101,7 +1101,7 @@ namespace std {
 
   [return<i32>]
   pngScalePackedSampleToByte([i32] sample, [i32] bitDepth) {
-    [i32] maxSample{pngSampleValueCount(bitDepth) - 1i32}
+    maxSample{pngSampleValueCount(bitDepth) - 1i32}
     if(less_equal(maxSample, 0i32),
        then() { return(0i32) },
        else() { })
@@ -1184,7 +1184,7 @@ namespace std {
 
   [effects(heap_alloc), return<int>]
   pngInitRgbPixels([i32] width, [i32] height, [vector<i32> mut] pixels) {
-    [i32 mut] pixelCount{0i32}
+    [mut] pixelCount{0i32}
     if(not(imageRgbWritePixelCount(width, height, pixelCount)),
        then() {
          /std/collections/vector/clear(pixels)
@@ -1193,7 +1193,7 @@ namespace std {
        else() { })
     /std/collections/vector/clear(pixels)
     /std/collections/vector/reserve(pixels, pixelCount)
-    [i32 mut] pixelIndex{0i32}
+    [mut] pixelIndex{0i32}
     while(less_than(pixelIndex, pixelCount), do() {
       /std/collections/vector/push(pixels, 0i32)
       increment(pixelIndex)
@@ -1209,7 +1209,7 @@ namespace std {
        then() { return(1i32) },
        else() { })
 
-    [i32 mut] pixelCount{0i32}
+    [mut] pixelCount{0i32}
     if(not(imageRgbWritePixelCount(width, height, pixelCount)),
        then() {
          /std/collections/vector/clear(pixels)
@@ -1218,15 +1218,15 @@ namespace std {
        else() { })
     /std/collections/vector/reserve(pixels, pixelCount)
 
-    [i32] bytesPerPixel{pngFilterBytesPerPixel(bitDepth, colorType)}
-    [i32 mut] scanlineBytes{0i32}
+    bytesPerPixel{pngFilterBytesPerPixel(bitDepth, colorType)}
+    [mut] scanlineBytes{0i32}
     if(not(pngScanlineBytesValid(width, bitDepth, colorType, scanlineBytes)),
        then() {
          /std/collections/vector/clear(pixels)
          return(1i32)
        },
        else() { })
-    [i64] requiredRowBytesWide{multiply(convert<i64>(height), convert<i64>(scanlineBytes) + 1i64)}
+    requiredRowBytesWide{multiply(convert<i64>(height), convert<i64>(scanlineBytes) + 1i64)}
     if(or(less_equal(requiredRowBytesWide, 0i64), greater_than(requiredRowBytesWide, 2147483647i64)),
        then() {
          /std/collections/vector/clear(pixels)
@@ -1237,11 +1237,11 @@ namespace std {
        then() { return(1i32) },
        else() { })
 
-    [i32 mut] row{0i32}
-    [vector<i32> mut] rowBytes{vector<i32>()}
-    [vector<i32> mut] previousRowBytes{vector<i32>()}
+    [mut] row{0i32}
+    [mut] rowBytes{vector<i32>()}
+    [mut] previousRowBytes{vector<i32>()}
     while(less_than(row, height), do() {
-      [i32] filterType{rawBytes[offset]}
+      filterType{rawBytes[offset]}
       if(and(and(and(and(not_equal(filterType, 0i32), not_equal(filterType, 1i32)), not_equal(filterType, 2i32)),
                  not_equal(filterType, 3i32)),
              not_equal(filterType, 4i32)),
@@ -1253,12 +1253,12 @@ namespace std {
       offset = offset + 1i32
       /std/collections/vector/clear(rowBytes)
 
-      [i32 mut] byteIndex{0i32}
+      [mut] byteIndex{0i32}
       while(less_than(byteIndex, scanlineBytes), do() {
-        [i32 mut] reconstructed{rawBytes[offset + byteIndex]}
-        [i32 mut] leftByte{0i32}
-        [i32 mut] upByte{0i32}
-        [i32 mut] upLeftByte{0i32}
+        [mut] reconstructed{rawBytes[offset + byteIndex]}
+        [mut] leftByte{0i32}
+        [mut] upByte{0i32}
+        [mut] upLeftByte{0i32}
         if(greater_equal(byteIndex, bytesPerPixel),
            then() { leftByte = rowBytes[byteIndex - bytesPerPixel] },
            else() { })
@@ -1294,18 +1294,18 @@ namespace std {
 
       if(less_than(bitDepth, 8i32),
          then() {
-           [i32 mut] pixelIndex{0i32}
+           [mut] pixelIndex{0i32}
            while(less_than(pixelIndex, width), do() {
-             [i32] sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}
+             sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}
              if(equal(colorType, 0i32),
                 then() {
-                  [i32] grayByte{pngScalePackedSampleToByte(sample, bitDepth)}
+                  grayByte{pngScalePackedSampleToByte(sample, bitDepth)}
                   /std/collections/vector/push(pixels, grayByte)
                   /std/collections/vector/push(pixels, grayByte)
                   /std/collections/vector/push(pixels, grayByte)
                 },
                 else() {
-                  [i32] paletteOffset{multiply(sample, 3i32)}
+                  paletteOffset{multiply(sample, 3i32)}
                   if(greater_equal(paletteOffset + 2i32, count(paletteBytes)),
                      then() {
                        /std/collections/vector/clear(pixels)
@@ -1320,12 +1320,12 @@ namespace std {
            })
          },
          else() {
-           [i32 mut] pixelByteIndex{0i32}
-           [i32] channelByteStride{divide(bitDepth, 8i32)}
+           [mut] pixelByteIndex{0i32}
+           channelByteStride{divide(bitDepth, 8i32)}
            while(less_than(pixelByteIndex, scanlineBytes), do() {
              if(equal(colorType, 0i32),
                 then() {
-                  [i32] grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
+                  grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
                   /std/collections/vector/push(pixels, grayByte)
                   /std/collections/vector/push(pixels, grayByte)
                   /std/collections/vector/push(pixels, grayByte)
@@ -1333,7 +1333,7 @@ namespace std {
                 else() {
                   if(equal(colorType, 4i32),
                      then() {
-                       [i32] grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
+                       grayByte{pngScanlineChannelByte(rowBytes, pixelByteIndex, bitDepth)}
                        /std/collections/vector/push(pixels, grayByte)
                        /std/collections/vector/push(pixels, grayByte)
                        /std/collections/vector/push(pixels, grayByte)
@@ -1341,7 +1341,7 @@ namespace std {
                      else() {
                        if(equal(colorType, 3i32),
                           then() {
-                            [i32] paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
+                            paletteOffset{multiply(rowBytes[pixelByteIndex], 3i32)}
                             if(greater_equal(paletteOffset + 2i32, count(paletteBytes)),
                                then() {
                                  /std/collections/vector/clear(pixels)
@@ -1363,7 +1363,7 @@ namespace std {
            })
          })
       /std/collections/vector/clear(previousRowBytes)
-      [i32 mut] previousRowIndex{0i32}
+      [mut] previousRowIndex{0i32}
       while(less_than(previousRowIndex, scanlineBytes), do() {
         /std/collections/vector/push(previousRowBytes, rowBytes[previousRowIndex])
         increment(previousRowIndex)
@@ -1390,10 +1390,10 @@ namespace std {
     if(less_than(count, 0i32),
        then() { return(1i32) },
        else() { })
-    [i32 mut] remaining{count}
-    [i32 mut] byte{0i32}
+    [mut] remaining{count}
+    [mut] byte{0i32}
     while(greater_than(remaining, 0i32), do() {
-      [i32] status{ppmReadByteStatus(file, byte)}
+      status{ppmReadByteStatus(file, byte)}
       if(not_equal(status, 0i32),
          then() { return(status) },
          else() { })
@@ -1405,10 +1405,10 @@ namespace std {
 
   [return<bool>]
   pngAdlerValid([vector<i32>] bytes, [i32] bHigh, [i32] bLow, [i32] aHigh, [i32] aLow) {
-    [i32 mut] a{1i32}
-    [i32 mut] b{0i32}
-    [i32] len{count(bytes)}
-    [i32 mut] index{0i32}
+    [mut] a{1i32}
+    [mut] b{0i32}
+    len{count(bytes)}
+    [mut] index{0i32}
     while(less_than(index, len), do() {
       a = pngMod(a + bytes[index], 65521i32)
       b = pngMod(b + a, 65521i32)
@@ -1421,15 +1421,15 @@ namespace std {
   [return<i32>]
   pngReadBits([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32] countBits, [i32 mut] value) {
     value = 0i32
-    [i32] len{count(bytes)}
-    [i32 mut] factor{1i32}
-    [i32 mut] readCount{0i32}
+    len{count(bytes)}
+    [mut] factor{1i32}
+    [mut] readCount{0i32}
     while(less_than(readCount, countBits), do() {
       if(greater_equal(byteIndex, len),
          then() { return(1i32) },
          else() { })
-      [i32 mut] shifted{bytes[byteIndex]}
-      [i32 mut] shiftCount{0i32}
+      [mut] shifted{bytes[byteIndex]}
+      [mut] shiftCount{0i32}
       while(less_than(shiftCount, bitIndex), do() {
         shifted = divide(shifted, 2i32)
         increment(shiftCount)
@@ -1450,9 +1450,9 @@ namespace std {
 
   [effects(heap_alloc), return<int>]
   pngReverseBits([i32] value, [i32] bitCount) {
-    [i32 mut] reversed{0i32}
-    [i32 mut] remaining{bitCount}
-    [i32 mut] current{value}
+    [mut] reversed{0i32}
+    [mut] remaining{bitCount}
+    [mut] current{value}
     while(greater_than(remaining, 0i32), do() {
       reversed = multiply(reversed, 2i32) + pngMod(current, 2i32)
       current = divide(current, 2i32)
@@ -1463,9 +1463,9 @@ namespace std {
 
   [return<i32>]
   pngCountCodeLength([vector<i32>] lengths, [i32] targetLength) {
-    [i32] lengthCount{count(lengths)}
-    [i32 mut] matches{0i32}
-    [i32 mut] index{0i32}
+    lengthCount{count(lengths)}
+    [mut] matches{0i32}
+    [mut] index{0i32}
     while(less_than(index, lengthCount), do() {
       if(equal(lengths[index], targetLength),
          then() { increment(matches) },
@@ -1477,20 +1477,20 @@ namespace std {
 
   [return<i32>]
   pngCanonicalCodeForSymbol([vector<i32>] lengths, [i32] targetSymbol) {
-    [i32] targetLength{lengths[targetSymbol]}
+    targetLength{lengths[targetSymbol]}
     if(equal(targetLength, 0i32),
        then() { return(-1i32) },
        else() { })
 
-    [i32 mut] code{0i32}
-    [i32 mut] length{1i32}
+    [mut] code{0i32}
+    [mut] length{1i32}
     while(less_than(length, targetLength), do() {
       code = multiply(code + pngCountCodeLength(lengths, length), 2i32)
       increment(length)
     })
 
-    [i32 mut] offset{0i32}
-    [i32 mut] index{0i32}
+    [mut] offset{0i32}
+    [mut] index{0i32}
     while(less_than(index, targetSymbol), do() {
       if(equal(lengths[index], targetLength),
          then() { increment(offset) },
@@ -1504,13 +1504,13 @@ namespace std {
   pngHuffmanDecodeSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [vector<i32>] lengths,
                          [i32] maxBits, [i32 mut] symbolOut) {
     symbolOut = 0i32
-    [i32] symbolCount{count(lengths)}
-    [i32 mut] code{0i32}
-    [i32 mut] factor{1i32}
-    [i32 mut] bitsRead{0i32}
+    symbolCount{count(lengths)}
+    [mut] code{0i32}
+    [mut] factor{1i32}
+    [mut] bitsRead{0i32}
     while(less_than(bitsRead, maxBits), do() {
-      [i32 mut] bit{0i32}
-      [i32] bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
+      [mut] bit{0i32}
+      bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
@@ -1518,11 +1518,11 @@ namespace std {
       factor = multiply(factor, 2i32)
       increment(bitsRead)
 
-      [i32 mut] symbolIndex{0i32}
+      [mut] symbolIndex{0i32}
       while(less_than(symbolIndex, symbolCount), do() {
         if(equal(lengths[symbolIndex], bitsRead),
            then() {
-             [i32] canonicalCode{pngCanonicalCodeForSymbol(lengths, symbolIndex)}
+             canonicalCode{pngCanonicalCodeForSymbol(lengths, symbolIndex)}
              if(equal(pngReverseBits(canonicalCode, bitsRead), code),
                 then() {
                   symbolOut = symbolIndex
@@ -1540,9 +1540,9 @@ namespace std {
   [effects(heap_alloc)]
   pngBuildFixedLiteralLengths([vector<i32> mut] lengths) {
     /std/collections/vector/clear(lengths)
-    [i32 mut] symbol{0i32}
+    [mut] symbol{0i32}
     while(less_than(symbol, 288i32), do() {
-      [i32 mut] codeLength{8i32}
+      [mut] codeLength{8i32}
       if(less_than(symbol, 144i32),
          then() { codeLength = 8i32 },
          else() {
@@ -1562,7 +1562,7 @@ namespace std {
   [effects(heap_alloc)]
   pngBuildFixedDistanceLengths([vector<i32> mut] lengths) {
     /std/collections/vector/clear(lengths)
-    [i32 mut] symbol{0i32}
+    [mut] symbol{0i32}
     while(less_than(symbol, 32i32), do() {
       /std/collections/vector/push(lengths, 5i32)
       increment(symbol)
@@ -1571,8 +1571,8 @@ namespace std {
 
   [return<i32>]
   pngHuffmanMaxBits([vector<i32>] lengths) {
-    [i32 mut] maxBits{0i32}
-    [i32 mut] index{0i32}
+    [mut] maxBits{0i32}
+    [mut] index{0i32}
     while(less_than(index, count(lengths)), do() {
       if(greater_than(lengths[index], maxBits),
          then() { maxBits = lengths[index] },
@@ -1653,21 +1653,21 @@ namespace std {
     /std/collections/vector/clear(literalLengthsHigh)
     /std/collections/vector/clear(distanceLengths)
 
-    [vector<i32> mut] codeLengthLengths{vector<i32>()}
-    [i32 mut] codeLengthIndex{0i32}
+    [mut] codeLengthLengths{vector<i32>()}
+    [mut] codeLengthIndex{0i32}
     while(less_than(codeLengthIndex, 19i32), do() {
       /std/collections/vector/push(codeLengthLengths, 0i32)
       increment(codeLengthIndex)
     })
 
-    [i32 mut] orderIndex{0i32}
+    [mut] orderIndex{0i32}
     while(less_than(orderIndex, codeLengthCodeCount), do() {
-      [i32] codeLengthSymbol{pngCodeLengthCodeOrder(orderIndex)}
+      codeLengthSymbol{pngCodeLengthCodeOrder(orderIndex)}
       if(less_than(codeLengthSymbol, 0i32),
          then() { return(1i32) },
          else() { })
-      [i32 mut] lengthValue{0i32}
-      [i32] lengthStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, lengthValue)}
+      [mut] lengthValue{0i32}
+      lengthStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, lengthValue)}
       if(not_equal(lengthStatus, 0i32),
          then() { return(1i32) },
          else() { })
@@ -1675,18 +1675,18 @@ namespace std {
       increment(orderIndex)
     })
 
-    [i32] codeLengthMaxBits{pngHuffmanMaxBits(codeLengthLengths)}
+    codeLengthMaxBits{pngHuffmanMaxBits(codeLengthLengths)}
     if(less_equal(codeLengthMaxBits, 0i32),
        then() { return(1i32) },
        else() { })
 
-    [i32] totalCodeCount{literalCount + distanceCount}
-    [i32 mut] position{0i32}
-    [i32 mut] previousLength{0i32}
+    totalCodeCount{literalCount + distanceCount}
+    [mut] position{0i32}
+    [mut] previousLength{0i32}
     while(less_than(position, totalCodeCount), do() {
-      [i32 mut] symbol{0i32}
-      [i32] symbolStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, codeLengthLengths, codeLengthMaxBits,
-                                                symbol)}
+      [mut] symbol{0i32}
+      symbolStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, codeLengthLengths, codeLengthMaxBits,
+                                          symbol)}
       if(not_equal(symbolStatus, 0i32),
          then() { return(1i32) },
          else() { })
@@ -1708,16 +1708,16 @@ namespace std {
                 if(equal(position, 0i32),
                    then() { return(1i32) },
                    else() { })
-                [i32 mut] repeatExtra{0i32}
-                [i32] repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, repeatExtra)}
+                [mut] repeatExtra{0i32}
+                repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, repeatExtra)}
                 if(not_equal(repeatStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
-                [i32] repeatCount{3i32 + repeatExtra}
+                repeatCount{3i32 + repeatExtra}
                 if(greater_than(position + repeatCount, totalCodeCount),
                    then() { return(1i32) },
                    else() { })
-                [i32 mut] repeatIndex{0i32}
+                [mut] repeatIndex{0i32}
                 while(less_than(repeatIndex, repeatCount), do() {
                   if(less_than(position, literalCount),
                      then() {
@@ -1733,16 +1733,16 @@ namespace std {
               else() {
                 if(equal(symbol, 17i32),
                    then() {
-                     [i32 mut] repeatExtra{0i32}
-                     [i32] repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, repeatExtra)}
+                     [mut] repeatExtra{0i32}
+                     repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, repeatExtra)}
                      if(not_equal(repeatStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
-                     [i32] repeatCount{3i32 + repeatExtra}
+                     repeatCount{3i32 + repeatExtra}
                      if(greater_than(position + repeatCount, totalCodeCount),
                         then() { return(1i32) },
                         else() { })
-                     [i32 mut] repeatIndex{0i32}
+                     [mut] repeatIndex{0i32}
                      while(less_than(repeatIndex, repeatCount), do() {
                        if(less_than(position, literalCount),
                           then() {
@@ -1759,16 +1759,16 @@ namespace std {
                    else() {
                      if(equal(symbol, 18i32),
                         then() {
-                          [i32 mut] repeatExtra{0i32}
-                          [i32] repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 7i32, repeatExtra)}
+                          [mut] repeatExtra{0i32}
+                          repeatStatus{pngReadBits(compressed, byteIndex, bitIndex, 7i32, repeatExtra)}
                           if(not_equal(repeatStatus, 0i32),
                              then() { return(1i32) },
                              else() { })
-                          [i32] repeatCount{11i32 + repeatExtra}
+                          repeatCount{11i32 + repeatExtra}
                           if(greater_than(position + repeatCount, totalCodeCount),
                              then() { return(1i32) },
                              else() { })
-                          [i32 mut] repeatIndex{0i32}
+                          [mut] repeatIndex{0i32}
                           while(less_than(repeatIndex, repeatCount), do() {
                             if(less_than(position, literalCount),
                                then() {
@@ -1806,7 +1806,7 @@ namespace std {
     if(less_than(symbol, count(literalLengthsLow)),
        then() { return(literalLengthsLow[symbol]) },
        else() { })
-    [i32] highIndex{symbol - count(literalLengthsLow)}
+    highIndex{symbol - count(literalLengthsLow)}
     if(or(less_than(highIndex, 0i32), not(less_than(highIndex, count(literalLengthsHigh)))),
        then() { return(-1i32) },
        else() { })
@@ -1815,9 +1815,9 @@ namespace std {
 
   [return<i32>]
   pngCountSplitLiteralLength([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh, [i32] targetLength) {
-    [i32 mut] matches{0i32}
-    [i32 mut] index{0i32}
-    [i32] lowCount{count(literalLengthsLow)}
+    [mut] matches{0i32}
+    [mut] index{0i32}
+    lowCount{count(literalLengthsLow)}
     while(less_than(index, lowCount), do() {
       if(equal(literalLengthsLow[index], targetLength),
          then() { increment(matches) },
@@ -1825,7 +1825,7 @@ namespace std {
       increment(index)
     })
     index = 0i32
-    [i32] highCount{count(literalLengthsHigh)}
+    highCount{count(literalLengthsHigh)}
     while(less_than(index, highCount), do() {
       if(equal(literalLengthsHigh[index], targetLength),
          then() { increment(matches) },
@@ -1837,21 +1837,21 @@ namespace std {
 
   [return<i32>]
   pngCanonicalCodeForSplitLiteralSymbol([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh, [i32] targetSymbol) {
-    [i32] targetLength{pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, targetSymbol)}
+    targetLength{pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, targetSymbol)}
     if(less_equal(targetLength, 0i32),
        then() { return(-1i32) },
        else() { })
 
-    [i32 mut] code{0i32}
-    [i32 mut] length{1i32}
+    [mut] code{0i32}
+    [mut] length{1i32}
     while(less_than(length, targetLength), do() {
       code = multiply(code + pngCountSplitLiteralLength(literalLengthsLow, literalLengthsHigh, length), 2i32)
       increment(length)
     })
 
-    [i32 mut] offset{0i32}
-    [i32 mut] index{0i32}
-    [i32] symbolCount{count(literalLengthsLow) + count(literalLengthsHigh)}
+    [mut] offset{0i32}
+    [mut] index{0i32}
+    symbolCount{count(literalLengthsLow) + count(literalLengthsHigh)}
     while(less_than(index, targetSymbol), do() {
       if(equal(pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, index), targetLength),
          then() { increment(offset) },
@@ -1863,8 +1863,8 @@ namespace std {
 
   [return<i32>]
   pngHuffmanMaxBitsSplitLiteralLengths([vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh) {
-    [i32] lowMax{pngHuffmanMaxBits(literalLengthsLow)}
-    [i32] highMax{pngHuffmanMaxBits(literalLengthsHigh)}
+    lowMax{pngHuffmanMaxBits(literalLengthsLow)}
+    highMax{pngHuffmanMaxBits(literalLengthsHigh)}
     if(greater_than(lowMax, highMax),
        then() { return(lowMax) },
        else() { return(highMax) })
@@ -1875,13 +1875,13 @@ namespace std {
                                      [vector<i32>] literalLengthsLow, [vector<i32>] literalLengthsHigh,
                                      [i32] maxBits, [i32 mut] symbolOut) {
     symbolOut = 0i32
-    [i32] symbolCount{count(literalLengthsLow) + count(literalLengthsHigh)}
-    [i32 mut] code{0i32}
-    [i32 mut] factor{1i32}
-    [i32 mut] bitsRead{0i32}
+    symbolCount{count(literalLengthsLow) + count(literalLengthsHigh)}
+    [mut] code{0i32}
+    [mut] factor{1i32}
+    [mut] bitsRead{0i32}
     while(less_than(bitsRead, maxBits), do() {
-      [i32 mut] bit{0i32}
-      [i32] bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
+      [mut] bit{0i32}
+      bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
@@ -1889,11 +1889,11 @@ namespace std {
       factor = multiply(factor, 2i32)
       increment(bitsRead)
 
-      [i32 mut] symbolIndex{0i32}
+      [mut] symbolIndex{0i32}
       while(less_than(symbolIndex, symbolCount), do() {
         if(equal(pngSplitLiteralLengthAt(literalLengthsLow, literalLengthsHigh, symbolIndex), bitsRead),
            then() {
-             [i32] canonicalCode{pngCanonicalCodeForSplitLiteralSymbol(literalLengthsLow, literalLengthsHigh, symbolIndex)}
+             canonicalCode{pngCanonicalCodeForSplitLiteralSymbol(literalLengthsLow, literalLengthsHigh, symbolIndex)}
              if(equal(pngReverseBits(canonicalCode, bitsRead), code),
                 then() {
                   symbolOut = symbolIndex
@@ -1931,10 +1931,10 @@ namespace std {
        then() { return(1i32) },
        else() { })
 
-    [i32 mut] base{11i32}
-    [i32 mut] currentSymbol{265i32}
-    [i32 mut] step{2i32}
-    [i32 mut] extraBits{1i32}
+    [mut] base{11i32}
+    [mut] currentSymbol{265i32}
+    [mut] step{2i32}
+    [mut] extraBits{1i32}
     while(greater_than(symbol, currentSymbol + 3i32), do() {
       base = base + multiply(step, 4i32)
       currentSymbol = currentSymbol + 4i32
@@ -1960,10 +1960,10 @@ namespace std {
        },
        else() { })
 
-    [i32 mut] base{5i32}
-    [i32 mut] currentSymbol{4i32}
-    [i32 mut] span{4i32}
-    [i32 mut] extraBits{1i32}
+    [mut] base{5i32}
+    [mut] currentSymbol{4i32}
+    [mut] span{4i32}
+    [mut] extraBits{1i32}
     while(greater_than(symbol, currentSymbol + 1i32), do() {
       base = base + span
       currentSymbol = currentSymbol + 2i32
@@ -1983,7 +1983,7 @@ namespace std {
     if(or(or(less_equal(distance, 0i32), less_than(length, 0i32)), greater_than(distance, count(output))),
        then() { return(1i32) },
        else() { })
-    [i32 mut] copyIndex{0i32}
+    [mut] copyIndex{0i32}
     while(less_than(copyIndex, length), do() {
       /std/collections/vector/push(output, output[count(output) - distance])
       increment(copyIndex)
@@ -2000,13 +2000,13 @@ namespace std {
        },
        else() { })
 
-    [i32] trailerStart{count(compressed) - 4i32}
+    trailerStart{count(compressed) - 4i32}
     if(greater_than(byteIndex + 4i32, trailerStart),
        then() { return(1i32) },
        else() { })
 
-    [i32] blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}
-    [i32] blockNlen{compressed[byteIndex + 2i32] + multiply(compressed[byteIndex + 3i32], 256i32)}
+    blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}
+    blockNlen{compressed[byteIndex + 2i32] + multiply(compressed[byteIndex + 3i32], 256i32)}
     if(not_equal(blockLen + blockNlen, 65535i32),
        then() { return(1i32) },
        else() { })
@@ -2015,7 +2015,7 @@ namespace std {
     if(greater_than(byteIndex + blockLen, trailerStart),
        then() { return(1i32) },
        else() { })
-    [i32 mut] blockIndex{0i32}
+    [mut] blockIndex{0i32}
     while(less_than(blockIndex, blockLen), do() {
       /std/collections/vector/push(output, compressed[byteIndex + blockIndex])
       increment(blockIndex)
@@ -2032,8 +2032,8 @@ namespace std {
        then() { return(1i32) },
        else() { })
     while(true, do() {
-      [i32 mut] symbol{0i32}
-      [i32] status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}
+      [mut] symbol{0i32}
+      status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}
       if(not_equal(status, 0i32),
          then() { return(1i32) },
          else() { })
@@ -2049,49 +2049,49 @@ namespace std {
                 if(less_equal(distanceMaxBits, 0i32),
                    then() { return(1i32) },
                    else() { })
-                [i32 mut] lengthBase{0i32}
-                [i32 mut] lengthExtraBits{0i32}
-                [i32] lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
+                [mut] lengthBase{0i32}
+                [mut] lengthExtraBits{0i32}
+                lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
                 if(not_equal(lengthInfoStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] lengthExtraValue{0i32}
+                [mut] lengthExtraValue{0i32}
                 if(greater_than(lengthExtraBits, 0i32),
                    then() {
-                     [i32] lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
+                     lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
                      if(not_equal(lengthExtraStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
                    },
                    else() { })
-                [i32] matchLength{lengthBase + lengthExtraValue}
+                matchLength{lengthBase + lengthExtraValue}
 
-                [i32 mut] distanceSymbol{0i32}
-                [i32] distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
-                                                            distanceMaxBits, distanceSymbol)}
+                [mut] distanceSymbol{0i32}
+                distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
+                                                      distanceMaxBits, distanceSymbol)}
                 if(not_equal(distanceStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] distanceBase{0i32}
-                [i32 mut] distanceExtraBits{0i32}
-                [i32] distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
+                [mut] distanceBase{0i32}
+                [mut] distanceExtraBits{0i32}
+                distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
                 if(not_equal(distanceInfoStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] distanceExtraValue{0i32}
+                [mut] distanceExtraValue{0i32}
                 if(greater_than(distanceExtraBits, 0i32),
                    then() {
-                     [i32] distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
+                     distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
                      if(not_equal(distanceExtraStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
                    },
                    else() { })
 
-                [i32] copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
+                copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
                 if(not_equal(copyStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
@@ -2104,12 +2104,12 @@ namespace std {
   [return<int>]
   pngDecodeFixedLiteralSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32 mut] symbolOut) {
     symbolOut = 0i32
-    [i32 mut] code{0i32}
-    [i32 mut] factor{1i32}
-    [i32 mut] bitsRead{0i32}
+    [mut] code{0i32}
+    [mut] factor{1i32}
+    [mut] bitsRead{0i32}
     while(less_than(bitsRead, 9i32), do() {
-      [i32 mut] bit{0i32}
-      [i32] bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
+      [mut] bit{0i32}
+      bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
@@ -2118,8 +2118,8 @@ namespace std {
       increment(bitsRead)
 
       if(equal(bitsRead, 7i32),
-         then() {
-           [i32 mut] symbol{256i32}
+        then() {
+           [mut] symbol{256i32}
            while(less_than(symbol, 280i32), do() {
              if(equal(pngReverseBits(symbol - 256i32, 7i32), code),
                 then() {
@@ -2133,8 +2133,8 @@ namespace std {
          else() { })
 
       if(equal(bitsRead, 8i32),
-         then() {
-           [i32 mut] symbol{0i32}
+        then() {
+           [mut] symbol{0i32}
            while(less_than(symbol, 144i32), do() {
              if(equal(pngReverseBits(48i32 + symbol, 8i32), code),
                 then() {
@@ -2158,8 +2158,8 @@ namespace std {
          else() { })
 
       if(equal(bitsRead, 9i32),
-         then() {
-           [i32 mut] symbol{144i32}
+        then() {
+           [mut] symbol{144i32}
            while(less_than(symbol, 256i32), do() {
              if(equal(pngReverseBits(400i32 + (symbol - 144i32), 9i32), code),
                 then() {
@@ -2178,12 +2178,12 @@ namespace std {
   [return<int>]
   pngDecodeFixedDistanceSymbol([vector<i32>] bytes, [i32 mut] byteIndex, [i32 mut] bitIndex, [i32 mut] symbolOut) {
     symbolOut = 0i32
-    [i32 mut] code{0i32}
-    [i32 mut] factor{1i32}
-    [i32 mut] bitsRead{0i32}
+    [mut] code{0i32}
+    [mut] factor{1i32}
+    [mut] bitsRead{0i32}
     while(less_than(bitsRead, 5i32), do() {
-      [i32 mut] bit{0i32}
-      [i32] bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
+      [mut] bit{0i32}
+      bitStatus{pngReadBits(bytes, byteIndex, bitIndex, 1i32, bit)}
       if(not_equal(bitStatus, 0i32),
          then() { return(1i32) },
          else() { })
@@ -2192,8 +2192,8 @@ namespace std {
       increment(bitsRead)
 
       if(equal(bitsRead, 5i32),
-         then() {
-           [i32 mut] symbol{0i32}
+        then() {
+           [mut] symbol{0i32}
            while(less_than(symbol, 32i32), do() {
              if(equal(pngReverseBits(symbol, 5i32), code),
                 then() {
@@ -2213,8 +2213,8 @@ namespace std {
   pngInflateFixedHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
                               [vector<i32> mut] output) {
     while(true, do() {
-      [i32 mut] symbol{0i32}
-      [i32] status{pngDecodeFixedLiteralSymbol(compressed, byteIndex, bitIndex, symbol)}
+      [mut] symbol{0i32}
+      status{pngDecodeFixedLiteralSymbol(compressed, byteIndex, bitIndex, symbol)}
       if(not_equal(status, 0i32),
          then() { return(1i32) },
          else() { })
@@ -2224,48 +2224,48 @@ namespace std {
            if(equal(symbol, 256i32),
               then() { return(0i32) },
               else() {
-                [i32 mut] lengthBase{0i32}
-                [i32 mut] lengthExtraBits{0i32}
-                [i32] lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
+                [mut] lengthBase{0i32}
+                [mut] lengthExtraBits{0i32}
+                lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
                 if(not_equal(lengthInfoStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] lengthExtraValue{0i32}
+                [mut] lengthExtraValue{0i32}
                 if(greater_than(lengthExtraBits, 0i32),
                    then() {
-                     [i32] lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
+                     lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
                      if(not_equal(lengthExtraStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
                    },
                    else() { })
-                [i32] matchLength{lengthBase + lengthExtraValue}
+                matchLength{lengthBase + lengthExtraValue}
 
-                [i32 mut] distanceSymbol{0i32}
-                [i32] distanceStatus{pngDecodeFixedDistanceSymbol(compressed, byteIndex, bitIndex, distanceSymbol)}
+                [mut] distanceSymbol{0i32}
+                distanceStatus{pngDecodeFixedDistanceSymbol(compressed, byteIndex, bitIndex, distanceSymbol)}
                 if(not_equal(distanceStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] distanceBase{0i32}
-                [i32 mut] distanceExtraBits{0i32}
-                [i32] distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
+                [mut] distanceBase{0i32}
+                [mut] distanceExtraBits{0i32}
+                distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
                 if(not_equal(distanceInfoStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] distanceExtraValue{0i32}
+                [mut] distanceExtraValue{0i32}
                 if(greater_than(distanceExtraBits, 0i32),
                    then() {
-                     [i32] distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
+                     distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
                      if(not_equal(distanceExtraStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
                    },
                    else() { })
 
-                [i32] copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
+                copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
                 if(not_equal(copyStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
@@ -2278,41 +2278,41 @@ namespace std {
   [effects(heap_alloc), return<int>]
   pngInflateDynamicHuffmanBlock([vector<i32>] compressed, [i32 mut] byteIndex, [i32 mut] bitIndex,
                                 [vector<i32> mut] output) {
-    [i32 mut] hlitBits{0i32}
-    [i32] hlitStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hlitBits)}
+    [mut] hlitBits{0i32}
+    hlitStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hlitBits)}
     if(not_equal(hlitStatus, 0i32),
        then() { return(1i32) },
        else() { })
-    [i32 mut] hdistBits{0i32}
-    [i32] hdistStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hdistBits)}
+    [mut] hdistBits{0i32}
+    hdistStatus{pngReadBits(compressed, byteIndex, bitIndex, 5i32, hdistBits)}
     if(not_equal(hdistStatus, 0i32),
        then() { return(1i32) },
        else() { })
-    [i32 mut] hclenBits{0i32}
-    [i32] hclenStatus{pngReadBits(compressed, byteIndex, bitIndex, 4i32, hclenBits)}
+    [mut] hclenBits{0i32}
+    hclenStatus{pngReadBits(compressed, byteIndex, bitIndex, 4i32, hclenBits)}
     if(not_equal(hclenStatus, 0i32),
        then() { return(1i32) },
        else() { })
 
-    [vector<i32> mut] literalLengthsLow{vector<i32>()}
-    [vector<i32> mut] literalLengthsHigh{vector<i32>()}
-    [vector<i32> mut] distanceLengths{vector<i32>()}
-    [i32] lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, hclenBits + 4i32,
-                                                    hlitBits + 257i32, hdistBits + 1i32, literalLengthsLow,
-                                                    literalLengthsHigh, distanceLengths)}
+    [mut] literalLengthsLow{vector<i32>()}
+    [mut] literalLengthsHigh{vector<i32>()}
+    [mut] distanceLengths{vector<i32>()}
+    lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, hclenBits + 4i32,
+                                              hlitBits + 257i32, hdistBits + 1i32, literalLengthsLow,
+                                              literalLengthsHigh, distanceLengths)}
     if(not_equal(lengthStatus, 0i32),
        then() { return(lengthStatus) },
        else() { })
 
-    [i32] literalMaxBits{pngHuffmanMaxBitsSplitLiteralLengths(literalLengthsLow, literalLengthsHigh)}
+    literalMaxBits{pngHuffmanMaxBitsSplitLiteralLengths(literalLengthsLow, literalLengthsHigh)}
     if(less_equal(literalMaxBits, 0i32),
        then() { return(1i32) },
        else() { })
-    [i32] distanceMaxBits{pngHuffmanMaxBits(distanceLengths)}
+    distanceMaxBits{pngHuffmanMaxBits(distanceLengths)}
     while(true, do() {
-      [i32 mut] symbol{0i32}
-      [i32] status{pngHuffmanDecodeSplitLiteralSymbol(compressed, byteIndex, bitIndex, literalLengthsLow,
-                                                      literalLengthsHigh, literalMaxBits, symbol)}
+      [mut] symbol{0i32}
+      status{pngHuffmanDecodeSplitLiteralSymbol(compressed, byteIndex, bitIndex, literalLengthsLow,
+                                                literalLengthsHigh, literalMaxBits, symbol)}
       if(not_equal(status, 0i32),
          then() { return(1i32) },
          else() { })
@@ -2325,49 +2325,49 @@ namespace std {
                 if(less_equal(distanceMaxBits, 0i32),
                    then() { return(1i32) },
                    else() { })
-                [i32 mut] lengthBase{0i32}
-                [i32 mut] lengthExtraBits{0i32}
-                [i32] lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
+                [mut] lengthBase{0i32}
+                [mut] lengthExtraBits{0i32}
+                lengthInfoStatus{pngLengthInfo(symbol, lengthBase, lengthExtraBits)}
                 if(not_equal(lengthInfoStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] lengthExtraValue{0i32}
+                [mut] lengthExtraValue{0i32}
                 if(greater_than(lengthExtraBits, 0i32),
                    then() {
-                     [i32] lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
+                     lengthExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, lengthExtraBits, lengthExtraValue)}
                      if(not_equal(lengthExtraStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
                    },
                    else() { })
-                [i32] matchLength{lengthBase + lengthExtraValue}
+                matchLength{lengthBase + lengthExtraValue}
 
-                [i32 mut] distanceSymbol{0i32}
-                [i32] distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
-                                                            distanceMaxBits, distanceSymbol)}
+                [mut] distanceSymbol{0i32}
+                distanceStatus{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, distanceLengths,
+                                                      distanceMaxBits, distanceSymbol)}
                 if(not_equal(distanceStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] distanceBase{0i32}
-                [i32 mut] distanceExtraBits{0i32}
-                [i32] distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
+                [mut] distanceBase{0i32}
+                [mut] distanceExtraBits{0i32}
+                distanceInfoStatus{pngDistanceInfo(distanceSymbol, distanceBase, distanceExtraBits)}
                 if(not_equal(distanceInfoStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
 
-                [i32 mut] distanceExtraValue{0i32}
+                [mut] distanceExtraValue{0i32}
                 if(greater_than(distanceExtraBits, 0i32),
                    then() {
-                     [i32] distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
+                     distanceExtraStatus{pngReadBits(compressed, byteIndex, bitIndex, distanceExtraBits, distanceExtraValue)}
                      if(not_equal(distanceExtraStatus, 0i32),
                         then() { return(1i32) },
                         else() { })
                    },
                    else() { })
 
-                [i32] copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
+                copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}
                 if(not_equal(copyStatus, 0i32),
                    then() { return(1i32) },
                    else() { })
@@ -2380,7 +2380,7 @@ namespace std {
   [effects(heap_alloc), return<int>]
   pngInflateDeflateBlocks([vector<i32>] compressed, [vector<i32> mut] output) {
     /std/collections/vector/clear(output)
-    [i32] compressedCount{count(compressed)}
+    compressedCount{count(compressed)}
     if(less_than(compressedCount, 7i32),
        then() { return(1i32) },
        else() { })
@@ -2389,22 +2389,22 @@ namespace std {
        then() { return(1i32) },
        else() { })
 
-    [i32 mut] byteIndex{2i32}
-    [i32 mut] bitIndex{0i32}
+    [mut] byteIndex{2i32}
+    [mut] bitIndex{0i32}
     while(true, do() {
-      [i32 mut] isFinal{0i32}
-      [i32] finalStatus{pngReadBits(compressed, byteIndex, bitIndex, 1i32, isFinal)}
+      [mut] isFinal{0i32}
+      finalStatus{pngReadBits(compressed, byteIndex, bitIndex, 1i32, isFinal)}
       if(not_equal(finalStatus, 0i32),
          then() { return(1i32) },
          else() { })
 
-      [i32 mut] blockType{0i32}
-      [i32] blockStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, blockType)}
+      [mut] blockType{0i32}
+      blockStatus{pngReadBits(compressed, byteIndex, bitIndex, 2i32, blockType)}
       if(not_equal(blockStatus, 0i32),
          then() { return(1i32) },
          else() { })
 
-      [i32 mut] inflateStatus{0i32}
+      [mut] inflateStatus{0i32}
       if(equal(blockType, 0i32),
          then() { inflateStatus = pngInflateStoredBlock(compressed, byteIndex, bitIndex, output) },
          else() {
@@ -2431,10 +2431,10 @@ namespace std {
 	          if(not_equal(compressedCount - byteIndex, 4i32),
 	             then() { return(1i32) },
 	             else() { })
-	          [i32] adlerBHigh{compressed[byteIndex]}
-	          [i32] adlerBLow{compressed[byteIndex + 1i32]}
-	          [i32] adlerAHigh{compressed[byteIndex + 2i32]}
-	          [i32] adlerALow{compressed[byteIndex + 3i32]}
+	          adlerBHigh{compressed[byteIndex]}
+	          adlerBLow{compressed[byteIndex + 1i32]}
+	          adlerAHigh{compressed[byteIndex + 2i32]}
+	          adlerALow{compressed[byteIndex + 3i32]}
 	          if(not(pngAdlerValid(output, adlerBHigh, adlerBLow, adlerAHigh, adlerALow)),
 	             then() { return(1i32) },
 	             else() { })

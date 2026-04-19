@@ -416,7 +416,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   const std::string pngScanlineBody = imageStdlib.substr(pngDecodeStart, pngInflateStart - pngDecodeStart);
   CHECK(pngScanlineBody.find("pngPaethPredictor") != std::string::npos);
   CHECK(pngScanlineBody.find("pngDecodeRows") != std::string::npos);
-  CHECK(pngScanlineBody.find("[i32] predictor{left + up - upLeft}") != std::string::npos);
+  CHECK(pngScanlineBody.find("predictor{left + up - upLeft}") != std::string::npos);
   CHECK(pngScanlineBody.find("return(divide(multiply(pngColorTypeSamplesPerPixel(colorType), bitDepth) + 7i32, 8i32))") != std::string::npos);
   CHECK(pngScanlineBody.find("scanlineBytes = 0i32") != std::string::npos);
   CHECK(pngScanlineBody.find("reconstructed = pngMod(reconstructed + leftByte, 256i32)") != std::string::npos);
@@ -436,8 +436,8 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBitstreamBody.find("return(equal(pngMod(multiply(cmf, 256i32) + flg, 31i32), 0i32))") != std::string::npos);
   CHECK(pngBitstreamBody.find("value = value + multiply(pngMod(shifted, 2i32), factor)") != std::string::npos);
   CHECK(pngBitstreamBody.find("codeLengthLengths[codeLengthSymbol] = lengthValue") != std::string::npos);
-  CHECK(pngBitstreamBody.find("[i32] totalCodeCount{literalCount + distanceCount}") != std::string::npos);
-  CHECK(pngBitstreamBody.find("[i32] repeatCount{11i32 + repeatExtra}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("totalCodeCount{literalCount + distanceCount}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("repeatCount{11i32 + repeatExtra}") != std::string::npos);
   CHECK(pngBitstreamBody.find("baseOut = 3i32 + (symbol - 257i32)") != std::string::npos);
   CHECK(pngBitstreamBody.find("if(equal(symbol - currentSymbol, 1i32),") != std::string::npos);
   CHECK(pngBitstreamBody.find("assign(") == std::string::npos);
@@ -451,9 +451,9 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngInflateExecBody.find("pngInflateDynamicHuffmanBlock") != std::string::npos);
   CHECK(pngInflateExecBody.find("pngInflateDeflateBlocks") != std::string::npos);
   CHECK(pngInflateExecBody.find("output[count(output) - distance]") != std::string::npos);
-  CHECK(pngInflateExecBody.find("[i32] trailerStart{count(compressed) - 4i32}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("trailerStart{count(compressed) - 4i32}") != std::string::npos);
   CHECK(pngInflateExecBody.find("byteIndex = byteIndex + 4i32") != std::string::npos);
-  CHECK(pngInflateExecBody.find("[i32] matchLength{lengthBase + lengthExtraValue}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("matchLength{lengthBase + lengthExtraValue}") != std::string::npos);
   CHECK(pngInflateExecBody.find("code = code + multiply(bit, factor)") != std::string::npos);
   CHECK(pngInflateExecBody.find("symbol = 280i32") != std::string::npos);
   CHECK(pngInflateExecBody.find("hclenBits + 4i32") != std::string::npos);
@@ -756,6 +756,112 @@ TEST_CASE("png prelude image workflows stay source locked to inferred locals") {
         std::string::npos);
   CHECK(pngPreludeBody.find("[i32] openStatus{pngWriteChunkOpen(file, 0i32, 73i32, 69i32, 78i32, 68i32, crc)}") ==
         std::string::npos);
+}
+
+TEST_CASE("png scanline bitstream and inflate helpers stay source locked to inferred locals") {
+  std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
+  if (!std::filesystem::exists(imageStdlibPath)) {
+    imageStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "image" / "image.prime";
+  }
+  REQUIRE(std::filesystem::exists(imageStdlibPath));
+
+  const std::string imageStdlib = readFile(imageStdlibPath.string());
+  const size_t pngDecodeStart = imageStdlib.find("pngPaethPredictor");
+  const size_t pngInflateStart = imageStdlib.find("pngZlibHeaderValid");
+  const size_t pngInflateExecStart = imageStdlib.find("pngInflateCopyFromOutput");
+  const size_t pngReadStart = imageStdlib.find("pngDecodeScanlines");
+  REQUIRE(pngDecodeStart != std::string::npos);
+  REQUIRE(pngInflateStart != std::string::npos);
+  REQUIRE(pngInflateExecStart != std::string::npos);
+  REQUIRE(pngReadStart != std::string::npos);
+  REQUIRE(pngInflateStart > pngDecodeStart);
+  REQUIRE(pngInflateExecStart > pngInflateStart);
+  REQUIRE(pngReadStart > pngInflateExecStart);
+
+  const std::string pngScanlineBody = imageStdlib.substr(pngDecodeStart, pngInflateStart - pngDecodeStart);
+  const std::string pngBitstreamBody = imageStdlib.substr(pngInflateStart, pngInflateExecStart - pngInflateStart);
+  const std::string pngInflateExecBody = imageStdlib.substr(pngInflateExecStart, pngReadStart - pngInflateExecStart);
+
+  CHECK(pngScanlineBody.find("predictor{left + up - upLeft}") != std::string::npos);
+  CHECK(pngScanlineBody.find("[mut] valueCount{1i32}") != std::string::npos);
+  CHECK(pngScanlineBody.find("[mut] rowBytes{vector<i32>()}") != std::string::npos);
+  CHECK(pngScanlineBody.find("sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}") != std::string::npos);
+  CHECK(pngScanlineBody.find("paletteOffset{multiply(sample, 3i32)}") != std::string::npos);
+  CHECK(pngScanlineBody.find("[mut] pixelByteIndex{0i32}") != std::string::npos);
+
+  CHECK(pngScanlineBody.find("[i32] predictor{left + up - upLeft}") == std::string::npos);
+  CHECK(pngScanlineBody.find("[i32 mut] valueCount{1i32}") == std::string::npos);
+  CHECK(pngScanlineBody.find("[vector<i32> mut] rowBytes{vector<i32>()}") == std::string::npos);
+  CHECK(pngScanlineBody.find("[i32] sample{pngPackedSampleAt(rowBytes, pixelIndex, bitDepth)}") ==
+        std::string::npos);
+  CHECK(pngScanlineBody.find("[i32] paletteOffset{multiply(sample, 3i32)}") == std::string::npos);
+  CHECK(pngScanlineBody.find("[i32 mut] pixelByteIndex{0i32}") == std::string::npos);
+
+  CHECK(pngBitstreamBody.find("[mut] remaining{count}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("status{ppmReadByteStatus(file, byte)}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("len{count(bytes)}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("[mut] factor{1i32}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("[mut] codeLengthLengths{vector<i32>()}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("codeLengthSymbol{pngCodeLengthCodeOrder(orderIndex)}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("lengthStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, lengthValue)}") !=
+        std::string::npos);
+  CHECK(pngBitstreamBody.find("totalCodeCount{literalCount + distanceCount}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("[mut] symbol{0i32}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("repeatCount{11i32 + repeatExtra}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("highIndex{symbol - count(literalLengthsLow)}") != std::string::npos);
+  CHECK(pngBitstreamBody.find("lowMax{pngHuffmanMaxBits(literalLengthsLow)}") != std::string::npos);
+
+  CHECK(pngBitstreamBody.find("[i32 mut] remaining{count}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] status{ppmReadByteStatus(file, byte)}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] len{count(bytes)}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32 mut] factor{1i32}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[vector<i32> mut] codeLengthLengths{vector<i32>()}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] codeLengthSymbol{pngCodeLengthCodeOrder(orderIndex)}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] lengthStatus{pngReadBits(compressed, byteIndex, bitIndex, 3i32, lengthValue)}") ==
+        std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] totalCodeCount{literalCount + distanceCount}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32 mut] symbol{0i32}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] repeatCount{11i32 + repeatExtra}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] highIndex{symbol - count(literalLengthsLow)}") == std::string::npos);
+  CHECK(pngBitstreamBody.find("[i32] lowMax{pngHuffmanMaxBits(literalLengthsLow)}") == std::string::npos);
+
+  CHECK(pngInflateExecBody.find("[mut] copyIndex{0i32}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("trailerStart{count(compressed) - 4i32}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}") !=
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("[mut] symbol{0i32}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}") !=
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("matchLength{lengthBase + lengthExtraValue}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}") !=
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("[mut] hlitBits{0i32}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("[mut] literalLengthsLow{vector<i32>()}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, hclenBits + 4i32,") !=
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("compressedCount{count(compressed)}") != std::string::npos);
+  CHECK(pngInflateExecBody.find("finalStatus{pngReadBits(compressed, byteIndex, bitIndex, 1i32, isFinal)}") !=
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("adlerBHigh{compressed[byteIndex]}") != std::string::npos);
+
+  CHECK(pngInflateExecBody.find("[i32 mut] copyIndex{0i32}") == std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] trailerStart{count(compressed) - 4i32}") == std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] blockLen{compressed[byteIndex] + multiply(compressed[byteIndex + 1i32], 256i32)}") ==
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32 mut] symbol{0i32}") == std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] status{pngHuffmanDecodeSymbol(compressed, byteIndex, bitIndex, literalLengths, literalMaxBits, symbol)}") ==
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] matchLength{lengthBase + lengthExtraValue}") == std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] copyStatus{pngInflateCopyFromOutput(output, distanceBase + distanceExtraValue, matchLength)}") ==
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32 mut] hlitBits{0i32}") == std::string::npos);
+  CHECK(pngInflateExecBody.find("[vector<i32> mut] literalLengthsLow{vector<i32>()}") == std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] lengthStatus{pngReadDynamicHuffmanLengths(compressed, byteIndex, bitIndex, hclenBits + 4i32,") ==
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] compressedCount{count(compressed)}") == std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] finalStatus{pngReadBits(compressed, byteIndex, bitIndex, 1i32, isFinal)}") ==
+        std::string::npos);
+  CHECK(pngInflateExecBody.find("[i32] adlerBHigh{compressed[byteIndex]}") == std::string::npos);
 }
 
 TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
