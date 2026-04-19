@@ -226,10 +226,18 @@ struct SemanticProductIndexBuilder {
   void buildQueryIndex(SemanticProductIndex &index) const {
     const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
     index.queryFactsByExpr.reserve(queryFacts.size());
+    index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size());
     for (const auto *entry : queryFacts) {
       if (entry->semanticNodeId != 0) {
         index.queryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
+      if (entry->resolvedPathId == InvalidSymbolId ||
+          entry->callNameId == InvalidSymbolId) {
+        continue;
+      }
+      index.queryFactsByResolvedPathAndCallNameId.insert_or_assign(
+          makeQueryFactResolvedPathCallNameKey(entry->resolvedPathId, entry->callNameId),
+          entry);
     }
   }
 
@@ -529,13 +537,6 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProdu
           makeQueryFactResolvedPathCallNameKey(*resolvedPathId, *callNameId));
       it != adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.end()) {
     return it->second;
-  }
-  const auto queryFacts = semanticProgramQueryFactView(*adapter.semanticProgram);
-  for (const auto *entry : queryFacts) {
-    if (entry->resolvedPathId == *resolvedPathId &&
-        entry->callNameId == *callNameId) {
-      return entry;
-    }
   }
   return nullptr;
 }

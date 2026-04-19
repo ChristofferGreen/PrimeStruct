@@ -1097,11 +1097,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramQueryFactView(*semanticProgram)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.find(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(queryFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("const auto queryFacts = semanticProgramQueryFactView(*adapter.semanticProgram);") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("resolveSemanticExprPathId(adapter, expr)") !=
         std::string::npos);

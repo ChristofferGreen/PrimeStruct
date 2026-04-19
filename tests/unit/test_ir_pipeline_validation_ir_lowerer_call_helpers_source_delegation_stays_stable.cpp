@@ -1560,7 +1560,7 @@ TEST_CASE("ir lowerer semantic-product adapter prefers local-auto semantic-id ma
   CHECK(localAutoFact->bindingTypeText == "i32");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter resolves query facts by resolved-path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter indexes query facts by resolved path and call name") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
@@ -1575,6 +1575,10 @@ TEST_CASE("ir lowerer semantic-product adapter resolves query facts by resolved-
       .semanticNodeId = 8101,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  const primec::SymbolId callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "lookup");
+  const primec::SymbolId resolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
       .callName = "lookup",
@@ -1587,18 +1591,21 @@ TEST_CASE("ir lowerer semantic-product adapter resolves query facts by resolved-
       .sourceLine = 15,
       .sourceColumn = 5,
       .semanticNodeId = 0,
-      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "lookup"),
-      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .callNameId = callNameId,
+      .resolvedPathId = resolvedPathId,
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(adapter.semanticIndex.queryFactsByExpr.empty());
+  CHECK(adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.count(
+            (static_cast<uint64_t>(resolvedPathId) << 32) | static_cast<uint64_t>(callNameId)) == 1);
   const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
   REQUIRE(queryFact != nullptr);
   CHECK(queryFact->resolvedPathId != primec::InvalidSymbolId);
   CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *queryFact) == "/lookup");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches over resolved-path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches over resolved-path index") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
