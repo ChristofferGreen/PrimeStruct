@@ -4341,3 +4341,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the obvious `/std/ui` inferred-binding opportunities are converted; leave broader layout or widget changes separate.
   - finished_at: 2026-04-19
   - evidence: Rewrote the obvious repeated-type local bindings in `stdlib/std/ui/ui.prime` to concise inferred forms across the command-list, HTML adapter, UI event-stream, and layout-tree workflows, including mutable vector scratch bindings and loop/index locals, while leaving layout behavior and widget APIs unchanged; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused `/std/ui` inferred-binding source lock and retargeted the existing UI syntax lock to the new `[mut]` loop/index forms; and updated `docs/todo.md` so `TODO-4085` is now the top ready inferred-binding follow-up.
+
+- [x] TODO-4086: Adopt concise inferred local bindings in `/std/image/ppm` helpers and read/write path where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074
+  - scope: Split oversized `TODO-4085` and convert the obvious repeated-type local bindings in the pre-PNG `/std/image` helper region plus the `/std/image/ppm` read/write path to concise inferred bindings where the initializer already establishes the type clearly, without mixing in PNG codec plumbing changes.
+  - acceptance:
+    - Obvious pre-PNG `/std/image` helper and `/std/image/ppm` read/write bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - PNG-specific inferred-binding cleanup remains split into explicit follow-up leaves instead of being folded into the same change.
+  - stop_rule: Stop once the obvious pre-PNG and `/std/image/ppm` inferred-binding opportunities are converted; leave PNG-specific cleanup separate.
+  - notes: Split from oversized `TODO-4085`, whose remaining inferred-binding cleanup now continues as `TODO-4087`, `TODO-4088`, and `TODO-4089`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the obvious repeated-type local bindings in the pre-PNG helper region and `/std/image/ppm` read/write path in `stdlib/std/image/image.prime` to concise inferred forms such as `status{...}`, `file{...}`, `pixelCountWide{...}`, and `[mut] parsedWidth{...}` while leaving PNG-specific helper stacks untouched; added a focused `/std/image` PPM inferred-binding source lock in `tests/unit/test_compile_run_examples_docs_locks.cpp`; and updated `docs/todo.md` to retire oversized `TODO-4085` in favor of the new bounded follow-up leaves `TODO-4087`, `TODO-4088`, and `TODO-4089`, with `TODO-4087` now next in the queue behind the completed `TODO-4086` slice.

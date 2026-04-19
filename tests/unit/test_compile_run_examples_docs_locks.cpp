@@ -626,6 +626,59 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
 }
 
+TEST_CASE("ppm image workflows stay source locked to inferred locals") {
+  std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
+  if (!std::filesystem::exists(imageStdlibPath)) {
+    imageStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "image" / "image.prime";
+  }
+  REQUIRE(std::filesystem::exists(imageStdlibPath));
+
+  const std::string imageStdlib = readFile(imageStdlibPath.string());
+  const size_t helperStart = imageStdlib.find("ppmSkipComment(");
+  const size_t pngStart = imageStdlib.find("namespace png");
+  REQUIRE(helperStart != std::string::npos);
+  REQUIRE(pngStart != std::string::npos);
+  REQUIRE(pngStart > helperStart);
+  const std::string ppmHelpersBody = imageStdlib.substr(helperStart, pngStart - helperStart);
+
+  CHECK(ppmHelpersBody.find("[mut] byte{0i32}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("status{ppmReadByteStatus(file, byte)}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[mut] started{0i32}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("commentStatus{ppmSkipComment(file)}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[mut] sawWhitespace{0i32}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("pixelCountWide{multiply(multiply(convert<i64>(width), convert<i64>(height)), 3i64)}") !=
+        std::string::npos);
+  CHECK(ppmHelpersBody.find("pixelCount{count(pixels)}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[mut] expectedPixelCount{0i32}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("component{pixels[index]}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("file{File<Read>(path)?}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[mut] formatByte{0i32}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[mut] status{ppmNextByte(file, hasPending, pendingByte, byte)}") !=
+        std::string::npos);
+  CHECK(ppmHelpersBody.find("[mut] parsedWidth{0i32}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[mut] pixelCount{0i32}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("status{readImpl(width, height, pixels, path)}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("file{File<Write>(path)?}") != std::string::npos);
+
+  CHECK(ppmHelpersBody.find("[i32] status{ppmReadByteStatus(file, byte)}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32 mut] started{0i32}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32] commentStatus{ppmSkipComment(file)}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32 mut] sawWhitespace{0i32}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i64] pixelCountWide{multiply(multiply(convert<i64>(width), convert<i64>(height)), 3i64)}") ==
+        std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32] pixelCount{count(pixels)}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32 mut] expectedPixelCount{0i32}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32] component{pixels[index]}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[File<Read>] file{File<Read>(path)?}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32 mut] formatByte{0i32}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32 mut] status{ppmNextByte(file, hasPending, pendingByte, byte)}") ==
+        std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32 mut] parsedWidth{0i32}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32 mut] pixelCount{0i32}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[i32] status{readImpl(width, height, pixels, path)}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("[File<Write>] file{File<Write>(path)?}") == std::string::npos);
+}
+
 TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   if (!std::filesystem::exists(gfxStdlibPath)) {

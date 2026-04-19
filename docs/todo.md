@@ -56,7 +56,9 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4085
+- TODO-4087
+- TODO-4088
+- TODO-4089
 - TODO-4037
 
 ### Immediate Next 10 (After Ready Now)
@@ -73,50 +75,52 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4085, TODO-4030 through TODO-4035
+- Stdlib surface-style alignment: TODO-4087, TODO-4088, TODO-4089, TODO-4030 through TODO-4035
 - Stdlib bridge consolidation: TODO-4037 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4085
-2. TODO-4030
-3. TODO-4031
-4. TODO-4032
-5. TODO-4033
-6. TODO-4034
-7. TODO-4035
-8. TODO-4037
-9. TODO-4038
-10. TODO-4039
-11. TODO-4040
-12. TODO-4041
-13. TODO-4042
-14. TODO-4051
-15. TODO-4043
-16. TODO-4044
-17. TODO-4045
-18. TODO-4046
-19. TODO-4047
-20. TODO-4048
-21. TODO-4049
-22. TODO-4050
-23. TODO-4052
-24. TODO-4058
-25. TODO-4053
-26. TODO-4055
-27. TODO-4054
-28. TODO-4056
-29. TODO-4057
-30. TODO-4059
+1. TODO-4087
+2. TODO-4088
+3. TODO-4089
+4. TODO-4030
+5. TODO-4031
+6. TODO-4032
+7. TODO-4033
+8. TODO-4034
+9. TODO-4035
+10. TODO-4037
+11. TODO-4038
+12. TODO-4039
+13. TODO-4040
+14. TODO-4041
+15. TODO-4042
+16. TODO-4051
+17. TODO-4043
+18. TODO-4044
+19. TODO-4045
+20. TODO-4046
+21. TODO-4047
+22. TODO-4048
+23. TODO-4049
+24. TODO-4050
+25. TODO-4052
+26. TODO-4058
+27. TODO-4053
+28. TODO-4055
+29. TODO-4054
+30. TODO-4056
+31. TODO-4057
+32. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4085, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4087, TODO-4088, TODO-4089, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -135,7 +139,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4085, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4087, TODO-4088, TODO-4089, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | TODO-4039 |
 | Lowerer/source-composition contract coverage | TODO-4040 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -497,14 +501,38 @@ Task template:
     - The cleanup does not change collection semantics or ownership boundaries as part of the same slice.
   - stop_rule: Stop once user-facing collection usage is expressed in the preferred member style and only justified substrate-only helper calls remain.
 
-- [ ] TODO-4085: Adopt concise inferred local bindings in `/std/image` read/write helpers where initializers already show the type
+- [ ] TODO-4089: Adopt concise inferred local bindings in `/std/image/png` top-level read/write orchestration where initializers already show the type
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026, TODO-4074, TODO-4076, TODO-4078, TODO-4079, TODO-4080, TODO-4081
-  - scope: Continue the split inferred-local cleanup by converting the remaining obvious repeated-type local bindings in `/std/image` read/write helpers to concise inferred bindings where the initializer already establishes the type clearly, without mixing in codec-behavior or API changes.
+  - depends_on: TODO-4026, TODO-4081
+  - scope: Continue the split inferred-local cleanup by converting the obvious repeated-type local bindings in the top-level `/std/image/png` read/write orchestration to concise inferred bindings where the initializer already establishes the type clearly, without mixing in codec-behavior or API changes.
   - acceptance:
-    - Obvious `/std/image` local bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - Obvious top-level `/std/image/png` read/write orchestration bindings avoid redundant type repetition when the initializer already establishes the type clearly.
     - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
     - Behavior-sensitive or readability-sensitive sites remain explicit only when needed instead of by default.
-  - stop_rule: Stop once the obvious `/std/image` inferred-binding opportunities are converted; leave broader API or codec changes separate.
+  - stop_rule: Stop once the obvious top-level `/std/image/png` orchestration inferred-binding opportunities are converted; leave broader API or codec changes separate.
+
+- [ ] TODO-4088: Adopt concise inferred local bindings in `/std/image/png` scanline, bitstream, and inflate helpers where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4078, TODO-4079, TODO-4080
+  - scope: Continue the split inferred-local cleanup by converting the obvious repeated-type local bindings in the `/std/image/png` scanline decode, bitstream, and inflate helper stack to concise inferred bindings where the initializer already establishes the type clearly, without mixing in codec-behavior changes.
+  - acceptance:
+    - Obvious `/std/image/png` scanline, bitstream, and inflate helper bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - Behavior-sensitive or readability-sensitive sites remain explicit only when needed instead of by default.
+  - stop_rule: Stop once the obvious `/std/image/png` scanline/bitstream/inflate inferred-binding opportunities are converted; leave broader codec changes separate.
+
+- [ ] TODO-4087: Adopt concise inferred local bindings in `/std/image/png` prelude and write-preparation helpers where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4076
+  - scope: Continue the split inferred-local cleanup by converting the obvious repeated-type local bindings in the `/std/image/png` chunk/prelude and write-preparation helpers to concise inferred bindings where the initializer already establishes the type clearly, without mixing in codec-behavior changes.
+  - acceptance:
+    - Obvious `/std/image/png` prelude and write-preparation helper bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - Behavior-sensitive or readability-sensitive sites remain explicit only when needed instead of by default.
+  - stop_rule: Stop once the obvious `/std/image/png` prelude/write-preparation inferred-binding opportunities are converted; leave broader codec changes separate.
