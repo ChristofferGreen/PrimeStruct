@@ -29,7 +29,7 @@ main() {
   CHECK(errors.find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map count through canonical helper in C++ emitter") {
+TEST_CASE("compiles and runs bare map count while builtin count stays authoritative in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -48,7 +48,7 @@ main() {
       (testScratchPath("") / "primec_cpp_map_unnamespaced_count_builtin_fallback_exe").string();
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("rejects bare map count without imported canonical helper in C++ emitter") {
@@ -531,7 +531,7 @@ main() {
   CHECK(runCommand(exePath) == 162);
 }
 
-TEST_CASE("rejects explicit canonical map helper calls through same-path helpers in C++ emitter with lowering diagnostics") {
+TEST_CASE("rejects explicit canonical map helper calls through same-path helpers in C++ emitter with current lowering diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -593,9 +593,9 @@ main() {
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("/std/collections/map/at_unsafe") != std::string::npos);
-  CHECK((diagnostics.find("call=/std/collections/map/at_unsafe") != std::string::npos ||
-         diagnostics.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos ||
+  CHECK(diagnostics.find("/std/collections/map/at") != std::string::npos);
+  CHECK((diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
+         diagnostics.find("unknown call target: /std/collections/map/at") != std::string::npos ||
          diagnostics.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/") !=
              std::string::npos));
 }

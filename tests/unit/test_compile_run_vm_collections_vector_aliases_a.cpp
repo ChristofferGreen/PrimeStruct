@@ -701,8 +701,8 @@ main() {
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) != 0);
   const std::string diagnostics = readFile(outPath);
-  CHECK((diagnostics.find("unknown method: /vector/count") != std::string::npos ||
-         diagnostics.find("unknown call target: /vector/count") != std::string::npos));
+  CHECK(diagnostics.find("semantic-product method-call target missing lowered definition: /string/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm local alias slash-method vector count on array receiver") {

@@ -4,6 +4,25 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `native-indexed-vector-assign-needs-collections-import`:
+  native compile-run coverage for `assign(values[index], 7i32)` must import
+  `/std/collections/*`, because indexed vector assignment lowers through the
+  canonical `/std/collections/vector/at` access surface and otherwise fails
+  with `unknown call target: /std/collections/vector/at`.
+  Evidence: the release-gate failure in
+  `test_compile_run_native_backend_collections_mutators_and_limits_a.cpp`
+  reproduced immediately without the import, while the same source compiled
+  and ran again after adding `import /std/collections/*`.
+- `string-slash-vector-count-lowers-to-string-target`:
+  backend compile-run coverage for `value./vector/count()` on string receivers
+  now fails at lowering with
+  `semantic-product method-call target missing lowered definition: /string/count`,
+  so VM/C++ emitter expectation locks should check the lowered `/string/count`
+  target instead of the older `/vector/count` unknown-target wording.
+  Evidence: the release-gate failures in
+  `test_compile_run_vm_collections_vector_aliases_a.cpp` and
+  `test_compile_run_emitters_local_vector_count_receiver_resolution.cpp`
+  reproduced that exact diagnostic when rerun directly with `primec`.
 - `direct-vector-access-fallback-order`:
   direct vector `at` and `at_unsafe` calls must stay on the canonical
   direct-helper rewrite before method-sugar fallback, otherwise imported bare
