@@ -4077,3 +4077,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from the oversized `TODO-4017` umbrella so the routing/callable-summary seam could land as one code-affecting commit before the remaining fact-index migration.
   - finished_at: 2026-04-19
   - evidence: Added direct `SemanticProgram *` overloads for routing and callable-summary helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, rewired `src/ir_lowerer/IrLowererCallResolution.cpp` and `src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp` to resolve published direct/method/bridge targets from `SemanticProgram` instead of adapter-owned routing state, switched callable-summary readers in `src/ir_lowerer/IrLowererLowerEffects.cpp`, `src/ir_lowerer/IrLowererStatementCallHelpers.cpp`, `src/ir_lowerer/IrLowererOnErrorHelpers.cpp`, `src/ir_lowerer/IrLowererReturnInferenceHelpers.cpp`, and `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp` to the direct semantic-program path, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock that ownership split, and replaced the live queue item with follow-up `TODO-4019` for the remaining fact-index adapter slice.
+
+- [x] TODO-4020: Retire semantic binding/local-auto adapter entry slice
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Architecture Stabilization
+  - depends_on: TODO-4018
+  - scope: Remove broad `SemanticProductTargetAdapter` mediation from the binding/local-auto validator entry checks and the binding-type adapter factory, switching those production readers to direct `SemanticProductIndex` plus `SemanticProgram` lookup helpers while leaving deeper statement/result/return/on_error fact threading as follow-up work.
+  - acceptance:
+    - Binding/local-auto semantic-product validation and `makeBindingTypeAdapters(...)` no longer build or depend on a broad `SemanticProductTargetAdapter`.
+    - Binding/local-auto fact lookup support is available directly through `SemanticProductIndex` plus `SemanticProgram` instead of only through the broad adapter wrapper.
+    - The remaining production semantic fact-threading work stays explicit in `docs/todo.md`.
+  - stop_rule: Stop once the binding/local-auto validator and binding-type adapter entry slice is direct; leave statement-binding, result, return, and on_error fact threading for follow-up work instead of widening this slice.
+  - notes: Split from oversized `TODO-4019` so the binding/local-auto entry slice could land independently before the deeper statement/result and definition-scoped fact threading work.
+  - finished_at: 2026-04-19
+  - evidence: Added direct `SemanticProductIndex` helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}` for building semantic fact indexes plus binding/local-auto lookup, rewired `src/ir_lowerer/IrLowererBindingTypeHelpers.cpp` so binding/local-auto validation and `makeBindingTypeAdapters(...)` use `buildSemanticProductIndex(semanticProgram)` with direct semantic-program/index lookups instead of constructing a broad adapter, added focused regression coverage in `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp` for direct binding/local-auto index lookups, refreshed `tests/unit/test_ir_pipeline_backends_graph_contexts.h` to lock the new direct entry-slice surface, and replaced the open queue item with follow-up `TODO-4021` for the remaining fact-threading paths.

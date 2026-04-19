@@ -50,9 +50,9 @@ uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine,
          columnBits;
 }
 
-std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProductTargetAdapter &adapter,
+std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProgram *semanticProgram,
                                                   const Expr &expr) {
-  if (adapter.semanticProgram == nullptr) {
+  if (semanticProgram == nullptr) {
     return std::nullopt;
   }
 
@@ -60,21 +60,21 @@ std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProductTargetAda
     if (resolvedPath.empty()) {
       return std::nullopt;
     }
-    return semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, resolvedPath);
+    return semanticProgramLookupCallTargetStringId(*semanticProgram, resolvedPath);
   };
 
   if (const auto directPathId =
-          lookupPathId(findSemanticProductDirectCallTarget(adapter, expr));
+          lookupPathId(findSemanticProductDirectCallTarget(semanticProgram, expr));
       directPathId.has_value()) {
     return directPathId;
   }
   if (const auto methodPathId =
-          lookupPathId(findSemanticProductMethodCallTarget(adapter, expr));
+          lookupPathId(findSemanticProductMethodCallTarget(semanticProgram, expr));
       methodPathId.has_value()) {
     return methodPathId;
   }
   if (const auto bridgePathId =
-          lookupPathId(findSemanticProductBridgePathChoice(adapter, expr));
+          lookupPathId(findSemanticProductBridgePathChoice(semanticProgram, expr));
       bridgePathId.has_value()) {
     return bridgePathId;
   }
@@ -84,14 +84,14 @@ std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProductTargetAda
   return std::nullopt;
 }
 
-std::optional<SymbolId> resolveLocalAutoInitializerPathId(const SemanticProductTargetAdapter &adapter,
+std::optional<SymbolId> resolveLocalAutoInitializerPathId(const SemanticProgram *semanticProgram,
                                                           const Expr &bindingExpr) {
   if (bindingExpr.args.empty()) {
     return std::nullopt;
   }
 
   const Expr &initializerExpr = bindingExpr.args.front();
-  if (const auto initializerPathId = resolveSemanticExprPathId(adapter, initializerExpr);
+  if (const auto initializerPathId = resolveSemanticExprPathId(semanticProgram, initializerExpr);
       initializerPathId.has_value()) {
     return initializerPathId;
   }
@@ -223,6 +223,10 @@ struct SemanticProductIndexBuilder {
 
 } // namespace
 
+SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticProgram) {
+  return SemanticProductIndexBuilder{semanticProgram}.build();
+}
+
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram) {
   SemanticProductTargetAdapter adapter;
   if (semanticProgram == nullptr) {
@@ -231,7 +235,7 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
   adapter.hasSemanticProduct = true;
   adapter.semanticProgram = semanticProgram;
   adapter.publishedRoutingLookups = &semanticProgram->publishedRoutingLookups;
-  adapter.semanticIndex = SemanticProductIndexBuilder{semanticProgram}.build();
+  adapter.semanticIndex = buildSemanticProductIndex(semanticProgram);
 
   return adapter;
 }
@@ -363,36 +367,49 @@ const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticPro
 }
 
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(
-    const SemanticProductTargetAdapter &adapter,
+    const SemanticProductIndex &semanticIndex,
     const Expr &expr) {
-  return findExpressionScopedSemanticFact(adapter.semanticIndex.localAutoFactsByExpr, expr);
+  return findExpressionScopedSemanticFact(semanticIndex.localAutoFactsByExpr, expr);
 }
 
-const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
-                                                                    const Expr &expr) {
-  if (const auto *fact = findSemanticProductLocalAutoFactBySemanticId(adapter, expr);
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findSemanticProductLocalAutoFactBySemanticId(adapter.semanticIndex, expr);
+}
+
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr) {
+  if (const auto *fact = findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr);
       fact != nullptr) {
     return fact;
   }
-  if (adapter.semanticProgram == nullptr || !expr.isBinding || expr.args.size() != 1 ||
+  if (semanticProgram == nullptr || !expr.isBinding || expr.args.size() != 1 ||
       expr.name.empty()) {
     return nullptr;
   }
   const auto bindingNameId =
-      semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, expr.name);
+      semanticProgramLookupCallTargetStringId(*semanticProgram, expr.name);
   if (!bindingNameId.has_value()) {
     return nullptr;
   }
-  const auto initializerPathId = resolveLocalAutoInitializerPathId(adapter, expr);
+  const auto initializerPathId = resolveLocalAutoInitializerPathId(semanticProgram, expr);
   if (!initializerPathId.has_value()) {
     return nullptr;
   }
-  if (const auto it = adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.find(
+  if (const auto it = semanticIndex.localAutoFactsByInitPathAndBindingNameId.find(
           makeLocalAutoInitPathBindingNameKey(*initializerPathId, *bindingNameId));
-      it != adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.end()) {
+      it != semanticIndex.localAutoFactsByInitPathAndBindingNameId.end()) {
     return it->second;
   }
   return nullptr;
+}
+
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
+                                                                    const Expr &expr) {
+  return findSemanticProductLocalAutoFact(adapter.semanticProgram, adapter.semanticIndex, expr);
 }
 
 const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
@@ -455,13 +472,18 @@ const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTa
   return nullptr;
 }
 
-const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
+const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductIndex &semanticIndex,
                                                                 const Expr &expr) {
-  if (const auto *fact = findExpressionScopedSemanticFact(adapter.semanticIndex.bindingFactsByExpr, expr);
+  if (const auto *fact = findExpressionScopedSemanticFact(semanticIndex.bindingFactsByExpr, expr);
       fact != nullptr) {
     return fact;
   }
   return nullptr;
+}
+
+const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
+                                                                const Expr &expr) {
+  return findSemanticProductBindingFact(adapter.semanticIndex, expr);
 }
 
 } // namespace primec::ir_lowerer

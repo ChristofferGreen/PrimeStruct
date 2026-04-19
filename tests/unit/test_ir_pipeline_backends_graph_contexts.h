@@ -1011,6 +1011,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticProgram);") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<SymbolId, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPathId;") !=
@@ -1053,9 +1055,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFact(") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(\n    const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByInitPathAndBindingNameId;") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(\n    const SemanticProgram *semanticProgram,\n    const SemanticProductIndex &semanticIndex,") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;") !=
         std::string::npos);
@@ -1073,14 +1079,18 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductIndex &semanticIndex,") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramBindingFact *findSemanticProductBindingFact(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticProgram)") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.hasSemanticProduct = true;") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.publishedRoutingLookups = &semanticProgram->publishedRoutingLookups;") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex = SemanticProductIndexBuilder{semanticProgram}.build();") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex = buildSemanticProductIndex(semanticProgram);") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedDirectCallTargetId(*adapter.semanticProgram,") !=
         std::string::npos);
@@ -1147,7 +1157,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size())") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.find(") !=
+  CHECK(semanticTargetAdapterSource.find("semanticIndex.localAutoFactsByInitPathAndBindingNameId.find(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.localAutoFactsByExpr.reserve(localAutoFacts.size())") ==
         std::string::npos);
@@ -1155,7 +1165,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("const auto localAutoFacts = semanticProgramLocalAutoFactView(*adapter.semanticProgram);") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("resolveLocalAutoInitializerPathId(adapter, expr)") !=
+  CHECK(semanticTargetAdapterSource.find("resolveLocalAutoInitializerPathId(semanticProgram, expr)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramQueryFactView(*semanticProgram)") !=
         std::string::npos);
@@ -1187,7 +1197,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramBindingFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("findExpressionScopedSemanticFact(adapter.semanticIndex.bindingFactsByExpr, expr)") !=
+  CHECK(semanticTargetAdapterSource.find("findExpressionScopedSemanticFact(semanticIndex.bindingFactsByExpr, expr)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(bindingFacts.size())") ==
         std::string::npos);
@@ -1272,11 +1282,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(bindingTypeHelpersHeader.find("BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find("findSemanticProductBindingFact(semanticProductTargets, expr)") !=
+  CHECK(bindingTypeHelpersSource.find("findSemanticProductBindingFact(semanticIndex, expr)") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find("findSemanticProductLocalAutoFact(semanticProductTargets, expr)") !=
+  CHECK(bindingTypeHelpersSource.find("findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr)") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find("requiresSemanticBindingFact(semanticProductTargets, expr)") !=
+  CHECK(bindingTypeHelpersSource.find("requiresSemanticBindingFact(semanticProgram, expr)") !=
         std::string::npos);
   CHECK(statementBindingHelpersHeader.find("const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,") !=
         std::string::npos);
@@ -1986,7 +1996,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find("findSemanticProductLocalAutoFactBySemanticId(semanticProductTargets, expr)") !=
+  CHECK(bindingTypeHelpersSource.find("findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr)") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto fact: ") != std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto initializer path id: ") !=

@@ -33,6 +33,7 @@ struct SemanticProductTargetAdapter {
   SemanticProductIndex semanticIndex;
 };
 
+SemanticProductIndex buildSemanticProductIndex(const SemanticProgram *semanticProgram);
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);
 
 std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr);
@@ -51,12 +52,21 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticP
                                                                 const Definition &definition);
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition);
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
                                                                     const Expr &expr);
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(
+    const SemanticProgram *semanticProgram,
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
 const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
                                                             const Expr &expr);
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,
                                                         const Expr &expr);
+const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductIndex &semanticIndex,
+                                                                const Expr &expr);
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Expr &expr);
 
