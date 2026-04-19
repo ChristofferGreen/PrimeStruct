@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1050: Reactivate native map method runtime coverage. Completed: the skipped native compile-run case for `values.size()` on a numeric `map<i32, i32>{...}` binding with an explicit `/map/size` helper is live again and now locks native method-sugar routing on builtin map literals alongside the already-active VM parity case.
 - ✓ TODO-1049: Reactivate native map count runtime coverage. Completed: the skipped native compile-run case for `count(values)` on a numeric `map<i32, i32>{...}` binding is live again and now locks the documented native lowering path for builtin map `count` on numeric/bool map literals.
 - ✓ TODO-1048: Reactivate native map literal runtime coverage. Completed: the skipped native compile-run case for a numeric `map<i32, i32>{...}` literal is live again and now locks the documented native lowering path for map literal construction plus `at(...)` access on numeric/bool map literals.
 - ✓ TODO-1047: Refresh native stdlib map `at_unsafe` alias fallback coverage. Completed: the stale skipped native compile-run case for `/std/collections/map/at_unsafe(...)` without an imported canonical wrapper now matches the documented rejection surface and actively locks the `unknown call target: /std/collections/map/at_unsafe` diagnostic instead of expecting removed `/map/at_unsafe(...)` fallback behavior.

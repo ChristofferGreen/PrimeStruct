@@ -107,7 +107,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native map method call" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native map method call") {
   const std::string source = R"(
 [return<int>]
 /map/size([map<i32, i32>] items) {
