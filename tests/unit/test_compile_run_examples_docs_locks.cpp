@@ -171,7 +171,7 @@ TEST_CASE("software renderer command list docs stay source locked" * doctest::sk
         std::string::npos);
 }
 
-TEST_CASE("image api docs and stdlib stay source locked" * doctest::skip(true)) {
+TEST_CASE("image api docs and stdlib stay source locked") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
   if (!std::filesystem::exists(primeStructPath)) {
