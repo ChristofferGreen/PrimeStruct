@@ -3824,3 +3824,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the stale skipped FileError helper semantics cases are active and the receiver-style positive coverage is pinned; leave unrelated file runtime slices alone.
   - finished_at: 2026-04-19
   - evidence: Unskipped the stale FileError helper negative tests, kept their deterministic type-mismatch diagnostics, and expanded the main FileError helper semantics case to cover receiver-style `err.status()`, `err.result<i32>()`, and their `Result.error(...)` / `Result.why(...)` consumers.
+
+- [x] TODO-4001: ADR ownership contract and delete production shadow state
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Semantic Ownership Cutover
+  - depends_on: none
+  - scope: Write an ADR that defines the authoritative ownership boundary between the type-resolution graph, validator scratch state, and semantic product, then use that contract to delete or quarantine production-path graph-local-auto legacy shadow state.
+  - acceptance:
+    - A new ADR documents the production owner for each covered semantic fact family plus any benchmark-only exceptions.
+    - The default production validator path no longer populates or reads the graph-local-auto legacy shadow maps for the covered local-auto/query/try/direct-call/method-call side-channel families.
+    - Release validation and focused semantic-product coverage pass with unchanged user-visible behavior.
+  - stop_rule: Stop once the ownership contract is documented and the covered production shadow-state subsystem has been deleted or explicitly isolated from production execution.
+  - finished_at: 2026-04-19
+  - evidence: Added `docs/adr/0002-semantic-ownership-boundary.md`, linked the policy from `docs/PrimeStruct.md`, quarantined the graph-local-auto legacy shadow maps behind explicit benchmark-only validator state, and updated the architecture/source-lock tests to pin the new ownership boundary.

@@ -219,54 +219,53 @@ TEST_CASE("graph local auto facts use compact structured keys") {
   CHECK(header.find("struct GraphLocalAutoKey {") != std::string::npos);
   CHECK(header.find("SymbolId scopePathId = InvalidSymbolId;") != std::string::npos);
   CHECK(header.find("mutable SymbolInterner graphLocalAutoScopePathInterner_;") != std::string::npos);
-  CHECK(header.find("mutable std::unordered_set<std::string> graphLocalAutoLegacyKeyShadow_;") !=
+  CHECK(header.find("struct BenchmarkGraphLocalAutoLegacyShadowState {") != std::string::npos);
+  CHECK(header.find("std::unique_ptr<BenchmarkGraphLocalAutoLegacyShadowState> benchmarkGraphLocalAutoLegacyShadowState_;") !=
         std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyBindingShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyInitializerResolvedPathShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyInitializerBindingShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyQuerySnapshotShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyTryValueShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyDirectCallPathShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyDirectCallReturnKindShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyMethodCallPathShadow_") != std::string::npos);
-  CHECK(header.find("graphLocalAutoLegacyMethodCallReturnKindShadow_") != std::string::npos);
+  CHECK(header.find("mutable std::unordered_set<std::string> graphLocalAutoLegacyKeyShadow_;") ==
+        std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyBindingShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyInitializerResolvedPathShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyInitializerBindingShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyQuerySnapshotShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyTryValueShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyDirectCallPathShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyDirectCallReturnKindShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyMethodCallPathShadow_") == std::string::npos);
+  CHECK(header.find("graphLocalAutoLegacyMethodCallReturnKindShadow_") == std::string::npos);
   CHECK(header.find("struct GraphLocalAutoFacts {") != std::string::npos);
   CHECK(header.find("bool hasBinding = false;") != std::string::npos);
   CHECK(header.find("std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;") !=
         std::string::npos);
   CHECK(snapshotLocals.find("const SymbolId scopePathId = graphLocalAutoScopePathInterner_.intern(scopePath);") !=
         std::string::npos);
-  CHECK(snapshotLocals.find("if (benchmarkGraphLocalAutoLegacyKeyShadowEnabled_) {") !=
+  CHECK(snapshotLocals.find("if (benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ &&") !=
         std::string::npos);
-  CHECK(snapshotLocals.find("graphLocalAutoLegacyKeyShadow_.insert(std::move(legacyKey));") !=
+  CHECK(snapshotLocals.find("benchmarkGraphLocalAutoLegacyShadowState_ != nullptr") !=
+        std::string::npos);
+  CHECK(snapshotLocals.find("benchmarkGraphLocalAutoLegacyShadowState_->keyShadow.insert(std::move(legacyKey));") !=
         std::string::npos);
   CHECK(snapshotLocals.find("return GraphLocalAutoKey{scopePathId, sourceLine, sourceColumn};") !=
         std::string::npos);
   CHECK(buildUtility.find("graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn)") !=
         std::string::npos);
   CHECK(inferGraph.find("graphLocalAutoScopePathInterner_.clear();") != std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyKeyShadow_.clear();") != std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyBindingShadow_.clear();") != std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyInitializerResolvedPathShadow_.clear();") !=
+  CHECK(inferGraph.find("if (benchmarkGraphLocalAutoLegacyShadowState_ != nullptr) {") !=
         std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyInitializerBindingShadow_.clear();") !=
-        std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyQuerySnapshotShadow_.clear();") !=
-        std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyTryValueShadow_.clear();") !=
-        std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyDirectCallPathShadow_.clear();") !=
-        std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyDirectCallReturnKindShadow_.clear();") !=
-        std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyMethodCallPathShadow_.clear();") !=
-        std::string::npos);
-  CHECK(inferGraph.find("graphLocalAutoLegacyMethodCallReturnKindShadow_.clear();") !=
+  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->clear();") !=
         std::string::npos);
   CHECK(inferGraph.find("graphLocalAutoFacts_.clear();") != std::string::npos);
   CHECK(inferGraph.find("graphLocalAutoFacts_.try_emplace(bindingKey);") != std::string::npos);
   CHECK(inferGraph.find("GraphLocalAutoFacts &fact = factIt->second;") != std::string::npos);
-  CHECK(inferGraph.find("if (benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_) {") !=
+  CHECK(inferGraph.find("if (benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_ &&") !=
+        std::string::npos);
+  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_ != nullptr") !=
+        std::string::npos);
+  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->bindingShadow.clear();") !=
+        std::string::npos);
+  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->initializerResolvedPathShadow.clear();") !=
+        std::string::npos);
+  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->querySnapshotShadow.try_emplace") !=
         std::string::npos);
   CHECK(inferGraph.find("for (const auto &[bindingKey, fact] : graphLocalAutoFacts_) {") !=
         std::string::npos);

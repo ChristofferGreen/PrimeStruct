@@ -39,6 +39,33 @@ TEST_CASE("backend boundary ADR is present and referenced from design doc") {
   CHECK(design.find("including production aliases (`cpp`, `exe`, `glsl`, `spirv`)") != std::string::npos);
 }
 
+TEST_CASE("semantic ownership ADR is present and referenced from design doc") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path adrPath = cwd / "docs" / "adr" / "0002-semantic-ownership-boundary.md";
+  std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(adrPath)) {
+    adrPath = cwd.parent_path() / "docs" / "adr" / "0002-semantic-ownership-boundary.md";
+    designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
+  }
+
+  REQUIRE(std::filesystem::exists(adrPath));
+  REQUIRE(std::filesystem::exists(designPath));
+
+  const std::string adr = readTextFile(adrPath);
+  CHECK(adr.find("The semantic ownership boundary is locked as follows:") != std::string::npos);
+  CHECK(adr.find("Production lowering, `primec`, `primevm`, and compile-pipeline entrypoints") !=
+        std::string::npos);
+  CHECK(adr.find("benchmark-only comparison") != std::string::npos);
+  CHECK(adr.find("must not influence production diagnostics, lowering, or semantic-product publication.") !=
+        std::string::npos);
+  CHECK(adr.find("Follow-up status (2026-04-19)") != std::string::npos);
+
+  const std::string design = readTextFile(designPath);
+  CHECK(design.find("docs/adr/0002-semantic-ownership-boundary.md") != std::string::npos);
+  CHECK(design.find("benchmark-only") != std::string::npos);
+  CHECK(design.find("production lowering/publication paths.") != std::string::npos);
+}
+
 TEST_CASE("cmake splits primec library into subsystem targets") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";

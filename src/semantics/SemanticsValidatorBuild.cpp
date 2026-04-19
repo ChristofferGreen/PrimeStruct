@@ -23,16 +23,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
   returnBindings_.clear();
   graphLocalAutoFacts_.clear();
   graphLocalAutoScopePathInterner_.clear();
-  graphLocalAutoLegacyKeyShadow_.clear();
-  graphLocalAutoLegacyBindingShadow_.clear();
-  graphLocalAutoLegacyInitializerResolvedPathShadow_.clear();
-  graphLocalAutoLegacyInitializerBindingShadow_.clear();
-  graphLocalAutoLegacyQuerySnapshotShadow_.clear();
-  graphLocalAutoLegacyTryValueShadow_.clear();
-  graphLocalAutoLegacyDirectCallPathShadow_.clear();
-  graphLocalAutoLegacyDirectCallReturnKindShadow_.clear();
-  graphLocalAutoLegacyMethodCallPathShadow_.clear();
-  graphLocalAutoLegacyMethodCallReturnKindShadow_.clear();
+  if (benchmarkGraphLocalAutoLegacyShadowState_ != nullptr) {
+    benchmarkGraphLocalAutoLegacyShadowState_->clear();
+  }
   pilotRoutingSemanticCollectorsValid_ = false;
   collectedDirectCallTargets_.clear();
   collectedMethodCallTargets_.clear();

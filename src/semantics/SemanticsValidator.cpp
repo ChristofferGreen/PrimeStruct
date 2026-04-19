@@ -110,6 +110,11 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       benchmarkGraphLocalAutoDependencyScratchPmrEnabled_(
           !benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr) {
   diagnosticSink_.reset();
+  if (benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ ||
+      benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_) {
+    benchmarkGraphLocalAutoLegacyShadowState_ =
+        std::make_unique<BenchmarkGraphLocalAutoLegacyShadowState>();
+  }
   auto registerMathImport = [&](const std::string &importPath) {
     if (importPath == "/std/math/*") {
       mathImportAll_ = true;
@@ -263,6 +268,19 @@ bool SemanticsValidator::run() {
     if (!benchmarkDumpValidatorState) {
       return;
     }
+    const auto *legacyShadowState = benchmarkGraphLocalAutoLegacyShadowState_.get();
+    const size_t legacyBindingCount =
+        legacyShadowState == nullptr ? 0 : legacyShadowState->bindingShadow.size();
+    const size_t legacyBindingBucketCount =
+        legacyShadowState == nullptr ? 0 : legacyShadowState->bindingShadow.bucket_count();
+    const size_t legacyQueryCount =
+        legacyShadowState == nullptr ? 0 : legacyShadowState->querySnapshotShadow.size();
+    const size_t legacyQueryBucketCount =
+        legacyShadowState == nullptr ? 0 : legacyShadowState->querySnapshotShadow.bucket_count();
+    const size_t legacyTryCount =
+        legacyShadowState == nullptr ? 0 : legacyShadowState->tryValueShadow.size();
+    const size_t legacyTryBucketCount =
+        legacyShadowState == nullptr ? 0 : legacyShadowState->tryValueShadow.bucket_count();
     size_t parameterCount = 0;
     for (const auto &entry : paramsByDef_) {
       parameterCount += entry.second.size();
@@ -285,15 +303,12 @@ bool SemanticsValidator::run() {
               << ",\"graph_local_auto_scope_paths\":" << graphLocalAutoScopePathInterner_.size()
               << ",\"graph_local_auto_facts\":" << graphLocalAutoFacts_.size()
               << ",\"graph_local_auto_fact_buckets\":" << graphLocalAutoFacts_.bucket_count()
-              << ",\"graph_local_auto_legacy_binding\":" << graphLocalAutoLegacyBindingShadow_.size()
-              << ",\"graph_local_auto_legacy_binding_buckets\":"
-              << graphLocalAutoLegacyBindingShadow_.bucket_count()
-              << ",\"graph_local_auto_legacy_query\":" << graphLocalAutoLegacyQuerySnapshotShadow_.size()
-              << ",\"graph_local_auto_legacy_query_buckets\":"
-              << graphLocalAutoLegacyQuerySnapshotShadow_.bucket_count()
-              << ",\"graph_local_auto_legacy_try\":" << graphLocalAutoLegacyTryValueShadow_.size()
-              << ",\"graph_local_auto_legacy_try_buckets\":"
-              << graphLocalAutoLegacyTryValueShadow_.bucket_count()
+              << ",\"graph_local_auto_legacy_binding\":" << legacyBindingCount
+              << ",\"graph_local_auto_legacy_binding_buckets\":" << legacyBindingBucketCount
+              << ",\"graph_local_auto_legacy_query\":" << legacyQueryCount
+              << ",\"graph_local_auto_legacy_query_buckets\":" << legacyQueryBucketCount
+              << ",\"graph_local_auto_legacy_try\":" << legacyTryCount
+              << ",\"graph_local_auto_legacy_try_buckets\":" << legacyTryBucketCount
               << ",\"query_fact_snapshot_cache\":" << queryFactSnapshotCache_.size()
               << ",\"try_value_snapshot_cache\":" << tryValueSnapshotCache_.size()
               << ",\"call_binding_snapshot_cache\":" << callBindingSnapshotCache_.size()

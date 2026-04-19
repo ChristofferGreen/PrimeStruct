@@ -326,6 +326,40 @@ private:
     ReturnKind methodCallReturnKind = ReturnKind::Unknown;
   };
 
+  struct BenchmarkGraphLocalAutoLegacyShadowState {
+    std::unordered_set<std::string> keyShadow;
+    std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash> bindingShadow;
+    std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
+        initializerResolvedPathShadow;
+    std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash>
+        initializerBindingShadow;
+    std::unordered_map<GraphLocalAutoKey, QuerySnapshotData, GraphLocalAutoKeyHash>
+        querySnapshotShadow;
+    std::unordered_map<GraphLocalAutoKey, LocalAutoTrySnapshotData, GraphLocalAutoKeyHash>
+        tryValueShadow;
+    std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
+        directCallPathShadow;
+    std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash>
+        directCallReturnKindShadow;
+    std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
+        methodCallPathShadow;
+    std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash>
+        methodCallReturnKindShadow;
+
+    void clear() {
+      keyShadow.clear();
+      bindingShadow.clear();
+      initializerResolvedPathShadow.clear();
+      initializerBindingShadow.clear();
+      querySnapshotShadow.clear();
+      tryValueShadow.clear();
+      directCallPathShadow.clear();
+      directCallReturnKindShadow.clear();
+      methodCallPathShadow.clear();
+      methodCallReturnKindShadow.clear();
+    }
+  };
+
   #include "SemanticsValidatorPrivateCore.h"
   #include "SemanticsValidatorPrivateExprValidation.h"
   #include "SemanticsValidatorPrivateExprInference.h"
@@ -735,25 +769,7 @@ private:
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;
   mutable SymbolInterner graphLocalAutoScopePathInterner_;
-  mutable std::unordered_set<std::string> graphLocalAutoLegacyKeyShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyBindingShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyInitializerResolvedPathShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyInitializerBindingShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, QuerySnapshotData, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyQuerySnapshotShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, LocalAutoTrySnapshotData, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyTryValueShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyDirectCallPathShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyDirectCallReturnKindShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyMethodCallPathShadow_;
-  mutable std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash>
-      graphLocalAutoLegacyMethodCallReturnKindShadow_;
+  std::unique_ptr<BenchmarkGraphLocalAutoLegacyShadowState> benchmarkGraphLocalAutoLegacyShadowState_;
   std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;
