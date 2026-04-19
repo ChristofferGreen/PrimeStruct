@@ -195,6 +195,28 @@ main() {
   CHECK(error.find("expected '>'") != std::string::npos);
 }
 
+TEST_CASE("labeled struct-literal local binding requires constructor initializer") {
+  const std::string source = R"(
+[struct]
+Pair {
+  [int] left{0}
+  [int] right{0}
+}
+
+[int]
+sum_pair() {
+  [Pair] pair{[left] 4, [right] 8}
+  return(pair.left + pair.right)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("expected identifier") != std::string::npos);
+}
+
 TEST_CASE("lambda template with comments still requires closing angle") {
   const std::string source = R"(
 [return<int>]

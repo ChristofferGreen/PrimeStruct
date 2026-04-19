@@ -56,36 +56,30 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1070
-2. TODO-1066
-3. TODO-1063
+1. TODO-1066
+2. TODO-1063
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1070
-2. TODO-1066
-3. TODO-1063
-4. TODO-1064
-5. TODO-1065
+1. TODO-1066
+2. TODO-1063
+3. TODO-1064
+4. TODO-1065
 
 ### Priority Lanes (Current)
 
 - Pilot semantic boundary ownership: TODO-1063, TODO-1064, TODO-1065
 - Parallel-ready validation state: TODO-1066
-- Frontend/docs correctness parity: TODO-1070
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1070
-2. TODO-1066
+1. TODO-1066
+2. TODO-1063
 
 Wave B:
-1. TODO-1063
-2. TODO-1064
-
-Wave C:
-1. TODO-1065
+1. TODO-1064
+2. TODO-1065
 
 ### PrimeStruct Coverage Snapshot
 
@@ -93,7 +87,6 @@ Wave C:
 | --- | --- |
 | Pilot semantic ownership boundary | TODO-1063, TODO-1064, TODO-1065 |
 | Parallel-ready validation architecture | TODO-1066 |
-| Frontend/docs correctness parity | TODO-1070 |
 
 ### Validation Coverage Snapshot
 
@@ -102,28 +95,13 @@ Wave C:
 | Semantic-product publication parity | TODO-1063, TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
 | Worker-count determinism and parity | TODO-1066 |
-| Frontend/docs compile-run parity | TODO-1070 |
 
 ### Task Blocks
-
-- [ ] TODO-1070: Restore frontend/docs compile-run parity for current examples
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Frontend/docs correctness
-  - scope: synchronize the three current frontend/docs example gaps with the actual supported surface by making the exact vector import example, omitted-parameter helper example, and labeled struct-literal local binding example compile again where intended, or documenting the narrower supported surface in `docs/CodeExamples.md` when those concise forms remain unsupported.
-  - acceptance:
-    - the exact-import vector example either compiles with `import /std/collections/vector` on the intended surface or is explicitly documented and tested as unsupported
-    - the omitted-parameter helper example either compiles with the intended concise `runCountdown(start)` surface or is explicitly documented and tested as unsupported
-    - the labeled struct-literal local binding example either compiles with `[Pair] pair{[left] 4, [right] 8}` on the intended surface or is explicitly documented and tested as unsupported
-    - `docs/CodeExamples.md` and any related syntax guidance are updated in the same change so the published examples match the supported frontend surface
-  - stop_rule: stop after those three documented examples are synchronized with the current toolchain and focused coverage; do not broaden into unrelated syntax cleanup in the same change
-  - notes: current known failures are `unknown import path` for `import /std/collections/vector`, omitted helper parameter-type rejection in the concise countdown example, and `PSC1003 expected identifier` at the first labeled field inside `[Pair] pair{[left] 4, [right] 8}`
 
 - [ ] TODO-1066: Pilot worker-local validation context for one deterministic slice
   - owner: ai
   - created_at: 2026-04-19
   - phase: Parallel-ready validation architecture
-  - depends_on: TODO-1062
   - scope: extract one definition-validation slice onto an explicit worker-local context that reads immutable prepass state and proves identical results across worker counts, reducing reliance on the monolithic validator object.
   - acceptance:
     - one validation slice runs through a dedicated per-definition or per-worker context instead of shared mutable validator state
@@ -159,7 +137,6 @@ Wave C:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Architecture boundary hardening
-  - depends_on: TODO-1062
   - scope: route the pilot routing semantic-product families through builder-owned collectors populated during validation, reducing the snapshot-export surface on `SemanticsValidator` for the first ownership slice.
   - acceptance:
     - direct-call, method-call, bridge-path, and callable-summary facts are emitted from append-only collectors instead of post-run snapshot reconstruction

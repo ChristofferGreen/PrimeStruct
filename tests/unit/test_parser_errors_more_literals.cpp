@@ -90,6 +90,27 @@ main(x) {
   CHECK(error.find("definition missing return statement") != std::string::npos);
 }
 
+TEST_CASE("free-standing helper shorthand without parameter type reports missing return transform") {
+  const std::string source = R"(
+run_countdown(start) {
+  [int mut] current{start}
+
+  while(current > 0) {
+    print_line("tick")
+    current = current - 1
+  }
+
+  return(current)
+}
+)";
+  primec::Lexer lexer(source);
+  primec::Parser parser(lexer.tokenize());
+  primec::Program program;
+  std::string error;
+  CHECK_FALSE(parser.parse(program, error));
+  CHECK(error.find("definition missing return statement") != std::string::npos);
+}
+
 TEST_CASE("string literal rejects unknown suffix") {
   const std::string source = R"(
 [return<void>]

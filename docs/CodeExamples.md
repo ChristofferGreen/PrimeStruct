@@ -330,10 +330,20 @@ Why this is good:
 Current note:
 - Use `import /std/collections/*` for bare vector helper names and method-sugar
   examples.
-- Do not use exact `import /std/collections/vector` in style-guide examples
-  yet; the current release toolchain still rejects that path.
+- Exact `import /std/collections/vector` is part of the supported surface for
+  bare `vector(...)` construction plus canonical
+  `/std/collections/vector/*` helper forms.
+- Keep wildcard imports for concise vector bindings, bare helper names,
+  method-sugar, and direct indexing examples.
 - Concise bindings such as `[vector<int>] values{4, 8, 15}` are now part of the
   verified current style for examples that use wildcard collection imports.
+- Omitted parameter-type shorthand on free-standing definitions is currently
+  unsupported in the verified surface; spell helper parameters explicitly in
+  examples.
+- Labeled struct-literal local bindings such as
+  `[Pair] pair{[left] 4, [right] 8}` are currently unsupported; use an
+  explicit constructor initializer such as `pair{Pair([left] 4, [right] 8)}`
+  instead.
 - The explicit constructor form `vector<T>{...}` remains valid, but docs no
   longer need it as a fallback for the readable vector loop example.
 
