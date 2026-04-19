@@ -200,7 +200,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector clear call shadow" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native user vector clear call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
