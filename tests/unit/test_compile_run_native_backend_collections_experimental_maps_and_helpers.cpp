@@ -237,7 +237,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native canonical soa_vector get slash-method reaches field access reject" * doctest::skip(true)) {
+TEST_CASE("native canonical soa_vector get slash-method reaches field access reject") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
