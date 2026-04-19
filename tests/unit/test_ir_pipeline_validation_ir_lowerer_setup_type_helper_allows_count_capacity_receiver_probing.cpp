@@ -247,6 +247,101 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare vector access met
   expectResolvedMethod("at_unsafe", &stdAtUnsafeDef);
 }
 
+TEST_CASE("ir lowerer setup type helper prefers canonical bare vector mutator methods") {
+  primec::Definition vectorPushDef;
+  vectorPushDef.fullPath = "/vector/push";
+  primec::Definition stdPushDef;
+  stdPushDef.fullPath = "/std/collections/vector/push";
+  primec::Definition vectorPopDef;
+  vectorPopDef.fullPath = "/vector/pop";
+  primec::Definition stdPopDef;
+  stdPopDef.fullPath = "/std/collections/vector/pop";
+  primec::Definition vectorReserveDef;
+  vectorReserveDef.fullPath = "/vector/reserve";
+  primec::Definition stdReserveDef;
+  stdReserveDef.fullPath = "/std/collections/vector/reserve";
+  primec::Definition vectorClearDef;
+  vectorClearDef.fullPath = "/vector/clear";
+  primec::Definition stdClearDef;
+  stdClearDef.fullPath = "/std/collections/vector/clear";
+  primec::Definition vectorRemoveAtDef;
+  vectorRemoveAtDef.fullPath = "/vector/remove_at";
+  primec::Definition stdRemoveAtDef;
+  stdRemoveAtDef.fullPath = "/std/collections/vector/remove_at";
+  primec::Definition vectorRemoveSwapDef;
+  vectorRemoveSwapDef.fullPath = "/vector/remove_swap";
+  primec::Definition stdRemoveSwapDef;
+  stdRemoveSwapDef.fullPath = "/std/collections/vector/remove_swap";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {vectorPushDef.fullPath, &vectorPushDef},
+      {stdPushDef.fullPath, &stdPushDef},
+      {vectorPopDef.fullPath, &vectorPopDef},
+      {stdPopDef.fullPath, &stdPopDef},
+      {vectorReserveDef.fullPath, &vectorReserveDef},
+      {stdReserveDef.fullPath, &stdReserveDef},
+      {vectorClearDef.fullPath, &vectorClearDef},
+      {stdClearDef.fullPath, &stdClearDef},
+      {vectorRemoveAtDef.fullPath, &vectorRemoveAtDef},
+      {stdRemoveAtDef.fullPath, &stdRemoveAtDef},
+      {vectorRemoveSwapDef.fullPath, &vectorRemoveSwapDef},
+      {stdRemoveSwapDef.fullPath, &stdRemoveSwapDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Literal;
+  valueExpr.intWidth = 32;
+  valueExpr.literalValue = 1;
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo itemsLocal;
+  itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("items", itemsLocal);
+
+  auto expectResolvedMethod = [&](const char *methodName,
+                                  const std::vector<primec::Expr> &args,
+                                  const primec::Definition *expectedDef) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = args;
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &) { return std::string(); },
+        defMap,
+        error);
+    CHECK(resolved == expectedDef);
+    CHECK(error.empty());
+  };
+
+  expectResolvedMethod("push", {receiverExpr, valueExpr}, &stdPushDef);
+  expectResolvedMethod("pop", {receiverExpr}, &stdPopDef);
+  expectResolvedMethod("reserve", {receiverExpr, valueExpr}, &stdReserveDef);
+  expectResolvedMethod("clear", {receiverExpr}, &stdClearDef);
+  expectResolvedMethod("remove_at", {receiverExpr, indexExpr}, &stdRemoveAtDef);
+  expectResolvedMethod("remove_swap", {receiverExpr, indexExpr}, &stdRemoveSwapDef);
+}
+
 TEST_CASE("ir lowerer setup type helper rejects explicit rooted vector slash methods while honoring /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";

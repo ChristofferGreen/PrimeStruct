@@ -112,7 +112,10 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return isVectorReceiverTarget(candidate) &&
            (isExplicitCanonicalVectorMethod || normalizedMethodName == "count" ||
             normalizedMethodName == "capacity" || normalizedMethodName == "at" ||
-            normalizedMethodName == "at_unsafe");
+            normalizedMethodName == "at_unsafe" || normalizedMethodName == "push" ||
+            normalizedMethodName == "pop" || normalizedMethodName == "reserve" ||
+            normalizedMethodName == "clear" || normalizedMethodName == "remove_at" ||
+            normalizedMethodName == "remove_swap");
   };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
     if (!isRawBuiltinSoaVectorReceiverTarget(candidate)) {

@@ -21,6 +21,30 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   vectorAtUnsafeDef.fullPath = "/vector/at_unsafe";
   primec::Definition stdAtUnsafeDef;
   stdAtUnsafeDef.fullPath = "/std/collections/vector/at_unsafe";
+  primec::Definition vectorPushDef;
+  vectorPushDef.fullPath = "/vector/push";
+  primec::Definition stdPushDef;
+  stdPushDef.fullPath = "/std/collections/vector/push";
+  primec::Definition vectorPopDef;
+  vectorPopDef.fullPath = "/vector/pop";
+  primec::Definition stdPopDef;
+  stdPopDef.fullPath = "/std/collections/vector/pop";
+  primec::Definition vectorReserveDef;
+  vectorReserveDef.fullPath = "/vector/reserve";
+  primec::Definition stdReserveDef;
+  stdReserveDef.fullPath = "/std/collections/vector/reserve";
+  primec::Definition vectorClearDef;
+  vectorClearDef.fullPath = "/vector/clear";
+  primec::Definition stdClearDef;
+  stdClearDef.fullPath = "/std/collections/vector/clear";
+  primec::Definition vectorRemoveAtDef;
+  vectorRemoveAtDef.fullPath = "/vector/remove_at";
+  primec::Definition stdRemoveAtDef;
+  stdRemoveAtDef.fullPath = "/std/collections/vector/remove_at";
+  primec::Definition vectorRemoveSwapDef;
+  vectorRemoveSwapDef.fullPath = "/vector/remove_swap";
+  primec::Definition stdRemoveSwapDef;
+  stdRemoveSwapDef.fullPath = "/std/collections/vector/remove_swap";
   primec::Definition mapCountDef;
   mapCountDef.fullPath = "/map/count";
   primec::Definition stdMapCountDef;
@@ -46,6 +70,18 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
       {"/std/collections/vector/at", &stdAtDef},
       {"/vector/at_unsafe", &vectorAtUnsafeDef},
       {"/std/collections/vector/at_unsafe", &stdAtUnsafeDef},
+      {"/vector/push", &vectorPushDef},
+      {"/std/collections/vector/push", &stdPushDef},
+      {"/vector/pop", &vectorPopDef},
+      {"/std/collections/vector/pop", &stdPopDef},
+      {"/vector/reserve", &vectorReserveDef},
+      {"/std/collections/vector/reserve", &stdReserveDef},
+      {"/vector/clear", &vectorClearDef},
+      {"/std/collections/vector/clear", &stdClearDef},
+      {"/vector/remove_at", &vectorRemoveAtDef},
+      {"/std/collections/vector/remove_at", &stdRemoveAtDef},
+      {"/vector/remove_swap", &vectorRemoveSwapDef},
+      {"/std/collections/vector/remove_swap", &stdRemoveSwapDef},
       {"/map/count", &mapCountDef},
       {"/std/collections/map/count", &stdMapCountDef},
       {"/map/at", &mapAtDef},
@@ -94,6 +130,30 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "at_unsafe", "std/collections/vector", "", defMap, error) == &stdAtUnsafeDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "push", "vector", "", defMap, error) == &stdPushDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "pop", "vector", "", defMap, error) == &stdPopDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "reserve", "vector", "", defMap, error) == &stdReserveDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "clear", "vector", "", defMap, error) == &stdClearDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "remove_at", "vector", "", defMap, error) == &stdRemoveAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "remove_swap", "vector", "", defMap, error) == &stdRemoveSwapDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
