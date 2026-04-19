@@ -1111,11 +1111,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramTryFactView(*semanticProgram)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("index.tryFactsByOperandPathAndSource.reserve(tryFacts.size())") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.tryFactsByOperandPathAndSource.find(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByExpr.reserve(tryFacts.size())") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByOperandPathAndSource.reserve(tryFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("const auto tryFacts = semanticProgramTryFactView(*adapter.semanticProgram);") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn)") !=
         std::string::npos);

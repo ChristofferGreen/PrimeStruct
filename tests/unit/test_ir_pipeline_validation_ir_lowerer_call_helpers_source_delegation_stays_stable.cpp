@@ -1664,7 +1664,7 @@ TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches
   CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter resolves try facts by operand path and source fallback") {
+TEST_CASE("ir lowerer semantic-product adapter indexes try facts by operand path and source") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
   operandExpr.name = "lookup";
@@ -1687,6 +1687,8 @@ TEST_CASE("ir lowerer semantic-product adapter resolves try facts by operand pat
       .semanticNodeId = 9101,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
+  const primec::SymbolId operandResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       .scopePath = "/main",
       .operandBindingTypeText = "Result<i32, FileError>",
@@ -1701,17 +1703,23 @@ TEST_CASE("ir lowerer semantic-product adapter resolves try facts by operand pat
       .sourceLine = 33,
       .sourceColumn = 9,
       .semanticNodeId = 0,
-      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .operandResolvedPathId = operandResolvedPathId,
   });
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const uint64_t tryKey =
+      (static_cast<uint64_t>(operandResolvedPathId) << 32) ^
+      (static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceLine)) * 1315423911ULL) ^
+      static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceColumn));
+  CHECK(adapter.semanticIndex.tryFactsByExpr.empty());
+  CHECK(adapter.semanticIndex.tryFactsByOperandPathAndSource.count(tryKey) == 1);
   const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(adapter, tryExpr);
   REQUIRE(tryFact != nullptr);
   CHECK(tryFact->operandResolvedPathId != primec::InvalidSymbolId);
   CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *tryFact) == "/lookup");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter prefers try semantic-id matches over operand-path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter prefers try semantic-id matches over operand-path index") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
   operandExpr.name = "lookup";

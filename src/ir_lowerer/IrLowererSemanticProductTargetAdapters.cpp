@@ -244,10 +244,21 @@ struct SemanticProductIndexBuilder {
   void buildTryIndex(SemanticProductIndex &index) const {
     const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
     index.tryFactsByExpr.reserve(tryFacts.size());
+    index.tryFactsByOperandPathAndSource.reserve(tryFacts.size());
     for (const auto *entry : tryFacts) {
       if (entry->semanticNodeId != 0) {
         index.tryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
+      if (entry->operandResolvedPathId == InvalidSymbolId ||
+          entry->sourceLine <= 0 ||
+          entry->sourceColumn <= 0) {
+        continue;
+      }
+      index.tryFactsByOperandPathAndSource.insert_or_assign(
+          makeTryFactOperandPathSourceKey(entry->operandResolvedPathId,
+                                          entry->sourceLine,
+                                          entry->sourceColumn),
+          entry);
     }
   }
 
@@ -559,14 +570,6 @@ const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTa
           makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));
       it != adapter.semanticIndex.tryFactsByOperandPathAndSource.end()) {
     return it->second;
-  }
-  const auto tryFacts = semanticProgramTryFactView(*adapter.semanticProgram);
-  for (const auto *entry : tryFacts) {
-    if (entry->operandResolvedPathId == *operandPathId &&
-        entry->sourceLine == expr.sourceLine &&
-        entry->sourceColumn == expr.sourceColumn) {
-      return entry;
-    }
   }
   return nullptr;
 }
