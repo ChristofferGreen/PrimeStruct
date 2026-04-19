@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1157
+- TODO-1158
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1157
+- TODO-1158
 
 ### Priority Lanes (Current)
 
-- VM canonical vector unsafe method-access count-shadow skip debt: TODO-1157
+- VM slash-method vector access string-literal fallback skip debt: TODO-1158
 
 ### Execution Queue (Recommended)
 
-1. TODO-1157
+1. TODO-1158
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM canonical vector access skipped-test debt | TODO-1157 |
+| VM canonical vector access skipped-test debt | TODO-1158 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1157 |
+| VM compile-run skipped-test debt | TODO-1158 |
 
 ### Task Blocks
 
-- [ ] TODO-1157: Audit VM canonical vector unsafe method-access count-shadow skip debt
+- [ ] TODO-1158: Audit VM slash-method vector access string-literal fallback skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM primitive-diagnostic coverage for canonical vector unsafe method-access count shadow, and lock the current VM contract for `values.at_unsafe(0i32).count()`.
+  - scope: Re-enable or delete the skipped VM slash-method vector access string-literal fallback coverage, and lock the current VM contract for `values./vector/at(0i32).count()` plus `values./std/collections/vector/at_unsafe(0i32).count()`.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM canonical vector unsafe method-access count-shadow case in stale form.
-    - The VM test locks the actual current contract for the unsafe method-access count-shadow surface, whether that remains the current successful `91` exit path or another stable VM-side outcome.
-  - stop_rule: Stop after the VM canonical vector unsafe method-access count-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_vm_collections_map_wrapper_shadows.cpp` no longer carries the skipped VM slash-method vector access string-literal fallback case in stale form.
+    - The VM test locks the actual current contract for the slash-method fallback surface, whether that remains the current `10` exit path or another stable VM-side outcome.
+  - stop_rule: Stop after the VM slash-method vector access string-literal fallback surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

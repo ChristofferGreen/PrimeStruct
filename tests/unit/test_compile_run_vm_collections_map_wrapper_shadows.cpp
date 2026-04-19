@@ -219,7 +219,7 @@ main() {
   CHECK(runCommand(runCmd) == 91);
 }
 
-TEST_CASE("vm keeps primitive diagnostics on canonical vector unsafe method access count shadow" * doctest::skip(true)) {
+TEST_CASE("vm keeps primitive diagnostics on canonical vector unsafe method access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
