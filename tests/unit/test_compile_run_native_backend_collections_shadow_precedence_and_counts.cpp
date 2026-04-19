@@ -106,7 +106,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native canonical map sugar before compatibility aliases" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native canonical map sugar before compatibility aliases") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {

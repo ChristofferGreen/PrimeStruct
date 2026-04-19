@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1130
+- TODO-1131
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1130
+- TODO-1131
 
 ### Priority Lanes (Current)
 
-- Native canonical map sugar precedence skip debt: TODO-1130
+- VM canonical map sugar precedence skip debt: TODO-1131
 
 ### Execution Queue (Recommended)
 
-1. TODO-1130
+1. TODO-1131
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native canonical map sugar precedence skipped-test debt | TODO-1130 |
+| VM canonical map sugar precedence skipped-test debt | TODO-1131 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1130 |
+| VM compile-run skipped-test debt | TODO-1131 |
 
 ### Task Blocks
 
-- [ ] TODO-1130: Audit native canonical map sugar precedence skip debt
+- [ ] TODO-1131: Audit VM canonical map sugar precedence skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native canonical map sugar precedence coverage, and lock the current native backend contract for canonical `/std/collections/map/*` helpers versus compatibility `/map/*` aliases.
+  - scope: Re-enable or delete the skipped VM canonical map sugar precedence coverage, and lock the current VM contract for canonical `/std/collections/map/*` helpers versus compatibility `/map/*` aliases.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp` no longer carries the skipped native canonical map sugar precedence case in stale form.
-    - The native test locks the actual current precedence contract for `count`, `at`, and `at_unsafe`, whether that stays as the current runtime result or a stable diagnostic.
-  - stop_rule: Stop after the native canonical map sugar precedence surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM canonical map sugar precedence case in stale form.
+    - The VM test locks the actual current precedence contract for `count`, `at`, and `at_unsafe`, whether that stays as the current runtime result or a stable diagnostic.
+  - stop_rule: Stop after the VM canonical map sugar precedence surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
