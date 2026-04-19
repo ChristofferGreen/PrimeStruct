@@ -13,6 +13,14 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   vectorCapacityDef.fullPath = "/vector/capacity";
   primec::Definition stdCapacityDef;
   stdCapacityDef.fullPath = "/std/collections/vector/capacity";
+  primec::Definition vectorAtDef;
+  vectorAtDef.fullPath = "/vector/at";
+  primec::Definition stdAtDef;
+  stdAtDef.fullPath = "/std/collections/vector/at";
+  primec::Definition vectorAtUnsafeDef;
+  vectorAtUnsafeDef.fullPath = "/vector/at_unsafe";
+  primec::Definition stdAtUnsafeDef;
+  stdAtUnsafeDef.fullPath = "/std/collections/vector/at_unsafe";
   primec::Definition mapCountDef;
   mapCountDef.fullPath = "/map/count";
   primec::Definition stdMapCountDef;
@@ -34,6 +42,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
       {"/std/collections/vector/count", &stdCountDef},
       {"/vector/capacity", &vectorCapacityDef},
       {"/std/collections/vector/capacity", &stdCapacityDef},
+      {"/vector/at", &vectorAtDef},
+      {"/std/collections/vector/at", &stdAtDef},
+      {"/vector/at_unsafe", &vectorAtUnsafeDef},
+      {"/std/collections/vector/at_unsafe", &stdAtUnsafeDef},
       {"/map/count", &mapCountDef},
       {"/std/collections/map/count", &stdMapCountDef},
       {"/map/at", &mapAtDef},
@@ -66,6 +78,22 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "capacity", "std/collections/vector", "", defMap, error) == &stdCapacityDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "vector", "", defMap, error) == &stdAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at", "std/collections/vector", "", defMap, error) == &stdAtDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at_unsafe", "vector", "", defMap, error) == &stdAtUnsafeDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "at_unsafe", "std/collections/vector", "", defMap, error) == &stdAtUnsafeDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(

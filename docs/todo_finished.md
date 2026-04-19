@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-0994: Canonicalize lowerer bare vector access receiver paths. Completed: `IrLowererSetupTypeMethodTargetHelpers.cpp` now prefers `/std/collections/vector/{at,at_unsafe}` over rooted `/vector/*` when bare vector receiver methods probe access helpers, and focused lowerer receiver-target tests now pin both the canonical bare-access resolution and the rejection of explicit rooted slash-method spellings.
 - ✓ TODO-0992: Canonicalize lowerer bare vector count/capacity receiver paths. Completed: `IrLowererSetupTypeMethodTargetHelpers.cpp` now prefers `/std/collections/vector/{count,capacity}` over rooted `/vector/*` when a bare vector receiver method probes those helpers, and focused lowerer receiver-target tests now pin both the canonical bare-method resolution and the rejection of explicit rooted slash-method spellings.
 - ✓ TODO-0990: Canonicalize emitter bare vector count/capacity method paths. Completed: `EmitterBuiltinMethodResolutionHelpers.cpp` now resolves bare vector `.count()`/`.capacity()` calls to `/std/collections/vector/{count,capacity}` when canonical helper metadata exists instead of reintroducing rooted `/vector/*` paths, and `test_compile_run_emitters_map_access_and_collection_rewrites.cpp` now pins both the canonical bare-method result and the explicit stdlib helper-path behavior.
 

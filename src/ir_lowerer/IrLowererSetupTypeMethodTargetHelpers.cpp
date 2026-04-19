@@ -111,7 +111,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   auto shouldPreferCanonicalVectorPath = [&](const std::string &candidate) {
     return isVectorReceiverTarget(candidate) &&
            (isExplicitCanonicalVectorMethod || normalizedMethodName == "count" ||
-            normalizedMethodName == "capacity");
+            normalizedMethodName == "capacity" || normalizedMethodName == "at" ||
+            normalizedMethodName == "at_unsafe");
   };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
     if (!isRawBuiltinSoaVectorReceiverTarget(candidate)) {

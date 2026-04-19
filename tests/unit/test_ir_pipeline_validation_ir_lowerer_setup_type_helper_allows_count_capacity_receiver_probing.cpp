@@ -187,6 +187,66 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare vector count and 
   expectResolvedMethod("capacity", &stdCapacityDef);
 }
 
+TEST_CASE("ir lowerer setup type helper prefers canonical bare vector access methods") {
+  primec::Definition vectorAtDef;
+  vectorAtDef.fullPath = "/vector/at";
+  primec::Definition stdAtDef;
+  stdAtDef.fullPath = "/std/collections/vector/at";
+  primec::Definition vectorAtUnsafeDef;
+  vectorAtUnsafeDef.fullPath = "/vector/at_unsafe";
+  primec::Definition stdAtUnsafeDef;
+  stdAtUnsafeDef.fullPath = "/std/collections/vector/at_unsafe";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {vectorAtDef.fullPath, &vectorAtDef},
+      {stdAtDef.fullPath, &stdAtDef},
+      {vectorAtUnsafeDef.fullPath, &vectorAtUnsafeDef},
+      {stdAtUnsafeDef.fullPath, &stdAtUnsafeDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo itemsLocal;
+  itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("items", itemsLocal);
+
+  auto expectResolvedMethod = [&](const char *methodName, const primec::Definition *expectedDef) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverExpr, indexExpr};
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &) { return std::string(); },
+        defMap,
+        error);
+    CHECK(resolved == expectedDef);
+    CHECK(error.empty());
+  };
+
+  expectResolvedMethod("at", &stdAtDef);
+  expectResolvedMethod("at_unsafe", &stdAtUnsafeDef);
+}
+
 TEST_CASE("ir lowerer setup type helper rejects explicit rooted vector slash methods while honoring /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
