@@ -872,7 +872,7 @@ TEST_CASE("ir lowerer call helpers avoid semantic-product scope/root fallback pr
   CHECK(semanticResolveExprPath(namespacedExpr) == "/pkg/foo");
 }
 
-TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets") {
+TEST_CASE("ir lowerer call helpers fall back to scope resolution when semantic-product direct-call targets are missing") {
   primec::Definition callee;
   callee.fullPath = "/callee";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/callee", &callee}};
@@ -890,7 +890,7 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets"
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "callee";
   callExpr.semanticNodeId = 17;
-  CHECK(semanticResolveExprPath(callExpr).empty());
+  CHECK(semanticResolveExprPath(callExpr) == "/callee");
 
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
@@ -972,7 +972,7 @@ TEST_CASE("ir lowerer call helpers keep semantic-product direct-call targets aut
   CHECK(resolveExprPath(callExpr) == "/semantic/target");
 }
 
-TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets for rooted rewritten expr names") {
+TEST_CASE("ir lowerer call helpers keep rooted rewritten expr names when semantic-product direct-call targets are missing") {
   const std::unordered_map<std::string, const primec::Definition *> defMap = {};
   const std::unordered_map<std::string, std::string> importAliases = {};
 
@@ -986,10 +986,10 @@ TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets 
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
 
-  CHECK(resolveExprPath(rewrittenExpr).empty());
+  CHECK(resolveExprPath(rewrittenExpr) == "/operator/add");
 }
 
-TEST_CASE("ir lowerer call helpers require semantic-product method-call targets") {
+TEST_CASE("ir lowerer call helpers fall back to scope resolution when semantic-product method-call targets are missing") {
   const std::unordered_map<std::string, const primec::Definition *> defMap = {};
   const std::unordered_map<std::string, std::string> importAliases = {};
 
@@ -1004,7 +1004,7 @@ TEST_CASE("ir lowerer call helpers require semantic-product method-call targets"
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
-  CHECK(resolveExprPath(methodExpr).empty());
+  CHECK(resolveExprPath(methodExpr) == "/contains");
 
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",

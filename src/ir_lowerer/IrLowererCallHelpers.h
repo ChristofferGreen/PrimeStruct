@@ -47,9 +47,13 @@ CallResolutionAdapters makeCallResolutionAdapters(
     const SemanticProgram *semanticProgram = nullptr);
 bool validateSemanticProductDirectCallCoverage(const Program &program,
                                                const SemanticProgram *semanticProgram,
+                                               const std::unordered_map<std::string, const Definition *> &defMap,
+                                               const std::unordered_map<std::string, std::string> &importAliases,
                                                std::string &error);
 bool validateSemanticProductBridgePathCoverage(const Program &program,
                                                const SemanticProgram *semanticProgram,
+                                               const std::unordered_map<std::string, const Definition *> &defMap,
+                                               const std::unordered_map<std::string, std::string> &importAliases,
                                                std::string &error);
 bool validateSemanticProductMethodCallCoverage(const Program &program,
                                                const SemanticProgram *semanticProgram,

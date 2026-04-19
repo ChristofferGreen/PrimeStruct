@@ -439,13 +439,17 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   collectedCallableSummaries_.reserve(
       program_.definitions.size() + program_.executions.size());
 
-  forEachResolvedNonMethodCallSnapshot(
-      program_,
-      [this](const Expr &expr) { return resolveCalleePath(expr); },
-      [&](const std::string &scopePath, const Expr &expr, std::string resolvedPath) {
-        if (resolvedPath.empty()) {
-          return;
-        }
+  std::function<void(const std::string &, const Expr &)> collectDirectCallExpr;
+  auto collectDirectCallExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      collectDirectCallExpr(scopePath, expr);
+    }
+  };
+
+  collectDirectCallExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
+      std::string resolvedPath = resolveCalleePath(expr);
+      if (!resolvedPath.empty()) {
         if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
             bridgeChoice.has_value()) {
           collectedBridgePathChoices_.push_back(CollectedBridgePathChoiceEntry{
@@ -466,7 +470,27 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
             expr.sourceColumn,
             expr.semanticNodeId,
         });
-      });
+      }
+    }
+    collectDirectCallExprs(scopePath, expr.args);
+    collectDirectCallExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program_.definitions) {
+    DefinitionContextScope definitionScope(*this, def);
+    ValidationStateScope validationStateScope(*this, buildDefinitionValidationState(def));
+    collectDirectCallExprs(def.fullPath, def.parameters);
+    collectDirectCallExprs(def.fullPath, def.statements);
+    if (def.returnExpr.has_value()) {
+      collectDirectCallExpr(def.fullPath, *def.returnExpr);
+    }
+  }
+
+  for (const auto &exec : program_.executions) {
+    ExecutionContextScope executionScope(*this, exec);
+    collectDirectCallExprs(exec.fullPath, exec.arguments);
+    collectDirectCallExprs(exec.fullPath, exec.bodyArguments);
+  }
 
   auto withPreservedError = [&](const std::function<bool()> &fn) {
     const std::string previousError = error_;

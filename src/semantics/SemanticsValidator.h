@@ -275,6 +275,7 @@ public:
   std::vector<CollectedMethodCallTargetEntry> takeCollectedMethodCallTargetsForSemanticProduct();
   std::vector<CollectedBridgePathChoiceEntry> takeCollectedBridgePathChoicesForSemanticProduct();
   std::vector<CollectedCallableSummaryEntry> takeCollectedCallableSummariesForSemanticProduct();
+  void invalidatePilotRoutingSemanticCollectors();
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
   std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadataSnapshotForSemanticProduct();
   std::vector<BindingFactSnapshotEntry> bindingFactSnapshotForSemanticProduct();

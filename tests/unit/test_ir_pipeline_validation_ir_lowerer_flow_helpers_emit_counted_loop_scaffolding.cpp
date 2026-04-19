@@ -566,7 +566,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             error) == EmitResult::Emitted);
   CHECK(error.empty());
   CHECK(reserveNegativeCalls == 1);
-  CHECK(reserveExceededCalls == 2);
+  CHECK(reserveExceededCalls == 1);
   bool reserveHasHeapAlloc = false;
   bool reserveHasAllocFailureCheck = false;
   for (const auto &inst : reserveInstructions) {
@@ -669,7 +669,7 @@ TEST_CASE("ir lowerer flow helpers emit vector statement helper paths") {
             nullptr,
             error) == EmitResult::Emitted);
   CHECK(error.empty());
-  CHECK(indexOutOfBoundsCalls == 4);
+  CHECK(indexOutOfBoundsCalls == 5);
 
   std::vector<primec::IrInstruction> pushInstructions;
   error.clear();

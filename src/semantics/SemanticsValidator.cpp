@@ -247,6 +247,15 @@ void SemanticsValidator::releaseTransientSnapshotCaches() {
   localBindingMemoRevisionByIdentity_.rehash(0);
 }
 
+void SemanticsValidator::invalidatePilotRoutingSemanticCollectors() {
+  pilotRoutingSemanticCollectorsValid_ = false;
+  std::vector<CollectedDirectCallTargetEntry>().swap(collectedDirectCallTargets_);
+  std::vector<CollectedMethodCallTargetEntry>().swap(collectedMethodCallTargets_);
+  std::vector<CollectedBridgePathChoiceEntry>().swap(collectedBridgePathChoices_);
+  std::vector<CollectedCallableSummaryEntry>().swap(collectedCallableSummaries_);
+  callTargetResolutionScratch_.resetArena();
+}
+
 bool SemanticsValidator::run() {
   const bool benchmarkDumpValidatorState =
       std::getenv("PRIMEC_BENCHMARK_SEMANTIC_VALIDATOR_STATE") != nullptr;

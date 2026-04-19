@@ -277,7 +277,7 @@ add([i32] left{[value] 1i32}, [i32] right) {
   primec::Program program;
   std::string error;
   CHECK_FALSE(parser.parse(program, error));
-  CHECK(error.find("expected identifier") != std::string::npos);
+  CHECK(error.find("parameter defaults do not accept named arguments") != std::string::npos);
 }
 
 TEST_CASE("field access allows member without parameter list") {

@@ -661,6 +661,37 @@ TEST_CASE("semantic product publishes resolved direct-call targets") {
                resolveDirectCallPath(semanticProgram, entry).rfind("/id__t", 0) == 0;
       });
   REQUIRE(targetEntry != nullptr);
+  CHECK(targetEntry->provenanceHandle != 0);
+  CHECK(targetEntry->sourceLine > 0);
+  CHECK(targetEntry->sourceColumn > 0);
+}
+
+TEST_CASE("semantic product publishes resolved direct-call targets for local binding reads") {
+  const std::string source =
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [i32 mut] value{5i32}\n"
+      "  assign(value, 6i32)\n"
+      "  return(value)\n"
+      "}\n";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *targetEntry = findSemanticEntry(
+      primec::semanticProgramDirectCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" &&
+               entry.callName == "value" &&
+               !resolveDirectCallPath(semanticProgram, entry).empty();
+      });
+  REQUIRE(targetEntry != nullptr);
+  CHECK(targetEntry->provenanceHandle != 0);
   CHECK(targetEntry->sourceLine > 0);
   CHECK(targetEntry->sourceColumn > 0);
 }

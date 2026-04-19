@@ -6171,6 +6171,7 @@ bool Semantics::validate(Program &program,
       return false;
     }
     semantics::assignSemanticNodeIds(program);
+    validator.invalidatePilotRoutingSemanticCollectors();
     maybeRelieveSemanticAllocatorPressure();
     if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
       validationAllocationAfter = captureProcessAllocationSample();

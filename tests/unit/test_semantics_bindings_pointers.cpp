@@ -974,8 +974,8 @@ TEST_CASE("binding initializer accepts labeled struct-literal local bindings") {
   const std::string source = R"(
 [struct]
 Pair {
-  [int] left{0}
-  [int] right{0}
+  [int] left{0i32}
+  [int] right{0i32}
 }
 
 [return<int>]
@@ -998,7 +998,7 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(parseProgramWithError(source, error));
   CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 

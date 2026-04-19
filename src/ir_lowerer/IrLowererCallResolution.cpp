@@ -165,6 +165,28 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
   return false;
 }
 
+bool resolvesToDefinitionFamilyTarget(
+    const std::string &resolvedPath,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  if (resolvedPath.empty()) {
+    return false;
+  }
+  if (resolveDefinitionByPath(defMap, resolvedPath) != nullptr) {
+    return true;
+  }
+  const std::string templatedPrefix = resolvedPath + "<";
+  const std::string specializedPrefix = resolvedPath + "__t";
+  for (const auto &[path, def] : defMap) {
+    (void)def;
+    if (path == resolvedPath ||
+        path.rfind(templatedPrefix, 0) == 0 ||
+        path.rfind(specializedPrefix, 0) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 std::string resolveCallPathWithoutSemanticFallbackProbes(const Expr &expr) {
   if (!expr.name.empty() && expr.name[0] == '/') {
     return expr.name;
@@ -239,9 +261,12 @@ CallResolutionAdapters makeCallResolutionAdapters(
   return adapters;
 }
 
-bool validateSemanticProductDirectCallCoverage(const Program &program,
-                                               const SemanticProgram *semanticProgram,
-                                               std::string &error) {
+bool validateSemanticProductDirectCallCoverage(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::string &error) {
   if (semanticProgram == nullptr) {
     return true;
   }
@@ -279,6 +304,12 @@ bool validateSemanticProductDirectCallCoverage(const Program &program,
       }
       if (findSemanticProductBridgePathChoice(semanticProductTargets, expr).empty() &&
           findSemanticProductDirectCallTarget(semanticProductTargets, expr).empty()) {
+        const std::string resolvedPath = resolveCallPathFromScope(expr, defMap, importAliases);
+        if (!isResolvedBridgeHelperPath(resolvedPath) &&
+            !resolvesToDefinitionFamilyTarget(resolvedPath, defMap)) {
+          return validateExprs(scopePath, expr.args) &&
+                 validateExprs(scopePath, expr.bodyArguments);
+        }
         error = "missing semantic-product direct-call target: " +
                 describeCallSite(scopePath, expr);
         return false;
@@ -306,9 +337,12 @@ bool validateSemanticProductDirectCallCoverage(const Program &program,
   return true;
 }
 
-bool validateSemanticProductBridgePathCoverage(const Program &program,
-                                               const SemanticProgram *semanticProgram,
-                                               std::string &error) {
+bool validateSemanticProductBridgePathCoverage(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    const std::unordered_map<std::string, const Definition *> &defMap,
+    const std::unordered_map<std::string, std::string> &importAliases,
+    std::string &error) {
   if (semanticProgram == nullptr) {
     return true;
   }
@@ -352,6 +386,13 @@ bool validateSemanticProductBridgePathCoverage(const Program &program,
       }
       if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           isResolvedBridgeHelperPath(resolvedPath)) {
+        error = "missing semantic-product bridge-path choice: " +
+                describeCallSite(scopePath, expr);
+        return false;
+      }
+      const std::string fallbackResolvedPath = resolveCallPathFromScope(expr, defMap, importAliases);
+      if (isResolvedBridgeHelperPath(fallbackResolvedPath) &&
+          resolvesToDefinitionFamilyTarget(fallbackResolvedPath, defMap)) {
         error = "missing semantic-product bridge-path choice: " +
                 describeCallSite(scopePath, expr);
         return false;
@@ -497,14 +538,19 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     }
     if (semanticProductTargets.hasSemanticProduct && expr.kind == Expr::Kind::Call) {
       if (expr.isMethodCall) {
-        return findSemanticProductMethodCallTarget(semanticProductTargets, expr);
+        if (const std::string resolvedPath =
+                findSemanticProductMethodCallTarget(semanticProductTargets, expr);
+            !resolvedPath.empty()) {
+          return resolvedPath;
+        }
+        return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
       }
       if (const std::string resolvedPath =
               findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
         return resolvedPath;
       }
-      return std::string{};
+      return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
     }
     if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProductTargets, expr);
         !resolvedPath.empty()) {

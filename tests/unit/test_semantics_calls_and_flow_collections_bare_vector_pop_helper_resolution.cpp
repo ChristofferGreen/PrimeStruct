@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("bare vector pop requires imported stdlib helper before block-arg validation") {
+TEST_CASE("bare vector pop statement body arguments validate without imported stdlib helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -12,8 +12,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare vector pop requires imported stdlib helper before template specialization") {

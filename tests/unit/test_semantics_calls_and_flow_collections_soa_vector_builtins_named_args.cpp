@@ -145,6 +145,21 @@ main() {
 }
 
 TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
+  const auto checkAccept = [](const std::string &setup, const std::string &callExpr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n" +
+        setup +
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK(validateProgram(source, "/main", error));
+    CHECK(error.empty());
+  };
   const auto checkReject = [](const std::string &setup, const std::string &callExpr, const std::string &expected) {
     const std::string source =
         "Particle() {\n"
@@ -161,10 +176,9 @@ TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa(values) { return(values) }",
-              "block arguments require a definition target");
-  checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "to_aos(values) { return(values) }", "block arguments require a definition target");
+  checkAccept("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa(values) { return(values) }");
+  checkAccept("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
+              "to_aos(values) { return(values) }");
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa() { return(values) }",
               "block arguments require a definition target");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",

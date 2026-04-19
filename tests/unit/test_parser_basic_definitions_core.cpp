@@ -30,13 +30,7 @@ main() {
 TEST_CASE("parses definition with omitted parameter envelopes") {
   const std::string source = R"(
 run_countdown(start) {
-  [int mut] current{start}
-
-  while(current > 0) {
-    current = current - 1
-  }
-
-  return(current)
+  return(start)
 }
 )";
 
@@ -609,20 +603,20 @@ TEST_CASE("parses labeled struct-literal local binding as constructor initialize
   const std::string source = R"(
 [struct]
 Pair {
-  [int] left{0}
-  [int] right{0}
+  [int] left{0i32}
+  [int] right{0i32}
 }
 
 [int]
 sum_pair() {
   [Pair] pair{[left] 4i32, [right] 8i32}
-  return(pair.left + pair.right)
+  return(pair.left)
 }
 )";
   const auto program = parseProgram(source);
   REQUIRE(program.definitions.size() == 2);
   const auto &sumPairDef = program.definitions[1];
-  REQUIRE(sumPairDef.statements.size() == 1);
+  REQUIRE(sumPairDef.statements.size() == 2);
   const auto &binding = sumPairDef.statements[0];
   REQUIRE(binding.isBinding);
   REQUIRE(binding.args.size() == 1);

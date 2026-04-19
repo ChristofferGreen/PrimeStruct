@@ -207,20 +207,20 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
           "lifecycle helpers must return void: " + def.fullPath);
     }
     const std::optional<OnErrorHandler> &onErrorHandler =
-        definitionContext.validationState.context.onError;
+        currentValidationState_.context.onError;
     if (onErrorHandler.has_value() &&
-        (!definitionContext.validationState.context.resultType.has_value() ||
-         !definitionContext.validationState.context.resultType->isResult) &&
+        (!currentValidationState_.context.resultType.has_value() ||
+         !currentValidationState_.context.resultType->isResult) &&
         definitionContext.returnKind != ReturnKind::Int) {
       return failPassesDefinitionsDiagnostic(
           nullptr,
           "on_error requires Result or int return type on " + def.fullPath);
     }
     if (onErrorHandler.has_value() &&
-        definitionContext.validationState.context.resultType.has_value() &&
-        definitionContext.validationState.context.resultType->isResult &&
+        currentValidationState_.context.resultType.has_value() &&
+        currentValidationState_.context.resultType->isResult &&
         !errorTypesMatch(onErrorHandler->errorType,
-                         definitionContext.validationState.context.resultType->errorType,
+                         currentValidationState_.context.resultType->errorType,
                          def.namespacePrefix)) {
       return failPassesDefinitionsDiagnostic(
           nullptr,
@@ -228,8 +228,7 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
     }
     if (onErrorHandler.has_value()) {
       OnErrorScope onErrorScope(*this, std::nullopt);
-      for (const auto &arg :
-           definitionContext.validationState.context.onError->boundArgs) {
+      for (const auto &arg : currentValidationState_.context.onError->boundArgs) {
         if (!validateExpr(defParams, definitionContext.locals, arg)) {
           if (error_.empty()) {
             return failPassesDefinitionsDiagnostic(

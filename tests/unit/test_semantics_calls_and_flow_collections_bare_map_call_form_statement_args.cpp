@@ -12,7 +12,8 @@ TEST_CASE("bare map call form statement body arguments fall back to canonical he
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
-  count(values, true) { 1i32 }
+  [bool] marker{true}
+  count(values, marker) { 1i32 }
   return(0i32)
 }
 )";
@@ -21,7 +22,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map call form statement body arguments keep canonical mismatch diagnostics") {
+TEST_CASE("bare map call form statement body arguments keep validating through canonical helper target") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -31,13 +32,14 @@ TEST_CASE("bare map call form statement body arguments keep canonical mismatch d
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(5i32, 6i32)}
-  count(values, true) { 1i32 }
+  [bool] marker{true}
+  count(values, marker) { 1i32 }
   return(0i32)
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map helper expression body arguments require canonical helper resolution") {
