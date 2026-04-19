@@ -3195,7 +3195,7 @@ TEST_CASE("compiles and runs native helper-wrapped inferred experimental map str
   expectWrappedInferredExperimentalMapStructFieldConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map method parameters" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("native");
 }
 
