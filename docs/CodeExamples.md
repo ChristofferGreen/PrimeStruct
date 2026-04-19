@@ -23,6 +23,46 @@ At top level:
 Bottom-level canonical form still exists and is useful for dumps, debugging,
 and spec work, but it is usually too noisy for style-guide examples.
 
+## Stdlib Style Boundary
+
+This style guide applies only to the stdlib modules that are meant to read like
+user-facing library code. When a directory mixes public wrappers with
+bridge/substrate helpers, use the file-level boundary below instead of assuming
+the whole directory shares one style target.
+
+Style-aligned surface code:
+- `stdlib/std/math/*`
+- `stdlib/std/maybe/*`
+- `stdlib/std/file/*`
+- `stdlib/std/image/*`
+- `stdlib/std/ui/*`
+- `stdlib/std/collections/vector.prime`
+- `stdlib/std/collections/map.prime`
+- `stdlib/std/collections/errors.prime`
+- `stdlib/std/collections/soa_vector.prime`
+- `stdlib/std/collections/soa_vector_conversions.prime`
+- `stdlib/std/gfx/gfx.prime`
+
+These modules should converge on the readable surface forms in this document:
+prefer method-style calls, operator syntax, concise inferred locals, and
+user-facing names whenever the current language surface already supports them.
+
+Intentionally canonical or substrate-oriented code:
+- `stdlib/std/bench_non_math/*`
+- `stdlib/std/collections/collections.prime`
+- `stdlib/std/collections/experimental_*`
+- `stdlib/std/gfx/experimental.prime`
+
+These files may stay helper-heavy or bridge-oriented while they define
+substrate, compatibility, migration, or benchmark behavior. Do not use them as
+the style reference for new public-facing examples.
+
+Mixed-directory rule:
+- `stdlib/std/collections` is intentionally mixed; follow the file-level list
+  above.
+- `stdlib/std/gfx` is intentionally mixed; treat `gfx.prime` as the
+  style-aligned wrapper layer and `experimental.prime` as bridge-oriented code.
+
 ## Code Conventions
 
 - Prefer snake_case for free-standing user-defined functions in examples.

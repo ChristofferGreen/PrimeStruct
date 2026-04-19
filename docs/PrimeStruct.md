@@ -2535,6 +2535,33 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 - `soa_vector<T>` remains a draft extension today, but its intended end-state is the same
   stdlib-owned public surface with only generic SoA substrate left in C++.
 
+### Stdlib Surface-Style Boundary
+This boundary is the scope reference for the stdlib surface-style cleanup lane in
+`docs/todo.md`. It decides which `stdlib/std` paths should read like
+user-facing library code and which ones remain intentionally canonical,
+bridge-oriented, or substrate-heavy while ownership migrations are still in
+flight.
+
+- **Style-aligned surface code:** `stdlib/std/math/*`, `stdlib/std/maybe/*`,
+  `stdlib/std/file/*`, `stdlib/std/image/*`, `stdlib/std/ui/*`,
+  `stdlib/std/collections/vector.prime`,
+  `stdlib/std/collections/map.prime`,
+  `stdlib/std/collections/errors.prime`,
+  `stdlib/std/collections/soa_vector.prime`,
+  `stdlib/std/collections/soa_vector_conversions.prime`, and
+  `stdlib/std/gfx/gfx.prime`.
+- **Canonical, bridge, or substrate code:** `stdlib/std/bench_non_math/*`,
+  `stdlib/std/collections/collections.prime`,
+  `stdlib/std/collections/experimental_*`, and
+  `stdlib/std/gfx/experimental.prime`.
+- **Mixed-directory rule:** `stdlib/std/collections` and `stdlib/std/gfx`
+  remain mixed on purpose, so contributors should follow the file-level mapping
+  above rather than assuming the whole directory has one style target.
+
+Style-aligned modules should follow `docs/CodeExamples.md`. The canonical or
+bridge-oriented files may stay helper-heavy until the relevant migration or
+cleanup TODO explicitly retargets them.
+
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
 - Profiles include: `vm_native`, `glsl`, `cpp`.

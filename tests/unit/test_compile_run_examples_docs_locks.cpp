@@ -21,6 +21,65 @@ TEST_CASE("contributor doctest guardrails stay source locked") {
   CHECK(agents.find("optimize it or add a brief justification") != std::string::npos);
 }
 
+TEST_CASE("stdlib style boundary docs stay source locked") {
+  std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path agentsPath = std::filesystem::path("..") / "AGENTS.md";
+  if (!std::filesystem::exists(codeExamplesPath)) {
+    codeExamplesPath = std::filesystem::current_path() / "docs" / "CodeExamples.md";
+  }
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(agentsPath)) {
+    agentsPath = std::filesystem::current_path() / "AGENTS.md";
+  }
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(agentsPath));
+
+  const std::string codeExamples = readFile(codeExamplesPath.string());
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string agents = readFile(agentsPath.string());
+
+  CHECK(codeExamples.find("## Stdlib Style Boundary") != std::string::npos);
+  CHECK(codeExamples.find("Style-aligned surface code:") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/math/*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/maybe/*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/file/*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/image/*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/ui/*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/vector.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/map.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/errors.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/soa_vector.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/soa_vector_conversions.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/gfx/gfx.prime`") != std::string::npos);
+  CHECK(codeExamples.find("Intentionally canonical or substrate-oriented code:") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/bench_non_math/*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/collections.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/experimental_*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/gfx/experimental.prime`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections` is intentionally mixed") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/gfx` is intentionally mixed") != std::string::npos);
+
+  CHECK(primeStructDoc.find("### Stdlib Surface-Style Boundary") != std::string::npos);
+  CHECK(primeStructDoc.find("This boundary is the scope reference for the stdlib surface-style cleanup lane in") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/collections/vector.prime`") != std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/collections/collections.prime`") != std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/collections/experimental_*`") != std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/gfx/experimental.prime`") != std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/collections` and `stdlib/std/gfx`") != std::string::npos);
+
+  CHECK(agents.find("For stdlib style work, treat `stdlib/std/math`, `maybe`, `file`, `image`,") !=
+        std::string::npos);
+  CHECK(agents.find("`stdlib/std/collections/collections.prime`,") != std::string::npos);
+  CHECK(agents.find("`stdlib/std/collections/experimental_*`, and") != std::string::npos);
+  CHECK(agents.find("`stdlib/std/gfx/experimental.prime` as canonical/bridge code") !=
+        std::string::npos);
+}
+
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";

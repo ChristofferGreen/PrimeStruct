@@ -56,12 +56,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4026
 - TODO-4036
+- TODO-4027
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4027
 - TODO-4028
 - TODO-4029
 - TODO-4030
@@ -71,50 +70,60 @@ Task template:
 - TODO-4034
 - TODO-4035
 - TODO-4037
+- TODO-4038
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4026 through TODO-4035
+- Stdlib surface-style alignment: TODO-4027 through TODO-4035
 - Stdlib bridge consolidation: TODO-4036 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
+- Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4026
-2. TODO-4036
-3. TODO-4027
-4. TODO-4028
-5. TODO-4029
-6. TODO-4030
-7. TODO-4031
-8. TODO-4032
-9. TODO-4033
-10. TODO-4034
-11. TODO-4035
-12. TODO-4037
-13. TODO-4038
-14. TODO-4039
-15. TODO-4040
-16. TODO-4041
-17. TODO-4042
-18. TODO-4051
-19. TODO-4043
-20. TODO-4044
-21. TODO-4045
-22. TODO-4046
-23. TODO-4047
-24. TODO-4048
-25. TODO-4049
-26. TODO-4050
+1. TODO-4036
+2. TODO-4027
+3. TODO-4028
+4. TODO-4029
+5. TODO-4030
+6. TODO-4031
+7. TODO-4032
+8. TODO-4033
+9. TODO-4034
+10. TODO-4035
+11. TODO-4037
+12. TODO-4038
+13. TODO-4039
+14. TODO-4040
+15. TODO-4041
+16. TODO-4042
+17. TODO-4051
+18. TODO-4043
+19. TODO-4044
+20. TODO-4045
+21. TODO-4046
+22. TODO-4047
+23. TODO-4048
+24. TODO-4049
+25. TODO-4050
+26. TODO-4052
+27. TODO-4058
+28. TODO-4053
+29. TODO-4055
+30. TODO-4054
+31. TODO-4056
+32. TODO-4057
+33. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4026, TODO-4027, TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4027, TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4036, TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -130,10 +139,11 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4026, TODO-4027, TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4027, TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | TODO-4039 |
 | Lowerer/source-composition contract coverage | TODO-4040 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | TODO-4041 |
 | VM debug-session argv lifetime coverage | none |
@@ -142,6 +152,102 @@ Task template:
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Task Blocks
+
+- [ ] TODO-4059: Remove completed experimental naming from docs and user-facing guidance
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4054, TODO-4056, TODO-4057, TODO-4058
+  - scope: Remove stale experimental naming from public docs, examples, and user-facing guidance once the corresponding stdlib surfaces have been reclassified or renamed so the documented public contract no longer advertises transitional namespaces that are no longer meant for direct use.
+  - acceptance:
+    - Public docs and guidance no longer present completed collection/gfx/substrate de-experimentalization work as still experimental.
+    - Any remaining intentionally incubating surface, especially SoA if still deferred, is documented explicitly rather than hidden behind blanket wording.
+    - The resulting docs distinguish canonical public surfaces, compatibility shims, and internal substrate namespaces consistently.
+  - stop_rule: Stop once the completed de-experimentalized surfaces are reflected in docs and any intentionally retained incubating surfaces are called out explicitly; split broader unrelated docs cleanup into separate tasks.
+
+- [ ] TODO-4058: Decide and document the SoA maturity track separately from vector/map promotion
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4052
+  - scope: Decide whether `soa_vector` remains an incubating surface with explicit experimental/internal backing or is ready for public promotion, and document the resulting boundary and rename policy separately from the vector/map cutover.
+  - acceptance:
+    - The repo explicitly states whether the SoA surface is still incubating or is on a promotion path independent of vector/map.
+    - The decision identifies which SoA modules remain compatibility/internal-only versus which are public contract if any.
+    - Follow-on rename or cleanup work for SoA is derived from that decision rather than assumed implicitly during collection de-experimentalization.
+  - stop_rule: Stop once the SoA maturity decision and resulting namespace boundary are explicit; split any implementation-heavy promotion work into separate follow-up leaves.
+
+- [ ] TODO-4057: Rename experimental substrate helpers to explicit internal namespaces instead of public-looking names
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4052, TODO-4054, TODO-4058
+  - scope: Reclassify low-level substrate helpers such as buffer-checked/buffer-unchecked and SoA storage modules away from `experimental` naming toward explicit internal/substrate namespaces so they stop reading like candidate public stdlib APIs.
+  - acceptance:
+    - Low-level substrate modules no longer advertise themselves as public-facing experimental stdlib APIs purely by name.
+    - The new naming makes their internal/substrate role explicit and leaves canonical public APIs routing through wrapper surfaces instead.
+    - Any import, bridge, or docs updates needed by the rename stay limited to the targeted substrate helpers and do not fold in broader public API redesign.
+  - stop_rule: Stop once the targeted substrate helper namespaces are clearly internal by name and usage; split any broader storage/runtime redesign into separate tasks.
+
+- [ ] TODO-4056: Retire `/std/gfx/experimental/*` after compatibility-shim parity is proven
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4055, TODO-4040
+  - scope: Remove the public `/std/gfx/experimental/*` namespace once the canonical `/std/gfx/*` surface and bridge-backed lowering/method resolution paths cover the same behavior and any needed compatibility window has been exercised.
+  - acceptance:
+    - Canonical `/std/gfx/*` is the only remaining public gfx namespace for the retired experimental surface area.
+    - Any temporary compatibility shim or import alias used during the transition is removed or narrowed to a clearly documented residual seam.
+    - Gfx resolution/lowering parity coverage confirms that removing the experimental public namespace does not change supported behavior.
+  - stop_rule: Stop once `/std/gfx/experimental/*` is no longer part of the public contract; split any backend-specific residual compatibility need into a separate follow-up item.
+
+- [ ] TODO-4055: Collapse `/std/gfx/experimental/*` into a compatibility shim over canonical `/std/gfx/*`
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4038, TODO-4052
+  - scope: Refactor the gfx surface so `/std/gfx/*` is the only canonical public contract and `/std/gfx/experimental/*` becomes a temporary compatibility shim rather than a parallel first-class namespace.
+  - acceptance:
+    - Canonical `/std/gfx/*` is identified in code and docs as the authoritative public gfx surface.
+    - The experimental gfx namespace, if retained temporarily, forwards through a compatibility layer instead of carrying a parallel independent public contract.
+    - The migration leaves runtime and backend ownership boundaries unchanged while reducing duplicate public gfx namespace authority.
+  - stop_rule: Stop once gfx has one canonical public namespace and any retained experimental path is clearly downgraded to compatibility-only status.
+
+- [ ] TODO-4054: Convert `experimental_vector` and `experimental_map` into internal implementation modules
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4053, TODO-4050
+  - scope: Reclassify the current experimental vector/map implementation namespaces as internal implementation modules or internal names once the canonical vector/map public contract and bridge-backed ownership cutover are complete.
+  - acceptance:
+    - `experimental_vector` and `experimental_map` no longer act as public transition namespaces for ordinary stdlib consumers.
+    - Canonical `vector`/`map` continue to work through the same implementation behavior without requiring users or compiler paths to target the experimental namespaces directly.
+    - Any rename or visibility change leaves internal implementation seams explicit instead of silently promoting them as new public API.
+  - stop_rule: Stop once the experimental vector/map namespaces are no longer public contract; split any deeper implementation refactor beyond that visibility/name boundary into separate tasks.
+
+- [ ] TODO-4053: Promote canonical `vector` and `map` as the sole public collection contracts
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4052, TODO-4050
+  - scope: Make `/std/collections/vector/*` and `/std/collections/map/*` the only public collection contracts for the promoted surface area so users, docs, and compiler-facing authority no longer treat the experimental collection namespaces as peer public APIs.
+  - acceptance:
+    - Canonical vector/map namespaces are the only documented public collection contracts for the promoted collection surface.
+    - Experimental collection namespaces are no longer required by user-facing docs, examples, or compiler path authority for ordinary vector/map behavior.
+    - The promotion stays aligned with the completed bridge and ownership-cutover tasks instead of introducing a second compatibility layer.
+  - stop_rule: Stop once canonical vector/map are the sole public collection contracts; split any remaining implementation visibility or rename work into separate follow-up tasks.
+
+- [ ] TODO-4052: Define de-experimentalization policy and classify current stdlib experimental modules
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib De-Experimentalization
+  - depends_on: TODO-4026, TODO-4036
+  - scope: Define the repo-wide stdlib policy that distinguishes canonical public surfaces, compatibility shims, and internal substrate modules, then classify the current `experimental` stdlib modules against that policy so follow-on renames and removals have an explicit target.
+  - acceptance:
+    - The de-experimentalization policy explicitly separates public canonical API, temporary compatibility namespace, and internal substrate/helper namespace roles.
+    - Current `stdlib/std` experimental modules are classified against that policy with enough precision to drive follow-on collection, gfx, SoA, and substrate cleanup tasks.
+    - `docs/todo.md` and any touched design docs reflect that classification instead of relying on blanket “experimental” wording.
+  - stop_rule: Stop once the policy and module classification are explicit enough to guide implementation; split any concrete rename/removal work into dedicated follow-up leaves.
 
 - [ ] TODO-4051: Add vector/map bridge parity coverage for imports, rewrites, and lowering
   - owner: ai
@@ -434,21 +540,10 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026
-  - scope: Sweep the public-facing stdlib modules and convert their high-level logic to the supported surface-form operators and control-flow syntax described in `docs/CodeExamples.md`, without dragging substrate internals or unsupported language forms into the same change.
+  - scope: Sweep the style-aligned public stdlib modules and convert their high-level logic to the supported surface-form operators and control-flow syntax described in `docs/CodeExamples.md`, without dragging substrate internals or unsupported language forms into the same change.
   - acceptance:
     - Public/high-level stdlib modules read like the documented language examples for operators, branching, and loop/control-flow spelling where the surface syntax is already supported.
     - Intentional canonical or substrate-only exceptions are limited to modules classified outside the public style-aligned surface.
     - The sweep leaves behavior unchanged and records any unsupported-syntax gaps as explicit follow-up work rather than silently keeping helper-heavy spellings.
   - stop_rule: Stop once the public/high-level stdlib surface follows the documented control-flow and operator style and any remaining unsupported cases are explicitly carved out.
-
-- [ ] TODO-4026: Define and document which stdlib directories are style-aligned surface code versus intentionally canonical substrate code
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - scope: Establish and document the boundary between stdlib directories that should follow `docs/CodeExamples.md` surface-style conventions and directories that intentionally remain canonical/substrate-oriented so future cleanup work has an explicit target and stop line.
-  - acceptance:
-    - Repo docs clearly identify which `stdlib/std` directories are expected to read like user-facing surface code and which remain intentionally canonical or substrate-heavy.
-    - The documented boundary is reflected in `docs/todo.md` task scoping so follow-on style cleanup items target the intended modules only.
-    - Any ambiguous directories or modules are called out explicitly instead of being left to implicit judgment during later cleanup.
-  - stop_rule: Stop once the stdlib surface-versus-substrate boundary is documented well enough that follow-on cleanup can proceed without re-litigating scope in each item.
+  - notes: Targets only the style-aligned modules documented in `docs/CodeExamples.md` and `docs/PrimeStruct.md`; exclude `stdlib/std/bench_non_math/*`, `stdlib/std/collections/collections.prime`, `stdlib/std/collections/experimental_*`, and `stdlib/std/gfx/experimental.prime` unless a later TODO explicitly retargets them.
