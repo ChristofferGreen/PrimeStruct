@@ -127,7 +127,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
   auto shouldPreferCanonicalSoaPath = [&](const std::string &candidate) {
     return !isExplicitSoaAliasMethod && isRawBuiltinSoaVectorReceiverTarget(candidate) &&
            (isExplicitCanonicalSoaMethod || normalizedMethodName == "get" ||
-            normalizedMethodName == "ref");
+            normalizedMethodName == "ref" || normalizedMethodName == "push" ||
+            normalizedMethodName == "reserve");
   };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
     if (!isRawBuiltinSoaVectorReceiverTarget(candidate)) {
@@ -179,7 +180,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     }
     if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
       const std::string suffix = path.substr(std::string("/std/collections/soa_vector/").size());
-      if (suffix != "get" && suffix != "ref") {
+      if (suffix != "get" && suffix != "ref" && suffix != "push" &&
+          suffix != "reserve") {
         const std::string samePathAlias = "/soa_vector/" + suffix;
         defIt = defMap.find(samePathAlias);
         if (defIt != defMap.end()) {
