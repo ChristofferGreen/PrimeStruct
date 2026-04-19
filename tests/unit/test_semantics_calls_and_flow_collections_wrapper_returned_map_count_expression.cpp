@@ -288,7 +288,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced access expression follows alias precedence" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced access expression follows alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -308,10 +308,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("return type mismatch") != std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced access expression reports alias return mismatch" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced access expression reports alias return mismatch") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -398,7 +399,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition for non-builtin arity" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced access expression uses canonical helper definition for non-builtin arity") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/vector/at([vector<i32>] values) {
@@ -412,8 +413,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("vector namespaced capacity auto inference keeps non-vector target diagnostics") {
