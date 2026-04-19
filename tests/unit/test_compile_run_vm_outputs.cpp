@@ -1073,7 +1073,7 @@ main() {
         "30\n");
 }
 
-TEST_CASE("rejects malformed vm png inputs deterministically" * doctest::skip(true)) {
+TEST_CASE("rejects malformed vm png inputs deterministically") {
   const std::string inPath = (testScratchPath("") / "primec_vm_image_read_invalid.png").string();
   {
     const std::vector<unsigned char> pngBytes = {0x00, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a};

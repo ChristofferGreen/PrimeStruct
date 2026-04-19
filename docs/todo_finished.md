@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1042: Reactivate VM malformed PNG guardrail. Completed: the skipped VM compile-run case for malformed `/std/image/png/read(...)` input bytes is live again and now locks the documented `image_invalid_operation` result plus the deterministic zeroing of width, height, and pixel outputs on failure.
 - ✓ TODO-1041: Reactivate VM dynamic-Huffman backreference PNG read lock. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on an RGBA input encoded with dynamic-Huffman length/distance backreferences is live again and now locks the documented PNG decoder subset plus the flattened RGB output contract for that path.
 - ✓ TODO-1040: Refresh VM dynamic-Huffman literal PNG read lock. Completed: the stale skipped rejection for `/std/image/png/read(...)` on a dynamic-Huffman literal-only RGB input now matches the documented supported decoder subset and actively locks deterministic width/height plus flattened RGB output for that path.
 - ✓ TODO-1039: Reactivate VM fixed-Huffman PNG read lock. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on an RGBA input encoded with fixed-Huffman deflate backreferences is live again and now locks the documented PNG decoder subset plus the flattened RGB output contract for that fixed-Huffman path.
