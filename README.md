@@ -62,9 +62,9 @@ sumValues() {
 
 Current note: the verified vector example shape today uses
 `import /std/collections/*` with concise `[vector<T>] values{...}` bindings for
-bare helper names and method sugar. Exact `import /std/collections/vector` is
-also supported for bare `vector(...)` construction plus canonical
-`/std/collections/vector/*` helpers.
+bare helper names and method sugar. Do not use exact
+`import /std/collections/vector` in top-level examples yet; the current release
+toolchain still rejects that path.
 
 ## Quick Start
 
@@ -108,7 +108,7 @@ For more runnable samples, start in:
 
 - `docs/PrimeStruct.md` for the main language and compiler design document
 - `docs/PrimeStruct_SyntaxSpec.md` for syntax and entry-point rules
-- `docs/CodeQuality.md` for readable PrimeStruct example style
+- `docs/CodeExamples.md` for readable PrimeStruct example style
 - `docs/Coding_Guidelines.md` for broader code and API guidance
 - `examples/` for runnable samples by language level
 - `AGENTS.md` for contributor workflow and repo rules

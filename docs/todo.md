@@ -145,12 +145,12 @@ Wave C:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Frontend/docs correctness
-  - scope: synchronize the three current frontend/docs example gaps with the actual supported surface by making the exact vector import example, omitted-parameter helper example, and labeled struct-literal local binding example compile again where intended, or documenting the narrower supported surface in `docs/CodeQuality.md` when those concise forms remain unsupported.
+  - scope: synchronize the three current frontend/docs example gaps with the actual supported surface by making the exact vector import example, omitted-parameter helper example, and labeled struct-literal local binding example compile again where intended, or documenting the narrower supported surface in `docs/CodeExamples.md` when those concise forms remain unsupported.
   - acceptance:
     - the exact-import vector example either compiles with `import /std/collections/vector` on the intended surface or is explicitly documented and tested as unsupported
     - the omitted-parameter helper example either compiles with the intended concise `runCountdown(start)` surface or is explicitly documented and tested as unsupported
     - the labeled struct-literal local binding example either compiles with `[Pair] pair{[left] 4, [right] 8}` on the intended surface or is explicitly documented and tested as unsupported
-    - `docs/CodeQuality.md` and any related syntax guidance are updated in the same change so the published examples match the supported frontend surface
+    - `docs/CodeExamples.md` and any related syntax guidance are updated in the same change so the published examples match the supported frontend surface
   - stop_rule: stop after those three documented examples are synchronized with the current toolchain and focused coverage; do not broaden into unrelated syntax cleanup in the same change
   - notes: current known failures are `unknown import path` for `import /std/collections/vector`, omitted helper parameter-type rejection in the concise countdown example, and `PSC1003 expected identifier` at the first labeled field inside `[Pair] pair{[left] 4, [right] 8}`
 
