@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1147
+- TODO-1148
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1147
+- TODO-1148
 
 ### Priority Lanes (Current)
 
-- Native direct wrapper-returned canonical map access string receiver typing skip debt: TODO-1147
+- Native slash-method vector access string count fallback skip debt: TODO-1148
 
 ### Execution Queue (Recommended)
 
-1. TODO-1147
+1. TODO-1148
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native direct wrapper-returned canonical map access skipped-test debt | TODO-1147 |
+| Native slash-method vector access skipped-test debt | TODO-1148 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1147 |
+| Native compile-run skipped-test debt | TODO-1148 |
 
 ### Task Blocks
 
-- [ ] TODO-1147: Audit native direct wrapper-returned canonical map access string receiver typing skip debt
+- [ ] TODO-1148: Audit native slash-method vector access string count fallback skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native direct wrapper-returned canonical map access string-receiver typing coverage, and lock the current native contract for `count(/std/collections/map/at(wrapMap(), 1i32))`.
+  - scope: Re-enable or delete the skipped native slash-method vector access string-count fallback coverage, and lock the current native contract for `values./vector/at(0i32).count()` plus `values./std/collections/vector/at_unsafe(0i32).count()`.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native direct wrapper-returned canonical map access string-receiver typing case in stale form.
-    - The native test locks the actual current contract for `count(/std/collections/map/at(wrapMap(), 1i32))`, whether that remains a successful string-count path or another stable native-side outcome.
-  - stop_rule: Stop after the native direct wrapper-returned canonical map access string-receiver typing surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native slash-method vector access string-count fallback case in stale form.
+    - The native test locks the actual current runtime contract for the slash-method fallback surface, whether that remains the current `182` exit path or another stable native-side outcome.
+  - stop_rule: Stop after the native slash-method vector access string-count fallback surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
