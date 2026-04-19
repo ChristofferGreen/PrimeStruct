@@ -243,54 +243,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         " typeName=" + std::string(typeName) +
         " resolvedType=" + std::string(resolvedType));
   };
-  auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
-    if (helperName == "why") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/why")) {
-        return "/std/file/FileError/why";
-      }
-      if (hasDefinitionFamilyPath("/FileError/why")) {
-        return "/FileError/why";
-      }
-      return "/file_error/why";
-    }
-    if (helperName == "is_eof") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/is_eof")) {
-        return "/std/file/FileError/is_eof";
-      }
-      if (hasDefinitionFamilyPath("/FileError/is_eof")) {
-        return "/FileError/is_eof";
-      }
-      if (hasDefinitionFamilyPath("/std/file/fileErrorIsEof")) {
-        return "/std/file/fileErrorIsEof";
-      }
-      return "";
-    }
-    if (helperName == "eof") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/eof")) {
-        return "/std/file/FileError/eof";
-      }
-      if (hasDefinitionFamilyPath("/FileError/eof")) {
-        return "/FileError/eof";
-      }
-      if (hasDefinitionFamilyPath("/std/file/fileReadEof")) {
-        return "/std/file/fileReadEof";
-      }
-      return "";
-    }
-    if (helperName == "status") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/status")) {
-        return "/std/file/FileError/status";
-      }
-      return "";
-    }
-    if (helperName == "result") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/result")) {
-        return "/std/file/FileError/result";
-      }
-      return "";
-    }
-    return "";
-  };
   if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
        normalizedMethodName == "eof" || normalizedMethodName == "status" ||
@@ -485,20 +437,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
 
   auto definitionPathContains = [&](std::string_view needle) {
     return currentValidationState_.context.definitionPath.find(std::string(needle)) != std::string::npos;
-  };
-  auto preferredFileMethodTarget = [&](std::string_view helperName) {
-    const std::string builtinPath = "/file/" + std::string(helperName);
-    if (helperName != "write" && helperName != "write_line" && helperName != "close") {
-      return builtinPath;
-    }
-    const std::string stdlibPath = "/File/" + std::string(helperName);
-    if (currentValidationState_.context.definitionPath.rfind(stdlibPath, 0) == 0) {
-      return builtinPath;
-    }
-    if (hasDefinitionFamilyPath(stdlibPath)) {
-      return stdlibPath;
-    }
-    return builtinPath;
   };
   auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {
     if (helperName == "count") {
@@ -1926,7 +1864,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setPreferredMapMethodTarget(receiverExpr, normalizedMethodName);
       }
       if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
-        resolvedOut = preferredFileMethodTarget(normalizedMethodName);
+        resolvedOut = preferredFileHelperTarget(normalizedMethodName,
+                                               currentValidationState_.context.definitionPath);
         isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
         return true;
       }
@@ -2402,7 +2341,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
               return setPreferredMapMethodTarget(receiver, normalizedMethodName);
             }
             if (elemBase == "File" && isFileMethodName(normalizedMethodName)) {
-              resolvedOut = preferredFileMethodTarget(normalizedMethodName);
+              resolvedOut = preferredFileHelperTarget(normalizedMethodName,
+                                                     currentValidationState_.context.definitionPath);
               isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
               return true;
             }
@@ -2650,7 +2590,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (typeName == "File" && isFileMethodName(normalizedMethodName)) {
-    resolvedOut = preferredFileMethodTarget(normalizedMethodName);
+    resolvedOut = preferredFileHelperTarget(normalizedMethodName,
+                                           currentValidationState_.context.definitionPath);
     isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
     return true;
   }

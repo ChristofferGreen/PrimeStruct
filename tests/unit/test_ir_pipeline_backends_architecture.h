@@ -85,7 +85,10 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/std/file/File\"") != std::string::npos);
   CHECK(source.find("\"/File\"") != std::string::npos);
   CHECK(source.find("\"write_line\"") != std::string::npos);
+  CHECK(source.find("\"/file/write\"") != std::string::npos);
+  CHECK(source.find("\"/file/write_line\"") != std::string::npos);
   CHECK(source.find("\"/file/write_bytes\"") != std::string::npos);
+  CHECK(source.find("\"/file/close\"") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::FileErrorHelpers") != std::string::npos);
   CHECK(source.find("\"file.file_error\"") != std::string::npos);

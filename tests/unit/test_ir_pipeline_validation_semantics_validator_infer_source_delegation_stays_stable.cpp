@@ -1638,6 +1638,96 @@ TEST_CASE("semantics validator build import publication stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path helperHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorPrivateExprInference.h";
+  const std::filesystem::path helperSourcePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolutionHelpers.cpp";
+  const std::filesystem::path buildCallResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildCallResolution.cpp";
+  const std::filesystem::path resultHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorResultHelpers.cpp";
+  const std::filesystem::path exprMethodTargetPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
+  REQUIRE(std::filesystem::exists(helperHeaderPath));
+  REQUIRE(std::filesystem::exists(helperSourcePath));
+  REQUIRE(std::filesystem::exists(buildCallResolutionPath));
+  REQUIRE(std::filesystem::exists(resultHelpersPath));
+  REQUIRE(std::filesystem::exists(exprMethodTargetPath));
+
+  const std::string helperHeaderSource = readText(helperHeaderPath);
+  const std::string helperSource = readText(helperSourcePath);
+  const std::string buildCallResolutionSource = readText(buildCallResolutionPath);
+  const std::string resultHelpersSource = readText(resultHelpersPath);
+  const std::string exprMethodTargetSource = readText(exprMethodTargetPath);
+
+  CHECK(helperHeaderSource.find("std::string preferredFileHelperTarget(") !=
+        std::string::npos);
+  CHECK(helperSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
+        std::string::npos);
+  CHECK(helperSource.find("StdlibSurfaceId::FileHelpers") != std::string::npos);
+  CHECK(helperSource.find("StdlibSurfaceId::FileErrorHelpers") !=
+        std::string::npos);
+  CHECK(helperSource.find("StdlibSurfaceId::CollectionsContainerErrorHelpers") !=
+        std::string::npos);
+  CHECK(helperSource.find("StdlibSurfaceId::GfxErrorHelpers") !=
+        std::string::npos);
+  CHECK(helperSource.find("appendSurfaceBasePaths(") != std::string::npos);
+  CHECK(helperSource.find("appendSurfaceExactHelperFallbacks(") !=
+        std::string::npos);
+
+  CHECK(buildCallResolutionSource.find("auto preferredFileErrorHelperTarget =") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "auto preferredContainerErrorHelperTarget =") == std::string::npos);
+  CHECK(buildCallResolutionSource.find("auto preferredGfxErrorHelperTarget =") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "this->preferredFileErrorHelperTarget(expr.name)") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "this->preferredContainerErrorHelperTarget(expr.name)") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "this->preferredGfxErrorHelperTarget(expr.name, normalizedPrefix)") !=
+        std::string::npos);
+
+  CHECK(resultHelpersSource.find("auto preferredFileErrorHelperTarget =") ==
+        std::string::npos);
+  CHECK(resultHelpersSource.find(
+            "auto preferredContainerErrorHelperTarget =") == std::string::npos);
+  CHECK(resultHelpersSource.find("auto preferredGfxErrorHelperTarget =") ==
+        std::string::npos);
+  CHECK(resultHelpersSource.find("return this->preferredFileErrorHelperTarget(") !=
+        std::string::npos);
+  CHECK(resultHelpersSource.find(
+            "return this->preferredContainerErrorHelperTarget(") !=
+        std::string::npos);
+  CHECK(resultHelpersSource.find("return this->preferredGfxErrorHelperTarget(") !=
+        std::string::npos);
+
+  CHECK(exprMethodTargetSource.find("auto preferredFileErrorHelperTarget =") ==
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find("auto preferredFileMethodTarget =") ==
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find("preferredFileErrorHelperTarget(normalizedMethodName)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find("preferredFileHelperTarget(normalizedMethodName,") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantics validator build struct-field publication stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

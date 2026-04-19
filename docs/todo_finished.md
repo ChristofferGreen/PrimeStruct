@@ -4412,3 +4412,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once import alias construction for the targeted stdlib surfaces is bridge-backed; split any packaging/root-discovery follow-up out of this item.
   - finished_at: 2026-04-20
   - evidence: Replaced the old vector-only exact-import special case in `src/semantics/SemanticsValidatorBuildImports.cpp` with shared-registry-backed alias target selection for the bridged file, collections, and gfx surfaces, including constructor-priority routing for `/std/collections/map`; added focused exact-import parity coverage in `tests/unit/test_semantics_imports.cpp`, an exact-map compile-run regression in `tests/unit/test_compile_run_imports_operations.cpp`, and a source-lock guard in `tests/unit/test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp`; and updated `docs/todo.md` to remove `TODO-4037`, promote `TODO-4038`, and clear the now-satisfied dependency references to `TODO-4037`.
+
+- [x] TODO-4038: Route file helper and error-surface method resolution through shared bridge queries
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Bridge Consolidation
+  - depends_on: none
+  - scope: Move file helper resolution and file/error-surface method targeting onto shared stdlib bridge queries so those surfaces no longer rely on scattered direct stdlib path matching in semantics.
+  - acceptance:
+    - File helper and error-surface method resolution uses shared bridge metadata instead of local hard-coded stdlib path tables.
+    - Existing file/error helper diagnostics and successful resolution behavior remain covered by parity tests after the migration.
+    - The refactor leaves runtime/backing behavior unchanged and limits itself to centralizing resolution authority.
+  - stop_rule: Stop once file/error-surface method resolution is bridge-driven; split any unrelated API cleanup or runtime behavior work into separate leaves.
+  - finished_at: 2026-04-20
+  - evidence: Replaced the scattered file, `FileError`, `ContainerError`, and `GfxError` helper target tables in the semantics helper layer with shared-registry-backed bridge queries in `src/semantics/SemanticsValidatorInferMethodResolutionHelpers.cpp`, including a new `preferredFileHelperTarget(...)` bridge seam and shared `StdlibSurfaceRegistry` metadata for builtin file helper spellings; removed the duplicate local lambdas from `src/semantics/SemanticsValidatorBuildCallResolution.cpp`, `src/semantics/SemanticsValidatorResultHelpers.cpp`, and `src/semantics/SemanticsValidatorExprMethodTargetResolution.cpp`; added exact-import parity regressions in `tests/unit/test_semantics_result_helpers_file.cpp`, `tests/unit/test_semantics_result_helpers_gfx.cpp`, and `tests/unit/test_semantics_result_helpers_errors.cpp` plus focused source-lock coverage in `tests/unit/test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp` and `tests/unit/test_ir_pipeline_backends_architecture.h`; and updated `docs/todo.md` to remove `TODO-4038` so the stdlib bridge consolidation queue now advances to `TODO-4039`.

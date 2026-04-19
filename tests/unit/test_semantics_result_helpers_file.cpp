@@ -311,6 +311,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("exact stdlib file imports keep file and FileError method helpers") {
+  const std::string source = R"(
+import /std/file/File
+import /std/file/FileError
+
+[effects(file_write), return<void>]
+write_out([File<Write>] file) {
+  [FileError] err{FileError.eof()}
+  [Result<FileError>] lineStatus{file.write_line(7i32)}
+  [Result<FileError>] flushStatus{file.flush()}
+  [Result<FileError>] closeStatus{file.close()}
+  [Result<FileError>] methodStatus{err.status()}
+  [Result<i32, FileError>] methodValue{err.result<i32>()}
+  [string] whyText{err.why()}
+  [bool] eof{err.is_eof()}
+  return()
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib File nine-value helpers cover imported method and slash-call wrappers") {
   const std::string source = R"(
 import /std/file/*

@@ -38,10 +38,13 @@ constexpr auto FileHelperLoweringSpellings = std::to_array<std::string_view>({
     "/std/file/File/open_append",
     "/std/file/File/write",
     "/std/file/File/write_line",
+    "/file/write",
+    "/file/write_line",
     "/file/read_byte",
     "/file/write_byte",
     "/file/write_bytes",
     "/file/flush",
+    "/file/close",
 });
 
 constexpr auto FileErrorHelperMembers = std::to_array<std::string_view>({

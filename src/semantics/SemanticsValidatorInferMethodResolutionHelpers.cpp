@@ -1,8 +1,98 @@
 #include "SemanticsValidator.h"
 
+#include "primec/StdlibSurfaceRegistry.h"
+
+#include <algorithm>
 #include <string_view>
+#include <vector>
 
 namespace primec::semantics {
+namespace {
+
+std::string_view pathLeaf(std::string_view path) {
+  const size_t slash = path.find_last_of('/');
+  return slash == std::string_view::npos ? path : path.substr(slash + 1);
+}
+
+bool isRootedPath(std::string_view path) {
+  return !path.empty() && path.front() == '/';
+}
+
+bool isSurfaceBasePath(const StdlibSurfaceMetadata &metadata, std::string_view path) {
+  return isRootedPath(path) && pathLeaf(path) == pathLeaf(metadata.canonicalPath);
+}
+
+void appendUniqueRooted(std::vector<std::string_view> &out, std::string_view path) {
+  if (!isRootedPath(path)) {
+    return;
+  }
+  if (std::find(out.begin(), out.end(), path) == out.end()) {
+    out.push_back(path);
+  }
+}
+
+void appendUniquePath(std::vector<std::string> &out, std::string_view path) {
+  if (std::find(out.begin(), out.end(), path) == out.end()) {
+    out.emplace_back(path);
+  }
+}
+
+void appendSurfaceBasePaths(std::vector<std::string_view> &out,
+                            const StdlibSurfaceMetadata &metadata) {
+  appendUniqueRooted(out, metadata.canonicalPath);
+  for (const std::string_view spelling : metadata.importAliasSpellings) {
+    if (isSurfaceBasePath(metadata, spelling)) {
+      appendUniqueRooted(out, spelling);
+    }
+  }
+  for (const std::string_view spelling : metadata.compatibilitySpellings) {
+    if (isSurfaceBasePath(metadata, spelling)) {
+      appendUniqueRooted(out, spelling);
+    }
+  }
+  for (const std::string_view spelling : metadata.loweringSpellings) {
+    if (isSurfaceBasePath(metadata, spelling)) {
+      appendUniqueRooted(out, spelling);
+    }
+  }
+}
+
+void appendSurfaceHelperPaths(std::vector<std::string> &out,
+                              const StdlibSurfaceMetadata &metadata,
+                              std::string_view helperName) {
+  std::vector<std::string_view> basePaths;
+  appendSurfaceBasePaths(basePaths, metadata);
+  for (const std::string_view basePath : basePaths) {
+    appendUniquePath(out, std::string(basePath) + "/" + std::string(helperName));
+  }
+}
+
+void appendSurfaceExactHelperFallbacks(std::vector<std::string> &out,
+                                       const StdlibSurfaceMetadata &metadata,
+                                       std::string_view helperName) {
+  auto appendFrom = [&](std::span<const std::string_view> spellings) {
+    for (const std::string_view spelling : spellings) {
+      if (isRootedPath(spelling) && pathLeaf(spelling) == helperName) {
+        appendUniquePath(out, spelling);
+      }
+    }
+  };
+  appendFrom(metadata.compatibilitySpellings);
+  appendFrom(metadata.loweringSpellings);
+}
+
+template <typename Predicate>
+std::string firstMatchingPath(const std::vector<std::string> &candidates,
+                              Predicate &&predicate) {
+  for (const auto &candidate : candidates) {
+    if (predicate(candidate)) {
+      return candidate;
+    }
+  }
+  return {};
+}
+
+}  // namespace
 
 std::string SemanticsValidator::inferMethodCollectionTypePathFromTypeText(
     const std::string &typeText) const {
@@ -99,53 +189,50 @@ bool SemanticsValidator::hasDefinitionFamilyPath(std::string_view path) const {
   return false;
 }
 
+std::string SemanticsValidator::preferredFileHelperTarget(
+    std::string_view helperName,
+    std::string_view currentDefinitionPath) const {
+  const std::string builtinPath = "/file/" + std::string(helperName);
+  if (helperName != "write" && helperName != "write_line" && helperName != "close") {
+    return builtinPath;
+  }
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::FileHelpers);
+  if (metadata == nullptr) {
+    return builtinPath;
+  }
+  std::vector<std::string> surfacedHelperPaths;
+  appendSurfaceHelperPaths(surfacedHelperPaths, *metadata, helperName);
+  for (const auto &surfacedHelperPath : surfacedHelperPaths) {
+    if (!currentDefinitionPath.empty() &&
+        currentDefinitionPath.rfind(surfacedHelperPath, 0) == 0) {
+      return builtinPath;
+    }
+  }
+  const std::string preferred = firstMatchingPath(
+      surfacedHelperPaths, [&](const std::string &candidate) {
+        return hasDefinitionFamilyPath(candidate);
+      });
+  return preferred.empty() ? builtinPath : preferred;
+}
+
 std::string SemanticsValidator::preferredFileErrorHelperTarget(std::string_view helperName) const {
-  if (helperName == "why") {
-    if (hasDefinitionFamilyPath("/std/file/FileError/why")) {
-      return "/std/file/FileError/why";
-    }
-    if (hasDefinitionFamilyPath("/FileError/why")) {
-      return "/FileError/why";
-    }
-    return "/file_error/why";
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::FileErrorHelpers);
+  if (metadata == nullptr) {
+    return helperName == "why" ? "/file_error/why" : std::string{};
   }
-  if (helperName == "is_eof") {
-    if (hasDefinitionFamilyPath("/std/file/FileError/is_eof")) {
-      return "/std/file/FileError/is_eof";
-    }
-    if (hasDefinitionFamilyPath("/FileError/is_eof")) {
-      return "/FileError/is_eof";
-    }
-    if (hasDefinitionFamilyPath("/std/file/fileErrorIsEof")) {
-      return "/std/file/fileErrorIsEof";
-    }
-    return {};
+  std::vector<std::string> helperPaths;
+  appendSurfaceHelperPaths(helperPaths, *metadata, helperName);
+  appendSurfaceExactHelperFallbacks(helperPaths, *metadata, helperName);
+  const std::string preferred = firstMatchingPath(
+      helperPaths, [&](const std::string &candidate) {
+        return hasDefinitionFamilyPath(candidate);
+      });
+  if (!preferred.empty()) {
+    return preferred;
   }
-  if (helperName == "eof") {
-    if (hasDefinitionFamilyPath("/std/file/FileError/eof")) {
-      return "/std/file/FileError/eof";
-    }
-    if (hasDefinitionFamilyPath("/FileError/eof")) {
-      return "/FileError/eof";
-    }
-    if (hasDefinitionFamilyPath("/std/file/fileReadEof")) {
-      return "/std/file/fileReadEof";
-    }
-    return {};
-  }
-  if (helperName == "status") {
-    if (hasDefinitionFamilyPath("/std/file/FileError/status")) {
-      return "/std/file/FileError/status";
-    }
-    return {};
-  }
-  if (helperName == "result") {
-    if (hasDefinitionFamilyPath("/std/file/FileError/result")) {
-      return "/std/file/FileError/result";
-    }
-    return {};
-  }
-  return {};
+  return helperName == "why" ? "/file_error/why" : std::string{};
 }
 
 std::string SemanticsValidator::preferredImageErrorHelperTarget(std::string_view helperName) const {
@@ -186,69 +273,80 @@ std::string SemanticsValidator::preferredImageErrorHelperTarget(std::string_view
 }
 
 std::string SemanticsValidator::preferredContainerErrorHelperTarget(std::string_view helperName) const {
-  if (helperName == "why") {
-    if (defMap_.count("/std/collections/ContainerError/why") > 0) {
-      return "/std/collections/ContainerError/why";
-    }
-    if (defMap_.count("/ContainerError/why") > 0) {
-      return "/ContainerError/why";
-    }
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsContainerErrorHelpers);
+  if (metadata == nullptr) {
     return {};
   }
-  if (helperName == "status") {
-    if (defMap_.count("/std/collections/ContainerError/status") > 0) {
-      return "/std/collections/ContainerError/status";
-    }
-    if (defMap_.count("/ContainerError/status") > 0) {
-      return "/ContainerError/status";
-    }
-    if (defMap_.count("/std/collections/containerErrorStatus") > 0) {
-      return "/std/collections/containerErrorStatus";
-    }
-    return {};
-  }
-  if (helperName == "result") {
-    if (defMap_.count("/std/collections/ContainerError/result") > 0) {
-      return "/std/collections/ContainerError/result";
-    }
-    if (defMap_.count("/ContainerError/result") > 0) {
-      return "/ContainerError/result";
-    }
-    if (defMap_.count("/std/collections/containerErrorResult") > 0) {
-      return "/std/collections/containerErrorResult";
-    }
-    return {};
-  }
-  return {};
+  std::vector<std::string> helperPaths;
+  appendSurfaceHelperPaths(helperPaths, *metadata, helperName);
+  appendSurfaceExactHelperFallbacks(helperPaths, *metadata, helperName);
+  return firstMatchingPath(helperPaths, [&](const std::string &candidate) {
+    return hasDefinitionFamilyPath(candidate);
+  });
 }
 
 std::string SemanticsValidator::preferredGfxErrorHelperTarget(
     std::string_view helperName,
     const std::string &resolvedStructPath) const {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::GfxErrorHelpers);
+  if (metadata == nullptr) {
+    return {};
+  }
+  std::vector<std::string_view> basePaths;
+  appendSurfaceBasePaths(basePaths, *metadata);
   auto helperForBasePath = [&](std::string_view basePath) -> std::string {
     const std::string helperPath = std::string(basePath) + "/" + std::string(helperName);
-    if (defMap_.count(helperPath) > 0) {
+    if (hasDefinitionFamilyPath(helperPath)) {
       return helperPath;
     }
     return {};
   };
-  const std::string canonicalBase = "/std/gfx/GfxError";
-  const std::string experimentalBase = "/std/gfx/experimental/GfxError";
-  if (resolvedStructPath == canonicalBase) {
-    return helperForBasePath(canonicalBase);
+  if (!resolvedStructPath.empty()) {
+    const std::string resolvedHelperPath = helperForBasePath(resolvedStructPath);
+    if (!resolvedHelperPath.empty()) {
+      return resolvedHelperPath;
+    }
+    if (std::find(basePaths.begin(), basePaths.end(), std::string_view(resolvedStructPath)) !=
+        basePaths.end()) {
+      return {};
+    }
   }
-  if (resolvedStructPath == experimentalBase) {
-    return helperForBasePath(experimentalBase);
+  const std::string canonicalHelperPath = helperForBasePath(metadata->canonicalPath);
+  std::string experimentalHelperPath;
+  std::string rootedAliasHelperPath;
+  for (const std::string_view basePath : basePaths) {
+    if (basePath == metadata->canonicalPath) {
+      continue;
+    }
+    const std::string candidate = helperForBasePath(basePath);
+    if (candidate.empty()) {
+      continue;
+    }
+    if (basePath.rfind("/std/gfx/experimental/", 0) == 0) {
+      experimentalHelperPath = candidate;
+      continue;
+    }
+    if (basePath == "/GfxError") {
+      rootedAliasHelperPath = candidate;
+    }
   }
-  const bool hasCanonical = defMap_.count(canonicalBase + "/" + std::string(helperName)) > 0;
-  const bool hasExperimental = defMap_.count(experimentalBase + "/" + std::string(helperName)) > 0;
-  if (hasCanonical && !hasExperimental) {
-    return helperForBasePath(canonicalBase);
+  if (!canonicalHelperPath.empty() && experimentalHelperPath.empty()) {
+    return canonicalHelperPath;
   }
-  if (!hasCanonical && hasExperimental) {
-    return helperForBasePath(experimentalBase);
+  if (canonicalHelperPath.empty() && !experimentalHelperPath.empty()) {
+    return experimentalHelperPath;
   }
-  return {};
+  if (canonicalHelperPath.empty() && experimentalHelperPath.empty() &&
+      !rootedAliasHelperPath.empty()) {
+    return rootedAliasHelperPath;
+  }
+  std::vector<std::string> helperPaths;
+  appendSurfaceExactHelperFallbacks(helperPaths, *metadata, helperName);
+  return firstMatchingPath(helperPaths, [&](const std::string &candidate) {
+    return hasDefinitionFamilyPath(candidate);
+  });
 }
 
 std::string SemanticsValidator::preferredMapMethodTargetForCall(

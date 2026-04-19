@@ -120,6 +120,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("exact canonical GfxError import keeps method helpers") {
+  const std::string source = R"(
+import /std/gfx/GfxError
+
+[return<void>]
+main() {
+  [GfxError] err{GfxError.queue_submit_failed()}
+  [Result<GfxError>] status{err.status()}
+  [Result<i32, GfxError>] value{err.result<i32>()}
+  [string] whyText{err.why()}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical stdlib gfx error helpers return explicit strings") {
   const std::string source = R"(
 import /std/gfx/*

@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4038
+- TODO-4039
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -72,40 +72,39 @@ Task template:
 ### Priority Lanes (Current)
 
 - Stdlib surface-style alignment: TODO-4030 through TODO-4035
-- Stdlib bridge consolidation: TODO-4038 through TODO-4041
+- Stdlib bridge consolidation: TODO-4039 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4038
-2. TODO-4039
-3. TODO-4040
-4. TODO-4041
-5. TODO-4042
-6. TODO-4051
-7. TODO-4043
-8. TODO-4044
-9. TODO-4045
-10. TODO-4046
-11. TODO-4047
-12. TODO-4048
-13. TODO-4049
-14. TODO-4050
-15. TODO-4052
-16. TODO-4058
-17. TODO-4053
-18. TODO-4055
-19. TODO-4054
-20. TODO-4056
-21. TODO-4057
-22. TODO-4059
-23. TODO-4030
-24. TODO-4031
-25. TODO-4032
-26. TODO-4033
-27. TODO-4034
-28. TODO-4035
+1. TODO-4039
+2. TODO-4040
+3. TODO-4041
+4. TODO-4042
+5. TODO-4051
+6. TODO-4043
+7. TODO-4044
+8. TODO-4045
+9. TODO-4046
+10. TODO-4047
+11. TODO-4048
+12. TODO-4049
+13. TODO-4050
+14. TODO-4052
+15. TODO-4058
+16. TODO-4053
+17. TODO-4055
+18. TODO-4054
+19. TODO-4056
+20. TODO-4057
+21. TODO-4059
+22. TODO-4030
+23. TODO-4031
+24. TODO-4032
+25. TODO-4033
+26. TODO-4034
+27. TODO-4035
 
 ### PrimeStruct Coverage Snapshot
 
@@ -113,7 +112,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -197,7 +196,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4038, TODO-4052
+  - depends_on: TODO-4052
   - scope: Refactor the gfx surface so `/std/gfx/*` is the only canonical public contract and `/std/gfx/experimental/*` becomes a temporary compatibility shim rather than a parallel first-class namespace.
   - acceptance:
     - Canonical `/std/gfx/*` is identified in code and docs as the authoritative public gfx surface.
@@ -389,25 +388,13 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib Bridge Consolidation
-  - depends_on: TODO-4038
+  - depends_on: none
   - scope: Extend semantic resolution so bridge-resolved stdlib imports, helpers, and methods publish stable stdlib surface IDs that downstream lowering code can consume without reconstructing path knowledge.
   - acceptance:
     - Semantic output carries stable stdlib surface identifiers for the bridge-backed surfaces needed by lowering.
     - Those IDs are produced from shared bridge resolution rather than parallel lowerer-specific classification logic.
     - Source-lock or parity coverage documents the intended semantic publication boundary for stdlib surface IDs.
   - stop_rule: Stop once the semantic product exposes the stdlib IDs needed for lowering; split any broader semantic-product reshaping beyond that boundary into separate tasks.
-
-- [ ] TODO-4038: Route file helper and error-surface method resolution through shared bridge queries
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Bridge Consolidation
-  - depends_on: none
-  - scope: Move file helper resolution and file/error-surface method targeting onto shared stdlib bridge queries so those surfaces no longer rely on scattered direct stdlib path matching in semantics.
-  - acceptance:
-    - File helper and error-surface method resolution uses shared bridge metadata instead of local hard-coded stdlib path tables.
-    - Existing file/error helper diagnostics and successful resolution behavior remain covered by parity tests after the migration.
-    - The refactor leaves runtime/backing behavior unchanged and limits itself to centralizing resolution authority.
-  - stop_rule: Stop once file/error-surface method resolution is bridge-driven; split any unrelated API cleanup or runtime behavior work into separate leaves.
 
 - [ ] TODO-4035: Audit canonical /std/gfx wrappers for readable surface syntax without changing hybrid runtime boundaries
   - owner: ai

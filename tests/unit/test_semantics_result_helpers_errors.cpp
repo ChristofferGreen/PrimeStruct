@@ -206,6 +206,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("exact ContainerError import keeps method helpers") {
+  const std::string source = R"(
+import /std/collections/ContainerError
+
+[return<void>]
+main() {
+  [ContainerError] err{ContainerError.missing_key()}
+  [Result<ContainerError>] status{err.status()}
+  [Result<i32, ContainerError>] value{err.result<i32>()}
+  [string] whyText{err.why()}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib container error status helper rejects non container errors") {
   const std::string source = R"(
 import /std/collections/*

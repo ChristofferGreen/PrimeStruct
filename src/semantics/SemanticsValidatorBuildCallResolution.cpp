@@ -217,49 +217,6 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return rewriteCanonicalHelper("/std/collections/map/", canonicalMapHelperAliasPath, false);
   };
 
-  auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
-    if (helperName == "why") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/why")) {
-        return "/std/file/FileError/why";
-      }
-      if (hasDefinitionFamilyPath("/FileError/why")) {
-        return "/FileError/why";
-      }
-      return "/file_error/why";
-    }
-    if (helperName == "is_eof") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/is_eof")) {
-        return "/std/file/FileError/is_eof";
-      }
-      if (hasDefinitionFamilyPath("/FileError/is_eof")) {
-        return "/FileError/is_eof";
-      }
-      if (hasDefinitionFamilyPath("/std/file/fileErrorIsEof")) {
-        return "/std/file/fileErrorIsEof";
-      }
-      return {};
-    }
-    if (helperName == "eof") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/eof")) {
-        return "/std/file/FileError/eof";
-      }
-      if (hasDefinitionFamilyPath("/FileError/eof")) {
-        return "/FileError/eof";
-      }
-      if (hasDefinitionFamilyPath("/std/file/fileReadEof")) {
-        return "/std/file/fileReadEof";
-      }
-      return {};
-    }
-    if (helperName == "status" && hasDefinitionFamilyPath("/std/file/FileError/status")) {
-      return "/std/file/FileError/status";
-    }
-    if (helperName == "result" && hasDefinitionFamilyPath("/std/file/FileError/result")) {
-      return "/std/file/FileError/result";
-    }
-    return {};
-  };
-
   auto preferredImageErrorHelperTarget = [&](std::string_view helperName) -> std::string {
     if (helperName == "why") {
       if (defMap_.count("/std/image/ImageError/why") > 0) {
@@ -291,88 +248,6 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       }
       if (defMap_.count("/std/image/imageErrorResult") > 0) {
         return "/std/image/imageErrorResult";
-      }
-      return {};
-    }
-    return {};
-  };
-
-  auto preferredContainerErrorHelperTarget = [&](std::string_view helperName) -> std::string {
-    if (helperName == "why") {
-      if (defMap_.count("/std/collections/ContainerError/why") > 0) {
-        return "/std/collections/ContainerError/why";
-      }
-      if (defMap_.count("/ContainerError/why") > 0) {
-        return "/ContainerError/why";
-      }
-      return {};
-    }
-    if (helperName == "status") {
-      if (defMap_.count("/std/collections/ContainerError/status") > 0) {
-        return "/std/collections/ContainerError/status";
-      }
-      if (defMap_.count("/ContainerError/status") > 0) {
-        return "/ContainerError/status";
-      }
-      if (defMap_.count("/std/collections/containerErrorStatus") > 0) {
-        return "/std/collections/containerErrorStatus";
-      }
-      return {};
-    }
-    if (helperName == "result") {
-      if (defMap_.count("/std/collections/ContainerError/result") > 0) {
-        return "/std/collections/ContainerError/result";
-      }
-      if (defMap_.count("/ContainerError/result") > 0) {
-        return "/ContainerError/result";
-      }
-      if (defMap_.count("/std/collections/containerErrorResult") > 0) {
-        return "/std/collections/containerErrorResult";
-      }
-      return {};
-    }
-    return {};
-  };
-
-  auto preferredGfxErrorHelperTarget = [&](std::string_view helperName,
-                                           const std::string &preferredNamespacePath) -> std::string {
-    const bool experimental = preferredNamespacePath.find("/std/gfx/experimental/") == 0;
-    if (helperName == "why") {
-      if (experimental) {
-        if (defMap_.count("/std/gfx/experimental/GfxError/why") > 0) {
-          return "/std/gfx/experimental/GfxError/why";
-        }
-      } else if (defMap_.count("/std/gfx/GfxError/why") > 0) {
-        return "/std/gfx/GfxError/why";
-      }
-      if (defMap_.count("/GfxError/why") > 0) {
-        return "/GfxError/why";
-      }
-      return {};
-    }
-    if (helperName == "status") {
-      if (experimental) {
-        if (defMap_.count("/std/gfx/experimental/GfxError/status") > 0) {
-          return "/std/gfx/experimental/GfxError/status";
-        }
-      } else if (defMap_.count("/std/gfx/GfxError/status") > 0) {
-        return "/std/gfx/GfxError/status";
-      }
-      if (defMap_.count("/GfxError/status") > 0) {
-        return "/GfxError/status";
-      }
-      return {};
-    }
-    if (helperName == "result") {
-      if (experimental) {
-        if (defMap_.count("/std/gfx/experimental/GfxError/result") > 0) {
-          return "/std/gfx/experimental/GfxError/result";
-        }
-      } else if (defMap_.count("/std/gfx/GfxError/result") > 0) {
-        return "/std/gfx/GfxError/result";
-      }
-      if (defMap_.count("/GfxError/result") > 0) {
-        return "/GfxError/result";
       }
       return {};
     }
@@ -442,7 +317,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
                                         ? std::string_view(normalizedPrefix)
                                         : std::string_view(normalizedPrefix).substr(lastSlash + 1);
     if (normalizedPrefix == "/FileError") {
-      const std::string preferred = preferredFileErrorHelperTarget(expr.name);
+      const std::string preferred = this->preferredFileErrorHelperTarget(expr.name);
       if (!preferred.empty()) {
         return preferred;
       }
@@ -454,13 +329,13 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       }
     }
     if (normalizedPrefix == "/ContainerError") {
-      const std::string preferred = preferredContainerErrorHelperTarget(expr.name);
+      const std::string preferred = this->preferredContainerErrorHelperTarget(expr.name);
       if (!preferred.empty()) {
         return preferred;
       }
     }
     if (normalizedPrefix == "/GfxError") {
-      const std::string preferred = preferredGfxErrorHelperTarget(expr.name, normalizedPrefix);
+      const std::string preferred = this->preferredGfxErrorHelperTarget(expr.name, normalizedPrefix);
       if (!preferred.empty()) {
         return preferred;
       }

@@ -407,68 +407,6 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     return true;
   };
-  auto hasDefinitionFamilyPath = [&](std::string_view path) {
-    if (defMap_.count(std::string(path)) > 0) {
-      return true;
-    }
-    const std::string templatedPrefix = std::string(path) + "<";
-    const std::string specializedPrefix = std::string(path) + "__t";
-    for (const auto &def : program_.definitions) {
-      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-          def.fullPath.rfind(specializedPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
-  };
-  auto preferredFileErrorHelperTarget = [&](std::string_view helperName) -> std::string {
-    if (helperName == "why") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/why")) {
-        return "/std/file/FileError/why";
-      }
-      if (hasDefinitionFamilyPath("/FileError/why")) {
-        return "/FileError/why";
-      }
-      return "/file_error/why";
-    }
-    if (helperName == "is_eof") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/is_eof")) {
-        return "/std/file/FileError/is_eof";
-      }
-      if (hasDefinitionFamilyPath("/FileError/is_eof")) {
-        return "/FileError/is_eof";
-      }
-      if (hasDefinitionFamilyPath("/std/file/fileErrorIsEof")) {
-        return "/std/file/fileErrorIsEof";
-      }
-      return "";
-    }
-    if (helperName == "eof") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/eof")) {
-        return "/std/file/FileError/eof";
-      }
-      if (hasDefinitionFamilyPath("/FileError/eof")) {
-        return "/FileError/eof";
-      }
-      if (hasDefinitionFamilyPath("/std/file/fileReadEof")) {
-        return "/std/file/fileReadEof";
-      }
-      return "";
-    }
-    if (helperName == "status") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/status")) {
-        return "/std/file/FileError/status";
-      }
-      return "";
-    }
-    if (helperName == "result") {
-      if (hasDefinitionFamilyPath("/std/file/FileError/result")) {
-        return "/std/file/FileError/result";
-      }
-      return "";
-    }
-    return "";
-  };
   auto preferredImageErrorHelperTarget = [&](std::string_view helperName) -> std::string {
     if (helperName == "why") {
       if (defMap_.count("/std/image/ImageError/why") > 0) {
@@ -500,86 +438,6 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       }
       if (defMap_.count("/std/image/imageErrorResult") > 0) {
         return "/std/image/imageErrorResult";
-      }
-      return "";
-    }
-    return "";
-  };
-  auto preferredContainerErrorHelperTarget = [&](std::string_view helperName) -> std::string {
-    if (helperName == "why") {
-      if (defMap_.count("/std/collections/ContainerError/why") > 0) {
-        return "/std/collections/ContainerError/why";
-      }
-      if (defMap_.count("/ContainerError/why") > 0) {
-        return "/ContainerError/why";
-      }
-      return "";
-    }
-    if (helperName == "status") {
-      if (defMap_.count("/std/collections/ContainerError/status") > 0) {
-        return "/std/collections/ContainerError/status";
-      }
-      if (defMap_.count("/ContainerError/status") > 0) {
-        return "/ContainerError/status";
-      }
-      if (defMap_.count("/std/collections/containerErrorStatus") > 0) {
-        return "/std/collections/containerErrorStatus";
-      }
-      return "";
-    }
-    if (helperName == "result") {
-      if (defMap_.count("/std/collections/ContainerError/result") > 0) {
-        return "/std/collections/ContainerError/result";
-      }
-      if (defMap_.count("/ContainerError/result") > 0) {
-        return "/ContainerError/result";
-      }
-      if (defMap_.count("/std/collections/containerErrorResult") > 0) {
-        return "/std/collections/containerErrorResult";
-      }
-      return "";
-    }
-    return "";
-  };
-  auto preferredGfxErrorHelperTarget = [&](std::string_view helperName,
-                                           const std::string &preferredNamespacePath) -> std::string {
-    const bool experimental = preferredNamespacePath.find("/std/gfx/experimental/") == 0;
-    if (helperName == "why") {
-      if (experimental) {
-        if (defMap_.count("/std/gfx/experimental/GfxError/why") > 0) {
-          return "/std/gfx/experimental/GfxError/why";
-        }
-      } else if (defMap_.count("/std/gfx/GfxError/why") > 0) {
-        return "/std/gfx/GfxError/why";
-      }
-      if (defMap_.count("/GfxError/why") > 0) {
-        return "/GfxError/why";
-      }
-      return "";
-    }
-    if (helperName == "status") {
-      if (experimental) {
-        if (defMap_.count("/std/gfx/experimental/GfxError/status") > 0) {
-          return "/std/gfx/experimental/GfxError/status";
-        }
-      } else if (defMap_.count("/std/gfx/GfxError/status") > 0) {
-        return "/std/gfx/GfxError/status";
-      }
-      if (defMap_.count("/GfxError/status") > 0) {
-        return "/GfxError/status";
-      }
-      return "";
-    }
-    if (helperName == "result") {
-      if (experimental) {
-        if (defMap_.count("/std/gfx/experimental/GfxError/result") > 0) {
-          return "/std/gfx/experimental/GfxError/result";
-        }
-      } else if (defMap_.count("/std/gfx/GfxError/result") > 0) {
-        return "/std/gfx/GfxError/result";
-      }
-      if (defMap_.count("/GfxError/result") > 0) {
-        return "/GfxError/result";
       }
       return "";
     }
@@ -640,11 +498,11 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
         (expr.name == "why" || expr.name == "is_eof" || expr.name == "eof" || expr.name == "status" ||
          expr.name == "result")) {
-      return preferredFileErrorHelperTarget(expr.name);
+      return this->preferredFileErrorHelperTarget(expr.name);
     }
     if (receiverTypeName == "FileError" &&
         (expr.name == "why" || expr.name == "is_eof" || expr.name == "status" || expr.name == "result")) {
-      return preferredFileErrorHelperTarget(expr.name);
+      return this->preferredFileErrorHelperTarget(expr.name);
     }
     if (receiverTypeName == "ImageError" &&
         (expr.name == "why" || expr.name == "status" || expr.name == "result")) {
@@ -652,11 +510,11 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     if (receiverTypeName == "ContainerError" &&
         (expr.name == "why" || expr.name == "status" || expr.name == "result")) {
-      return preferredContainerErrorHelperTarget(expr.name);
+      return this->preferredContainerErrorHelperTarget(expr.name);
     }
     if (receiverTypeName == "GfxError" &&
         (expr.name == "why" || expr.name == "status" || expr.name == "result")) {
-      return preferredGfxErrorHelperTarget(
+      return this->preferredGfxErrorHelperTarget(
           expr.name,
           resolveStructTypePath(receiverTypeName, receiver.namespacePrefix, structNames_));
     }
