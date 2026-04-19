@@ -1441,7 +1441,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(resultHelpersHeader.find("std::string *errorOut = nullptr") != std::string::npos);
   CHECK(resultHelpersHeader.find("bool validateSemanticProductResultMetadataCompleteness(") !=
         std::string::npos);
-  CHECK(resultHelpersSource.find("findSemanticProductQueryFact(*semanticProductTargets, expr)") !=
+  CHECK(resultHelpersSource.find("findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr)") !=
         std::string::npos);
   CHECK(resultHelpersSource.find("missing semantic-product query fact: ") != std::string::npos);
   CHECK(resultHelpersSource.find("missing semantic-product callable result metadata: ") !=
@@ -1450,12 +1450,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(resultHelpersSource.find("incomplete semantic-product query fact: ") != std::string::npos);
   CHECK(resultHelpersSource.find("incomplete semantic-product try fact: try") != std::string::npos);
-  CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFact(*semanticProductTargets, tryExpr)") !=
+  CHECK(lowerInferenceDispatchSource.find("findSemanticProductTryFactBySemanticId(*semanticProductTargets, tryExpr)") !=
         std::string::npos);
   CHECK(lowerInferenceDispatchSource.find("missing semantic-product try fact: try") !=
         std::string::npos);
-  CHECK(lowerEmitExprTryHelpers.find("findSemanticProductTryFact(callResolutionAdapters.semanticProductTargets, expr)") !=
+  CHECK(lowerEmitExprTryHelpers.find(
+            "findSemanticProductTryFactBySemanticId(callResolutionAdapters.semanticProductTargets, expr)") !=
         std::string::npos);
+  CHECK(lowerEmitExprTryHelpers.find(
+            "findSemanticProductQueryFactBySemanticId(\n"
+            "                    callResolutionAdapters.semanticProductTargets,\n"
+            "                    operandExpr)") != std::string::npos);
 
   const auto runtimeErrorHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererRuntimeErrorHelpers.h");
@@ -1517,7 +1522,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(onErrorHelpersSource.find("buildEntryCountAccessSetup(entryDef, semanticProgram, out.countAccessSetup, error)") !=
         std::string::npos);
-  CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFact(semanticProductTargets, def)") !=
+  CHECK(onErrorHelpersSource.find("findSemanticProductOnErrorFactBySemanticId(semanticProductTargets, def)") !=
         std::string::npos);
   CHECK(onErrorHelpersSource.find("missing semantic-product on_error fact: ") !=
         std::string::npos);
@@ -1879,12 +1884,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irCallResolution.find("missing semantic-product method-call resolved path id: ") !=
         std::string::npos);
   CHECK(irCallResolution.find("missing semantic-product method-call target: ") != std::string::npos);
+  CHECK(irCallResolution.find("if (expr.semanticNodeId != 0) {\n          return std::string{};\n        }") !=
+        std::string::npos);
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductBindingCoverage(const Program &program,") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product binding fact: ") != std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product binding resolved path id: ") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("findSemanticProductLocalAutoFactBySemanticId(semanticProductTargets, expr)") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto fact: ") != std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto initializer path id: ") !=

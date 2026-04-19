@@ -958,6 +958,172 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   CHECK(diagnosticInfo.message.empty());
 }
 
+TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in production mode") {
+  primec::Program program;
+
+  primec::Definition calleeDef;
+  calleeDef.fullPath = "/callee";
+  calleeDef.semanticNodeId = 183;
+  primec::Expr calleeReturnExpr;
+  calleeReturnExpr.kind = primec::Expr::Kind::Literal;
+  calleeReturnExpr.literalValue = 1;
+  calleeReturnExpr.intWidth = 32;
+  calleeDef.returnExpr = calleeReturnExpr;
+  program.definitions.push_back(calleeDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 181;
+  primec::Expr initCall;
+  initCall.kind = primec::Expr::Kind::Call;
+  initCall.name = "callee";
+  initCall.semanticNodeId = 182;
+  primec::Expr localBinding;
+  localBinding.isBinding = true;
+  localBinding.name = "selected";
+  localBinding.semanticNodeId = 184;
+  localBinding.args.push_back(initCall);
+  mainDef.statements.push_back(localBinding);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 183,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 181,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 183,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "void",
+      .structPath = "",
+      .bindingTypeText = "void",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 181,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+  });
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "callee",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 182,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+  });
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "selected",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 184,
+      .provenanceHandle = 0,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected"),
+  });
+  semanticProgram.localAutoFacts.push_back(primec::SemanticProgramLocalAutoFact{
+      .scopePath = "/main",
+      .bindingName = "selected",
+      .bindingTypeText = "i32",
+      .initializerBindingTypeText = "i32",
+      .initializerReceiverBindingTypeText = "",
+      .initializerQueryTypeText = "",
+      .initializerResultHasValue = false,
+      .initializerResultValueType = "",
+      .initializerResultErrorType = "",
+      .initializerHasTry = false,
+      .initializerTryOperandResolvedPath = "",
+      .initializerTryOperandBindingTypeText = "",
+      .initializerTryOperandReceiverBindingTypeText = "",
+      .initializerTryOperandQueryTypeText = "",
+      .initializerTryValueType = "",
+      .initializerTryErrorType = "",
+      .initializerTryContextReturnKind = "",
+      .initializerTryOnErrorHandlerPath = "",
+      .initializerTryOnErrorErrorType = "",
+      .initializerTryOnErrorBoundArgCount = 0,
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
+      .initializerDirectCallResolvedPath = "",
+      .initializerDirectCallReturnKind = "",
+      .initializerMethodCallResolvedPath = "",
+      .initializerMethodCallReturnKind = "",
+      .bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "selected"),
+      .initializerResolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+  });
+
+  primec::Options options;
+  options.entryPath = "/main";
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(
+      program, &semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(failure.message == "missing semantic-product local-auto fact: /main -> local selected");
+  CHECK(failure.diagnosticInfo.message == failure.message);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product callable summaries" * doctest::skip(true)) {
   primec::Program program;
 

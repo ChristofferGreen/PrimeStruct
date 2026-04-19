@@ -256,7 +256,7 @@ TEST_CASE("ir lowerer on_error helpers require definition semantic ids for seman
   CHECK(error == "missing semantic-product on_error fact: /main");
 }
 
-TEST_CASE("ir lowerer on_error helpers resolve semantic metadata by definition path ids") {
+TEST_CASE("ir lowerer on_error helpers reject definition-path fallback in semantic-product mode") {
   primec::Program program;
 
   primec::Definition handlerDef;
@@ -332,12 +332,9 @@ TEST_CASE("ir lowerer on_error helpers resolve semantic metadata by definition p
 
   primec::ir_lowerer::OnErrorByDefinition onErrorByDef;
   std::string error;
-  REQUIRE(primec::ir_lowerer::buildOnErrorByDefinition(
+  CHECK_FALSE(primec::ir_lowerer::buildOnErrorByDefinition(
       program, &semanticProgram, resolveExprPath, definitionExists, onErrorByDef, error));
-  CHECK(error.empty());
-  REQUIRE(onErrorByDef.count("/main") == 1);
-  REQUIRE(onErrorByDef.at("/main").has_value());
-  CHECK(onErrorByDef.at("/main")->handlerPath == "/handler");
+  CHECK(error == "missing semantic-product on_error fact: /main");
 }
 
 TEST_CASE("ir lowerer on_error helpers prefer semantic-id facts over definition path fallback") {

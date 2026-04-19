@@ -70,7 +70,7 @@ bool applySemanticQueryFactResultInfo(const Expr &expr,
       expr.semanticNodeId == 0) {
     return false;
   }
-  const auto *queryFact = findSemanticProductQueryFact(*semanticProductTargets, expr);
+  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr);
   if (queryFact == nullptr || !queryFact->hasResultType) {
     return false;
   }
@@ -758,7 +758,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   if (expr.kind == Expr::Kind::Call && semanticProductTargets != nullptr &&
       semanticProductTargets->hasSemanticProduct && expr.semanticNodeId != 0) {
-    const auto *queryFact = findSemanticProductQueryFact(*semanticProductTargets, expr);
+    const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, expr);
     if (queryFact == nullptr) {
       assignSemanticResultError(
           errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));

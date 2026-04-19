@@ -321,13 +321,8 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
     if (expr.isBinding && expr.args.size() == 1 && expr.semanticNodeId != 0 &&
         isLocalAutoBindingCandidate(expr)) {
       const SemanticProgramLocalAutoFact *localAutoFact =
-          findSemanticProductLocalAutoFact(semanticProductTargets, expr);
-      const SemanticProgramBindingFact *bindingFact =
-          findSemanticProductBindingFact(semanticProductTargets, expr);
-      const bool hasPublishedBindingType =
-          (localAutoFact != nullptr && !localAutoFact->bindingTypeText.empty()) ||
-          (bindingFact != nullptr && !bindingFact->bindingTypeText.empty());
-      if (!hasPublishedBindingType) {
+          findSemanticProductLocalAutoFactBySemanticId(semanticProductTargets, expr);
+      if (localAutoFact == nullptr || localAutoFact->bindingTypeText.empty()) {
         error = "missing semantic-product local-auto fact: " +
                 describeBindingSite(scopePath, "local", expr);
         return false;
@@ -401,7 +396,7 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
   };
   adapters.hasExplicitBindingTypeTransform = [semanticProductTargets](const Expr &expr) {
     if (const SemanticProgramLocalAutoFact *localAutoFact =
-            findSemanticProductLocalAutoFact(semanticProductTargets, expr);
+            findSemanticProductLocalAutoFactBySemanticId(semanticProductTargets, expr);
         localAutoFact != nullptr) {
       return false;
     }

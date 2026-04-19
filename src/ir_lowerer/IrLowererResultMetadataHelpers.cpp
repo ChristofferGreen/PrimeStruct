@@ -901,7 +901,7 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
         applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
       return;
     }
-    if (const auto *queryFact = findSemanticProductQueryFact(*semanticProductTargets, valueExpr);
+    if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticProductTargets, valueExpr);
         queryFact != nullptr && !queryFact->bindingTypeText.empty() &&
         applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
       return;

@@ -61,7 +61,9 @@
               return false;
             }
             const auto *queryFact =
-                findSemanticProductQueryFact(callResolutionAdapters.semanticProductTargets, operandExpr);
+                findSemanticProductQueryFactBySemanticId(
+                    callResolutionAdapters.semanticProductTargets,
+                    operandExpr);
             if (queryFact == nullptr || !queryFact->hasResultType) {
               return false;
             }
@@ -162,7 +164,9 @@
           };
           if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0) {
             const auto *tryFact =
-                findSemanticProductTryFact(callResolutionAdapters.semanticProductTargets, expr);
+                findSemanticProductTryFactBySemanticId(
+                    callResolutionAdapters.semanticProductTargets,
+                    expr);
             if (tryFact != nullptr) {
               resultInfo.isResult = true;
               resultInfo.hasValue = true;

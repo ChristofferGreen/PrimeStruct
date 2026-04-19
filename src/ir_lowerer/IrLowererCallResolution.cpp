@@ -543,12 +543,18 @@ ResolveExprPathFn makeResolveCallPathFromScope(
             !resolvedPath.empty()) {
           return resolvedPath;
         }
+        if (expr.semanticNodeId != 0) {
+          return std::string{};
+        }
         return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
       }
       if (const std::string resolvedPath =
               findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
         return resolvedPath;
+      }
+      if (expr.semanticNodeId != 0) {
+        return std::string{};
       }
       return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
     }

@@ -260,14 +260,12 @@
           stmt.semanticNodeId != 0 &&
           isLocalAutoBindingCandidate(stmt)) {
         const SemanticProgramLocalAutoFact *localAutoFact =
-            findSemanticProductLocalAutoFact(callResolutionAdapters.semanticProductTargets, stmt);
-        const SemanticProgramBindingFact *bindingFact =
-            findSemanticProductBindingFact(callResolutionAdapters.semanticProductTargets, stmt);
+            findSemanticProductLocalAutoFactBySemanticId(
+                callResolutionAdapters.semanticProductTargets,
+                stmt);
         const std::string bindingTypeText =
-            localAutoFact != nullptr && !localAutoFact->bindingTypeText.empty()
-                ? trimTemplateTypeText(localAutoFact->bindingTypeText)
-                : (bindingFact != nullptr ? trimTemplateTypeText(bindingFact->bindingTypeText)
-                                          : std::string{});
+            localAutoFact != nullptr ? trimTemplateTypeText(localAutoFact->bindingTypeText)
+                                     : std::string{};
         if (bindingTypeText.empty()) {
           const std::string scopePath =
               activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;

@@ -45,6 +45,9 @@ std::string findSemanticProductBridgePathChoice(const SemanticProductTargetAdapt
 const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
     const SemanticProductTargetAdapter &adapter,
     const std::string &fullPath);
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Definition &definition);
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Definition &definition);
 const SemanticProgramTypeMetadata *findSemanticProductTypeMetadata(const SemanticProductTargetAdapter &adapter,
@@ -54,10 +57,19 @@ const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProdu
     const std::string &structPath);
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition);
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
                                                                     const Expr &expr);
+const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
 const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
                                                             const Expr &expr);
+const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,
                                                         const Expr &expr);
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,

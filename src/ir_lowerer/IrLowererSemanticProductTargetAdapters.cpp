@@ -328,9 +328,15 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const S
   return semanticProgramLookupPublishedCallableSummary(*adapter.semanticProgram, fullPath);
 }
 
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Definition &definition) {
+  return findDefinitionScopedSemanticFact(adapter.semanticIndex.onErrorFactsByDefinitionId, definition);
+}
+
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Definition &definition) {
-  if (const auto *fact = findDefinitionScopedSemanticFact(adapter.semanticIndex.onErrorFactsByDefinitionId, definition);
+  if (const auto *fact = findSemanticProductOnErrorFactBySemanticId(adapter, definition);
       fact != nullptr) {
     return fact;
   }
@@ -395,9 +401,15 @@ const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticPro
   return nullptr;
 }
 
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findExpressionScopedSemanticFact(adapter.semanticIndex.localAutoFactsByExpr, expr);
+}
+
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
                                                                     const Expr &expr) {
-  if (const auto *fact = findExpressionScopedSemanticFact(adapter.semanticIndex.localAutoFactsByExpr, expr);
+  if (const auto *fact = findSemanticProductLocalAutoFactBySemanticId(adapter, expr);
       fact != nullptr) {
     return fact;
   }
@@ -422,9 +434,15 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const Seman
   return nullptr;
 }
 
+const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findExpressionScopedSemanticFact(adapter.semanticIndex.queryFactsByExpr, expr);
+}
+
 const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
                                                             const Expr &expr) {
-  if (const auto *fact = findExpressionScopedSemanticFact(adapter.semanticIndex.queryFactsByExpr, expr);
+  if (const auto *fact = findSemanticProductQueryFactBySemanticId(adapter, expr);
       fact != nullptr) {
     return fact;
   }
@@ -448,9 +466,15 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProdu
   return nullptr;
 }
 
+const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findExpressionScopedSemanticFact(adapter.semanticIndex.tryFactsByExpr, expr);
+}
+
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,
                                                         const Expr &expr) {
-  if (const auto *fact = findExpressionScopedSemanticFact(adapter.semanticIndex.tryFactsByExpr, expr);
+  if (const auto *fact = findSemanticProductTryFactBySemanticId(adapter, expr);
       fact != nullptr) {
     return fact;
   }

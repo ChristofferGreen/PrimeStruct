@@ -578,6 +578,69 @@ TEST_CASE("ir lowerer result helpers require semantic query facts for generic ca
   CHECK(error == "missing semantic-product query fact: lookup");
 }
 
+TEST_CASE("ir lowerer result helpers reject resolved-path semantic query fallback in production mode") {
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.semanticNodeId = 163;
+
+  const auto resolveMethodCall = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 11,
+      .sourceColumn = 7,
+      .semanticNodeId = 163,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  const primec::SymbolId callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "lookup");
+  const primec::SymbolId resolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 11,
+      .sourceColumn = 7,
+      .semanticNodeId = 0,
+      .callNameId = callNameId,
+      .resolvedPathId = resolvedPathId,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::ir_lowerer::ResultExprInfo out;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(queryExpr,
+                                                                  {},
+                                                                  resolveMethodCall,
+                                                                  resolveDefinitionCall,
+                                                                  lookupReturnInfo,
+                                                                  inferExprKind,
+                                                                  out,
+                                                                  &semanticTargets,
+                                                                  &error));
+  CHECK(error == "missing semantic-product query fact: lookup");
+}
+
 TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
@@ -671,6 +734,106 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
   state.semanticProductTargets = &missingTargets;
   error.clear();
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &) { return std::string{}; },
+          .error = &error,
+      },
+      state,
+      error));
+  CHECK(state.inferExprKind(tryExpr, {}) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(error == "missing semantic-product try fact: try");
+}
+
+TEST_CASE("ir lowerer inference dispatch rejects operand-path semantic try fallback in production mode") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.inferLiteralOrNameExprKind = [](const primec::Expr &,
+                                        const primec::ir_lowerer::LocalMap &,
+                                        primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprBaseKind = [](const primec::Expr &,
+                                   const primec::ir_lowerer::LocalMap &,
+                                   primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprDirectReturnKind =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &) {
+        return primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved;
+      };
+  state.inferCallExprCountAccessGpuFallbackKind = [](const primec::Expr &,
+                                                     const primec::ir_lowerer::LocalMap &,
+                                                     primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprOperatorFallbackKind = [](const primec::Expr &,
+                                               const primec::ir_lowerer::LocalMap &,
+                                               primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprControlFlowFallbackKind = [](const primec::Expr &,
+                                                  const primec::ir_lowerer::LocalMap &,
+                                                  std::string &,
+                                                  primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprPointerFallbackKind = [](const primec::Expr &,
+                                              const primec::ir_lowerer::LocalMap &,
+                                              primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+
+  primec::Expr operandExpr;
+  operandExpr.kind = primec::Expr::Kind::Call;
+  operandExpr.name = "lookup";
+  operandExpr.semanticNodeId = 164;
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {operandExpr};
+  tryExpr.semanticNodeId = 165;
+  tryExpr.sourceLine = 12;
+  tryExpr.sourceColumn = 9;
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 12,
+      .sourceColumn = 9,
+      .semanticNodeId = 164,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<bool, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<bool, FileError>",
+      .valueType = "bool",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 12,
+      .sourceColumn = 9,
+      .semanticNodeId = 0,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  state.semanticProductTargets = &semanticTargets;
+
+  std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
       {
           .defMap = &defMap,

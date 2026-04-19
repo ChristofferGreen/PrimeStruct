@@ -152,7 +152,8 @@ bool buildOnErrorByDefinition(const Program &program,
         return false;
       }
       if (callableSummary->hasOnError) {
-        const auto *onErrorFact = findSemanticProductOnErrorFact(semanticProductTargets, def);
+        const auto *onErrorFact =
+            findSemanticProductOnErrorFactBySemanticId(semanticProductTargets, def);
         if (onErrorFact == nullptr) {
           error = "missing semantic-product on_error fact: " + def.fullPath;
           return false;

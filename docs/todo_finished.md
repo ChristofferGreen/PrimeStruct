@@ -4017,3 +4017,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start with `include/primec/Semantics.h`, `src/CompilePipeline.cpp`, and the benchmark harness callers; if the API split is easy but observer plumbing is not, keep the API split in this leaf and create a follow-up for deeper benchmark internals.
   - finished_at: 2026-04-19
   - evidence: Split `Semantics` into a production `validate(...)` entrypoint plus benchmark-only `SemanticValidationBenchmarkConfig` and `SemanticValidationBenchmarkObserver` plumbing, rewired `CompilePipeline.cpp` to call `validateForBenchmark(...)` only when benchmark worker-count or observer options are active, updated the worker-count semantics tests to exercise the new benchmark path explicitly, and added source-lock coverage in `tests/unit/test_ir_pipeline_backends_graph_pilot_a.h` and `tests/unit/test_compile_run_benchmark_harness.cpp` so benchmark-only switches stay off the normal public validation surface.
+
+- [x] TODO-4004: Fail closed on missing semantic-product facts
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Semantic Ownership Cutover
+  - depends_on: none
+  - scope: Make production lowering fail closed when required semantic-product facts are missing instead of consulting validator-owned or AST-rederived semantic metadata.
+  - acceptance:
+    - Focused lowerer and `prepareIrModule` coverage proves the covered direct-call, method-call, local-auto, query, `try(...)`, and `on_error` families fail when published semantic-product facts are missing.
+    - Production lowerer helpers read published semantic-product data only for the covered families.
+    - Remaining compatibility fallbacks are deleted or explicitly limited to non-production fixture paths.
+  - stop_rule: Stop once semantic-product presence fully disables production semantic fallback behavior for the covered lowering families.
+  - notes: Primary verification seams are `prepareIrModule(...)`, `IrLowerer::lower(...)`, and the backend-registry / graph-context conformance tests that already pin semantic-product entry contracts.
+  - finished_at: 2026-04-19
+  - evidence: Added semantic-id-only semantic-product fact lookup helpers in `src/ir_lowerer/IrLowererSemanticProductTargetAdapters.{h,cpp}`, rewired production lowering to use those stricter helpers for local-auto, query, `try(...)`, and `on_error` handling, stopped semantic-product-backed call resolution from reconstructing direct/method targets from scope when published routing is absent, added focused regressions that reject definition-path/resolved-path/operand-path compatibility fallback in production mode, added a `prepareIrModule(...)` regression for local-auto fallback rejection, and refreshed graph-context source-lock coverage so production lowerer code stays pinned to the stricter semantic-id path.

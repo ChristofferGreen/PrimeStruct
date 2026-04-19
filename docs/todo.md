@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4004
 - TODO-4005
 
 ### Immediate Next 10 (After Ready Now)
@@ -65,20 +64,19 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic ownership cutover: TODO-4004, TODO-4008
+- Semantic ownership cutover: TODO-4008
 - Semantic-product publication shaping: TODO-4005
 
 ### Execution Queue (Recommended)
 
-1. TODO-4004
-2. TODO-4005
-3. TODO-4008
+1. TODO-4005
+2. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4004, TODO-4008 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4008 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | TODO-4005 |
 | IR lowerer compile-unit breakup | none |
@@ -93,7 +91,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4004, TODO-4008 |
+| Semantic-product-authority conformance | TODO-4008 |
 | Semantic-product publication parity and deterministic ordering | TODO-4005 |
 | Lowerer/source-composition contract coverage | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -130,16 +128,3 @@ Task template:
     - Release validation and semantic-product dump coverage pass unchanged except for intentional contract updates.
   - stop_rule: Stop once semantic-product publication is partitioned into smaller builders with clear ownership and no new broad whole-program collector sweeps are introduced.
   - notes: This starts after TODO-4002 lands and should focus on `src/semantics/SemanticsValidate.cpp`; keep routing/callable-summary publication and graph-backed inference publication as the first candidate split if the builder breakup does not fit one commit.
-
-- [ ] TODO-4004: Fail closed on missing semantic-product facts
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Semantic Ownership Cutover
-  - depends_on: none
-  - scope: Make production lowering fail closed when required semantic-product facts are missing instead of consulting validator-owned or AST-rederived semantic metadata.
-  - acceptance:
-    - Focused lowerer and `prepareIrModule` coverage proves the covered direct-call, method-call, local-auto, query, `try(...)`, and `on_error` families fail when published semantic-product facts are missing.
-    - Production lowerer helpers read published semantic-product data only for the covered families.
-    - Remaining compatibility fallbacks are deleted or explicitly limited to non-production fixture paths.
-  - stop_rule: Stop once semantic-product presence fully disables production semantic fallback behavior for the covered lowering families.
-  - notes: Primary verification seams are `prepareIrModule(...)`, `IrLowerer::lower(...)`, and the backend-registry / graph-context conformance tests that already pin semantic-product entry contracts.
