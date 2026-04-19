@@ -3099,7 +3099,7 @@ main() {
   CHECK(runCommand(exePath) == 9);
 }
 
-TEST_CASE("compiles and runs native canonical namespaced map helpers on experimental map values" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native canonical namespaced map helpers on experimental map values") {
   expectCanonicalMapNamespaceExperimentalValueConformance("native");
 }
 

@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1100
+- TODO-1101
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1100
+- TODO-1101
 
 ### Priority Lanes (Current)
 
-- Native experimental map helper skip debt: TODO-1100
+- Native experimental map ownership-method skip debt: TODO-1101
 
 ### Execution Queue (Recommended)
 
-1. TODO-1100
+1. TODO-1101
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native experimental map helper skipped-test debt | TODO-1100 |
+| Native experimental map ownership-method skipped-test debt | TODO-1101 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1100 |
+| Native compile-run skipped-test debt | TODO-1101 |
 
 ### Task Blocks
 
-- [ ] TODO-1100: Audit native canonical map helpers on experimental values skip debt
+- [ ] TODO-1101: Audit native ownership-sensitive experimental map methods skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native canonical namespaced map-helper coverage on experimental map values, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native ownership-sensitive experimental-map method coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native canonical namespaced map-helper case on experimental values in stale form.
-    - The native test locks the actual current contract for canonical namespaced map helpers on experimental map values, whether that is a successful runtime path or a stable diagnostic.
-  - stop_rule: Stop after the native canonical namespaced map-helper-on-experimental-values surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native ownership-sensitive experimental-map method case in stale form.
+    - The native test locks the actual current contract for ownership-sensitive experimental-map value methods, whether that is a successful runtime path or a stable diagnostic.
+  - stop_rule: Stop after the native ownership-sensitive experimental-map value-method surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
