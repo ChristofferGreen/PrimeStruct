@@ -933,7 +933,7 @@ main() {
   CHECK(runCommand(exePath) == 65);
 }
 
-TEST_CASE("compiles and runs native user array at call shadow" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native user array at call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {
