@@ -76,7 +76,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native map literals" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
