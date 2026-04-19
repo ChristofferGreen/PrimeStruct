@@ -56,13 +56,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4072
 - TODO-4073
+- TODO-4029
 - TODO-4037
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4029
 - TODO-4030
 - TODO-4031
 - TODO-4032
@@ -75,52 +74,51 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4072, TODO-4073, TODO-4029 through TODO-4035
+- Stdlib surface-style alignment: TODO-4073, TODO-4029 through TODO-4035
 - Stdlib bridge consolidation: TODO-4037 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4072
-2. TODO-4073
-3. TODO-4029
-4. TODO-4030
-5. TODO-4031
-6. TODO-4032
-7. TODO-4033
-8. TODO-4034
-9. TODO-4035
-10. TODO-4037
-11. TODO-4038
-12. TODO-4039
-13. TODO-4040
-14. TODO-4041
-15. TODO-4042
-16. TODO-4051
-17. TODO-4043
-18. TODO-4044
-19. TODO-4045
-20. TODO-4046
-21. TODO-4047
-22. TODO-4048
-23. TODO-4049
-24. TODO-4050
-25. TODO-4052
-26. TODO-4058
-27. TODO-4053
-28. TODO-4055
-29. TODO-4054
-30. TODO-4056
-31. TODO-4057
-32. TODO-4059
+1. TODO-4073
+2. TODO-4029
+3. TODO-4030
+4. TODO-4031
+5. TODO-4032
+6. TODO-4033
+7. TODO-4034
+8. TODO-4035
+9. TODO-4037
+10. TODO-4038
+11. TODO-4039
+12. TODO-4040
+13. TODO-4041
+14. TODO-4042
+15. TODO-4051
+16. TODO-4043
+17. TODO-4044
+18. TODO-4045
+19. TODO-4046
+20. TODO-4047
+21. TODO-4048
+22. TODO-4049
+23. TODO-4050
+24. TODO-4052
+25. TODO-4058
+26. TODO-4053
+27. TODO-4055
+28. TODO-4054
+29. TODO-4056
+30. TODO-4057
+31. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4072, TODO-4073, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4073, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -139,7 +137,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4072, TODO-4073, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4073, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | TODO-4039 |
 | Lowerer/source-composition contract coverage | TODO-4040 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -164,18 +162,6 @@ Task template:
     - Any remaining helper-form arithmetic or assignment in `/std/image` is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
     - Focused source-lock coverage pins representative `/std/image` operator-form sites so the style-aligned surface does not regress silently.
   - stop_rule: Stop once `/std/image` uses readable surface arithmetic and assignment by default; split any deeper API cleanup or unsupported syntax edge cases into separate follow-up work.
-
-- [ ] TODO-4072: Align `/std/ui` arithmetic and assignment to surface operators
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026
-  - scope: Split the oversized helper-spelling cleanup from `TODO-4028` and rewrite the public `/std/ui` module away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in unrelated widget/API changes.
-  - acceptance:
-    - Public `/std/ui` helpers stop using helper-form arithmetic and assignment by default when direct surface operators are already supported.
-    - Any remaining helper-form arithmetic or assignment in `/std/ui` is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
-    - Focused source-lock coverage pins representative `/std/ui` operator-form sites so the style-aligned surface does not regress silently.
-  - stop_rule: Stop once `/std/ui` uses readable surface arithmetic and assignment by default; leave broader widget/layout cleanup separate.
 
 - [ ] TODO-4059: Remove completed experimental naming from docs and user-facing guidance
   - owner: ai

@@ -472,6 +472,26 @@ TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operator
   CHECK(gfxExperimental.find("plus(") != std::string::npos);
 }
 
+TEST_CASE("ui stdlib arithmetic and assignment stay source locked to surface operators") {
+  std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
+  if (!std::filesystem::exists(uiStdlibPath)) {
+    uiStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "ui" / "ui.prime";
+  }
+  REQUIRE(std::filesystem::exists(uiStdlibPath));
+
+  const std::string source = readFile(uiStdlibPath.string());
+
+  CHECK(source.find("assign(") == std::string::npos);
+  CHECK(source.find("plus(") == std::string::npos);
+  CHECK(source.find("minus(") == std::string::npos);
+  CHECK(source.find("self.commandCount = self.commandCount + 1i32") != std::string::npos);
+  CHECK(source.find("self.records = records") != std::string::npos);
+  CHECK(source.find("for([i32 mut] index{0i32}, less_than(index, len), ++index)") != std::string::npos);
+  CHECK(source.find("[i32 mut] nodeId{count(self.kinds) - 1i32}") != std::string::npos);
+  CHECK(source.find("childY = childY + self.measuredHeights[childId] + self.gapPxs[nodeId]") !=
+        std::string::npos);
+}
+
 TEST_CASE("software renderer composite widgets stay source locked to basic widgets") {
   std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
   if (!std::filesystem::exists(uiStdlibPath)) {

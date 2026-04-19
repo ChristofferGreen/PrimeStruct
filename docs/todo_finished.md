@@ -4193,3 +4193,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4028`, whose remaining `/std/ui` and `/std/image` helper-spelling cleanup is now tracked explicitly as `TODO-4072` and `TODO-4073`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the public mutation sites in `stdlib/std/maybe/maybe.prime` from `assign(...)` to direct field assignment, converted the public wrapper arithmetic in `stdlib/std/gfx/gfx.prime` from `plus(...)` to surface `+` expressions without touching `stdlib/std/gfx/experimental.prime`, updated the matching `Maybe<T>` example snippet in `docs/PrimeStruct.md`, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to pin both the `/std/maybe` assignment form and the `/std/gfx/gfx.prime` operator form while preserving helper-form expectations for the experimental gfx bridge file, and updated `docs/todo.md` to retire oversized `TODO-4028` while promoting `TODO-4072` and `TODO-4073` as the remaining style-alignment follow-ups.
+
+- [x] TODO-4072: Align `/std/ui` arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026
+  - scope: Split the oversized helper-spelling cleanup from `TODO-4028` and rewrite the public `/std/ui` module away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in unrelated widget/API changes.
+  - acceptance:
+    - Public `/std/ui` helpers stop using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - Any remaining helper-form arithmetic or assignment in `/std/ui` is limited to unsupported or clearly justified cases instead of broad mechanical carry-over.
+    - Focused source-lock coverage pins representative `/std/ui` operator-form sites so the style-aligned surface does not regress silently.
+  - stop_rule: Stop once `/std/ui` uses readable surface arithmetic and assignment by default; leave broader widget/layout cleanup separate.
+  - notes: Split from oversized `TODO-4028`, whose remaining style-aligned helper-spelling cleanup continues in `TODO-4073` for `/std/image` and then the inferred-binding follow-ups starting at `TODO-4029`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote `stdlib/std/ui/ui.prime` so the style-aligned UI wrappers no longer use `assign(...)`, `plus(...)`, or `minus(...)`, replacing those sites with direct assignment, `+`, `-`, and loop increment/decrement surface forms across `CommandList`, `HtmlCommandList`, `UiEventStream`, and `LayoutTree`; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused source-lock that asserts `/std/ui` contains no remaining helper-form assignment or additive spellings and pins representative operator-form sites; and updated `docs/todo.md` so `TODO-4073` is now the next active surface-style leaf while the queue/snapshot rows drop `TODO-4072`.
