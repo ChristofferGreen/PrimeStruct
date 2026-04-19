@@ -722,7 +722,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("native keeps current builtin count runtime failure on canonical map reference string access" * doctest::skip(true)) {
+TEST_CASE("native keeps current builtin count runtime failure on canonical map reference string access") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
