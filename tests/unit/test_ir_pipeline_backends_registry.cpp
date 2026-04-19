@@ -352,7 +352,11 @@ TEST_CASE("ir lowerer keeps semantic-product direct-call targets authoritative o
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "native backend cannot resolve definition: /semantic/target");
+  CHECK(error.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
+                   "saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(error.find("call=/semantic/target") != std::string::npos);
+  CHECK(error.find("name=/legacy") != std::string::npos);
   CHECK(diagnosticInfo.message == error);
 }
 

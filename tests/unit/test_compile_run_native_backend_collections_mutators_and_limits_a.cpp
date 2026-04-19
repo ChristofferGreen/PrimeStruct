@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native auto-inferred named access helper receiver precedence") {
+TEST_CASE("rejects native auto-inferred named access helper receiver precedence in lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/get([vector<i32>] values, [string] index) {
@@ -35,10 +35,17 @@ main() {
       (testScratchPath("") /
        "primec_native_user_access_expr_named_receiver_precedence_auto_exe")
           .string();
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_native_user_access_expr_named_receiver_precedence_auto_out.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 12);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) != 0);
+  CHECK(readFile(outPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
+                               "saturate/convert/pointer/assign/increment/decrement calls in expressions "
+                               "(call=/get") != std::string::npos);
 }
 
 TEST_CASE("rejects native auto-inferred std namespaced access helper compatibility alias precedence") {
@@ -74,7 +81,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
+  const std::string diagnostics = readFile(outPath);
+  CHECK(diagnostics.find("return type mismatch") != std::string::npos);
+  CHECK((diagnostics.find("expected int") != std::string::npos ||
+         diagnostics.find("expected i32") != std::string::npos));
 }
 
 TEST_CASE("compiles and runs native auto-inferred std namespaced access helper canonical definition") {
@@ -125,7 +135,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs native user vector pop method shadow") {

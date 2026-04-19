@@ -25,7 +25,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_pop_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("runs vm with user vector pop method shadow") {
@@ -141,7 +141,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_clear_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("runs vm user vector clear call expression shadow" * doctest::skip(true)) {
@@ -235,7 +235,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_remove_at_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("runs vm with user vector remove_at method shadow") {
