@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1045: Reactivate native canonical map access wrapper receiver coverage. Completed: the skipped native compile-run case for explicit `/std/collections/map/at(...)` and `/std/collections/map/at_unsafe(...)` helpers on a slash-return `map<i32, i32>` receiver is live again and now locks direct-call plus method-sugar routing for canonical map access helpers on wrapper-return values.
 - ✓ TODO-1044: Reactivate VM PNG `IDAT` ordering guardrail. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on a PNG whose `IDAT` chunks are split by a non-`IDAT` chunk is live again and now locks the documented `image_invalid_operation` result plus the deterministic zeroing of width, height, and pixel outputs on failure.
 - ✓ TODO-1043: Reactivate VM PNG CRC guardrail. Completed: the skipped VM compile-run case for `/std/image/png/read(...)` on a PNG with a corrupted critical-chunk CRC is live again and now locks the documented `image_invalid_operation` result plus the deterministic zeroing of width, height, and pixel outputs on failure.
 - ✓ TODO-1042: Reactivate VM malformed PNG guardrail. Completed: the skipped VM compile-run case for malformed `/std/image/png/read(...)` input bytes is live again and now locks the documented `image_invalid_operation` result plus the deterministic zeroing of width, height, and pixel outputs on failure.

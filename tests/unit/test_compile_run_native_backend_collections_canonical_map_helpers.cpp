@@ -68,7 +68,7 @@ main() {
   CHECK(runCommand(exePath) == 73);
 }
 
-TEST_CASE("compiles and runs native canonical map access helpers on wrapper slash return receiver" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native canonical map access helpers on wrapper slash return receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
