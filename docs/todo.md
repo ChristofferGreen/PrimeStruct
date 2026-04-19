@@ -143,6 +143,126 @@ Task template:
 
 ### Task Blocks
 
+- [ ] TODO-4051: Add vector/map bridge parity coverage for imports, rewrites, and lowering
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4042
+  - scope: Add focused parity coverage that locks current vector/map import behavior, constructor/helper rewrites, compatibility diagnostics, and lowering behavior so the ownership-cutover work can centralize collection path authority without silent regressions.
+  - acceptance:
+    - Focused tests cover exact imports, wildcard imports, constructor/helper rewrite behavior, compatibility diagnostics, and representative lowering paths for `vector` and `map`.
+    - The parity coverage is specific enough to detect behavior drift while the bridge-backed collection migration is in flight.
+    - The new coverage is wired into the existing validation surfaces instead of remaining as ad hoc local-only checks.
+  - stop_rule: Stop once vector/map bridge parity is pinned well enough that the migration tasks can safely delete duplicated path tables without guessing about current behavior.
+
+- [ ] TODO-4050: Retire duplicated vector/map compatibility and canonical-to-experimental tables
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4049, TODO-4041
+  - scope: Delete the remaining vector/map-specific compatibility tables, constructor-path mappings, and canonical-to-experimental translation helpers once the shared bridge and semantic/lowerer surface-ID flow fully cover the collection behavior they currently protect.
+  - acceptance:
+    - Vector/map-specific compatibility and canonical-to-experimental tables that are superseded by the bridge-backed flow are removed from production code.
+    - Collection behavior continues to resolve through shared bridge metadata and semantic IDs rather than residual vector/map-only translation helpers.
+    - Any residual edge-case table that cannot yet move is left behind with a narrowly scoped follow-up instead of preserving a broad duplicate compatibility layer.
+  - stop_rule: Stop once the superseded vector/map path-translation tables are gone; split any stubborn residual edge cases into explicit follow-up leaves instead of keeping general duplicate tables alive.
+
+- [ ] TODO-4049: Replace lowerer collection path dispatch with semantic surface IDs
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4048, TODO-4040
+  - scope: Refactor the collection-sensitive lowering paths for `vector` and `map` so they dispatch on semantic collection surface IDs rather than reconstructing collection meaning from `/std/collections/...` helper paths.
+  - acceptance:
+    - Production lowerer logic for vector/map-sensitive calls dispatches on semantic collection surface IDs.
+    - Lowering parity coverage confirms that vector/map behavior is unchanged after the dispatch swap.
+    - New vector/map lowering logic does not add fresh string-path matching outside narrowly documented temporary seams.
+  - stop_rule: Stop once vector/map lowerer dispatch is ID-based; if a backend still needs a temporary path fallback, split that backend-specific fallback into a separate task.
+
+- [ ] TODO-4048: Publish resolved vector/map surface IDs into semantic output
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4047, TODO-4039
+  - scope: Extend semantic resolution for `vector` and `map` so bridge-resolved imports, constructors, and helpers publish stable collection surface IDs that lowerer code can consume directly.
+  - acceptance:
+    - Semantic output carries stable surface identifiers for the resolved vector/map operations needed by lowering.
+    - The vector/map IDs are emitted from bridge-backed semantic resolution rather than a second lowerer-specific classifier.
+    - Source-lock or parity coverage documents the intended publication boundary for vector/map semantic IDs.
+  - stop_rule: Stop once semantics publishes the vector/map IDs needed for lowering; split any broader semantic-product restructuring beyond that boundary into separate tasks.
+
+- [ ] TODO-4047: Move collection helper rewrites onto bridge-backed semantic queries
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4046
+  - scope: Refactor vector/map helper rewrite passes so they consume bridge-backed semantic queries instead of maintaining local path lists and canonical-to-experimental translation logic inside the rewrite code.
+  - acceptance:
+    - Vector/map helper rewrites use shared bridge-backed semantic classification instead of private string/path tables.
+    - Rewrite behavior remains covered by focused parity tests after the migration.
+    - The refactor reduces duplicated collection path knowledge instead of merely moving the same lists into another rewrite-local helper.
+  - stop_rule: Stop once vector/map rewrites are bridge-backed and parity-tested; split any rewrite family that still needs a separate migration seam into its own follow-up item.
+
+- [ ] TODO-4046: Route vector/map helper compatibility resolution through the shared bridge
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4045
+  - scope: Centralize vector/map helper-family matching, removed-helper diagnostics, and canonical-versus-compatibility spelling handling behind shared bridge queries so semantics stops carrying separate collection compatibility tables.
+  - acceptance:
+    - Vector/map helper compatibility resolution uses bridge metadata rather than duplicated collection descriptor arrays in production semantics code.
+    - Removed-helper and compatibility diagnostics for vector/map remain stable under focused parity coverage.
+    - Helper compatibility authority is centralized enough that later cleanup can delete the superseded vector/map tables.
+  - stop_rule: Stop once vector/map helper compatibility resolution is bridge-backed; if one helper family still needs a temporary compatibility seam, split it into an explicit follow-up leaf.
+
+- [ ] TODO-4045: Route collection constructor classification through the shared bridge
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4043
+  - scope: Replace scattered canonical/experimental vector/map constructor path tables with bridge-backed constructor family classification so constructor handling no longer depends on hard-coded collection path helpers.
+  - acceptance:
+    - Vector/map constructor classification is driven by shared bridge metadata.
+    - Constructor rewrite and resolution behavior remains stable under focused parity coverage.
+    - Production collection constructor handling no longer requires duplicated local canonical-to-experimental path maps for the migrated constructor families.
+  - stop_rule: Stop once vector/map constructor classification is bridge-backed and parity-tested; split any constructor family that still needs a temporary isolated mapping into a separate task.
+
+- [ ] TODO-4044: Route vector/map import alias construction through collection bridge metadata
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4043, TODO-4037
+  - scope: Refactor vector/map import-time alias exposure so collection aliases come from the shared collection bridge metadata rather than exact-import and wildcard-import special cases scattered through semantics code.
+  - acceptance:
+    - Vector/map import alias construction is driven by shared collection bridge metadata.
+    - Existing exact-import and wildcard-import collection alias behavior remains covered by focused parity tests.
+    - The migrated collection import path no longer duplicates vector/map alias knowledge in multiple production files.
+  - stop_rule: Stop once vector/map import alias construction is bridge-backed; split any broader packaging or stdlib-root-discovery work out of this item.
+
+- [ ] TODO-4043: Add shared collection surface registry for vector and map
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4042, TODO-4036
+  - scope: Extend the shared stdlib bridge with the canonical vector/map collection metadata needed for imports, constructors, helper families, compatibility spellings, removed spellings, and downstream semantic/lowering IDs.
+  - acceptance:
+    - The shared bridge contains explicit vector/map metadata rather than leaving collection specifics in scattered helper tables.
+    - The registry is rich enough to back vector/map alias construction, constructor classification, helper compatibility resolution, and surface-ID publication in later slices.
+    - Focused source-lock or parity coverage pins the intended vector/map bridge metadata surface before follow-on migrations consume it.
+  - stop_rule: Stop once the shared bridge describes vector/map collection surfaces well enough for the follow-on migration tasks; do not widen this item into full semantics or lowering rewrites.
+
+- [ ] TODO-4042: Define vector/map bridge scope and ownership boundary
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Vector/Map Stdlib Ownership Cutover
+  - depends_on: TODO-4036
+  - scope: Define exactly which vector/map imports, constructors, helper families, compatibility spellings, semantic operations, and lowering hooks belong to the vector/map ownership-cutover bridge contract, and call out what remains intentionally substrate-only or temporary.
+  - acceptance:
+    - The intended vector/map bridge contract is documented clearly enough that follow-on migration tasks can target the same surface area without re-litigating scope.
+    - The documented boundary distinguishes public vector/map ownership behavior from temporary substrate or migration-only internals.
+    - `docs/todo.md` reflects that boundary across the vector/map cutover tasks instead of leaving scope implicit.
+  - stop_rule: Stop once the vector/map bridge boundary is explicit enough to guide implementation and validation slices; split any broader stdlib bridge scoping beyond vector/map into separate tasks.
+
 - [ ] TODO-4041: Retire duplicated collection helper compatibility tables after bridge parity lands
   - owner: ai
   - created_at: 2026-04-19
