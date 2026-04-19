@@ -56,23 +56,20 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1074
-2. TODO-1062
-3. TODO-1070
+1. TODO-1062
+2. TODO-1070
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1074
-2. TODO-1062
-3. TODO-1070
-4. TODO-1066
-5. TODO-1063
-6. TODO-1064
-7. TODO-1065
+1. TODO-1062
+2. TODO-1070
+3. TODO-1066
+4. TODO-1063
+5. TODO-1064
+6. TODO-1065
 
 ### Priority Lanes (Current)
 
-- Disabled test audit: TODO-1074
 - Pilot semantic boundary ownership: TODO-1062, TODO-1063, TODO-1064, TODO-1065
 - Parallel-ready validation state: TODO-1066
 - Frontend/docs correctness parity: TODO-1070
@@ -80,9 +77,8 @@ Task template:
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1074
-2. TODO-1062
-3. TODO-1070
+1. TODO-1062
+2. TODO-1070
 
 Wave B:
 1. TODO-1066
@@ -96,7 +92,6 @@ Wave C:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Disabled test audit | TODO-1074 |
 | Pilot semantic ownership boundary | TODO-1062, TODO-1063, TODO-1064, TODO-1065 |
 | Parallel-ready validation architecture | TODO-1066 |
 | Frontend/docs correctness parity | TODO-1070 |
@@ -105,25 +100,12 @@ Wave C:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| C++ emitter canonical map helper disabled-test audit | TODO-1074 |
 | Semantic-product publication parity | TODO-1062, TODO-1063, TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
 | Worker-count determinism and parity | TODO-1066 |
 | Frontend/docs compile-run parity | TODO-1070 |
 
 ### Task Blocks
-
-- [ ] TODO-1074: Audit emitter canonical map helper skip debt
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Test suite hygiene
-  - scope: resolve the 5 remaining `doctest::skip(true)` cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp` by re-enabling supported canonical-map helper behavior, converting stale expectations into current rejection locks, or deleting cases that no longer protect a supported surface.
-  - acceptance:
-    - the bare `map` canonical helper emitter cases for `count`, `at`, and `at_unsafe` are active again or explicitly deleted if the covered surface is no longer supported
-    - the explicit same-path alias/helper cases in that file either assert current emitter behavior without skip markers or are removed as stale coverage
-    - the file ends with no unexplained `doctest::skip(true)` map-helper cases
-  - stop_rule: stop after the 5 skipped canonical-map helper cases in `test_compile_run_emitters_canonical_map_helper_calls.cpp` are either active or deleted; do not broaden into unrelated emitter skip debt in the same change
-  - notes: keep the outcome bounded to the current map-helper surface in that file and prefer behavior-level locks over source-shape assumptions
 
 - [ ] TODO-1070: Restore frontend/docs compile-run parity for current examples
   - owner: ai

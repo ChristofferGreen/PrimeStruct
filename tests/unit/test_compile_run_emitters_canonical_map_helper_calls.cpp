@@ -29,7 +29,7 @@ main() {
   CHECK(errors.find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map count through canonical helper in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("compiles and runs bare map count through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -94,7 +94,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs bare map at through canonical helper in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("compiles and runs bare map at through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -116,7 +116,7 @@ main() {
   CHECK(runCommand(exePath) == 17);
 }
 
-TEST_CASE("compiles and runs bare map at_unsafe through canonical helper in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("compiles and runs bare map at_unsafe through canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -475,7 +475,7 @@ main() {
   CHECK(readFile(errPath).find("missing on_error for ? usage") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs explicit map helper calls through same-path aliases in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("compiles and runs explicit map helper calls through same-path aliases in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -531,7 +531,7 @@ main() {
   CHECK(runCommand(exePath) == 243);
 }
 
-TEST_CASE("compiles and runs explicit canonical map helper calls through same-path helpers in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("rejects explicit canonical map helper calls through same-path helpers in C++ emitter with lowering diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -585,13 +585,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_canonical_map_helper_same_path_precedence.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_direct_canonical_map_helper_same_path_precedence_exe")
+       "primec_cpp_direct_canonical_map_helper_same_path_precedence.err")
           .string();
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 243);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("rejects bare map tryAt call without imported canonical helper in C++ emitter with unknown-target diagnostics") {
