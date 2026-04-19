@@ -303,7 +303,81 @@ TEST_CASE("semantic memory budget policy artifacts are checked in") {
   CHECK(note.find("key_cardinality") != std::string::npos);
   CHECK(note.find("semantic_product_index_family_counts") != std::string::npos);
   CHECK(note.find("definition_validation_worker_mode_deltas") != std::string::npos);
+  CHECK(note.find("semantic_product_index_parity_evidence.json") != std::string::npos);
   CHECK(note.find("--definition-validation-workers both") != std::string::npos);
+}
+
+TEST_CASE("semantic memory semantic-product index parity evidence artifact is checked in") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path evidencePath =
+      repoRoot / "benchmarks" / "semantic_memory" / "semantic_product_index_parity_evidence.json";
+  const std::string evidence = readFile(evidencePath.string());
+  REQUIRE_FALSE(evidence.empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_index_parity_evidence_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_index_parity_evidence_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "artifact = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "required = {\n"
+          "  'direct_call_targets', 'method_call_targets', 'bridge_path_choices',\n"
+          "  'binding_facts', 'return_facts', 'local_auto_facts',\n"
+          "  'query_facts', 'try_facts', 'on_error_facts'\n"
+          "}\n"
+          "rows = artifact.get('rows', [])\n"
+          "deltas = artifact.get('definition_validation_worker_mode_deltas', [])\n"
+          "ok = artifact.get('schema') == 'primestruct_semantic_product_index_parity_evidence_v1'\n"
+          "ok = ok and artifact.get('baseline_report') == 'benchmarks/semantic_memory_baseline_report.json'\n"
+          "ok = ok and artifact.get('report_script') == 'scripts/semantic_memory_benchmark.py'\n"
+          "ok = ok and artifact.get('source_contracts') == [\n"
+          "  'collect_semantic_product_index_family_counts',\n"
+          "  'compute_definition_validation_worker_mode_deltas'\n"
+          "]\n"
+          "ok = ok and len(rows) == 2 and len(deltas) == 1\n"
+          "if ok:\n"
+          "  worker_modes = sorted(row.get('definition_validation_workers') for row in rows)\n"
+          "  ok = ok and worker_modes == [1, 2]\n"
+          "  row_counts = []\n"
+          "  for row in rows:\n"
+          "    counts = row.get('semantic_product_index_family_counts')\n"
+          "    ok = ok and row.get('fixture') == 'semantic_product_index_contract_fixture'\n"
+          "    ok = ok and row.get('phase') == 'semantic-product'\n"
+          "    ok = ok and row.get('semantic_product_force') == 'auto'\n"
+          "    ok = ok and row.get('no_fact_emission') == 'off'\n"
+          "    ok = ok and row.get('fact_families') == 'auto'\n"
+          "    ok = ok and isinstance(counts, dict)\n"
+          "    if isinstance(counts, dict):\n"
+          "      ok = ok and set(counts.keys()) == required\n"
+          "      ok = ok and counts.get('direct_call_targets') == 2\n"
+          "      ok = ok and all(isinstance(counts[name], int) and counts[name] >= 1 for name in required)\n"
+          "      row_counts.append(counts)\n"
+          "  delta = deltas[0]\n"
+          "  single = delta.get('semantic_product_index_family_counts_single_worker')\n"
+          "  dual = delta.get('semantic_product_index_family_counts_dual_worker')\n"
+          "  ok = ok and delta.get('fixture') == 'semantic_product_index_contract_fixture'\n"
+          "  ok = ok and delta.get('phase') == 'semantic-product'\n"
+          "  ok = ok and delta.get('semantic_product_force') == 'auto'\n"
+          "  ok = ok and delta.get('no_fact_emission') == 'off'\n"
+          "  ok = ok and delta.get('fact_families') == 'auto'\n"
+          "  ok = ok and bool(delta.get('semantic_product_index_family_counts_identical'))\n"
+          "  ok = ok and isinstance(single, dict) and isinstance(dual, dict)\n"
+          "  if isinstance(single, dict) and isinstance(dual, dict):\n"
+          "    ok = ok and set(single.keys()) == required and set(dual.keys()) == required\n"
+          "    ok = ok and len(row_counts) == 2 and row_counts[0] == row_counts[1] == single == dual\n"
+          "if not ok:\n"
+          "  print(json.dumps(artifact, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(evidencePath.string()) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
 }
 
 TEST_CASE("semantic memory phase-one success criteria artifacts are checked in") {

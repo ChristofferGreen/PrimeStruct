@@ -159,6 +159,10 @@ Initial checked-in baseline report:
   a `3`-report window).
 - `docs/semantic_memory_benchmark_policy.md` documents how to update those
   budgets safely.
+- `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json`
+  locks the checked-in semantic-product index-family count and
+  definition-worker parity field shape until the canonical baseline report is
+  refreshed with `--definition-validation-workers both`.
 - `benchmarks/semantic_memory_phase_one_success_criteria.json` defines the
   phase-one success target tied to the primary `/std/math/*` fixture
   (`math_star_repro`, `semantic-product`) using a reduction-vs-cap rule.

@@ -106,6 +106,9 @@ mode:
   `semantic-product` row and carry matching
   `definition_validation_worker_mode_deltas[*].semantic_product_index_family_counts_*`
   fields for the unified semantic-product adapter path.
+- `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json`
+  is the paired checked-in evidence artifact that locks those family-count and
+  worker-parity fields before the next canonical baseline refresh lands.
 - Use those family-count fields to confirm the direct-call, method-call,
   bridge-path, binding, return, local-auto, query, try, and `on_error` index
   families remain populated and worker-parity-identical while comparing RSS and

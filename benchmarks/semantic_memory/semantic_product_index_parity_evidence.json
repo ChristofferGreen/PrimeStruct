@@ -1,0 +1,82 @@
+{
+  "schema": "primestruct_semantic_product_index_parity_evidence_v1",
+  "description": "Paired checked-in evidence artifact for the unified SemanticProductIndex benchmark report surface. It locks the semantic_product_index_family_counts row shape and definition_validation_worker_mode_deltas parity fields while benchmarks/semantic_memory_baseline_report.json awaits a canonical refresh with --definition-validation-workers both.",
+  "baseline_report": "benchmarks/semantic_memory_baseline_report.json",
+  "report_script": "scripts/semantic_memory_benchmark.py",
+  "source_contracts": [
+    "collect_semantic_product_index_family_counts",
+    "compute_definition_validation_worker_mode_deltas"
+  ],
+  "rows": [
+    {
+      "fixture": "semantic_product_index_contract_fixture",
+      "phase": "semantic-product",
+      "definition_validation_workers": 1,
+      "semantic_product_force": "auto",
+      "no_fact_emission": "off",
+      "fact_families": "auto",
+      "semantic_product_index_family_counts": {
+        "binding_facts": 1,
+        "bridge_path_choices": 1,
+        "direct_call_targets": 2,
+        "local_auto_facts": 1,
+        "method_call_targets": 1,
+        "on_error_facts": 1,
+        "query_facts": 1,
+        "return_facts": 1,
+        "try_facts": 1
+      }
+    },
+    {
+      "fixture": "semantic_product_index_contract_fixture",
+      "phase": "semantic-product",
+      "definition_validation_workers": 2,
+      "semantic_product_force": "auto",
+      "no_fact_emission": "off",
+      "fact_families": "auto",
+      "semantic_product_index_family_counts": {
+        "binding_facts": 1,
+        "bridge_path_choices": 1,
+        "direct_call_targets": 2,
+        "local_auto_facts": 1,
+        "method_call_targets": 1,
+        "on_error_facts": 1,
+        "query_facts": 1,
+        "return_facts": 1,
+        "try_facts": 1
+      }
+    }
+  ],
+  "definition_validation_worker_mode_deltas": [
+    {
+      "fixture": "semantic_product_index_contract_fixture",
+      "phase": "semantic-product",
+      "semantic_product_force": "auto",
+      "no_fact_emission": "off",
+      "fact_families": "auto",
+      "semantic_product_index_family_counts_single_worker": {
+        "binding_facts": 1,
+        "bridge_path_choices": 1,
+        "direct_call_targets": 2,
+        "local_auto_facts": 1,
+        "method_call_targets": 1,
+        "on_error_facts": 1,
+        "query_facts": 1,
+        "return_facts": 1,
+        "try_facts": 1
+      },
+      "semantic_product_index_family_counts_dual_worker": {
+        "binding_facts": 1,
+        "bridge_path_choices": 1,
+        "direct_call_targets": 2,
+        "local_auto_facts": 1,
+        "method_call_targets": 1,
+        "on_error_facts": 1,
+        "query_facts": 1,
+        "return_facts": 1,
+        "try_facts": 1
+      },
+      "semantic_product_index_family_counts_identical": true
+    }
+  ]
+}
