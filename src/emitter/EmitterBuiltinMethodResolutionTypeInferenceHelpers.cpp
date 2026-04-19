@@ -306,6 +306,13 @@ std::string inferMethodResolutionPrimitiveTypeName(
     }
     return "";
   };
+  auto isRemovedMapDirectCallResultCompatibility = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return false;
+    }
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    return resolvedExprPath == "/map/contains" || resolvedExprPath == "/map/tryAt";
+  };
 
   inferPrimitiveTypeName = [&](const Expr &candidateExpr) -> std::string {
     switch (candidateExpr.kind) {
@@ -384,6 +391,9 @@ std::string inferMethodResolutionPrimitiveTypeName(
                   inferCanonicalMapAccessTypeName(candidateExpr);
               !canonicalMapAccessType.empty()) {
             return canonicalMapAccessType;
+          }
+          if (isRemovedMapDirectCallResultCompatibility(candidateExpr)) {
+            return "";
           }
           const std::string resolvedExprPath = resolveExprPath(candidateExpr);
           std::vector<std::string> resolvedCandidates =

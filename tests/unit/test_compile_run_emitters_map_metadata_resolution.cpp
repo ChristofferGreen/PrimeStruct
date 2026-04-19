@@ -650,7 +650,7 @@ TEST_CASE("C++ emitter helper rejects canonical return-struct fallback for direc
   CHECK(resolved.empty());
 }
 
-TEST_CASE("C++ emitter helper keeps same-path map tryAt direct-call return metadata precedence") {
+TEST_CASE("C++ emitter helper rejects rooted map contains and tryAt direct-call return metadata") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
   receiverName.name = "values";
@@ -660,7 +660,7 @@ TEST_CASE("C++ emitter helper keeps same-path map tryAt direct-call return metad
   keyLiteral.intWidth = 32;
   keyLiteral.literalValue = 1;
 
-  auto expectResolved = [&](const char *receiverPath, const char *expectedPath) {
+  auto expectUnresolved = [&](const char *receiverPath, const std::string &markerName) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.name = receiverPath;
@@ -685,18 +685,65 @@ TEST_CASE("C++ emitter helper keeps same-path map tryAt direct-call return metad
     std::unordered_map<std::string, std::string> structTypeMap;
     std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
     std::unordered_map<std::string, std::string> returnStructs = {
-        {"/map/tryAt", "/AliasTryAtMarker"},
-        {"/std/collections/map/tryAt", "/CanonicalTryAtMarker"},
+        {receiverPath, markerName},
+    };
+
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved.empty());
+  };
+
+  expectUnresolved("/map/contains", "/AliasContainsMarker");
+  expectUnresolved("/map/tryAt", "/AliasTryAtMarker");
+}
+
+TEST_CASE("C++ emitter helper keeps canonical map contains and tryAt direct-call return metadata") {
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  auto expectResolved = [&](const char *receiverPath, const std::string &markerName) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = receiverPath;
+    receiverCall.args = {receiverName, keyLiteral};
+    receiverCall.argNames = {std::nullopt, std::nullopt};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args = {receiverCall};
+    methodCall.argNames = {std::nullopt};
+
+    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+    primec::emitter::BindingInfo receiverInfo;
+    receiverInfo.typeName = "map";
+    receiverInfo.typeTemplateArg = "i32, i32";
+    localTypes.emplace("values", receiverInfo);
+
+    std::unordered_map<std::string, const primec::Definition *> defMap;
+    std::unordered_map<std::string, std::string> importAliases;
+    std::unordered_map<std::string, std::string> structTypeMap;
+    std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+    std::unordered_map<std::string, std::string> returnStructs = {
+        {receiverPath, markerName},
     };
 
     std::string resolved;
     CHECK(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == expectedPath);
+    CHECK(resolved == markerName + "/tag");
   };
 
-  expectResolved("/map/tryAt", "/AliasTryAtMarker/tag");
-  expectResolved("/std/collections/map/tryAt", "/CanonicalTryAtMarker/tag");
+  expectResolved("/std/collections/map/contains", "/CanonicalContainsMarker");
+  expectResolved("/std/collections/map/tryAt", "/CanonicalTryAtMarker");
 }
 
 TEST_CASE("C++ emitter helper keeps same-path map access direct-call return metadata precedence") {

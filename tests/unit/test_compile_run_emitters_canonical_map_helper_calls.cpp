@@ -646,7 +646,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/tryAt") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs same-path direct map tryAt struct method chain in C++ emitter") {
+TEST_CASE("rejects same-path direct map tryAt struct method chain through alias helper in C++ emitter") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -679,24 +679,72 @@ AliasMarker {
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
-  return(plus(/std/collections/map/tryAt(values, 2i32).tag(),
-              /map/tryAt(values, 2i32).tag()))
+  return(/map/tryAt(values, 2i32).tag())
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_cpp_direct_map_try_at_struct_method_chain_same_path_precedence.prime", source);
+      writeTemp("compile_cpp_direct_map_try_at_struct_method_chain_alias_helper_reject.prime", source);
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_direct_map_try_at_struct_method_chain_alias_helper_reject.err")
+          .string();
+
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /map/tryAt") != std::string::npos);
+}
+
+TEST_CASE("compiles and runs canonical direct map tryAt struct method chain in C++ emitter") {
+  const std::string source = R"(
+CanonicalMarker {
+  [i32] value
+}
+
+AliasMarker {
+  [i32] value
+}
+
+[return<AliasMarker>]
+/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(AliasMarker(plus(key, 40i32)))
+}
+
+[return<CanonicalMarker>]
+/std/collections/map/tryAt([map<i32, i32>] values, [i32] key) {
+  return(CanonicalMarker(key))
+}
+
+[return<int>]
+/CanonicalMarker/tag([CanonicalMarker] self) {
+  return(self.value)
+}
+
+[return<int>]
+/AliasMarker/tag([AliasMarker] self) {
+  return(self.value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(2i32, 7i32)}
+  return(/std/collections/map/tryAt(values, 2i32).tag())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_cpp_direct_canonical_map_try_at_struct_method_chain.prime", source);
   const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_direct_map_try_at_struct_method_chain_same_path_precedence_exe")
+       "primec_cpp_direct_canonical_map_try_at_struct_method_chain_exe")
           .string();
   const std::string outPath =
       (testScratchPath("") /
-       "primec_cpp_direct_map_try_at_struct_method_chain_same_path_precedence.out")
+       "primec_cpp_direct_canonical_map_try_at_struct_method_chain.out")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 44);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
   CHECK(readFile(outPath).empty());
 }
 
