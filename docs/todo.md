@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1118
+- TODO-1119
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1118
+- TODO-1119
 
 ### Priority Lanes (Current)
 
-- Native borrowed experimental map method skip debt: TODO-1118
+- Native experimental map insert skip debt: TODO-1119
 
 ### Execution Queue (Recommended)
 
-1. TODO-1118
+1. TODO-1119
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native borrowed experimental map method skipped-test debt | TODO-1118 |
+| Native experimental map insert skipped-test debt | TODO-1119 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1118 |
+| Native compile-run skipped-test debt | TODO-1119 |
 
 ### Task Blocks
 
-- [ ] TODO-1118: Audit native borrowed experimental map method skip debt
+- [ ] TODO-1119: Audit native experimental map insert skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native borrowed experimental-map method coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native experimental-map insert coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native borrowed experimental-map method case in stale form.
-    - The native test locks the actual current contract for borrowed experimental-map methods, whether that is a successful runtime path or a stable diagnostic.
-  - stop_rule: Stop after the native borrowed experimental-map method surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native experimental-map insert case in stale form.
+    - The native test locks the actual current contract for experimental-map inserts, whether that is a successful runtime path or a stable diagnostic.
+  - stop_rule: Stop after the native experimental-map insert surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
