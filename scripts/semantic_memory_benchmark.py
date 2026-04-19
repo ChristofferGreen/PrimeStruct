@@ -74,6 +74,21 @@ FIXTURES: tuple[FixtureSpec, ...] = (
 
 DIRECT_TARGET_RE = re.compile(r'direct_call_targets\[\d+\]:\s+scope_path="([^"]*)"\s+call_name="([^"]*)"')
 METHOD_TARGET_RE = re.compile(r'method_call_targets\[\d+\]:\s+scope_path="([^"]*)"\s+method_name="([^"]*)"')
+SEMANTIC_PRODUCT_INDEX_FAMILY_LABELS = (
+    "direct_call_targets",
+    "method_call_targets",
+    "bridge_path_choices",
+    "binding_facts",
+    "return_facts",
+    "local_auto_facts",
+    "query_facts",
+    "try_facts",
+    "on_error_facts",
+)
+SEMANTIC_PRODUCT_INDEX_FAMILY_PATTERNS = {
+    label: re.compile(rf"^\s*{re.escape(label)}\[\d+\]:", re.MULTILINE)
+    for label in SEMANTIC_PRODUCT_INDEX_FAMILY_LABELS
+}
 SEMANTIC_PHASE_COUNTERS_PREFIX = "[benchmark-semantic-phase-counters] "
 SEMANTIC_REPEAT_LEAK_CHECK_PREFIX = "[benchmark-semantic-repeat-leak-check] "
 
@@ -400,6 +415,9 @@ def measure_fixture_phase(primec: Path,
 
     if phase == "semantic-product":
         result["key_cardinality"] = collect_key_cardinality_metrics(captured_dump)
+        result["semantic_product_index_family_counts"] = (
+            collect_semantic_product_index_family_counts(captured_dump)
+        )
 
     return result
 
@@ -423,6 +441,13 @@ def collect_key_cardinality_metrics(dump_text: str) -> dict:
         "distinct_direct_call_target_keys": len(direct_keys),
         "distinct_method_call_target_keys": len(method_keys),
         "max_target_key_length": max_key_len,
+    }
+
+
+def collect_semantic_product_index_family_counts(dump_text: str) -> dict:
+    return {
+        label: len(pattern.findall(dump_text))
+        for label, pattern in SEMANTIC_PRODUCT_INDEX_FAMILY_PATTERNS.items()
     }
 
 
@@ -995,6 +1020,22 @@ def benchmark_row_definition_validation_workers_mode(row: dict) -> int:
     return parsed if parsed > 0 else 1
 
 
+def benchmark_row_semantic_product_index_family_counts(row: dict) -> dict[str, int]:
+    value = row.get("semantic_product_index_family_counts", {})
+    if not isinstance(value, dict):
+        value = {}
+
+    normalized: dict[str, int] = {}
+    for label in SEMANTIC_PRODUCT_INDEX_FAMILY_LABELS:
+        raw = value.get(label, 0)
+        try:
+            count = int(raw)
+        except Exception:
+            count = 0
+        normalized[label] = count if count >= 0 else 0
+    return normalized
+
+
 def compute_definition_validation_worker_mode_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, bool, str, str, str, str], dict[int, dict]] = {}
     for row in results:
@@ -1030,6 +1071,8 @@ def compute_definition_validation_worker_mode_deltas(results: list[dict]) -> lis
             continue
         single_worker_dump_sha = str(single_worker_row.get("dump_sha256", ""))
         dual_worker_dump_sha = str(dual_worker_row.get("dump_sha256", ""))
+        single_worker_index_counts = benchmark_row_semantic_product_index_family_counts(single_worker_row)
+        dual_worker_index_counts = benchmark_row_semantic_product_index_family_counts(dual_worker_row)
         deltas.append(
             {
                 "fixture": fixture,
@@ -1042,6 +1085,10 @@ def compute_definition_validation_worker_mode_deltas(results: list[dict]) -> lis
                 "graph_local_auto_side_channel_mode": graph_local_auto_side_channel_mode,
                 "graph_local_auto_dependency_scratch_mode":
                     benchmark_row_graph_local_auto_dependency_scratch_mode(single_worker_row),
+                "semantic_product_index_family_counts_single_worker": single_worker_index_counts,
+                "semantic_product_index_family_counts_dual_worker": dual_worker_index_counts,
+                "semantic_product_index_family_counts_identical":
+                    single_worker_index_counts == dual_worker_index_counts,
                 "single_worker_dump_sha256": single_worker_dump_sha,
                 "dual_worker_dump_sha256": dual_worker_dump_sha,
                 "dump_sha256_identical": single_worker_dump_sha == dual_worker_dump_sha,

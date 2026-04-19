@@ -1556,6 +1556,128 @@ TEST_CASE("semantic memory benchmark helper emits key-cardinality report fields"
   CHECK(readFile(validateErrPath).empty());
 }
 
+TEST_CASE("semantic memory benchmark helper counts semantic-product index families from dumps") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::string validateOutPath = writeTemp("semantic_memory_index_family_counts_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_index_family_counts_validate.err", "");
+  const std::string validateCmd =
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c " +
+      quoteShellArg(
+          "import importlib.util, json, sys\n"
+          "spec = importlib.util.spec_from_file_location('semantic_memory_benchmark', sys.argv[1])\n"
+          "mod = importlib.util.module_from_spec(spec)\n"
+          "sys.modules[spec.name] = mod\n"
+          "spec.loader.exec_module(mod)\n"
+          "dump = '''semantic_product {\n"
+          "  direct_call_targets[0]: scope_path=\"/main\" call_name=\"id\"\n"
+          "  direct_call_targets[1]: scope_path=\"/main\" call_name=\"plus\"\n"
+          "  method_call_targets[0]: scope_path=\"/main\" method_name=\"count\"\n"
+          "  bridge_path_choices[0]: scope_path=\"/main\" collection_family=\"vector\"\n"
+          "  binding_facts[0]: scope_path=\"/main\" site_kind=\"local\"\n"
+          "  return_facts[0]: definition_path=\"/main\"\n"
+          "  local_auto_facts[0]: scope_path=\"/main\" binding_name=\"value\"\n"
+          "  query_facts[0]: scope_path=\"/main\" call_name=\"lookup\"\n"
+          "  try_facts[0]: scope_path=\"/main\"\n"
+          "  on_error_facts[0]: definition_path=\"/main\"\n"
+          "}'''\n"
+          "counts = mod.collect_semantic_product_index_family_counts(dump)\n"
+          "ok = counts == {\n"
+          "  'direct_call_targets': 2,\n"
+          "  'method_call_targets': 1,\n"
+          "  'bridge_path_choices': 1,\n"
+          "  'binding_facts': 1,\n"
+          "  'return_facts': 1,\n"
+          "  'local_auto_facts': 1,\n"
+          "  'query_facts': 1,\n"
+          "  'try_facts': 1,\n"
+          "  'on_error_facts': 1,\n"
+          "}\n"
+          "if not ok:\n"
+          "  print(json.dumps(counts, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(scriptPath.string()) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
+TEST_CASE("semantic memory benchmark helper reports semantic-product index family parity across definition workers") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::filesystem::path primecPath = repoRoot / "build-release" / "primec";
+  if (!std::filesystem::exists(primecPath)) {
+    INFO("primec not available in build-release");
+    return;
+  }
+
+  const std::string reportPath = writeTemp("semantic_memory_index_family_parity_report.json", "");
+  const std::string stdoutPath = writeTemp("semantic_memory_index_family_parity.out", "");
+  const std::string stderrPath = writeTemp("semantic_memory_index_family_parity.err", "");
+  const std::string benchmarkCmd =
+      "python3 " + quoteShellArg(scriptPath.string()) +
+      " --repo-root " + quoteShellArg(repoRoot.string()) +
+      " --primec " + quoteShellArg(primecPath.string()) +
+      " --runs 1 --fixtures math_vector --phases semantic-product "
+      "--definition-validation-workers both --report-json " +
+      quoteShellArg(reportPath) +
+      " > " + quoteShellArg(stdoutPath) + " 2> " + quoteShellArg(stderrPath);
+  CHECK(runCommand(benchmarkCmd) == 0);
+  CHECK(readFile(stderrPath).empty());
+
+  const std::string validateOutPath = writeTemp("semantic_memory_index_family_parity_validate.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_index_family_parity_validate.err", "");
+  const std::string validateCmd =
+      "python3 -c " +
+      quoteShellArg(
+          "import json, sys\n"
+          "report = json.load(open(sys.argv[1], encoding='utf-8'))\n"
+          "rows = report.get('results', [])\n"
+          "deltas = report.get('definition_validation_worker_mode_deltas', [])\n"
+          "required = {\n"
+          "  'direct_call_targets', 'method_call_targets', 'bridge_path_choices',\n"
+          "  'binding_facts', 'return_facts', 'local_auto_facts',\n"
+          "  'query_facts', 'try_facts', 'on_error_facts'\n"
+          "}\n"
+          "ok = len(rows) == 2 and len(deltas) == 1\n"
+          "if ok:\n"
+          "  for row in rows:\n"
+          "    counts = row.get('semantic_product_index_family_counts')\n"
+          "    ok = ok and isinstance(counts, dict)\n"
+          "    if isinstance(counts, dict):\n"
+          "      ok = ok and set(counts.keys()) == required\n"
+          "      ok = ok and all(isinstance(counts[name], int) and counts[name] >= 0 for name in required)\n"
+          "      ok = ok and sum(counts.values()) > 0\n"
+          "  delta = deltas[0]\n"
+          "  single = delta.get('semantic_product_index_family_counts_single_worker')\n"
+          "  dual = delta.get('semantic_product_index_family_counts_dual_worker')\n"
+          "  ok = ok and delta.get('fixture') == 'math_vector'\n"
+          "  ok = ok and delta.get('phase') == 'semantic-product'\n"
+          "  ok = ok and bool(delta.get('dump_sha256_identical'))\n"
+          "  ok = ok and bool(delta.get('semantic_product_index_family_counts_identical'))\n"
+          "  ok = ok and isinstance(single, dict) and isinstance(dual, dict)\n"
+          "  if isinstance(single, dict) and isinstance(dual, dict):\n"
+          "    ok = ok and set(single.keys()) == required and set(dual.keys()) == required\n"
+          "    ok = ok and single == dual\n"
+          "if not ok:\n"
+          "  print(json.dumps(report, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
 TEST_CASE("semantic memory benchmark helper defaults to three runs with median-worst rollups") {
   if (!hasPython3()) {
     INFO("python3 not available");
@@ -2030,6 +2152,10 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   CHECK(script.find("selected_graph_local_auto_dependency_scratch_modes") != std::string::npos);
   CHECK(script.find("selected_definition_validation_worker_modes") != std::string::npos);
   CHECK(script.find("benchmark_row_definition_validation_workers_mode") != std::string::npos);
+  CHECK(script.find("SEMANTIC_PRODUCT_INDEX_FAMILY_LABELS") != std::string::npos);
+  CHECK(script.find("SEMANTIC_PRODUCT_INDEX_FAMILY_PATTERNS") != std::string::npos);
+  CHECK(script.find("def collect_semantic_product_index_family_counts(dump_text: str) -> dict:") != std::string::npos);
+  CHECK(script.find("def benchmark_row_semantic_product_index_family_counts(row: dict) -> dict[str, int]:") != std::string::npos);
   CHECK(script.find("compute_semantic_product_force_deltas") != std::string::npos);
   CHECK(script.find("compute_semantic_validation_without_fact_emission_deltas") != std::string::npos);
   CHECK(script.find("compute_method_target_memoization_deltas") != std::string::npos);
@@ -2047,6 +2173,10 @@ TEST_CASE("semantic memory benchmark helper defines method-target memoization de
   CHECK(script.find("\"definition_validation_worker_mode_deltas\"") != std::string::npos);
   CHECK(script.find("\"definition_validation_workers\"") != std::string::npos);
   CHECK(script.find("\"dump_sha256_identical\"") != std::string::npos);
+  CHECK(script.find("\"semantic_product_index_family_counts\"") != std::string::npos);
+  CHECK(script.find("\"semantic_product_index_family_counts_single_worker\"") != std::string::npos);
+  CHECK(script.find("\"semantic_product_index_family_counts_dual_worker\"") != std::string::npos);
+  CHECK(script.find("\"semantic_product_index_family_counts_identical\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_on_minus_off\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_no_fact_emission_minus_fact_emission\"") != std::string::npos);
   CHECK(script.find("\"median_peak_rss_bytes_legacy_shadow_minus_compact\"") != std::string::npos);
