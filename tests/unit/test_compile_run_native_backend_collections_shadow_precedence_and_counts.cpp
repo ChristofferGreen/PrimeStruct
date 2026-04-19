@@ -231,7 +231,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("native canonical map access non-string compatibility aliases no longer override same-path typing" * doctest::skip(true)) {
+TEST_CASE("native canonical map access non-string compatibility aliases no longer override same-path typing") {
   const std::string source = R"(
 [return<string>]
 /map/at([map<i32, string>] values, [i32] key) {
