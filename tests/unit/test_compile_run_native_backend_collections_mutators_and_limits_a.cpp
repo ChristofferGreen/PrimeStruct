@@ -104,7 +104,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native user vector pop call shadow" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native user vector pop call shadow") {
   const std::string source = R"(
 import /std/collections/*
 
