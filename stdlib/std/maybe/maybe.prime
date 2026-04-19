@@ -11,7 +11,9 @@ namespace std {
 
     [public]
     Destroy() {
-      if(not(this.empty), then() { drop(this.value) }, else() { })
+      if(not(this.empty)) {
+        drop(this.value)
+      }
     }
 
     [public return<bool>]
@@ -26,13 +28,17 @@ namespace std {
 
     [public mut return<void>]
     clear() {
-      if(not(this.empty), then() { drop(this.value) }, else() { })
+      if(not(this.empty)) {
+        drop(this.value)
+      }
       assign(this.empty, true)
     }
 
     [public mut return<void>]
     set([T] v) {
-      if(not(this.empty), then() { drop(this.value) }, else() { })
+      if(not(this.empty)) {
+        drop(this.value)
+      }
       init(this.value, v)
       assign(this.empty, false)
     }

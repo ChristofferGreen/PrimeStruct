@@ -416,6 +416,30 @@ TEST_CASE("file read_byte docs and helpers stay source locked") {
   CHECK(lowerer.find("emitInstruction(IrOpcode::FileReadByte") != std::string::npos);
 }
 
+TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path maybeStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "maybe" / "maybe.prime";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(maybeStdlibPath)) {
+    maybeStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "maybe" / "maybe.prime";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(maybeStdlibPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string maybeStdlib = readFile(maybeStdlibPath.string());
+
+  CHECK(primeStructDoc.find("Destroy() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n    }") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("clear() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n      assign(this.empty, true)\n    }") !=
+        std::string::npos);
+  CHECK(maybeStdlib.find("if(not(this.empty)) {\n        drop(this.value)\n      }") != std::string::npos);
+  CHECK(maybeStdlib.find("if(not(this.empty), then() { drop(this.value) }, else() { })") ==
+        std::string::npos);
+}
+
 TEST_CASE("software renderer composite widgets stay source locked to basic widgets") {
   std::filesystem::path uiStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "ui" / "ui.prime";
   if (!std::filesystem::exists(uiStdlibPath)) {

@@ -56,12 +56,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4027
+- TODO-4028
 - TODO-4037
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4028
 - TODO-4029
 - TODO-4030
 - TODO-4031
@@ -71,55 +70,55 @@ Task template:
 - TODO-4035
 - TODO-4038
 - TODO-4039
+- TODO-4040
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4027 through TODO-4035
+- Stdlib surface-style alignment: TODO-4028 through TODO-4035
 - Stdlib bridge consolidation: TODO-4037 through TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4027
-2. TODO-4028
-3. TODO-4029
-4. TODO-4030
-5. TODO-4031
-6. TODO-4032
-7. TODO-4033
-8. TODO-4034
-9. TODO-4035
-10. TODO-4037
-11. TODO-4038
-12. TODO-4039
-13. TODO-4040
-14. TODO-4041
-15. TODO-4042
-16. TODO-4051
-17. TODO-4043
-18. TODO-4044
-19. TODO-4045
-20. TODO-4046
-21. TODO-4047
-22. TODO-4048
-23. TODO-4049
-24. TODO-4050
-25. TODO-4052
-26. TODO-4058
-27. TODO-4053
-28. TODO-4055
-29. TODO-4054
-30. TODO-4056
-31. TODO-4057
-32. TODO-4059
+1. TODO-4028
+2. TODO-4029
+3. TODO-4030
+4. TODO-4031
+5. TODO-4032
+6. TODO-4033
+7. TODO-4034
+8. TODO-4035
+9. TODO-4037
+10. TODO-4038
+11. TODO-4039
+12. TODO-4040
+13. TODO-4041
+14. TODO-4042
+15. TODO-4051
+16. TODO-4043
+17. TODO-4044
+18. TODO-4045
+19. TODO-4046
+20. TODO-4047
+21. TODO-4048
+22. TODO-4049
+23. TODO-4050
+24. TODO-4052
+25. TODO-4058
+26. TODO-4053
+27. TODO-4055
+28. TODO-4054
+29. TODO-4056
+30. TODO-4057
+31. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4027, TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4037, TODO-4038, TODO-4039, TODO-4040, TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -138,7 +137,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4027, TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4028, TODO-4029, TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | TODO-4039 |
 | Lowerer/source-composition contract coverage | TODO-4040 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -523,15 +522,3 @@ Task template:
     - Any remaining helper-form arithmetic or assignment is confined to substrate, canonical, or unsupported-syntax cases and is documented as intentional.
     - The cleanup does not mix in unrelated API or behavior changes.
   - stop_rule: Stop once public/high-level stdlib code uses readable surface arithmetic and assignment forms by default and only justified helper-form remnants remain.
-
-- [ ] TODO-4027: Align public stdlib modules to surface-form operators and control flow
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - scope: Sweep the style-aligned public stdlib modules and convert their high-level logic to the supported surface-form operators and control-flow syntax described in `docs/CodeExamples.md`, without dragging substrate internals or unsupported language forms into the same change.
-  - acceptance:
-    - Public/high-level stdlib modules read like the documented language examples for operators, branching, and loop/control-flow spelling where the surface syntax is already supported.
-    - Intentional canonical or substrate-only exceptions are limited to modules classified outside the public style-aligned surface.
-    - The sweep leaves behavior unchanged and records any unsupported-syntax gaps as explicit follow-up work rather than silently keeping helper-heavy spellings.
-  - stop_rule: Stop once the public/high-level stdlib surface follows the documented control-flow and operator style and any remaining unsupported cases are explicitly carved out.
-  - notes: Targets only the style-aligned modules documented in `docs/CodeExamples.md` and `docs/PrimeStruct.md`; exclude `stdlib/std/bench_non_math/*`, `stdlib/std/collections/collections.prime`, `stdlib/std/collections/experimental_*`, and `stdlib/std/gfx/experimental.prime` unless a later TODO explicitly retargets them.

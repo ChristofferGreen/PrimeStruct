@@ -4163,3 +4163,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the shared registry exists and describes the initial stdlib bridge surfaces well enough for follow-on migration tasks; do not widen this item into semantics or lowering rewrites.
   - finished_at: 2026-04-19
   - evidence: Added `include/primec/StdlibSurfaceRegistry.h` and `src/StdlibSurfaceRegistry.cpp` under `primec_support_lib` so one shared production registry now declares the initial file helper, file error, vector helper, map helper, map constructor, container error, gfx buffer, and gfx error bridge families with canonical import roots, compatibility spellings, and stable bridge keys for later migration work; added a focused source-lock test in `tests/unit/test_ir_pipeline_backends_architecture.h` that pins the registry API shape, the CMake support-library placement, and the initial file/collections/gfx coverage; and updated `docs/todo.md` so `TODO-4037` is now the next unblocked stdlib bridge item while preserving the newer queue additions already present in the file.
+
+- [x] TODO-4070: Align `/std/maybe` control flow to surface `if (...) { ... }` syntax
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026
+  - scope: Split the oversized control-flow umbrella from `TODO-4027` and convert the public `/std/maybe` module from canonical `if(cond, then() { ... }, else() { ... })` spellings to the supported surface `if (...) { ... }` form without changing assignment or API shape.
+  - acceptance:
+    - `/std/maybe` uses the supported surface conditional form for its public control-flow sites.
+    - Assignment-heavy follow-up work stays in `TODO-4028` instead of being mixed into the same slice.
+    - Source-lock coverage pins the style-aligned `/std/maybe` contract against the matching spec example.
+  - stop_rule: Stop once `/std/maybe` uses the surface conditional form and the remaining style cleanup stays explicit in the existing follow-up TODOs.
+  - notes: Split from oversized `TODO-4027`, whose remaining operator, assignment, naming, and module-specific style cleanup is already covered by `TODO-4028` through `TODO-4035`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the three public control-flow sites in `stdlib/std/maybe/maybe.prime` from canonical `if(..., then() { ... }, else() { ... })` form to the surface `if (...) { ... }` spelling, added a focused source-lock regression in `tests/unit/test_compile_run_examples_docs_locks.cpp` that pins `/std/maybe` to the same conditional shape documented in `docs/PrimeStruct.md`, and updated `docs/todo.md` to retire oversized `TODO-4027` while promoting `TODO-4028` as the next active style-alignment item.
