@@ -4208,3 +4208,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4028`, whose remaining style-aligned helper-spelling cleanup continues in `TODO-4073` for `/std/image` and then the inferred-binding follow-ups starting at `TODO-4029`.
   - finished_at: 2026-04-19
   - evidence: Rewrote `stdlib/std/ui/ui.prime` so the style-aligned UI wrappers no longer use `assign(...)`, `plus(...)`, or `minus(...)`, replacing those sites with direct assignment, `+`, `-`, and loop increment/decrement surface forms across `CommandList`, `HtmlCommandList`, `UiEventStream`, and `LayoutTree`; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused source-lock that asserts `/std/ui` contains no remaining helper-form assignment or additive spellings and pins representative operator-form sites; and updated `docs/todo.md` so `TODO-4073` is now the next active surface-style leaf while the queue/snapshot rows drop `TODO-4072`.
+
+- [x] TODO-4074: Align `/std/image/ppm` arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026
+  - scope: Split the oversized `/std/image` helper-spelling cleanup and rewrite only the PPM-facing helpers plus `namespace ppm` read/write body away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in the much larger PNG/DEFLATE implementation.
+  - acceptance:
+    - The global PPM helpers and `namespace ppm` read/write path stop using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - The remaining PNG/DEFLATE half of `/std/image` stays isolated as follow-up work instead of being folded into the same mechanical rewrite.
+    - Focused source-lock coverage pins representative PPM operator-form sites and keeps representative PNG helper-form sites explicit until the follow-up lands.
+  - stop_rule: Stop once the PPM-facing portion of `/std/image` uses readable surface arithmetic and assignment by default; leave the remaining PNG/DEFLATE helper-spelling cleanup in a separate follow-up leaf.
+  - notes: Split from oversized `TODO-4073`, whose remaining PNG/DEFLATE helper-spelling cleanup continues as `TODO-4075` before the inferred-binding follow-ups starting at `TODO-4029`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the PPM-facing helpers and `namespace ppm` read/write path in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, left the larger `namespace png` helper-form arithmetic and assignment sites untouched for the follow-up slice, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the `ppmBody` operator-form spellings while pinning representative `pngBody` helper-form spellings, and updated `docs/todo.md` so oversized `TODO-4073` is retired in favor of the remaining `TODO-4075` PNG follow-up.

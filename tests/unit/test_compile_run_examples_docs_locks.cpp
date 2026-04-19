@@ -360,6 +360,15 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(ppmBody.find("File<Write>(path)?") != std::string::npos);
   CHECK(ppmBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(ppmBody.find("return(Result.ok())") != std::string::npos);
+  CHECK(ppmBody.find("return(value - 48i32)") != std::string::npos);
+  CHECK(ppmBody.find("value = pendingByte") != std::string::npos);
+  CHECK(ppmBody.find("value = multiply(value, 10i32) + ppmDigitValue(byte)") != std::string::npos);
+  CHECK(ppmBody.find("pixelCount = convert<i32>(pixelCountWide)") != std::string::npos);
+  CHECK(ppmBody.find("status = ppmReadAsciiInt(file, hasPending, pendingByte, parsedWidth)") != std::string::npos);
+  CHECK(ppmBody.find("status = ppmWriteComponent(file, pixels[index])") != std::string::npos);
+  CHECK(ppmBody.find("assign(") == std::string::npos);
+  CHECK(ppmBody.find("plus(") == std::string::npos);
+  CHECK(ppmBody.find("minus(") == std::string::npos);
   CHECK(ppmBody.find("return(unsupported_write())") == std::string::npos);
 
   const std::string pngBody = imageStdlib.substr(pngStart);
@@ -378,6 +387,9 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("File<Read>(path)?") != std::string::npos);
   CHECK(pngBody.find("File<Write>(path)?") != std::string::npos);
   CHECK(pngBody.find("pngAppendBytes") != std::string::npos);
+  CHECK(pngBody.find("assign(value, 0i32)") != std::string::npos);
+  CHECK(pngBody.find("assign(value, plus(multiply(value, 256i32), byte))") != std::string::npos);
+  CHECK(pngBody.find("assign(remaining, minus(remaining, 1i32))") != std::string::npos);
   CHECK(pngBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(pngBody.find("return(unsupported_write())") == std::string::npos);
 }
