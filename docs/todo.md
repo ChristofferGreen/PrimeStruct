@@ -56,30 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- none
+- TODO-1123
 
 ### Immediate Next 10 (After Ready Now)
 
-- none
+- TODO-1123
 
 ### Priority Lanes (Current)
 
-- none
+- VM bare vector mutator method import-requirement skip debt: TODO-1123
 
 ### Execution Queue (Recommended)
 
-- none
+1. TODO-1123
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | none |
+| VM bare vector mutator method skipped-test debt | TODO-1123 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | none |
+| VM compile-run skipped-test debt | TODO-1123 |
 
 ### Task Blocks
+
+- [ ] TODO-1123: Audit VM bare vector mutator method import-requirement skip debt
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Backend skip-debt cleanup
+  - scope: Re-enable or delete the skipped VM bare vector mutator method coverage, and lock the current VM contract for calling `push`, `pop`, `reserve`, `clear`, `remove_at`, and `remove_swap` without imported helpers.
+  - acceptance:
+    - `tests/unit/test_compile_run_vm_collections_shim_maps_c.cpp` no longer carries the skipped bare vector mutator method case in stale form.
+    - The VM test locks the actual current contract for bare vector mutator methods without imported helpers, whether that stays as successful execution or a stable diagnostic.
+  - stop_rule: Stop after the VM bare vector mutator method surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

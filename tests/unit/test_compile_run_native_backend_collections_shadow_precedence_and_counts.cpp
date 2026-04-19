@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("native bare vector mutator methods compile without imported helpers" * doctest::skip(true)) {
+TEST_CASE("native bare vector mutator methods compile without imported helpers") {
   expectBareVectorMutatorMethodImportRequirement("native", "push", "7i32");
   expectBareVectorMutatorMethodImportRequirement("native", "pop", "");
   expectBareVectorMutatorMethodImportRequirement("native", "reserve", "8i32");
