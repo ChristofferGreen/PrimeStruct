@@ -108,6 +108,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
             normalizedMethodName == "at" || normalizedMethodName == "at_unsafe" ||
             normalizedMethodName == "insert");
   };
+  auto shouldPreferCanonicalVectorPath = [&](const std::string &candidate) {
+    return isVectorReceiverTarget(candidate) &&
+           (isExplicitCanonicalVectorMethod || normalizedMethodName == "count" ||
+            normalizedMethodName == "capacity");
+  };
   auto shouldRetryCanonicalSoaHelperPath = [&](const std::string &candidate) {
     if (!isRawBuiltinSoaVectorReceiverTarget(candidate)) {
       return false;
@@ -254,9 +259,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
         (isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
          isMapReceiverTarget(resolvedTypeWithoutSlash))
             ? "/map"
-            : (shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
+            : (shouldPreferCanonicalVectorPath(resolvedTypeWithoutSlash)
+                   ? "/std/collections/vector"
+                   : (shouldPreferCanonicalMapPath(resolvedTypeWithoutSlash)
                    ? "/std/collections/map"
-                   : normalizedResolvedTypePath);
+                   : normalizedResolvedTypePath));
     const std::string resolved = resolvedBase + "/" + normalizedMethodName;
     if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(resolvedTypeWithoutSlash)) {
       errorOut.clear();
@@ -314,9 +321,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
       (isExplicitMapContainsOrTryAtCompatibilityMethodAlias &&
        isMapReceiverTarget(normalizedTypeName))
           ? "/map"
-          : (shouldPreferCanonicalMapPath(normalizedTypeName)
+          : (shouldPreferCanonicalVectorPath(normalizedTypeName)
+                 ? "/std/collections/vector"
+                 : (shouldPreferCanonicalMapPath(normalizedTypeName)
                  ? "/std/collections/map"
-                 : "/" + normalizedTypeName);
+                 : "/" + normalizedTypeName));
   const std::string resolved = resolvedBase + "/" + normalizedMethodName;
   if (normalizedMethodName == "to_soa" && isVectorReceiverTarget(normalizedTypeName)) {
     errorOut.clear();

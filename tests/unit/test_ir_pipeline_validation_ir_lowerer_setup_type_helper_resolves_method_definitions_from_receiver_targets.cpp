@@ -9,6 +9,10 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   vectorCountDef.fullPath = "/vector/count";
   primec::Definition stdCountDef;
   stdCountDef.fullPath = "/std/collections/vector/count";
+  primec::Definition vectorCapacityDef;
+  vectorCapacityDef.fullPath = "/vector/capacity";
+  primec::Definition stdCapacityDef;
+  stdCapacityDef.fullPath = "/std/collections/vector/capacity";
   primec::Definition mapCountDef;
   mapCountDef.fullPath = "/map/count";
   primec::Definition stdMapCountDef;
@@ -28,6 +32,8 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
       {"/array/count", &arrayCountDef},
       {"/vector/count", &vectorCountDef},
       {"/std/collections/vector/count", &stdCountDef},
+      {"/vector/capacity", &vectorCapacityDef},
+      {"/std/collections/vector/capacity", &stdCapacityDef},
       {"/map/count", &mapCountDef},
       {"/std/collections/map/count", &stdMapCountDef},
       {"/map/at", &mapAtDef},
@@ -47,7 +53,19 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "count", "vector", "", defMap, error) == &stdCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
             "count", "std/collections/vector", "", defMap, error) == &stdCountDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "capacity", "vector", "", defMap, error) == &stdCapacityDef);
+  CHECK(error.empty());
+
+  CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(
+            "capacity", "std/collections/vector", "", defMap, error) == &stdCapacityDef);
   CHECK(error.empty());
 
   CHECK(primec::ir_lowerer::resolveMethodDefinitionFromReceiverTarget(

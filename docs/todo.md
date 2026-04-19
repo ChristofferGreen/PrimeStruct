@@ -55,7 +55,7 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-0991
+1. TODO-0993
 2. TODO-0401
 3. TODO-0402
 4. TODO-0405
@@ -68,14 +68,14 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- P1 Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`): TODO-0991, TODO-0409
+- P1 Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`): TODO-0993, TODO-0409
 - P2 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (collection stdlib ownership cutover):
-1. TODO-0991
+1. TODO-0993
 2. TODO-0409
 
 Wave B (SoA completion):
@@ -93,7 +93,7 @@ Wave D (queue hygiene):
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`) | TODO-0991, TODO-0409 |
+| Collection stdlib ownership cutover (`vector`, `map`, `soa_vector`) | TODO-0993, TODO-0409 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
 | Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
@@ -103,31 +103,43 @@ Wave D (queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0991, TODO-0409 |
-| Collection conformance and alias-deletion checks (`vector`/`map`/`soa_vector`) | TODO-0991, TODO-0409 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0993, TODO-0409 |
+| Collection conformance and alias-deletion checks (`vector`/`map`/`soa_vector`) | TODO-0993, TODO-0409 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
 
-- [ ] TODO-0991: Remove remaining rooted vector helper bridges from production call adapters
+- [~] TODO-0991: Track remaining rooted vector helper bridge cleanup
   - owner: ai
   - created_at: 2026-04-19
   - phase: Group 14
-  - scope: Finish the vector stdlib-authoritative cutover after the emitter bare-method canonicalization by deleting the remaining production call-adapter branches that still reintroduce rooted `/vector/*` helper paths when canonical `/std/collections/vector/*` metadata already exists.
+  - scope: Track the remaining vector call-adapter child leaves required to delete rooted `/vector/*` helper-path bridges after the emitter and lowerer bare `count`/`capacity` canonicalizations; implementation work lives in child TODOs.
   - acceptance:
-    - Production emitter/IR call-adapter helpers prefer `/std/collections/vector/*` over rooted `/vector/*` for normal vector helper routing when canonical helper metadata exists.
+    - Active vector bridge child leaves stay explicit with bounded scope, canonical-path goals, and verification commands.
+    - Completed vector bridge child leaves move to `docs/todo_finished.md` with evidence notes in the same change that removes them from active planning.
+    - `TODO-0409` depends only on explicit remaining vector bridge child work, not on implicit tracker state.
+  - stop_rule: If any remaining vector bridge child leaf is too large for one code-affecting commit, split that child into smaller leaves before implementation continues.
+  - notes: Archived child `TODO-0990` canonicalized emitter bare `count`/`capacity` method routing to `/std/collections/vector/*`; archived child `TODO-0992` canonicalized lowerer bare vector `count`/`capacity` receiver probing to the same canonical stdlib paths; active child `TODO-0993` owns the remaining rooted vector helper-path bridges before `TODO-0409` begins.
+
+- [ ] TODO-0993: Remove remaining rooted vector helper bridges outside bare count/capacity lowerer routing
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Group 14
+  - scope: Finish the vector stdlib-authoritative cutover after the emitter and lowerer bare `count`/`capacity` canonicalizations by deleting the remaining production call-adapter branches that still reintroduce rooted `/vector/*` helper paths on other vector helper surfaces.
+  - acceptance:
+    - Production emitter/IR call-adapter helpers no longer reintroduce rooted `/vector/*` helper paths on at least one remaining non-`count`/`capacity` vector helper branch family when canonical `/std/collections/vector/*` metadata already exists.
     - Rooted `/vector/*` compatibility spellings that are meant to stay rejected keep their current unknown-target/unknown-method behavior instead of silently routing through backend-owned helper bridges.
-    - Focused helper tests pin canonical vector helper success paths plus rooted-alias rejection so the remaining bridge deletions cannot regress silently.
+    - Focused helper tests pin the new canonical vector helper success paths plus rooted-alias rejection so the remaining bridge deletions cannot regress silently.
     - At least one real rooted vector helper-path compatibility branch family is deleted rather than renamed.
-  - stop_rule: If the remaining call-adapter cleanup splits naturally into separate emitter and IR-lowerer branches, land the smallest complete branch family first and add a follow-up child leaf for the rest before continuing.
+  - stop_rule: If the remaining call-adapter cleanup splits naturally into separate access and mutator branch families, land the smallest complete branch family first and add a follow-up child leaf for the rest before continuing.
 
 - [ ] TODO-0409: Remove C++ name routing for `map` + `soa_vector`
   - owner: ai
   - created_at: 2026-04-13
   - phase: Group 14
-  - depends_on: TODO-0991
+  - depends_on: TODO-0993
   - scope: Complete stdlib-authoritative collection migration by routing `map` and `soa_vector` behavior through `.prime` definitions, then delete remaining production compiler/runtime C++ name/path alias logic for these collections in semantics/lowering (`src/` + `include/primec`, excluding tests/testing-only facades).
   - acceptance:
     - Production `src/` + `include/` collection routing no longer hardcodes `map`/`soa_vector` symbol/path aliases for normal call/access classification; dispatch is generic or intrinsic-driven.
@@ -148,7 +160,7 @@ Wave D (queue hygiene):
     - Completed vector child leaves move to `docs/todo_finished.md` with evidence notes in the same change that removes them from active planning.
     - `TODO-0409` depends only on explicit remaining vector child work, not on implicit parent-state.
   - stop_rule: If any remaining vector child leaf is too large for one code-affecting commit, split that child into smaller leaves before implementation continues.
-  - notes: Archived child `TODO-0990` canonicalized the emitter bare `count`/`capacity` method path to `/std/collections/vector/*`; active child `TODO-0991` owns the remaining rooted vector helper-path bridges before `TODO-0409` begins.
+  - notes: Archived child `TODO-0990` canonicalized the emitter bare `count`/`capacity` method path to `/std/collections/vector/*`, archived child `TODO-0992` canonicalized the lowerer bare vector `count`/`capacity` receiver path to the same canonical stdlib helpers, and active child `TODO-0993` owns the remaining rooted vector helper-path bridges before `TODO-0409` begins.
   - progress: Completed `TODO-0983` by hoisting the shared method-target usage bundle behind `markMethodTargetUsage` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the named helper fast path and the main count/capacity method-surface routes no longer repeat that receiver-index setup inline.
   - progress: Completed `TODO-0982` by hoisting the std-namespaced vector `count` compatibility diagnostic behind `failStdNamespacedVectorCountDiagnosticIfPresent` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the early count dispatch no longer carries that dense diagnostic block inline.
   - progress: Completed `TODO-0981` by hoisting the named-argument `count`/`capacity` helper target resolver behind `resolvesNamedArgumentCountOrCapacityHelperTarget` in `SemanticsValidatorExprCollectionCountCapacity.cpp`, so the fast-path application block no longer nests that lookup inline.
@@ -813,8 +825,8 @@ Wave D (queue hygiene):
   - phase: Group 14
   - scope: Track and close Group 14 child leaves required to finish stdlib-authoritative collection behavior and remove compatibility scaffolding; implementation work lives in child TODOs.
   - acceptance:
-    - Active Group 14 implementation leaves (currently TODO-0991 and TODO-0409) stay explicit with bounded scope, dependencies, and verification steps.
+    - Active Group 14 implementation leaves (currently TODO-0993 and TODO-0409) stay explicit with bounded scope, dependencies, and verification steps.
     - This tracker is only completed after all Group 14 child leaves are archived in `docs/todo_finished.md` with evidence notes.
     - At least one leaf is always `Ready Now` with no unmet TODO dependencies.
   - stop_rule: If a leaf is too large for one commit plus focused conformance updates, split it before implementation.
-  - notes: Current active Group 14 child leaves are TODO-0991 and TODO-0409. Archived child TODO-0990 plus prior Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already recorded in `docs/todo_finished.md` (April 12-19, 2026).
+  - notes: Current active Group 14 child leaves are TODO-0993 and TODO-0409. Archived children TODO-0990 and TODO-0992 plus prior Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already recorded in `docs/todo_finished.md` (April 12-19, 2026).
