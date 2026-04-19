@@ -563,7 +563,7 @@ main() {
   CHECK(runCommand(runCmd) == 95);
 }
 
-TEST_CASE("vm canonical map reference access currently rejects reference indexing" * doctest::skip(true)) {
+TEST_CASE("runs vm canonical map reference string access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
