@@ -3139,7 +3139,7 @@ TEST_CASE("compiles and runs native canonical namespaced map constructors throug
   expectCanonicalMapNamespaceExperimentalParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native wrapper map constructors on explicit experimental map bindings" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native wrapper map constructors on explicit experimental map bindings") {
   expectWrapperMapConstructorExperimentalBindingConformance("native");
 }
 
