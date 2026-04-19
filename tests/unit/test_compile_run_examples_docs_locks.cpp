@@ -433,11 +433,43 @@ TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") 
 
   CHECK(primeStructDoc.find("Destroy() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n    }") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("clear() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n      assign(this.empty, true)\n    }") !=
+  CHECK(primeStructDoc.find("clear() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n      this.empty = true\n    }") !=
         std::string::npos);
   CHECK(maybeStdlib.find("if(not(this.empty)) {\n        drop(this.value)\n      }") != std::string::npos);
+  CHECK(maybeStdlib.find("this.empty = true") != std::string::npos);
+  CHECK(maybeStdlib.find("this.empty = false") != std::string::npos);
+  CHECK(maybeStdlib.find("ref.empty = false") != std::string::npos);
+  CHECK(maybeStdlib.find("assign(this.empty, true)") == std::string::npos);
+  CHECK(maybeStdlib.find("assign(this.empty, false)") == std::string::npos);
+  CHECK(maybeStdlib.find("assign(ref.empty, false)") == std::string::npos);
   CHECK(maybeStdlib.find("if(not(this.empty), then() { drop(this.value) }, else() { })") ==
         std::string::npos);
+}
+
+TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operators") {
+  std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
+  std::filesystem::path gfxExperimentalPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "experimental.prime";
+  if (!std::filesystem::exists(gfxStdlibPath)) {
+    gfxStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "gfx" / "gfx.prime";
+  }
+  if (!std::filesystem::exists(gfxExperimentalPath)) {
+    gfxExperimentalPath = std::filesystem::current_path() / "stdlib" / "std" / "gfx" / "experimental.prime";
+  }
+  REQUIRE(std::filesystem::exists(gfxStdlibPath));
+  REQUIRE(std::filesystem::exists(gfxExperimentalPath));
+
+  const std::string gfxStdlib = readFile(gfxStdlibPath.string());
+  const std::string gfxExperimental = readFile(gfxExperimentalPath.string());
+
+  CHECK(gfxStdlib.find("return(Queue([token] this.token + 1i32))") != std::string::npos);
+  CHECK(gfxStdlib.find("[swapchainToken] this.token + window.token + 1i32") != std::string::npos);
+  CHECK(gfxStdlib.find("[meshToken] this.token + vertexCount + indexCount") != std::string::npos);
+  CHECK(gfxStdlib.find("[pipelineToken] shader.value + this.token + 5i32") != std::string::npos);
+  CHECK(gfxStdlib.find("[drawToken] this.token + mesh.token + material.token") != std::string::npos);
+  CHECK(gfxStdlib.find("if(not_equal(queueToken, deviceToken + 1i32))") != std::string::npos);
+  CHECK(gfxStdlib.find("plus(") == std::string::npos);
+  CHECK(gfxExperimental.find("plus(") != std::string::npos);
 }
 
 TEST_CASE("software renderer composite widgets stay source locked to basic widgets") {

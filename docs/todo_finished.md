@@ -4178,3 +4178,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4027`, whose remaining operator, assignment, naming, and module-specific style cleanup is already covered by `TODO-4028` through `TODO-4035`.
   - finished_at: 2026-04-19
   - evidence: Rewrote the three public control-flow sites in `stdlib/std/maybe/maybe.prime` from canonical `if(..., then() { ... }, else() { ... })` form to the surface `if (...) { ... }` spelling, added a focused source-lock regression in `tests/unit/test_compile_run_examples_docs_locks.cpp` that pins `/std/maybe` to the same conditional shape documented in `docs/PrimeStruct.md`, and updated `docs/todo.md` to retire oversized `TODO-4027` while promoting `TODO-4028` as the next active style-alignment item.
+
+- [x] TODO-4071: Align `/std/maybe` and `/std/gfx` helper arithmetic/assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026
+  - scope: Split the oversized helper-spelling cleanup from `TODO-4028` and convert the small public wrapper surfaces in `/std/maybe` and `/std/gfx/gfx.prime` from `assign(...)` and `plus(...)` spellings to the supported surface `=` and `+` forms without mixing in the much larger `/std/ui` or `/std/image` rewrites.
+  - acceptance:
+    - `/std/maybe` no longer uses `assign(...)` for its public wrapper mutation sites when the direct assignment surface is already supported.
+    - `/std/gfx/gfx.prime` no longer uses helper-form `plus(...)` in the public wrapper layer when direct `+` syntax is already supported.
+    - Focused source-lock coverage pins the new `/std/maybe` and `/std/gfx/gfx.prime` surface forms while keeping `/std/gfx/experimental.prime` on the bridge-oriented helper surface.
+  - stop_rule: Stop once the small `/std/maybe` and `/std/gfx/gfx.prime` wrapper surfaces are on the readable operator/assignment form; leave the larger `/std/ui` and `/std/image` rewrites explicit in follow-up TODOs instead of widening this slice.
+  - notes: Split from oversized `TODO-4028`, whose remaining `/std/ui` and `/std/image` helper-spelling cleanup is now tracked explicitly as `TODO-4072` and `TODO-4073`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the public mutation sites in `stdlib/std/maybe/maybe.prime` from `assign(...)` to direct field assignment, converted the public wrapper arithmetic in `stdlib/std/gfx/gfx.prime` from `plus(...)` to surface `+` expressions without touching `stdlib/std/gfx/experimental.prime`, updated the matching `Maybe<T>` example snippet in `docs/PrimeStruct.md`, expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to pin both the `/std/maybe` assignment form and the `/std/gfx/gfx.prime` operator form while preserving helper-form expectations for the experimental gfx bridge file, and updated `docs/todo.md` to retire oversized `TODO-4028` while promoting `TODO-4072` and `TODO-4073` as the remaining style-alignment follow-ups.

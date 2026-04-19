@@ -31,7 +31,7 @@ namespace std {
       if(not(this.empty)) {
         drop(this.value)
       }
-      assign(this.empty, true)
+      this.empty = true
     }
 
     [public mut return<void>]
@@ -40,13 +40,13 @@ namespace std {
         drop(this.value)
       }
       init(this.value, v)
-      assign(this.empty, false)
+      this.empty = false
     }
 
     [public mut return<T>]
     take() {
       [T] out{take(this.value)}
-      assign(this.empty, true)
+      this.empty = true
       return(out)
     }
   }
@@ -56,7 +56,7 @@ namespace std {
     [Maybe<T> mut] out{Maybe<T>()}
     [Reference<Maybe<T>> mut] ref{location(out)}
     init(ref.value, value)
-    assign(ref.empty, false)
+    ref.empty = false
     return(out)
   }
 

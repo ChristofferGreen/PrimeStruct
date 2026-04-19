@@ -2825,7 +2825,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
       if(not(this.empty)) {
         drop(this.value)
       }
-      assign(this.empty, true)
+      this.empty = true
     }
 
     [public mut return<void>]
@@ -2834,13 +2834,13 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
         drop(this.value)
       }
       init(this.value, v)
-      assign(this.empty, false)
+      this.empty = false
     }
 
     [public mut return<T>]
     take() {
       [T] out{take(this.value)}
-      assign(this.empty, true)
+      this.empty = true
       return(out)
     }
   }
@@ -2850,7 +2850,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
     [Maybe<T> mut] out{Maybe<T>()}
     [Reference<Maybe<T>> mut] ref{location(out)}
     init(ref.value, v)
-    assign(ref.empty, false)
+    ref.empty = false
     return(out)
   }
 

@@ -61,7 +61,7 @@ namespace std {
 
     [public return<Queue>]
     default_queue() {
-      return(Queue([token] plus(this.token, 1i32)))
+      return(Queue([token] this.token + 1i32))
     }
 
     [public return<Result<Swapchain, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
@@ -76,7 +76,7 @@ namespace std {
         SubstrateSwapchainConfig(
           [window] window,
           [device] this,
-          [swapchainToken] plus(plus(this.token, window.token), 1i32),
+          [swapchainToken] this.token + window.token + 1i32,
           [colorFormat] color_format,
           [depthFormat] depth_format,
           [presentMode] present_mode
@@ -101,7 +101,7 @@ namespace std {
       }
       [SubstrateMeshConfig] config{
         SubstrateMeshConfig(
-          [meshToken] plus(plus(this.token, vertexCount), indexCount),
+          [meshToken] this.token + vertexCount + indexCount,
           [vertexCount] vertexCount,
           [indexCount] indexCount
         )
@@ -123,7 +123,7 @@ namespace std {
       }
       [SubstratePipelineConfig] config{
         SubstratePipelineConfig(
-          [pipelineToken] plus(shader.value, plus(this.token, 5i32)),
+          [pipelineToken] shader.value + this.token + 5i32,
           [shader] shader,
           [colorFormat] color_format,
           [depthFormat] depth_format
@@ -152,7 +152,7 @@ namespace std {
         return(/std/gfx/GfxError/result<Frame>(frameAcquireFailed()))
       }
       [SubstrateFrameConfig] config{
-        SubstrateFrameConfig([swapchain] this, [frameToken] plus(this.token, 1i32))
+        SubstrateFrameConfig([swapchain] this, [frameToken] this.token + 1i32)
       }
       [i32] frameToken{GraphicsSubstrate.acquireFrame(config)?}
       return(Result.ok(Frame([token] frameToken)))
@@ -168,7 +168,7 @@ namespace std {
       [SubstrateRenderPassConfig] config{
         SubstrateRenderPassConfig(
           [frame] this,
-          [renderPassToken] plus(this.token, 1i32),
+          [renderPassToken] this.token + 1i32,
           [clearColor] clear_color,
           [clearDepth] clear_depth
         )
@@ -199,7 +199,7 @@ namespace std {
           [renderPass] this,
           [mesh] mesh,
           [material] material,
-          [drawToken] plus(this.token, plus(mesh.token, material.token))
+          [drawToken] this.token + mesh.token + material.token
         )
       }
       [i32] drawToken{GraphicsSubstrate.drawMesh(config)}
@@ -212,7 +212,7 @@ namespace std {
     [public return<void>]
     end() {
       [SubstrateRenderPassEndConfig] config{
-        SubstrateRenderPassEndConfig([renderPass] this, [endToken] plus(this.token, 1i32))
+        SubstrateRenderPassEndConfig([renderPass] this, [endToken] this.token + 1i32)
       }
       [i32] endToken{GraphicsSubstrate.endRenderPass(config)}
       if(equal(endToken, 0i32)) {
@@ -468,7 +468,7 @@ namespace std {
       if(less_than(this.token, 1i32)) {
         return(/std/gfx/GfxError/result<Material>(materialCreateFailed()))
       }
-      return(Result.ok(Material([token] plus(this.token, 1i32))))
+      return(Result.ok(Material([token] this.token + 1i32)))
     }
   }
 
@@ -543,7 +543,7 @@ namespace std {
     }
     [i32] deviceToken{GraphicsSubstrate.createDevice(config)?}
     [i32] queueToken{GraphicsSubstrate.createQueue(config)?}
-    if(not_equal(queueToken, plus(deviceToken, 1i32))) {
+    if(not_equal(queueToken, deviceToken + 1i32)) {
       return(/std/gfx/GfxError/result<Device>(deviceCreateFailed()))
     }
     return(Result.ok(Device([token] deviceToken)))
