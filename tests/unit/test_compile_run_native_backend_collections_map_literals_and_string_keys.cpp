@@ -284,7 +284,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("compiles and runs native string-valued map literals" * doctest::skip(true)) {
+TEST_CASE("rejects native string-valued map literals on builtin path") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -293,12 +293,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_literal_string_values.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_map_literal_string_values_out.txt").string();
   const std::string exePath =
       (testScratchPath("") / "primec_native_map_literal_string_values_exe").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 5);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find(
+            "map literal requires relocation-trivial map value type until container move/reallocation semantics "
+            "are implemented: string") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native string-keyed map literals" * doctest::skip(true)) {
