@@ -145,7 +145,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native map indexing sugar" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native map indexing sugar") {
   const std::string source = R"(
 [return<int>]
 main() {
