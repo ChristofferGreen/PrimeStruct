@@ -529,7 +529,7 @@ main() {
   CHECK(readBinaryFile(outPath.string()) == expected);
 }
 
-TEST_CASE("rejects invalid vm png write inputs deterministically" * doctest::skip(true)) {
+TEST_CASE("rejects invalid vm png write inputs deterministically") {
   const std::filesystem::path outPath = testScratchPath("") / "primec_vm_image_write_invalid.png";
   std::error_code ec;
   std::filesystem::remove(outPath, ec);
