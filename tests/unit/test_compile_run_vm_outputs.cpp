@@ -998,7 +998,7 @@ main() {
         "60\n");
 }
 
-TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs deterministically" * doctest::skip(true)) {
+TEST_CASE("runs vm png read for dynamic-huffman backreference rgba inputs deterministically") {
   const std::string inPath =
       (testScratchPath("") / "primec_vm_image_read_dynamic_backref.png").string();
   {
