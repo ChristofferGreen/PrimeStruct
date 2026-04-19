@@ -18,6 +18,8 @@ struct SemanticProductIndex {
   std::unordered_map<uint64_t, SymbolId> bridgePathChoiceIdsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionId;
   std::unordered_map<SymbolId, const SemanticProgramOnErrorFact *> onErrorFactsByDefinitionPathId;
+  std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;
+  std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByInitPathAndBindingNameId;
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByExpr;
@@ -36,8 +38,6 @@ struct SemanticProductTargetAdapter {
   std::vector<const SemanticProgramTypeMetadata *> orderedStructTypeMetadata;
   std::unordered_map<std::string_view, std::vector<const SemanticProgramStructFieldMetadata *>>
       structFieldMetadataByStructPath;
-  std::unordered_map<uint64_t, const SemanticProgramReturnFact *> returnFactsByDefinitionId;
-  std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;
 };
 
 SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticProgram *semanticProgram);

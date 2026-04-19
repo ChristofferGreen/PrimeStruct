@@ -1312,7 +1312,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id with r
   CHECK(tryFact->onErrorHandlerPath == "/handler");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter resolves return facts by definition path id fallback") {
+TEST_CASE("ir lowerer semantic-product adapter indexes return facts by definition path id") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -1335,6 +1335,11 @@ TEST_CASE("ir lowerer semantic-product adapter resolves return facts by definiti
 
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto mainPathId =
+      primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
+  REQUIRE(mainPathId.has_value());
+  CHECK(semanticTargets.semanticIndex.returnFactsByDefinitionId.empty());
+  CHECK(semanticTargets.semanticIndex.returnFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *returnFact = primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, mainDef);
   REQUIRE(returnFact != nullptr);
   CHECK(returnFact->definitionPathId != primec::InvalidSymbolId);

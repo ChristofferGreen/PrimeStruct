@@ -997,6 +997,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<SymbolId, const SemanticProgramReturnFact *> returnFactsByDefinitionPathId;") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterHeader.find("SemanticProductIndex semanticIndex;") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramReturnFact *findSemanticProductReturnFact(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::unordered_map<uint64_t, const SemanticProgramLocalAutoFact *> localAutoFactsByExpr;") !=
@@ -1060,11 +1062,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("std::stable_sort(entries.begin(),") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramReturnFactView(*semanticProgram)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionId.reserve(returnFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("index.returnFactsByDefinitionId.reserve(returnFacts.size())") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPathId.reserve(returnFacts.size())") !=
+  CHECK(semanticTargetAdapterSource.find("index.returnFactsByDefinitionPathId.reserve(returnFacts.size())") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPath.reserve(") == std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(adapter.semanticIndex.returnFactsByDefinitionId,") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionId.reserve(returnFacts.size())") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPathId.reserve(returnFacts.size())") ==
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*adapter.semanticProgram, definition.fullPath)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLocalAutoFactView(*semanticProgram)") !=

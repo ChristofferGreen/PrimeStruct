@@ -111,6 +111,7 @@ struct SemanticProductIndexBuilder {
     buildMethodCallIndex(index);
     buildBridgePathChoiceIndex(index);
     buildOnErrorIndex(index);
+    buildReturnIndex(index);
     buildLocalAutoIndex(index);
     buildQueryIndex(index);
     buildTryIndex(index);
@@ -172,6 +173,25 @@ struct SemanticProductIndexBuilder {
     for (const auto *entry : onErrorFacts) {
       if (entry->semanticNodeId != 0) {
         index.onErrorFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
+      }
+    }
+  }
+
+  void buildReturnIndex(SemanticProductIndex &index) const {
+    const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
+    index.returnFactsByDefinitionId.reserve(returnFacts.size());
+    index.returnFactsByDefinitionPathId.reserve(returnFacts.size());
+    for (const auto *entry : returnFacts) {
+      if (entry->semanticNodeId != 0) {
+        index.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
+      }
+      if (entry->definitionPathId == InvalidSymbolId) {
+        continue;
+      }
+      const std::string_view definitionPath =
+          semanticProgramResolveCallTargetString(*semanticProgram, entry->definitionPathId);
+      if (!definitionPath.empty()) {
+        index.returnFactsByDefinitionPathId.insert_or_assign(entry->definitionPathId, entry);
       }
     }
   }
@@ -308,14 +328,6 @@ SemanticProductTargetAdapter buildSemanticProductTargetAdapter(const SemanticPro
                      });
   }
 
-  const auto returnFacts = semanticProgramReturnFactView(*semanticProgram);
-  adapter.returnFactsByDefinitionId.reserve(returnFacts.size());
-  for (const auto *entry : returnFacts) {
-    if (entry->semanticNodeId != 0) {
-      adapter.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
-    }
-  }
-
   return adapter;
 }
 
@@ -437,7 +449,8 @@ const std::vector<const SemanticProgramStructFieldMetadata *> *findSemanticProdu
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,
                                                               const Definition &definition) {
-  if (const auto *fact = findDefinitionScopedSemanticFact(adapter.returnFactsByDefinitionId, definition);
+  if (const auto *fact = findDefinitionScopedSemanticFact(adapter.semanticIndex.returnFactsByDefinitionId,
+                                                          definition);
       fact != nullptr) {
     return fact;
   }
@@ -449,15 +462,9 @@ const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticPro
   if (!definitionPathId.has_value()) {
     return nullptr;
   }
-  if (const auto it = adapter.returnFactsByDefinitionPathId.find(*definitionPathId);
-      it != adapter.returnFactsByDefinitionPathId.end()) {
+  if (const auto it = adapter.semanticIndex.returnFactsByDefinitionPathId.find(*definitionPathId);
+      it != adapter.semanticIndex.returnFactsByDefinitionPathId.end()) {
     return it->second;
-  }
-  const auto returnFacts = semanticProgramReturnFactView(*adapter.semanticProgram);
-  for (const auto *entry : returnFacts) {
-    if (entry->definitionPathId == *definitionPathId) {
-      return entry;
-    }
   }
   return nullptr;
 }

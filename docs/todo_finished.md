@@ -6,6 +6,7 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 19, 2026)**
+- ✓ TODO-1008: Index return facts by definition path in the shared semantic-product adapter index. Completed: `IrLowererSemanticProductTargetAdapters.{h,cpp}` now stores return-fact lookup tables in the shared `SemanticProductIndex`, populates definition-path ids directly from `semanticProgramReturnFactView(...)`, and deletes the adapter-side return-fact fallback scan; focused lowerer adapter runtime and source-lock coverage now pin the new index-backed return-fact resolution.
 - ✓ TODO-0401: Group 14 completion tracker (SoA end-state cleanup). Completed: all remaining Group 14 child leaves are now archived, including the final `soa_vector` semantics compatibility slice `TODO-1007` plus trackers `TODO-1003`, `TODO-1005`, `TODO-0411`, and `TODO-0409`, so no active Group 14 collection name-routing cleanup remains in `docs/todo.md`.
 - ✓ TODO-0409: Track remaining `map` + `soa_vector` name-routing cleanup. Completed: both collection branches are now fully archived (`map` via `TODO-0410` and `soa_vector` via `TODO-0411`), so no production compiler/runtime `map` or `soa_vector` name-routing cleanup leaf remains open.
 - ✓ TODO-0411: Track remaining `soa_vector` name-routing cleanup. Completed: the last `soa_vector` child leaf `TODO-1007` is archived, so no remaining lowerer, semantics, or emitter compatibility-routing branch stays open for the stdlib-authoritative `soa_vector` cutover.
