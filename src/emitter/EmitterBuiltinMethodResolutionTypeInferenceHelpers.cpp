@@ -256,8 +256,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
       return "";
     }
     const std::string resolvedExprPath = resolveExprPath(candidate);
-    if (resolvedExprPath != "/map/at" && resolvedExprPath != "/map/at_unsafe" &&
-        resolvedExprPath != "/std/collections/map/at" &&
+    if (resolvedExprPath != "/std/collections/map/at" &&
         resolvedExprPath != "/std/collections/map/at_unsafe") {
       return "";
     }

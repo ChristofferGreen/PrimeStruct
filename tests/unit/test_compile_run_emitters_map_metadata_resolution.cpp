@@ -746,7 +746,7 @@ TEST_CASE("C++ emitter helper keeps canonical map contains and tryAt direct-call
   expectResolved("/std/collections/map/tryAt", "/CanonicalTryAtMarker");
 }
 
-TEST_CASE("C++ emitter helper keeps same-path map access direct-call return metadata precedence") {
+TEST_CASE("C++ emitter helper rejects rooted map access direct-call return metadata") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
   receiverName.name = "values";
@@ -756,7 +756,7 @@ TEST_CASE("C++ emitter helper keeps same-path map access direct-call return meta
   keyLiteral.intWidth = 32;
   keyLiteral.literalValue = 1;
 
-  auto expectResolved = [&](const char *receiverPath, const char *expectedPath) {
+  auto expectUnresolved = [&](const char *receiverPath, const std::string &markerName) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.name = receiverPath;
@@ -781,22 +781,65 @@ TEST_CASE("C++ emitter helper keeps same-path map access direct-call return meta
     std::unordered_map<std::string, std::string> structTypeMap;
     std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
     std::unordered_map<std::string, std::string> returnStructs = {
-        {"/map/at", "/AliasAtMarker"},
-        {"/std/collections/map/at", "/CanonicalAtMarker"},
-        {"/map/at_unsafe", "/AliasAtUnsafeMarker"},
-        {"/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker"},
+        {receiverPath, markerName},
+    };
+
+    std::string resolved = "/stale/path";
+    CHECK_FALSE(primec::emitter::resolveMethodCallPath(
+        methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved.empty());
+  };
+
+  expectUnresolved("/map/at", "/AliasAtMarker");
+  expectUnresolved("/map/at_unsafe", "/AliasAtUnsafeMarker");
+}
+
+TEST_CASE("C++ emitter helper keeps canonical map access direct-call return metadata") {
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  auto expectResolved = [&](const char *receiverPath, const std::string &markerName) {
+    primec::Expr receiverCall;
+    receiverCall.kind = primec::Expr::Kind::Call;
+    receiverCall.name = receiverPath;
+    receiverCall.args = {receiverName, keyLiteral};
+    receiverCall.argNames = {std::nullopt, std::nullopt};
+
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.isMethodCall = true;
+    methodCall.name = "tag";
+    methodCall.args = {receiverCall};
+    methodCall.argNames = {std::nullopt};
+
+    std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+    primec::emitter::BindingInfo receiverInfo;
+    receiverInfo.typeName = "map";
+    receiverInfo.typeTemplateArg = "i32, i32";
+    localTypes.emplace("values", receiverInfo);
+
+    std::unordered_map<std::string, const primec::Definition *> defMap;
+    std::unordered_map<std::string, std::string> importAliases;
+    std::unordered_map<std::string, std::string> structTypeMap;
+    std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+    std::unordered_map<std::string, std::string> returnStructs = {
+        {receiverPath, markerName},
     };
 
     std::string resolved;
     CHECK(primec::emitter::resolveMethodCallPath(
         methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
-    CHECK(resolved == expectedPath);
+    CHECK(resolved == markerName + "/tag");
   };
 
-  expectResolved("/map/at", "/AliasAtMarker/tag");
-  expectResolved("/std/collections/map/at", "/CanonicalAtMarker/tag");
-  expectResolved("/map/at_unsafe", "/AliasAtUnsafeMarker/tag");
-  expectResolved("/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker/tag");
+  expectResolved("/std/collections/map/at", "/CanonicalAtMarker");
+  expectResolved("/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker");
 }
 
 TEST_CASE("C++ emitter helper keeps cross-path vector alias access struct-return metadata") {

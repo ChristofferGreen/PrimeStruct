@@ -55,28 +55,26 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-0999
-2. TODO-0411
-3. TODO-0401
-4. TODO-0402
-5. TODO-0405
+1. TODO-0411
+2. TODO-0401
+3. TODO-0402
+4. TODO-0405
+5. TODO-0406
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-0406
-2. TODO-0403
+1. TODO-0403
 
 ### Priority Lanes (Current)
 
-- P1 Collection stdlib ownership cutover (`map`, `soa_vector`): TODO-0999, TODO-0411
+- P1 Collection stdlib ownership cutover (`soa_vector`): TODO-0411
 - P2 SoA canonicalization + semantic memory/perf + multithread substrate + semantic-product boundary hardening: TODO-0401, TODO-0402, TODO-0405, TODO-0406
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
 Wave A (collection stdlib ownership cutover):
-1. TODO-0999
-2. TODO-0411
+1. TODO-0411
 
 Wave B (SoA completion):
 1. TODO-0401
@@ -93,7 +91,7 @@ Wave D (queue hygiene):
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Collection stdlib ownership cutover (`map`, `soa_vector`) | TODO-0999, TODO-0411 |
+| Collection stdlib ownership cutover (`soa_vector`) | TODO-0411 |
 | SoA bring-up and stdlib-authoritative `soa_vector` end-state cleanup | TODO-0401 |
 | Semantic memory footprint and multithread compile substrate | TODO-0402 |
 | Semantic-product contract/index boundary hardening | TODO-0405, TODO-0406 |
@@ -103,8 +101,8 @@ Wave D (queue hygiene):
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0999, TODO-0411 |
-| Collection conformance and alias-deletion checks (`map`/`soa_vector`) | TODO-0999, TODO-0411 |
+| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0401, TODO-0402, TODO-0405, TODO-0406, TODO-0411 |
+| Collection conformance and alias-deletion checks (`soa_vector`) | TODO-0411 |
 | Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
 | Semantic-product contract/index and deterministic conformance checks | TODO-0405, TODO-0406 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
@@ -117,36 +115,11 @@ Wave D (queue hygiene):
   - phase: Group 14
   - scope: Track the remaining child leaves needed to finish stdlib-authoritative `map` and `soa_vector` behavior and delete the last production compiler/runtime name/path alias logic for those collections; implementation work lives in child TODOs.
   - acceptance:
-    - Active child leaves for `map` and `soa_vector` (currently TODO-0999 and TODO-0411) stay explicit with bounded scope, deletion targets, and verification commands.
-    - This tracker is only completed after the `map` and `soa_vector` child work is archived in `docs/todo_finished.md` with evidence notes.
+    - Active child leaves for the remaining collection branch (currently TODO-0411) stay explicit with bounded scope, deletion targets, and verification commands.
+    - This tracker is only completed after the remaining `soa_vector` child work is archived in `docs/todo_finished.md` with evidence notes.
     - At least one collection-alias deletion leaf remains `Ready Now` until the final collection compatibility routing is gone.
   - stop_rule: If either collection branch remains too large for one code-affecting commit, keep splitting it into explicit child leaves before implementation continues.
-  - notes: Split the old broad leaf into `TODO-0410` (`map`) and `TODO-0411` (`soa_vector`). Archived children `TODO-0996`, `TODO-0997`, and `TODO-0998` removed the lowerer, emitter explicit slash-method, and emitter direct-call `map` `contains`/`tryAt` compatibility routing. Active child `TODO-0999` owns the remaining emitter direct-call access cleanup slice.
-
-- [~] TODO-0410: Track remaining `map` name-routing cleanup
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 14
-  - scope: Track the remaining child leaves needed to delete production `map` name/path alias routing after the vector cutover; implementation work lives in child TODOs.
-  - acceptance:
-    - Active `map` child leaves stay explicit with bounded scope, canonical-path goals, and verification commands.
-    - Completed `map` child leaves move to `docs/todo_finished.md` with evidence notes in the same change that removes them from active planning.
-    - This tracker is only completed after no production semantics/lowerer/emitter code path still preserves rooted `map` compatibility routing for normal helper dispatch.
-  - stop_rule: If the remaining `map` cleanup still spans multiple subsystems, keep landing one subsystem-sized child leaf at a time before moving to `soa_vector`.
-  - notes: Archived children `TODO-0996`, `TODO-0997`, and `TODO-0998` removed the lowerer, emitter explicit slash-method, and emitter direct-call `map` `contains`/`tryAt` compatibility branch family. Active child `TODO-0999` owns the remaining emitter direct-call access alias cleanup slice.
-
-- [ ] TODO-0999: Remove emitter direct-call `map` result alias routing for `at` and `at_unsafe`
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 14
-  - depends_on: TODO-0998
-  - scope: Delete the remaining emitter-side rooted `map` compatibility routing that still preserves same-path `/map/{at,at_unsafe}` direct-call result metadata and struct-method chaining after the `contains`/`tryAt` direct-call cleanup.
-  - acceptance:
-    - Production emitter direct-call resolution no longer preserves rooted `/map/{at,at_unsafe}` result metadata or struct-method chaining when canonical `/std/collections/map/*` helpers exist.
-    - Bare and canonical explicit map access emission remain explicit in focused coverage while rooted direct-call access chaining is rejected for the touched helper family.
-    - Focused emitter coverage pins the rejection of rooted `/map/{at,at_unsafe}` direct-call chaining and keeps canonical `/std/collections/map/*` direct-call chaining explicit.
-    - At least one real emitter-side `map` alias branch family is deleted rather than renamed.
-  - stop_rule: If the remaining emitter access cleanup still spans multiple helper families beyond `at`/`at_unsafe`, land the largest coherent access pair first and add one follow-up leaf for anything still preserving rooted direct-call result routing.
+  - notes: Split the old broad leaf into `TODO-0410` (`map`) and `TODO-0411` (`soa_vector`). Archived `map` children `TODO-0996` through `TODO-0999` removed the lowerer, emitter explicit slash-method, and emitter direct-call compatibility routing for the remaining `map` helper families. Active child `TODO-0411` now owns the last collection cleanup branch.
 
 - [ ] TODO-0411: Remove C++ name routing for `soa_vector`
   - owner: ai
@@ -218,8 +191,8 @@ Wave D (queue hygiene):
   - phase: Group 14
   - scope: Track and close Group 14 child leaves required to finish stdlib-authoritative collection behavior and remove compatibility scaffolding; implementation work lives in child TODOs.
   - acceptance:
-    - Active Group 14 implementation leaves (currently TODO-0999 and TODO-0411, tracked under TODO-0410 and TODO-0409) stay explicit with bounded scope, dependencies, and verification steps.
+    - Active Group 14 implementation leaves (currently TODO-0411, tracked under TODO-0409) stay explicit with bounded scope, dependencies, and verification steps.
     - This tracker is only completed after all Group 14 child leaves are archived in `docs/todo_finished.md` with evidence notes.
     - At least one leaf is always `Ready Now` with no unmet TODO dependencies.
   - stop_rule: If a leaf is too large for one commit plus focused conformance updates, split it before implementation.
-  - notes: Current active Group 14 child leaves are TODO-0999 and TODO-0411, tracked under TODO-0410 and TODO-0409. Archived Group 14 trackers/leaves include the vector cleanup set TODO-0408, TODO-0990, TODO-0991, TODO-0992, TODO-0993, TODO-0994, and TODO-0995 plus the first three map children TODO-0996, TODO-0997, and TODO-0998; earlier Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already recorded in `docs/todo_finished.md` (April 12-19, 2026).
+  - notes: Current active Group 14 child leaf is TODO-0411, tracked under TODO-0409. Archived Group 14 trackers/leaves include the vector cleanup set TODO-0408, TODO-0990, TODO-0991, TODO-0992, TODO-0993, TODO-0994, and TODO-0995 plus the full `map` cleanup set TODO-0410, TODO-0996, TODO-0997, TODO-0998, and TODO-0999; earlier Group 14 slices `[S2-01]` through `[S2-05]`, `[S3-01]` through `[S3-132]`, and `[S4-01a1]` through `[S4-03]` are already recorded in `docs/todo_finished.md` (April 12-19, 2026).
