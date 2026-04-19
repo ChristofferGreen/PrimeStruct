@@ -360,7 +360,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native string-keyed map indexing binding key" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native string-keyed map indexing binding key") {
   const std::string source = R"(
 [return<int>]
 main() {
