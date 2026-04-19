@@ -84,6 +84,8 @@ build and layout solidify.
 - When adding a language feature, include at least:
   - one positive parse + IR test
   - one negative/diagnostic test
+- **Doctest size guardrail:** split a doctest case by default once it grows beyond 10 `SUBCASE` blocks or equivalent subtests; prefer multiple focused `TEST_CASE`s or suite shards over one oversized umbrella case.
+- **Doctest runtime guardrail:** if a doctest case with multiple subcases takes more than 5 seconds in routine release validation, split it into smaller focused cases; if a single-focus doctest still takes more than 5 seconds, optimize it or add a brief justification in the test source or nearby registration.
 
 ## TODO slicing workflow
 - Follow `docs/todo.md` as the canonical open-work log; keep only `[ ]`/`[~]` tasks

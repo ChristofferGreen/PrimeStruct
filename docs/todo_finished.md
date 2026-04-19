@@ -3867,3 +3867,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: The audit hit this failure before ordinary compile-run shards turned red, so this should be handled as a distinct release-gate stabilization task rather than being buried under unrelated compile-run failures.
   - finished_at: 2026-04-19
   - evidence: Reclassified `PrimeStruct_semantic_memory_benchmark` to collector-only release behavior by passing `--skip-budget-check-in-benchmark` in CMake, added benchmark-harness coverage for both the wrapper skip path and the CMake contract, and updated the benchmark policy/README notes so the dependent `PrimeStruct_semantic_memory_trend` target is the explicit sustained-gate owner in release builds.
+
+- [x] TODO-4015: Codify doctest size guardrails
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Test Audit Follow-up
+  - depends_on: none
+  - scope: Add explicit doctest size and runtime guardrails to the contributor workflow so oversized or slow doctest cases are called out consistently, including `AGENTS.md` guidance plus one repository-side check or lock that keeps those thresholds from drifting silently.
+  - acceptance:
+    - `AGENTS.md` explicitly states that doctest cases with more than 10 subcases or subtests should be split by default.
+    - `AGENTS.md` explicitly states that doctest cases above 5 seconds with multiple subcases should be split and that single-focus tests above 5 seconds should be optimized or justified.
+    - One repository-side check, source-lock, or architecture assertion keeps the documented thresholds visible in normal contributor validation instead of relying only on tribal memory.
+  - stop_rule: Stop once the doctest split and optimization thresholds are both documented and anchored in normal contributor validation; do not widen this leaf into a broad test-style linter.
+  - notes: The audit already confirmed release-first and parallel-test guidance are present, so this leaf should stay scoped to the missing size/runtime guardrails and their validation hook.
+  - finished_at: 2026-04-19
+  - evidence: Added explicit doctest size and runtime guardrail bullets to `AGENTS.md` covering the `>10` subcase split threshold plus the `>5` second runtime split-or-justify rule, and added source-lock coverage in `tests/unit/test_compile_run_examples_docs_locks.cpp` so normal validation keeps those contributor thresholds visible.

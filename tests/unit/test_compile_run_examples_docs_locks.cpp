@@ -4,6 +4,23 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
 
+TEST_CASE("contributor doctest guardrails stay source locked") {
+  std::filesystem::path agentsPath = std::filesystem::path("..") / "AGENTS.md";
+  if (!std::filesystem::exists(agentsPath)) {
+    agentsPath = std::filesystem::current_path() / "AGENTS.md";
+  }
+  REQUIRE(std::filesystem::exists(agentsPath));
+
+  const std::string agents = readFile(agentsPath.string());
+  CHECK(agents.find("**Doctest size guardrail:**") != std::string::npos);
+  CHECK(agents.find("beyond 10 `SUBCASE` blocks or equivalent subtests") != std::string::npos);
+  CHECK(agents.find("multiple focused `TEST_CASE`s or suite shards") != std::string::npos);
+  CHECK(agents.find("**Doctest runtime guardrail:**") != std::string::npos);
+  CHECK(agents.find("multiple subcases takes more than 5 seconds") != std::string::npos);
+  CHECK(agents.find("single-focus doctest still takes more than 5 seconds") != std::string::npos);
+  CHECK(agents.find("optimize it or add a brief justification") != std::string::npos);
+}
+
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
