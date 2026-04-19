@@ -3446,7 +3446,7 @@ TEST_CASE("compiles and runs native experimental vector helper runtime contracts
   expectExperimentalVectorRuntimeContracts("native");
 }
 
-TEST_CASE("compiles and runs native experimental vector ownership-sensitive helpers" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native experimental vector ownership-sensitive helpers") {
   expectExperimentalVectorOwnershipContracts("native");
 }
 
