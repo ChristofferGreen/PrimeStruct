@@ -306,7 +306,7 @@ main() {
             "are implemented: string") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native string-keyed map literals" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native string-keyed map literals") {
   const std::string source = R"(
 [return<int>]
 main() {
