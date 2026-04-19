@@ -3419,8 +3419,8 @@ TEST_CASE("compiles and runs stdlib wrapper vector constructors on explicit Vect
   expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("exe");
 }
 
-TEST_CASE("rejects stdlib wrapper vector constructor explicit Vector mismatch in C++ emitter") {
-  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("exe");
+TEST_CASE("keeps stdlib wrapper vector constructor explicit Vector mismatch contract in C++ emitter") {
+  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract("exe");
 }
 
 TEST_CASE("compiles and runs stdlib wrapper vector constructors on inferred auto bindings in C++ emitter") {

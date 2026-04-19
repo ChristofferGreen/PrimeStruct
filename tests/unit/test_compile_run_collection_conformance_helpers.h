@@ -35,7 +35,7 @@ inline void expectVmSharedStdlibVectorConformanceHarness() {
     expectStdlibWrapperVectorHelperExplicitVectorBindingConformance(emitMode);
     expectStdlibWrapperVectorHelperExplicitVectorBindingMismatchReject(emitMode);
     expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance(emitMode);
-    expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject(emitMode);
+    expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract(emitMode);
     expectStdlibWrapperVectorConstructorAutoInferenceConformance(emitMode);
     expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject(emitMode);
     expectStdlibWrapperVectorConstructorReceiverConformance(emitMode);

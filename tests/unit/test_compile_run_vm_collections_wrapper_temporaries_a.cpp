@@ -2954,8 +2954,8 @@ TEST_CASE("runs vm stdlib wrapper vector constructors on explicit Vector binding
   expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("vm");
 }
 
-TEST_CASE("rejects vm stdlib wrapper vector constructor explicit Vector mismatch") {
-  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("vm");
+TEST_CASE("keeps vm stdlib wrapper vector constructor explicit Vector mismatch contract") {
+  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract("vm");
 }
 
 TEST_CASE("runs vm stdlib wrapper vector constructors on inferred auto bindings") {

@@ -3396,8 +3396,8 @@ TEST_CASE("compiles and runs native stdlib wrapper vector constructors on explic
   expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance("native");
 }
 
-TEST_CASE("rejects native stdlib wrapper vector constructor explicit Vector mismatch" * doctest::skip(true)) {
-  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject("native");
+TEST_CASE("keeps native stdlib wrapper vector constructor explicit Vector mismatch contract") {
+  expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract("native");
 }
 
 TEST_CASE("compiles and runs native stdlib wrapper vector constructors on inferred auto bindings") {

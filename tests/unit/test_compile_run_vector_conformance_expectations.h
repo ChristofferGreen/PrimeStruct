@@ -213,7 +213,7 @@ inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingConformance
       31);
 }
 
-inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchReject(const std::string &emitMode) {
+inline void expectStdlibWrapperVectorConstructorExplicitVectorBindingMismatchContract(const std::string &emitMode) {
   expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorExplicitVectorBindingMismatchSource(),
       "vector_wrapper_constructor_explicit_vector_binding_mismatch_" + emitMode,
