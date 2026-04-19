@@ -522,7 +522,7 @@ main() {
   CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
-TEST_CASE("rejects vm user vector capacity call shadow" * doctest::skip(true)) {
+TEST_CASE("rejects vm user vector capacity call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
