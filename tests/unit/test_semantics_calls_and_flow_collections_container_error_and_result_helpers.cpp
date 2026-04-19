@@ -4396,7 +4396,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit to_aos direct call validates on soa_vector binding" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface to_aos direct call rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4410,8 +4410,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
 }
 
 TEST_CASE("to_aos method validates on soa_vector binding") {
@@ -4432,7 +4433,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("imported to_aos root forms validate on soa_vector binding") {
+TEST_CASE("imported non-root to_aos forms validate on soa_vector binding") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -4445,8 +4446,7 @@ Particle() {
 main() {
   [soa_vector<Particle>] values{soa_vector<Particle>()}
   [vector<Particle>] unpackedA{to_aos(values)}
-  [vector<Particle>] unpackedB{/to_aos(values)}
-  [vector<Particle>] unpackedC{values.to_aos()}
+  [vector<Particle>] unpackedB{values.to_aos()}
   return(0i32)
 }
 )";
@@ -4455,7 +4455,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit to_aos slash-method validates on soa_vector binding") {
+TEST_CASE("explicit old-surface to_aos slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4469,8 +4469,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
+        std::string::npos);
 }
 
 TEST_CASE("to_aos validates on borrowed indexed soa_vector receiver") {
@@ -4578,7 +4579,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("to_aos root forms keep canonical reject on vector target") {
+TEST_CASE("non-root to_aos forms keep canonical reject on vector target") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4588,9 +4589,7 @@ Particle() {
 main() {
   [vector<Particle>] values{vector<Particle>()}
   to_aos(values)
-  /to_aos(values)
   values.to_aos()
-  values./to_aos()
   return(0i32)
 }
 )";
@@ -4599,44 +4598,7 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/to_aos") != std::string::npos);
 }
 
-TEST_CASE("explicit old-surface to_aos rejects without same-path helper" * doctest::skip(true)) {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  /to_aos(values)
-  return(0i32)
-}
-  )";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("explicit old-surface to_aos slash-method rejects without same-path helper" * doctest::skip(true)) {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
-
-[return<int>]
-main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>()}
-  values./to_aos()
-  return(0i32)
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos") !=
-        std::string::npos);
-}
-
-TEST_CASE("explicit old-surface to_aos_ref rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface to_aos_ref direct call rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4650,11 +4612,12 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown method: /std/collections/soa_vector/to_aos_ref") !=
+        std::string::npos);
 }
 
-TEST_CASE("explicit old-surface to_aos_ref slash-method rejects without same-path helper" * doctest::skip(true)) {
+TEST_CASE("explicit old-surface to_aos_ref slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -4839,7 +4802,8 @@ main() {
   [auto] itemA{to_aos(holder.cloneValues())}
   [auto] itemB{/to_aos(holder.cloneValues())}
   [auto] itemC{holder.cloneValues().to_aos()}
-  return(plus(plus(itemA, itemB), itemC))
+  [auto] itemD{holder.cloneValues()./to_aos()}
+  return(plus(plus(itemA, itemB), plus(itemC, itemD)))
 }
 )";
   std::string error;

@@ -358,19 +358,40 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
 
   const std::string resolvedSoaToAosCanonical =
       canonicalizeLegacySoaToAosHelperPath(resolved);
+  const bool hasVisibleSamePathToAosHelper =
+      hasVisibleDefinitionPathForCurrentImports("/to_aos");
+  const bool hasVisibleSamePathToAosRefHelper =
+      hasVisibleDefinitionPathForCurrentImports("/to_aos_ref");
+  const bool rejectExplicitOldSurfaceToAosCall =
+      isExplicitOldSurfaceSoaConversionCall("to_aos") &&
+      !hasVisibleSamePathToAosHelper;
+  const bool rejectExplicitOldSurfaceToAosRefCall =
+      isExplicitOldSurfaceSoaConversionCall("to_aos_ref") &&
+      !hasVisibleSamePathToAosRefHelper;
   const bool matchesSoaToAosResolved =
+      resolved != "/to_aos" &&
       isLegacyOrCanonicalSoaHelperPath(
           resolvedSoaToAosCanonical, "to_aos");
   const bool matchesBorrowedSoaToAosResolved =
+      resolved != "/to_aos_ref" &&
       isLegacyOrCanonicalSoaHelperPath(
           resolvedSoaToAosCanonical, "to_aos_ref");
+
+  if (rejectExplicitOldSurfaceToAosCall ||
+      rejectExplicitOldSurfaceToAosRefCall) {
+    handledOut = true;
+    return failMapSoaBuiltinDiagnostic(soaUnavailableMethodDiagnostic(
+        rejectExplicitOldSurfaceToAosCall ? "/to_aos" : "/to_aos_ref"));
+  }
 
   if ((!resolvedMethod &&
        (isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
         isSimpleCallName(expr, "to_aos_ref")) &&
        resolvedMissing) ||
       (resolvedMethod &&
-       (resolved == "/to_soa" || resolved == "/to_aos" ||
+       (resolved == "/to_soa" ||
+        (resolved == "/to_aos" && hasVisibleSamePathToAosHelper) ||
+        (resolved == "/to_aos_ref" && hasVisibleSamePathToAosRefHelper) ||
         matchesBorrowedSoaToAosResolved || matchesSoaToAosResolved)) ||
       (!resolvedMethod &&
        (matchesBorrowedSoaToAosResolved || matchesSoaToAosResolved))) {
@@ -438,12 +459,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             !ignoreBorrowName.empty() ? ignoreBorrowName : borrowRoot;
         return failBorrowedBindingDiagnostic(borrowRoot, borrowSink);
       }
-    }
-    if ((helperName == "to_aos" || helperName == "to_aos_ref") &&
-        isExplicitOldSurfaceSoaConversionCall(helperName) &&
-        !hasVisibleDefinitionPathForCurrentImports("/" + helperName)) {
-      return failMapSoaBuiltinDiagnostic(
-          soaUnavailableMethodDiagnostic("/" + helperName));
     }
     if (!validateExpr(params, locals, expr.args.front())) {
       return false;
