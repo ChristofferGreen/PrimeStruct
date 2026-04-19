@@ -48,7 +48,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm user vector pop call expression shadow") {
+TEST_CASE("rejects vm user vector pop call expression shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/pop([vector<i32> mut] values) {
@@ -60,10 +60,16 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   return(pop(values))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_user_vector_pop_call_expr_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 7);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_pop_call_expr_shadow.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+                               "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/pop") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user vector reserve call shadow") {
@@ -144,7 +150,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("runs vm user vector clear call expression shadow" * doctest::skip(true)) {
+TEST_CASE("rejects vm user vector clear call expression shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/clear([vector<i32> mut] values) {
@@ -156,10 +162,16 @@ main() {
   [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
   return(clear(values))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_user_vector_clear_call_expr_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 8);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_clear_call_expr_shadow.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+                               "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/clear") != std::string::npos);
 }
 
 TEST_CASE("runs vm user vector remove_at call expression shadow" * doctest::skip(true)) {

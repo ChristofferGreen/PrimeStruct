@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("vm keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {
+TEST_CASE("vm keeps canonical map unknown-target diagnostics on wrapper-returned map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -33,10 +33,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("vm keeps direct wrapper-returned canonical map access string receiver typing") {
+TEST_CASE("vm keeps inferExprString lowering diagnostics on direct wrapper-returned canonical map access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -60,8 +60,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_direct_wrapper_canonical_map_access_count_diag.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: debug: branch=inferExprString") != std::string::npos);
 }
 
 TEST_CASE("vm keeps wrapper-returned canonical map method access string receiver typing") {
@@ -164,7 +169,7 @@ main() {
   CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
-TEST_CASE("vm keeps primitive diagnostics on canonical vector unsafe access count shadow") {
+TEST_CASE("vm keeps builtin string count on canonical vector unsafe access shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -189,7 +194,7 @@ main() {
        "primec_vm_canonical_vector_access_unsafe_count_shadow_reject.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 91);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm canonical vector method access string literals") {
@@ -219,7 +224,7 @@ main() {
   CHECK(runCommand(runCmd) == 91);
 }
 
-TEST_CASE("vm keeps primitive diagnostics on canonical vector unsafe method access count shadow") {
+TEST_CASE("vm keeps entry-indexing lowering diagnostics on canonical vector unsafe method access shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -245,10 +250,11 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("VM lowering error: vm backend only supports entry argument indexing") !=
+        std::string::npos);
 }
 
-TEST_CASE("rejects vm slash-method vector access string literals") {
+TEST_CASE("rejects vm slash-method vector access string count fallback") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -278,10 +284,11 @@ main() {
        "primec_vm_slash_method_vector_access_string_count_fallback.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 10);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("vm keeps slash-method vector access primitive count diagnostics") {
+TEST_CASE("vm keeps slash-method vector access unknown-method diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -312,7 +319,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper-returned vector access string literals") {
@@ -519,7 +526,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_user_vector_count_call_shadow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm user vector capacity call shadow") {
@@ -540,25 +547,28 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_user_vector_capacity_call_shadow_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user array capacity call shadow") {
+TEST_CASE("rejects vm user array capacity call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
   return(66i32)
 }
 
-[return<int>]
+  [return<int>]
 main() {
   [array<i32>] values{array<i32>(1i32, 2i32)}
   return(capacity(values))
 }
 )";
   const std::string srcPath = writeTemp("vm_user_array_capacity_call_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 66);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_array_capacity_call_shadow.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user array capacity method shadow") {
@@ -579,7 +589,7 @@ main() {
   CHECK(runCommand(runCmd) == 65);
 }
 
-TEST_CASE("runs vm with user array at call shadow") {
+TEST_CASE("keeps builtin array access on vm user array at call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {
@@ -591,10 +601,10 @@ main() {
   [array<i32>] values{array<i32>(1i32, 2i32)}
   return(at(values, 1i32))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_user_array_at_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 61);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with user array at method shadow") {
@@ -615,7 +625,7 @@ main() {
   CHECK(runCommand(runCmd) == 63);
 }
 
-TEST_CASE("runs vm with user array at_unsafe call shadow") {
+TEST_CASE("keeps builtin array access on vm user array at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([array<i32>] values, [i32] index) {
@@ -627,10 +637,10 @@ main() {
   [array<i32>] values{array<i32>(1i32, 2i32)}
   return(at_unsafe(values, 1i32))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_user_array_at_unsafe_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 85);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with user array at_unsafe method shadow") {

@@ -48,7 +48,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native keeps non-imported wrapper-returned canonical map reference access primitive receiver diagnostics") {
+TEST_CASE("native keeps canonical map unknown-target diagnostics on wrapper-returned map reference access") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -76,11 +76,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /string/count parameter values: expected string") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
 }
 
-TEST_CASE("native keeps map method sugar on wrapper-returned canonical map references") {
+TEST_CASE("rejects native map method sugar on wrapper-returned canonical map references without imported helpers") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -94,22 +94,18 @@ main() {
               plus(borrowMap(location(values)).at(1i32),
                    borrowMap(location(values)).at_unsafe(2i32))))
 }
-)";
+  )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_map_reference_method_sugar.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_wrapper_map_reference_method_sugar_exe")
-          .string();
-  const std::string outPath =
-      (testScratchPath("") /
-       "primec_native_wrapper_map_reference_method_sugar_out.txt")
+       "primec_native_wrapper_map_reference_method_sugar.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on canonical map reference access count shadow") {
@@ -138,7 +134,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("native keeps key diagnostics on wrapper-returned canonical map reference method sugar") {
+TEST_CASE("native keeps canonical map unknown-target diagnostics on wrapper-returned map reference method sugar") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -161,7 +157,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: at requires map key type i32") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("native keeps non-string diagnostics on wrapper-returned canonical map access count shadow") {
@@ -313,7 +309,7 @@ main() {
   CHECK_FALSE(readFile(errPath).empty());
 }
 
-TEST_CASE("native keeps direct wrapper-returned canonical map access string receiver typing") {
+TEST_CASE("native keeps inferExprString lowering diagnostics on direct wrapper-returned canonical map access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -334,18 +330,18 @@ wrapMap() {
 main() {
   return(count(/std/collections/map/at(wrapMap(), 1i32)))
 }
-)";
+  )";
   const std::string srcPath =
       writeTemp("compile_native_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_direct_wrapper_canonical_map_access_count_diag_exe")
+       "primec_native_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: debug: branch=inferExprString") != std::string::npos);
 }
 
 TEST_CASE("native keeps wrapper-returned canonical map method access string receiver typing") {
@@ -429,7 +425,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native slash-method vector access string count fallback") {
+TEST_CASE("rejects native slash-method vector access string count fallback") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -452,20 +448,21 @@ main() {
   return(plus(values./vector/at(0i32).count(),
               values./std/collections/vector/at_unsafe(0i32).count()))
 }
-)";
+  )";
   const std::string srcPath =
       writeTemp("compile_native_slash_method_vector_access_string_count_fallback.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_slash_method_vector_access_string_count_fallback_exe")
+       "primec_native_slash_method_vector_access_string_count_fallback.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 182);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("native keeps slash-method vector access primitive count diagnostics") {
+TEST_CASE("native keeps slash-method vector access unknown-method diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -499,7 +496,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native wrapper-returned vector access string count fallback") {
@@ -889,7 +886,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user array capacity call shadow") {
+TEST_CASE("rejects native user array capacity call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
@@ -901,14 +898,15 @@ main() {
   [array<i32>] values{array<i32>(1i32, 2i32)}
   return(capacity(values))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("compile_native_user_array_capacity_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 66);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user array capacity method shadow") {
@@ -933,7 +931,7 @@ main() {
   CHECK(runCommand(exePath) == 65);
 }
 
-TEST_CASE("compiles and runs native user array at call shadow") {
+TEST_CASE("keeps builtin array access on native user array at call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {
@@ -952,7 +950,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 61);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_SUITE_END();

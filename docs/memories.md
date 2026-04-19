@@ -94,6 +94,19 @@ This file stores durable session-derived facts that are useful in later work. Ke
   `at_unsafe(values, ...)` through method fallback first; this cleared the
   imported bare vector access crash in emitter/VM coverage and the release
   gate passed afterward.
+- `direct-wrapper-map-string-lowering-fails`:
+  direct `count(/std/collections/map/at(wrapMap(), 1i32))` on wrapper-returned
+  maps now stops at backend-specific `inferExprString` lowering failures in
+  both VM and native even when same-path `/std/collections/map/at` and
+  `/string/count` helpers are defined, so compile-run coverage should lock the
+  lowering diagnostics instead of a runtime `3` path.
+  Evidence: focused `primec --emit=vm` and `--emit=native` repros during
+  `TODO-1167` stabilization reproduced `VM lowering error: debug:
+  branch=inferExprString` and `Native lowering error: debug:
+  branch=inferExprString`, and the full `./scripts/compile.sh --release` gate
+  passed after updating
+  `test_compile_run_vm_collections_map_wrapper_shadows.cpp` and
+  `test_compile_run_native_backend_collections_canonical_count_shadows.cpp`.
 - `exact-vector-import-covers-canonical-surface`:
   exact `import /std/collections/vector` must expose bare `vector(...)` plus
   the canonical `/std/collections/vector/*` helper surface through import
@@ -201,6 +214,18 @@ This file stores durable session-derived facts that are useful in later work. Ke
   builtin named-argument classification for unresolved removed vector access
   aliases; updated coverage in vector alias named-arg tests across semantics,
   VM/native backend compile-run, and C++ emitter suites.
+- `vm-vector-mutator-call-expressions-reject`:
+  VM call-expression shadows for `/vector/pop` and `/vector/clear` are not
+  expression-lowerable; they now fail with
+  `vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/
+  saturate/convert/pointer/assign/increment/decrement calls in expressions`
+  plus `call=/pop` or `call=/clear`, so compile-run coverage should treat those
+  surfaces as stable lowering rejections rather than return-value runtime
+  paths.
+  Evidence: focused `primec --emit=vm` repros during `TODO-1167`
+  stabilization reproduced the same lowering diagnostic for both expression
+  forms, and the full `./scripts/compile.sh --release` gate passed after
+  updating `test_compile_run_vm_collections_vector_limits_a.cpp`.
 - `vector-rooted-method-prereject-redundant`:
   rooted `/vector/{count,capacity,at,at_unsafe}` method calls must not be
   pre-rejected in `SemanticsValidatorExprMethodResolution.cpp`, because

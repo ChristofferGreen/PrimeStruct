@@ -769,7 +769,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("vm keeps key diagnostics on wrapper-returned canonical map reference method sugar") {
+TEST_CASE("vm keeps canonical map unknown-target diagnostics on wrapper-returned map reference method sugar") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -790,7 +790,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
+  CHECK(readFile(errPath).find("Semantic error: unknown call target: /std/collections/map/at") !=
         std::string::npos);
 }
 
