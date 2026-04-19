@@ -161,7 +161,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("compiles and runs native map at_unsafe helper" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native map at_unsafe helper") {
   const std::string source = R"(
 [return<int>]
 main() {
