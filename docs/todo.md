@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1091
+- TODO-1092
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1091
+- TODO-1092
 
 ### Priority Lanes (Current)
 
-- Experimental map backend skip debt: TODO-1091
+- Native vector skip debt: TODO-1092
 
 ### Execution Queue (Recommended)
 
-1. TODO-1091
+1. TODO-1092
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Experimental map backend compile-run coverage | TODO-1091 |
+| Native vector compile-run skipped-test debt | TODO-1092 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1091 |
+| Native compile-run skipped-test debt | TODO-1092 |
 
 ### Task Blocks
 
-- [ ] TODO-1091: Audit native experimental map custom comparable key skip debt
+- [ ] TODO-1092: Audit native shared vector harness skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native compile-run coverage for experimental map custom comparable struct keys, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native shared vector conformance harness coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped custom-comparable experimental-map case in stale form.
-    - The native test locks the actual current contract for `Map<Key, i32>` with `/Key/equal` and `/Key/less_than`, whether that is successful compile-run behavior or a stable diagnostic.
-  - stop_rule: Stop after the native compile-run custom-comparable key surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped shared-vector harness case in stale form.
+    - The native test locks the actual current contract for the shared stdlib plus experimental vector harness, whether that is successful compile-run behavior or a stable diagnostic.
+  - stop_rule: Stop after the native shared-vector harness surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

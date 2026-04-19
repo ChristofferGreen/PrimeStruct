@@ -3331,7 +3331,7 @@ TEST_CASE("compiles and runs native experimental map bracket access") {
   expectExperimentalMapIndexConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map custom comparable struct keys" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
