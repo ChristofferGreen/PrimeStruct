@@ -84,7 +84,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("compiles and runs native user map count method shadow" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native user map count method shadow") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
