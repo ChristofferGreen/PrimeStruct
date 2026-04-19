@@ -4327,3 +4327,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the obvious `/std/gfx/gfx.prime` inferred-binding opportunities are converted; leave hybrid-boundary or API-shape changes separate.
   - finished_at: 2026-04-19
   - evidence: Rewrote the obvious repeated-type local bindings in `stdlib/std/gfx/gfx.prime` to concise inferred forms across the swapchain, mesh, pipeline, frame, render-pass, window, and device wrappers while leaving the hybrid runtime boundary and substrate-facing API shape unchanged; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused `/std/gfx` inferred-binding source lock that pins the new concise forms and guards against reintroducing the old repeated-type locals; and updated `docs/todo.md` so `TODO-4084` is now the top ready inferred-binding follow-up.
+
+- [x] TODO-4084: Adopt concise inferred local bindings in `/std/ui` workflows where initializers already show the type
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4072
+  - scope: Continue the split inferred-local cleanup by converting the remaining obvious repeated-type local bindings in `/std/ui` workflows to concise inferred bindings where the initializer already establishes the type clearly, without mixing in layout behavior or widget API changes.
+  - acceptance:
+    - Obvious `/std/ui` local bindings avoid redundant type repetition when the initializer already establishes the type clearly.
+    - The resulting bindings match the supported inferred-local style documented in `docs/CodeExamples.md`.
+    - Behavior-sensitive or readability-sensitive sites remain explicit only when needed instead of by default.
+  - stop_rule: Stop once the obvious `/std/ui` inferred-binding opportunities are converted; leave broader layout or widget changes separate.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the obvious repeated-type local bindings in `stdlib/std/ui/ui.prime` to concise inferred forms across the command-list, HTML adapter, UI event-stream, and layout-tree workflows, including mutable vector scratch bindings and loop/index locals, while leaving layout behavior and widget APIs unchanged; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` with a focused `/std/ui` inferred-binding source lock and retargeted the existing UI syntax lock to the new `[mut]` loop/index forms; and updated `docs/todo.md` so `TODO-4085` is now the top ready inferred-binding follow-up.
