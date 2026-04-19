@@ -352,6 +352,39 @@ private:
       validator.currentValidationState_ = std::move(previous);
     }
   };
+  struct DefinitionValidationSliceContext {
+    const Definition *definition = nullptr;
+    const std::vector<ParameterInfo> *params = nullptr;
+    ValidationState validationState;
+    std::unordered_map<std::string, BindingInfo> locals;
+    ReturnKind returnKind = ReturnKind::Unknown;
+    bool sawReturn = false;
+  };
+  struct WorkerLocalDefinitionValidationScope {
+    SemanticsValidator &validator;
+    DefinitionValidationSliceContext &context;
+    const Definition *previousDefinition = nullptr;
+    ValidationState previousValidationState;
+
+    WorkerLocalDefinitionValidationScope(SemanticsValidator &validatorIn,
+                                         DefinitionValidationSliceContext &contextIn)
+        : validator(validatorIn),
+          context(contextIn),
+          previousDefinition(validatorIn.currentDefinitionContext_),
+          previousValidationState(std::move(validatorIn.currentValidationState_)) {
+      validator.currentDefinitionContext_ = context.definition;
+      validator.currentValidationState_ = std::move(context.validationState);
+    }
+
+    ~WorkerLocalDefinitionValidationScope() {
+      if (!validator.error_.empty() && context.definition != nullptr) {
+        validator.captureDefinitionContext(*context.definition);
+      }
+      context.validationState = std::move(validator.currentValidationState_);
+      validator.currentDefinitionContext_ = previousDefinition;
+      validator.currentValidationState_ = std::move(previousValidationState);
+    }
+  };
   struct EntryArgStringScope {
     SemanticsValidator &validator;
     bool previous = false;

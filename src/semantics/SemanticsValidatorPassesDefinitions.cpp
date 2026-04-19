@@ -64,6 +64,15 @@ void relieveAllocatorPressure() {
 #endif
 }
 
+bool isStructDefinition(const Definition &candidate) {
+  for (const auto &transform : candidate.transforms) {
+    if (isStructTransformName(transform.name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {
@@ -130,6 +139,23 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
   if (benchmarkPerDefinitionRss) {
     definitionRssRecords.reserve(stableCount);
   }
+  auto buildDefinitionValidationSliceContext =
+      [&](const Definition &def, DefinitionValidationSliceContext &out) -> bool {
+    out = {};
+    out.definition = &def;
+    out.params = &paramsByDef_[def.fullPath];
+    if (!makeDefinitionValidationState(def, out.validationState)) {
+      return false;
+    }
+    for (const auto &param : *out.params) {
+      out.locals.emplace(param.name, param.binding);
+    }
+    auto kindIt = returnKinds_.find(def.fullPath);
+    if (kindIt != returnKinds_.end()) {
+      out.returnKind = kindIt->second;
+    }
+    return true;
+  };
   auto validateDefinition = [&](const Definition &def) -> bool {
     auto failPassesDefinitionsDiagnostic =
         [&](const Expr *expr, std::string message) -> bool {
@@ -141,35 +167,31 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       }
       return failUncontextualizedDiagnostic(std::move(message));
     };
-    DefinitionContextScope definitionScope(*this, def);
-    ValidationStateScope validationContextScope(*this, buildDefinitionValidationState(def));
-    auto isStructDefinition = [&](const Definition &candidate) {
-      for (const auto &transform : candidate.transforms) {
-        if (isStructTransformName(transform.name)) {
-          return true;
-        }
+    DefinitionValidationSliceContext definitionContext;
+    if (!buildDefinitionValidationSliceContext(def, definitionContext)) {
+      if (error_.empty()) {
+        return failPassesDefinitionsDiagnostic(
+            nullptr,
+            "definition validation context setup failed on " + def.fullPath);
       }
       return false;
-    };
-    if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
-        if (error_.empty()) {
-          return failPassesDefinitionsDiagnostic(
-              nullptr,
-              "validateCapabilitiesSubset failed on " + def.fullPath);
-        }
-        return false;
-      }
-    std::unordered_map<std::string, BindingInfo> locals;
-    const auto &defParams = paramsByDef_[def.fullPath];
-    for (const auto &param : defParams) {
-      locals.emplace(param.name, param.binding);
     }
-    observeLocalMapSize(locals.size());
+    WorkerLocalDefinitionValidationScope definitionScope(*this, definitionContext);
+    if (!validateCapabilitiesSubset(def.transforms, def.fullPath)) {
+      if (error_.empty()) {
+        return failPassesDefinitionsDiagnostic(
+            nullptr,
+            "validateCapabilitiesSubset failed on " + def.fullPath);
+      }
+      return false;
+    }
+    const auto &defParams = *definitionContext.params;
+    observeLocalMapSize(definitionContext.locals.size());
     for (const auto &param : defParams) {
       if (param.defaultExpr == nullptr) {
         continue;
       }
-      if (!validateExpr(defParams, locals, *param.defaultExpr)) {
+      if (!validateExpr(defParams, definitionContext.locals, *param.defaultExpr)) {
         if (error_.empty()) {
           return failPassesDefinitionsDiagnostic(
               param.defaultExpr,
@@ -178,30 +200,27 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         return false;
       }
     }
-    ReturnKind kind = ReturnKind::Unknown;
-    auto kindIt = returnKinds_.find(def.fullPath);
-    if (kindIt != returnKinds_.end()) {
-      kind = kindIt->second;
-    }
-    if (isLifecycleHelperName(def.fullPath) && kind != ReturnKind::Void) {
+    if (isLifecycleHelperName(def.fullPath) &&
+        definitionContext.returnKind != ReturnKind::Void) {
       return failPassesDefinitionsDiagnostic(
           nullptr,
           "lifecycle helpers must return void: " + def.fullPath);
     }
-    const std::optional<OnErrorHandler> &onErrorHandler = currentValidationState_.context.onError;
+    const std::optional<OnErrorHandler> &onErrorHandler =
+        definitionContext.validationState.context.onError;
     if (onErrorHandler.has_value() &&
-        (!currentValidationState_.context.resultType.has_value() ||
-         !currentValidationState_.context.resultType->isResult) &&
-        kind != ReturnKind::Int) {
+        (!definitionContext.validationState.context.resultType.has_value() ||
+         !definitionContext.validationState.context.resultType->isResult) &&
+        definitionContext.returnKind != ReturnKind::Int) {
       return failPassesDefinitionsDiagnostic(
           nullptr,
           "on_error requires Result or int return type on " + def.fullPath);
     }
     if (onErrorHandler.has_value() &&
-        currentValidationState_.context.resultType.has_value() &&
-        currentValidationState_.context.resultType->isResult &&
+        definitionContext.validationState.context.resultType.has_value() &&
+        definitionContext.validationState.context.resultType->isResult &&
         !errorTypesMatch(onErrorHandler->errorType,
-                         currentValidationState_.context.resultType->errorType,
+                         definitionContext.validationState.context.resultType->errorType,
                          def.namespacePrefix)) {
       return failPassesDefinitionsDiagnostic(
           nullptr,
@@ -209,8 +228,9 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
     }
     if (onErrorHandler.has_value()) {
       OnErrorScope onErrorScope(*this, std::nullopt);
-      for (const auto &arg : currentValidationState_.context.onError->boundArgs) {
-        if (!validateExpr(defParams, locals, arg)) {
+      for (const auto &arg :
+           definitionContext.validationState.context.onError->boundArgs) {
+        if (!validateExpr(defParams, definitionContext.locals, arg)) {
           if (error_.empty()) {
             return failPassesDefinitionsDiagnostic(
                 &arg,
@@ -221,16 +241,15 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
       }
     }
     OnErrorScope onErrorScope(*this, onErrorHandler);
-    bool sawReturn = false;
     for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
       const Expr &stmt = def.statements[stmtIndex];
       if (!validateStatement(defParams,
-                             locals,
+                             definitionContext.locals,
                              stmt,
-                             kind,
+                             definitionContext.returnKind,
                              true,
                              true,
-                             &sawReturn,
+                             &definitionContext.sawReturn,
                              def.namespacePrefix,
                              &def.statements,
                              stmtIndex)) {
@@ -241,11 +260,15 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         }
         return false;
       }
-      observeLocalMapSize(locals.size());
-      expireReferenceBorrowsForRemainder(defParams, locals, def.statements, stmtIndex + 1);
+      observeLocalMapSize(definitionContext.locals.size());
+      expireReferenceBorrowsForRemainder(
+          defParams,
+          definitionContext.locals,
+          def.statements,
+          stmtIndex + 1);
     }
     if (def.returnExpr.has_value()) {
-      if (!validateExpr(defParams, locals, *def.returnExpr)) {
+      if (!validateExpr(defParams, definitionContext.locals, *def.returnExpr)) {
         if (error_.empty()) {
           return failPassesDefinitionsDiagnostic(
               &*def.returnExpr,
@@ -253,21 +276,24 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
         }
         return false;
       }
-      sawReturn = true;
+      definitionContext.sawReturn = true;
     }
-    if (kind != ReturnKind::Void && !isStructDefinition(def)) {
+    if (definitionContext.returnKind != ReturnKind::Void &&
+        !isStructDefinition(def)) {
       bool allPathsReturn = def.returnExpr.has_value() || blockAlwaysReturns(def.statements);
       if (!allPathsReturn) {
         return failPassesDefinitionsDiagnostic(
             nullptr,
-            sawReturn
+            definitionContext.sawReturn
                 ? "not all control paths return in " + def.fullPath +
                       " (missing return statement)"
                 : "missing return statement in " + def.fullPath);
       }
     }
-    bool shouldCheckUninitialized = (kind == ReturnKind::Void);
-    if (kind != ReturnKind::Void && !isStructDefinition(def)) {
+    bool shouldCheckUninitialized =
+        (definitionContext.returnKind == ReturnKind::Void);
+    if (definitionContext.returnKind != ReturnKind::Void &&
+        !isStructDefinition(def)) {
       shouldCheckUninitialized = def.returnExpr.has_value() || blockAlwaysReturns(def.statements);
     }
     if (shouldCheckUninitialized) {

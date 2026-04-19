@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <vector>
 
@@ -42,6 +43,15 @@ std::vector<std::string> diagnosticMessages(
     messages.push_back(record.message);
   }
   return messages;
+}
+
+bool anyMessageContains(const std::vector<std::string> &messages,
+                        std::string_view needle) {
+  return std::any_of(messages.begin(),
+                     messages.end(),
+                     [&](const std::string &message) {
+                       return message.find(needle) != std::string::npos;
+                     });
 }
 
 } // namespace
@@ -624,6 +634,130 @@ main() {
 
   CHECK(formattedByWorkerCount[0] == formattedByWorkerCount[1]);
   CHECK(formattedByWorkerCount[1] == formattedByWorkerCount[2]);
+}
+
+TEST_CASE("worker-local definition validation context keeps semantic product equivalent across worker counts 1,2,4") {
+  const std::string source = R"(
+[return<Result<i32, i32>>]
+add_with_default([i32] value, [i32] delta{2i32}) {
+  [i32] current{plus(value, delta)}
+  return(Result.ok(current))
+}
+
+[return<i32>]
+record_error([i32] err, [i32] offset) {
+  return(plus(err, offset))
+}
+
+[return<i32> on_error<i32, /record_error>(7i32)]
+main() {
+  [auto] current{add_with_default(4i32)}
+  [i32] value{try(current)}
+  return(plus(value, 1i32))
+}
+)";
+
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::Semantics semantics;
+  std::array<std::string, 3> formattedByWorkerCount;
+  std::array<std::size_t, 3> onErrorFactCounts{};
+  constexpr std::array<uint32_t, 3> workerCounts = {1u, 2u, 4u};
+
+  for (std::size_t i = 0; i < workerCounts.size(); ++i) {
+    primec::Program program = parseProgram(source);
+    std::string error;
+    primec::SemanticProgram semanticProgram;
+    const bool ok = semantics.validate(program,
+                                       "/main",
+                                       error,
+                                       defaults,
+                                       defaults,
+                                       {},
+                                       nullptr,
+                                       false,
+                                       &semanticProgram,
+                                       nullptr,
+                                       workerCounts[i]);
+    CHECK(ok);
+    CHECK(error.empty());
+    CHECK(semanticProgram.callableSummaries.size() >= 3);
+    onErrorFactCounts[i] = semanticProgram.onErrorFacts.size();
+    formattedByWorkerCount[i] = primec::formatSemanticProgram(semanticProgram);
+    CHECK(formattedByWorkerCount[i].find("/add_with_default") != std::string::npos);
+    CHECK(formattedByWorkerCount[i].find("/record_error") != std::string::npos);
+  }
+
+  CHECK(onErrorFactCounts[0] == 1);
+  CHECK(onErrorFactCounts[0] == onErrorFactCounts[1]);
+  CHECK(onErrorFactCounts[1] == onErrorFactCounts[2]);
+  CHECK(formattedByWorkerCount[0] == formattedByWorkerCount[1]);
+  CHECK(formattedByWorkerCount[1] == formattedByWorkerCount[2]);
+}
+
+TEST_CASE("worker-local definition validation context keeps diagnostics equivalent across worker counts 1,2,4") {
+  const std::string source = R"(
+[return<Result<i32, i32>>]
+broken_default([i32] value, [i32] delta{missing_default()}) {
+  [i32] current{plus(value, 1i32)}
+  return(Result.ok(current))
+}
+
+[return<i32>]
+record_error([i32] err, [i32] offset) {
+  return(plus(err, offset))
+}
+
+[return<i32> on_error<i32, /record_error>(missing_offset())]
+broken_on_error() {
+  [auto] current{Result.ok(4i32)}
+  [i32] value{try(current)}
+  return(value)
+}
+
+[return<i32>]
+broken_body([i32] value) {
+  [i32] next{plus(value, 1i32)}
+  missing_body(next)
+  return(next)
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::Semantics semantics;
+  std::array<std::vector<std::string>, 3> messagesByWorkerCount;
+  constexpr std::array<uint32_t, 3> workerCounts = {1u, 2u, 4u};
+
+  for (std::size_t i = 0; i < workerCounts.size(); ++i) {
+    primec::Program program = parseProgram(source);
+    std::string error;
+    primec::SemanticDiagnosticInfo diagnostics;
+    const bool ok = semantics.validate(program,
+                                       "/main",
+                                       error,
+                                       defaults,
+                                       defaults,
+                                       {},
+                                       &diagnostics,
+                                       true,
+                                       nullptr,
+                                       nullptr,
+                                       workerCounts[i]);
+    CHECK_FALSE(ok);
+    CHECK_FALSE(error.empty());
+    messagesByWorkerCount[i] = diagnosticMessages(diagnostics);
+    CHECK(messagesByWorkerCount[i].size() >= 3);
+    CHECK(anyMessageContains(messagesByWorkerCount[i], "missing_default"));
+    CHECK(anyMessageContains(messagesByWorkerCount[i], "missing_offset"));
+    CHECK(anyMessageContains(messagesByWorkerCount[i], "missing_body"));
+  }
+
+  CHECK(messagesByWorkerCount[0] == messagesByWorkerCount[1]);
+  CHECK(messagesByWorkerCount[1] == messagesByWorkerCount[2]);
 }
 
 TEST_CASE("semantic product index families are equivalent across worker counts 1,2,4") {

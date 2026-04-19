@@ -56,26 +56,22 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1066
-2. TODO-1063
+1. TODO-1063
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1066
-2. TODO-1063
-3. TODO-1064
-4. TODO-1065
+1. TODO-1063
+2. TODO-1064
+3. TODO-1065
 
 ### Priority Lanes (Current)
 
 - Pilot semantic boundary ownership: TODO-1063, TODO-1064, TODO-1065
-- Parallel-ready validation state: TODO-1066
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1066
-2. TODO-1063
+1. TODO-1063
 
 Wave B:
 1. TODO-1064
@@ -86,7 +82,6 @@ Wave B:
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Pilot semantic ownership boundary | TODO-1063, TODO-1064, TODO-1065 |
-| Parallel-ready validation architecture | TODO-1066 |
 
 ### Validation Coverage Snapshot
 
@@ -94,20 +89,8 @@ Wave B:
 | --- | --- |
 | Semantic-product publication parity | TODO-1063, TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
-| Worker-count determinism and parity | TODO-1066 |
 
 ### Task Blocks
-
-- [ ] TODO-1066: Pilot worker-local validation context for one deterministic slice
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Parallel-ready validation architecture
-  - scope: extract one definition-validation slice onto an explicit worker-local context that reads immutable prepass state and proves identical results across worker counts, reducing reliance on the monolithic validator object.
-  - acceptance:
-    - one validation slice runs through a dedicated per-definition or per-worker context instead of shared mutable validator state
-    - single-worker and multi-worker semantic-product plus diagnostic parity tests stay green on that slice
-    - the migrated slice no longer mutates shared hot-path state outside the documented publish boundary
-  - stop_rule: stop after one slice demonstrates the architecture and parity contract; do not try to parallelize the entire validator in one task
 
 - [ ] TODO-1065: Delete remaining lowering-side AST semantic fallbacks for migrated families
   - owner: ai
