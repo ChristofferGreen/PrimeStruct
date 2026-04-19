@@ -3159,7 +3159,7 @@ TEST_CASE("rejects native experimental map variadic constructor type mismatch") 
   expectExperimentalMapVariadicConstructorMismatchReject("native");
 }
 
-TEST_CASE("compiles and runs native experimental map constructor assignments" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native experimental map constructor assignments") {
   expectExperimentalMapAssignConformance("native");
 }
 

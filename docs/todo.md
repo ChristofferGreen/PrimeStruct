@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1107
+- TODO-1108
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1107
+- TODO-1108
 
 ### Priority Lanes (Current)
 
-- Native experimental map assignment skip debt: TODO-1107
+- Native inferred experimental map field skip debt: TODO-1108
 
 ### Execution Queue (Recommended)
 
-1. TODO-1107
+1. TODO-1108
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native experimental map assignment skipped-test debt | TODO-1107 |
+| Native inferred experimental map field skipped-test debt | TODO-1108 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1107 |
+| Native compile-run skipped-test debt | TODO-1108 |
 
 ### Task Blocks
 
-- [ ] TODO-1107: Audit native experimental map constructor assignment skip debt
+- [ ] TODO-1108: Audit native inferred experimental map struct field skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native experimental-map constructor-assignment coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped native inferred experimental-map struct-field coverage, and lock the current native backend contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native experimental-map constructor-assignment case in stale form.
-    - The native test locks the actual current contract for experimental-map constructor assignments, whether that is a successful runtime path or a stable diagnostic.
-  - stop_rule: Stop after the native experimental-map constructor-assignment surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp` no longer carries the skipped native inferred experimental-map struct-field case in stale form.
+    - The native test locks the actual current contract for inferred experimental-map struct fields, whether that is a successful runtime path or a stable diagnostic.
+  - stop_rule: Stop after the native inferred-experimental-map-struct-field surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
