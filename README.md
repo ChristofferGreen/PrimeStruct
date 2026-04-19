@@ -32,13 +32,14 @@ Struct:
 
 ```prime
 [struct]
-Counter {
-  [int] value{0}
+Rect {
+  [int] width{1}
+  [int] height{2}
+}
 
-  [int]
-  nextValue() {
-    return(this.value + 1)
-  }
+area_with_default_height() {
+  rect{Rect([width] 4)}
+  return(rect.width * rect.height)
 }
 ```
 
@@ -48,19 +49,19 @@ Error handling:
 import /std/file/*
 
 [Result<int, FileError>]
-countReady([int] value) {
-  return(Result.ok(value + 1))
+load_count() {
+  return(Result.ok(7))
 }
 
 [effects(io_err)]
-log_file_error([FileError] err) {
+report_file_error([FileError] err) {
   print_line_error(err.why())
 }
 
-[int effects(io_err) on_error<FileError, log_file_error>]
+[int effects(io_err) on_error<FileError, report_file_error>]
 main() {
-  ready{countReady(5)}
-  return(ready?)
+  count{load_count()}
+  return(count?)
 }
 ```
 
@@ -68,13 +69,13 @@ Named parameters:
 
 ```prime
 [int]
-addPair([int] left, [int] right) {
-  return(left + right)
+compute_score([int] base, [int] bonus, [int] penalty) {
+  return(base + bonus - penalty)
 }
 
 [int]
 main() {
-  return(addPair([left] 4, [right] 8))
+  return(compute_score([base] 10, [bonus] 4, [penalty] 2))
 }
 ```
 
@@ -83,7 +84,7 @@ Collections:
 ```prime
 import /std/collections/*
 
-lookupValue() {
+lookup_value() {
   pairs{map<int, int>{7=10, 9=4}}
   return(pairs[7] + pairs[9])
 }

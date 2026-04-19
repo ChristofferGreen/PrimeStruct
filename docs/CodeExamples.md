@@ -23,6 +23,13 @@ At top level:
 Bottom-level canonical form still exists and is useful for dumps, debugging,
 and spec work, but it is usually too noisy for style-guide examples.
 
+## Code Conventions
+
+- Prefer snake_case for free-standing user-defined functions in examples.
+- Prefer lowerCamelCase for struct member functions in examples.
+- Keep struct and enum type names in PascalCase.
+- Keep example names descriptive and behavior-oriented rather than generic.
+
 ## General Guidance
 
 - Prefer small functions with one obvious responsibility.
@@ -44,7 +51,7 @@ Use a small helper with one clear rule and an obvious name.
 
 ```prime
 [int]
-clampToZero([int] value) {
+clamp_to_zero([int] value) {
   if (value < 0) {
     return(0)
   } else {
@@ -64,7 +71,7 @@ Use mutable locals only when needed, and keep the loop body small.
 
 ```prime
 [int]
-runCountdown([int] start) {
+run_countdown([int] start) {
   [int mut] current{start}
 
   while(current > 0) {
@@ -88,7 +95,7 @@ envelopes and use `[mut]` only on the binding that actually changes.
 
 ```prime
 [int]
-clampToLimit([int] start) {
+clamp_to_limit([int] start) {
   [mut] current{start}
   limit{5}
 
@@ -115,7 +122,7 @@ Counter {
   [int] value{0}
 
   [int]
-  nextValue() {
+  next_value() {
     return(this.value + 1)
   }
 }
@@ -139,7 +146,7 @@ Pair {
 }
 
 [int]
-sumPair() {
+sum_pair() {
   pair{Pair([left] 4, [right] 8)}
   return(pair.left + pair.right)
 }
@@ -150,6 +157,29 @@ Why this is good:
 - Labeled constructor arguments make field intent obvious at the call site.
 - The example introduces a distinct surface syntax without adding extra control-flow noise.
 
+### Struct Defaults with Partial Construction
+
+When a struct already provides sensible field defaults, override only the field
+that matters at the call site instead of restating the whole shape.
+
+```prime
+[struct]
+Rect {
+  [int] width{1}
+  [int] height{2}
+}
+
+area_with_default_height() {
+  rect{Rect([width] 4)}
+  return(rect.width * rect.height)
+}
+```
+
+Why this is good:
+- The example shows that omitted fields use their declared defaults.
+- The call site stays focused on the one field that changes.
+- The helper demonstrates a distinct struct-construction rule without extra syntax.
+
 ### Labeled Function Arguments
 
 When a call has multiple parameters with related meanings, labeled arguments can
@@ -157,13 +187,13 @@ make the call site easier to scan without changing the underlying helper shape.
 
 ```prime
 [int]
-addPair([int] left, [int] right) {
+add_pair([int] left, [int] right) {
   return(left + right)
 }
 
 [int]
 main() {
-  return(addPair([left] 4, [right] 8))
+  return(add_pair([left] 4, [right] 8))
 }
 ```
 
@@ -179,7 +209,7 @@ keep the example compact without introducing extra bindings.
 
 ```prime
 [int]
-firstPlusLast() {
+first_plus_last() {
   return(array<int>{4, 8, 15}[0] + array<int>{4, 8, 15}[2])
 }
 ```
@@ -198,7 +228,7 @@ visible.
 import /std/collections/*
 
 [effects(heap_alloc), int]
-sumValues() {
+sum_values() {
   [vector<int> mut] values{4, 8, 15}
   [int mut] total{0}
   [int] count{values.count()}
@@ -225,7 +255,7 @@ member-style helper surface over canonical free-function spellings.
 import /std/collections/*
 
 [effects(heap_alloc), int]
-accumulateValues() {
+accumulate_values() {
   [vector<int> mut] values{1, 2}
   values.push(3)
   values.reserve(8)
@@ -249,7 +279,7 @@ ad-hoc unwrap patterns.
 import /std/file/*
 
 [Result<int, FileError>]
-countReady([int] value) {
+count_ready([int] value) {
   return(Result.ok(value + 1))
 }
 
@@ -260,7 +290,7 @@ log_file_error([FileError] err) {
 
 [int effects(io_err) on_error<FileError, log_file_error>]
 main() {
-  ready{countReady(5)}
+  ready{count_ready(5)}
   return(ready?)
 }
 ```
