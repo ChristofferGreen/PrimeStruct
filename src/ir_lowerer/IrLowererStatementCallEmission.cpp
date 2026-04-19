@@ -7,6 +7,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <optional>
 #include <utility>
@@ -23,49 +24,127 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
   return helperName;
 }
 
-bool resolveExperimentalVectorHelperAliasName(std::string helperName, std::string &helperNameOut) {
-  helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "vectorCount") {
-    helperNameOut = "count";
-    return true;
-  }
-  if (helperName == "vectorCapacity") {
-    helperNameOut = "capacity";
-    return true;
-  }
-  if (helperName == "vectorAt") {
-    helperNameOut = "at";
-    return true;
-  }
-  if (helperName == "vectorAtUnsafe") {
-    helperNameOut = "at_unsafe";
-    return true;
-  }
-  if (helperName == "vectorPush") {
-    helperNameOut = "push";
-    return true;
-  }
-  if (helperName == "vectorPop") {
-    helperNameOut = "pop";
-    return true;
-  }
-  if (helperName == "vectorReserve") {
-    helperNameOut = "reserve";
-    return true;
-  }
-  if (helperName == "vectorClear") {
-    helperNameOut = "clear";
-    return true;
-  }
-  if (helperName == "vectorRemoveAt") {
-    helperNameOut = "remove_at";
-    return true;
-  }
-  if (helperName == "vectorRemoveSwap") {
-    helperNameOut = "remove_swap";
-    return true;
+bool matchesRegistrySpellingSet(std::span<const std::string_view> spellings,
+                                std::string_view spelling) {
+  for (const std::string_view candidate : spellings) {
+    if (candidate == spelling) {
+      return true;
+    }
   }
   return false;
+}
+
+std::string canonicalStatementVectorHelperName(std::string helperName) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "vectorCount") {
+    return "count";
+  }
+  if (helperName == "vectorCapacity") {
+    return "capacity";
+  }
+  if (helperName == "vectorAt") {
+    return "at";
+  }
+  if (helperName == "vectorAtUnsafe") {
+    return "at_unsafe";
+  }
+  if (helperName == "vectorPush") {
+    return "push";
+  }
+  if (helperName == "vectorPop") {
+    return "pop";
+  }
+  if (helperName == "vectorReserve") {
+    return "reserve";
+  }
+  if (helperName == "vectorClear") {
+    return "clear";
+  }
+  if (helperName == "vectorRemoveAt") {
+    return "remove_at";
+  }
+  if (helperName == "vectorRemoveSwap") {
+    return "remove_swap";
+  }
+  return helperName;
+}
+
+bool resolvePublishedStatementVectorHelperName(std::string_view resolvedPath,
+                                               std::string &helperNameOut) {
+  const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+  if (metadata == nullptr || metadata->id != StdlibSurfaceId::CollectionsVectorHelpers) {
+    return false;
+  }
+  const size_t slash = resolvedPath.find_last_of('/');
+  if (slash == std::string_view::npos || slash + 1 >= resolvedPath.size()) {
+    return false;
+  }
+  helperNameOut =
+      canonicalStatementVectorHelperName(std::string(resolvedPath.substr(slash + 1)));
+  return !helperNameOut.empty();
+}
+
+bool isPublishedCanonicalStatementVectorHelperPath(std::string_view resolvedPath) {
+  const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+  return metadata != nullptr &&
+         metadata->id == StdlibSurfaceId::CollectionsVectorHelpers &&
+         matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath);
+}
+
+std::string canonicalStatementMapHelperName(std::string helperName) {
+  helperName = stripGeneratedHelperSuffix(std::move(helperName));
+  if (helperName == "mapCount") {
+    return "count";
+  }
+  if (helperName == "mapCountRef") {
+    return "count_ref";
+  }
+  if (helperName == "mapContains") {
+    return "contains";
+  }
+  if (helperName == "mapContainsRef") {
+    return "contains_ref";
+  }
+  if (helperName == "mapTryAt") {
+    return "tryAt";
+  }
+  if (helperName == "mapTryAtRef") {
+    return "tryAt_ref";
+  }
+  if (helperName == "mapAt") {
+    return "at";
+  }
+  if (helperName == "mapAtRef") {
+    return "at_ref";
+  }
+  if (helperName == "mapAtUnsafe") {
+    return "at_unsafe";
+  }
+  if (helperName == "mapAtUnsafeRef") {
+    return "at_unsafe_ref";
+  }
+  if (helperName == "mapInsert") {
+    return "insert";
+  }
+  if (helperName == "mapInsertRef") {
+    return "insert_ref";
+  }
+  return helperName;
+}
+
+bool resolvePublishedStatementMapHelperName(std::string_view resolvedPath,
+                                            std::string &helperNameOut) {
+  const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+  if (metadata == nullptr || metadata->id != StdlibSurfaceId::CollectionsMapHelpers) {
+    return false;
+  }
+  const size_t slash = resolvedPath.find_last_of('/');
+  if (slash == std::string_view::npos || slash + 1 >= resolvedPath.size()) {
+    return false;
+  }
+  helperNameOut =
+      canonicalStatementMapHelperName(std::string(resolvedPath.substr(slash + 1)));
+  return !helperNameOut.empty();
 }
 
 bool isFreeMemoryIntrinsicCall(const Expr &expr) {
@@ -77,20 +156,7 @@ static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string 
   if (expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(normalized.begin());
-  }
-  const std::string stdVectorPrefix = "std/collections/vector/";
-  const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
-  if (normalized.rfind(stdVectorPrefix, 0) == 0) {
-    helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
-    return true;
-  }
-  if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
-    return resolveExperimentalVectorHelperAliasName(normalized.substr(experimentalVectorPrefix.size()), helperNameOut);
-  }
-  return false;
+  return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);
 }
 
 static bool isVectorBuiltinName(const Expr &expr, const char *name) {
@@ -104,13 +170,6 @@ static bool isVectorBuiltinName(const Expr &expr, const char *name) {
 static bool isExplicitVectorMutatorHelperCall(const Expr &expr) {
   std::string aliasName;
   if (!resolveStatementVectorHelperAliasName(expr, aliasName)) {
-    return false;
-  }
-  const bool isExplicitHelperPath =
-      expr.name.rfind("/std/collections/vector/", 0) == 0 ||
-      expr.name.rfind("/std/collections/vector", 0) == 0 ||
-      expr.name.rfind("/std/collections/experimental_vector/", 0) == 0;
-  if (!isExplicitHelperPath) {
     return false;
   }
   return aliasName == "push" || aliasName == "pop" || aliasName == "reserve" || aliasName == "clear" ||
@@ -269,13 +328,16 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return stripGeneratedHelperSuffix(std::move(helperName));
     };
     auto isMapInsertLikeCallee = [&](const Definition &callee) {
-      if (callee.fullPath == "/std/collections/map/insert" ||
-          callee.fullPath.rfind("/std/collections/map/insert__", 0) == 0 ||
-          callee.fullPath == "/std/collections/map/insert_builtin" ||
-          callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) {
+      std::string publishedHelperName;
+      if (resolvePublishedStatementMapHelperName(callee.fullPath, publishedHelperName) &&
+          (publishedHelperName == "insert" || publishedHelperName == "insert_ref")) {
         return true;
       }
       const std::string helperStem = normalizeInsertHelperStem(callee.fullPath);
+      if (callee.fullPath.rfind("/std/collections/map/", 0) == 0 &&
+          helperStem == "insert_builtin") {
+        return true;
+      }
       if (helperStem == "insert" || helperStem == "insert_ref" ||
           helperStem == "Insert" || helperStem == "InsertRef" ||
           helperStem == "mapInsert" || helperStem == "mapInsertRef" ||
@@ -444,10 +506,11 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
           isDirectMapArgsPackStem("AtRef") || isDirectMapArgsPackStem("AtUnsafeRef")) {
         return true;
       }
-      if (expr.name == "/map/at" || expr.name == "/std/collections/map/at" ||
-          expr.name == "/map/at_ref" || expr.name == "/std/collections/map/at_ref" ||
-          expr.name == "/map/at_unsafe" || expr.name == "/std/collections/map/at_unsafe" ||
-          expr.name == "/map/at_unsafe_ref" || expr.name == "/std/collections/map/at_unsafe_ref") {
+      std::string publishedHelperName;
+      if (resolvePublishedStatementMapHelperName(expr.name, publishedHelperName) &&
+          (publishedHelperName == "at" || publishedHelperName == "at_ref" ||
+           publishedHelperName == "at_unsafe" ||
+           publishedHelperName == "at_unsafe_ref")) {
         return true;
       }
       std::string accessName;
@@ -659,7 +722,7 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
   std::string explicitStdlibHelperName;
   const bool isExplicitStdlibVectorHelper =
       resolveStatementVectorHelperAliasName(stmt, explicitStdlibHelperName) &&
-      stmt.name.rfind("/std/collections/vector/", 0) == 0;
+      isPublishedCanonicalStatementVectorHelperPath(stmt.name);
 
   std::vector<size_t> receiverIndices;
   auto appendReceiverIndex = [&](size_t index) {

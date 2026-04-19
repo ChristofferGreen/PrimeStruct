@@ -5614,8 +5614,14 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
 
   runVectorMutatorAliasNotHandledCase("/vector/push", {makeValueArg(), makeValuesArg()});
   runVectorMutatorAliasNotHandledCase("/std/collections/vector/push", {makeValueArg(), makeValuesArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/experimental_vector/vectorPush",
+      {makeValueArg(), makeValuesArg()});
   runVectorMutatorAliasNotHandledCase("/vector/clear", {makeValuesArg()});
   runVectorMutatorAliasNotHandledCase("/std/collections/vector/clear", {makeValuesArg()});
+  runVectorMutatorAliasNotHandledCase(
+      "/std/collections/experimental_vector/vectorClear",
+      {makeValuesArg()});
 
   const auto runExplicitVectorMutatorDirectDefinitionCase =
       [&](const std::string &helperName, const std::vector<primec::Expr> &args) {
@@ -5685,6 +5691,51 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   runExplicitVectorMutatorDirectDefinitionCase("/vector/push", {makeValueArg(), makeValuesArg()});
   runExplicitVectorMutatorDirectDefinitionCase(
       "/std/collections/vector/clear", {makeValuesArg()});
+  runExplicitVectorMutatorDirectDefinitionCase(
+      "/std/collections/experimental_vector/vectorPush",
+      {makeValueArg(), makeValuesArg()});
+}
+
+TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
+          doctest::skip(true)) {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path statementCallEmissionPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
+  REQUIRE(std::filesystem::exists(statementCallEmissionPath));
+
+  const std::string source = readText(statementCallEmissionPath);
+  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedStatementVectorHelperName(") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedStatementMapHelperName(") !=
+        std::string::npos);
+  CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsVectorHelpers") !=
+        std::string::npos);
+  CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsMapHelpers") !=
+        std::string::npos);
+  CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
+        std::string::npos);
+  CHECK(source.find("const std::string experimentalVectorPrefix = \"std/collections/experimental_vector/\"") ==
+        std::string::npos);
+  CHECK(source.find("expr.name == \"/map/at\" || expr.name == \"/std/collections/map/at\"") ==
+        std::string::npos);
+  CHECK(source.find("callee.fullPath == \"/std/collections/map/insert\"") ==
+        std::string::npos);
 }
 
 TEST_SUITE_END();

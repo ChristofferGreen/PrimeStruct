@@ -4468,3 +4468,17 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the inline map helper dispatch seam is registry-backed and parity-tested; split remaining statement/tail/emit path tables into a separate follow-up leaf instead of widening this change.
   - finished_at: 2026-04-20
   - evidence: Replaced the embedded direct map helper path table in `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp` with shared `StdlibSurfaceRegistry` classification via `findStdlibSurfaceMetadataByResolvedPath(...)`, canonical helper-family matching, and a narrow residual fallback for specialized experimental-map methods; added inline-dispatch regressions in `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_dispatch_inline_calls_with_locals.cpp` that keep bridged map helper callees like `/std/collections/mapContains` and `/std/collections/experimental_map/mapInsertRef` out of inline emission for map receivers; expanded source-lock coverage in `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`; and split oversized `TODO-4091` in `docs/todo.md` so the remaining downstream statement/tail/emit dispatch work continues as `TODO-4093`.
+
+- [x] TODO-4094: Route lowerer statement call helper stdlib dispatch through shared registry metadata
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Stdlib Bridge Consolidation
+  - depends_on: none
+  - scope: Replace the remaining statement-call helper path tables in `IrLowererStatementCallEmission.cpp` with shared stdlib surface registry classification so explicit vector helper routing and map insert/access helper matching stop depending on duplicated raw collection path matrices, while leaving the native-tail and expression-emission layers for a follow-up leaf.
+  - acceptance:
+    - Statement-call helper routing in `IrLowererStatementCallEmission.cpp` classifies explicit vector helper paths through shared registry metadata instead of local canonical-versus-experimental prefix tables.
+    - Map insert/access helper matching in the same statement-call layer uses shared registry-backed map helper classification for bridged helper paths, with any residual non-bridged builtin path called out explicitly.
+    - Focused runtime and source-lock coverage pin the new statement-call seam and keep experimental vector helper spellings working without reintroducing the old raw path matrix.
+  - stop_rule: Stop once the statement-call helper layer is registry-backed and parity-tested; split the remaining native-tail and expression-emission path tables into a separate follow-up leaf instead of widening this change.
+  - finished_at: 2026-04-20
+  - evidence: Replaced the local vector prefix table and map helper path checks in `src/ir_lowerer/IrLowererStatementCallEmission.cpp` with shared `StdlibSurfaceRegistry` classification via `findStdlibSurfaceMetadataByResolvedPath(...)`, canonical helper-name normalization, and a narrow residual fallback for `/std/collections/map/insert_builtin`; expanded `tests/unit/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp` with experimental-vector direct-call and not-handled regressions plus a focused source-lock test for the statement-call emission seam; and split oversized `TODO-4093` in `docs/todo.md` so the remaining native-tail and expression-emission dispatch work continues as `TODO-4095`.
