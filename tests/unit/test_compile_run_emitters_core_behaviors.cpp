@@ -38,7 +38,7 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
-TEST_CASE("C++ emitter rejects experimental map custom comparable keys through builtin map key validation" * doctest::skip(true)) {
+TEST_CASE("C++ emitter runs experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*

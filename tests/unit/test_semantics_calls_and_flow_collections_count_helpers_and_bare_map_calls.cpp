@@ -241,7 +241,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("experimental map custom comparable struct keys currently reject through canonical map helpers") {
+TEST_CASE("experimental map custom comparable struct keys validate through canonical map helpers") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
