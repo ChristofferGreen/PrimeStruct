@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1126
+- TODO-1127
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1126
+- TODO-1127
 
 ### Priority Lanes (Current)
 
-- Native user map count call-shadow skip debt: TODO-1126
+- VM user map count call-shadow skip debt: TODO-1127
 
 ### Execution Queue (Recommended)
 
-1. TODO-1126
+1. TODO-1127
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native map count call-shadow skipped-test debt | TODO-1126 |
+| VM map count call-shadow skipped-test debt | TODO-1127 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1126 |
+| VM compile-run skipped-test debt | TODO-1127 |
 
 ### Task Blocks
 
-- [ ] TODO-1126: Audit native user map count call-shadow skip debt
+- [ ] TODO-1127: Audit VM user map count call-shadow skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native user map `count(values)` shadow coverage, and lock the current native backend contract with non-skipped assertions.
+  - scope: Re-enable or delete the skipped VM user map `count(values)` shadow coverage, and lock the current VM contract with non-skipped assertions.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp` no longer carries the skipped native user map `count(values)` shadow case in stale form.
-    - The native test locks the actual current contract for bare user map count call shadowing, whether that stays as successful runtime behavior or a stable diagnostic.
-  - stop_rule: Stop after the native user map `count(values)` shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM user map `count(values)` shadow case in stale form.
+    - The VM test locks the actual current contract for bare user map count call shadowing, whether that stays as successful runtime behavior or a stable diagnostic.
+  - stop_rule: Stop after the VM user map `count(values)` shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
