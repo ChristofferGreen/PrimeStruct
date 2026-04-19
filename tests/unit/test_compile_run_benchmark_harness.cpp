@@ -199,7 +199,16 @@ TEST_CASE("semantic memory baseline report is checked in with fixture phase cove
           "ok = ok and len(fixtures) == 10\n"
           "ok = ok and len(results) == len(expected_pairs)\n"
           "ok = ok and pairs == expected_pairs\n"
+          "semantic_rows = [row for row in results if row.get('phase') == 'semantic-product']\n"
+          "ok = ok and len(semantic_rows) == len(fixtures)\n"
           "ok = ok and all(row_has_required_metrics(row) for row in results)\n"
+          "ok = ok and all(isinstance(row.get('key_cardinality'), dict) for row in semantic_rows)\n"
+          "ok = ok and all(\n"
+          "  isinstance(row['key_cardinality'].get('distinct_direct_call_target_keys'), int)\n"
+          "  and isinstance(row['key_cardinality'].get('distinct_method_call_target_keys'), int)\n"
+          "  and isinstance(row['key_cardinality'].get('max_target_key_length'), int)\n"
+          "  for row in semantic_rows\n"
+          ")\n"
           "ok = ok and all('is_expensive_threshold_offender' in row for row in results)\n"
           "ok = ok and len(report.get('expensive_offenders', [])) >= 1\n"
           "if not ok:\n"
@@ -289,6 +298,12 @@ TEST_CASE("semantic memory budget policy artifacts are checked in") {
   CHECK(policy.find("\"fixture\": \"math_star_repro\"") != std::string::npos);
   CHECK(policy.find("\"phase\": \"semantic-product\"") != std::string::npos);
   CHECK(note.find("Sustained-Window Rule") != std::string::npos);
+  CHECK(note.find("Unified Semantic-Product Index Evidence") != std::string::npos);
+  CHECK(note.find("contains all `10`") != std::string::npos);
+  CHECK(note.find("key_cardinality") != std::string::npos);
+  CHECK(note.find("semantic_product_index_family_counts") != std::string::npos);
+  CHECK(note.find("definition_validation_worker_mode_deltas") != std::string::npos);
+  CHECK(note.find("--definition-validation-workers both") != std::string::npos);
 }
 
 TEST_CASE("semantic memory phase-one success criteria artifacts are checked in") {

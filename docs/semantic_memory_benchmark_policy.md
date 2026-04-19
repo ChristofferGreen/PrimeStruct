@@ -92,6 +92,30 @@ This mode records worker-mode deltas and fails when one-worker and two-worker
 runs emit different dump payload hashes for the same `(fixture, phase, mode)`
 tuple.
 
+## Unified Semantic-Product Index Evidence
+
+Current checked-in evidence for the unified lowerer `SemanticProductIndex`
+builder is split across the baseline report and the worker-parity benchmark
+mode:
+
+- `benchmarks/semantic_memory_baseline_report.json` currently contains all `10`
+  `semantic-product` fixture rows, and each of those rows already carries
+  `key_cardinality` metrics for the published direct/method target surfaces.
+- Regenerated reports produced with `--definition-validation-workers both` now
+  also publish `semantic_product_index_family_counts` on every
+  `semantic-product` row and carry matching
+  `definition_validation_worker_mode_deltas[*].semantic_product_index_family_counts_*`
+  fields for the unified semantic-product adapter path.
+- Use those family-count fields to confirm the direct-call, method-call,
+  bridge-path, binding, return, local-auto, query, try, and `on_error` index
+  families remain populated and worker-parity-identical while comparing RSS and
+  wall-time deltas.
+
+The current checked-in baseline source predates those worker-parity family-count
+fields, so the next canonical report refresh should be generated with
+`--definition-validation-workers both` and recorded alongside the same policy
+update that relies on those counts.
+
 The CI artifact wrapper forwards this mode via:
 
 ```bash
