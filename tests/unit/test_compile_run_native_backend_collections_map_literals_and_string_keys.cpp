@@ -209,7 +209,7 @@ main() {
   CHECK(runCommand(exePath) == 12);
 }
 
-TEST_CASE("compiles and runs native map at missing key" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native map at missing key") {
   const std::string source = R"(
 [return<int>]
 main() {
