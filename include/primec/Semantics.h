@@ -34,6 +34,20 @@ struct SemanticPhaseCounters {
   SemanticPhaseCounterSnapshot semanticProductBuild;
 };
 
+struct SemanticValidationBenchmarkConfig {
+  uint32_t definitionValidationWorkerCount = 1;
+  bool disableMethodTargetMemoization = false;
+  bool graphLocalAutoLegacyKeyShadow = false;
+  bool graphLocalAutoLegacySideChannelShadow = false;
+  bool disableGraphLocalAutoDependencyScratchPmr = false;
+};
+
+struct SemanticValidationBenchmarkObserver {
+  SemanticPhaseCounters *phaseCounters = nullptr;
+  bool allocationCountersEnabled = false;
+  bool rssCheckpointsEnabled = false;
+};
+
 class Semantics {
 public:
   bool validate(Program &program,
@@ -45,15 +59,21 @@ public:
                 SemanticDiagnosticInfo *diagnosticInfo = nullptr,
                 bool collectDiagnostics = false,
                 SemanticProgram *semanticProgramOut = nullptr,
-                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
-                uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1,
-                SemanticPhaseCounters *benchmarkSemanticPhaseCounters = nullptr,
-                bool benchmarkSemanticAllocationCountersEnabled = false,
-                bool benchmarkSemanticRssCheckpointsEnabled = false,
-                bool benchmarkSemanticDisableMethodTargetMemoization = false,
-                bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow = false,
-                bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false,
-                bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false) const;
+                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr) const;
+
+  bool validateForBenchmark(
+      Program &program,
+      const std::string &entryPath,
+      std::string &error,
+      const std::vector<std::string> &defaultEffects,
+      const std::vector<std::string> &entryDefaultEffects,
+      const std::vector<std::string> &semanticTransforms = {},
+      SemanticDiagnosticInfo *diagnosticInfo = nullptr,
+      bool collectDiagnostics = false,
+      SemanticProgram *semanticProgramOut = nullptr,
+      const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
+      const SemanticValidationBenchmarkConfig &benchmarkConfig = {},
+      const SemanticValidationBenchmarkObserver &benchmarkObserver = {}) const;
 };
 
 } // namespace primec

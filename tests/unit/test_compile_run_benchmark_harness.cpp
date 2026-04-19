@@ -3612,6 +3612,43 @@ TEST_CASE("semantic memory ci artifact wrapper ignores stale reports on benchmar
   CHECK(manifest.find("\"budget_report\": null") != std::string::npos);
 }
 
+TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow") {
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path semanticsHeaderPath = repoRoot / "include" / "primec" / "Semantics.h";
+  const std::filesystem::path pipelinePath = repoRoot / "src" / "CompilePipeline.cpp";
+  const std::string semanticsHeader = readFile(semanticsHeaderPath.string());
+  const std::string pipelineText = readFile(pipelinePath.string());
+
+  REQUIRE_FALSE(semanticsHeader.empty());
+  REQUIRE_FALSE(pipelineText.empty());
+
+  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkConfig") != std::string::npos);
+  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkObserver") != std::string::npos);
+  CHECK(semanticsHeader.find("bool validateForBenchmark(") != std::string::npos);
+  CHECK(semanticsHeader.find(
+            "bool validate(Program &program,\n"
+            "                const std::string &entryPath,\n"
+            "                std::string &error,\n"
+            "                const std::vector<std::string> &defaultEffects,\n"
+            "                const std::vector<std::string> &entryDefaultEffects,\n"
+            "                const std::vector<std::string> &semanticTransforms = {},\n"
+            "                SemanticDiagnosticInfo *diagnosticInfo = nullptr,\n"
+            "                bool collectDiagnostics = false,\n"
+            "                SemanticProgram *semanticProgramOut = nullptr,\n"
+            "                const SemanticProductBuildConfig *semanticProductBuildConfig = nullptr) const;") !=
+        std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticDisableMethodTargetMemoization") == std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") == std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") == std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr") ==
+        std::string::npos);
+
+  CHECK(pipelineText.find("SemanticValidationBenchmarkConfig benchmarkConfig;") != std::string::npos);
+  CHECK(pipelineText.find("SemanticValidationBenchmarkObserver benchmarkObserver;") != std::string::npos);
+  CHECK(pipelineText.find("semantics.validateForBenchmark(") != std::string::npos);
+  CHECK(pipelineText.find("semanticValidationOk = semantics.validate(") != std::string::npos);
+}
+
 TEST_CASE("tsan semantics smoke is gated behind optional-ci wiring") {
   const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
   const std::filesystem::path cmakePath = repoRoot / "CMakeLists.txt";

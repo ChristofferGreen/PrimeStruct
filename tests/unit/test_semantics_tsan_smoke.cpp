@@ -59,6 +59,33 @@ std::vector<std::string> extractDiagnosticMessages(
   return messages;
 }
 
+bool validateWithWorkerCount(primec::Semantics &semantics,
+                             primec::Program &program,
+                             const std::string &entryPath,
+                             std::string &error,
+                             const std::vector<std::string> &defaultEffects,
+                             const std::vector<std::string> &entryDefaultEffects,
+                             const std::vector<std::string> &semanticTransforms = {},
+                             primec::SemanticDiagnosticInfo *diagnosticInfo = nullptr,
+                             bool collectDiagnostics = false,
+                             primec::SemanticProgram *semanticProgramOut = nullptr,
+                             const primec::SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
+                             uint32_t workerCount = 1) {
+  primec::SemanticValidationBenchmarkConfig benchmarkConfig;
+  benchmarkConfig.definitionValidationWorkerCount = workerCount;
+  return semantics.validateForBenchmark(program,
+                                        entryPath,
+                                        error,
+                                        defaultEffects,
+                                        entryDefaultEffects,
+                                        semanticTransforms,
+                                        diagnosticInfo,
+                                        collectDiagnostics,
+                                        semanticProgramOut,
+                                        semanticProductBuildConfig,
+                                        benchmarkConfig);
+}
+
 } // namespace
 
 TEST_CASE("thread sanitizer smoke keeps multithread semantic-product deterministic") {
@@ -74,17 +101,18 @@ TEST_CASE("thread sanitizer smoke keeps multithread semantic-product determinist
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticProgram semanticProgram;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       nullptr,
-                                       false,
-                                       &semanticProgram,
-                                       nullptr,
-                                       workerCounts[i]);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            nullptr,
+                                            false,
+                                            &semanticProgram,
+                                            nullptr,
+                                            workerCounts[i]);
     CHECK(ok);
     CHECK(error.empty());
     formattedOutputs[i] = primec::formatSemanticProgram(semanticProgram);
@@ -107,17 +135,18 @@ TEST_CASE("thread sanitizer smoke keeps multithread diagnostic order determinist
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticDiagnosticInfo diagnostics;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       &diagnostics,
-                                       true,
-                                       nullptr,
-                                       nullptr,
-                                       workerCounts[i]);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            &diagnostics,
+                                            true,
+                                            nullptr,
+                                            nullptr,
+                                            workerCounts[i]);
     CHECK_FALSE(ok);
     CHECK_FALSE(error.empty());
     diagnosticMessagesByRun[i] = extractDiagnosticMessages(diagnostics);

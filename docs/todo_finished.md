@@ -4002,3 +4002,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Start in `CMakeLists.txt` around `PrimeStruct_backend_tests` plus the architecture assertions under `tests/unit/test_ir_pipeline_backends_architecture.h`; if one pass cannot land the three-way split cleanly, split this leaf by target family rather than by random file groups.
   - finished_at: 2026-04-19
   - evidence: Replaced the monolithic `PrimeStruct_backend_tests` binary with `PrimeStruct_backend_ir_tests`, `PrimeStruct_backend_runtime_tests`, and `PrimeStruct_compile_run_tests`, added a suite-to-target router so managed and unmanaged backend/compile-run doctest registrations land on the focused binary without losing shard behavior, refreshed the managed backend suite file and architecture source-lock tests to pin the new target ownership, and updated `AGENTS.md` so direct reruns call out the new binary names.
+
+- [x] TODO-4003: Introduce production validate config and benchmark observer
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Validator Simplification
+  - depends_on: none
+  - scope: Separate the production `Semantics::validate` contract from benchmark instrumentation and memory/telemetry plumbing by introducing a narrower production-facing config surface plus a dedicated benchmark observer/config path.
+  - acceptance:
+    - Production callers use a narrower validation entrypoint or config surface than the current benchmark-heavy signature, and benchmark-only switches no longer appear directly on that production surface.
+    - Allocation, RSS, semantic fact, and repeat-run benchmark reporting still work through a dedicated observer/config path with unchanged benchmark-harness behavior.
+    - Compile-pipeline and benchmark harness coverage both pass after the split.
+  - stop_rule: Stop once benchmark-only behavior is isolated from the normal production validation flow at the API/call-plumbing boundary; do not expand this leaf into unrelated validator-internal cleanup.
+  - notes: Start with `include/primec/Semantics.h`, `src/CompilePipeline.cpp`, and the benchmark harness callers; if the API split is easy but observer plumbing is not, keep the API split in this leaf and create a follow-up for deeper benchmark internals.
+  - finished_at: 2026-04-19
+  - evidence: Split `Semantics` into a production `validate(...)` entrypoint plus benchmark-only `SemanticValidationBenchmarkConfig` and `SemanticValidationBenchmarkObserver` plumbing, rewired `CompilePipeline.cpp` to call `validateForBenchmark(...)` only when benchmark worker-count or observer options are active, updated the worker-count semantics tests to exercise the new benchmark path explicitly, and added source-lock coverage in `tests/unit/test_ir_pipeline_backends_graph_pilot_a.h` and `tests/unit/test_compile_run_benchmark_harness.cpp` so benchmark-only switches stay off the normal public validation surface.

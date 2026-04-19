@@ -340,24 +340,30 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(optionsParser.find("--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr") !=
         std::string::npos);
   CHECK(semanticsHeader.find("typeResolver") == std::string::npos);
-  CHECK(semanticsHeader.find("benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
-  CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
-  CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") != std::string::npos);
-  CHECK(semanticsHeader.find("benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr") !=
+  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkConfig") != std::string::npos);
+  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkObserver") != std::string::npos);
+  CHECK(semanticsHeader.find("bool validateForBenchmark(") != std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticDisableMethodTargetMemoization") == std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") == std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") == std::string::npos);
+  CHECK(semanticsHeader.find("benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr") ==
         std::string::npos);
   CHECK(semanticsValidate.find("collectDiagnostics") != std::string::npos);
-  CHECK(semanticsValidate.find("benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
-  CHECK(semanticsValidate.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
-  CHECK(semanticsValidate.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") !=
+  CHECK(semanticsValidate.find("runSemanticValidation(") != std::string::npos);
+  CHECK(semanticsValidate.find("const SemanticValidationBenchmarkConfig *benchmarkConfig") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr") !=
+  CHECK(semanticsValidate.find("const SemanticValidationBenchmarkObserver *benchmarkObserver") !=
         std::string::npos);
+  CHECK(semanticsValidate.find("bool Semantics::validateForBenchmark(") != std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") !=
         std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr") !=
         std::string::npos);
+  CHECK(pipeline.find("SemanticValidationBenchmarkConfig benchmarkConfig;") != std::string::npos);
+  CHECK(pipeline.find("SemanticValidationBenchmarkObserver benchmarkObserver;") != std::string::npos);
+  CHECK(pipeline.find("semantics.validateForBenchmark(") != std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-disable-method-target-memoization") != std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-graph-local-auto-legacy-key-shadow") != std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow") !=

@@ -54,6 +54,33 @@ bool anyMessageContains(const std::vector<std::string> &messages,
                      });
 }
 
+bool validateWithWorkerCount(primec::Semantics &semantics,
+                             primec::Program &program,
+                             const std::string &entryPath,
+                             std::string &error,
+                             const std::vector<std::string> &defaultEffects,
+                             const std::vector<std::string> &entryDefaultEffects,
+                             const std::vector<std::string> &semanticTransforms = {},
+                             primec::SemanticDiagnosticInfo *diagnosticInfo = nullptr,
+                             bool collectDiagnostics = false,
+                             primec::SemanticProgram *semanticProgramOut = nullptr,
+                             const primec::SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
+                             uint32_t workerCount = 1) {
+  primec::SemanticValidationBenchmarkConfig benchmarkConfig;
+  benchmarkConfig.definitionValidationWorkerCount = workerCount;
+  return semantics.validateForBenchmark(program,
+                                        entryPath,
+                                        error,
+                                        defaultEffects,
+                                        entryDefaultEffects,
+                                        semanticTransforms,
+                                        diagnosticInfo,
+                                        collectDiagnostics,
+                                        semanticProgramOut,
+                                        semanticProductBuildConfig,
+                                        benchmarkConfig);
+}
+
 } // namespace
 
 TEST_CASE("definition partitioner emits deterministic balanced contiguous chunks") {
@@ -196,17 +223,18 @@ main() {
 
   const bool serialOk =
       semantics.validate(serialProgram, "/main", serialError, defaults, defaults);
-  const bool parallelOk = semantics.validate(parallelProgram,
-                                             "/main",
-                                             parallelError,
-                                             defaults,
-                                             defaults,
-                                             {},
-                                             nullptr,
-                                             false,
-                                             nullptr,
-                                             nullptr,
-                                             2);
+  const bool parallelOk = validateWithWorkerCount(semantics,
+                                                  parallelProgram,
+                                                  "/main",
+                                                  parallelError,
+                                                  defaults,
+                                                  defaults,
+                                                  {},
+                                                  nullptr,
+                                                  false,
+                                                  nullptr,
+                                                  nullptr,
+                                                  2);
 
   CHECK(serialOk);
   CHECK(parallelOk);
@@ -244,28 +272,30 @@ main() {
   primec::SemanticDiagnosticInfo serialDiagnostics;
   primec::SemanticDiagnosticInfo parallelDiagnostics;
 
-  const bool serialOk = semantics.validate(serialProgram,
-                                           "/main",
-                                           serialError,
-                                           defaults,
-                                           defaults,
-                                           {},
-                                           &serialDiagnostics,
-                                           true,
-                                           nullptr,
-                                           nullptr,
-                                           1);
-  const bool parallelOk = semantics.validate(parallelProgram,
-                                             "/main",
-                                             parallelError,
-                                             defaults,
-                                             defaults,
-                                             {},
-                                             &parallelDiagnostics,
-                                             true,
-                                             nullptr,
-                                             nullptr,
-                                             2);
+  const bool serialOk = validateWithWorkerCount(semantics,
+                                                serialProgram,
+                                                "/main",
+                                                serialError,
+                                                defaults,
+                                                defaults,
+                                                {},
+                                                &serialDiagnostics,
+                                                true,
+                                                nullptr,
+                                                nullptr,
+                                                1);
+  const bool parallelOk = validateWithWorkerCount(semantics,
+                                                  parallelProgram,
+                                                  "/main",
+                                                  parallelError,
+                                                  defaults,
+                                                  defaults,
+                                                  {},
+                                                  &parallelDiagnostics,
+                                                  true,
+                                                  nullptr,
+                                                  nullptr,
+                                                  2);
 
   CHECK_FALSE(serialOk);
   CHECK_FALSE(parallelOk);
@@ -310,28 +340,30 @@ main() {
   primec::SemanticDiagnosticInfo serialDiagnostics;
   primec::SemanticDiagnosticInfo parallelDiagnostics;
 
-  const bool serialOk = semantics.validate(serialProgram,
-                                           "/main",
-                                           serialError,
-                                           defaults,
-                                           defaults,
-                                           {},
-                                           &serialDiagnostics,
-                                           true,
-                                           nullptr,
-                                           nullptr,
-                                           1);
-  const bool parallelOk = semantics.validate(parallelProgram,
-                                             "/main",
-                                             parallelError,
-                                             defaults,
-                                             defaults,
-                                             {},
-                                             &parallelDiagnostics,
-                                             true,
-                                             nullptr,
-                                             nullptr,
-                                             4);
+  const bool serialOk = validateWithWorkerCount(semantics,
+                                                serialProgram,
+                                                "/main",
+                                                serialError,
+                                                defaults,
+                                                defaults,
+                                                {},
+                                                &serialDiagnostics,
+                                                true,
+                                                nullptr,
+                                                nullptr,
+                                                1);
+  const bool parallelOk = validateWithWorkerCount(semantics,
+                                                  parallelProgram,
+                                                  "/main",
+                                                  parallelError,
+                                                  defaults,
+                                                  defaults,
+                                                  {},
+                                                  &parallelDiagnostics,
+                                                  true,
+                                                  nullptr,
+                                                  nullptr,
+                                                  4);
 
   CHECK_FALSE(serialOk);
   CHECK_FALSE(parallelOk);
@@ -376,17 +408,18 @@ main() {
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticDiagnosticInfo diagnostics;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       &diagnostics,
-                                       true,
-                                       nullptr,
-                                       nullptr,
-                                       4);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            &diagnostics,
+                                            true,
+                                            nullptr,
+                                            nullptr,
+                                            4);
     CHECK_FALSE(ok);
     CHECK_FALSE(error.empty());
     if (run == 0) {
@@ -434,17 +467,18 @@ main() {
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticProgram semanticProgram;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       nullptr,
-                                       false,
-                                       &semanticProgram,
-                                       nullptr,
-                                       4);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            nullptr,
+                                            false,
+                                            &semanticProgram,
+                                            nullptr,
+                                            4);
     CHECK(ok);
     CHECK(error.empty());
     const std::string formatted = primec::formatSemanticProgram(semanticProgram);
@@ -496,28 +530,30 @@ main() {
   primec::SemanticProgram serialSemanticProduct;
   primec::SemanticProgram parallelSemanticProduct;
 
-  const bool serialOk = semantics.validate(serialProgram,
-                                           "/main",
-                                           serialError,
-                                           defaults,
-                                           defaults,
-                                           {},
-                                           nullptr,
-                                           false,
-                                           &serialSemanticProduct,
-                                           nullptr,
-                                           1);
-  const bool parallelOk = semantics.validate(parallelProgram,
-                                             "/main",
-                                             parallelError,
-                                             defaults,
-                                             defaults,
-                                             {},
-                                             nullptr,
-                                             false,
-                                             &parallelSemanticProduct,
-                                             nullptr,
-                                             4);
+  const bool serialOk = validateWithWorkerCount(semantics,
+                                                serialProgram,
+                                                "/main",
+                                                serialError,
+                                                defaults,
+                                                defaults,
+                                                {},
+                                                nullptr,
+                                                false,
+                                                &serialSemanticProduct,
+                                                nullptr,
+                                                1);
+  const bool parallelOk = validateWithWorkerCount(semantics,
+                                                  parallelProgram,
+                                                  "/main",
+                                                  parallelError,
+                                                  defaults,
+                                                  defaults,
+                                                  {},
+                                                  nullptr,
+                                                  false,
+                                                  &parallelSemanticProduct,
+                                                  nullptr,
+                                                  4);
   CHECK(serialOk);
   CHECK(parallelOk);
   CHECK(serialError.empty());
@@ -561,17 +597,18 @@ main() {
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticDiagnosticInfo diagnostics;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       &diagnostics,
-                                       true,
-                                       nullptr,
-                                       nullptr,
-                                       workerCounts[i]);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            &diagnostics,
+                                            true,
+                                            nullptr,
+                                            nullptr,
+                                            workerCounts[i]);
     CHECK_FALSE(ok);
     CHECK_FALSE(error.empty());
     diagnosticMessagesByWorkerCount[i] = diagnosticMessages(diagnostics);
@@ -616,17 +653,18 @@ main() {
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticProgram semanticProgram;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       nullptr,
-                                       false,
-                                       &semanticProgram,
-                                       nullptr,
-                                       workerCounts[i]);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            nullptr,
+                                            false,
+                                            &semanticProgram,
+                                            nullptr,
+                                            workerCounts[i]);
     CHECK(ok);
     CHECK(error.empty());
     formattedByWorkerCount[i] = primec::formatSemanticProgram(semanticProgram);
@@ -667,17 +705,18 @@ main() {
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticProgram semanticProgram;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       nullptr,
-                                       false,
-                                       &semanticProgram,
-                                       nullptr,
-                                       workerCounts[i]);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            nullptr,
+                                            false,
+                                            &semanticProgram,
+                                            nullptr,
+                                            workerCounts[i]);
     CHECK(ok);
     CHECK(error.empty());
     CHECK(semanticProgram.callableSummaries.size() >= 3);
@@ -736,17 +775,18 @@ main() {
     primec::Program program = parseProgram(source);
     std::string error;
     primec::SemanticDiagnosticInfo diagnostics;
-    const bool ok = semantics.validate(program,
-                                       "/main",
-                                       error,
-                                       defaults,
-                                       defaults,
-                                       {},
-                                       &diagnostics,
-                                       true,
-                                       nullptr,
-                                       nullptr,
-                                       workerCounts[i]);
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            &diagnostics,
+                                            true,
+                                            nullptr,
+                                            nullptr,
+                                            workerCounts[i]);
     CHECK_FALSE(ok);
     CHECK_FALSE(error.empty());
     messagesByWorkerCount[i] = diagnosticMessages(diagnostics);

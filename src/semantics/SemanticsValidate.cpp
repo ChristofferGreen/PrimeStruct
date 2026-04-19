@@ -5986,24 +5986,37 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
 }
 } // namespace
 
-bool Semantics::validate(Program &program,
-                         const std::string &entryPath,
-                         std::string &error,
-                         const std::vector<std::string> &defaultEffects,
-                         const std::vector<std::string> &entryDefaultEffects,
-                         const std::vector<std::string> &semanticTransforms,
-                         SemanticDiagnosticInfo *diagnosticInfo,
-                         bool collectDiagnostics,
-                         SemanticProgram *semanticProgramOut,
-                         const SemanticProductBuildConfig *semanticProductBuildConfig,
-                         uint32_t benchmarkSemanticDefinitionValidationWorkerCount,
-                         SemanticPhaseCounters *benchmarkSemanticPhaseCounters,
-                         bool benchmarkSemanticAllocationCountersEnabled,
-                         bool benchmarkSemanticRssCheckpointsEnabled,
-                         bool benchmarkSemanticDisableMethodTargetMemoization,
-                         bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
-                         bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
-                         bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr) const {
+namespace {
+
+bool runSemanticValidation(Program &program,
+                           const std::string &entryPath,
+                           std::string &error,
+                           const std::vector<std::string> &defaultEffects,
+                           const std::vector<std::string> &entryDefaultEffects,
+                           const std::vector<std::string> &semanticTransforms,
+                           SemanticDiagnosticInfo *diagnosticInfo,
+                           bool collectDiagnostics,
+                           SemanticProgram *semanticProgramOut,
+                           const SemanticProductBuildConfig *semanticProductBuildConfig,
+                           const SemanticValidationBenchmarkConfig *benchmarkConfig,
+                           const SemanticValidationBenchmarkObserver *benchmarkObserver) {
+  const uint32_t benchmarkSemanticDefinitionValidationWorkerCount =
+      benchmarkConfig != nullptr ? benchmarkConfig->definitionValidationWorkerCount : 1;
+  SemanticPhaseCounters *benchmarkSemanticPhaseCounters =
+      benchmarkObserver != nullptr ? benchmarkObserver->phaseCounters : nullptr;
+  const bool benchmarkSemanticAllocationCountersEnabled =
+      benchmarkObserver != nullptr && benchmarkObserver->allocationCountersEnabled;
+  const bool benchmarkSemanticRssCheckpointsEnabled =
+      benchmarkObserver != nullptr && benchmarkObserver->rssCheckpointsEnabled;
+  const bool benchmarkSemanticDisableMethodTargetMemoization =
+      benchmarkConfig != nullptr && benchmarkConfig->disableMethodTargetMemoization;
+  const bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow =
+      benchmarkConfig != nullptr && benchmarkConfig->graphLocalAutoLegacyKeyShadow;
+  const bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow =
+      benchmarkConfig != nullptr && benchmarkConfig->graphLocalAutoLegacySideChannelShadow;
+  const bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr =
+      benchmarkConfig != nullptr && benchmarkConfig->disableGraphLocalAutoDependencyScratchPmr;
+
   error.clear();
   if (benchmarkSemanticPhaseCounters != nullptr) {
     *benchmarkSemanticPhaseCounters = {};
@@ -6234,6 +6247,59 @@ bool Semantics::validate(Program &program,
   error.clear();
   validationSucceeded = true;
   return true;
+}
+
+} // namespace
+
+bool Semantics::validate(Program &program,
+                         const std::string &entryPath,
+                         std::string &error,
+                         const std::vector<std::string> &defaultEffects,
+                         const std::vector<std::string> &entryDefaultEffects,
+                         const std::vector<std::string> &semanticTransforms,
+                         SemanticDiagnosticInfo *diagnosticInfo,
+                         bool collectDiagnostics,
+                         SemanticProgram *semanticProgramOut,
+                         const SemanticProductBuildConfig *semanticProductBuildConfig) const {
+  return runSemanticValidation(program,
+                               entryPath,
+                               error,
+                               defaultEffects,
+                               entryDefaultEffects,
+                               semanticTransforms,
+                               diagnosticInfo,
+                               collectDiagnostics,
+                               semanticProgramOut,
+                               semanticProductBuildConfig,
+                               nullptr,
+                               nullptr);
+}
+
+bool Semantics::validateForBenchmark(
+    Program &program,
+    const std::string &entryPath,
+    std::string &error,
+    const std::vector<std::string> &defaultEffects,
+    const std::vector<std::string> &entryDefaultEffects,
+    const std::vector<std::string> &semanticTransforms,
+    SemanticDiagnosticInfo *diagnosticInfo,
+    bool collectDiagnostics,
+    SemanticProgram *semanticProgramOut,
+    const SemanticProductBuildConfig *semanticProductBuildConfig,
+    const SemanticValidationBenchmarkConfig &benchmarkConfig,
+    const SemanticValidationBenchmarkObserver &benchmarkObserver) const {
+  return runSemanticValidation(program,
+                               entryPath,
+                               error,
+                               defaultEffects,
+                               entryDefaultEffects,
+                               semanticTransforms,
+                               diagnosticInfo,
+                               collectDiagnostics,
+                               semanticProgramOut,
+                               semanticProductBuildConfig,
+                               &benchmarkConfig,
+                               &benchmarkObserver);
 }
 
 bool semantics::computeTypeResolutionReturnSnapshotForTesting(

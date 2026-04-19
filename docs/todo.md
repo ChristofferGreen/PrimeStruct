@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4003
 - TODO-4004
 - TODO-4005
 
@@ -67,21 +66,20 @@ Task template:
 ### Priority Lanes (Current)
 
 - Semantic ownership cutover: TODO-4004, TODO-4008
-- Validator/publication simplification: TODO-4003, TODO-4005
+- Semantic-product publication shaping: TODO-4005
 
 ### Execution Queue (Recommended)
 
-1. TODO-4003
-2. TODO-4004
-3. TODO-4005
-4. TODO-4008
+1. TODO-4004
+2. TODO-4005
+3. TODO-4008
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4004, TODO-4008 |
-| Validator entrypoint and benchmark-plumbing split | TODO-4003 |
+| Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | TODO-4005 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
@@ -145,16 +143,3 @@ Task template:
     - Remaining compatibility fallbacks are deleted or explicitly limited to non-production fixture paths.
   - stop_rule: Stop once semantic-product presence fully disables production semantic fallback behavior for the covered lowering families.
   - notes: Primary verification seams are `prepareIrModule(...)`, `IrLowerer::lower(...)`, and the backend-registry / graph-context conformance tests that already pin semantic-product entry contracts.
-
-- [ ] TODO-4003: Introduce production validate config and benchmark observer
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Validator Simplification
-  - depends_on: none
-  - scope: Separate the production `Semantics::validate` contract from benchmark instrumentation and memory/telemetry plumbing by introducing a narrower production-facing config surface plus a dedicated benchmark observer/config path.
-  - acceptance:
-    - Production callers use a narrower validation entrypoint or config surface than the current benchmark-heavy signature, and benchmark-only switches no longer appear directly on that production surface.
-    - Allocation, RSS, semantic fact, and repeat-run benchmark reporting still work through a dedicated observer/config path with unchanged benchmark-harness behavior.
-    - Compile-pipeline and benchmark harness coverage both pass after the split.
-  - stop_rule: Stop once benchmark-only behavior is isolated from the normal production validation flow at the API/call-plumbing boundary; do not expand this leaf into unrelated validator-internal cleanup.
-  - notes: Start with `include/primec/Semantics.h`, `src/CompilePipeline.cpp`, and the benchmark harness callers; if the API split is easy but observer plumbing is not, keep the API split in this leaf and create a follow-up for deeper benchmark internals.

@@ -978,26 +978,57 @@ bool runCompilePipeline(const Options &options,
       options.benchmarkSemanticRssCheckpoints;
   SemanticPhaseCounters *benchmarkSemanticPhaseCountersPtr =
       benchmarkSemanticCountersRequested ? &benchmarkSemanticPhaseCounters : nullptr;
+  const bool benchmarkSemanticConfigRequested =
+      benchmarkSemanticDefinitionValidationWorkerCount != 1 ||
+      options.benchmarkSemanticDisableMethodTargetMemoization ||
+      options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow ||
+      options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow ||
+      options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr;
   output.semanticProductDecision = semanticProductDecision;
   output.semanticProductRequested = needsSemanticProduct;
-  if (!semantics.validate(output.program,
-                          options.entryPath,
-                          error,
-                          options.defaultEffects,
-                          options.entryDefaultEffects,
-                          options.semanticTransforms,
-                          &semanticDiagnosticInfo,
-                          options.collectDiagnostics,
-                          needsSemanticProduct ? &semanticProgram : nullptr,
-                          semanticProductBuildConfigPtr,
-                          benchmarkSemanticDefinitionValidationWorkerCount,
-                          benchmarkSemanticPhaseCountersPtr,
-                          options.benchmarkSemanticAllocationCounters,
-                          options.benchmarkSemanticRssCheckpoints,
-                          options.benchmarkSemanticDisableMethodTargetMemoization,
-                          options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
-                          options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
-                          options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr)) {
+  bool semanticValidationOk = false;
+  if (benchmarkSemanticConfigRequested || benchmarkSemanticCountersRequested) {
+    SemanticValidationBenchmarkConfig benchmarkConfig;
+    benchmarkConfig.definitionValidationWorkerCount = benchmarkSemanticDefinitionValidationWorkerCount;
+    benchmarkConfig.disableMethodTargetMemoization =
+        options.benchmarkSemanticDisableMethodTargetMemoization;
+    benchmarkConfig.graphLocalAutoLegacyKeyShadow =
+        options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow;
+    benchmarkConfig.graphLocalAutoLegacySideChannelShadow =
+        options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow;
+    benchmarkConfig.disableGraphLocalAutoDependencyScratchPmr =
+        options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr;
+
+    SemanticValidationBenchmarkObserver benchmarkObserver;
+    benchmarkObserver.phaseCounters = benchmarkSemanticPhaseCountersPtr;
+    benchmarkObserver.allocationCountersEnabled = options.benchmarkSemanticAllocationCounters;
+    benchmarkObserver.rssCheckpointsEnabled = options.benchmarkSemanticRssCheckpoints;
+
+    semanticValidationOk = semantics.validateForBenchmark(output.program,
+                                                          options.entryPath,
+                                                          error,
+                                                          options.defaultEffects,
+                                                          options.entryDefaultEffects,
+                                                          options.semanticTransforms,
+                                                          &semanticDiagnosticInfo,
+                                                          options.collectDiagnostics,
+                                                          needsSemanticProduct ? &semanticProgram : nullptr,
+                                                          semanticProductBuildConfigPtr,
+                                                          benchmarkConfig,
+                                                          benchmarkObserver);
+  } else {
+    semanticValidationOk = semantics.validate(output.program,
+                                              options.entryPath,
+                                              error,
+                                              options.defaultEffects,
+                                              options.entryDefaultEffects,
+                                              options.semanticTransforms,
+                                              &semanticDiagnosticInfo,
+                                              options.collectDiagnostics,
+                                              needsSemanticProduct ? &semanticProgram : nullptr,
+                                              semanticProductBuildConfigPtr);
+  }
+  if (!semanticValidationOk) {
     if (semanticDiagnosticInfo.message.empty()) {
       semanticDiagnosticInfo.message = error;
     }
