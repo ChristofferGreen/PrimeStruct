@@ -1,6 +1,0 @@
-
-[return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"utf8, 1i32, "b"utf8, 2i32)}
-  return(plus(plus(at(values, "b"utf8), at_unsafe(values, "a"utf8)), count(values)))
-}

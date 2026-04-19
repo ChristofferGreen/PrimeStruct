@@ -1,5 +1,0 @@
-
-[return<int>]
-main() {
-  return(convert<int>(/std/math/sin(0.0f)))
-}

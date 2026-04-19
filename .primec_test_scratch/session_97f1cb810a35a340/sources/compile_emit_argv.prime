@@ -1,6 +1,0 @@
-
-[return<int> effects(io_out)]
-main([array<string>] args) {
-  print_line(args[1i32])
-  return(args.count())
-}

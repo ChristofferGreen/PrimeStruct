@@ -1,6 +1,0 @@
-
-[return<int>]
-main() {
-  [array<i32>] values{array<i32>(4i32, 7i32, 9i32)}
-  return(values[1u64])
-}

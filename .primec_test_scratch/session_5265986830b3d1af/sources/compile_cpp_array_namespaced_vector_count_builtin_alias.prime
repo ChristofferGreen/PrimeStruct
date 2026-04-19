@@ -1,8 +1,0 @@
-
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [auto mut] values{/std/collections/vector/vector<i32>(4i32, 5i32)}
-  return(/array/count(values))
-}

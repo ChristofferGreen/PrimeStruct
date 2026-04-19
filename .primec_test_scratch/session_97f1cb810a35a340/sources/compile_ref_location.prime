@@ -1,8 +1,0 @@
-
-[return<int>]
-main() {
-  [i32 mut] value{8i32}
-  [Reference<i32> mut] ref{location(value)}
-  [Pointer<i32>] ptr{location(ref)}
-  return(dereference(ptr))
-}

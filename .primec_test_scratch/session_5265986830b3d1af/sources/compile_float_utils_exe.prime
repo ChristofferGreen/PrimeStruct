@@ -1,9 +1,0 @@
-
-import /std/math/*
-[return<int>]
-main() {
-  return(plus(
-    plus(convert<int>(fma(2.0f, 3.0f, 1.0f)), convert<int>(hypot(3.0f, 4.0f))),
-    convert<int>(copysign(2.0f, -1.0f))
-  ))
-}

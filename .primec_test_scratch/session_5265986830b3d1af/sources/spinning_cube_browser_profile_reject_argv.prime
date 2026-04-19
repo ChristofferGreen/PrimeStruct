@@ -1,5 +1,0 @@
-
-[return<int>]
-main([array<string>] args) {
-  return(args.count())
-}

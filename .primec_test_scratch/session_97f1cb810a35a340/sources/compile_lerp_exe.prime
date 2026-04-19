@@ -1,6 +1,0 @@
-
-import /std/math/*
-[return<int>]
-main() {
-  return(lerp(2i32, 6i32, 1i32))
-}

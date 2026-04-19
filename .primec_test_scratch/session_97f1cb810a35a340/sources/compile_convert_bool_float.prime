@@ -1,5 +1,0 @@
-
-[return<int>]
-main() {
-  return(plus(convert<int>(convert<bool>(0.0f)), convert<int>(convert<bool>(2.5f))))
-}

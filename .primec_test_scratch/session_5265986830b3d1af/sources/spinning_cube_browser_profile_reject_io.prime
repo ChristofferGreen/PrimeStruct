@@ -1,6 +1,0 @@
-
-[return<int> effects(io_out)]
-main() {
-  print_line("browser"utf8)
-  return(0i32)
-}

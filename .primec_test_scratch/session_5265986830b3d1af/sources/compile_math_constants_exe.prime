@@ -1,5 +1,0 @@
-
-[return<int>]
-main() {
-  return(plus(convert<int>(/std/math/pi), plus(convert<int>(/std/math/tau), convert<int>(/std/math/e))))
-}

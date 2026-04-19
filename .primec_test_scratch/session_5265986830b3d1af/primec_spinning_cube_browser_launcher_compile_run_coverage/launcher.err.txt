@@ -1,1 +1,0 @@
-[browser-launcher] ERROR: primec binary not found: ./primec

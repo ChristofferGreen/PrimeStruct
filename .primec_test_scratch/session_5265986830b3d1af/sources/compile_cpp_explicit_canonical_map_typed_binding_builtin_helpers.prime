@@ -1,6 +1,0 @@
-
-[effects(heap_alloc), return<int>]
-main() {
-  [/std/collections/map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  return(plus(plus(count(values), at(values, 1i32)), at_unsafe(values, 2i32)))
-}

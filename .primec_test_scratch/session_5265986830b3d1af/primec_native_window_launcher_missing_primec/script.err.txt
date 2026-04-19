@@ -1,1 +1,0 @@
-[native-window-launcher] ERROR: primec binary not found: /Users/chrgre01/src/PrimeStruct/.primec_test_scratch/session_5265986830b3d1af/primec_native_window_launcher_missing_primec/missing-primec

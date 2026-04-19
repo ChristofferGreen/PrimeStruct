@@ -1,9 +1,0 @@
-
-import /std/collections/*
-
-[effects(heap_alloc), return<int>]
-main() {
-  [/std/collections/map<i32, string>] values{map<i32, string>(1i32, "hello"utf8)}
-  [Reference</std/collections/map<i32, string>>] ref{location(values)}
-  return(ref[1i32].count())
-}

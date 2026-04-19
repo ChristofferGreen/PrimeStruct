@@ -1,3 +1,0 @@
-gfx_profile=metal-osx
-gfx_error_code=device_create_failed
-gfx_error_why=failed to create Metal device

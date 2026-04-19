@@ -1,1 +1,0 @@
-sh: /Users/chrgre01/src/PrimeStruct/.primec_test_scratch/session_97f1cb810a35a340/primec_int_pow_negative_exe: No such file or directory

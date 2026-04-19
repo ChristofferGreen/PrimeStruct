@@ -1,8 +1,0 @@
-
-[return<int>]
-main() {
-  [i32 mut] value{1i32}
-  value++
-  --value
-  return(value)
-}

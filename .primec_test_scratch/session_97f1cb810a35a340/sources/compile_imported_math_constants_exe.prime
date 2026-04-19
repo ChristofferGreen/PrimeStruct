@@ -1,6 +1,0 @@
-
-import /std/math/*
-[return<int>]
-main() {
-  return(plus(convert<int>(pi), plus(convert<int>(tau), convert<int>(e))))
-}

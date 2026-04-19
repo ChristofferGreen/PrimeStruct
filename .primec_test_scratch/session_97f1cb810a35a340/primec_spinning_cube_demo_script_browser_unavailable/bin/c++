@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-if [[ "${1:-}" == "--version" ]]; then
-  echo "fake-cxx"
-  exit 0
-fi
-echo "unexpected c++ invocation" >&2
-exit 99

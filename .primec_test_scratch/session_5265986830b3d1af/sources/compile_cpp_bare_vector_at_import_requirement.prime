@@ -1,6 +1,0 @@
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32>] values{vector<i32>(1i32, 4i32)}
-  return(at(values, 1i32))
-}

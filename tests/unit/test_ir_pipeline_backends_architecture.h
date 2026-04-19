@@ -16,52 +16,32 @@ TEST_CASE("main routes glsl and spirv through ir backends without legacy fallbac
   CHECK(source.find("if (irFailure.stage != IrBackendRunFailureStage::Emit)") == std::string::npos);
 }
 
-TEST_CASE("backend boundary ADR is present and referenced from design doc") {
+TEST_CASE("design doc records backend boundary policy") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path adrPath = cwd / "docs" / "adr" / "0001-backend-ir-boundary.md";
   std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
-  if (!std::filesystem::exists(adrPath)) {
-    adrPath = cwd.parent_path() / "docs" / "adr" / "0001-backend-ir-boundary.md";
+  if (!std::filesystem::exists(designPath)) {
     designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
   }
 
-  REQUIRE(std::filesystem::exists(adrPath));
   REQUIRE(std::filesystem::exists(designPath));
 
-  const std::string adr = readTextFile(adrPath);
-  CHECK(adr.find("All code generation backends must consume canonical `IrModule` only.") != std::string::npos);
-  CHECK(adr.find("AST-direct backend emission paths are not allowed") != std::string::npos);
-  CHECK(adr.find("Follow-up status (2026-03-11)") != std::string::npos);
-  CHECK(adr.find("production `primec --emit` aliases") != std::string::npos);
-
   const std::string design = readTextFile(designPath);
-  CHECK(design.find("docs/adr/0001-backend-ir-boundary.md") != std::string::npos);
+  CHECK(design.find("all codegen modes consume canonical IR via") != std::string::npos);
+  CHECK(design.find("`IrBackend`") != std::string::npos);
   CHECK(design.find("including production aliases (`cpp`, `exe`, `glsl`, `spirv`)") != std::string::npos);
 }
 
-TEST_CASE("semantic ownership ADR is present and referenced from design doc") {
+TEST_CASE("design doc records semantic ownership boundary policy") {
   const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path adrPath = cwd / "docs" / "adr" / "0002-semantic-ownership-boundary.md";
   std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
-  if (!std::filesystem::exists(adrPath)) {
-    adrPath = cwd.parent_path() / "docs" / "adr" / "0002-semantic-ownership-boundary.md";
+  if (!std::filesystem::exists(designPath)) {
     designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
   }
 
-  REQUIRE(std::filesystem::exists(adrPath));
   REQUIRE(std::filesystem::exists(designPath));
 
-  const std::string adr = readTextFile(adrPath);
-  CHECK(adr.find("The semantic ownership boundary is locked as follows:") != std::string::npos);
-  CHECK(adr.find("Production lowering, `primec`, `primevm`, and compile-pipeline entrypoints") !=
-        std::string::npos);
-  CHECK(adr.find("benchmark-only comparison") != std::string::npos);
-  CHECK(adr.find("must not influence production diagnostics, lowering, or semantic-product publication.") !=
-        std::string::npos);
-  CHECK(adr.find("Follow-up status (2026-04-19)") != std::string::npos);
-
   const std::string design = readTextFile(designPath);
-  CHECK(design.find("docs/adr/0002-semantic-ownership-boundary.md") != std::string::npos);
+  CHECK(design.find("semantic product follow an explicit ownership split") != std::string::npos);
   CHECK(design.find("benchmark-only") != std::string::npos);
   CHECK(design.find("production lowering/publication paths.") != std::string::npos);
 }

@@ -1,7 +1,0 @@
-
-[return<int>]
-main() {
-  [array<i32>] values{array<i32>(2i32, 7i32)}
-  [Reference<array<i32>>] ref{location(values)}
-  return(plus(count(ref), at(ref, 1i32)))
-}

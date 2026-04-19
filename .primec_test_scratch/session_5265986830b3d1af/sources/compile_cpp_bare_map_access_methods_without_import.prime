@@ -1,6 +1,0 @@
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
-  return(plus(values.at(1i32), values.at_unsafe(2i32)))
-}

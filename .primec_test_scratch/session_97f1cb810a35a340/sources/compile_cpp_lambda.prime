@@ -1,8 +1,0 @@
-
-[return<int>]
-main() {
-  [i32] base{3i32}
-  [i32 mut] bump{2i32}
-  holder{[value base, ref bump]([i32] x) { [i32] sum{plus(x, base)} return(sum) }}
-  return(0i32)
-}

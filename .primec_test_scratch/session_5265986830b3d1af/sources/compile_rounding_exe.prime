@@ -1,9 +1,0 @@
-
-import /std/math/*
-[return<int>]
-main() {
-  [f32] value{1.5f}
-  return(plus(plus(plus(convert<int>(floor(value)), convert<int>(ceil(value))),
-                   plus(convert<int>(round(value)), convert<int>(trunc(value)))),
-              convert<int>(multiply(fract(value), 10.0f))))
-}

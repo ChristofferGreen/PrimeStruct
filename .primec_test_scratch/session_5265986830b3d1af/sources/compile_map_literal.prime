@@ -1,5 +1,0 @@
-
-[return<int>]
-main() {
-  return(at(map<i32, i32>{1i32=2i32, 3i32=4i32}, 3i32))
-}

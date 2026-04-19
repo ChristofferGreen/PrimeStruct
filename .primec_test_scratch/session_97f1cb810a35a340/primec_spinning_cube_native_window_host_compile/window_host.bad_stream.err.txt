@@ -1,6 +1,0 @@
-startup_failure=1
-gfx_profile=native-desktop
-startup_failure_stage=simulation_stream_load
-startup_failure_reason=gfx_stream_load_failed
-startup_failure_exit_code=69
-startup_failure_detail=gfx stream was empty

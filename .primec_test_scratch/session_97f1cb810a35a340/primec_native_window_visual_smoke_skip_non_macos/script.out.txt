@@ -1,1 +1,0 @@
-[native-window-launcher] VISUAL-SMOKE: SKIP non-macOS runner

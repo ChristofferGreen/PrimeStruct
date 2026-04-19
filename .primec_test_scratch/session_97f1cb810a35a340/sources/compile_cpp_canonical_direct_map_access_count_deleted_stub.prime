@@ -1,7 +1,0 @@
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "hello"utf8, 2i32, "bye"utf8)}
-  return(plus(count(/std/collections/map/at(values, 1i32)),
-              count(/std/collections/map/at_unsafe(values, 2i32))))
-}

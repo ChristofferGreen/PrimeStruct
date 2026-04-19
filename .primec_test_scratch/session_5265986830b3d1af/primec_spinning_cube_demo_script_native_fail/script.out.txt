@@ -1,5 +1,0 @@
-[spinning-cube-demo] SUMMARY
-[spinning-cube-demo] WEB: FAIL (failed to compile cube.wasm)
-[spinning-cube-demo] NATIVE: FAIL (failed to compile cube native binary)
-[spinning-cube-demo] METAL: SKIP (xcrun unavailable)
-[spinning-cube-demo] RESULT: FAIL

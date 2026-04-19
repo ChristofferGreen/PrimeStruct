@@ -1,6 +1,0 @@
-
-[return<int>]
-main() {
-  [string] text{"abc"raw_utf8}
-  return(text.capacity())
-}

@@ -1,9 +1,0 @@
-
-[return<int>]
-main() {
-  [return<int>]
-  helper() {
-    return(5i32)
-  }
-  return(/main/helper())
-}

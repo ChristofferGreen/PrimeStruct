@@ -1,1 +1,0 @@
-[native-window-preflight] ERROR: GUI session unavailable; log in via macOS desktop session and rerun.

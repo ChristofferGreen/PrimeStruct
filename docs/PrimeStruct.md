@@ -68,12 +68,13 @@ PrimeStruct is organized into four language levels. Each higher level desugars i
   reintroducing surface syntax.
 - **Deterministic emission:** canonicalization happens once, before backend selection, so all emitters see the same
   fully-resolved envelopes and produce consistent results.
-- **Backend boundary policy:** all codegen modes consume canonical IR via `IrBackend`
-  (`docs/adr/0001-backend-ir-boundary.md`), including production aliases (`cpp`, `exe`, `glsl`, `spirv`) that resolve to
-  canonical IR backend kinds before dispatch.
+- **Backend boundary policy:** all codegen modes consume canonical IR via
+  `IrBackend`, including production aliases (`cpp`, `exe`, `glsl`, `spirv`)
+  that resolve to canonical IR backend kinds before dispatch.
 - **Semantic ownership boundary policy:** graph-backed inference facts, validator-local scratch state, and the published
-  semantic product follow an explicit ownership split (`docs/adr/0002-semantic-ownership-boundary.md`); benchmark-only
-  legacy shadow comparisons must stay isolated from production lowering/publication paths.
+  semantic product follow an explicit ownership split; benchmark-only legacy
+  shadow comparisons must stay isolated from production
+  lowering/publication paths.
 
 ### Planned Type-Resolution Graph
 The planned graph-backed resolver is an internal semantics model built from the canonical AST after semantic transforms
@@ -4146,8 +4147,9 @@ module {
 
 ### Semantics Parallelism (Investigation)
 We plan to parallelize semantic validation across root functions using a
-deterministic diagnostics pipeline. See `docs/Semantics_Multithreaded_Pass.md`
-for the proposed phases, refactors, and test plan.
+deterministic diagnostics pipeline. See
+`docs/Semantics_Multithread_Design.md` for the canonical phase boundaries,
+ownership model, and rollout plan.
 
 ### IDE/LSP Integration Plan
 Goals:

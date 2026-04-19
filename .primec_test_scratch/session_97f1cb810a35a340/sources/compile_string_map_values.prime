@@ -1,9 +1,0 @@
-
-[return<int>]
-main() {
-  [map<string, string>] values{
-    map<string, string>("a"raw_utf8, "alpha"raw_utf8, "b"raw_utf8, "beta"raw_utf8)
-  }
-  [string] value{at(values, "b"raw_utf8)}
-  return(convert<int>(equal(value, "beta"raw_utf8)))
-}

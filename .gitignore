@@ -4,6 +4,8 @@ build/
 build_*/
 build-*/
 workspaces/
+.primec_test_cache/
+.primec_test_scratch/
 *.profraw
 compile_commands.json
 screenshots/

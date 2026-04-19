@@ -1,7 +1,0 @@
-
-[effects(heap_alloc), return<int>]
-main() {
-  [map<i32, map<i32, i32>>] values{map<i32, map<i32, i32>>()}
-  return(plus(contains(/std/collections/map/at(values, 1i32), 2i32),
-              contains(/std/collections/map/at_unsafe(values, 2i32), 3i32)))
-}
