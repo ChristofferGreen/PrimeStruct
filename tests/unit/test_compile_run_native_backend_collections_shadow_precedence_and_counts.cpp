@@ -277,7 +277,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases") {
   const std::string source = R"(
 import /std/collections/*
 

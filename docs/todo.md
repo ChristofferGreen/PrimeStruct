@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1133
+- TODO-1134
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1133
+- TODO-1134
 
 ### Priority Lanes (Current)
 
-- Native explicit map helper alias precedence skip debt: TODO-1133
+- Native explicit canonical map helper same-path precedence skip debt: TODO-1134
 
 ### Execution Queue (Recommended)
 
-1. TODO-1133
+1. TODO-1134
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native explicit map helper alias skipped-test debt | TODO-1133 |
+| Native explicit canonical map helper skipped-test debt | TODO-1134 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1133 |
+| Native compile-run skipped-test debt | TODO-1134 |
 
 ### Task Blocks
 
-- [ ] TODO-1133: Audit native explicit map helper alias precedence skip debt
+- [ ] TODO-1134: Audit native explicit canonical map helper same-path precedence skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native explicit `/map/*` helper alias precedence coverage, and lock the current native backend contract for explicit same-path alias helper calls.
+  - scope: Re-enable or delete the skipped native explicit canonical `/std/collections/map/*` same-path helper coverage, and lock the current native backend contract for explicit canonical helper calls through same-path helpers.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp` no longer carries the skipped native explicit map helper alias precedence case in stale form.
-    - The native test locks the actual current same-path alias helper contract for `count`, `contains`, `tryAt`, `at`, and `at_unsafe`, whether that stays as the current runtime result or a stable diagnostic.
-  - stop_rule: Stop after the native explicit same-path alias helper surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp` no longer carries the skipped native explicit canonical map helper same-path case in stale form.
+    - The native test locks the actual current same-path helper contract for explicit `/std/collections/map/{count,contains,tryAt,at,at_unsafe}` calls, whether that stays as the current runtime result or a stable diagnostic.
+  - stop_rule: Stop after the native explicit canonical same-path helper surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
