@@ -3215,7 +3215,7 @@ TEST_CASE("compiles and runs native experimental map helper receivers") {
   expectExperimentalMapHelperReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped experimental map helper receivers" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native helper-wrapped experimental map helper receivers") {
   expectWrappedExperimentalMapHelperReceiverConformance("native");
 }
 
