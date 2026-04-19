@@ -935,7 +935,7 @@ TEST_CASE("ir lowerer call helpers remap unresolved rooted semantic operator tar
   CHECK(resolveExprPath(callExpr) == "/std/math/multiply");
 }
 
-TEST_CASE("ir lowerer call helpers prefer rooted rewritten direct-call paths over stale semantic-product targets") {
+TEST_CASE("ir lowerer call helpers keep semantic-product direct-call targets authoritative over rooted rewritten expr names") {
   primec::Definition legacyRootedCall;
   legacyRootedCall.fullPath = "/legacy";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -962,10 +962,10 @@ TEST_CASE("ir lowerer call helpers prefer rooted rewritten direct-call paths ove
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
 
-  CHECK(resolveExprPath(callExpr) == "/legacy");
+  CHECK(resolveExprPath(callExpr) == "/semantic/target");
 }
 
-TEST_CASE("ir lowerer call helpers keep rewritten rooted direct-call paths without semantic targets") {
+TEST_CASE("ir lowerer call helpers require semantic-product direct-call targets for rooted rewritten expr names") {
   const std::unordered_map<std::string, const primec::Definition *> defMap = {};
   const std::unordered_map<std::string, std::string> importAliases = {};
 
@@ -979,7 +979,7 @@ TEST_CASE("ir lowerer call helpers keep rewritten rooted direct-call paths witho
   const auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, semanticTargets);
 
-  CHECK(resolveExprPath(rewrittenExpr) == "/operator/add");
+  CHECK(resolveExprPath(rewrittenExpr).empty());
 }
 
 TEST_CASE("ir lowerer call helpers require semantic-product method-call targets") {
@@ -1913,7 +1913,7 @@ TEST_CASE("ir lowerer call helpers resolve definition calls through slashless ma
   CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == &canonicalMapCountDef);
 }
 
-TEST_CASE("ir lowerer call helpers prefer rooted rewritten helper paths over stale semantic direct-call targets") {
+TEST_CASE("ir lowerer call helpers keep semantic direct-call targets authoritative over rooted rewritten helper paths") {
   primec::Definition quatMultiplyDef;
   quatMultiplyDef.fullPath = "/std/math/quat_multiply_internal";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -1942,8 +1942,8 @@ TEST_CASE("ir lowerer call helpers prefer rooted rewritten helper paths over sta
   rewrittenExpr.name = "/std/math/quat_multiply_internal";
   rewrittenExpr.semanticNodeId = 42;
 
-  CHECK(resolveExprPath(rewrittenExpr) == "/std/math/quat_multiply_internal");
-  CHECK(primec::ir_lowerer::resolveDefinitionCall(rewrittenExpr, defMap, resolveExprPath) == &quatMultiplyDef);
+  CHECK(resolveExprPath(rewrittenExpr) == "/multiply");
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(rewrittenExpr, defMap, resolveExprPath) == nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers resolve definition namespace prefixes") {

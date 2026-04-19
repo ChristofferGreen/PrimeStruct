@@ -56,43 +56,42 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1062
-2. TODO-1070
+1. TODO-1070
+2. TODO-1066
+3. TODO-1063
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-1062
-2. TODO-1070
-3. TODO-1066
-4. TODO-1063
-5. TODO-1064
-6. TODO-1065
+1. TODO-1070
+2. TODO-1066
+3. TODO-1063
+4. TODO-1064
+5. TODO-1065
 
 ### Priority Lanes (Current)
 
-- Pilot semantic boundary ownership: TODO-1062, TODO-1063, TODO-1064, TODO-1065
+- Pilot semantic boundary ownership: TODO-1063, TODO-1064, TODO-1065
 - Parallel-ready validation state: TODO-1066
 - Frontend/docs correctness parity: TODO-1070
 
 ### Execution Queue (Recommended)
 
 Wave A:
-1. TODO-1062
-2. TODO-1070
+1. TODO-1070
+2. TODO-1066
 
 Wave B:
-1. TODO-1066
-2. TODO-1063
+1. TODO-1063
+2. TODO-1064
 
 Wave C:
-1. TODO-1064
-2. TODO-1065
+1. TODO-1065
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Pilot semantic ownership boundary | TODO-1062, TODO-1063, TODO-1064, TODO-1065 |
+| Pilot semantic ownership boundary | TODO-1063, TODO-1064, TODO-1065 |
 | Parallel-ready validation architecture | TODO-1066 |
 | Frontend/docs correctness parity | TODO-1070 |
 
@@ -100,7 +99,7 @@ Wave C:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product publication parity | TODO-1062, TODO-1063, TODO-1064 |
+| Semantic-product publication parity | TODO-1063, TODO-1064 |
 | Lowering conformance and fallback deletion | TODO-1065 |
 | Worker-count determinism and parity | TODO-1066 |
 | Frontend/docs compile-run parity | TODO-1070 |
@@ -167,14 +166,3 @@ Wave C:
     - the corresponding pilot routing snapshot structs or export methods disappear from `SemanticsValidator`
     - semantic-product formatter and lowering parity stay unchanged for the migrated pilot routing facts
   - stop_rule: stop after the pilot routing families prove the collector pattern and shrink the validator export surface; leave non-routing families for follow-up tasks
-
-- [ ] TODO-1062: Publish a single owned resolved-semantic artifact for one pilot routing slice
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Architecture boundary hardening
-  - scope: establish one explicit pilot routing slice where lowering-facing semantic meaning is owned by a published resolved artifact rather than co-owned by mutated AST state, validator caches, and lowerer adapters.
-  - acceptance:
-    - the pilot slice is explicitly limited to direct-call, method-call, bridge-path, and callable-summary facts
-    - compile-pipeline and lowering tests use the published artifact as the semantic source of truth for that pilot slice
-    - at least one duplicated semantic-meaning path for the pilot routing slice is removed from either validator or lowering code
-  - stop_rule: stop after the routing pilot slice proves the ownership model and deletes real duplication; leave broader result-control rollout to dependent or future tasks

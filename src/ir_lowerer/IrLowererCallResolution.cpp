@@ -502,15 +502,6 @@ ResolveExprPathFn makeResolveCallPathFromScope(
       if (const std::string resolvedPath =
               findSemanticProductDirectCallTarget(semanticProductTargets, expr);
           !resolvedPath.empty() && !isResolvedBridgeHelperPath(resolvedPath)) {
-        // Lowering can rewrite a semantic call node to an explicit rooted
-        // helper (for example "/std/math/quat_multiply_internal") while the
-        // semantic direct-call target on that node remains the pre-rewrite
-        // builtin token (for example "/multiply"). Prefer the rewritten rooted
-        // helper path when it resolves to a definition.
-        if (!expr.name.empty() && expr.name.front() == '/' && expr.name != resolvedPath &&
-            defMap.count(expr.name) > 0) {
-          return expr.name;
-        }
         // Some overloaded helper calls can carry a semantic target equal to
         // the unresolved rooted call token (for example "/multiply") even
         // when the lowered definition map only contains the imported helper
@@ -524,11 +515,6 @@ ResolveExprPathFn makeResolveCallPathFromScope(
           }
         }
         return resolvedPath;
-      }
-      // Lowering sometimes rewrites validated operators/helpers into rooted direct
-      // calls that do not have their own semantic-product direct-call fact.
-      if (!expr.name.empty() && expr.name.front() == '/') {
-        return expr.name;
       }
       return std::string{};
     }
