@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1142
+- TODO-1143
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1142
+- TODO-1143
 
 ### Priority Lanes (Current)
 
-- VM canonical map reference count-shadow diagnostics skip debt: TODO-1142
+- VM wrapper-returned canonical map reference method-sugar key diagnostics skip debt: TODO-1143
 
 ### Execution Queue (Recommended)
 
-1. TODO-1142
+1. TODO-1143
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| VM canonical map reference count-shadow diagnostics skipped-test debt | TODO-1142 |
+| VM wrapper-returned canonical map reference method-sugar skipped-test debt | TODO-1143 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| VM compile-run skipped-test debt | TODO-1142 |
+| VM compile-run skipped-test debt | TODO-1143 |
 
 ### Task Blocks
 
-- [ ] TODO-1142: Audit VM canonical map reference count-shadow diagnostics skip debt
+- [ ] TODO-1143: Audit VM wrapper-returned canonical map reference method-sugar key diagnostics skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped VM non-string diagnostic coverage for canonical map reference count-shadow access, and lock the current VM contract for `ref[1i32].count()` when the referenced value is `i32`.
+  - scope: Re-enable or delete the skipped VM key-type diagnostic coverage for wrapper-returned canonical map reference method sugar, and lock the current VM contract for `borrowMap(location(values)).at(true)`.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM canonical map reference count-shadow diagnostic case in stale form.
-    - The VM test locks the actual current non-string diagnostic contract for `ref[1i32].count()` on `Reference</std/collections/map<i32, i32>>`, whether that stays as `unknown method: /i32/count` or another stable VM-side reject.
-  - stop_rule: Stop after the VM canonical map reference count-shadow diagnostic surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` no longer carries the skipped VM wrapper-returned canonical map reference method-sugar key-diagnostic case in stale form.
+    - The VM test locks the actual current diagnostic contract for `borrowMap(location(values)).at(true)`, whether that stays as a key-typing reject or another stable VM-side diagnostic.
+  - stop_rule: Stop after the VM wrapper-returned canonical map reference method-sugar key-diagnostic surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.

@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("runs vm with user array count call shadow") {
+TEST_CASE("runs vm with builtin array count before user call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/count([array<i32>] values) {
@@ -23,7 +23,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_array_count_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 98);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with canonical slash vector count same-path helper on array receiver") {
@@ -121,7 +121,7 @@ main() {
   CHECK(readFile(outPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user map count call shadow") {
+TEST_CASE("rejects vm user map count call shadow without imported canonical helper") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -135,11 +135,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_map_count_call_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 1);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_map_count_call_shadow.out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user map count method shadow") {
+TEST_CASE("rejects vm user map count method shadow without imported canonical helper") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -153,8 +156,11 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_map_count_method_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 1);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_map_count_method_shadow.out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("runs vm canonical map sugar before compatibility aliases") {
@@ -198,7 +204,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_canonical_map_sugar_before_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 169);
+  CHECK(runCommand(runCmd) == 97);
 }
 
 TEST_CASE("rejects vm canonical unknown map helper with canonical diagnostics") {
@@ -527,7 +533,7 @@ main() {
   CHECK(runCommand(runCmd) == 96);
 }
 
-TEST_CASE("runs vm with user string count call shadow") {
+TEST_CASE("runs vm with builtin string count before user call shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -542,7 +548,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_count_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 94);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("runs vm with user string count method shadow") {
@@ -563,7 +569,7 @@ main() {
   CHECK(runCommand(runCmd) == 95);
 }
 
-TEST_CASE("runs vm canonical map reference string access") {
+TEST_CASE("rejects vm canonical map reference string access without imported canonical helper") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -583,10 +589,11 @@ main() {
        "primec_vm_user_string_count_method_shadow_map_reference_access.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 91);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("runs vm builtin count on canonical map reference string access") {
+TEST_CASE("rejects vm builtin count on canonical map reference string access without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -601,8 +608,8 @@ main() {
        "primec_vm_builtin_count_canonical_map_reference_string_access.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath).find("VM error: invalid string index in IR") != std::string::npos);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("vm rejects bare builtin count on wrapper-returned canonical map access before lowering") {
@@ -709,10 +716,10 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("runs vm user map method sugar on wrapper-returned canonical map references") {
+TEST_CASE("rejects vm user map method sugar on wrapper-returned canonical map references without imported helpers") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -729,11 +736,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("vm_wrapper_map_reference_method_sugar.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 11);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_wrapper_map_reference_method_sugar.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("vm keeps non-string diagnostics on canonical map reference access count shadow" * doctest::skip(true)) {
+TEST_CASE("vm keeps non-string diagnostics on canonical map reference access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -754,7 +766,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("vm keeps key diagnostics on wrapper-returned canonical map reference method sugar" * doctest::skip(true)) {

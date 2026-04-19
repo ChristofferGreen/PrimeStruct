@@ -4,6 +4,56 @@ This file stores durable session-derived facts that are useful in later work. Ke
 
 ## Active Memories
 
+- `builtin-count-call-shadows-stay-builtin`:
+  bare `count(text)` and `count(values)` call-form shadows on builtin string
+  and array receivers currently stay on builtin behavior in both VM and
+  native, so compile-run coverage should expect the builtin lengths (`3` for
+  `"abc"utf8`, `2` for `array<i32>(1i32, 2i32)`) instead of user-defined
+  `/string/count` or `/array/count` helper results.
+  Evidence: the release-gate stabilization for `TODO-1135`,
+  `test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp`,
+  and `test_compile_run_vm_collections_array_and_wrapper_shadows.cpp`
+  reproduced `count(text) -> 3` and `count(values) -> 2` in focused
+  `primec --emit=native`/`--emit=vm` repros, and the full
+  `./scripts/compile.sh --release` gate passed after aligning those tests.
+- `builtin-map-count-shadows-need-canonical-imports`:
+  bare `count(values)` and `values.count()` on builtin `map<K, V>` receivers
+  now fail in both VM and native when only `/map/count` is defined, because
+  the no-import canonical `/std/collections/map/count` fallback is gone and
+  these surfaces now reject with
+  `unknown call target: /std/collections/map/count`.
+  Evidence: focused reruns of
+  `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_1_10`
+  and
+  `PrimeStruct_primestruct_compile_run_native_backend_collections_growth_limits_and_map_access_351_355`
+  reproduced the same semantic-stage unknown-target diagnostic, and the full
+  `./scripts/compile.sh --release` gate passed after updating both suites.
+- `canonical-map-reference-access-needs-imports`:
+  VM and native compile-run coverage for `ref[1i32].count()`,
+  `count(/std/collections/map/at(ref, 1i32))`, and wrapper-returned canonical
+  map reference method sugar now rejects at semantics with
+  `unknown call target: /std/collections/map/at` or
+  `unknown call target: /std/collections/map/count` unless canonical map
+  helpers are imported or explicitly defined.
+  Evidence: focused `primec --emit=vm` and `--emit=native` repros during
+  `TODO-1142` stabilization reproduced those diagnostics for
+  `test_compile_run_vm_collections_array_and_wrapper_shadows.cpp` and
+  `test_compile_run_native_backend_collections_shadow_precedence_and_counts.cpp`,
+  and the full `./scripts/compile.sh --release` gate passed after aligning the
+  tests.
+- `vector-mutator-methods-need-canonical-imports`:
+  bare builtin vector mutator method sugar (`values.push/pop/reserve/clear/
+  remove_at/remove_swap`) now rejects without imported canonical helpers in
+  both VM and native, with the stable diagnostic
+  `unknown method: /std/collections/vector/<helper>`.
+  Evidence: focused reruns of
+  `PrimeStruct_primestruct_compile_run_vm_collections_user_shadow_and_receiver_precedence_255_264`
+  and
+  `PrimeStruct_primestruct_compile_run_native_backend_collections_growth_limits_and_map_access_346_350`
+  plus direct `primec --emit=vm`/`--emit=native` repros for `values.push(7i32)`
+  reproduced the same semantic-stage unknown-method diagnostic, and the full
+  `./scripts/compile.sh --release` gate passed after updating
+  `expectBareVectorMutatorMethodImportRequirement(...)`.
 - `native-borrowed-experimental-map-ref-rejects`:
   native canonical `/std/collections/map/*_ref` helpers on borrowed
   experimental-map values currently stop at a backend compile-time rejection,
