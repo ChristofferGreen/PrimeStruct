@@ -889,7 +889,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user array capacity call shadow" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native user array capacity call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {

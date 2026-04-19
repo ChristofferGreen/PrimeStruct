@@ -56,40 +56,40 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-- TODO-1152
+- TODO-1153
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-1152
+- TODO-1153
 
 ### Priority Lanes (Current)
 
-- Native user array capacity call-shadow skip debt: TODO-1152
+- Native user array at call-shadow skip debt: TODO-1153
 
 ### Execution Queue (Recommended)
 
-1. TODO-1152
+1. TODO-1153
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Native user array call-shadow skipped-test debt | TODO-1152 |
+| Native user array call-shadow skipped-test debt | TODO-1153 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Native compile-run skipped-test debt | TODO-1152 |
+| Native compile-run skipped-test debt | TODO-1153 |
 
 ### Task Blocks
 
-- [ ] TODO-1152: Audit native user array capacity call-shadow skip debt
+- [ ] TODO-1153: Audit native user array at call-shadow skip debt
   - owner: ai
   - created_at: 2026-04-19
   - phase: Backend skip-debt cleanup
-  - scope: Re-enable or delete the skipped native user array `capacity(values)` call-shadow coverage, and lock the current native runtime contract when `/array/capacity` competes with canonical `capacity(values)` lowering.
+  - scope: Re-enable or delete the skipped native user array `at(values, index)` call-shadow coverage, and lock the current native runtime contract when `/array/at` competes with canonical `at(values, index)` lowering.
   - acceptance:
-    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native user array `capacity(values)` call-shadow case in stale form.
-    - The native test locks the actual current runtime contract for the call-shadow surface, whether that remains the current successful `66` exit path or another stable native-side outcome.
-  - stop_rule: Stop after the native user array `capacity(values)` call-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
+    - `tests/unit/test_compile_run_native_backend_collections_canonical_count_shadows.cpp` no longer carries the skipped native user array `at(values, index)` call-shadow case in stale form.
+    - The native test locks the actual current runtime contract for the call-shadow surface, whether that remains the current successful `61` exit path or another stable native-side outcome.
+  - stop_rule: Stop after the native user array `at(values, index)` call-shadow surface is covered without `doctest::skip(true)` and any stale contradictory expectations are removed.
