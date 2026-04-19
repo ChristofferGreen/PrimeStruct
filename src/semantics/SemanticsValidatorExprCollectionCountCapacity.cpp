@@ -79,6 +79,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                defMap_.find(methodTargetPath) == defMap_.end() &&
                resolved.rfind(methodTargetPath + "__t", 0) == 0;
       };
+  const auto markMethodTargetUsage =
+      [&]() {
+        usedMethodTarget = true;
+        hasMethodReceiverIndex = true;
+        methodReceiverIndex = 0;
+      };
   const auto resolveVisiblePreferredVectorHelperMethodTarget =
       [&](const Expr &receiverExpr,
           const char *helperName,
@@ -147,9 +153,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         std::string methodResolved;
         if (resolvesNamedArgumentCountOrCapacityHelperTarget(methodResolved,
                                                              isBuiltinMethod)) {
-          usedMethodTarget = true;
-          hasMethodReceiverIndex = true;
-          methodReceiverIndex = 0;
+          markMethodTargetUsage();
           resolved = methodResolved;
           resolvedMethod = false;
         }
@@ -296,9 +300,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       allowsCountMethodSurfaceRouteShape;
   if (matchesCountMethodSurfaceRoute) {
     handledOut = true;
-    usedMethodTarget = true;
-    hasMethodReceiverIndex = true;
-    methodReceiverIndex = 0;
+    markMethodTargetUsage();
     const Expr &receiver = expr.args.front();
     const bool isDirectNamedCountReceiverCall =
         !expr.isMethodCall && isSingleArgCountCall &&
@@ -489,9 +491,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       routesThroughCapacityMethodSurface;
   if (matchesCapacityMethodSurfaceRoute) {
     handledOut = true;
-    usedMethodTarget = true;
-    hasMethodReceiverIndex = true;
-    methodReceiverIndex = 0;
+    markMethodTargetUsage();
     const Expr &receiver = expr.args.front();
     bool isBuiltinMethod = false;
     std::string methodResolved;

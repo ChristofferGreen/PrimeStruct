@@ -1908,6 +1908,14 @@
             "      };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto markMethodTargetUsage =\n"
+            "      [&]() {\n"
+            "        usedMethodTarget = true;\n"
+            "        hasMethodReceiverIndex = true;\n"
+            "        methodReceiverIndex = 0;\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto tryRewriteBareNamedVectorHelperCall =\n"
             "      [&](const char *helperName) {\n"
             "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
@@ -1944,9 +1952,7 @@
             "        std::string methodResolved;\n"
             "        if (resolvesNamedArgumentCountOrCapacityHelperTarget(methodResolved,\n"
             "                                                             isBuiltinMethod)) {\n"
-            "          usedMethodTarget = true;\n"
-            "          hasMethodReceiverIndex = true;\n"
-            "          methodReceiverIndex = 0;\n"
+            "          markMethodTargetUsage();\n"
             "          resolved = methodResolved;\n"
             "          resolvedMethod = false;\n"
             "        }\n"
@@ -3463,9 +3469,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "if (matchesCountMethodSurfaceRoute) {\n"
             "  handledOut = true;\n"
-            "  usedMethodTarget = true;\n"
-            "  hasMethodReceiverIndex = true;\n"
-            "  methodReceiverIndex = 0;\n"
+            "  markMethodTargetUsage();\n"
             "  const Expr &receiver = expr.args.front();\n"
             "  const bool isDirectNamedCountReceiverCall =\n"
             "      !expr.isMethodCall && isSingleArgCountCall &&\n"
@@ -3619,9 +3623,7 @@
             "      (defMap_.find(resolved) == defMap_.end() ||\n"
             "       context.isNamespacedVectorCapacityCall)))) {\n"
             "  handledOut = true;\n"
-            "  usedMethodTarget = true;\n"
-            "  hasMethodReceiverIndex = true;\n"
-            "  methodReceiverIndex = 0;\n"
+            "  markMethodTargetUsage();\n"
             "  const Expr &receiver = expr.args.front();\n"
             "  bool isBuiltinMethod = false;\n"
             "  std::string methodResolved;\n"
