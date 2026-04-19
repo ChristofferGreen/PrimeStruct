@@ -95,7 +95,7 @@ build and layout solidify.
   compatibility subsystem deletion).
 - If the highest-priority TODO is too large for one code-affecting commit, split it
   into explicit sub-items in `docs/todo.md` before continuing implementation.
-- Keep the active queue short: no more than 8 live leaves at once.
+- Keep the live execution queue short: no more than 8 leaf tasks in the `Ready Now` section at once. Additional dependency-blocked follow-up leaves may remain lower in `docs/todo.md`, but only `Ready Now` counts toward the active queue cap.
 
 ## Code guidelines
 - **Language:** C++23 for compiler/VM tooling unless otherwise documented.

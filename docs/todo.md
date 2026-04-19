@@ -28,7 +28,7 @@
    - deletion of a real compatibility subsystem
 15. Avoid standalone micro-cleanups (alias renames, trivial bool rewrites, local dedup) unless bundled into one value outcome above.
 16. If a leaf misses its value target after 2 attempts, archive it as low-value and replace it with a different hotspot.
-17. Keep the active queue short: no more than 8 live leaves at once.
+17. Keep the live execution queue short: no more than 8 leaf tasks in `Ready Now` at once. Additional dependency-blocked or deferred follow-up leaves may stay in the task blocks and `Immediate Next 10`, but only `Ready Now` counts as the live queue cap.
 18. Treat disabled tests as debt: every retained `doctest::skip(true)` cluster must either map to an active TODO leaf with a clear re-enable-or-delete outcome, or be removed once proven stale.
 
 Status legend:
@@ -54,7 +54,7 @@ Task template:
 
 ## Open Tasks
 
-### Ready Now (No Unmet TODO Dependencies)
+### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
 - TODO-4015
 - TODO-4012
@@ -192,18 +192,18 @@ Task template:
   - stop_rule: Stop once numeric opcode behavior is defined in one shared implementation for both execution paths and the duplicate numeric interpreter is gone; non-numeric opcode dedup belongs to a separate follow-up.
   - notes: Start in `src/VmExecutionNumeric.cpp`, `src/VmDebugSessionInstructionNumeric.cpp`, and the numeric dispatch call sites in `src/VmExecution.cpp` and `src/VmDebugSessionInstruction.cpp`.
 
-- [ ] TODO-4008: Retire covered production semantic adapters
+- [ ] TODO-4008: Retire first covered production semantic adapter slice
   - owner: ai
   - created_at: 2026-04-19
   - phase: Architecture Stabilization
   - depends_on: TODO-4002, TODO-4004, TODO-4005
-  - scope: Delete the remaining production-path temporary semantic-product adapters and AST-dependent lowerer re-derivations for the fact families already made authoritative by TODO-4004 and TODO-4005, then refresh the open architecture queue around the post-cutover baseline.
+  - scope: Delete one production-path temporary semantic-product adapter slice and its AST-dependent lowerer re-derivations for a fact family already made authoritative by TODO-4004 and TODO-4005, then refresh the open architecture queue so any remaining adapter-retirement slices are called out explicitly instead of hiding behind this leaf.
   - acceptance:
-    - The temporary adapter and fallback branches that still serve the fact families covered by TODO-4004 and TODO-4005 are deleted or explicitly limited to non-production-only fixtures.
-    - `primec`, `primevm`, and compile-pipeline production entrypoints consume the semantic product without hidden validator-owned side channels for those covered fact families.
-    - `docs/todo.md` is refreshed so any still-open adapter retirement work outside the covered slice remains as explicit follow-up instead of staying implicit.
-  - stop_rule: Stop once transitional production lowering adapters are no longer part of the normal compile/runtime path for the covered fact families; if uncovered adapter families remain, leave them as separate follow-up TODOs instead of widening this leaf further.
-  - notes: Primary seams are `src/IrPreparation.cpp`, `src/primevm_main.cpp`, `src/main.cpp`, and the remaining adapter/fallback helpers under `src/ir_lowerer/`; if retirements naturally separate by fact family, split them into explicit follow-up leaves instead of keeping one umbrella cleanup.
+    - One concrete covered adapter/fact-family slice is deleted or explicitly limited to non-production-only fixtures.
+    - `primec`, `primevm`, and compile-pipeline production entrypoints consume the semantic product without hidden validator-owned side channels for that retired slice.
+    - `docs/todo.md` is refreshed so any still-open adapter retirement work outside the retired slice remains as explicit follow-up instead of staying implicit.
+  - stop_rule: Stop once one covered production adapter slice is retired end to end and any remaining slices are written down as separate follow-up work; do not use this leaf as an umbrella cleanup.
+  - notes: Primary seams are `src/IrPreparation.cpp`, `src/primevm_main.cpp`, `src/main.cpp`, and the remaining adapter/fallback helpers under `src/ir_lowerer/`; choose one fact-family slice first and only keep neighboring retirements together when they share the same production entrypoints.
 
 - [ ] TODO-4007: Shard backend tests into focused binaries
   - owner: ai
@@ -218,18 +218,18 @@ Task template:
   - stop_rule: Stop once ordinary focused backend reruns no longer depend on the current monolithic backend test binary for IR-lowering, registry/runtime adapter, or compile-run coverage.
   - notes: Start in `CMakeLists.txt` around `PrimeStruct_backend_tests` plus the architecture assertions under `tests/unit/test_ir_pipeline_backends_architecture.h`; if one pass cannot land the three-way split cleanly, split this leaf by target family rather than by random file groups.
 
-- [ ] TODO-4006: Extract lowerer lanes from mega translation unit
+- [ ] TODO-4006: Extract first lowerer lanes from mega translation unit
   - owner: ai
   - created_at: 2026-04-19
   - phase: Lowerer Architecture
   - depends_on: none
-  - scope: Break `src/ir_lowerer/IrLowererLower.cpp` include aggregation into normal compiled units for at least entry/setup, call lowering, and statement lowering lanes.
+  - scope: Break `src/ir_lowerer/IrLowererLower.cpp` include aggregation into normal compiled units for entry/setup plus the first additional lowering lane that fits cleanly in one implementation slice, starting with call lowering and then statement lowering only if it still fits.
   - acceptance:
-    - The extracted lanes build as ordinary `.cpp` compilation units rather than being re-included through `IrLowererLower.cpp`.
+    - Entry/setup and at least one additional named lowering lane build as ordinary `.cpp` compilation units rather than being re-included through `IrLowererLower.cpp`.
     - Lowerer interface coverage is updated to assert behavior/contracts instead of depending on the current source aggregation layout.
     - The full release gate passes after the decomposition.
-  - stop_rule: Stop once the lowerer no longer depends on the current mega-aggregation for the extracted lanes.
-  - notes: Start from `src/ir_lowerer/IrLowererLower.cpp` and the source-lock tests that still read that file directly; if one commit cannot cover entry/setup, call lowering, and statement lowering together, split by lane in that order.
+  - stop_rule: Stop once entry/setup and one additional named lowering lane no longer depend on the current mega-aggregation; if another lane still remains, leave it as a follow-up instead of widening this leaf.
+  - notes: Start from `src/ir_lowerer/IrLowererLower.cpp` and the source-lock tests that still read that file directly; take call lowering before statement lowering, and if both do not fit after entry/setup, write the remaining lane down as explicit follow-up work.
 
 - [ ] TODO-4005: Split semantic publication into scoped builders
   - owner: ai
@@ -280,5 +280,5 @@ Task template:
     - `buildSemanticProgram(...)` consumes one structured publication surface rather than a mix of independent collector pulls for routing, callable-summary, binding/result, local-auto, query, `try(...)`, and `on_error` fact families.
     - Deterministic semantic-product ordering and lookup behavior remain locked by focused dump and adapter coverage.
     - Redundant production traversals across fact families are removed for the unified publication path.
-  - stop_rule: Stop once semantic-product publication has one authoritative production input surface for the covered fact families and duplicate fact-family sweeps are removed from that path; builder decomposition beyond that belongs to TODO-4005.
+  - stop_rule: Stop once semantic-product publication has one authoritative production input surface for the covered fact families and duplicate fact-family sweeps are removed from that path; if routing/callable-summary publication and graph-backed inference publication do not fit one change, split those clusters before code changes instead of widening the leaf.
   - notes: Primary implementation seams are `src/semantics/SemanticsValidate.cpp`, `src/semantics/SemanticsValidator.h`, and `src/semantics/SemanticsValidatorSnapshots.cpp`; retire the `takeCollected*ForSemanticProduct()` sweep pattern for the covered families rather than widening into later builder-layout cleanup.
