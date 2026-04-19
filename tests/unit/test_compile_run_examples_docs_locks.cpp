@@ -462,10 +462,22 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngInflateExecBody.find("assign(") == std::string::npos);
   CHECK(pngInflateExecBody.find("plus(") == std::string::npos);
   CHECK(pngInflateExecBody.find("minus(") == std::string::npos);
-  const std::string pngReadBody = imageStdlib.substr(pngReadStart);
-  CHECK(pngReadBody.find("assign(pixels[targetOffset], passPixels[sourceOffset])") != std::string::npos);
-  CHECK(pngReadBody.find("assign(sawIhdr, 1i32)") != std::string::npos);
-  CHECK(pngReadBody.find("assign(width, parsedWidth)") != std::string::npos);
+  const size_t pngWriteStart = imageStdlib.rfind(
+      "[effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]\n    writeImpl");
+  REQUIRE(pngWriteStart != std::string::npos);
+  REQUIRE(pngWriteStart > pngReadStart);
+  const std::string pngReadBody = imageStdlib.substr(pngReadStart, pngWriteStart - pngReadStart);
+  CHECK(pngReadBody.find("pixels[targetOffset] = passPixels[sourceOffset]") != std::string::npos);
+  CHECK(pngReadBody.find("pixels[targetOffset + 1i32] = passPixels[sourceOffset + 1i32]") != std::string::npos);
+  CHECK(pngReadBody.find("sawIhdr = 1i32") != std::string::npos);
+  CHECK(pngReadBody.find("sawPlte = 1i32") != std::string::npos);
+  CHECK(pngReadBody.find("sawPostIdatChunk = 1i32") != std::string::npos);
+  CHECK(pngReadBody.find("sawIdat = 1i32") != std::string::npos);
+  CHECK(pngReadBody.find("width = parsedWidth") != std::string::npos);
+  CHECK(pngReadBody.find("height = parsedHeight") != std::string::npos);
+  CHECK(pngReadBody.find("assign(") == std::string::npos);
+  CHECK(pngReadBody.find("plus(") == std::string::npos);
+  CHECK(pngReadBody.find("minus(") == std::string::npos);
   CHECK(pngBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(pngBody.find("return(unsupported_write())") == std::string::npos);
 }

@@ -2510,13 +2510,13 @@ namespace std {
                 while(less_than(passRow, passHeight), do() {
                   [i32 mut] passColumn{0i32}
                   while(less_than(passColumn, passWidth), do() {
-                    [i32] imageX{plus(passStartX, multiply(passColumn, passStepX))}
-                    [i32] imageY{plus(passStartY, multiply(passRow, passStepY))}
-                    [i32] sourceOffset{multiply(plus(multiply(passRow, passWidth), passColumn), 3i32)}
-                    [i32] targetOffset{multiply(plus(multiply(imageY, width), imageX), 3i32)}
-                    assign(pixels[targetOffset], passPixels[sourceOffset])
-                    assign(pixels[plus(targetOffset, 1i32)], passPixels[plus(sourceOffset, 1i32)])
-                    assign(pixels[plus(targetOffset, 2i32)], passPixels[plus(sourceOffset, 2i32)])
+                    [i32] imageX{passStartX + multiply(passColumn, passStepX)}
+                    [i32] imageY{passStartY + multiply(passRow, passStepY)}
+                    [i32] sourceOffset{multiply(multiply(passRow, passWidth) + passColumn, 3i32)}
+                    [i32] targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}
+                    pixels[targetOffset] = passPixels[sourceOffset]
+                    pixels[targetOffset + 1i32] = passPixels[sourceOffset + 1i32]
+                    pixels[targetOffset + 2i32] = passPixels[sourceOffset + 2i32]
                     increment(passColumn)
                   })
                   increment(passRow)
@@ -2714,7 +2714,7 @@ namespace std {
              if(or(not(pngChunkIsIhdr(typeA, typeB, typeC, typeD)), not_equal(chunkLength, 13i32)),
                 then() { return(1i32) },
                 else() { })
-             assign(sawIhdr, 1i32)
+             sawIhdr = 1i32
              [i32] ihdrStatus{pngReadIhdr(file, parsedWidth, parsedHeight, bitDepth, colorType, interlace)}
              if(not_equal(ihdrStatus, 0i32),
                 then() { return(1i32) },
@@ -2748,7 +2748,7 @@ namespace std {
                   if(or(not_equal(sawPlte, 0i32), not_equal(sawIdat, 0i32)),
                      then() { return(1i32) },
                      else() { })
-                  assign(sawPlte, 1i32)
+                  sawPlte = 1i32
                 },
                 else() { })
              if(and(not_equal(sawPostIdatChunk, 0i32), pngChunkIsIdat(typeA, typeB, typeC, typeD)),
@@ -2788,11 +2788,11 @@ namespace std {
                 },
                 else() { })
              if(and(not_equal(sawIdat, 0i32), not(pngChunkIsIdat(typeA, typeB, typeC, typeD))),
-                then() { assign(sawPostIdatChunk, 1i32) },
+                then() { sawPostIdatChunk = 1i32 },
                 else() { })
              if(pngChunkIsIdat(typeA, typeB, typeC, typeD),
                 then() {
-                  assign(sawIdat, 1i32)
+                  sawIdat = 1i32
                   pngAppendVectorBytes(chunkBytes, idatBytes)
                 },
                 else() { })
@@ -2827,8 +2827,8 @@ namespace std {
                           },
                           else() { })
 
-                       assign(width, parsedWidth)
-                       assign(height, parsedHeight)
+                       width = parsedWidth
+                       height = parsedHeight
                        return(0i32)
                      })
                 },

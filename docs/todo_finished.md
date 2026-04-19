@@ -4283,3 +4283,18 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - notes: Split from oversized `TODO-4077`, whose remaining PNG helper-spelling cleanup now continues only as `TODO-4081` for the top-level read/decode path.
   - finished_at: 2026-04-19
   - evidence: Rewrote the `pngInflateCopyFromOutput` through `pngInflateDeflateBlocks` execution lane in `stdlib/std/image/image.prime` from helper-form `assign(...)`, `plus(...)`, and `minus(...)` spellings to direct assignment and `+`/`-` expressions, including stored-block reads, fixed/dynamic Huffman block execution, fixed-symbol decode helpers, backreference copies, and final deflate-block/adler orchestration; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` to assert the new `pngInflateExecBody` operator-form spellings while leaving representative helper-form expectations only in the remaining `pngReadBody` decode/read carve-out; and updated `docs/todo.md` to remove `TODO-4080` from the live queue while promoting `TODO-4081` as the next active PNG surface-style leaf.
+
+- [x] TODO-4081: Align `/std/image/png` top-level read path arithmetic and assignment to surface operators
+  - owner: ai
+  - created_at: 2026-04-19
+  - phase: Stdlib Surface Style Alignment
+  - depends_on: TODO-4026, TODO-4074, TODO-4076, TODO-4078
+  - scope: Rewrite the remaining top-level `namespace png` read/decode orchestration away from `assign(...)`, `plus(...)`, and `minus(...)` where readable `=`, `+`, and `-` surface forms are already supported, without mixing in unrelated API or codec changes.
+  - acceptance:
+    - The remaining top-level `namespace png` read path stops using helper-form arithmetic and assignment by default when direct surface operators are already supported.
+    - Any residual helper-form arithmetic or assignment after this slice is limited to unsupported or clearly justified cases.
+    - Focused source-lock coverage drops the final PNG decode/read helper-form carve-out once the follow-up rewrite lands.
+  - stop_rule: Stop once the top-level `namespace png` read path uses readable surface arithmetic and assignment by default; split any unrelated API cleanup into separate follow-up work.
+  - notes: This completes the split PNG helper-spelling cleanup that started when oversized `TODO-4077` was broken into `TODO-4078` through `TODO-4081`.
+  - finished_at: 2026-04-19
+  - evidence: Rewrote the remaining `pngDecodeScanlines` Adam7 scatter loop and `namespace png` read orchestration in `stdlib/std/image/image.prime` from helper-form `assign(...)` and `plus(...)` spellings to direct assignment and `+` expressions, including indexed pixel writes, interlace coordinate math, IHDR/PLTE/IDAT state transitions, and final width/height publication; expanded `tests/unit/test_compile_run_examples_docs_locks.cpp` so `pngReadBody` now source-locks representative operator-form spellings and the absence of `assign(`, `plus(`, and `minus(`; and updated `docs/todo.md` to remove `TODO-4081` from the live queue so the stdlib surface-style lane now advances to `TODO-4029`.
