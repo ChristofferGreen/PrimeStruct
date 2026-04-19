@@ -40,7 +40,7 @@ main() {
   CHECK(runCommand(exePath) == 99);
 }
 
-TEST_CASE("compiles and runs native user array count call shadow" * doctest::skip(true)) {
+TEST_CASE("compiles and runs native user array count call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/count([array<i32>] values) {
