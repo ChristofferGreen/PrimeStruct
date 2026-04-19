@@ -55,87 +55,42 @@ Task template:
 
 ### Ready Now (No Unmet TODO Dependencies)
 
-1. TODO-1022
+1. TODO-0403
 
 ### Immediate Next 10 (After Ready Now)
 
-1. TODO-0403
+1. none
 
 ### Priority Lanes (Current)
 
-- P1 Semantic memory/perf + multithread substrate + semantics/testing API boundary hardening: TODO-0402, TODO-0406, TODO-1022
 - P3 Queue/snapshot governance: TODO-0403
 
 ### Execution Queue (Recommended)
 
-Wave A (semantic memory/perf):
-1. TODO-1022
-
-Wave B (queue hygiene):
+Wave A (queue hygiene):
 1. TODO-0403
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic memory footprint and multithread compile substrate | TODO-0402 |
-| Semantic/testing API boundary hardening | TODO-0406, TODO-1022 |
 | TODO queue quality gates and dependency/coverage synchronization | TODO-0403 |
 
 ### Validation Coverage Snapshot
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Release gate (`./scripts/compile.sh --release`) discipline | TODO-0402, TODO-0406, TODO-1022 |
-| Benchmark/runtime regression checks (`./scripts/benchmark.sh`) | TODO-0402 |
-| Semantic/testing API and deterministic conformance checks | TODO-0406, TODO-1022 |
 | TODO/open-vs-finished hygiene (`docs/todo.md` vs `docs/todo_finished.md`) | TODO-0403 |
 
 ### Task Blocks
-
-- [~] TODO-0406: Split production semantics APIs from testing snapshots
-  - owner: ai
-  - created_at: 2026-04-13
-  - phase: Group 15
-  - scope: Track bounded removal of snapshot-for-testing surface area from production semantics interfaces so `include/primec/testing/*` facades and semantic-product views become the only supported testing entry points.
-  - acceptance:
-    - Child leaves remove snapshot-only structs/methods from `SemanticsValidator` in bounded families while preserving existing `include/primec/testing/*` facades.
-    - Existing semantics/IR snapshot tests continue to compile through testing facades or semantic-product projections without adding new `tests -> src` include-layer allowlist entries.
-    - At least one snapshot-only compatibility path in production semantics code is deleted in each completed child rather than renamed in place.
-  - stop_rule: If a snapshot family cannot be removed without touching unrelated runtime/backend consumers, split it into a smaller facade-projection child before continuing.
-  - notes: Archived child `TODO-1021` removed the duplicate query snapshot family from `SemanticsValidator`; `TODO-1022` is the next live leaf for the remaining try/on_error/validation-context aliases.
-
-- [ ] TODO-1022: Route remaining try/on_error/validation testing snapshots through production semantic facts
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Group 15
-  - scope: Reuse semantic-product facts or callable summaries for the remaining try/on_error/validation-context testing snapshots so more `SemanticsValidator::*ForTesting()` aliases can be deleted.
-  - acceptance:
-    - `computeTypeResolutionTryValueSnapshotForTesting`, `computeTypeResolutionOnErrorSnapshotForTesting`, and `computeTypeResolutionValidationContextSnapshotForTesting` no longer depend on testing-only `SemanticsValidator` snapshot methods.
-    - Focused snapshot/source-lock tests pin the new projection path without adding any `tests -> src` include-layer allowlist entries.
-    - At least one additional snapshot-only method disappears from `SemanticsValidator.h`.
-  - stop_rule: If any remaining snapshot view needs a new production fact shape instead of a pure projection, stop and split that shape work into its own follow-up leaf rather than widening this task.
 
 - [ ] TODO-0403: Keep queue, lanes, and snapshots synchronized
   - owner: ai
   - created_at: 2026-04-13
   - phase: Cross-cutting
-  - depends_on: TODO-0402
   - scope: Keep this TODO log internally consistent as Group 14/15 leaf tasks are added, split, completed, and archived.
   - acceptance:
     - Every TODO ID listed in `Ready Now`, `Immediate Next 10`, `Priority Lanes`, and `Execution Queue` has a matching task block.
     - Archived IDs are removed from open sections in the same change that moves their task blocks to `docs/todo_finished.md`.
     - Coverage snapshot tables reflect only currently open IDs.
   - stop_rule: If synchronization touches more than one logical workstream, split updates into focused queue-only follow-up tasks.
-
-- [~] TODO-0402: Group 15 completion tracker (semantic memory + multithread substrate)
-  - owner: ai
-  - created_at: 2026-04-13
-  - phase: Group 15
-  - scope: Define and execute remaining measurable leaf slices after archived P0/P1/P2 work to ship memory/runtime wins with strict regression control.
-  - acceptance:
-    - Remaining Group 15 leaf tasks are listed with stable IDs and explicit metric baselines/targets.
-    - Each new leaf includes concrete validation commands, including release build/test and focused benchmark or memory checks.
-    - Completed Group 15 leaves are moved to `docs/todo_finished.md` with evidence notes.
-  - stop_rule: If a leaf cannot demonstrate measurable impact within one code-affecting commit, split it into smaller measurable leaves before implementation.
-  - notes: Prior Group 15 slices `[P0-17]` through `[P0-28]`, `[P1-01]` through `[P1-03]`, and `[P2-14]` through `[P2-42]` are already archived in `docs/todo_finished.md` (April 12-13, 2026). Archived items `TODO-0405`, `TODO-1013`, `TODO-1016`, `TODO-1018`, `TODO-1017`, and `TODO-1019`, and `TODO-1020` now complete the unified semantic-product benchmark-proof chain with a refreshed full baseline report plus paired contract and primary-fixture measured artifacts. `TODO-0406` now tracks the last live Group 15 workstream, with archived child `TODO-1021` done and `TODO-1022` remaining.

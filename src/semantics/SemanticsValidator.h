@@ -146,22 +146,6 @@ public:
     uint64_t semanticNodeId = 0;
   };
 
-  struct ValidationContextSnapshotEntry {
-    std::string definitionPath;
-    ReturnKind returnKind = ReturnKind::Unknown;
-    bool definitionIsCompute = false;
-    bool definitionIsUnsafe = false;
-    std::vector<std::string> activeEffects;
-    bool hasResultType = false;
-    bool resultTypeHasValue = false;
-    std::string resultValueType;
-    std::string resultErrorType;
-    bool hasOnError = false;
-    std::string onErrorHandlerPath;
-    std::string onErrorErrorType;
-    size_t onErrorBoundArgCount = 0;
-  };
-
   struct MethodCallTargetSnapshotEntry {
     std::string scopePath;
     std::string methodName;
@@ -286,7 +270,6 @@ public:
   const ValidationCounters &validationCounters() const { return validationCounters_; }
   std::vector<ReturnResolutionSnapshotEntry> returnResolutionSnapshotForTesting() const;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoBindingSnapshotForTesting() const;
-  std::vector<TryValueSnapshotEntry> tryValueSnapshotForTesting();
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotForTesting();
   std::vector<DirectCallTargetSnapshotEntry> directCallTargetSnapshotForSemanticProduct() const;
   std::vector<MethodCallTargetSnapshotEntry> methodCallTargetSnapshotForSemanticProduct();
@@ -300,8 +283,6 @@ public:
   std::vector<QueryFactSnapshotEntry> queryFactSnapshotForSemanticProduct();
   std::vector<TryValueSnapshotEntry> tryFactSnapshotForSemanticProduct();
   std::vector<OnErrorSnapshotEntry> onErrorFactSnapshotForSemanticProduct();
-  std::vector<OnErrorSnapshotEntry> onErrorSnapshotForTesting();
-  std::vector<ValidationContextSnapshotEntry> validationContextSnapshotForTesting() const;
   void releaseTransientSnapshotCaches();
 
 private:

@@ -435,13 +435,6 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
   return entries;
 }
 
-std::vector<SemanticsValidator::TryValueSnapshotEntry>
-SemanticsValidator::tryValueSnapshotForTesting() {
-  ensureCallAndTrySnapshotFactCaches(
-      true, false);
-  return tryValueSnapshotCache_;
-}
-
 std::vector<SemanticsValidator::CallBindingSnapshotEntry>
 SemanticsValidator::callBindingSnapshotForTesting() {
   ensureCallAndTrySnapshotFactCaches(
@@ -1134,56 +1127,17 @@ SemanticsValidator::queryFactSnapshotForSemanticProduct() {
 
 std::vector<SemanticsValidator::TryValueSnapshotEntry>
 SemanticsValidator::tryFactSnapshotForSemanticProduct() {
-  return tryValueSnapshotForTesting();
+  ensureCallAndTrySnapshotFactCaches(
+      true, false);
+  tryValueSnapshotCacheValid_ = false;
+  return std::exchange(tryValueSnapshotCache_, {});
 }
 
 std::vector<SemanticsValidator::OnErrorSnapshotEntry>
 SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {
-  return onErrorSnapshotForTesting();
-}
-
-std::vector<SemanticsValidator::OnErrorSnapshotEntry>
-SemanticsValidator::onErrorSnapshotForTesting() {
   ensureCallableAndOnErrorSnapshotFactCaches();
-  return onErrorSnapshotCache_;
-}
-
-std::vector<SemanticsValidator::ValidationContextSnapshotEntry>
-SemanticsValidator::validationContextSnapshotForTesting() const {
-  std::vector<ValidationContextSnapshotEntry> entries;
-  entries.reserve(program_.definitions.size());
-  for (const auto &def : program_.definitions) {
-    const auto state = buildDefinitionValidationState(def);
-    const auto &context = state.context;
-    ReturnKind returnKind = ReturnKind::Unknown;
-    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-      returnKind = returnKindIt->second;
-    }
-    std::vector<std::string> activeEffects(context.activeEffects.begin(), context.activeEffects.end());
-    std::sort(activeEffects.begin(), activeEffects.end());
-    activeEffects.erase(std::unique(activeEffects.begin(), activeEffects.end()), activeEffects.end());
-
-    entries.push_back(ValidationContextSnapshotEntry{
-        def.fullPath,
-        returnKind,
-        context.definitionIsCompute,
-        context.definitionIsUnsafe,
-        std::move(activeEffects),
-        context.resultType.has_value() && context.resultType->isResult,
-        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
-        context.onError.has_value(),
-        context.onError.has_value() ? context.onError->handlerPath : std::string{},
-        context.onError.has_value() ? context.onError->errorType : std::string{},
-        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
-    });
-  }
-
-  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
-    return left.definitionPath < right.definitionPath;
-  });
-  return entries;
+  callableAndOnErrorSnapshotFactCacheValid_ = false;
+  return std::exchange(onErrorSnapshotCache_, {});
 }
 
 } // namespace primec::semantics

@@ -6502,7 +6502,7 @@ bool semantics::computeTypeResolutionTryValueSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out.entries.clear();
   return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
-    const auto entries = validator.tryValueSnapshotForTesting();
+    const auto entries = validator.tryFactSnapshotForSemanticProduct();
     out.entries.reserve(entries.size());
     for (const auto &entry : entries) {
       out.entries.push_back(TypeResolutionTryValueSnapshotEntry{
@@ -6581,7 +6581,7 @@ bool semantics::computeTypeResolutionOnErrorSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out.entries.clear();
   return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
-    const auto entries = validator.onErrorSnapshotForTesting();
+    const auto entries = validator.onErrorFactSnapshotForSemanticProduct();
     out.entries.reserve(entries.size());
     for (const auto &entry : entries) {
       out.entries.push_back(TypeResolutionOnErrorSnapshotEntry{
@@ -6606,14 +6606,17 @@ bool semantics::computeTypeResolutionValidationContextSnapshotForTesting(
     const std::vector<std::string> &semanticTransforms) {
   out.entries.clear();
   return runTypeResolutionSnapshot(program, entryPath, error, semanticTransforms, [&](auto &validator) {
-    const auto entries = validator.validationContextSnapshotForTesting();
+    const auto entries = validator.callableSummarySnapshotForSemanticProduct();
     out.entries.reserve(entries.size());
     for (const auto &entry : entries) {
+      if (entry.isExecution) {
+        continue;
+      }
       out.entries.push_back(TypeResolutionValidationContextSnapshotEntry{
-          entry.definitionPath,
+          entry.fullPath,
           returnKindSnapshotName(entry.returnKind),
-          entry.definitionIsCompute,
-          entry.definitionIsUnsafe,
+          entry.isCompute,
+          entry.isUnsafe,
           entry.activeEffects,
           entry.hasResultType,
           entry.resultTypeHasValue,

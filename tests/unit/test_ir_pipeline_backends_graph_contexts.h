@@ -2222,41 +2222,52 @@ TEST_CASE("semantic snapshot query projections reuse semantic-product fact cache
 
 TEST_CASE("semantic snapshot shared traversal keeps call and try ordering keys") {
   const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
   const std::filesystem::path root =
       std::filesystem::exists(cwd / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp")
           ? cwd
           : cwd.parent_path();
+  if (!std::filesystem::exists(headerPath)) {
+    headerPath = root / "src" / "semantics" / "SemanticsValidator.h";
+  }
+  REQUIRE(std::filesystem::exists(headerPath));
+  const std::string semanticsHeader = readTextFile(headerPath);
   const std::string semanticsSnapshots =
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
   const std::string semanticsSnapshotLocals =
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshotLocals.cpp");
+  const std::string semanticsValidate =
+      readTextFile(root / "src" / "semantics" / "SemanticsValidate.cpp");
 
-  const std::size_t tryValueStart =
-      semanticsSnapshots.find("SemanticsValidator::tryValueSnapshotForTesting() {");
   const std::size_t callBindingStart =
       semanticsSnapshots.find("SemanticsValidator::callBindingSnapshotForTesting() {");
   const std::size_t directCallStart =
       semanticsSnapshots.find("SemanticsValidator::directCallTargetSnapshotForSemanticProduct() const {");
+  const std::size_t tryFactStart =
+      semanticsSnapshots.find("SemanticsValidator::tryFactSnapshotForSemanticProduct() {");
+  const std::size_t onErrorFactStart =
+      semanticsSnapshots.find("SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {");
   const std::size_t callTryCacheHelperStart =
       semanticsSnapshotLocals.find("SemanticsValidator::ensureCallAndTrySnapshotFactCaches() {");
   const std::size_t graphLocalKeyStart =
       semanticsSnapshotLocals.find("SemanticsValidator::GraphLocalAutoKey");
-  REQUIRE(tryValueStart != std::string::npos);
   REQUIRE(callBindingStart != std::string::npos);
   REQUIRE(directCallStart != std::string::npos);
+  REQUIRE(tryFactStart != std::string::npos);
+  REQUIRE(onErrorFactStart != std::string::npos);
   REQUIRE(callTryCacheHelperStart != std::string::npos);
   REQUIRE(graphLocalKeyStart != std::string::npos);
-  REQUIRE(tryValueStart < callBindingStart);
   REQUIRE(callBindingStart < directCallStart);
+  REQUIRE(tryFactStart < onErrorFactStart);
   REQUIRE(callTryCacheHelperStart < graphLocalKeyStart);
-
-  const std::string tryValueBody = semanticsSnapshots.substr(tryValueStart, callBindingStart - tryValueStart);
-  CHECK(tryValueBody.find("ensureCallAndTrySnapshotFactCaches();") != std::string::npos);
-  CHECK(tryValueBody.find("return tryValueSnapshotCache_;") != std::string::npos);
 
   const std::string callBindingBody = semanticsSnapshots.substr(callBindingStart, directCallStart - callBindingStart);
   CHECK(callBindingBody.find("ensureCallAndTrySnapshotFactCaches();") != std::string::npos);
   CHECK(callBindingBody.find("return callBindingSnapshotCache_;") != std::string::npos);
+
+  const std::string tryFactBody = semanticsSnapshots.substr(tryFactStart, onErrorFactStart - tryFactStart);
+  CHECK(tryFactBody.find("ensureCallAndTrySnapshotFactCaches();") != std::string::npos);
+  CHECK(tryFactBody.find("return std::exchange(tryValueSnapshotCache_, {});") != std::string::npos);
 
   const std::string callTryCacheHelperBody =
       semanticsSnapshotLocals.substr(callTryCacheHelperStart, graphLocalKeyStart - callTryCacheHelperStart);
@@ -2271,16 +2282,28 @@ TEST_CASE("semantic snapshot shared traversal keeps call and try ordering keys")
   CHECK(callTryCacheHelperBody.find("return left.callName < right.callName;") != std::string::npos);
   CHECK(callTryCacheHelperBody.find("return left.operandResolvedPath < right.operandResolvedPath;") !=
         std::string::npos);
+
+  CHECK(semanticsHeader.find("tryValueSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsValidate.find("validator.tryFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.tryValueSnapshotForTesting()") == std::string::npos);
 }
 
 TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_error ordering keys") {
   const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
   const std::filesystem::path root =
       std::filesystem::exists(cwd / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp")
           ? cwd
           : cwd.parent_path();
+  if (!std::filesystem::exists(headerPath)) {
+    headerPath = root / "src" / "semantics" / "SemanticsValidator.h";
+  }
+  REQUIRE(std::filesystem::exists(headerPath));
+  const std::string semanticsHeader = readTextFile(headerPath);
   const std::string semanticsSnapshots =
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
+  const std::string semanticsValidate =
+      readTextFile(root / "src" / "semantics" / "SemanticsValidate.cpp");
 
   const std::size_t cacheHelperStart =
       semanticsSnapshots.find("SemanticsValidator::ensureCallableAndOnErrorSnapshotFactCaches() const {");
@@ -2289,17 +2312,13 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   const std::size_t typeMetadataStart =
       semanticsSnapshots.find("SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {");
   const std::size_t onErrorStart =
-      semanticsSnapshots.find("SemanticsValidator::onErrorSnapshotForTesting() {");
-  const std::size_t validationContextStart =
-      semanticsSnapshots.find("SemanticsValidator::validationContextSnapshotForTesting() const {");
+      semanticsSnapshots.find("SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {");
   REQUIRE(cacheHelperStart != std::string::npos);
   REQUIRE(callableSummaryStart != std::string::npos);
   REQUIRE(typeMetadataStart != std::string::npos);
   REQUIRE(onErrorStart != std::string::npos);
-  REQUIRE(validationContextStart != std::string::npos);
   REQUIRE(cacheHelperStart < callableSummaryStart);
   REQUIRE(callableSummaryStart < typeMetadataStart);
-  REQUIRE(onErrorStart < validationContextStart);
 
   const std::string cacheHelperBody =
       semanticsSnapshots.substr(cacheHelperStart, callableSummaryStart - cacheHelperStart);
@@ -2318,8 +2337,16 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   CHECK(callableSummaryBody.find("std::vector<CallableSummarySnapshotEntry> entries = callableSummaryDefinitionSnapshotCache_;") !=
         std::string::npos);
 
-  const std::string onErrorBody =
-      semanticsSnapshots.substr(onErrorStart, validationContextStart - onErrorStart);
+  const std::string onErrorBody = semanticsSnapshots.substr(onErrorStart);
   CHECK(onErrorBody.find("ensureCallableAndOnErrorSnapshotFactCaches();") != std::string::npos);
-  CHECK(onErrorBody.find("return onErrorSnapshotCache_;") != std::string::npos);
+  CHECK(onErrorBody.find("return std::exchange(onErrorSnapshotCache_, {});") != std::string::npos);
+
+  CHECK(semanticsHeader.find("onErrorSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsHeader.find("validationContextSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsHeader.find("struct ValidationContextSnapshotEntry {") == std::string::npos);
+  CHECK(semanticsValidate.find("validator.onErrorFactSnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.onErrorSnapshotForTesting()") == std::string::npos);
+  CHECK(semanticsValidate.find("validator.callableSummarySnapshotForSemanticProduct()") != std::string::npos);
+  CHECK(semanticsValidate.find("validator.validationContextSnapshotForTesting()") == std::string::npos);
+  CHECK(semanticsValidate.find("if (entry.isExecution) {") != std::string::npos);
 }
