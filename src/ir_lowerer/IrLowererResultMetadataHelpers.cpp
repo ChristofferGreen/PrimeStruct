@@ -16,23 +16,6 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isFileHandleTypeText(const std::string &typeText) {
-  std::string base;
-  std::string arg;
-  return splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg) &&
-         normalizeCollectionBindingTypeName(base) == "File";
-}
-
-bool isBufferHandleCall(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
-    return false;
-  }
-  return expr.name == "Buffer" || expr.name == "/std/gfx/Buffer" ||
-         expr.name == "/std/gfx/experimental/Buffer" ||
-         expr.name.rfind("/std/gfx/Buffer__t", 0) == 0 ||
-         expr.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
-}
-
 std::string resolveScopedCallPath(const Expr &expr) {
   if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
     return expr.name;
@@ -44,6 +27,24 @@ std::string resolveScopedCallPath(const Expr &expr) {
     return expr.namespacePrefix + expr.name;
   }
   return expr.namespacePrefix + "/" + expr.name;
+}
+
+bool isFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string arg;
+  return splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg) &&
+         normalizeCollectionBindingTypeName(base) == "File";
+}
+
+bool isBufferHandleCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
+    return false;
+  }
+  const std::string scopedName = resolveScopedCallPath(expr);
+  return scopedName == "Buffer" || scopedName == "/std/gfx/Buffer" ||
+         scopedName == "/std/gfx/experimental/Buffer" ||
+         scopedName.rfind("/std/gfx/Buffer__t", 0) == 0 ||
+         scopedName.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
 }
 
 bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {

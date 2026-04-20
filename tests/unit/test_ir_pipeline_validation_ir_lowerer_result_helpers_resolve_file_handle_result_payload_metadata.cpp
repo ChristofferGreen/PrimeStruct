@@ -290,6 +290,12 @@ TEST_CASE("ir lowerer result helpers resolve Buffer Result payload metadata") {
   okExpr.name = "ok";
   okExpr.args = {resultName, bufferCtorExpr};
 
+  primec::Expr scopedBufferCtorExpr = bufferCtorExpr;
+  scopedBufferCtorExpr.namespacePrefix = "/std/gfx";
+
+  primec::Expr scopedOkExpr = okExpr;
+  scopedOkExpr.args = {resultName, scopedBufferCtorExpr};
+
   primec::ir_lowerer::LocalInfo bufferResult;
   bufferResult.isResult = true;
   bufferResult.resultHasValue = true;
@@ -379,6 +385,14 @@ TEST_CASE("ir lowerer result helpers resolve Buffer Result payload metadata") {
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       okExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Buffer);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      scopedOkExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Buffer);
