@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include "IrLowererHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
@@ -539,6 +540,38 @@ bool resolvePublishedStdlibSurfaceExprMemberName(const Expr &expr,
   }
 
   return false;
+}
+
+bool resolvePublishedSemanticStdlibSurfaceMemberName(const SemanticProgram *semanticProgram,
+                                                     const Expr &expr,
+                                                     StdlibSurfaceId surfaceId,
+                                                     std::string &memberNameOut) {
+  memberNameOut.clear();
+  if (semanticProgram == nullptr || expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+
+  const auto trySemanticSurface = [&](std::optional<StdlibSurfaceId> semanticSurfaceId,
+                                      const std::string &resolvedPath) {
+    if (!semanticSurfaceId.has_value() || *semanticSurfaceId != surfaceId) {
+      return false;
+    }
+    return (!resolvedPath.empty() &&
+            resolvePublishedStdlibSurfaceMemberName(
+                resolvedPath, surfaceId, memberNameOut)) ||
+           resolvePublishedStdlibSurfaceExprMemberName(
+               expr, surfaceId, memberNameOut);
+  };
+
+  return trySemanticSurface(
+             findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr),
+             findSemanticProductBridgePathChoice(semanticProgram, expr)) ||
+         trySemanticSurface(
+             findSemanticProductMethodCallStdlibSurfaceId(semanticProgram, expr),
+             findSemanticProductMethodCallTarget(semanticProgram, expr)) ||
+         trySemanticSurface(
+             findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr),
+             findSemanticProductDirectCallTarget(semanticProgram, expr));
 }
 
 bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,

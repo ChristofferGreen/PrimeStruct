@@ -8,6 +8,10 @@
 #include "primec/Ast.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
+namespace primec {
+struct SemanticProgram;
+}
+
 namespace primec::ir_lowerer {
 
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix);
@@ -51,6 +55,10 @@ bool resolvePublishedStdlibSurfaceMemberToken(std::string_view memberToken,
 bool resolvePublishedStdlibSurfaceExprMemberName(const Expr &expr,
                                                  StdlibSurfaceId surfaceId,
                                                  std::string &memberNameOut);
+bool resolvePublishedSemanticStdlibSurfaceMemberName(const SemanticProgram *semanticProgram,
+                                                     const Expr &expr,
+                                                     StdlibSurfaceId surfaceId,
+                                                     std::string &memberNameOut);
 bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,
                                              StdlibSurfaceId surfaceId,
                                              std::string &memberNameOut);

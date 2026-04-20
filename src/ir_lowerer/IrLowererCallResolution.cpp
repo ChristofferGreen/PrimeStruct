@@ -72,7 +72,33 @@ bool isBridgeHelperCall(const SemanticProgram *semanticProgram,
          isResidualBridgeHelperPath(resolvedPath);
 }
 
-bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath) {
+bool isBuiltinPublishedMapHelperName(const Expr &expr, std::string_view helperName) {
+  if (helperName == "count") {
+    return expr.args.size() == 1;
+  }
+  if (helperName == "contains" || helperName == "tryAt" ||
+      helperName == "at" || helperName == "at_unsafe") {
+    return expr.args.size() == 2;
+  }
+  if (helperName == "insert") {
+    return expr.args.size() == 3;
+  }
+  return false;
+}
+
+bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
+                              const Expr &expr,
+                              const std::string &resolvedPath) {
+  std::string semanticHelperName;
+  if (resolvePublishedSemanticStdlibSurfaceMemberName(
+          semanticProgram,
+          expr,
+          StdlibSurfaceId::CollectionsMapHelpers,
+          semanticHelperName) &&
+      isBuiltinPublishedMapHelperName(expr, semanticHelperName)) {
+    return true;
+  }
+
   auto matchesResolvedPath = [&](std::string_view basePath) {
     return resolvedPath == basePath ||
            resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
@@ -406,7 +432,8 @@ std::string describeCallSite(const std::string &scopePath, const Expr &expr) {
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
-                                        const ResolveExprPathFn &resolveExprPath) {
+                                        const ResolveExprPathFn &resolveExprPath,
+                                        const SemanticProgram *semanticProgram) {
   if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isMethodCall) {
     return nullptr;
   }
@@ -425,7 +452,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
   }
   if (const Definition *resolvedDef = resolveDefinitionByPath(defMap, resolved);
       resolvedDef != nullptr) {
-    if (!isMapBuiltinResolvedPath(callExpr, resolved)) {
+    if (!isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved)) {
       return resolvedDef;
     }
     if (isExplicitExperimentalMapHelperDefinitionCall(callExpr, resolved)) {
@@ -444,7 +471,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     }
     return nullptr;
   }
-  if (isMapBuiltinResolvedPath(callExpr, resolved)) {
+  if (isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved)) {
     return nullptr;
   }
   return nullptr;
@@ -452,9 +479,10 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
 
 ResolveDefinitionCallFn makeResolveDefinitionCall(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath) {
-  return [defMap, resolveExprPath](const Expr &expr) {
-    return resolveDefinitionCall(expr, defMap, resolveExprPath);
+    const ResolveExprPathFn &resolveExprPath,
+    const SemanticProgram *semanticProgram) {
+  return [defMap, resolveExprPath, semanticProgram](const Expr &expr) {
+    return resolveDefinitionCall(expr, defMap, resolveExprPath, semanticProgram);
   };
 }
 

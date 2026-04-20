@@ -46,7 +46,10 @@
     return ir_lowerer::emitCompareToZero(function.instructions, kind, equals, error);
   };
 
-  resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(defMap, resolveExprPath);
+  resolveDefinitionCall = ir_lowerer::makeResolveDefinitionCall(
+      defMap,
+      resolveExprPath,
+      callResolutionAdapters.semanticProgram);
   resolveResultExprInfo = ir_lowerer::makeResolveResultExprInfoFromLocals(
       [&](const Expr &callExpr, const LocalMap &localsForCall) -> const Definition * {
         return resolveMethodCallDefinition(callExpr, localsForCall);

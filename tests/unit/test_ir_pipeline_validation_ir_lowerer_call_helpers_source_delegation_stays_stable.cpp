@@ -254,7 +254,11 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
         std::string::npos);
   CHECK(callResolutionSource.find("bool hasTailExecutionCandidate(const std::vector<Expr> &statements,") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)") !=
+  CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("isBuiltinPublishedMapHelperName(expr, semanticHelperName)") !=
         std::string::npos);
   CHECK(callResolutionSource.find("return matchesResolvedPath(\"/std/collections/map/contains\") ||") !=
         std::string::npos);
@@ -492,6 +496,8 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceExprMemberName(") !=
         std::string::npos);
+  CHECK(setupHelpersHeader.find("bool resolvePublishedSemanticStdlibSurfaceMemberName(") !=
+        std::string::npos);
   CHECK(setupHelpersHeader.find("bool isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);
   CHECK(setupHelpersHeader.find("bool isCanonicalPublishedStdlibSurfaceHelperPath(") !=
@@ -507,6 +513,14 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
   CHECK(setupHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, path)") !=
         std::string::npos);
   CHECK(setupHelpersSource.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, expr)") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("findSemanticProductMethodCallStdlibSurfaceId(semanticProgram, expr)") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
@@ -2929,6 +2943,50 @@ TEST_CASE("ir lowerer call helpers keep lowered collection helper paths reachabl
   CHECK(resolveExprPath(callExpr) == "/std/collections/mapContains");
   CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) ==
         &loweredMapContainsDef);
+}
+
+TEST_CASE("ir lowerer call helpers classify lowered map helper overloads through semantic surface ids") {
+  primec::Definition loweredMapContainsOverloadDef;
+  loweredMapContainsOverloadDef.fullPath = "/std/collections/mapContains__ov1";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {loweredMapContainsOverloadDef.fullPath, &loweredMapContainsOverloadDef},
+  };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "contains",
+      .sourceLine = 10,
+      .sourceColumn = 6,
+      .semanticNodeId = 83,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, loweredMapContainsOverloadDef.fullPath),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      83, semanticProgram.directCallTargets.front().resolvedPathId);
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      83, primec::StdlibSurfaceId::CollectionsMapHelpers);
+
+  const auto resolveExprPath = [&](const primec::Expr &) {
+    return loweredMapContainsOverloadDef.fullPath;
+  };
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "contains";
+  callExpr.semanticNodeId = 83;
+  primec::Expr mapArg;
+  mapArg.kind = primec::Expr::Kind::Name;
+  mapArg.name = "values";
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Name;
+  keyArg.name = "key";
+  callExpr.args.push_back(mapArg);
+  callExpr.args.push_back(keyArg);
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(
+            callExpr, defMap, resolveExprPath, &semanticProgram) == nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers keep experimental map helper aliases off specialized method defs") {

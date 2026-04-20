@@ -19,10 +19,12 @@ struct EntryCallResolutionSetup {
 
 const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
-                                        const ResolveExprPathFn &resolveExprPath);
+                                        const ResolveExprPathFn &resolveExprPath,
+                                        const SemanticProgram *semanticProgram = nullptr);
 ResolveDefinitionCallFn makeResolveDefinitionCall(
     const std::unordered_map<std::string, const Definition *> &defMap,
-    const ResolveExprPathFn &resolveExprPath);
+    const ResolveExprPathFn &resolveExprPath,
+    const SemanticProgram *semanticProgram = nullptr);
 
 CallResolutionAdapters makeCallResolutionAdapters(
     const std::unordered_map<std::string, const Definition *> &defMap,
