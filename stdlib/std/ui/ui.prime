@@ -57,22 +57,22 @@ namespace std {
 
   [return<i32>]
   widget_text_advance([i32] textSizePx) {
-    return(/std/math/max(1i32, divide(textSizePx + 1i32, 2i32)))
+    return(max(1i32, (textSizePx + 1i32) / 2i32))
   }
 
   [return<i32>]
   widget_text_width([i32] textSizePx, [string] text) {
-    return(multiply(widget_text_advance(textSizePx), count(text)))
+    return(widget_text_advance(textSizePx) * text.count())
   }
 
   [return<i32>]
   widget_text_height([i32] textSizePx) {
-    return(/std/math/max(1i32, textSizePx))
+    return(max(1i32, textSizePx))
   }
 
   [return<i32>]
   layout_inner_extent([i32] outerExtent, [i32] paddingPx) {
-    return(/std/math/max(0i32, outerExtent - multiply(paddingPx, 2i32)))
+    return(max(0i32, outerExtent - paddingPx * 2i32))
   }
 
   namespace CommandList {
@@ -107,7 +107,7 @@ namespace std {
 
     [public effects(heap_alloc), return<void>]
     draw_text([CommandList mut] self, [i32] x, [i32] y, [i32] sizePx, [Rgba8] color, [string] text) {
-      len{count(text)}
+      len{text.count()}
       self.append_word(1i32)
       self.append_word(8i32 + len)
       self.append_word(x)
@@ -115,7 +115,7 @@ namespace std {
       self.append_word(sizePx)
       self.append_color(color)
       self.append_word(len)
-      for([i32 mut] index{0i32}, less_than(index, len), ++index) {
+      for([i32 mut] index{0i32}, index < len, ++index) {
         self.append_word(text[index])
       }
       self.commandCount = self.commandCount + 1i32
@@ -232,7 +232,7 @@ namespace std {
 
     [public effects(heap_alloc), return<void>]
     pop_clip([CommandList mut] self) {
-      if(greater_than(self.clipDepth, 0i32)) {
+      if(self.clipDepth > 0i32) {
         self.append_word(4i32)
         self.append_word(0i32)
         self.commandCount = self.commandCount + 1i32
@@ -253,10 +253,10 @@ namespace std {
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([CommandList] self) {
       [mut] words{vector<i32>()}
-      len{count(self.records)}
+      len{self.records.count()}
       words.push(1i32)
       words.push(self.commandCount)
-      for([i32 mut] index{0i32}, less_than(index, len), ++index) {
+      for([i32 mut] index{0i32}, index < len, ++index) {
         words.push(self.records[index])
       }
       return(words)
@@ -281,9 +281,9 @@ namespace std {
 
     [effects(heap_alloc), return<void>]
     append_string([HtmlCommandList mut] self, [string] text) {
-      len{count(text)}
+      len{text.count()}
       self.append_word(len)
-      for([i32 mut] index{0i32}, less_than(index, len), ++index) {
+      for([i32 mut] index{0i32}, index < len, ++index) {
         self.append_word(text[index])
       }
     }
@@ -317,7 +317,7 @@ namespace std {
         [i32] textSizePx,
         [Rgba8] textColor,
         [string] text) {
-      len{count(text)}
+      len{text.count()}
       self.append_word(2i32)
       self.append_word(12i32 + len)
       self.append_word(nodeId)
@@ -438,10 +438,10 @@ namespace std {
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([HtmlCommandList] self) {
       [mut] words{vector<i32>()}
-      len{count(self.records)}
+      len{self.records.count()}
       words.push(1i32)
       words.push(self.commandCount)
-      for([i32 mut] index{0i32}, less_than(index, len), ++index) {
+      for([i32 mut] index{0i32}, index < len, ++index) {
         words.push(self.records[index])
       }
       return(words)
@@ -458,9 +458,9 @@ namespace std {
 
     [effects(heap_alloc), return<void>]
     append_string([UiEventStream mut] self, [string] text) {
-      len{count(text)}
+      len{text.count()}
       self.append_word(len)
-      for([i32 mut] index{0i32}, less_than(index, len), ++index) {
+      for([i32 mut] index{0i32}, index < len, ++index) {
         self.append_word(text[index])
       }
     }
@@ -509,7 +509,7 @@ namespace std {
         [i32] selectionStart,
         [i32] selectionEnd,
         [string] text) {
-      len{count(text)}
+      len{text.count()}
       self.append_word(eventKind)
       self.append_word(4i32 + len)
       self.append_word(targetNodeId)
@@ -614,10 +614,10 @@ namespace std {
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([UiEventStream] self) {
       [mut] words{vector<i32>()}
-      len{count(self.records)}
+      len{self.records.count()}
       words.push(1i32)
       words.push(self.eventCount)
-      for([i32 mut] index{0i32}, less_than(index, len), ++index) {
+      for([i32 mut] index{0i32}, index < len, ++index) {
         words.push(self.records[index])
       }
       return(words)
@@ -646,7 +646,7 @@ namespace std {
       [mut] rectYs{self.rectYs}
       [mut] rectWidths{self.rectWidths}
       [mut] rectHeights{self.rectHeights}
-      nodeId{count(kinds)}
+      nodeId{kinds.count()}
       kinds.push(kind)
       parentIndices.push(parentIndex)
       paddingPxs.push(paddingPx)
@@ -741,25 +741,25 @@ namespace std {
     append_button([LayoutTree mut] self, [i32] parentIndex, [i32] textSizePx, [i32] paddingPx, [string] text) {
       return(self.append_leaf(
         parentIndex,
-        widget_text_width(textSizePx, text) + multiply(paddingPx, 2i32),
-        widget_text_height(textSizePx) + multiply(paddingPx, 2i32)
+        widget_text_width(textSizePx, text) + paddingPx * 2i32,
+        widget_text_height(textSizePx) + paddingPx * 2i32
       ))
     }
 
     [public effects(heap_alloc), return<i32>]
     append_input(
         [LayoutTree mut] self, [i32] parentIndex, [i32] textSizePx, [i32] paddingPx, [i32] minWidth, [string] text) {
-      contentWidth{widget_text_width(textSizePx, text) + multiply(paddingPx, 2i32)}
+      contentWidth{widget_text_width(textSizePx, text) + paddingPx * 2i32}
       return(self.append_leaf(
         parentIndex,
-        /std/math/max(minWidth, contentWidth),
-        widget_text_height(textSizePx) + multiply(paddingPx, 2i32)
+        max(minWidth, contentWidth),
+        widget_text_height(textSizePx) + paddingPx * 2i32
       ))
     }
 
     [public return<i32>]
     node_count([LayoutTree] self) {
-      return(count(self.kinds))
+      return(self.kinds.count())
     }
 
     [public return<i32>]
@@ -804,31 +804,31 @@ namespace std {
 
     [public return<void>]
     measure([LayoutTree mut] self) {
-      [i32 mut] nodeId{count(self.kinds) - 1i32}
-      while(greater_equal(nodeId, 0i32)) {
-        if(equal(self.kinds[nodeId], 1i32)) {
+      [i32 mut] nodeId{self.kinds.count() - 1i32}
+      while(nodeId >= 0i32) {
+        if(self.kinds[nodeId] == 1i32) {
           self.measuredWidths[nodeId] = self.minWidths[nodeId]
           self.measuredHeights[nodeId] = self.minHeights[nodeId]
         } else {
           [i32 mut] maxChildWidth{0i32}
           [i32 mut] totalChildHeight{0i32}
           [i32 mut] childCount{0i32}
-          totalNodes{count(self.kinds)}
-          for([i32 mut] childId{0i32}, less_than(childId, totalNodes), ++childId) {
-            if(equal(self.parentIndices[childId], nodeId)) {
-              maxChildWidth = /std/math/max(maxChildWidth, self.measuredWidths[childId])
+          totalNodes{self.kinds.count()}
+          for([i32 mut] childId{0i32}, childId < totalNodes, ++childId) {
+            if(self.parentIndices[childId] == nodeId) {
+              maxChildWidth = max(maxChildWidth, self.measuredWidths[childId])
               totalChildHeight = totalChildHeight + self.measuredHeights[childId]
               childCount = childCount + 1i32
             }
           }
-          gapCount{/std/math/max(0i32, childCount - 1i32)}
-          contentWidth{maxChildWidth + multiply(self.paddingPxs[nodeId], 2i32)}
+          gapCount{max(0i32, childCount - 1i32)}
+          contentWidth{maxChildWidth + self.paddingPxs[nodeId] * 2i32}
           contentHeight{
-            totalChildHeight + multiply(self.gapPxs[nodeId], gapCount) +
-            multiply(self.paddingPxs[nodeId], 2i32)
+            totalChildHeight + self.gapPxs[nodeId] * gapCount +
+            self.paddingPxs[nodeId] * 2i32
           }
-          self.measuredWidths[nodeId] = /std/math/max(self.minWidths[nodeId], contentWidth)
-          self.measuredHeights[nodeId] = /std/math/max(self.minHeights[nodeId], contentHeight)
+          self.measuredWidths[nodeId] = max(self.minWidths[nodeId], contentWidth)
+          self.measuredHeights[nodeId] = max(self.minHeights[nodeId], contentHeight)
         }
         --nodeId
       }
@@ -836,23 +836,23 @@ namespace std {
 
     [public return<void>]
     arrange([LayoutTree mut] self, [i32] rootX, [i32] rootY, [i32] rootWidth, [i32] rootHeight) {
-      if(equal(count(self.kinds), 0i32)) {
+      if(self.kinds.count() == 0i32) {
         return()
       }
 
       self.assign_rect(0i32, rootX, rootY, rootWidth, rootHeight)
 
-      totalNodes{count(self.kinds)}
-      for([i32 mut] nodeId{0i32}, less_than(nodeId, totalNodes), ++nodeId) {
-        if(equal(self.kinds[nodeId], 2i32)) {
+      totalNodes{self.kinds.count()}
+      for([i32 mut] nodeId{0i32}, nodeId < totalNodes, ++nodeId) {
+        if(self.kinds[nodeId] == 2i32) {
           paddingPx{self.paddingPxs[nodeId]}
           innerX{self.rectXs[nodeId] + paddingPx}
           innerY{self.rectYs[nodeId] + paddingPx}
-          innerWidth{/std/math/max(0i32, self.rectWidths[nodeId] - multiply(paddingPx, 2i32))}
+          innerWidth{max(0i32, self.rectWidths[nodeId] - paddingPx * 2i32)}
           [i32 mut] childY{innerY}
 
-          for([i32 mut] childId{0i32}, less_than(childId, totalNodes), ++childId) {
-            if(equal(self.parentIndices[childId], nodeId)) {
+          for([i32 mut] childId{0i32}, childId < totalNodes, ++childId) {
+            if(self.parentIndices[childId] == nodeId) {
               self.assign_rect(childId, innerX, childY, innerWidth, self.measuredHeights[childId])
               childY = childY + self.measuredHeights[childId] + self.gapPxs[nodeId]
             }
@@ -864,10 +864,10 @@ namespace std {
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([LayoutTree] self) {
       [mut] words{vector<i32>()}
-      totalNodes{count(self.kinds)}
+      totalNodes{self.kinds.count()}
       words.push(1i32)
       words.push(totalNodes)
-      for([i32 mut] nodeId{0i32}, less_than(nodeId, totalNodes), ++nodeId) {
+      for([i32 mut] nodeId{0i32}, nodeId < totalNodes, ++nodeId) {
         words.push(self.kinds[nodeId])
         words.push(self.parentIndices[nodeId])
         words.push(self.measuredWidths[nodeId])

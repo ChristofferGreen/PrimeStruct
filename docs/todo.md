@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4033
+- TODO-4034
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4034
 - TODO-4035
 - TODO-4042
 - TODO-4043
@@ -68,42 +67,42 @@ Task template:
 - TODO-4045
 - TODO-4046
 - TODO-4047
+- TODO-4048
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4033 through TODO-4035
+- Stdlib surface-style alignment: TODO-4034 through TODO-4035
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4033
-2. TODO-4034
-3. TODO-4035
-4. TODO-4042
-5. TODO-4043
-6. TODO-4044
-7. TODO-4045
-8. TODO-4046
-9. TODO-4047
-10. TODO-4048
-11. TODO-4049
-12. TODO-4050
-13. TODO-4052
-14. TODO-4058
-15. TODO-4053
-16. TODO-4055
-17. TODO-4054
-18. TODO-4056
-19. TODO-4057
-20. TODO-4059
+1. TODO-4034
+2. TODO-4035
+3. TODO-4042
+4. TODO-4043
+5. TODO-4044
+6. TODO-4045
+7. TODO-4046
+8. TODO-4047
+9. TODO-4048
+10. TODO-4049
+11. TODO-4050
+12. TODO-4052
+13. TODO-4058
+14. TODO-4053
+15. TODO-4055
+16. TODO-4054
+17. TODO-4056
+18. TODO-4057
+19. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -122,7 +121,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -375,15 +374,3 @@ Task template:
     - The style cleanup does not change codec behavior, file-format semantics, or error mapping as part of the same slice.
     - Any behavior-affecting codec or parser follow-up discovered during the audit is captured as separate TODO work rather than folded into the style cleanup.
   - stop_rule: Stop once the style-only `/std/image` cleanup boundary is clear and the public-facing layer is aligned without mixing in codec-behavior changes.
-
-- [ ] TODO-4033: Audit /std/ui for example-style readability and convert internal collection workflows to preferred surface style
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026
-  - scope: Audit `/std/ui` for public and high-level internal code that still uses canonical helper-heavy spellings, then convert collection-heavy workflows to the preferred readable surface style shown in `docs/CodeExamples.md`.
-  - acceptance:
-    - `/std/ui` high-level flows use readable operators, control flow, and collection interactions where the language supports them.
-    - Collection-heavy UI helpers prefer the intended surface syntax instead of canonical plumbing-style calls when readability improves.
-    - Any UI cleanup that would require ownership, runtime, or behavior changes is split into a separate follow-up item.
-  - stop_rule: Stop once the high-level `/std/ui` workflows read like standard library example code and any deeper architectural cleanup has been separated from the style pass.
