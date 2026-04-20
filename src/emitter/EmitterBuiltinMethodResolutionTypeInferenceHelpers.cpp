@@ -5,6 +5,18 @@
 #include <functional>
 
 namespace primec::emitter {
+namespace {
+
+std::string resolvedCollectionHelperName(const Expr &candidate) {
+  std::string normalized = resolveExprPath(candidate);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  return normalized;
+}
+
+} // namespace
+
 std::string inferMethodResolutionPrimitiveTypeName(
     const Expr &expr,
     const MethodResolutionMetadataView &view,
@@ -72,10 +84,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
         candidate.args.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
+    const std::string normalized = resolvedCollectionHelperName(candidate);
     if (normalized != "std/collections/vector/at" &&
         normalized != "std/collections/vector/at_unsafe") {
       return false;
@@ -145,10 +154,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
+    const std::string normalized = resolvedCollectionHelperName(candidate);
     if (normalized.rfind("map/", 0) != 0 ||
         !isCanonicalMapAccessHelperName(
             std::string_view(normalized).substr(std::string_view("map/").size()))) {
@@ -165,10 +171,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
+    const std::string normalized = resolvedCollectionHelperName(candidate);
     if (normalized != "std/collections/vector/at" &&
         normalized != "std/collections/vector/at_unsafe") {
       return false;
@@ -188,10 +191,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
+    const std::string normalized = resolvedCollectionHelperName(candidate);
     return normalized == "std/collections/vector/count" ||
            normalized == "std/collections/vector/capacity";
   };
@@ -228,10 +228,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
+    const std::string normalized = resolvedCollectionHelperName(candidate);
     if (normalized != "std/collections/vector/at" &&
         normalized != "std/collections/vector/at_unsafe") {
       return "";
@@ -248,10 +245,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
+    const std::string normalized = resolvedCollectionHelperName(candidate);
     if (normalized.rfind("std/collections/map/", 0) != 0 ||
         !isCanonicalMapAccessHelperName(
             std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {
@@ -285,10 +279,7 @@ std::string inferMethodResolutionPrimitiveTypeName(
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
-    if (!normalized.empty() && normalized.front() == '/') {
-      normalized.erase(normalized.begin());
-    }
+    const std::string normalized = resolvedCollectionHelperName(candidate);
     if (normalized.rfind("std/collections/map/", 0) != 0 ||
         !isCanonicalMapAccessHelperName(
             std::string_view(normalized).substr(std::string_view("std/collections/map/").size()))) {

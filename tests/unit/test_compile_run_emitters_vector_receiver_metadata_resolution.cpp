@@ -456,6 +456,51 @@ TEST_CASE("C++ emitter helper handles explicit removed vector slash count capaci
   expectResult("/std/collections/vector/capacity");
 }
 
+TEST_CASE("C++ emitter helper handles parser-shaped canonical vector count capacity methods") {
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/vector/count";
+  primec::Definition canonicalCapacityDef;
+  canonicalCapacityDef.fullPath = "/std/collections/vector/capacity";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalCountDef.fullPath, &canonicalCountDef},
+      {canonicalCapacityDef.fullPath, &canonicalCapacityDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  auto expectResolved = [&](const char *methodName) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.namespacePrefix = "/std/collections/vector";
+    call.args = {receiver};
+    call.argNames = {std::nullopt};
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK_FALSE(resolved.empty());
+    CHECK(resolved.find(methodName) != std::string::npos);
+  };
+
+  expectResolved("count");
+  expectResolved("capacity");
+}
+
 TEST_CASE("C++ emitter helper handles cross-path vector slash count capacity fallback") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
