@@ -56,22 +56,24 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4105
+- TODO-4109
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4110
 - TODO-4106
 - TODO-4107
 
 ### Priority Lanes (Current)
 
-- Skipped doctest debt: TODO-4105, TODO-4106, TODO-4107
+- Skipped doctest debt: TODO-4109, TODO-4110, TODO-4106, TODO-4107
 
 ### Execution Queue (Recommended)
 
-1. TODO-4105
-2. TODO-4106
-3. TODO-4107
+1. TODO-4109
+2. TODO-4110
+3. TODO-4106
+4. TODO-4107
 
 ### PrimeStruct Coverage Snapshot
 
@@ -107,7 +109,7 @@ Task template:
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | TODO-4105, TODO-4106, TODO-4107 |
+| Release benchmark/example suite stability and doctest governance | TODO-4109, TODO-4110, TODO-4106, TODO-4107 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -170,10 +172,11 @@ Task template:
 
 ### Skipped Doctest Debt Summary
 
-- Retained `doctest::skip(true)` coverage is now tracked in three active
-  clusters: `TODO-4105` for VM math/maps runtime coverage, `TODO-4106` for
-  collection compatibility and alias-precedence coverage, and `TODO-4107` for
-  residual IR/docs/gfx/smoke skips.
+- Retained `doctest::skip(true)` coverage is now tracked in four active
+  clusters: `TODO-4109` for the legacy VM map runtime suite, `TODO-4110` for
+  the remaining VM support-matrix math skips, `TODO-4106` for collection
+  compatibility and alias-precedence coverage, and `TODO-4107` for residual
+  IR/docs/gfx/smoke skips.
 - New skipped doctest coverage must either attach to one of those active leaves
   or replace them with a narrower explicit follow-up before it lands.
 - The success condition for each lane is re-enable-or-delete; indefinite
@@ -181,25 +184,40 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4105: Re-enable or prune skipped VM math and map suites
+- [ ] TODO-4109: Re-enable or prune skipped legacy VM map suite
   - owner: ai
   - created_at: 2026-04-20
   - phase: Skipped Doctest Debt
   - depends_on: none
-  - scope: Audit the bulk-skipped VM math and VM map runtime suites, re-enable
-      the cases that now pass, and delete or split stale coverage so VM runtime
-      behavior is no longer hidden behind the current umbrella skip clusters.
+  - scope: Audit the remaining skipped legacy cases in
+      `tests/unit/test_compile_run_vm_maps.cpp`, re-enable the cases that still
+      add unique VM runtime signal, and delete or split stale duplicates now
+      covered by the import-aware map conformance suites.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_math.cpp` and
-      `tests/unit/test_compile_run_vm_maps.cpp` no longer rely on their current
-      bulk `doctest::skip(true)` clusters.
-    - Any residual VM runtime skips in adjacent math/map runtime files are
-      either removed or reduced to smaller focused follow-up leaves with clear
-      backend blockers.
-    - The resulting queue/docs state stays aligned with the reduced VM skip
-      surface.
-  - stop_rule: Stop once the current VM math/maps umbrella skip clusters are
-      gone; split any residual backend-specific blockers into narrower leaves.
+    - `tests/unit/test_compile_run_vm_maps.cpp` no longer carries stale skipped
+      cases that are already covered elsewhere in active VM map coverage.
+    - Any residual skipped map cases in that file are narrowed to uniquely
+      valuable blockers rather than the old legacy umbrella.
+    - The queue/docs state stays aligned with the reduced VM map skip surface.
+  - stop_rule: Stop once the legacy VM map suite no longer hides stale
+      duplicate coverage behind its retained skips.
+
+- [ ] TODO-4110: Re-enable or prune remaining VM support-matrix math skips
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Skipped Doctest Debt
+  - depends_on: none
+  - scope: Audit the remaining skipped support-matrix and quaternion/matrix math
+      cases in `tests/unit/test_compile_run_vm_math.cpp`, then re-enable or
+      delete stale coverage so only current VM-specific blockers remain.
+  - acceptance:
+    - `tests/unit/test_compile_run_vm_math.cpp` no longer carries the remaining
+      support-matrix skip cluster without explicit queue ownership.
+    - Any residual VM math skips are reduced to narrow blockers with clear
+      backend rationale instead of one broad umbrella.
+    - The queue/docs state stays aligned with the narrowed VM math skip surface.
+  - stop_rule: Stop once the remaining VM support-matrix math skips are either
+      active, deleted, or narrowed into explicit blocker-owned follow-ups.
 
 - [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites
   - owner: ai
