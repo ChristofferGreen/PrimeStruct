@@ -247,6 +247,76 @@ TEST_CASE("ir lowerer setup type helper prefers canonical bare vector access met
   expectResolvedMethod("at_unsafe", &stdAtUnsafeDef);
 }
 
+TEST_CASE("ir lowerer setup type helper resolves parser-shaped canonical vector methods") {
+  primec::Definition stdCountDef;
+  stdCountDef.fullPath = "/std/collections/vector/count";
+  primec::Definition stdCapacityDef;
+  stdCapacityDef.fullPath = "/std/collections/vector/capacity";
+  primec::Definition stdAtDef;
+  stdAtDef.fullPath = "/std/collections/vector/at";
+  primec::Definition stdAtUnsafeDef;
+  stdAtUnsafeDef.fullPath = "/std/collections/vector/at_unsafe";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {stdCountDef.fullPath, &stdCountDef},
+      {stdCapacityDef.fullPath, &stdCapacityDef},
+      {stdAtDef.fullPath, &stdAtDef},
+      {stdAtUnsafeDef.fullPath, &stdAtUnsafeDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "items";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo itemsLocal;
+  itemsLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("items", itemsLocal);
+
+  auto expectResolvedMethod = [&](const char *methodName,
+                                  const std::vector<primec::Expr> &args,
+                                  const primec::Definition *expectedDef) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.namespacePrefix = "/std/collections/vector";
+    methodCall.isMethodCall = true;
+    methodCall.args = args;
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        locals,
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &expr) {
+          if (!expr.namespacePrefix.empty()) {
+            return expr.namespacePrefix + "/" + expr.name;
+          }
+          return expr.name;
+        },
+        defMap,
+        error);
+    CHECK(resolved == expectedDef);
+    CHECK(error.empty());
+  };
+
+  expectResolvedMethod("count", {receiverExpr}, &stdCountDef);
+  expectResolvedMethod("capacity", {receiverExpr}, &stdCapacityDef);
+  expectResolvedMethod("at", {receiverExpr, indexExpr}, &stdAtDef);
+  expectResolvedMethod("at_unsafe", {receiverExpr, indexExpr}, &stdAtUnsafeDef);
+}
+
 TEST_CASE("ir lowerer setup type helper prefers canonical bare vector mutator methods") {
   primec::Definition vectorPushDef;
   vectorPushDef.fullPath = "/vector/push";

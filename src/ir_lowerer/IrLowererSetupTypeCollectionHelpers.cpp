@@ -290,6 +290,12 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (expr.name.empty()) {
     return false;
   }
+  if (resolvePublishedStdlibSurfaceExprMemberName(
+          expr,
+          StdlibSurfaceId::CollectionsVectorHelpers,
+          helperNameOut)) {
+    return true;
+  }
   std::string normalized = expr.name;
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(0, 1);
@@ -491,20 +497,28 @@ bool isExplicitVectorAccessHelperPath(const std::string &path) {
 }
 
 bool isExplicitVectorAccessHelperExpr(const Expr &expr) {
-  return expr.kind == Expr::Kind::Call && !expr.name.empty() &&
-         isExplicitVectorAccessHelperPath(expr.name);
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string helperName;
+  return resolvePublishedStdlibSurfaceExprMemberName(
+             expr,
+             StdlibSurfaceId::CollectionsVectorHelpers,
+             helperName) &&
+         (helperName == "at" || helperName == "at_unsafe");
 }
 
 bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (isExplicitVectorAccessHelperExpr(expr)) {
-    return true;
-  }
-  const std::string normalizedPath = normalizeCollectionHelperPath(expr.name);
-  return normalizedPath == "/std/collections/vector/count" ||
-         normalizedPath == "/std/collections/vector/capacity";
+  std::string helperName;
+  return resolvePublishedStdlibSurfaceExprMemberName(
+             expr,
+             StdlibSurfaceId::CollectionsVectorHelpers,
+             helperName) &&
+         (helperName == "at" || helperName == "at_unsafe" ||
+          helperName == "count" || helperName == "capacity");
 }
 
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
