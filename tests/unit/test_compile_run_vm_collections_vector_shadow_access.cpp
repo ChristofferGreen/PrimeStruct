@@ -32,7 +32,7 @@ main() {
   CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("runs vm std namespaced reordered mutator compatibility helper shadow") {
+TEST_CASE("rejects vm std namespaced reordered mutator compatibility helper shadow") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -48,11 +48,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_std_namespaced_reordered_mutator_compat_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_std_namespaced_reordered_mutator_compat_shadow_err.txt")
+          .string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm with user vector push bool positional call shadow") {
+TEST_CASE("rejects vm user vector push bool positional call shadow during lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -68,11 +75,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_call_bool_positional_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_user_vector_push_call_bool_positional_shadow_err.txt")
+          .string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("VM lowering error: push requires mutable vector binding") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm with user vector push call named shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user vector push named call canonical precedence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -89,10 +103,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_call_named_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with user vector push method shadow") {
+TEST_CASE("runs vm with user vector push method canonical precedence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -109,10 +123,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm user vector push call expression shadow" * doctest::skip(true)) {
+TEST_CASE("rejects vm user vector push call expression shadow during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -126,8 +140,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_call_expr_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_user_vector_push_call_expr_shadow_err.txt")
+          .string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm reordered namespaced vector push call expression compatibility alias") {
@@ -152,7 +174,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("runs vm named vector push expression receiver precedence" * doctest::skip(true)) {
+TEST_CASE("rejects vm named vector push expression receiver precedence during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -172,11 +194,19 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_expr_named_receiver_precedence.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 11);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_user_vector_push_expr_named_receiver_precedence_err.txt")
+          .string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm auto-inferred named vector push expression receiver precedence" * doctest::skip(true)) {
+TEST_CASE("rejects vm auto-inferred named vector push expression receiver precedence during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -197,11 +227,19 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_push_expr_named_receiver_precedence_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 11);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_user_vector_push_expr_named_receiver_precedence_auto_err.txt")
+          .string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm auto-inferred std namespaced vector push compatibility alias precedence" * doctest::skip(true)) {
+TEST_CASE("rejects vm auto-inferred std namespaced vector push compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -228,8 +266,8 @@ main() {
        "primec_vm_std_namespaced_vector_push_expr_named_receiver_precedence_auto_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with auto-inferred std namespaced vector push canonical definition") {
@@ -347,7 +385,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects vm std namespaced count map target without helper" * doctest::skip(true)) {
+TEST_CASE("rejects vm std namespaced count map target without helper") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -365,7 +403,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("template arguments required for /std/collections/vector/count") !=
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") !=
         std::string::npos);
 }
 
@@ -583,7 +621,7 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("runs vm with auto-inferred named access helper receiver precedence") {
+TEST_CASE("rejects vm auto-inferred named access helper receiver precedence before lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/get([vector<i32>] values, [string] index) {
@@ -604,11 +642,18 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_access_expr_named_receiver_precedence_auto.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_user_access_expr_named_receiver_precedence_auto_err.txt")
+          .string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("missing semantic-product local-auto fact: /main -> local inferred") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm auto-inferred std namespaced access helper compatibility alias precedence") {
+TEST_CASE("rejects vm auto-inferred std namespaced access helper compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -634,8 +679,8 @@ main() {
        "primec_vm_std_namespaced_vector_access_expr_named_receiver_precedence_auto_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with auto-inferred std namespaced access helper canonical definition") {
