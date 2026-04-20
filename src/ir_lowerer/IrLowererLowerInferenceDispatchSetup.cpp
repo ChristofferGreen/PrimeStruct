@@ -66,6 +66,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       const bool hasBorrowedMapHelperAlias =
           resolveBorrowedMapHelperAliasName(expr, borrowedMapHelperName);
       if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
+          (!stateInOut.resolveDefinitionCall || stateInOut.resolveDefinitionCall(expr) == nullptr) &&
           !hasBorrowedMapHelperAlias &&
           (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
            canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||

@@ -172,6 +172,7 @@
         if (!expr.isMethodCall && !expr.args.empty()) {
           std::string canonicalMapHelperName;
           if (resolveMapHelperAliasName(expr, canonicalMapHelperName) &&
+              resolveDefinitionCall(expr) == nullptr &&
               (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
                canonicalMapHelperName == "tryAt" ||
                canonicalMapHelperName == "insert") &&

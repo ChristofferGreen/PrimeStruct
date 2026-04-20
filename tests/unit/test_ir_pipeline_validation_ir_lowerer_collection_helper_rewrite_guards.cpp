@@ -62,4 +62,40 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer direct expr and inference rewrites guard explicit map defs") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path emitExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  const std::filesystem::path inferenceDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInferenceDispatchSetup.cpp";
+
+  REQUIRE(std::filesystem::exists(emitExprPath));
+  REQUIRE(std::filesystem::exists(inferenceDispatchPath));
+
+  const std::string emitExprSource = readText(emitExprPath);
+  const std::string inferenceDispatchSource = readText(inferenceDispatchPath);
+
+  CHECK(emitExprSource.find("resolveMapHelperAliasName(expr, canonicalMapHelperName) &&") !=
+        std::string::npos);
+  CHECK(emitExprSource.find("resolveDefinitionCall(expr) == nullptr &&") != std::string::npos);
+  CHECK(inferenceDispatchSource.find("resolveMapHelperAliasName(expr, canonicalMapHelperName) &&") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSource.find(
+            "(!stateInOut.resolveDefinitionCall || stateInOut.resolveDefinitionCall(expr) == nullptr) &&") !=
+        std::string::npos);
+}
+
 TEST_SUITE_END();
