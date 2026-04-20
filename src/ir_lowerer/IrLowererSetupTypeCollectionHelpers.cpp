@@ -661,6 +661,13 @@ bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,
   return true;
 }
 
+bool isPublishedStdlibSurfaceLoweringPath(std::string_view path,
+                                          StdlibSurfaceId surfaceId) {
+  const auto *metadata = findPublishedStdlibSurfaceMetadata(path, surfaceId);
+  return metadata != nullptr &&
+         matchesRegistrySpellingSet(metadata->loweringSpellings, path);
+}
+
 bool isCanonicalPublishedStdlibSurfaceHelperPath(std::string_view path,
                                                  StdlibSurfaceId surfaceId) {
   const auto *metadata = findPublishedStdlibSurfaceMetadata(path, surfaceId);

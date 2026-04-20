@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4096
+- TODO-4041
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -66,28 +66,27 @@ Task template:
 - TODO-4033
 - TODO-4034
 - TODO-4035
-- TODO-4096
 - TODO-4041
 
 ### Priority Lanes (Current)
 
 - Stdlib surface-style alignment: TODO-4030 through TODO-4035
-- Stdlib bridge consolidation: TODO-4096, TODO-4041
+- Stdlib bridge consolidation: TODO-4041
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4096
-2. TODO-4041
-3. TODO-4042
-4. TODO-4051
-5. TODO-4043
-6. TODO-4044
-7. TODO-4045
-8. TODO-4046
-9. TODO-4047
-10. TODO-4048
+1. TODO-4041
+2. TODO-4042
+3. TODO-4051
+4. TODO-4043
+5. TODO-4044
+6. TODO-4045
+7. TODO-4046
+8. TODO-4047
+9. TODO-4048
+10. TODO-4049
 11. TODO-4049
 12. TODO-4050
 13. TODO-4052
@@ -111,7 +110,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4096, TODO-4041 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4041 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -131,7 +130,7 @@ Task template:
 | Semantic-product-authority conformance | none |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | none |
-| Lowerer/source-composition contract coverage | TODO-4096 |
+| Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -183,7 +182,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4055, TODO-4096
+  - depends_on: TODO-4055
   - scope: Remove the public `/std/gfx/experimental/*` namespace once the canonical `/std/gfx/*` surface and bridge-backed lowering/method resolution paths cover the same behavior and any needed compatibility window has been exercised.
   - acceptance:
     - Canonical `/std/gfx/*` is the only remaining public gfx namespace for the retired experimental surface area.
@@ -267,7 +266,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4048, TODO-4096
+  - depends_on: TODO-4048
   - scope: Refactor the collection-sensitive lowering paths for `vector` and `map` so they dispatch on semantic collection surface IDs rather than reconstructing collection meaning from `/std/collections/...` helper paths.
   - acceptance:
     - Production lowerer logic for vector/map-sensitive calls dispatches on semantic collection surface IDs.
@@ -359,23 +358,11 @@ Task template:
     - `docs/todo.md` reflects that boundary across the vector/map cutover tasks instead of leaving scope implicit.
   - stop_rule: Stop once the vector/map bridge boundary is explicit enough to guide implementation and validation slices; split any broader stdlib bridge scoping beyond vector/map into separate tasks.
 
-- [ ] TODO-4096: Finish late map insert and experimental helper dispatch migration after the metadata cutover
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Stdlib Bridge Consolidation
-  - depends_on: none
-  - scope: Finish the remaining post-`TODO-4095` lowerer cleanup by replacing the late expression-emission and native-tail map insert / experimental helper dispatch tables that still branch on raw stdlib helper spellings, so the remaining collection bridge behavior no longer mixes metadata-driven helper routing with hand-maintained late-path lists.
-  - acceptance:
-    - Remaining late map insert and experimental map helper dispatch in native-tail / expression emission resolves through shared bridge metadata or a single narrowly documented helper adapter instead of duplicated raw stdlib path tables.
-    - Focused lowering coverage confirms explicit map insert and experimental helper spellings still lower identically after the remaining late dispatch swap.
-    - Any residual helper family that still cannot move, especially if it needs generated struct-path synthesis rather than helper classification, is left behind as an explicit narrowly scoped follow-up instead of staying hidden in broad path tables.
-  - stop_rule: Stop once the remaining late map insert / experimental helper dispatch tables are centralized off raw helper string matching; split any deeper implementation-path synthesis or backend-specific fallback into a separate leaf instead of keeping a broad mixed task.
-
 - [ ] TODO-4041: Retire duplicated collection helper compatibility tables after bridge parity lands
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib Bridge Consolidation
-  - depends_on: TODO-4096
+  - depends_on: none
   - scope: Remove the remaining duplicated collection helper compatibility tables and canonical-to-experimental mapping lists once the shared stdlib bridge and semantic surface-ID flow cover the current vector/map behavior.
   - acceptance:
     - Duplicated collection helper compatibility tables that are superseded by the shared bridge are deleted from production code.

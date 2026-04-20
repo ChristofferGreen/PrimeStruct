@@ -41,15 +41,18 @@
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
             return false;
           }
-          auto matchesGeneratedMapInsertPath = [&](const std::string &resolvedPath) {
-            return resolvedPath == "/std/collections/mapInsert" ||
-                   resolvedPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
-                   resolvedPath == "/std/collections/experimental_map/mapInsert" ||
-                   resolvedPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
-                   resolvedPath == "/std/collections/experimental_map/mapInsertRef" ||
-                   resolvedPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
+          auto matchesPublishedMapInsertPath = [&](const std::string &resolvedPath) {
+            std::string helperName;
+            return ir_lowerer::isPublishedStdlibSurfaceLoweringPath(
+                       resolvedPath,
+                       primec::StdlibSurfaceId::CollectionsMapHelpers) &&
+                   ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                       resolvedPath,
+                       primec::StdlibSurfaceId::CollectionsMapHelpers,
+                       helperName) &&
+                   (helperName == "insert" || helperName == "insert_ref");
           };
-          if (matchesGeneratedMapInsertPath(resolveExprPath(callExpr))) {
+          if (matchesPublishedMapInsertPath(resolveExprPath(callExpr))) {
             return false;
           }
 
@@ -157,18 +160,8 @@
           };
           const auto targetInfo =
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn, inferCallMapTargetInfo);
-          auto matchesBuiltinMapInsertPath = [&](const std::string &resolvedPath) {
-            return resolvedPath == "/std/collections/map/insert" ||
-                   resolvedPath.rfind("/std/collections/map/insert__", 0) == 0 ||
-                   resolvedPath == "/std/collections/mapInsert" ||
-                   resolvedPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
-                   resolvedPath == "/std/collections/experimental_map/mapInsert" ||
-                   resolvedPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
-                   resolvedPath == "/std/collections/experimental_map/mapInsertRef" ||
-                   resolvedPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
-          };
           if (!targetInfo.isMapTarget &&
-              !matchesBuiltinMapInsertPath(resolveExprPath(callExpr))) {
+              !matchesPublishedMapInsertPath(resolveExprPath(callExpr))) {
             return false;
           }
 

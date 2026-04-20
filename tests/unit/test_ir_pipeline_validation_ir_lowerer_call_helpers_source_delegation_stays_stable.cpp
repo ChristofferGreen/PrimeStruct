@@ -488,17 +488,25 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
+  CHECK(setupHelpersHeader.find("bool isPublishedStdlibSurfaceLoweringPath(") !=
+        std::string::npos);
   CHECK(setupHelpersHeader.find("bool isCanonicalPublishedStdlibSurfaceHelperPath(") !=
         std::string::npos);
   CHECK(setupHelpersSource.find("findPublishedStdlibSurfaceMetadata(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("matchesRegistrySpellingSet(metadata->loweringSpellings, path)") !=
         std::string::npos);
   CHECK(setupHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, path)") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
+  CHECK(collectionHelpersSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
+        std::string::npos);
   CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
         std::string::npos);

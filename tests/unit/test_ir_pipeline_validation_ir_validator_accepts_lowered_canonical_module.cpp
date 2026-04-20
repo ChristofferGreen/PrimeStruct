@@ -425,6 +425,29 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
   CHECK(helperName.empty());
 }
 
+TEST_CASE("ir lowerer stdlib surface metadata recognizes experimental map lowering helpers") {
+  const auto *countMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/experimental_map/mapCount");
+  REQUIRE(countMetadata != nullptr);
+  CHECK(countMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *countMetadata, "/std/collections/experimental_map/mapCount") == "count");
+
+  const auto *insertMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/experimental_map/mapInsert");
+  REQUIRE(insertMetadata != nullptr);
+  CHECK(insertMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *insertMetadata, "/std/collections/experimental_map/mapInsert") == "insert");
+
+  const auto *atUnsafeMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/experimental_map/mapAtUnsafe");
+  REQUIRE(atUnsafeMetadata != nullptr);
+  CHECK(atUnsafeMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *atUnsafeMetadata, "/std/collections/experimental_map/mapAtUnsafe") == "at_unsafe");
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*

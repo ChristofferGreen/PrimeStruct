@@ -261,7 +261,13 @@
                helperName != "tryAt" && helperName != "insert")) {
             return false;
           }
-          if (resolveDirectHelperPath(callExpr).rfind("/std/collections/experimental_map/", 0) == 0) {
+          const std::string directHelperPath = resolveDirectHelperPath(callExpr);
+          if (ir_lowerer::isPublishedStdlibSurfaceLoweringPath(
+                  directHelperPath,
+                  primec::StdlibSurfaceId::CollectionsMapHelpers) &&
+              !ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                  directHelperPath,
+                  primec::StdlibSurfaceId::CollectionsMapHelpers)) {
             return false;
           }
           if (helperName != "insert" && isRootedAliasSamePathCountLikeCall(callExpr)) {

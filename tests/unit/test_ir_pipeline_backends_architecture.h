@@ -112,11 +112,17 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"count_ref\"") != std::string::npos);
   CHECK(source.find("\"insert_ref\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/mapInsert\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapCount\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapCountRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapContains\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapContainsRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapTryAt\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapTryAtRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapAt\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapAtRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapAtUnsafe\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapAtUnsafeRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_map/mapInsert\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapInsertRef\"") != std::string::npos);
   CHECK(source.find("stripResolvedPathSpecializationSuffix(") != std::string::npos);
   CHECK(source.find("resolveCollectionsVectorMemberName(") != std::string::npos);

@@ -48,6 +48,8 @@ bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const st
 bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,
                                              StdlibSurfaceId surfaceId,
                                              std::string &memberNameOut);
+bool isPublishedStdlibSurfaceLoweringPath(std::string_view path,
+                                          StdlibSurfaceId surfaceId);
 bool isCanonicalPublishedStdlibSurfaceHelperPath(std::string_view path,
                                                  StdlibSurfaceId surfaceId);
 
