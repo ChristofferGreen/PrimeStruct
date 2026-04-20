@@ -246,6 +246,15 @@
             }
             return candidate.name;
           };
+          auto isRootedAliasSamePathCountLikeCall = [&](const Expr &candidate) {
+            const std::string rawPath = resolveDirectHelperPath(candidate);
+            if (rawPath.rfind("/map/", 0) != 0) {
+              return false;
+            }
+            const std::string resolvedPath = resolveExprPath(candidate);
+            return normalizeCollectionHelperPath(rawPath) ==
+                   normalizeCollectionHelperPath(resolvedPath);
+          };
           std::string helperName;
           if (!resolveMapHelperAliasName(callExpr, helperName) ||
               (helperName != "count" && helperName != "contains" &&
@@ -253,6 +262,9 @@
             return false;
           }
           if (resolveDirectHelperPath(callExpr).rfind("/std/collections/experimental_map/", 0) == 0) {
+            return false;
+          }
+          if (helperName != "insert" && isRootedAliasSamePathCountLikeCall(callExpr)) {
             return false;
           }
           if (resolveDefinitionCall(callExpr) != nullptr) {

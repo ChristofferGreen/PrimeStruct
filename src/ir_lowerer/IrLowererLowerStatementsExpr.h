@@ -1,3 +1,77 @@
+        auto resolveDirectHelperPath = [&](const Expr &callExpr) {
+          if (!callExpr.name.empty() && callExpr.name.front() == '/') {
+            return callExpr.name;
+          }
+          if (!callExpr.namespacePrefix.empty()) {
+            std::string scoped = callExpr.namespacePrefix;
+            if (!scoped.empty() && scoped.front() != '/') {
+              scoped.insert(scoped.begin(), '/');
+            }
+            return scoped + "/" + callExpr.name;
+          }
+          return callExpr.name;
+        };
+        auto isDirectHelperDefinitionFamily = [&](const std::string &rawPath,
+                                                  const Definition &callee) {
+          return callee.fullPath == rawPath ||
+                 callee.fullPath.rfind(rawPath + "__", 0) == 0 ||
+                 normalizeCollectionHelperPath(rawPath) ==
+                     normalizeCollectionHelperPath(callee.fullPath);
+        };
+        auto findDirectHelperDefinition = [&](const std::string &rawPath) -> const Definition * {
+          auto defIt = defMap.find(rawPath);
+          if (defIt != defMap.end()) {
+            return defIt->second;
+          }
+          const std::string specializedPrefix = rawPath + "__t";
+          const std::string overloadPrefix = rawPath + "__ov";
+          for (const auto &[path, def] : defMap) {
+            if (def == nullptr) {
+              continue;
+            }
+            if (path.rfind(specializedPrefix, 0) == 0 ||
+                path.rfind(overloadPrefix, 0) == 0) {
+              return def;
+            }
+          }
+          return nullptr;
+        };
+        if (!expr.isMethodCall) {
+          const std::string rawPath = resolveDirectHelperPath(expr);
+          const Definition *directCallee = resolveDefinitionCall(expr);
+          if (directCallee == nullptr &&
+              (rawPath.rfind("/map/", 0) == 0 ||
+               rawPath.rfind("/std/collections/map/", 0) == 0)) {
+            directCallee = findDirectHelperDefinition(rawPath);
+          }
+          if (directCallee != nullptr) {
+            std::string helperName;
+            if (resolveMapHelperAliasName(expr, helperName) &&
+                (helperName == "count" || helperName == "contains" ||
+                 helperName == "tryAt") &&
+                (rawPath.rfind("/map/", 0) == 0 ||
+                 rawPath.rfind("/std/collections/map/", 0) == 0) &&
+                isDirectHelperDefinitionFamily(rawPath, *directCallee)) {
+              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
+            std::string accessName;
+            if (getBuiltinArrayAccessName(expr, accessName) &&
+                expr.args.size() == 2 &&
+                rawPath.rfind("/std/collections/map/", 0) == 0 &&
+                isDirectHelperDefinitionFamily(rawPath, *directCallee)) {
+              error =
+                  "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
+                  resolveExprPath(expr) + ", name=" + expr.name +
+                  ", args=" + std::to_string(expr.args.size()) +
+                  ", method=" + std::string(expr.isMethodCall ? "true" : "false") + ")";
+              return false;
+            }
+          }
+        }
+
         std::string accessName;
         if (getBuiltinArrayAccessName(expr, accessName)) {
           if (expr.args.size() != 2) {

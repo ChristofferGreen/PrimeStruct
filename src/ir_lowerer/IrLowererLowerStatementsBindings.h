@@ -1,5 +1,36 @@
   emitStatement = [&](const Expr &stmtInput, LocalMap &localsIn) -> bool {
     Expr normalizedStmt = stmtInput;
+    auto resolveDirectMapHelperPath = [&](const Expr &exprIn) {
+      if (!exprIn.name.empty() && exprIn.name.front() == '/') {
+        return exprIn.name;
+      }
+      if (!exprIn.namespacePrefix.empty()) {
+        std::string scoped = exprIn.namespacePrefix;
+        if (!scoped.empty() && scoped.front() != '/') {
+          scoped.insert(scoped.begin(), '/');
+        }
+        return scoped + "/" + exprIn.name;
+      }
+      return exprIn.name;
+    };
+    auto findDirectMapHelperDefinition = [&](const std::string &rawPath) -> const Definition * {
+      auto defIt = defMap.find(rawPath);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+      const std::string specializedPrefix = rawPath + "__t";
+      const std::string overloadPrefix = rawPath + "__ov";
+      for (const auto &[path, def] : defMap) {
+        if (def == nullptr) {
+          continue;
+        }
+        if (path.rfind(specializedPrefix, 0) == 0 ||
+            path.rfind(overloadPrefix, 0) == 0) {
+          return def;
+        }
+      }
+      return nullptr;
+    };
     std::function<void(Expr &)> canonicalizeExplicitBuiltinMapHelpers =
         [&](Expr &exprIn) {
           for (auto &argExpr : exprIn.args) {
@@ -20,6 +51,12 @@
           if (exprIn.name.find('/') == std::string::npos &&
               exprIn.namespacePrefix.empty() &&
               exprIn.templateArgs.empty()) {
+            return;
+          }
+          const std::string rawPath = resolveDirectMapHelperPath(exprIn);
+          if ((rawPath.rfind("/map/", 0) == 0 ||
+               rawPath.rfind("/std/collections/map/", 0) == 0) &&
+              findDirectMapHelperDefinition(rawPath) != nullptr) {
             return;
           }
           exprIn.name = helperName;

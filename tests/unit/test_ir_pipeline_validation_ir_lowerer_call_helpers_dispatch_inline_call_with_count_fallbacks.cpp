@@ -721,6 +721,69 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
       rootedTryAt);
 }
 
+TEST_CASE("ir lowerer call helpers keep direct map access defs on builtin fallback") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  auto isMapReceiver = [](const primec::Expr &receiverExpr) {
+    return receiverExpr.kind == primec::Expr::Kind::Name ||
+           receiverExpr.kind == primec::Expr::Kind::Call;
+  };
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  auto expectBuiltinFallback = [&](const std::string &callPath,
+                                   const std::string &calleePath) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = callPath;
+    callExpr.args = {valuesName, keyLiteral};
+
+    primec::Definition callee;
+    callee.fullPath = calleePath;
+
+    int resolveMethodCalls = 0;
+    int resolveDefinitionCalls = 0;
+    int emitCalls = 0;
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+              callExpr,
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              isMapReceiver,
+              [&](const primec::Expr &) -> const primec::Definition * {
+                ++resolveMethodCalls;
+                return &callee;
+              },
+              [&](const primec::Expr &) -> const primec::Definition * {
+                ++resolveDefinitionCalls;
+                return &callee;
+              },
+              [&](const primec::Expr &, const primec::Definition &) {
+                ++emitCalls;
+                return true;
+              },
+              error) == Result::NotHandled);
+    CHECK(error == "stale");
+    CHECK(resolveMethodCalls == 0);
+    CHECK(resolveDefinitionCalls == 1);
+    CHECK(emitCalls == 0);
+  };
+
+  expectBuiltinFallback("/map/at", "/map/at");
+  expectBuiltinFallback("/map/at_unsafe", "/map/at_unsafe");
+  expectBuiltinFallback("/std/collections/map/at", "/std/collections/map/at");
+  expectBuiltinFallback("/std/collections/map/at_unsafe",
+                        "/std/collections/map/at_unsafe");
+}
+
 TEST_CASE("ir lowerer call helpers keep map count and local access same-path defs") {
   using Result = primec::ir_lowerer::InlineCallDispatchResult;
 

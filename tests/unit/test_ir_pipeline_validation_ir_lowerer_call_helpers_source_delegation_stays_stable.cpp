@@ -2763,6 +2763,49 @@ TEST_CASE("ir lowerer call helpers keep rooted map alias defs under canonical se
         &aliasMapTryAtDef);
 }
 
+TEST_CASE("ir lowerer call helpers keep rooted map alias def families under same-path resolution") {
+  primec::Definition aliasMapCountDef;
+  aliasMapCountDef.fullPath = "/map/count__ov0";
+  primec::Definition aliasMapContainsDef;
+  aliasMapContainsDef.fullPath = "/map/contains__tmono";
+  primec::Definition aliasMapTryAtDef;
+  aliasMapTryAtDef.fullPath = "/map/tryAt__ov1";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {aliasMapCountDef.fullPath, &aliasMapCountDef},
+      {aliasMapContainsDef.fullPath, &aliasMapContainsDef},
+      {aliasMapTryAtDef.fullPath, &aliasMapTryAtDef},
+  };
+  const auto resolveExprPath = [](const primec::Expr &expr) { return expr.name; };
+
+  primec::Expr valuesArg;
+  valuesArg.kind = primec::Expr::Kind::Name;
+  valuesArg.name = "values";
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Literal;
+  keyArg.intWidth = 32;
+  keyArg.literalValue = 1;
+
+  primec::Expr aliasCountCall;
+  aliasCountCall.kind = primec::Expr::Kind::Call;
+  aliasCountCall.name = "/map/count";
+  aliasCountCall.args = {valuesArg};
+
+  primec::Expr aliasContainsCall;
+  aliasContainsCall.kind = primec::Expr::Kind::Call;
+  aliasContainsCall.name = "/map/contains";
+  aliasContainsCall.args = {valuesArg, keyArg};
+
+  primec::Expr aliasTryAtCall = aliasContainsCall;
+  aliasTryAtCall.name = "/map/tryAt";
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasCountCall, defMap, resolveExprPath) ==
+        &aliasMapCountDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasContainsCall, defMap, resolveExprPath) ==
+        &aliasMapContainsDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasTryAtCall, defMap, resolveExprPath) ==
+        &aliasMapTryAtDef);
+}
+
 TEST_CASE("ir lowerer call helpers suppress lowered collection helper paths from published surface ids") {
   primec::Definition loweredMapContainsDef;
   loweredMapContainsDef.fullPath = "/std/collections/mapContains";

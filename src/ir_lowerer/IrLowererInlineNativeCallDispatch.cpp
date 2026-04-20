@@ -129,6 +129,15 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
          normalizeCollectionHelperPath(callee.fullPath);
 }
 
+bool isDirectMapAccessHelperCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  std::string helperName;
+  return resolveMapHelperAliasName(expr, helperName) &&
+         (helperName == "at" || helperName == "at_unsafe");
+}
+
 bool prefersBuiltinCountFallbackOverRemovedShadow(
     const Expr &expr,
     const Definition &callee,
@@ -441,6 +450,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
   const Definition *directCallee = nullptr;
   if (!expr.isMethodCall) {
     directCallee = resolveDefinitionCall(expr);
+    if (directCallee != nullptr && isCollectionAccessReceiverExpr &&
+        !expr.args.empty() && isCollectionAccessReceiverExpr(expr.args.front()) &&
+        isDirectMapAccessHelperCall(expr)) {
+      return InlineCallDispatchResult::NotHandled;
+    }
     if (directCallee != nullptr &&
         prefersBuiltinCountFallbackOverRemovedShadow(
             expr, *directCallee, isArrayCountCall, isStringCountCall)) {

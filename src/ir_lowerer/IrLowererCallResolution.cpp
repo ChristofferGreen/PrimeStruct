@@ -323,6 +323,31 @@ const Definition *preferExplicitExperimentalMapHelperDefinition(
   return nullptr;
 }
 
+const Definition *preferExplicitRootedMapAliasDefinition(
+    const Expr &expr,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  if (!isExactRootedMapAliasDefinitionCall(expr)) {
+    return nullptr;
+  }
+  const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);
+  if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);
+      rawDef != nullptr) {
+    return rawDef;
+  }
+  const std::string specializedPrefix = rawPath + "__t";
+  const std::string overloadPrefix = rawPath + "__ov";
+  for (const auto &[path, def] : defMap) {
+    if (def == nullptr) {
+      continue;
+    }
+    if (path.rfind(specializedPrefix, 0) == 0 ||
+        path.rfind(overloadPrefix, 0) == 0) {
+      return def;
+    }
+  }
+  return nullptr;
+}
+
 bool resolvesToDefinitionFamilyTarget(
     const std::string &resolvedPath,
     const std::unordered_map<std::string, const Definition *> &defMap) {
@@ -386,14 +411,12 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     return nullptr;
   }
   const std::string resolved = resolveExprPath(callExpr);
-  if (isExactRootedMapAliasDefinitionCall(callExpr)) {
-    const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(callExpr);
-    if (rawPath != resolved) {
-      if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);
-          rawDef != nullptr) {
-        return rawDef;
-      }
-    }
+  if (const Definition *rawAliasDef =
+          preferExplicitRootedMapAliasDefinition(callExpr, defMap);
+      rawAliasDef != nullptr &&
+      normalizeCollectionHelperPath(rawAliasDef->fullPath) !=
+          normalizeCollectionHelperPath(resolved)) {
+    return rawAliasDef;
   }
   if (const Definition *explicitExperimentalMapHelperDef =
           preferExplicitExperimentalMapHelperDefinition(callExpr, resolved, defMap);

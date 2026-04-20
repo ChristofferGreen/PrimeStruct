@@ -326,9 +326,6 @@
                helperName != "at_unsafe")) {
             return false;
           }
-          if (resolveDefinitionCall(callExpr) != nullptr) {
-            return false;
-          }
           const auto mapTargetInfo =
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn);
           const auto receiverTargetInfo =
@@ -342,6 +339,32 @@
           if (isCanonicalStdMapHelperPath) {
             // Keep canonical stdlib helper calls intact so direct overrides on
             // /std/collections/map/* are honored.
+            return false;
+          }
+          auto resolveDirectHelperPath = [&](const Expr &candidate) {
+            if (!candidate.name.empty() && candidate.name.front() == '/') {
+              return candidate.name;
+            }
+            if (!candidate.namespacePrefix.empty()) {
+              std::string scoped = candidate.namespacePrefix;
+              if (!scoped.empty() && scoped.front() != '/') {
+                scoped.insert(scoped.begin(), '/');
+              }
+              return scoped + "/" + candidate.name;
+            }
+            return candidate.name;
+          };
+          const std::string rawPath = resolveDirectHelperPath(callExpr);
+          if ((helperName == "count" || helperName == "contains" ||
+               helperName == "tryAt") &&
+              rawPath.rfind("/map/", 0) == 0 &&
+              normalizeCollectionHelperPath(rawPath) ==
+                  normalizeCollectionHelperPath(resolveExprPath(callExpr))) {
+            return false;
+          }
+          if ((helperName == "count" || helperName == "contains" ||
+               helperName == "tryAt" || helperName == "insert") &&
+              resolveDefinitionCall(callExpr) != nullptr) {
             return false;
           }
           const std::string resolvedHelperPath = resolveExprPath(callExpr);
