@@ -201,13 +201,12 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     return false;
   }
   const Expr &target = expr.args.front();
-  const bool isBareVectorCountCall =
-      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "count" &&
-      expr.namespacePrefix.empty();
-  if ((isBareVectorCountCall ||
-       (expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "count" &&
-        (expr.namespacePrefix == "/std/collections/vector" ||
-         expr.namespacePrefix == "std/collections/vector"))) &&
+  const std::string scopedExprPath = resolveScopedCallPath(expr);
+  const bool isBareOrCanonicalVectorCountCall =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
+      (scopedExprPath == "count" || scopedExprPath == "/std/collections/vector/count" ||
+       scopedExprPath == "std/collections/vector/count");
+  if (isBareOrCanonicalVectorCountCall &&
       isVectorCountTarget(target, localsIn)) {
     return false;
   }
@@ -306,16 +305,12 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
     return false;
   }
   const Expr &target = expr.args.front();
-  const bool isBareVectorCapacityCall =
-      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.name == "capacity" &&
-      expr.namespacePrefix.empty();
-  const bool isExplicitVectorCapacityCall =
+  const std::string scopedExprPath = resolveScopedCallPath(expr);
+  const bool isBareOrCanonicalVectorCapacityCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
-      (expr.name == "/std/collections/vector/capacity" ||
-       (expr.name == "capacity" &&
-        (expr.namespacePrefix == "/std/collections/vector" ||
-         expr.namespacePrefix == "std/collections/vector")));
-  if ((isBareVectorCapacityCall || isExplicitVectorCapacityCall) &&
+      (scopedExprPath == "capacity" || scopedExprPath == "/std/collections/vector/capacity" ||
+       scopedExprPath == "std/collections/vector/capacity");
+  if (isBareOrCanonicalVectorCapacityCall &&
       isVectorCountTarget(target, localsIn)) {
     return false;
   }

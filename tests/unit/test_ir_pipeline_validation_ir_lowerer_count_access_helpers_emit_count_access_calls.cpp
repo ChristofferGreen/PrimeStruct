@@ -256,6 +256,9 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(isArrayCountCall(countEntry, locals));
+  countEntry.namespacePrefix = "/std/collections/vector";
+  CHECK(isArrayCountCall(countEntry, locals));
+  countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
   CHECK(isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
@@ -281,6 +284,9 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
   CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
+  capacityCall.namespacePrefix = "/std/collections/vector";
+  CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
+  capacityCall.namespacePrefix.clear();
   capacityCall.name = "/std/collections/vector/capacity";
   CHECK_FALSE(isVectorCapacityCall(capacityCall, locals));
 
@@ -320,6 +326,9 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.name = "count";
   countEntry.args = {entryName};
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.namespacePrefix = "/std/collections/vector";
+  CHECK(classifiers.isArrayCountCall(countEntry, locals));
+  countEntry.namespacePrefix.clear();
   countEntry.name = "/std/collections/vector/count";
   CHECK(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/vector/count";
@@ -345,6 +354,9 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   capacityCall.name = "capacity";
   capacityCall.args = {valuesName};
   CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
+  capacityCall.namespacePrefix = "/std/collections/vector";
+  CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
+  capacityCall.namespacePrefix.clear();
   capacityCall.name = "/vector/capacity";
   CHECK_FALSE(classifiers.isVectorCapacityCall(capacityCall, locals));
   primec::Expr canonicalToAosCall;
