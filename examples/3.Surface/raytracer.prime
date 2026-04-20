@@ -325,7 +325,14 @@ sky_color([Vec3] dir) {
   [f32] t{0.5 * (dir.y + 1.0)}
   [ColorRGB] base{ColorRGB(0.2, 0.2, 0.2).mix(ColorRGB(0.5, 0.7, 1.0), t)}
   [ColorRGB] scaled{base.mulScalar(1.5)}
-  return(scaled.clamp(0.0, 1.0))
+  [ColorRGB] clamped{
+    ColorRGB(
+      clamp(scaled.r, 0.0, 1.0),
+      clamp(scaled.g, 0.0, 1.0),
+      clamp(scaled.b, 0.0, 1.0)
+    )
+  }
+  return(clamped)
 }
 
 [ColorRGB]

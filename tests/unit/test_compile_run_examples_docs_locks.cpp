@@ -1052,6 +1052,35 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
   CHECK(source.find("[mut] childY{innerY}") == std::string::npos);
 }
 
+TEST_CASE("surface examples stay source locked to lowering-compatible helper forms") {
+  std::filesystem::path featuresOverviewPath =
+      std::filesystem::path("..") / "examples" / "3.Surface" / "features_overview.prime";
+  std::filesystem::path raytracerPath =
+      std::filesystem::path("..") / "examples" / "3.Surface" / "raytracer.prime";
+  if (!std::filesystem::exists(featuresOverviewPath)) {
+    featuresOverviewPath =
+        std::filesystem::current_path() / "examples" / "3.Surface" / "features_overview.prime";
+  }
+  if (!std::filesystem::exists(raytracerPath)) {
+    raytracerPath = std::filesystem::current_path() / "examples" / "3.Surface" / "raytracer.prime";
+  }
+  REQUIRE(std::filesystem::exists(featuresOverviewPath));
+  REQUIRE(std::filesystem::exists(raytracerPath));
+
+  const std::string featuresOverview = readFile(featuresOverviewPath.string());
+  const std::string raytracer = readFile(raytracerPath.string());
+
+  CHECK(featuresOverview.find("if(value > best)") != std::string::npos);
+  CHECK(featuresOverview.find("best = value") != std::string::npos);
+  CHECK(featuresOverview.find("best = max(best, value)") == std::string::npos);
+
+  CHECK(raytracer.find("[ColorRGB] clamped{") != std::string::npos);
+  CHECK(raytracer.find("clamp(scaled.r, 0.0, 1.0)") != std::string::npos);
+  CHECK(raytracer.find("clamp(scaled.g, 0.0, 1.0)") != std::string::npos);
+  CHECK(raytracer.find("clamp(scaled.b, 0.0, 1.0)") != std::string::npos);
+  CHECK(raytracer.find("return(scaled.clamp(0.0, 1.0))") == std::string::npos);
+}
+
 TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operators") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   std::filesystem::path gfxExperimentalPath =

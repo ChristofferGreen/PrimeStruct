@@ -10,7 +10,10 @@ namespace demo {
 
     for([i32 mut] idx{0}; idx < count; ++idx) {
       [i32] value{scores[idx]}
-      best = max(best, value)
+      if(value > best) {
+        best = value
+      } else {
+      }
       total = total + value
     };
 
