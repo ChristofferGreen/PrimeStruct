@@ -453,35 +453,35 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
 
 bool isBuiltinClamp(const Expr &expr, bool allowBare) {
   std::string name;
-  if (!parseMathName(expr.name, name, allowBare)) {
+  if (!parseMathName(resolveExprPath(expr), name, allowBare)) {
     return false;
   }
   return name == "clamp";
 }
 
 bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveExprPath(expr), out, allowBare)) {
     return false;
   }
   return out == "min" || out == "max";
 }
 
 bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveExprPath(expr), out, allowBare)) {
     return false;
   }
   return out == "abs" || out == "sign";
 }
 
 bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveExprPath(expr), out, allowBare)) {
     return false;
   }
   return out == "saturate";
 }
 
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare) {
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveExprPath(expr), out, allowBare)) {
     return false;
   }
   if (out == "lerp" || out == "floor" || out == "ceil" || out == "round" || out == "trunc" || out == "fract" ||

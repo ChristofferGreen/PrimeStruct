@@ -881,6 +881,40 @@ TEST_CASE("ir lowerer helper keeps parser-shaped rooted convert builtin") {
   CHECK(builtin == "convert");
 }
 
+TEST_CASE("emitter helpers keep parser-shaped std math builtins") {
+  primec::Expr minCall;
+  minCall.kind = primec::Expr::Kind::Call;
+  minCall.name = "min";
+  minCall.namespacePrefix = "/std/math";
+
+  std::string builtin;
+  CHECK(primec::emitter::getBuiltinMinMaxName(minCall, builtin, false));
+  CHECK(builtin == "min");
+
+  primec::Expr absCall;
+  absCall.kind = primec::Expr::Kind::Call;
+  absCall.name = "abs";
+  absCall.namespacePrefix = "/std/math";
+
+  CHECK(primec::emitter::getBuiltinAbsSignName(absCall, builtin, false));
+  CHECK(builtin == "abs");
+
+  primec::Expr clampCall;
+  clampCall.kind = primec::Expr::Kind::Call;
+  clampCall.name = "clamp";
+  clampCall.namespacePrefix = "/std/math";
+
+  CHECK(primec::emitter::isBuiltinClamp(clampCall, false));
+
+  primec::Expr sqrtCall;
+  sqrtCall.kind = primec::Expr::Kind::Call;
+  sqrtCall.name = "sqrt";
+  sqrtCall.namespacePrefix = "/std/math";
+
+  CHECK(primec::emitter::getBuiltinMathName(sqrtCall, builtin, false));
+  CHECK(builtin == "sqrt");
+}
+
 TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespaced paths") {
   primec::Expr rootedPlusCall;
   rootedPlusCall.kind = primec::Expr::Kind::Call;
