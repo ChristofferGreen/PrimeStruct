@@ -98,4 +98,40 @@ TEST_CASE("ir lowerer direct expr and inference rewrites guard explicit map defs
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer canonical map contains and tryAt rewrites stay recognized late") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+
+  const std::string collectionHelpersSource = readText(collectionHelpersPath);
+  const std::string tailDispatchSource = readText(tailDispatchPath);
+
+  CHECK(collectionHelpersSource.find("matchesResolvedPath(\"/std/collections/map/contains\")") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("matchesResolvedPath(\"/std/collections/map/tryAt\")") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("matchesGeneratedMapHelperPath(callExpr, \"/std/collections/map/contains\")") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("matchesGeneratedMapHelperPath(callExpr, \"/std/collections/map/tryAt\")") !=
+        std::string::npos);
+}
+
 TEST_SUITE_END();

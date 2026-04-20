@@ -32,7 +32,15 @@
                 helperNameOut = "contains";
                 return true;
               }
+              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/map/contains")) {
+                helperNameOut = "contains";
+                return true;
+              }
               if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapTryAt")) {
+                helperNameOut = "tryAt";
+                return true;
+              }
+              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/map/tryAt")) {
                 helperNameOut = "tryAt";
                 return true;
               }

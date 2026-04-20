@@ -363,10 +363,12 @@
                      matchesResolvedPath("/std/collections/mapCount");
             }
             if (bareName == "contains") {
-              return matchesResolvedPath("/std/collections/mapContains");
+              return matchesResolvedPath("/std/collections/map/contains") ||
+                     matchesResolvedPath("/std/collections/mapContains");
             }
             if (bareName == "tryAt") {
-              return matchesResolvedPath("/std/collections/mapTryAt");
+              return matchesResolvedPath("/std/collections/map/tryAt") ||
+                     matchesResolvedPath("/std/collections/mapTryAt");
             }
             return false;
           };
