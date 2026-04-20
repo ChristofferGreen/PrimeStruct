@@ -2572,6 +2572,25 @@ Style-aligned modules should follow `docs/CodeExamples.md`. The canonical or
 bridge-oriented files may stay helper-heavy until the relevant migration or
 cleanup TODO explicitly retargets them.
 
+### Vector/Map Bridge Contract
+This contract is the scope reference for the vector/map ownership-cutover lane
+in `docs/todo.md`. Follow-on bridge tasks should share this boundary instead of
+re-defining it piecemeal.
+
+- **Bridge-owned public contract:** exact and wildcard `/std/collections`
+  imports for `vector`/`map`, constructor and literal-rewrite surfaces for
+  `vector<T>` and `map<K, V>`, collection helper families, compatibility
+  spellings plus removed-helper diagnostics, semantic surface IDs, and lowerer
+  dispatch metadata.
+- **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings,
+  `vectorCount` / `mapCount`-style lowering names, and
+  `/std/collections/experimental_*` implementation modules remain temporary
+  compatibility or internal seams until the later cutover TODOs delete them.
+- **Out of scope for this bridge lane:** `array<T>` core ownership,
+  `soa_vector<T>` maturity/promotion policy, and runtime storage/allocator
+  redesign stay outside the vector/map bridge contract and require separate
+  TODO lanes when they move.
+
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
 - Profiles include: `vm_native`, `glsl`, `cpp`.

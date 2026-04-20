@@ -46,6 +46,27 @@ TEST_CASE("design doc records semantic ownership boundary policy") {
   CHECK(design.find("production lowering/publication paths.") != std::string::npos);
 }
 
+TEST_CASE("design doc records vector map bridge contract") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(designPath)) {
+    designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
+  }
+
+  REQUIRE(std::filesystem::exists(designPath));
+
+  const std::string design = readTextFile(designPath);
+  CHECK(design.find("### Vector/Map Bridge Contract") != std::string::npos);
+  CHECK(design.find("scope reference for the vector/map ownership-cutover lane") !=
+        std::string::npos);
+  CHECK(design.find("Bridge-owned public contract:") != std::string::npos);
+  CHECK(design.find("exact and wildcard `/std/collections`") != std::string::npos);
+  CHECK(design.find("Migration-only seams:") != std::string::npos);
+  CHECK(design.find("rooted `/vector/*` and `/map/*` spellings") != std::string::npos);
+  CHECK(design.find("Out of scope for this bridge lane: `array<T>` core ownership,") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib surface registry stays source locked") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";

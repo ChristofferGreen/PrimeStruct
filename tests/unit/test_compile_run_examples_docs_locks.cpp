@@ -80,6 +80,40 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
         std::string::npos);
 }
 
+TEST_CASE("vector map bridge boundary docs stay source locked") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todo = readFile(todoPath.string());
+
+  CHECK(primeStructDoc.find("### Vector/Map Bridge Contract") != std::string::npos);
+  CHECK(primeStructDoc.find("Bridge-owned public contract: exact and wildcard `/std/collections`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Migration-only seams: rooted `/vector/*` and `/map/*` spellings,") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Out of scope for this bridge lane: `array<T>` core ownership,") !=
+        std::string::npos);
+
+  CHECK(todo.find("### Vector/Map Bridge Contract Summary") != std::string::npos);
+  CHECK(todo.find("Bridge-owned public contract: exact and wildcard `/std/collections` imports,") !=
+        std::string::npos);
+  CHECK(todo.find("Migration-only seams: rooted `/vector/*` and `/map/*` spellings,") !=
+        std::string::npos);
+  CHECK(todo.find("Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4042:") == std::string::npos);
+  CHECK(todo.find("TODO-4043") != std::string::npos);
+}
+
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";

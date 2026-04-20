@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4042
+- TODO-4043
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4043
 - TODO-4044
 - TODO-4045
 - TODO-4046
@@ -71,28 +70,27 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
+- Vector/map bridge rollout and ownership cutover: TODO-4043 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4042
-2. TODO-4043
-3. TODO-4044
-4. TODO-4045
-5. TODO-4046
-6. TODO-4047
-7. TODO-4048
-8. TODO-4049
-9. TODO-4050
-10. TODO-4052
-11. TODO-4058
-12. TODO-4053
-13. TODO-4055
-14. TODO-4054
-15. TODO-4056
-16. TODO-4057
-17. TODO-4059
+1. TODO-4043
+2. TODO-4044
+3. TODO-4045
+4. TODO-4046
+5. TODO-4047
+6. TODO-4048
+7. TODO-4049
+8. TODO-4050
+9. TODO-4052
+10. TODO-4058
+11. TODO-4053
+12. TODO-4055
+13. TODO-4054
+14. TODO-4056
+15. TODO-4057
+16. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -101,7 +99,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -129,6 +127,20 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
+
+### Vector/Map Bridge Contract Summary
+
+- Bridge-owned public contract: exact and wildcard `/std/collections` imports,
+  `vector<T>` / `map<K, V>` constructor and literal-rewrite surfaces, helper
+  families, compatibility spellings plus removed-helper diagnostics, semantic
+  surface IDs, and lowerer dispatch metadata.
+- Migration-only seams: rooted `/vector/*` and `/map/*` spellings,
+  `vectorCount` / `mapCount`-style lowering names, and
+  `/std/collections/experimental_*` implementation modules stay temporary until
+  the later cutover TODOs retire them.
+- Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and
+  runtime/storage redesign remain separate boundaries and should not be folded
+  into the vector/map bridge tasks below.
 
 ### Task Blocks
 
@@ -335,15 +347,3 @@ Task template:
     - The registry is rich enough to back vector/map alias construction, constructor classification, helper compatibility resolution, and surface-ID publication in later slices.
     - Focused source-lock or parity coverage pins the intended vector/map bridge metadata surface before follow-on migrations consume it.
   - stop_rule: Stop once the shared bridge describes vector/map collection surfaces well enough for the follow-on migration tasks; do not widen this item into full semantics or lowering rewrites.
-
-- [ ] TODO-4042: Define vector/map bridge scope and ownership boundary
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4036
-  - scope: Define exactly which vector/map imports, constructors, helper families, compatibility spellings, semantic operations, and lowering hooks belong to the vector/map ownership-cutover bridge contract, and call out what remains intentionally substrate-only or temporary.
-  - acceptance:
-    - The intended vector/map bridge contract is documented clearly enough that follow-on migration tasks can target the same surface area without re-litigating scope.
-    - The documented boundary distinguishes public vector/map ownership behavior from temporary substrate or migration-only internals.
-    - `docs/todo.md` reflects that boundary across the vector/map cutover tasks instead of leaving scope implicit.
-  - stop_rule: Stop once the vector/map bridge boundary is explicit enough to guide implementation and validation slices; split any broader stdlib bridge scoping beyond vector/map into separate tasks.
