@@ -496,10 +496,12 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("return(unsupported_write())") == std::string::npos);
 }
 
-TEST_CASE("file read_byte docs and helpers stay source locked") {
+TEST_CASE("file readByte docs and helpers stay source locked") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path preludePath = std::filesystem::path("..") / "src" / "emitter" / "EmitterEmitPrelude.h";
   std::filesystem::path lowererPath = std::filesystem::path("..") / "src" / "ir_lowerer" / "IrLowererFileWriteHelpers.cpp";
+  std::filesystem::path fileStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "file" / "file.prime";
+  std::filesystem::path fileErrorsPath = std::filesystem::path("..") / "stdlib" / "std" / "file" / "errors.prime";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
@@ -509,17 +511,52 @@ TEST_CASE("file read_byte docs and helpers stay source locked") {
   if (!std::filesystem::exists(lowererPath)) {
     lowererPath = std::filesystem::current_path() / "src" / "ir_lowerer" / "IrLowererFileWriteHelpers.cpp";
   }
+  if (!std::filesystem::exists(fileStdlibPath)) {
+    fileStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "file" / "file.prime";
+  }
+  if (!std::filesystem::exists(fileErrorsPath)) {
+    fileErrorsPath = std::filesystem::current_path() / "stdlib" / "std" / "file" / "errors.prime";
+  }
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(preludePath));
   REQUIRE(std::filesystem::exists(lowererPath));
+  REQUIRE(std::filesystem::exists(fileStdlibPath));
+  REQUIRE(std::filesystem::exists(fileErrorsPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string prelude = readFile(preludePath.string());
   const std::string lowerer = readFile(lowererPath.string());
+  const std::string fileStdlib = readFile(fileStdlibPath.string());
+  const std::string fileErrors = readFile(fileErrorsPath.string());
 
-  CHECK(primeStructDoc.find("`read_byte([i32 mut] value)`") != std::string::npos);
-  CHECK(primeStructDoc.find("`read_byte(...)` reports deterministic end-of-file as `EOF`") != std::string::npos);
+  CHECK(primeStructDoc.find("`readByte([i32 mut] value)`") != std::string::npos);
+  CHECK(primeStructDoc.find("`readByte(...)` reports deterministic end-of-file as `EOF`") != std::string::npos);
+  CHECK(primeStructDoc.find("`FileError.isEof(err)`") != std::string::npos);
+  CHECK(primeStructDoc.find("`/File/openRead(...)`, `/File/openWrite(...)`, `/File/openAppend(...)`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Compatibility wrappers keep the older snake_case spellings") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`read_byte([i32 mut] value)`") == std::string::npos);
+  CHECK(primeStructDoc.find("`FileError.is_eof(err)`") == std::string::npos);
   CHECK(primeStructDoc.find("read-only file operations require `effects(file_read)`") != std::string::npos);
+
+  CHECK(fileStdlib.find("/File/openRead([string] path)") != std::string::npos);
+  CHECK(fileStdlib.find("/File/open_read([string] path)") != std::string::npos);
+  CHECK(fileStdlib.find("return(/File/openRead(path))") != std::string::npos);
+  CHECK(fileStdlib.find("/File/readByte<Mode, T>([File<Mode>] self, [T mut] value)") != std::string::npos);
+  CHECK(fileStdlib.find("/File/read_byte<Mode, T>([File<Mode>] self, [T mut] value)") != std::string::npos);
+  CHECK(fileStdlib.find("return(/File/readByte(self, value))") != std::string::npos);
+  CHECK(fileStdlib.find("/File/writeLine<Mode>([File<Mode>] self)") != std::string::npos);
+  CHECK(fileStdlib.find("/File/write_line<Mode>([File<Mode>] self)") != std::string::npos);
+  CHECK(fileStdlib.find("return(/File/writeLine(self))") != std::string::npos);
+  CHECK(fileStdlib.find("/File/writeByte<Mode, T>([File<Mode>] self, [T] value)") != std::string::npos);
+  CHECK(fileStdlib.find("return(/File/writeByte(self, value))") != std::string::npos);
+  CHECK(fileStdlib.find("/File/writeBytes<Mode, T>([File<Mode>] self, [array<T>] bytes)") != std::string::npos);
+  CHECK(fileStdlib.find("return(/File/writeBytes(self, bytes))") != std::string::npos);
+
+  CHECK(fileErrors.find("isEof([FileError] err)") != std::string::npos);
+  CHECK(fileErrors.find("return(isEof(err))") != std::string::npos);
+  CHECK(fileErrors.find("return(/std/file/FileError/isEof(err))") != std::string::npos);
 
   CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
   CHECK(prelude.find("return \" << FileReadEofCode << \"u;") != std::string::npos);
@@ -545,10 +582,19 @@ TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
 
+  CHECK(primeStructDoc.find("`isEmpty()` / `isSome()`") != std::string::npos);
+  CHECK(primeStructDoc.find("Compatibility wrappers keep `is_empty()` / `is_some()`") != std::string::npos);
+  CHECK(primeStructDoc.find("**Helper surface (stdlib):** `is_empty()` / `is_some()`") == std::string::npos);
   CHECK(primeStructDoc.find("Destroy() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n    }") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("isEmpty() {\n      return(this.empty)\n    }") != std::string::npos);
+  CHECK(primeStructDoc.find("isSome() {\n      return(not(this.empty))\n    }") != std::string::npos);
   CHECK(primeStructDoc.find("clear() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n      this.empty = true\n    }") !=
         std::string::npos);
+  CHECK(maybeStdlib.find("isEmpty() {\n      return(this.empty)\n    }") != std::string::npos);
+  CHECK(maybeStdlib.find("isSome() {\n      return(not(this.empty))\n    }") != std::string::npos);
+  CHECK(maybeStdlib.find("is_empty() {\n      return(this.isEmpty())\n    }") != std::string::npos);
+  CHECK(maybeStdlib.find("is_some() {\n      return(this.isSome())\n    }") != std::string::npos);
   CHECK(maybeStdlib.find("if(not(this.empty)) {\n        drop(this.value)\n      }") != std::string::npos);
   CHECK(maybeStdlib.find("this.empty = true") != std::string::npos);
   CHECK(maybeStdlib.find("this.empty = false") != std::string::npos);

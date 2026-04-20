@@ -21,13 +21,23 @@ Destroy() {
 }
 
 [public return<bool>]
-is_empty() {
+isEmpty() {
   return(this.empty)
 }
 
 [public return<bool>]
-is_some() {
+isSome() {
   return(not(this.empty))
+}
+
+[public return<bool>]
+is_empty() {
+  return(this.isEmpty())
+}
+
+[public return<bool>]
+is_some() {
+  return(this.isSome())
 }
 
 [public mut return<void>]
@@ -160,6 +170,25 @@ main() {
     return(0i32)
   }
   if(value.is_empty()) {
+    return(1i32)
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe camelCase helpers report empty and some") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] value{none<i32>()}
+  if(value.isSome()) {
+    return(0i32)
+  }
+  if(value.isEmpty()) {
     return(1i32)
   }
   return(0i32)

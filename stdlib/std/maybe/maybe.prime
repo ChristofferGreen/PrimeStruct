@@ -17,13 +17,23 @@ namespace std {
     }
 
     [public return<bool>]
-    is_empty() {
+    isEmpty() {
       return(this.empty)
     }
 
     [public return<bool>]
-    is_some() {
+    isSome() {
       return(not(this.empty))
+    }
+
+    [public return<bool>]
+    is_empty() {
+      return(this.isEmpty())
+    }
+
+    [public return<bool>]
+    is_some() {
+      return(this.isSome())
     }
 
     [public mut return<void>]

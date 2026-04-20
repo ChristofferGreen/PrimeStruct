@@ -1,21 +1,146 @@
 [public effects(file_read), return<Result<File<Read>, FileError>>]
-/File/open_read([string] path) {
+/File/openRead([string] path) {
   return(File<Read>(path))
 }
 
 [public effects(file_write), return<Result<File<Write>, FileError>>]
-/File/open_write([string] path) {
+/File/openWrite([string] path) {
   return(File<Write>(path))
 }
 
 [public effects(file_write), return<Result<File<Append>, FileError>>]
-/File/open_append([string] path) {
+/File/openAppend([string] path) {
   return(File<Append>(path))
 }
 
 [public effects(file_read), return<Result<FileError>>]
-/File/read_byte<Mode, T>([File<Mode>] self, [T mut] value) {
+/File/readByte<Mode, T>([File<Mode>] self, [T mut] value) {
   return(/file/read_byte(self, value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode>([File<Mode>] self) {
+  return(self.write_line())
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, T>([File<Mode>] self, [T] value) {
+  return(self.write_line(value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B>([File<Mode>] self, [A] first, [B] second) {
+  return(self.write_line(first, second))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B, C>([File<Mode>] self, [A] first, [B] second, [C] third) {
+  return(self.write_line(first, second, third))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B, C, D>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth) {
+  return(self.write_line(first, second, third, fourth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B, C, D, E>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth) {
+  return(self.write_line(first, second, third, fourth, fifth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B, C, D, E, F>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth,
+    [F] sixth) {
+  return(self.write_line(first, second, third, fourth, fifth, sixth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B, C, D, E, F, G>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth,
+    [F] sixth,
+    [G] seventh) {
+  return(self.write_line(first, second, third, fourth, fifth, sixth, seventh))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B, C, D, E, F, G, H>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth,
+    [F] sixth,
+    [G] seventh,
+    [H] eighth) {
+  return(self.write_line(first, second, third, fourth, fifth, sixth, seventh, eighth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeLine<Mode, A, B, C, D, E, F, G, H, I>(
+    [File<Mode>] self,
+    [A] first,
+    [B] second,
+    [C] third,
+    [D] fourth,
+    [E] fifth,
+    [F] sixth,
+    [G] seventh,
+    [H] eighth,
+    [I] ninth) {
+  return(self.write_line(first, second, third, fourth, fifth, sixth, seventh, eighth, ninth))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeByte<Mode, T>([File<Mode>] self, [T] value) {
+  return(/file/write_byte(self, value))
+}
+
+[public effects(file_write), return<Result<FileError>>]
+/File/writeBytes<Mode, T>([File<Mode>] self, [array<T>] bytes) {
+  return(/file/write_bytes(self, bytes))
+}
+
+[public effects(file_read), return<Result<File<Read>, FileError>>]
+/File/open_read([string] path) {
+  return(/File/openRead(path))
+}
+
+[public effects(file_write), return<Result<File<Write>, FileError>>]
+/File/open_write([string] path) {
+  return(/File/openWrite(path))
+}
+
+[public effects(file_write), return<Result<File<Append>, FileError>>]
+/File/open_append([string] path) {
+  return(/File/openAppend(path))
+}
+
+[public effects(file_read), return<Result<FileError>>]
+/File/read_byte<Mode, T>([File<Mode>] self, [T mut] value) {
+  return(/File/readByte(self, value))
 }
 
 [public effects(file_write), return<Result<FileError>>]
@@ -110,22 +235,22 @@
 
 [public effects(file_write), return<Result<FileError>>]
 /File/write_line<Mode>([File<Mode>] self) {
-  return(self.write_line())
+  return(/File/writeLine(self))
 }
 
 [public effects(file_write), return<Result<FileError>>]
 /File/write_line<Mode, T>([File<Mode>] self, [T] value) {
-  return(self.write_line(value))
+  return(/File/writeLine(self, value))
 }
 
 [public effects(file_write), return<Result<FileError>>]
 /File/write_line<Mode, A, B>([File<Mode>] self, [A] first, [B] second) {
-  return(self.write_line(first, second))
+  return(/File/writeLine(self, first, second))
 }
 
 [public effects(file_write), return<Result<FileError>>]
 /File/write_line<Mode, A, B, C>([File<Mode>] self, [A] first, [B] second, [C] third) {
-  return(self.write_line(first, second, third))
+  return(/File/writeLine(self, first, second, third))
 }
 
 [public effects(file_write), return<Result<FileError>>]
@@ -135,7 +260,7 @@
     [B] second,
     [C] third,
     [D] fourth) {
-  return(self.write_line(first, second, third, fourth))
+  return(/File/writeLine(self, first, second, third, fourth))
 }
 
 [public effects(file_write), return<Result<FileError>>]
@@ -146,7 +271,7 @@
     [C] third,
     [D] fourth,
     [E] fifth) {
-  return(self.write_line(first, second, third, fourth, fifth))
+  return(/File/writeLine(self, first, second, third, fourth, fifth))
 }
 
 [public effects(file_write), return<Result<FileError>>]
@@ -158,7 +283,7 @@
     [D] fourth,
     [E] fifth,
     [F] sixth) {
-  return(self.write_line(first, second, third, fourth, fifth, sixth))
+  return(/File/writeLine(self, first, second, third, fourth, fifth, sixth))
 }
 
 [public effects(file_write), return<Result<FileError>>]
@@ -171,7 +296,7 @@
     [E] fifth,
     [F] sixth,
     [G] seventh) {
-  return(self.write_line(first, second, third, fourth, fifth, sixth, seventh))
+  return(/File/writeLine(self, first, second, third, fourth, fifth, sixth, seventh))
 }
 
 [public effects(file_write), return<Result<FileError>>]
@@ -185,7 +310,7 @@
     [F] sixth,
     [G] seventh,
     [H] eighth) {
-  return(self.write_line(first, second, third, fourth, fifth, sixth, seventh, eighth))
+  return(/File/writeLine(self, first, second, third, fourth, fifth, sixth, seventh, eighth))
 }
 
 [public effects(file_write), return<Result<FileError>>]
@@ -200,17 +325,17 @@
     [G] seventh,
     [H] eighth,
     [I] ninth) {
-  return(self.write_line(first, second, third, fourth, fifth, sixth, seventh, eighth, ninth))
+  return(/File/writeLine(self, first, second, third, fourth, fifth, sixth, seventh, eighth, ninth))
 }
 
 [public effects(file_write), return<Result<FileError>>]
 /File/write_byte<Mode, T>([File<Mode>] self, [T] value) {
-  return(/file/write_byte(self, value))
+  return(/File/writeByte(self, value))
 }
 
 [public effects(file_write), return<Result<FileError>>]
 /File/write_bytes<Mode, T>([File<Mode>] self, [array<T>] bytes) {
-  return(/file/write_bytes(self, bytes))
+  return(/File/writeBytes(self, bytes))
 }
 
 [public effects(file_write), return<Result<FileError>>]

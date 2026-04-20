@@ -120,6 +120,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib FileError camelCase eof wrapper covers direct and method access") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+main() {
+  [FileError] eofErr{fileReadEof()}
+  [FileError] otherErr{1i32}
+  [bool] directEof{FileError.isEof(eofErr)}
+  [bool] methodEof{eofErr.isEof()}
+  [bool] helperOther{fileErrorIsEof(otherErr)}
+  [bool] methodOther{otherErr.isEof()}
+  if(and(and(directEof, methodEof), and(not(helperOther), not(methodOther))),
+     then(){ return() },
+     else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("builtin FileError why method rejects explicit arguments without imported wrapper") {
   const std::string source = R"(
 [return<void>]
@@ -311,6 +333,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib File camelCase helpers cover imported method and slash-call wrappers") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(file_write), return<void>]
+write_out([File<Write>] file, [array<i32>] bytes, [string] text) {
+  [Result<FileError>] directOpen{/File/openWrite("hello.txt"utf8)}
+  [Result<FileError>] directWriteLine{/File/writeLine<Write, i32>(file, 7i32)}
+  [Result<FileError>] methodWriteLine{file.writeLine(text)}
+  [Result<FileError>] methodByte{file.writeByte(65i32)}
+  [Result<FileError>] directBytes{/File/writeBytes(file, bytes)}
+  [Result<FileError>] methodFlush{file.flush()}
+  [Result<FileError>] directClose{/File/close<Write>(file)}
+  return()
+}
+
+[effects(file_read), return<void>]
+read_in([File<Read>] file, [i32 mut] value) {
+  [Result<FileError>] methodRead{file.readByte(value)}
+  [Result<FileError>] directRead{/File/readByte(file, value)}
+  return()
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact stdlib file imports keep file and FileError method helpers") {
   const std::string source = R"(
 import /std/file/File
@@ -459,6 +514,23 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /File/open_write") != std::string::npos);
+}
+
+TEST_CASE("stdlib File camelCase open slash-call helpers require stdlib import") {
+  const std::string source = R"(
+[effects(file_write), return<void>]
+write_out() {
+  /File/openWrite("hello.txt"utf8)
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /File/openWrite") != std::string::npos);
 }
 
 TEST_CASE("stdlib File close slash-call helper infers template args from File receiver") {

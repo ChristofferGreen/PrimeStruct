@@ -17,8 +17,13 @@ namespace std {
     }
 
     [public return<bool>]
-    is_eof([FileError] err) {
+    isEof([FileError] err) {
       return(equal(err, eof()))
+    }
+
+    [public return<bool>]
+    is_eof([FileError] err) {
+      return(isEof(err))
     }
 
     [public return<Result<T, FileError>>]
@@ -34,7 +39,7 @@ namespace std {
 
   [public return<bool>]
   fileErrorIsEof([FileError] err) {
-    return(/std/file/FileError/is_eof(err))
+    return(/std/file/FileError/isEof(err))
   }
   }
 }

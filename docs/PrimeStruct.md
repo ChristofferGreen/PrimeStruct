@@ -1228,12 +1228,12 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     access, `Reference<File<Mode>>` packs preserve indexed downstream file-handle method access alongside explicit
     `dereference(...).write*` / `flush()` receiver forms plus helper-style `at(values, i).write*()` /
     `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()`
-    receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values,
-    [index] i).read_byte(...)` `?`, `Pointer<File<Mode>>` packs preserve indexed downstream file-handle method access
+    receivers, and direct indexed `readByte(...)` `?` inference plus canonical free-builtin `at([values] values,
+    [index] i).readByte(...)` `?`, `Pointer<File<Mode>>` packs preserve indexed downstream file-handle method access
     alongside explicit `dereference(...).write*` / `flush()` receiver forms plus helper-style `at(values, i).write*()` /
     `values.at(i).flush()` receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()`
-    receivers, and direct indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values,
-    [index] i).read_byte(...)` `?`, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` and
+    receivers, and direct indexed `readByte(...)` `?` inference plus canonical free-builtin `at([values] values,
+    [index] i).readByte(...)` `?`, `Buffer<T>` packs preserve indexed downstream `buffer_load(...)` and
     `buffer_store(...)` on the IR/VM GPU path, `Reference<Buffer<T>>` packs preserve indexed downstream
     `buffer_load(dereference(...), ...)` and `buffer_store(dereference(...), ...)` on that same IR/VM GPU path,
     `Pointer<Buffer<T>>` packs preserve indexed downstream `buffer_load(dereference(...), ...)` and
@@ -1252,7 +1252,7 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     `Reference<T>` packs now preserve indexed downstream field/helper access; other unsupported non-string pack elements
     remain follow-up work.
     Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>`
-    arg-packs now preserves `write*()` / `flush()` receivers plus `read_byte(...)` `?` inference across direct calls
+    arg-packs now preserves `write*()` / `flush()` receivers plus `readByte(...)` `?` inference across direct calls
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
     named-argument rejection path.
 - **Definitions vs executions:** definitions include a body (`{…}`) and optional transforms; executions are call-style
@@ -2125,10 +2125,10 @@ for(
     `reader.read()` can feed direct `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` consumers on
     IR-backed VM/native paths without an intermediate local.
   - `/std/file/*` now also exposes a stdlib-owned `FileError` namespace surface: `FileError.why(err)`,
-    `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.is_eof(err)` resolve
+    `FileError.status(err)`, `FileError.result<T>(err)`, `FileError.eof()`, and `FileError.isEof(err)` resolve
     through `/std/file/FileError/*` even in direct nested `Result.error(...)` / `Result.why(...)` expressions, while
     receiver-style `err.status()` / `err.result<T>()` method sugar now routes through the same stdlib-owned FileError
-    helpers as `err.why()` / `err.is_eof()`. The old root `/FileError/*` wrappers and package-level
+    helpers as `err.why()` / `err.isEof()`. The old root `/FileError/*` wrappers and package-level
     `fileErrorStatus(err)` / `fileErrorResult<T>(err)` compatibility helpers are removed, while `fileReadEof()` and
     `fileErrorIsEof(err)` remain as the narrow convenience helpers over that same type-owned implementation.
   - Stdlib containers use `Result<ContainerError>` / `Result<T, ContainerError>` as the shared error contract;
@@ -2201,9 +2201,9 @@ sum_two_files([string] a, [string] b) {
     `fileErrorIsEof(err)`, the type-owned `FileError.status(err)` / `FileError.result<T>(err)` namespace surface
     instead of hand-packing `FileError` results or hard-coding the EOF status code, plus receiver-style
     `err.status()` / `err.result<T>()` and the type-owned `FileError.why(err)` / `FileError.eof()` /
-    `FileError.is_eof(err)` helpers for explicit access to the current stdlib FileError helper surface. The same
+    `FileError.isEof(err)` helpers for explicit access to the current stdlib FileError helper surface. The same
     import also exposes
-    `.prime`-authored `/File/open_read(...)`, `/File/open_write(...)`, and `/File/open_append(...)` wrappers so the
+    `.prime`-authored `/File/openRead(...)`, `/File/openWrite(...)`, and `/File/openAppend(...)` wrappers so the
     common constructor-shaped `File<Mode>(path)` surface can resolve through stdlib-owned helpers while the host file
     substrate remains builtin and effect-gated underneath.
     Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` /
@@ -2246,35 +2246,37 @@ sum_two_files([string] a, [string] b) {
 - **Construction:** `File<Mode>(path)` returns `Result<File<Mode>, FileError>`.
   - `path` is a `string` (string literal or literal-backed binding in VM/native).
 - **Methods (all return `Result<FileError>`):**
-  - `read_byte([i32 mut] value)` (reads one byte into `value`; leaves `value` unchanged on error)
+  - `readByte([i32 mut] value)` (reads one byte into `value`; leaves `value` unchanged on error)
   - `write(values...)` (variadic text write)
-  - `write_line(values...)` (variadic + newline)
-  - `write_byte(u8_value)`
-  - `write_bytes(array<u8>)`
+  - `writeLine(values...)` (variadic + newline)
+  - `writeByte(u8_value)`
+  - `writeBytes(array<u8>)`
   - `flush()`
   - `close()`
 - **Error type:** `FileError` carries `why()` (owned `string`).
-  - `read_byte(...)` reports deterministic end-of-file as `EOF`.
+  - `readByte(...)` reports deterministic end-of-file as `EOF`.
   - Import `/std/file/*` for the current stdlib-authored file helper layer:
     `fileReadEof()`, `fileErrorIsEof(err)`,
-    `FileError.why(err)`, `FileError.eof()`, `FileError.is_eof(err)`,
-    `/File/open_read(...)`, `/File/open_write(...)`, `/File/open_append(...)`,
-    `/File/read_byte(...)`, zero-to-nine-value heterogenous `/File/write(...)` and
-    `/File/write_line(...)` overload families,
-    `/File/write_byte(...)`, `/File/write_bytes(...)`, `/File/flush(...)`, and
+    `FileError.why(err)`, `FileError.eof()`, `FileError.isEof(err)`,
+    `/File/openRead(...)`, `/File/openWrite(...)`, `/File/openAppend(...)`,
+    `/File/readByte(...)`, zero-to-nine-value heterogenous `/File/write(...)` and
+    `/File/writeLine(...)` overload families,
+    `/File/writeByte(...)`, `/File/writeBytes(...)`, `/File/flush(...)`, and
     `/File/close<Mode>(...)`.
+    Compatibility wrappers keep the older snake_case spellings (`open_read`, `read_byte`, `write_line`,
+    `write_byte`, `write_bytes`, `is_eof`) available for migration-only callers.
     Imported constructor-shaped `File<Mode>(path)` calls now route through those `.prime`
     mode-specific open wrappers, and imported method/free-call sugar now prefers the same stdlib
-    layer for `read_byte`, `write`, `write_line`, `write_byte`, `write_bytes`, `flush`, and
+    layer for `readByte`, `write`, `writeLine`, `writeByte`, `writeBytes`, `flush`, and
     `close` across that current zero-to-nine-value overload family. Once `write(...)` or
-    `write_line(...)` exceeds the fixed wrapper ladder, imported broader slash-calls and method
+    `writeLine(...)` exceeds the fixed wrapper ladder, imported broader slash-calls and method
     sugar now fall back to the builtin variadic `/file/*` surface instead of extending the stdlib
     overload family further.
   - The stdlib file layer defines `FileError.why(err)` as the public type-owned wrapper over the intrinsic
     file-error string mapping, so direct `err.why()` and `Result.why(...)` can route through stdlib-owned helper
     surface while platform-specific code-to-string translation stays builtin substrate. It also defines
     `FileError.eof()` so EOF values can be constructed from the same type-owned stdlib surface, plus
-    `FileError.is_eof(err)` so EOF classification can use that same surface via direct calls or `err.is_eof()`.
+    `FileError.isEof(err)` so EOF classification can use that same surface via direct calls or `err.isEof()`.
 - **Effect requirement:** read-only file operations require `effects(file_read)` and write/append operations require
   `effects(file_write)`. `file_write` also implies `file_read` for compatibility.
 - **Example:**
@@ -2283,10 +2285,10 @@ sum_two_files([string] a, [string] b) {
    on_error<FileError, /log_file_error>(path)]
   write_ppm([string] path, [i32] width, [i32] height) {
     [File<Write>] file{ File<Write>(path)? }
-    file.write_line("P3")?
-    file.write_line(width, " ", height)?
-    file.write_line("255")?
-    file.write_line(255, " ", 0, " ", 0)?
+    file.writeLine("P3")?
+    file.writeLine(width, " ", height)?
+    file.writeLine("255")?
+    file.writeLine(255, " ", 0, " ", 0)?
     return(Result.ok())
   }
 
@@ -2791,8 +2793,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
   - `Maybe<T>` is intended to be a stdlib-owned optional type, not a permanently compiler-owned special case.
   - Present-value construction is explicit: `Maybe(value)` / `Maybe<T>(value)` are intentionally unsupported; use
     `some<T>(value)` instead.
-- **Helper surface (stdlib):** `is_empty()` / `is_some()`, `set(value)`, `clear()`, `take()` (consumes the stored value
-  and marks empty).
+- **Helper surface (stdlib):** `isEmpty()` / `isSome()`, `set(value)`, `clear()`, `take()` (consumes the stored value
+  and marks empty). Compatibility wrappers keep `is_empty()` / `is_some()` available for migration-only callers.
 - **Example shape:**
   ```
   [struct]
@@ -2811,12 +2813,12 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
     }
 
     [public return<bool>]
-    is_empty() {
+    isEmpty() {
       return(this.empty)
     }
 
     [public return<bool>]
-    is_some() {
+    isSome() {
       return(not(this.empty))
     }
 
@@ -2960,11 +2962,11 @@ bad_use_after_take() {
     `Reference<File<Mode>>` packs with indexed downstream file-handle method access alongside explicit
     `dereference(...).write*` / `flush()` access plus helper-style `at(values, i).write*()` / `values.at(i).flush()`
     receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct
-    indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)`
+    indexed `readByte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).readByte(...)`
     `?`, `Pointer<File<Mode>>` packs with indexed downstream file-handle method access alongside explicit
     `dereference(...).write*` / `flush()` access plus helper-style `at(values, i).write*()` / `values.at(i).flush()`
     receivers, canonical free-builtin `at([values] values, [index] i).write*()` / `.flush()` receivers, and direct
-    indexed `read_byte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).read_byte(...)`
+    indexed `readByte(...)` `?` inference plus canonical free-builtin `at([values] values, [index] i).readByte(...)`
     `?`, `Buffer<T>` packs with indexed downstream `buffer_load(...)` and `buffer_store(...)` on the IR/VM GPU path,
     `Reference<Buffer<T>>` packs with indexed downstream `buffer_load(dereference(...), ...)` and
     `buffer_store(dereference(...), ...)` on that same IR/VM GPU path, `Pointer<Buffer<T>>` packs with indexed
@@ -2983,7 +2985,7 @@ bad_use_after_take() {
     packs with indexed downstream field/helper access. Borrowed/pointer `Result` packs and the remaining unsupported
     non-string packs stay follow-up work.
     Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>`
-    arg-packs now preserves `write*()` / `flush()` receivers plus `read_byte(...)` `?` inference across direct calls
+    arg-packs now preserves `write*()` / `flush()` receivers plus `readByte(...)` `?` inference across direct calls
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
     named-argument rejection path.
 - **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{

@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4031
+- TODO-4032
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4032
 - TODO-4033
 - TODO-4034
 - TODO-4035
@@ -68,44 +67,44 @@ Task template:
 - TODO-4043
 - TODO-4044
 - TODO-4045
+- TODO-4046
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4031 through TODO-4035
+- Stdlib surface-style alignment: TODO-4032 through TODO-4035
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4031
-2. TODO-4032
-3. TODO-4033
-4. TODO-4034
-5. TODO-4035
-6. TODO-4042
-7. TODO-4043
-8. TODO-4044
-9. TODO-4045
-10. TODO-4046
-11. TODO-4047
-12. TODO-4048
-13. TODO-4049
-14. TODO-4050
-15. TODO-4052
-16. TODO-4058
-17. TODO-4053
-18. TODO-4055
-19. TODO-4054
-20. TODO-4056
-21. TODO-4057
-22. TODO-4059
+1. TODO-4032
+2. TODO-4033
+3. TODO-4034
+4. TODO-4035
+5. TODO-4042
+6. TODO-4043
+7. TODO-4044
+8. TODO-4045
+9. TODO-4046
+10. TODO-4047
+11. TODO-4048
+12. TODO-4049
+13. TODO-4050
+14. TODO-4052
+15. TODO-4058
+16. TODO-4053
+17. TODO-4055
+18. TODO-4054
+19. TODO-4056
+20. TODO-4057
+21. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -124,7 +123,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -401,15 +400,3 @@ Task template:
     - Helper naming, local bindings, and control flow in those modules align with `docs/CodeExamples.md` where the syntax is already supported.
     - The cleanup does not change public error domains or runtime behavior as part of the same slice.
   - stop_rule: Stop once the public error-helper layer is style-aligned; split any behavior or API changes into separate TODOs.
-
-- [ ] TODO-4031: Normalize public stdlib helper naming to docs/CodeExamples conventions for free functions and member methods
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026
-  - scope: Align public stdlib helper names and call surfaces with the conventions demonstrated in `docs/CodeExamples.md`, prioritizing free functions and member methods that users encounter directly in high-level stdlib modules.
-  - acceptance:
-    - Public-facing stdlib helpers use naming that matches the example-style conventions instead of canonical or migration-oriented spellings.
-    - Member-method versus free-function presentation is normalized where the existing language surface already supports the preferred form.
-    - Compatibility shims or follow-up renames that need broader migration work are captured explicitly instead of being hidden in this cleanup.
-  - stop_rule: Stop once public helper naming is normalized across the intended surface modules and any required compatibility migration has been split out.
