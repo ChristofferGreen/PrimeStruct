@@ -39,6 +39,12 @@ TEST_CASE("ir lowerer setup inference helper rejects invalid pointer targets") {
   ptrOffset.kind = primec::Expr::Kind::Call;
   ptrOffset.name = "plus";
   ptrOffset.args = {ptrName, one};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            ptrOffset,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   primec::Expr nestedInvalid;
   nestedInvalid.kind = primec::Expr::Kind::Call;
   nestedInvalid.name = "plus";
@@ -507,6 +513,36 @@ TEST_CASE("ir lowerer setup inference helper handles unresolved call return kind
             {},
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
               matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {
+              matchedOut = false;
+              return false;
+            },
+            kindOut) == Resolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr dereferenceCall;
+  dereferenceCall.kind = primec::Expr::Kind::Call;
+  dereferenceCall.name = "dereference";
+  primec::Expr pointerName;
+  pointerName.kind = primec::Expr::Kind::Name;
+  pointerName.name = "ptr";
+  dereferenceCall.args = {pointerName};
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            dereferenceCall,
+            {},
+            [](const primec::Expr &expr,
+               const primec::ir_lowerer::LocalMap &,
+               primec::ir_lowerer::LocalInfo::ValueKind &,
+               bool &matchedOut) {
+              matchedOut = (expr.name == "dereference");
               return false;
             },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::LocalInfo::ValueKind &, bool &matchedOut) {

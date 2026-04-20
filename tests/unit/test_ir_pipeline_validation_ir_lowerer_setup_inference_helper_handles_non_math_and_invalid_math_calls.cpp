@@ -111,6 +111,14 @@ TEST_CASE("ir lowerer setup inference helper infers non-math scalar call return 
   primec::Expr ptr;
   ptr.kind = primec::Expr::Kind::Name;
   ptr.name = "ptr";
+  primec::Expr offset;
+  offset.kind = primec::Expr::Kind::Literal;
+  offset.literalValue = 16;
+  offset.intWidth = 32;
+  primec::Expr pointerOffsetExpr;
+  pointerOffsetExpr.kind = primec::Expr::Kind::Call;
+  pointerOffsetExpr.name = "plus";
+  pointerOffsetExpr.args = {ptr, offset};
   primec::Expr dereferenceTarget;
   dereferenceTarget.kind = primec::Expr::Kind::Call;
   dereferenceTarget.name = "dereference";
@@ -130,6 +138,27 @@ TEST_CASE("ir lowerer setup inference helper infers non-math scalar call return 
             },
             kindOut) == Resolution::Resolved);
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
+  dereferenceTarget.args = {pointerOffsetExpr};
+  CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
+            dereferenceTarget,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Call && expr.name == "plus" &&
+                  expr.args.size() == 2 && expr.args.front().kind == primec::Expr::Kind::Name &&
+                  expr.args.front().name == "ptr") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+              }
+              if (expr.kind == primec::Expr::Kind::Name && expr.name == "ptr") {
+                return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            kindOut) == Resolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
 TEST_CASE("ir lowerer setup inference helper handles invalid non-math scalar calls") {

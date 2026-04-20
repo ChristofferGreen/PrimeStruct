@@ -250,6 +250,18 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
     const ResolveSetupInferenceCallReturnKindFn &resolveMethodCallReturnKind,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
+  std::string pointerBuiltinName;
+  std::string memoryBuiltinName;
+  const bool isPointerBuiltinCall = getBuiltinPointerName(expr, pointerBuiltinName);
+  const bool isPointerMemoryIntrinsicCall =
+      getBuiltinMemoryName(expr, memoryBuiltinName) &&
+      (memoryBuiltinName == "alloc" || memoryBuiltinName == "realloc" ||
+       memoryBuiltinName == "at" || memoryBuiltinName == "at_unsafe" ||
+       memoryBuiltinName == "reinterpret");
+  if (isPointerBuiltinCall || isPointerMemoryIntrinsicCall) {
+    return CallExpressionReturnKindResolution::NotResolved;
+  }
+
   LocalInfo::ValueKind returnKind = LocalInfo::ValueKind::Unknown;
   bool matched = false;
 

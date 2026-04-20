@@ -102,6 +102,14 @@ NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
     return NonMathScalarCallReturnKindResolution::Resolved;
   }
 
+  if (isSimpleCallName(expr, "dereference")) {
+    if (expr.args.size() != 1) {
+      return NonMathScalarCallReturnKindResolution::Resolved;
+    }
+    kindOut = inferPointerTargetKind(expr.args.front(), localsIn);
+    return NonMathScalarCallReturnKindResolution::Resolved;
+  }
+
   if (isSimpleCallName(expr, "assign")) {
     if (expr.args.size() != 2) {
       return NonMathScalarCallReturnKindResolution::Resolved;
