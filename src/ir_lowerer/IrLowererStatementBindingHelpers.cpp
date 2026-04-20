@@ -492,10 +492,11 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isBinding) {
       return false;
     }
-    return candidate.name == "Buffer" || candidate.name == "/std/gfx/Buffer" ||
-           candidate.name == "/std/gfx/experimental/Buffer" ||
-           candidate.name.rfind("/std/gfx/Buffer__t", 0) == 0 ||
-           candidate.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
+    const std::string scopedName = resolveExprPath(candidate);
+    return scopedName == "Buffer" || scopedName == "/std/gfx/Buffer" ||
+           scopedName == "/std/gfx/experimental/Buffer" ||
+           scopedName.rfind("/std/gfx/Buffer__t", 0) == 0 ||
+           scopedName.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
   };
   if (hasExplicitType && info.kind == LocalInfo::Kind::Buffer && isRawStructBufferInit(init)) {
     info.kind = LocalInfo::Kind::Value;

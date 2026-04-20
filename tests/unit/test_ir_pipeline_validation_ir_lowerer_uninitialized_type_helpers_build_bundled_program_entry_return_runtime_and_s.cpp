@@ -445,6 +445,11 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver call targets") 
   bufferCall.templateArgs = {"i32"};
   CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(bufferCall, ValueKind::Unknown) == "Buffer");
 
+  primec::Expr scopedBufferCall = bufferCall;
+  scopedBufferCall.namespacePrefix = "/std/gfx";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeNameFromCallExpr(
+            scopedBufferCall, ValueKind::Unknown) == "Buffer");
+
   primec::Expr soaVectorCall;
   soaVectorCall.kind = primec::Expr::Kind::Call;
   soaVectorCall.name = "soa_vector";

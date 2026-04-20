@@ -364,4 +364,33 @@ TEST_CASE("ir lowerer binding normalization guards explicit map helper defs") {
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer packed result buffer helpers normalize scoped gfx calls") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path emitExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+
+  REQUIRE(std::filesystem::exists(emitExprPath));
+  const std::string source = readText(emitExprPath);
+
+  CHECK(source.find("const std::string scopedName = resolveExprPath(candidate);") !=
+        std::string::npos);
+  CHECK(source.find("std::string normalized = resolveExprPath(valueExpr);") !=
+        std::string::npos);
+  CHECK(source.find("candidate.name == \"/std/gfx/Buffer\"") == std::string::npos);
+  CHECK(source.find("std::string normalized = valueExpr.name;") == std::string::npos);
+}
+
 TEST_SUITE_END();

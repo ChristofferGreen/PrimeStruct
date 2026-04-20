@@ -266,12 +266,15 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
 
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
                                                       LocalInfo::ValueKind inferredKind) {
-  auto isBufferConstructorCall = [&](const std::string &name) {
-    return name == "Buffer" || name == "/std/gfx/Buffer" || name == "/std/gfx/experimental/Buffer" ||
-           name.rfind("/std/gfx/Buffer__t", 0) == 0 || name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
+  auto isBufferConstructorCall = [&](const Expr &candidate) {
+    const std::string scopedName = resolveExprPath(candidate);
+    return scopedName == "Buffer" || scopedName == "/std/gfx/Buffer" ||
+           scopedName == "/std/gfx/experimental/Buffer" ||
+           scopedName.rfind("/std/gfx/Buffer__t", 0) == 0 ||
+           scopedName.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
   };
   if (receiverCallExpr.kind == Expr::Kind::Call && receiverCallExpr.templateArgs.size() == 1 &&
-      isBufferConstructorCall(receiverCallExpr.name)) {
+      isBufferConstructorCall(receiverCallExpr)) {
     return "Buffer";
   }
   std::string collection;

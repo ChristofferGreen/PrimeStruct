@@ -516,6 +516,37 @@ TEST_CASE("ir lowerer statement binding helper infers canonical map constructor 
   CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
+TEST_CASE("ir lowerer statement binding helper treats scoped Buffer ctor as raw struct init") {
+  primec::Expr stmt;
+  stmt.name = "value";
+  primec::Transform typeTransform;
+  typeTransform.name = "Buffer";
+  typeTransform.templateArgs = {"i32"};
+  stmt.transforms.push_back(typeTransform);
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "Buffer";
+  init.namespacePrefix = "/std/gfx";
+  init.templateArgs = {"i32"};
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info = primec::ir_lowerer::inferStatementBindingTypeInfo(
+      stmt,
+      init,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+}
+
 TEST_CASE("ir lowerer statement binding helper inherits map metadata from named source binding") {
   primec::Expr stmt;
   stmt.name = "dst";
