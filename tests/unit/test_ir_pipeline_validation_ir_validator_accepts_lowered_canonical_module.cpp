@@ -264,6 +264,17 @@ TEST_CASE("ir lowerer helper keeps parser-shaped canonical vector constructor bu
   CHECK(builtin == "vector");
 }
 
+TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib internals") {
+  primec::Expr namespacedArrayCall;
+  namespacedArrayCall.kind = primec::Expr::Kind::Call;
+  namespacedArrayCall.name = "array";
+  namespacedArrayCall.namespacePrefix = "/std/collections/internal_soa_storage";
+
+  std::string builtin;
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(namespacedArrayCall, builtin));
+  CHECK(builtin == "array");
+}
+
 TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map") {
   primec::Expr entryCall;
   entryCall.kind = primec::Expr::Kind::Call;

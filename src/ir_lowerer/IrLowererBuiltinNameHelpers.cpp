@@ -448,20 +448,24 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }();
-  std::string name = resolveScopedExprName(expr);
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
+  std::string scopedName = resolveScopedExprName(expr);
+  if (!scopedName.empty() && scopedName[0] == '/') {
+    scopedName.erase(scopedName.begin());
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/vector/").size());
+  std::string rawName = expr.name;
+  if (!rawName.empty() && rawName[0] == '/') {
+    rawName.erase(rawName.begin());
+  }
+  if (scopedName.rfind("std/collections/vector/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("std/collections/vector/").size());
     if (alias == "vector") {
       out = "vector";
       return true;
     }
     return false;
   }
-  if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
+  if (scopedName.rfind("map/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("map/").size());
     if (alias == "map") {
       if (hasEntryCtorArgs) {
         return false;
@@ -471,8 +475,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
+  if (scopedName.rfind("std/collections/map/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("std/collections/map/").size());
     if (alias == "map") {
       if (hasEntryCtorArgs) {
         return false;
@@ -482,11 +486,11 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
-  if (name.find('/') != std::string::npos) {
+  if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "array" || name == "vector" || name == "map" || name == "soa_vector") {
-    out = name;
+  if (rawName == "array" || rawName == "vector" || rawName == "map" || rawName == "soa_vector") {
+    out = rawName;
     return true;
   }
   return false;
