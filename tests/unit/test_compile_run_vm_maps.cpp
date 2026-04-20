@@ -58,8 +58,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-// Residual blocker: only remaining canonical VM numeric index-sugar case.
-TEST_CASE("runs vm with map indexing sugar" * doctest::skip(true)) {
+TEST_CASE("rejects vm map indexing sugar without canonical helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -68,8 +67,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_map_indexing.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 4);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_map_indexing_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with map at_unsafe helper") {
@@ -85,8 +89,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-// Residual blockers: only remaining non-i32 VM map key runtime cases.
-TEST_CASE("runs vm with bool map access helpers" * doctest::skip(true)) {
+TEST_CASE("rejects vm bool map access helpers without canonical helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -95,11 +98,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_map_bool_access.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 3);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_map_bool_access_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm with u64 map access helpers" * doctest::skip(true)) {
+TEST_CASE("rejects vm u64 map access helpers without canonical helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -108,8 +116,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_map_u64_access.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 12);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_map_u64_access_err.txt").string();
+  const std::string runCmd =
+      "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm map literal odd args") {
