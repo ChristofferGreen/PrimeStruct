@@ -555,11 +555,16 @@ TEST_CASE("C++ emitter helper keeps same-path map access slash-method metadata p
       {"/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker"},
   };
 
-  auto expectResolved = [&](const char *receiverMethodName, const char *expectedPath) {
+  auto expectResolved = [&](const char *receiverMethodName,
+                            const char *expectedPath,
+                            const char *receiverNamespace = nullptr) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
     receiverCall.name = receiverMethodName;
+    if (receiverNamespace != nullptr) {
+      receiverCall.namespacePrefix = receiverNamespace;
+    }
     receiverCall.args = {receiverName, key};
     receiverCall.argNames = {std::nullopt, std::nullopt};
 
@@ -578,8 +583,12 @@ TEST_CASE("C++ emitter helper keeps same-path map access slash-method metadata p
 
   expectResolved("/map/at", "/AliasAtMarker/tag");
   expectResolved("/std/collections/map/at", "/CanonicalAtMarker/tag");
+  expectResolved("at", "/CanonicalAtMarker/tag", "/std/collections/map");
   expectResolved("/map/at_unsafe", "/AliasAtUnsafeMarker/tag");
   expectResolved("/std/collections/map/at_unsafe", "/CanonicalAtUnsafeMarker/tag");
+  expectResolved("at_unsafe",
+                 "/CanonicalAtUnsafeMarker/tag",
+                 "/std/collections/map");
 }
 
 TEST_CASE("C++ emitter helper rejects explicit map slash-method count receiver fallback") {

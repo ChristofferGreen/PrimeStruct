@@ -94,7 +94,7 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -105,7 +105,7 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -188,7 +188,7 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -244,7 +244,7 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -295,7 +295,7 @@
         candidate.args.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -333,7 +333,7 @@
         candidate.args.empty()) {
       return "";
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -360,7 +360,7 @@
     if (candidate.kind != Expr::Kind::Call || !candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }

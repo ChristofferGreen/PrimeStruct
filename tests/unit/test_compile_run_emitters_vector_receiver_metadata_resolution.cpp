@@ -187,6 +187,51 @@ TEST_CASE("C++ emitter helper resolves canonical direct-call method receiver thr
   CHECK(resolved == "/CanonicalMarker/tag");
 }
 
+TEST_CASE("C++ emitter helper resolves parser-shaped canonical direct-call method receiver through same-path metadata") {
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "at";
+  receiverCall.namespacePrefix = "/std/collections/vector";
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  receiverCall.args = {receiverName, indexLiteral};
+  receiverCall.argNames = {std::nullopt, std::nullopt};
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.isMethodCall = true;
+  methodCall.name = "tag";
+  methodCall.args = {receiverCall};
+  methodCall.argNames = {std::nullopt};
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "vector";
+  receiverInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", receiverInfo);
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/std/collections/vector/at", "/CanonicalMarker"},
+  };
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      methodCall, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == "/CanonicalMarker/tag");
+}
+
 TEST_CASE("C++ emitter helper resolves explicit vector slash-method receivers through builtin receiver typing") {
   primec::Expr receiverName;
   receiverName.kind = primec::Expr::Kind::Name;
@@ -212,11 +257,15 @@ TEST_CASE("C++ emitter helper resolves explicit vector slash-method receivers th
       {"/std/collections/vector/at", "/CanonicalMarker"},
   };
 
-  auto expectResolved = [&](const char *receiverMethodName) {
+  auto expectResolved = [&](const char *receiverMethodName,
+                            const char *receiverNamespace = nullptr) {
     primec::Expr receiverCall;
     receiverCall.kind = primec::Expr::Kind::Call;
     receiverCall.isMethodCall = true;
     receiverCall.name = receiverMethodName;
+    if (receiverNamespace != nullptr) {
+      receiverCall.namespacePrefix = receiverNamespace;
+    }
     receiverCall.args = {receiverName, indexLiteral};
     receiverCall.argNames = {std::nullopt, std::nullopt};
 
@@ -236,6 +285,7 @@ TEST_CASE("C++ emitter helper resolves explicit vector slash-method receivers th
 
   expectResolved("/vector/at");
   expectResolved("/std/collections/vector/at");
+  expectResolved("at", "/std/collections/vector");
 }
 
 TEST_CASE("C++ emitter helper prefers same-path vector slash-method access return-kind metadata") {
