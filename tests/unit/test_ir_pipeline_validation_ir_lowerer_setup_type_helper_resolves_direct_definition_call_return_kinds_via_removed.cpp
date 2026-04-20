@@ -318,6 +318,113 @@ TEST_CASE("ir lowerer setup type helper rejects canonical map tryAt fallback whi
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer setup type helper prefers exact direct map count-like return info over semantic canonical paths") {
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  primec::Definition aliasCountDef;
+  aliasCountDef.fullPath = "/map/count";
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/map/count";
+  primec::Definition aliasContainsDef;
+  aliasContainsDef.fullPath = "/map/contains";
+  primec::Definition canonicalContainsDef;
+  canonicalContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition aliasTryAtDef;
+  aliasTryAtDef.fullPath = "/map/tryAt";
+  primec::Definition canonicalTryAtDef;
+  canonicalTryAtDef.fullPath = "/std/collections/map/tryAt";
+  defMap.emplace(aliasCountDef.fullPath, &aliasCountDef);
+  defMap.emplace(canonicalCountDef.fullPath, &canonicalCountDef);
+  defMap.emplace(aliasContainsDef.fullPath, &aliasContainsDef);
+  defMap.emplace(canonicalContainsDef.fullPath, &canonicalContainsDef);
+  defMap.emplace(aliasTryAtDef.fullPath, &aliasTryAtDef);
+  defMap.emplace(canonicalTryAtDef.fullPath, &canonicalTryAtDef);
+
+  std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  infoByPath.emplace(
+      "/map/count",
+      primec::ir_lowerer::ReturnInfo{
+          .returnsVoid = false,
+          .returnsArray = false,
+          .kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64,
+      });
+  infoByPath.emplace(
+      "/std/collections/map/count",
+      primec::ir_lowerer::ReturnInfo{
+          .returnsVoid = false,
+          .returnsArray = false,
+          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32,
+      });
+  infoByPath.emplace(
+      "/map/contains",
+      primec::ir_lowerer::ReturnInfo{
+          .returnsVoid = false,
+          .returnsArray = false,
+          .kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt8,
+      });
+  infoByPath.emplace(
+      "/std/collections/map/contains",
+      primec::ir_lowerer::ReturnInfo{
+          .returnsVoid = false,
+          .returnsArray = false,
+          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Bool,
+      });
+  infoByPath.emplace(
+      "/map/tryAt",
+      primec::ir_lowerer::ReturnInfo{
+          .returnsVoid = false,
+          .returnsArray = false,
+          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64,
+      });
+  infoByPath.emplace(
+      "/std/collections/map/tryAt",
+      primec::ir_lowerer::ReturnInfo{
+          .returnsVoid = false,
+          .returnsArray = false,
+          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32,
+      });
+
+  auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
+    auto it = infoByPath.find(path);
+    if (it == infoByPath.end()) {
+      return false;
+    }
+    out = it->second;
+    return true;
+  };
+
+  auto expectExactPathWins = [&](const std::string &callName,
+                                 primec::ir_lowerer::LocalInfo::ValueKind expectedKind,
+                                 const std::string &resolvedPath) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = callName;
+
+    primec::ir_lowerer::LocalInfo::ValueKind kindOut =
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    bool definitionMatched = false;
+    CHECK(primec::ir_lowerer::resolveDefinitionCallReturnKind(
+        callExpr,
+        defMap,
+        [&](const primec::Expr &) { return resolvedPath; },
+        getReturnInfo,
+        false,
+        kindOut,
+        &definitionMatched));
+    CHECK(definitionMatched);
+    CHECK(kindOut == expectedKind);
+  };
+
+  expectExactPathWins("/map/count",
+                      primec::ir_lowerer::LocalInfo::ValueKind::UInt64,
+                      "/std/collections/map/count");
+  expectExactPathWins("/map/contains",
+                      primec::ir_lowerer::LocalInfo::ValueKind::UInt8,
+                      "/std/collections/map/contains");
+  expectExactPathWins("/map/tryAt",
+                      primec::ir_lowerer::LocalInfo::ValueKind::Int64,
+                      "/std/collections/map/tryAt");
+}
+
 TEST_CASE("ir lowerer setup type helper rejects canonical map constructor fallback to compatibility defs") {
   std::unordered_map<std::string, const primec::Definition *> defMap;
   primec::Definition aliasCtorDef;

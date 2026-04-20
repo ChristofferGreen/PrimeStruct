@@ -9,6 +9,21 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
+      callExpr.name.empty() || callExpr.name.front() != '/') {
+    return false;
+  }
+  std::string helperName;
+  return resolveMapHelperAliasName(callExpr, helperName) &&
+         (helperName == "count" || helperName == "contains" ||
+          helperName == "tryAt");
+}
+
+} // namespace
+
 bool resolveReturnInfoKindForPath(const std::string &path,
                                   const GetReturnInfoForPathFn &getReturnInfo,
                                   bool requireArrayReturn,
@@ -299,8 +314,13 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
       appendCandidate(candidate);
     }
   };
-  appendCandidates(collectionHelperPathCandidates(resolveExprPath(callExpr)));
-  appendCandidates(collectionHelperPathCandidates(callExpr.name));
+  if (prefersExactDirectMapCountLikeReturnPath(callExpr)) {
+    appendCandidates(collectionHelperPathCandidates(callExpr.name));
+    appendCandidates(collectionHelperPathCandidates(resolveExprPath(callExpr)));
+  } else {
+    appendCandidates(collectionHelperPathCandidates(resolveExprPath(callExpr)));
+    appendCandidates(collectionHelperPathCandidates(callExpr.name));
+  }
   if (!callExpr.name.empty() && callExpr.name.front() != '/' &&
       !callExpr.namespacePrefix.empty()) {
     appendCandidates(collectionHelperPathCandidates(callExpr.namespacePrefix + "/" +
