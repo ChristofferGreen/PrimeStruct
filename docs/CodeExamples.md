@@ -47,7 +47,7 @@ These modules should converge on the readable surface forms in this document:
 prefer method-style calls, operator syntax, concise inferred locals, and
 user-facing names whenever the current language surface already supports them.
 
-Intentionally canonical or substrate-oriented code:
+Internal implementation, bridge, or substrate-oriented code:
 - `stdlib/std/bench_non_math/*`
 - `stdlib/std/collections/collections.prime`
 - `stdlib/std/collections/experimental_*`

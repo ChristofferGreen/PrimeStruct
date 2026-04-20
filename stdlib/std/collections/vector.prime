@@ -1,3 +1,4 @@
+// Canonical public wrapper layer over the internal experimental_vector implementation module.
 import /std/collections/experimental_vector/*
 
 [public effects(heap_alloc), return<Vector<T>>]

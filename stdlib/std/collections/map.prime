@@ -1,3 +1,4 @@
+// Canonical public wrapper layer over the internal experimental_map implementation module.
 import /std/collections/experimental_map/*
 
 [public return<Entry<K, V>>]

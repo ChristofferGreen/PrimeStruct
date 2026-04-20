@@ -138,11 +138,17 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Canonical `/std/collections/map/*` is now the sole public namespaced map contract.") !=
         std::string::npos);
+  CHECK(primeStructDoc.find(
+            "`/std/collections/experimental_vector/*` family now remains only as the internal implementation seam behind that") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find(
+            "`/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("no `experimental` namespace counts as canonical public API") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/vector/*` public contract; not a peer user-facing collection API. | `TODO-4054` |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/map/*` public contract; not a peer user-facing collection API. | `TODO-4054` |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Compatibility shim over canonical `/std/gfx/*`; legacy wrapper imports remain only to preserve existing source while behavior continues to move through the canonical helper layer. | `TODO-4056` |") !=
         std::string::npos);
@@ -154,6 +160,14 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("Canonical collection contract: `/std/collections/vector/*` and") !=
         std::string::npos);
+  CHECK(todo.find("Internal collection implementation modules:") != std::string::npos);
+  CHECK(todo.find("/std/collections/experimental_vector/*` and") != std::string::npos);
+  CHECK(todo.find("/std/collections/experimental_map/*` now remain implementation-owned seams") !=
+        std::string::npos);
+  CHECK(todo.find("Stdlib de-experimentalization: TODO-4056 through TODO-4059") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4057: Rename experimental substrate helpers") != std::string::npos);
+  CHECK(todo.find("  - depends_on: none") != std::string::npos);
   CHECK(todo.find("Compatibility gfx shim: `/std/gfx/experimental/*` now remains only as a") !=
         std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_vector/*`, and") !=
@@ -162,6 +176,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4053:") == std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4054:") == std::string::npos);
   CHECK(todo.find("TODO-4055") == std::string::npos);
   CHECK(todo.find("TODO-4056") != std::string::npos);
 }
@@ -200,8 +215,8 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
-  CHECK(todo.find("TODO-4054") != std::string::npos);
   CHECK(todo.find("TODO-4056") != std::string::npos);
+  CHECK(todo.find("TODO-4057") != std::string::npos);
 }
 
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
@@ -825,6 +840,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "vector.prime";
   std::filesystem::path mapStdlibPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "map.prime";
+  std::filesystem::path experimentalVectorStdlibPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_vector.prime";
   std::filesystem::path experimentalMapStdlibPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_map.prime";
   std::filesystem::path soaConversionsPath =
@@ -841,6 +858,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   if (!std::filesystem::exists(mapStdlibPath)) {
     mapStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "collections" / "map.prime";
   }
+  if (!std::filesystem::exists(experimentalVectorStdlibPath)) {
+    experimentalVectorStdlibPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_vector.prime";
+  }
   if (!std::filesystem::exists(experimentalMapStdlibPath)) {
     experimentalMapStdlibPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_map.prime";
@@ -853,6 +874,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(maybeStdlibPath));
   REQUIRE(std::filesystem::exists(vectorStdlibPath));
   REQUIRE(std::filesystem::exists(mapStdlibPath));
+  REQUIRE(std::filesystem::exists(experimentalVectorStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
   REQUIRE(std::filesystem::exists(soaConversionsPath));
 
@@ -860,9 +882,13 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
   const std::string vectorStdlib = readFile(vectorStdlibPath.string());
   const std::string mapStdlib = readFile(mapStdlibPath.string());
+  const std::string experimentalVectorStdlib = readFile(experimentalVectorStdlibPath.string());
   const std::string experimentalMapStdlib = readFile(experimentalMapStdlibPath.string());
   const std::string soaConversions = readFile(soaConversionsPath.string());
 
+  CHECK(codeExamples.find("Internal implementation, bridge, or substrate-oriented code:") !=
+        std::string::npos);
+  CHECK(codeExamples.find("Intentionally canonical or substrate-oriented code:") == std::string::npos);
   CHECK(codeExamples.find("[mut] current{start}") != std::string::npos);
   CHECK(codeExamples.find("limit{5}") != std::string::npos);
 
@@ -873,6 +899,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(maybeStdlib.find("[Maybe<T> mut] out{Maybe<T>()}") == std::string::npos);
   CHECK(maybeStdlib.find("[Reference<Maybe<T>> mut] ref{location(out)}") == std::string::npos);
 
+  CHECK(vectorStdlib.find(
+            "// Canonical public wrapper layer over the internal experimental_vector implementation module.") !=
+        std::string::npos);
   CHECK(vectorStdlib.find("[mut] out{/std/collections/experimental_vector/vector<T>()}") !=
         std::string::npos);
   CHECK(vectorStdlib.find("valueCount{count(values)}") != std::string::npos);
@@ -882,6 +911,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(vectorStdlib.find("[i32] valueCount{count(values)}") == std::string::npos);
   CHECK(vectorStdlib.find("[i32 mut] index{0i32}") == std::string::npos);
 
+  CHECK(mapStdlib.find(
+            "// Canonical public wrapper layer over the internal experimental_map implementation module.") !=
+        std::string::npos);
   CHECK(mapStdlib.find("[mut] out{/std/collections/experimental_map/mapNew<K, V>()}") !=
         std::string::npos);
   CHECK(mapStdlib.find("entryCount{count(entries)}") != std::string::npos);
@@ -892,7 +924,17 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(mapStdlib.find("[i32] entryCount{count(entries)}") == std::string::npos);
   CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") == std::string::npos);
 
+  CHECK(experimentalVectorStdlib.find("// Internal implementation module behind canonical /std/collections/vector/*.") !=
+        std::string::npos);
+  CHECK(experimentalVectorStdlib.find(
+            "// Direct imports remain only for targeted compatibility or conformance coverage.") !=
+        std::string::npos);
   CHECK(experimentalMapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
+  CHECK(experimentalMapStdlib.find("// Internal implementation module behind canonical /std/collections/map/*.") !=
+        std::string::npos);
+  CHECK(experimentalMapStdlib.find(
+            "// Direct imports remain only for targeted compatibility or conformance coverage.") !=
+        std::string::npos);
   CHECK(experimentalMapStdlib.find("return(/std/collections/experimental_vector/vectorCount<K>(keys))") !=
         std::string::npos);
   CHECK(experimentalMapStdlib.find("return(mapCount<K, V>(this))") == std::string::npos);

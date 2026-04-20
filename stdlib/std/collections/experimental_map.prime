@@ -1,3 +1,5 @@
+// Internal implementation module behind canonical /std/collections/map/*.
+// Direct imports remain only for targeted compatibility or conformance coverage.
 import /std/collections/experimental_vector/*
 
 [return<bool>]

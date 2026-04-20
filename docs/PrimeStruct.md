@@ -2002,9 +2002,9 @@ for(
     `Result.why(Result<ContainerError>)` maps container error codes to the same stable literal-backed messages.
     Builtin empty-vector `pop` runtime aborts and checked vector indexing/removal aborts now use the same `"container
     empty"` / `"container index out of bounds"` wording across VM/native/C++ flows.
-  - Canonical `/std/collections/vector/*` is now the sole public namespaced vector contract. The temporary
-    `/std/collections/experimental_vector/*` family remains only as the backing implementation seam while the later
-    internal-module cleanup is still pending. That backing namespace (`vector<T>(...)`, `vectorNew`, `vectorSingle`,
+  - Canonical `/std/collections/vector/*` is now the sole public namespaced vector contract. The
+    `/std/collections/experimental_vector/*` family now remains only as the internal implementation seam behind that
+    public contract. That backing namespace (`vector<T>(...)`, `vectorNew`, `vectorSingle`,
     `vectorPair`, `vectorTriple`, `vectorQuad`, `vectorQuint`, `vectorSext`, `vectorSept`, `vectorOct`, `vectorCount`,
     `vectorCapacity`, `vectorReserve`, `vectorPush`, `vectorPop`, `vectorClear`, `vectorRemoveAt`,
     `vectorRemoveSwap`, `vectorAt`, `vectorAtUnsafe`) returns the current `.prime` `Vector<T>` record backed by
@@ -2033,9 +2033,9 @@ for(
     ownership-sensitive element types on explicit experimental `Vector<T>` bindings, and canonical
     `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the backing indexed-removal path for
     those same explicit experimental `Vector<T>` bindings.
-  - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The temporary
-    `/std/collections/experimental_map/*` family remains only as the backing implementation seam while the later
-    internal-module cleanup is still pending. That backing namespace (`Entry<K, V>`, `entry(key, value)`,
+  - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The
+    `/std/collections/experimental_map/*` family now remains only as the internal implementation seam behind that
+    public contract. That backing namespace (`Entry<K, V>`, `entry(key, value)`,
     `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`, `mapQuint`,
     `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, `mapAtUnsafe`,
     `mapInsertRef`, `mapCountRef`, `mapContainsRef`, `mapTryAtRef`, `mapAtRef`, `mapAtUnsafeRef`) returns the current
@@ -2566,7 +2566,7 @@ flight.
   `stdlib/std/collections/soa_vector.prime`,
   `stdlib/std/collections/soa_vector_conversions.prime`, and
   `stdlib/std/gfx/gfx.prime`.
-- **Canonical, bridge, or substrate code:** `stdlib/std/bench_non_math/*`,
+- **Internal implementation, bridge, or substrate code:** `stdlib/std/bench_non_math/*`,
   `stdlib/std/collections/collections.prime`,
   `stdlib/std/collections/experimental_*`, and
   `stdlib/std/gfx/experimental.prime`.
@@ -2574,7 +2574,7 @@ flight.
   remain mixed on purpose, so contributors should follow the file-level mapping
   above rather than assuming the whole directory has one style target.
 
-Style-aligned modules should follow `docs/CodeExamples.md`. The canonical or
+Style-aligned modules should follow `docs/CodeExamples.md`. The internal implementation or
 bridge-oriented files may stay helper-heavy until the relevant migration or
 cleanup TODO explicitly retargets them.
 
@@ -2588,10 +2588,14 @@ re-defining it piecemeal.
   `vector<T>` and `map<K, V>`, collection helper families, compatibility
   spellings plus removed-helper diagnostics, semantic surface IDs, and lowerer
   dispatch metadata.
-- **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings,
-  `vectorCount` / `mapCount`-style lowering names, and
-  `/std/collections/experimental_*` implementation modules remain temporary
-  compatibility or internal seams until the later cutover TODOs delete them.
+- **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
+  `vectorCount` / `mapCount`-style lowering names remain temporary
+  compatibility seams until the later cutover TODOs delete them.
+- **Internal implementation seams:** `/std/collections/experimental_vector/*`
+  and `/std/collections/experimental_map/*` remain implementation-owned
+  modules behind the canonical wrappers; direct imports should stay limited to
+  targeted compatibility or conformance coverage rather than ordinary public
+  API use.
 - **Out of scope for this bridge lane:** `array<T>` core ownership,
   `soa_vector<T>` maturity/promotion policy, and runtime storage/allocator
   redesign stay outside the vector/map bridge contract and require separate
@@ -2622,8 +2626,8 @@ Current `stdlib/std` experimental module classification:
 
 | Namespace family | Current role | Current interpretation | Follow-up |
 | --- | --- | --- | --- |
-| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/vector/*` public contract; not a peer user-facing collection API. | `TODO-4054` |
-| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/map/*` public contract; not a peer user-facing collection API. | `TODO-4054` |
+| `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
+| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Compatibility shim over canonical `/std/gfx/*`; legacy wrapper imports remain only to preserve existing source while behavior continues to move through the canonical helper layer. | `TODO-4056` |
 | `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity track. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
@@ -3930,7 +3934,7 @@ read-only path.
     `/map/contains`, `/map/tryAt`, or `/map/at*` handling. Explicit removed compatibility `/map/count(...)`,
     `/map/contains(...)`, `/map/tryAt(...)`, `/map/at(...)`, and `/map/at_unsafe(...)` spellings also no longer inherit
     canonical `/std/collections/map/*` behavior and now require explicit `/map/count`, `/map/contains`, `/map/tryAt`,
-    `/map/at`, or `/map/at_unsafe` definitions. Importing `/std/collections/experimental_map/*` now extends canonical
+    `/map/at`, or `/map/at_unsafe` definitions. Legacy compatibility or conformance imports of `/std/collections/experimental_map/*` now extend canonical
     namespaced helper calls in three distinct ways: value `Map<K, V>` receivers can use call-form
     `/std/collections/map/count|contains|tryAt|at|at_unsafe`, which rewrites directly onto the real experimental
     `.prime` helper implementation; wrapper-layer `/std/collections/mapCount|mapContains|mapTryAt|mapAt|mapAtUnsafe`

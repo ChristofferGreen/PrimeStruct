@@ -56,24 +56,22 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4054
 - TODO-4056
+- TODO-4057
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4057
 - TODO-4059
 
 ### Priority Lanes (Current)
 
-- Stdlib de-experimentalization: TODO-4054 through TODO-4059
+- Stdlib de-experimentalization: TODO-4056 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4054
-2. TODO-4056
-3. TODO-4057
-4. TODO-4059
+1. TODO-4056
+2. TODO-4057
+3. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -83,7 +81,7 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4054, TODO-4056, TODO-4057, TODO-4059 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4056, TODO-4057, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -103,7 +101,7 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | TODO-4054, TODO-4056, TODO-4057, TODO-4059 |
+| De-experimentalization surface and namespace parity | TODO-4056, TODO-4057, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
@@ -132,12 +130,16 @@ Task template:
 - Canonical collection contract: `/std/collections/vector/*` and
   `/std/collections/map/*` are the sole public vector/map collection surfaces.
 - Temporary compatibility namespaces:
-  `/std/collections/experimental_vector/*`,
-  `/std/collections/experimental_map/*`,
   `/std/gfx/experimental/*`,
   `/std/collections/experimental_soa_vector/*`, and
   `/std/collections/experimental_soa_vector_conversions/*` stay transitional
   until their explicit shim, rename, or maturity TODOs land.
+- Internal collection implementation modules:
+  `/std/collections/experimental_vector/*` and
+  `/std/collections/experimental_map/*` now remain implementation-owned seams
+  behind canonical `/std/collections/vector/*` and `/std/collections/map/*`,
+  with direct imports kept only for targeted compatibility or conformance
+  coverage.
 - Compatibility gfx shim: `/std/gfx/experimental/*` now remains only as a
   legacy compatibility shim over canonical `/std/gfx/*`, not as a peer public
   graphics namespace.
@@ -173,7 +175,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4054, TODO-4056, TODO-4057
+  - depends_on: TODO-4056, TODO-4057
   - scope: Remove stale experimental naming from public docs, examples, and user-facing guidance once the corresponding stdlib surfaces have been reclassified or renamed so the documented public contract no longer advertises transitional namespaces that are no longer meant for direct use.
   - acceptance:
     - Public docs and guidance no longer present completed collection/gfx/substrate de-experimentalization work as still experimental.
@@ -185,7 +187,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4054
+  - depends_on: none
   - scope: Reclassify low-level substrate helpers such as buffer-checked/buffer-unchecked and SoA storage modules away from `experimental` naming toward explicit internal/substrate namespaces so they stop reading like candidate public stdlib APIs.
   - acceptance:
     - Low-level substrate modules no longer advertise themselves as public-facing experimental stdlib APIs purely by name.
@@ -204,15 +206,3 @@ Task template:
     - Any temporary compatibility shim or import alias used during the transition is removed or narrowed to a clearly documented residual seam.
     - Gfx resolution/lowering parity coverage confirms that removing the experimental public namespace does not change supported behavior.
   - stop_rule: Stop once `/std/gfx/experimental/*` is no longer part of the public contract; split any backend-specific residual compatibility need into a separate follow-up item.
-
-- [ ] TODO-4054: Convert `experimental_vector` and `experimental_map` into internal implementation modules
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib De-Experimentalization
-  - depends_on: none
-  - scope: Reclassify the current experimental vector/map implementation namespaces as internal implementation modules or internal names once the canonical vector/map public contract and bridge-backed ownership cutover are complete.
-  - acceptance:
-    - `experimental_vector` and `experimental_map` no longer act as public transition namespaces for ordinary stdlib consumers.
-    - Canonical `vector`/`map` continue to work through the same implementation behavior without requiring users or compiler paths to target the experimental namespaces directly.
-    - Any rename or visibility change leaves internal implementation seams explicit instead of silently promoting them as new public API.
-  - stop_rule: Stop once the experimental vector/map namespaces are no longer public contract; split any deeper implementation refactor beyond that visibility/name boundary into separate tasks.
