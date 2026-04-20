@@ -34,6 +34,20 @@ bool matchesRegistrySpellingSet(std::span<const std::string_view> spellings,
   return false;
 }
 
+std::string resolveStatementCallPathWithoutFallbackProbes(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    return scoped + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 std::string canonicalStatementVectorHelperName(std::string helperName) {
   helperName = stripGeneratedHelperSuffix(std::move(helperName));
   if (helperName == "vectorCount") {
@@ -156,7 +170,13 @@ static bool resolveStatementVectorHelperAliasName(const Expr &expr, std::string 
   if (expr.name.empty()) {
     return false;
   }
-  return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);
+  return resolvePublishedStdlibSurfaceExprMemberName(
+             expr,
+             StdlibSurfaceId::CollectionsVectorHelpers,
+             helperNameOut) ||
+         resolvePublishedStatementVectorHelperName(
+             resolveStatementCallPathWithoutFallbackProbes(expr),
+             helperNameOut);
 }
 
 static bool isVectorBuiltinName(const Expr &expr, const char *name) {
@@ -725,7 +745,8 @@ static DirectCallStatementEmitResult tryEmitVectorHelperCallFormStatement(
   std::string explicitStdlibHelperName;
   const bool isExplicitStdlibVectorHelper =
       resolveStatementVectorHelperAliasName(stmt, explicitStdlibHelperName) &&
-      isPublishedCanonicalStatementVectorHelperPath(stmt.name);
+      isPublishedCanonicalStatementVectorHelperPath(
+          resolveStatementCallPathWithoutFallbackProbes(stmt));
 
   std::vector<size_t> receiverIndices;
   auto appendReceiverIndex = [&](size_t index) {

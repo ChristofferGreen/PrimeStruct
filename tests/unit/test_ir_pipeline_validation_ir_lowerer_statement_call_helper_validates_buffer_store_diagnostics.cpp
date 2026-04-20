@@ -5742,6 +5742,64 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   runExplicitVectorMutatorDirectDefinitionCase(
       "/std/collections/experimental_vector/vectorPush",
       {makeValueArg(), makeValuesArg()});
+
+  primec::Expr namespacedCanonicalPushStmt;
+  namespacedCanonicalPushStmt.kind = primec::Expr::Kind::Call;
+  namespacedCanonicalPushStmt.name = "push";
+  namespacedCanonicalPushStmt.namespacePrefix = "/std/collections/vector";
+  namespacedCanonicalPushStmt.args = {makeValueArg(), makeValuesArg()};
+  namespacedCanonicalPushStmt.argNames = {std::nullopt, std::nullopt};
+
+  primec::ir_lowerer::LocalMap builtinVectorLocals;
+  primec::ir_lowerer::LocalInfo builtinVectorInfo;
+  builtinVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  builtinVectorLocals.emplace("values", builtinVectorInfo);
+
+  int builtinVectorEmitCalls = 0;
+  int builtinVectorMethodResolutionCalls = 0;
+  int builtinVectorDefinitionResolutionCalls = 0;
+  primec::Expr observedBuiltinVectorExpr;
+  error.clear();
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            namespacedCanonicalPushStmt,
+            builtinVectorLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              ++builtinVectorEmitCalls;
+              observedBuiltinVectorExpr = expr;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++builtinVectorMethodResolutionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++builtinVectorDefinitionResolutionCalls;
+              return nullptr;
+            },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return true; },
+            [&](const primec::Expr &,
+                const primec::Definition &,
+                const primec::ir_lowerer::LocalMap &,
+                bool) {
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(builtinVectorEmitCalls == 1);
+  CHECK(builtinVectorMethodResolutionCalls == 0);
+  CHECK(builtinVectorDefinitionResolutionCalls == 0);
+  CHECK(observedBuiltinVectorExpr.name == "push");
+  CHECK(observedBuiltinVectorExpr.namespacePrefix.empty());
+  REQUIRE(observedBuiltinVectorExpr.args.size() == 2);
+  CHECK(observedBuiltinVectorExpr.args[0].kind == primec::Expr::Kind::Name);
+  CHECK(observedBuiltinVectorExpr.args[0].name == "values");
+  CHECK(observedBuiltinVectorExpr.args[1].kind == primec::Expr::Kind::BoolLiteral);
+  CHECK(observedBuiltinVectorExpr.args[1].boolValue);
 }
 
 TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
@@ -5768,6 +5826,8 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
         std::string::npos);
   CHECK(source.find("resolvePublishedStatementVectorHelperName(") !=
         std::string::npos);
+  CHECK(source.find("resolveStatementCallPathWithoutFallbackProbes(") !=
+        std::string::npos);
   CHECK(source.find("resolvePublishedStatementMapHelperName(") !=
         std::string::npos);
   CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
@@ -5779,6 +5839,8 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
   CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
   CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
+        std::string::npos);
+  CHECK(source.find("return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);") ==
         std::string::npos);
   CHECK(source.find("const std::string experimentalVectorPrefix = \"std/collections/experimental_vector/\"") ==
         std::string::npos);
