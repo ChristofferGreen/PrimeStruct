@@ -56,23 +56,23 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4048
+- TODO-4049
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4049
 - TODO-4050
+- TODO-4051
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4048 through TODO-4051
+- Vector/map bridge rollout and ownership cutover: TODO-4049 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4048
-2. TODO-4049
-3. TODO-4050
+1. TODO-4049
+2. TODO-4050
+3. TODO-4051
 4. TODO-4052
 5. TODO-4058
 6. TODO-4053
@@ -89,7 +89,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -109,7 +109,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4049, TODO-4050, TODO-4051 |
 | De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
@@ -265,15 +265,3 @@ Task template:
     - Lowering parity coverage confirms that vector/map behavior is unchanged after the dispatch swap.
     - New vector/map lowering logic does not add fresh string-path matching outside narrowly documented temporary seams.
   - stop_rule: Stop once vector/map lowerer dispatch is ID-based; if a backend still needs a temporary path fallback, split that backend-specific fallback into a separate task.
-
-- [ ] TODO-4048: Publish resolved vector/map surface IDs into semantic output
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4047
-  - scope: Extend semantic resolution for `vector` and `map` so bridge-resolved imports, constructors, and helpers publish stable collection surface IDs that lowerer code can consume directly.
-  - acceptance:
-    - Semantic output carries stable surface identifiers for the resolved vector/map operations needed by lowering.
-    - The vector/map IDs are emitted from bridge-backed semantic resolution rather than a second lowerer-specific classifier.
-    - Source-lock or parity coverage documents the intended publication boundary for vector/map semantic IDs.
-  - stop_rule: Stop once semantics publishes the vector/map IDs needed for lowering; split any broader semantic-product restructuring beyond that boundary into separate tasks.

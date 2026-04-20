@@ -1958,6 +1958,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("module.bindingFactIndices.push_back(entryIndex);") !=
         std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find(
+            "entry.initializerStdlibSurfaceId =\n        classifyPublishedStdlibSurfaceId(snapshotEntry.initializerResolvedPath);") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find(
+            "entry.initializerDirectCallStdlibSurfaceId =\n        classifyPublishedStdlibSurfaceId(snapshotEntry.initializerDirectCallResolvedPath);") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find(
+            "entry.initializerMethodCallStdlibSurfaceId =\n        classifyPublishedStdlibSurfaceId(snapshotEntry.initializerMethodCallResolvedPath);") !=
+        std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(entry.scopePath).directCallTargets.push_back(entry);") ==
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(entry.scopePath).methodCallTargets.push_back(entry);") ==
@@ -2430,10 +2439,23 @@ TEST_CASE("semantic product local auto facts use initializerResolvedPathId witho
   CHECK(localAutoBody.find("SymbolId initializerResolvedPathId = InvalidSymbolId;") !=
         std::string::npos);
   CHECK(localAutoBody.find("std::string initializerResolvedPath;") == std::string::npos);
+  CHECK(localAutoBody.find("std::optional<StdlibSurfaceId> initializerStdlibSurfaceId;") !=
+        std::string::npos);
+  CHECK(localAutoBody.find(
+            "std::optional<StdlibSurfaceId> initializerDirectCallStdlibSurfaceId;") !=
+        std::string::npos);
+  CHECK(localAutoBody.find(
+            "std::optional<StdlibSurfaceId> initializerMethodCallStdlibSurfaceId;") !=
+        std::string::npos);
 
   CHECK(semanticProductSource.find("semanticProgramLocalAutoFactInitializerResolvedPath(") !=
         std::string::npos);
   CHECK(semanticProductSource.find("initializerResolvedPath.empty() ? entry.initializerResolvedPath") ==
+        std::string::npos);
+  CHECK(semanticProductSource.find("initializer_stdlib_surface_id=") != std::string::npos);
+  CHECK(semanticProductSource.find("initializer_direct_call_stdlib_surface_id=") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("initializer_method_call_stdlib_surface_id=") !=
         std::string::npos);
 
   CHECK(bindingTypeHelpersSource.find("localAutoFact->initializerResolvedPathId != InvalidSymbolId") !=

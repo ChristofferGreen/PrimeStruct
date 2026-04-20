@@ -227,6 +227,9 @@ struct SemanticProgramLocalAutoFact {
   std::string initializerDirectCallReturnKind;
   std::string initializerMethodCallResolvedPath;
   std::string initializerMethodCallReturnKind;
+  std::optional<StdlibSurfaceId> initializerStdlibSurfaceId;
+  std::optional<StdlibSurfaceId> initializerDirectCallStdlibSurfaceId;
+  std::optional<StdlibSurfaceId> initializerMethodCallStdlibSurfaceId;
   SymbolId scopePathId = InvalidSymbolId;
   SymbolId bindingNameId = InvalidSymbolId;
   SymbolId bindingTypeTextId = InvalidSymbolId;

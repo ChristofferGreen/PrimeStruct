@@ -600,6 +600,12 @@ void publishLocalAutoFacts(
         snapshotEntry.initializerMethodCallReturnKind != ReturnKind::Unknown
             ? returnKindSnapshotName(snapshotEntry.initializerMethodCallReturnKind)
             : std::string{};
+    entry.initializerStdlibSurfaceId =
+        classifyPublishedStdlibSurfaceId(snapshotEntry.initializerResolvedPath);
+    entry.initializerDirectCallStdlibSurfaceId =
+        classifyPublishedStdlibSurfaceId(snapshotEntry.initializerDirectCallResolvedPath);
+    entry.initializerMethodCallStdlibSurfaceId =
+        classifyPublishedStdlibSurfaceId(snapshotEntry.initializerMethodCallResolvedPath);
     entry.scopePathId = semanticProgramInternCallTargetString(state.semanticProgram, entry.scopePath);
     entry.bindingNameId =
         semanticProgramInternCallTargetString(state.semanticProgram, entry.bindingName);

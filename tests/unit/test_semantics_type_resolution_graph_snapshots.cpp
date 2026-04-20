@@ -1960,6 +1960,9 @@ main() {
   CHECK(viaDirectEntry->initializerDirectCallReturnKind == "i32");
   CHECK(viaDirectEntry->initializerMethodCallResolvedPath.empty());
   CHECK(viaDirectEntry->initializerMethodCallReturnKind.empty());
+  CHECK_FALSE(viaDirectEntry->initializerStdlibSurfaceId.has_value());
+  CHECK_FALSE(viaDirectEntry->initializerDirectCallStdlibSurfaceId.has_value());
+  CHECK_FALSE(viaDirectEntry->initializerMethodCallStdlibSurfaceId.has_value());
 
   const auto *viaMethodEntry = findSemanticEntry(
       primec::semanticProgramLocalAutoFactView(semanticProgram),
@@ -1971,6 +1974,13 @@ main() {
   CHECK(viaMethodEntry->initializerDirectCallReturnKind.empty());
   CHECK(viaMethodEntry->initializerMethodCallResolvedPath == "/std/collections/vector/count");
   CHECK(viaMethodEntry->initializerMethodCallReturnKind == "i32");
+  REQUIRE(viaMethodEntry->initializerStdlibSurfaceId.has_value());
+  CHECK(*viaMethodEntry->initializerStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK_FALSE(viaMethodEntry->initializerDirectCallStdlibSurfaceId.has_value());
+  REQUIRE(viaMethodEntry->initializerMethodCallStdlibSurfaceId.has_value());
+  CHECK(*viaMethodEntry->initializerMethodCallStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
 }
 
 TEST_CASE("semantic product publishes graph-backed collection helper direct-call facts") {
@@ -2004,6 +2014,50 @@ main() {
   REQUIRE(localAutoEntry != nullptr);
   CHECK(localAutoEntry->initializerDirectCallResolvedPath == "/std/collections/vector/count");
   CHECK(localAutoEntry->initializerDirectCallReturnKind == "i32");
+  REQUIRE(localAutoEntry->initializerStdlibSurfaceId.has_value());
+  CHECK(*localAutoEntry->initializerStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  REQUIRE(localAutoEntry->initializerDirectCallStdlibSurfaceId.has_value());
+  CHECK(*localAutoEntry->initializerDirectCallStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK_FALSE(localAutoEntry->initializerMethodCallStdlibSurfaceId.has_value());
+}
+
+TEST_CASE("semantic product publishes graph-backed collection constructor local-auto surface ids") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [auto] values{vector<i32>(1i32)}
+  return(1i32)
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(
+      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                         &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *localAutoEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "values";
+      });
+  REQUIRE(localAutoEntry != nullptr);
+  CHECK(localAutoEntry->bindingTypeText == "vector<i32>");
+  REQUIRE(localAutoEntry->initializerStdlibSurfaceId.has_value());
+  CHECK(*localAutoEntry->initializerStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+  REQUIRE(localAutoEntry->initializerDirectCallStdlibSurfaceId.has_value());
+  CHECK(*localAutoEntry->initializerDirectCallStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+  CHECK_FALSE(localAutoEntry->initializerMethodCallStdlibSurfaceId.has_value());
 }
 
 TEST_CASE("semantic product keeps graph-backed local auto facts for nested borrowed array access helpers") {

@@ -1006,6 +1006,24 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
       const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
       return resolved.empty() ? std::string_view(fallback) : resolved;
     };
+    const std::string initializerStdlibSurfaceText =
+        entry.initializerStdlibSurfaceId.has_value()
+            ? " initializer_stdlib_surface_id=" +
+                  quoteSemanticString(
+                      formatSemanticStdlibSurfaceId(*entry.initializerStdlibSurfaceId))
+            : std::string{};
+    const std::string initializerDirectCallStdlibSurfaceText =
+        entry.initializerDirectCallStdlibSurfaceId.has_value()
+            ? " initializer_direct_call_stdlib_surface_id=" +
+                  quoteSemanticString(formatSemanticStdlibSurfaceId(
+                      *entry.initializerDirectCallStdlibSurfaceId))
+            : std::string{};
+    const std::string initializerMethodCallStdlibSurfaceText =
+        entry.initializerMethodCallStdlibSurfaceId.has_value()
+            ? " initializer_method_call_stdlib_surface_id=" +
+                  quoteSemanticString(formatSemanticStdlibSurfaceId(
+                      *entry.initializerMethodCallStdlibSurfaceId))
+            : std::string{};
     appendSemanticIndexedLine(out,
                               "local_auto_facts",
                               i,
@@ -1020,6 +1038,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(
                                       semanticProgramLocalAutoFactInitializerResolvedPath(
                                           semanticProgram, entry)) +
+                                  initializerStdlibSurfaceText +
                                   " initializer_binding_type_text=" +
                                   quoteSemanticString(localAutoText(entry.initializerBindingTypeTextId,
                                                                     entry.initializerBindingTypeText)) +
@@ -1078,6 +1097,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(localAutoText(
                                       entry.initializerDirectCallResolvedPathId,
                                       entry.initializerDirectCallResolvedPath)) +
+                                  initializerDirectCallStdlibSurfaceText +
                                   " initializer_direct_call_return_kind=" +
                                   quoteSemanticString(localAutoText(entry.initializerDirectCallReturnKindId,
                                                                     entry.initializerDirectCallReturnKind)) +
@@ -1085,6 +1105,7 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(localAutoText(
                                       entry.initializerMethodCallResolvedPathId,
                                       entry.initializerMethodCallResolvedPath)) +
+                                  initializerMethodCallStdlibSurfaceText +
                                   " initializer_method_call_return_kind=" +
                                   quoteSemanticString(localAutoText(entry.initializerMethodCallReturnKindId,
                                                                     entry.initializerMethodCallReturnKind)) +
