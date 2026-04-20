@@ -282,6 +282,44 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
   CHECK_FALSE(inlineCalled);
   CHECK(fileErrorCalled);
 
+  inlineCalled = false;
+  fileErrorCalled = false;
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitResultWhyDispatchCall(
+            resultWhyExpr,
+            locals,
+            {},
+            tempCounter,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &out) {
+              out = primec::ir_lowerer::ResultExprInfo{};
+              out.isResult = true;
+              out.hasValue = false;
+              out.errorType = "/std/file/FileError";
+              return true;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            []() { return 0; },
+            [&](primec::IrOpcode, uint64_t) {},
+            [](const std::string &) { return 0; },
+            [](const std::string &, const std::string &, std::string &) { return false; },
+            [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; },
+            [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return false; },
+            [](const std::string &) { return ValueKind::Unknown; },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              inlineCalled = true;
+              return true;
+            },
+            [&](int32_t) {
+              fileErrorCalled = true;
+              return true;
+            },
+            &instructions,
+            error) ==
+        EmitResult::Emitted);
+  CHECK_FALSE(inlineCalled);
+  CHECK(fileErrorCalled);
+
   primec::Expr fileErrorWhyExpr;
   fileErrorWhyExpr.kind = primec::Expr::Kind::Call;
   fileErrorWhyExpr.isMethodCall = true;

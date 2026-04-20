@@ -297,7 +297,7 @@ bool isSupportedResultWhyErrorKind(LocalInfo::ValueKind kind) {
 }
 
 std::string normalizeResultWhyErrorName(const std::string &errorType, LocalInfo::ValueKind errorKind) {
-  if (errorType == "FileError") {
+  if (errorType == "FileError" || errorType == "/std/file/FileError") {
     return "FileError";
   }
   switch (errorKind) {
@@ -545,7 +545,7 @@ ResultWhyCallEmitResult emitResolvedResultWhyCall(
     }
   }
 
-  if (resultInfo.errorType == "FileError") {
+  if (resultInfo.errorType == "FileError" || resultInfo.errorType == "/std/file/FileError") {
     return ops.emitFileErrorWhy(errorLocal) ? ResultWhyCallEmitResult::Emitted
                                             : ResultWhyCallEmitResult::Error;
   }

@@ -208,6 +208,7 @@ TEST_CASE("ir lowerer result helpers classify Result.why error kinds") {
 TEST_CASE("ir lowerer result helpers normalize Result.why type names") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("FileError", ValueKind::Int32) == "FileError");
+  CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("/std/file/FileError", ValueKind::Int32) == "FileError");
   CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("Other", ValueKind::Int32) == "i32");
   CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("Other", ValueKind::Int64) == "i64");
   CHECK(primec::ir_lowerer::normalizeResultWhyErrorName("Other", ValueKind::UInt64) == "u64");
