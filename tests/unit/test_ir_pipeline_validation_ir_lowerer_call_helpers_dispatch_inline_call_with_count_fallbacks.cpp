@@ -222,6 +222,118 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
   CHECK(explicitVectorAtResolveDefinitionCalls == 1);
   CHECK(explicitVectorAtEmitCalls == 1);
 
+  primec::Definition arrayCountDef;
+  arrayCountDef.fullPath = "/array/count";
+  int arrayCountResolveMethodCalls = 0;
+  int arrayCountResolveDefinitionCalls = 0;
+  int arrayCountEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            countCall,
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++arrayCountResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++arrayCountResolveDefinitionCalls;
+              return &arrayCountDef;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++arrayCountEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(arrayCountResolveMethodCalls == 0);
+  CHECK(arrayCountResolveDefinitionCalls == 1);
+  CHECK(arrayCountEmitCalls == 0);
+
+  int arrayCountFallbackResolveMethodCalls = 0;
+  int arrayCountFallbackResolveDefinitionCalls = 0;
+  int arrayCountFallbackEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            countCall,
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++arrayCountFallbackResolveMethodCalls;
+              return &arrayCountDef;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++arrayCountFallbackResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++arrayCountFallbackEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(arrayCountFallbackResolveMethodCalls == 2);
+  CHECK(arrayCountFallbackResolveDefinitionCalls == 2);
+  CHECK(arrayCountFallbackEmitCalls == 0);
+
+  primec::Definition stringCountDef;
+  stringCountDef.fullPath = "/string/count";
+  int stringCountResolveMethodCalls = 0;
+  int stringCountResolveDefinitionCalls = 0;
+  int stringCountEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++stringCountResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++stringCountResolveDefinitionCalls;
+              return &stringCountDef;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++stringCountEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(stringCountResolveMethodCalls == 0);
+  CHECK(stringCountResolveDefinitionCalls == 1);
+  CHECK(stringCountEmitCalls == 0);
+
+  int stringCountFallbackResolveMethodCalls = 0;
+  int stringCountFallbackResolveDefinitionCalls = 0;
+  int stringCountFallbackEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++stringCountFallbackResolveMethodCalls;
+              return &stringCountDef;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++stringCountFallbackResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++stringCountFallbackEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(stringCountFallbackResolveMethodCalls == 2);
+  CHECK(stringCountFallbackResolveDefinitionCalls == 2);
+  CHECK(stringCountFallbackEmitCalls == 0);
+
   primec::Expr canonicalPushCall = countCall;
   canonicalPushCall.name = "/std/collections/vector/push";
   canonicalPushCall.args.push_back(indexArg);

@@ -135,8 +135,6 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       expr.args.size() != expectedArgCount) {
     return CountMethodFallbackResult::NotHandled;
   }
-  (void)isArrayCountCall;
-  (void)isStringCountCall;
 
   auto hasNamedArgs = [&]() {
     for (const auto &argName : expr.argNames) {
@@ -235,6 +233,18 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       });
 
   const std::string priorError = error;
+  auto prefersBuiltinCountFallbackOverShadow = [&](const Definition &callee) {
+    if (expr.name != "count" || !expr.namespacePrefix.empty() || expr.args.size() != 1) {
+      return false;
+    }
+    if (callee.fullPath == "/array/count") {
+      return isArrayCountCall(expr);
+    }
+    if (callee.fullPath == "/string/count") {
+      return isStringCountCall(expr);
+    }
+    return false;
+  };
   for (size_t receiverIndex : receiverIndices) {
     Expr methodExpr = buildMethodExprForReceiverIndex(receiverIndex);
     const Definition *callee = resolveMethodCallDefinition(methodExpr);
@@ -242,6 +252,10 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
       continue;
     }
     if (callee != nullptr && isRemovedVectorHelperDefinitionPath(callee->fullPath)) {
+      error = priorError;
+      continue;
+    }
+    if (callee != nullptr && prefersBuiltinCountFallbackOverShadow(*callee)) {
       error = priorError;
       continue;
     }

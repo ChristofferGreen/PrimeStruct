@@ -129,6 +129,24 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
          normalizeCollectionHelperPath(callee.fullPath);
 }
 
+bool prefersBuiltinCountFallbackOverRemovedShadow(
+    const Expr &expr,
+    const Definition &callee,
+    const std::function<bool(const Expr &)> &isArrayCountCall,
+    const std::function<bool(const Expr &)> &isStringCountCall) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name != "count" ||
+      !expr.namespacePrefix.empty() || expr.args.size() != 1) {
+    return false;
+  }
+  if (callee.fullPath == "/array/count") {
+    return isArrayCountCall(expr);
+  }
+  if (callee.fullPath == "/string/count") {
+    return isStringCountCall(expr);
+  }
+  return false;
+}
+
 bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
                                   std::string_view resolvedHelperName) {
   if (requestedHelperName == resolvedHelperName) {
@@ -420,9 +438,15 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error) {
+  const Definition *directCallee = nullptr;
   if (!expr.isMethodCall) {
-    if (const Definition *directCallee = resolveDefinitionCall(expr);
-        directCallee != nullptr &&
+    directCallee = resolveDefinitionCall(expr);
+    if (directCallee != nullptr &&
+        prefersBuiltinCountFallbackOverRemovedShadow(
+            expr, *directCallee, isArrayCountCall, isStringCountCall)) {
+      return InlineCallDispatchResult::NotHandled;
+    }
+    if (directCallee != nullptr &&
         isExplicitSamePathMapCountLikeDefinitionCall(expr, *directCallee)) {
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, directCallee, emitInlineDefinitionCall, error);
@@ -478,7 +502,8 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     error.clear();
   }
 
-  if (const Definition *callee = resolveDefinitionCall(expr)) {
+  if (const Definition *callee =
+          directCallee != nullptr ? directCallee : resolveDefinitionCall(expr)) {
     if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
         isCollectionAccessReceiverExpr(expr.args.front()) &&
         isMapBuiltinInlinePath(expr, *callee)) {
