@@ -178,17 +178,21 @@ If you want the default debug build instead:
 ```
 
 For more runnable samples, start in:
-- `examples/0.Concrete/`
-- `examples/3.Surface/`
+- [`examples/0.Concrete/`](examples/0.Concrete/)
+- [`examples/3.Surface/`](examples/3.Surface/)
 
 ## Where To Go Next
 
-- `docs/PrimeStruct.md` for the main language and compiler design document
-- `docs/PrimeStruct_SyntaxSpec.md` for syntax and entry-point rules
-- `docs/CodeExamples.md` for readable PrimeStruct example style
-- `docs/Coding_Guidelines.md` for broader code and API guidance
-- `examples/` for runnable samples by language level
-- `AGENTS.md` for contributor workflow and repo rules
+- [`docs/PrimeStruct.md`](docs/PrimeStruct.md) for the main language and
+  compiler design document
+- [`docs/PrimeStruct_SyntaxSpec.md`](docs/PrimeStruct_SyntaxSpec.md) for syntax
+  and entry-point rules
+- [`docs/CodeExamples.md`](docs/CodeExamples.md) for readable PrimeStruct
+  example style
+- [`docs/Coding_Guidelines.md`](docs/Coding_Guidelines.md) for broader code and
+  API guidance
+- [`examples/`](examples/) for runnable samples by language level
+- [`AGENTS.md`](AGENTS.md) for contributor workflow and repo rules
 
 ## Useful Facts
 
@@ -206,4 +210,4 @@ and backward compatibility is not guaranteed yet.
 
 ## License
 
-Licensed under the terms in `LICENSE`.
+Licensed under the terms in [`LICENSE`](LICENSE).
