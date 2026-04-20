@@ -11,6 +11,16 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string resolveScopedCallPath(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
+
 bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          localInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
@@ -241,16 +251,17 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     }
     std::string accessName;
     std::string helperName;
+    const std::string scopedTargetPath = resolveScopedCallPath(target);
     const bool isAliasMapArgsPackAccess =
         resolveMapHelperAliasName(target, helperName) &&
         (helperName == "at" || helperName == "at_ref" ||
          helperName == "at_unsafe" || helperName == "at_unsafe_ref");
     const bool isExplicitMapArgsPackAccess =
         !target.isMethodCall &&
-        (target.name == "/map/at" || target.name == "/std/collections/map/at" ||
-         target.name == "/map/at_ref" || target.name == "/std/collections/map/at_ref" ||
-         target.name == "/map/at_unsafe" || target.name == "/std/collections/map/at_unsafe" ||
-         target.name == "/map/at_unsafe_ref" || target.name == "/std/collections/map/at_unsafe_ref" ||
+        (scopedTargetPath == "/map/at" || scopedTargetPath == "/std/collections/map/at" ||
+         scopedTargetPath == "/map/at_ref" || scopedTargetPath == "/std/collections/map/at_ref" ||
+         scopedTargetPath == "/map/at_unsafe" || scopedTargetPath == "/std/collections/map/at_unsafe" ||
+         scopedTargetPath == "/map/at_unsafe_ref" || scopedTargetPath == "/std/collections/map/at_unsafe_ref" ||
          isAliasMapArgsPackAccess) &&
         target.args.size() == 2;
     if ((getBuiltinArrayAccessName(target, accessName) && target.args.size() == 2) ||

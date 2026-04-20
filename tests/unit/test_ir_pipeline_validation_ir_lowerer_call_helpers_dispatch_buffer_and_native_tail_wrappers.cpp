@@ -271,6 +271,16 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 
+  primec::Expr canonicalMapArgsAccess;
+  canonicalMapArgsAccess.kind = primec::Expr::Kind::Call;
+  canonicalMapArgsAccess.name = "at";
+  canonicalMapArgsAccess.namespacePrefix = "/std/collections/map";
+  canonicalMapArgsAccess.args = {mapArgsName, mapArgsIndex};
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(canonicalMapArgsAccess, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
   primec::ir_lowerer::LocalInfo mapPointerInfo;
   mapPointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
   mapPointerInfo.pointerToMap = true;
