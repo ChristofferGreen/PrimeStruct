@@ -876,6 +876,9 @@ TEST_CASE("ir lowerer helper keeps parser-shaped rooted convert builtin") {
   convertCall.namespacePrefix = "/";
 
   CHECK(primec::ir_lowerer::getBuiltinConvertName(convertCall));
+  std::string builtin;
+  CHECK(primec::emitter::getBuiltinConvertName(convertCall, builtin));
+  CHECK(builtin == "convert");
 }
 
 TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespaced paths") {
