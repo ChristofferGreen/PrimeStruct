@@ -98,6 +98,56 @@ TEST_CASE("ir lowerer result helpers resolve indexed dereferenced args-pack Resu
   CHECK(out.errorType == "ParseError");
 }
 
+TEST_CASE("ir lowerer result helpers resolve direct File constructor Results") {
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind = {};
+
+  primec::Expr fileCtorExpr;
+  fileCtorExpr.kind = primec::Expr::Kind::Call;
+  fileCtorExpr.name = "File";
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      fileCtorExpr,
+      {},
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.errorType == "FileError");
+
+  primec::Expr scopedFileCtorExpr = fileCtorExpr;
+  scopedFileCtorExpr.namespacePrefix = "/std/file";
+
+  out = primec::ir_lowerer::ResultExprInfo{};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      scopedFileCtorExpr,
+      {},
+      resolveMethodCall,
+      resolveDefinitionCall,
+      lookupReturnInfo,
+      inferExprKind,
+      out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.errorType == "FileError");
+}
+
 TEST_CASE("ir lowerer result helpers resolve Result.why call info") {
   primec::Expr resultWhyExpr;
   resultWhyExpr.kind = primec::Expr::Kind::Call;

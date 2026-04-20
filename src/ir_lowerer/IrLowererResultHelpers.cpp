@@ -26,6 +26,16 @@ std::string describeSemanticResultCall(const Expr &expr) {
   return expr.name.empty() ? "<call>" : expr.name;
 }
 
+std::string resolveScopedExprPath(const Expr &expr) {
+  if (expr.name.empty()) {
+    return {};
+  }
+  if (!expr.namespacePrefix.empty()) {
+    return expr.namespacePrefix + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 bool isSemanticFileHandleTypeText(const std::string &typeText) {
   std::string base;
   std::string args;
@@ -230,13 +240,16 @@ bool resolveResultExprInfo(const Expr &expr,
     return false;
   }
 
-  if (!expr.isMethodCall && expr.name == "File") {
-    out.isResult = true;
-    out.hasValue = true;
-    out.valueKind = LocalInfo::ValueKind::Int64;
-    out.valueIsFileHandle = true;
-    out.errorType = "FileError";
-    return true;
+  if (!expr.isMethodCall) {
+    const std::string directPath = resolveScopedExprPath(expr);
+    if (directPath == "File" || directPath == "/std/file/File") {
+      out.isResult = true;
+      out.hasValue = true;
+      out.valueKind = LocalInfo::ValueKind::Int64;
+      out.valueIsFileHandle = true;
+      out.errorType = "FileError";
+      return true;
+    }
   }
 
   if (!expr.args.empty()) {
