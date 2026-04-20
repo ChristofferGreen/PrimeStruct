@@ -42,14 +42,13 @@ namespace std {
   namespace ImageError {
     [public return<string>]
     why([ImageError] err) {
-      return(
-        if(equal(err.code, 1i32),
-          then() { "image_read_unsupported"utf8 },
-          else() {
-            if(equal(err.code, 2i32),
-              then() { "image_write_unsupported"utf8 },
-              else() { "image_invalid_operation"utf8 })
-          }))
+      if(err.code == 1i32) {
+        return("image_read_unsupported"utf8)
+      }
+      if(err.code == 2i32) {
+        return("image_write_unsupported"utf8)
+      }
+      return("image_invalid_operation"utf8)
     }
 
     [public return<Result<ImageError>>]
@@ -124,7 +123,8 @@ namespace std {
 
   // The codec and deflate helpers below intentionally keep explicit
   // /std/collections/vector/* calls because they are byte-oriented
-  // substrate plumbing rather than the public-facing image wrapper layer.
+  // substrate plumbing rather than the public-facing image wrapper layer
+  // above, which should prefer the readable surface syntax when possible.
 
   [return<bool>]
   ppmIsWhitespace([i32] value) {
@@ -143,7 +143,7 @@ namespace std {
 
   [effects(file_read), return<int> on_error<FileError, /std/image/ignoreFileError>]
   ppmReadByteStatus([File<Read>] file, [i32 mut] value) {
-    file.read_byte(value)?
+    file.readByte(value)?
     return(0i32)
   }
 
@@ -260,36 +260,36 @@ namespace std {
   [return<bool>]
   imageRgbWritePixelCount([i32] width, [i32] height, [i32 mut] pixelCount) {
     pixelCount = 0i32
-    if(or(less_equal(width, 0i32), less_equal(height, 0i32)),
-       then() { return(false) },
-       else() { })
+    if(width <= 0i32 || height <= 0i32) {
+      return(false)
+    }
 
-    pixelCountWide{multiply(multiply(convert<i64>(width), convert<i64>(height)), 3i64)}
-    if(or(less_equal(pixelCountWide, 0i64), greater_than(pixelCountWide, 2147483647i64)),
-       then() { return(false) },
-       else() { })
+    pixelCountWide{convert<i64>(width) * convert<i64>(height) * 3i64}
+    if(pixelCountWide <= 0i64 || pixelCountWide > 2147483647i64) {
+      return(false)
+    }
     pixelCount = convert<i32>(pixelCountWide)
     return(true)
   }
 
   [return<bool>]
   ppmWriteInputValid([i32] width, [i32] height, [vector<i32>] pixels) {
-    pixelCount{count(pixels)}
+    pixelCount{pixels.count()}
     [mut] expectedPixelCount{0i32}
-    if(not(imageRgbWritePixelCount(width, height, expectedPixelCount)),
-       then() { return(false) },
-       else() { })
-    if(not_equal(pixelCount, expectedPixelCount),
-       then() { return(false) },
-       else() { })
+    if(!imageRgbWritePixelCount(width, height, expectedPixelCount)) {
+      return(false)
+    }
+    if(pixelCount != expectedPixelCount) {
+      return(false)
+    }
 
     [mut] index{0i32}
-    while(less_than(index, pixelCount), do() {
+    while(index < pixelCount, do() {
       component{pixels[index]}
-      if(or(less_than(component, 0i32), greater_than(component, 255i32)),
-         then() { return(false) },
-         else() { })
-      increment(index)
+      if(component < 0i32 || component > 255i32) {
+        return(false)
+      }
+      ++index
     })
     return(true)
   }
@@ -614,10 +614,10 @@ namespace std {
 
   [effects(file_write), return<int> on_error<FileError, /std/image/ignoreFileError>]
   pngWriteByte([File<Write>] file, [i32] value) {
-    if(or(less_than(value, 0i32), greater_than(value, 255i32)),
-       then() { return(1i32) },
-       else() { })
-    file.write_byte(value)?
+    if(value < 0i32 || value > 255i32) {
+      return(1i32)
+    }
+    file.writeByte(value)?
     return(0i32)
   }
 
@@ -2633,12 +2633,10 @@ namespace std {
     read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       resetReadOutputs(width, height, pixels)
       status{readImpl(width, height, pixels, path)}
-      if(not_equal(status, 0i32),
-         then() {
-           resetReadOutputs(width, height, pixels)
-           return(invalidOperation())
-         },
-         else() { })
+      if(status != 0i32) {
+        resetReadOutputs(width, height, pixels)
+        return(invalidOperation())
+      }
       return(Result.ok())
     }
 
@@ -2650,18 +2648,18 @@ namespace std {
 
       [File<Write>] file{File<Write>(path)?}
       [mut] status{ppmWriteHeader(file, width, height)}
-      if(not_equal(status, 0i32),
-         then() { return(1i32) },
-         else() { })
+      if(status != 0i32) {
+        return(1i32)
+      }
 
-      pixelCount{count(pixels)}
+      pixelCount{pixels.count()}
       [mut] index{0i32}
-      while(less_than(index, pixelCount), do() {
+      while(index < pixelCount, do() {
         status = ppmWriteComponent(file, pixels[index])
-        if(not_equal(status, 0i32),
-           then() { return(1i32) },
-           else() { })
-        increment(index)
+        if(status != 0i32) {
+          return(1i32)
+        }
+        ++index
       })
       return(0i32)
     }
@@ -2669,9 +2667,9 @@ namespace std {
     [public return<Result<ImageError>> effects(file_write)]
     write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
       status{writeImpl(path, width, height, pixels)}
-      if(not_equal(status, 0i32),
-         then() { return(invalidOperation()) },
-         else() { })
+      if(status != 0i32) {
+        return(invalidOperation())
+      }
       return(Result.ok())
     }
   }
@@ -2846,18 +2844,14 @@ namespace std {
     read([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
       resetReadOutputs(width, height, pixels)
       status{readImpl(width, height, pixels, path)}
-      if(equal(status, 1i32),
-         then() {
-           resetReadOutputs(width, height, pixels)
-           return(invalidOperation())
-         },
-         else() { })
-      if(equal(status, 2i32),
-         then() {
-           resetReadOutputs(width, height, pixels)
-           return(unsupported_read())
-         },
-         else() { })
+      if(status == 1i32) {
+        resetReadOutputs(width, height, pixels)
+        return(invalidOperation())
+      }
+      if(status == 2i32) {
+        resetReadOutputs(width, height, pixels)
+        return(unsupported_read())
+      }
       return(Result.ok())
     }
 
@@ -2891,9 +2885,9 @@ namespace std {
     [public return<Result<ImageError>> effects(file_write)]
     write([string] path, [i32] width, [i32] height, [vector<i32>] pixels) {
       status{writeImpl(path, width, height, pixels)}
-      if(not_equal(status, 0i32),
-         then() { return(invalidOperation()) },
-         else() { })
+      if(status != 0i32) {
+        return(invalidOperation())
+      }
       return(Result.ok())
     }
   }

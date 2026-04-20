@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4034
+- TODO-4035
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4035
 - TODO-4042
 - TODO-4043
 - TODO-4044
@@ -68,41 +67,41 @@ Task template:
 - TODO-4046
 - TODO-4047
 - TODO-4048
+- TODO-4049
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4034 through TODO-4035
+- Stdlib surface-style alignment: TODO-4035
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4034
-2. TODO-4035
-3. TODO-4042
-4. TODO-4043
-5. TODO-4044
-6. TODO-4045
-7. TODO-4046
-8. TODO-4047
-9. TODO-4048
-10. TODO-4049
-11. TODO-4050
-12. TODO-4052
-13. TODO-4058
-14. TODO-4053
-15. TODO-4055
-16. TODO-4054
-17. TODO-4056
-18. TODO-4057
-19. TODO-4059
+1. TODO-4035
+2. TODO-4042
+3. TODO-4043
+4. TODO-4044
+5. TODO-4045
+6. TODO-4046
+7. TODO-4047
+8. TODO-4048
+9. TODO-4049
+10. TODO-4050
+11. TODO-4052
+12. TODO-4058
+13. TODO-4053
+14. TODO-4055
+15. TODO-4054
+16. TODO-4056
+17. TODO-4057
+18. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -121,7 +120,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -362,15 +361,3 @@ Task template:
     - Runtime-boundary hooks, experimental gfx internals, and lowering/runtime ownership lines remain unchanged by this cleanup.
     - Any follow-up that would alter hybrid ownership or backend behavior is split into a separate TODO instead of being mixed into the style pass.
   - stop_rule: Stop once the canonical wrapper layer is style-aligned and any remaining backend-facing cleanup has been carved out into explicit follow-up work.
-
-- [ ] TODO-4034: Audit /std/image for style-guide alignment and split style cleanup from codec-behavior changes
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026
-  - scope: Audit `/std/image` for places where public-facing library code still reads like canonical plumbing, then align that code to `docs/CodeExamples.md` style while keeping behavior-sensitive codec/parser changes isolated into separate follow-up work.
-  - acceptance:
-    - High-level `/std/image` library code that is user-facing adopts the supported surface-form syntax where it improves readability.
-    - The style cleanup does not change codec behavior, file-format semantics, or error mapping as part of the same slice.
-    - Any behavior-affecting codec or parser follow-up discovered during the audit is captured as separate TODO work rather than folded into the style cleanup.
-  - stop_rule: Stop once the style-only `/std/image` cleanup boundary is clear and the public-facing layer is aligned without mixing in codec-behavior changes.

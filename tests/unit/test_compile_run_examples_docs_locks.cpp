@@ -348,6 +348,8 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("pngScalePackedSampleToByte") != std::string::npos);
   CHECK(imageStdlib.find("pngScaleU16SampleToByte") != std::string::npos);
   CHECK(imageStdlib.find("The codec and deflate helpers below intentionally keep explicit") != std::string::npos);
+  CHECK(imageStdlib.find("public-facing image wrapper layer\n  // above, which should prefer the readable surface syntax when possible.") !=
+        std::string::npos);
   CHECK(resetReadOutputsBody.find("pixels.clear()") != std::string::npos);
   CHECK(resetReadOutputsBody.find("/std/collections/vector/clear(pixels)") == std::string::npos);
   CHECK(imageStdlib.find("pngScanlineChannelByte") != std::string::npos);
@@ -370,6 +372,22 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(ppmBody.find("writeImpl(") != std::string::npos);
   CHECK(ppmBody.find("File<Read>(path)?") != std::string::npos);
   CHECK(ppmBody.find("File<Write>(path)?") != std::string::npos);
+  CHECK(imageStdlib.find("if(err.code == 1i32)") != std::string::npos);
+  CHECK(imageStdlib.find("if(err.code == 2i32)") != std::string::npos);
+  CHECK(imageStdlib.find("return(\"image_invalid_operation\"utf8)") != std::string::npos);
+  CHECK(imageStdlib.find("file.readByte(value)?") != std::string::npos);
+  CHECK(imageStdlib.find("pixelCount{pixels.count()}") != std::string::npos);
+  CHECK(imageStdlib.find("if(width <= 0i32 || height <= 0i32)") != std::string::npos);
+  CHECK(imageStdlib.find("pixelCountWide{convert<i64>(width) * convert<i64>(height) * 3i64}") !=
+        std::string::npos);
+  CHECK(imageStdlib.find("if(pixelCountWide <= 0i64 || pixelCountWide > 2147483647i64)") !=
+        std::string::npos);
+  CHECK(imageStdlib.find("if(!imageRgbWritePixelCount(width, height, expectedPixelCount))") !=
+        std::string::npos);
+  CHECK(imageStdlib.find("if(pixelCount != expectedPixelCount)") != std::string::npos);
+  CHECK(imageStdlib.find("while(index < pixelCount, do()") != std::string::npos);
+  CHECK(imageStdlib.find("if(component < 0i32 || component > 255i32)") != std::string::npos);
+  CHECK(imageStdlib.find("++index") != std::string::npos);
   CHECK(ppmBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(ppmBody.find("return(Result.ok())") != std::string::npos);
   CHECK(imageStdlib.find("return(value - 48i32)") != std::string::npos);
@@ -378,13 +396,22 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("pixelCount = convert<i32>(pixelCountWide)") != std::string::npos);
   CHECK(ppmBody.find("status = ppmReadAsciiInt(file, hasPending, pendingByte, parsedWidth)") != std::string::npos);
   CHECK(ppmBody.find("status = ppmWriteComponent(file, pixels[index])") != std::string::npos);
+  CHECK(ppmBody.find("if(status != 0i32)") != std::string::npos);
+  CHECK(ppmBody.find("pixelCount{pixels.count()}") != std::string::npos);
   CHECK(ppmBody.find("assign(") == std::string::npos);
   CHECK(ppmBody.find("plus(") == std::string::npos);
   CHECK(ppmBody.find("minus(") == std::string::npos);
   CHECK(ppmBody.find("return(unsupported_write())") == std::string::npos);
+  CHECK(ppmBody.find("file.read_byte(value)?") == std::string::npos);
 
   const std::string pngBody = imageStdlib.substr(pngStart);
   CHECK(pngBody.find("return(unsupported_read())") != std::string::npos);
+  CHECK(pngBody.find("file.writeByte(value)?") != std::string::npos);
+  CHECK(pngBody.find("if(value < 0i32 || value > 255i32)") != std::string::npos);
+  CHECK(pngBody.find("if(status == 1i32)") != std::string::npos);
+  CHECK(pngBody.find("if(status == 2i32)") != std::string::npos);
+  CHECK(pngBody.find("if(status != 0i32)") != std::string::npos);
+  CHECK(pngBody.find("file.write_byte(value)?") == std::string::npos);
   CHECK(pngBody.find("readImpl(") != std::string::npos);
   CHECK(pngBody.find("writeImpl(") != std::string::npos);
   CHECK(pngBody.find("pngValidateSignature") != std::string::npos);
