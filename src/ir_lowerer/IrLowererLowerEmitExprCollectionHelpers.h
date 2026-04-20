@@ -1,3 +1,59 @@
+        auto resolveCollectionExprDirectPath = [&](const Expr &candidate) {
+          if (!candidate.name.empty() && candidate.name.front() == '/') {
+            return candidate.name;
+          }
+          if (!candidate.namespacePrefix.empty()) {
+            std::string scoped = candidate.namespacePrefix;
+            if (!scoped.empty() && scoped.front() != '/') {
+              scoped.insert(scoped.begin(), '/');
+            }
+            return scoped + "/" + candidate.name;
+          }
+          return candidate.name;
+        };
+        auto normalizeLateCollectionHelperName = [&](std::string &helperName) {
+          if (helperName == "count_ref") {
+            helperName = "count";
+          } else if (helperName == "contains_ref") {
+            helperName = "contains";
+          } else if (helperName == "tryAt_ref") {
+            helperName = "tryAt";
+          } else if (helperName == "at_ref") {
+            helperName = "at";
+          } else if (helperName == "at_unsafe_ref") {
+            helperName = "at_unsafe";
+          } else if (helperName == "insert_ref") {
+            helperName = "insert";
+          }
+        };
+        auto resolvePublishedLateCollectionMemberName =
+            [&](const Expr &candidate,
+                primec::StdlibSurfaceId surfaceId,
+                std::string &memberNameOut) {
+              memberNameOut.clear();
+              const bool resolved =
+                  ir_lowerer::resolvePublishedSemanticStdlibSurfaceMemberName(
+                      callResolutionAdapters.semanticProgram,
+                      candidate,
+                      surfaceId,
+                      memberNameOut) ||
+                  ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
+                      candidate,
+                      surfaceId,
+                      memberNameOut) ||
+                  ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                      resolveExprPath(candidate),
+                      surfaceId,
+                      memberNameOut) ||
+                  ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                      resolveCollectionExprDirectPath(candidate),
+                      surfaceId,
+                      memberNameOut);
+              if (resolved && surfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers) {
+                normalizeLateCollectionHelperName(memberNameOut);
+              }
+              return resolved;
+            };
         auto rewriteBuiltinMapConstructorExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
             return false;
@@ -6,33 +62,12 @@
           if (callee == nullptr) {
             return false;
           }
-          auto matchesConstructorPath = [&](std::string_view basePath) {
-            return callee->fullPath == basePath ||
-                   callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
-          };
-          const bool isBuiltinMapConstructor =
-              matchesConstructorPath("/std/collections/map/map") ||
-              matchesConstructorPath("/std/collections/mapNew") ||
-              matchesConstructorPath("/std/collections/mapSingle") ||
-              matchesConstructorPath("/std/collections/mapDouble") ||
-              matchesConstructorPath("/std/collections/mapPair") ||
-              matchesConstructorPath("/std/collections/mapTriple") ||
-              matchesConstructorPath("/std/collections/mapQuad") ||
-              matchesConstructorPath("/std/collections/mapQuint") ||
-              matchesConstructorPath("/std/collections/mapSext") ||
-              matchesConstructorPath("/std/collections/mapSept") ||
-              matchesConstructorPath("/std/collections/mapOct") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapNew") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapSingle") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapDouble") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapPair") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapTriple") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapQuad") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapQuint") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapSext") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapSept") ||
-              matchesConstructorPath("/std/collections/experimental_map/mapOct");
-          if (!isBuiltinMapConstructor) {
+          std::string constructorName;
+          if (!resolvePublishedLateCollectionMemberName(
+                  callExpr,
+                  primec::StdlibSurfaceId::CollectionsMapConstructors,
+                  constructorName) ||
+              constructorName == "entry") {
             return false;
           }
           rewrittenExpr = callExpr;
@@ -45,18 +80,12 @@
                 candidateExpr.args.size() != 2) {
               return false;
             }
-            auto matchesEntryPath = [&](const std::string &path) {
-              return path == "/std/collections/map/entry" ||
-                     path.rfind("/std/collections/map/entry__", 0) == 0 ||
-                     path == "/std/collections/experimental_map/entry" ||
-                     path.rfind("/std/collections/experimental_map/entry__", 0) == 0;
-            };
-            const Definition *entryDef = resolveDefinitionCall(candidateExpr);
-            if (entryDef != nullptr && matchesEntryPath(entryDef->fullPath)) {
-              return true;
-            }
-            const std::string resolvedEntryPath = resolveExprPath(candidateExpr);
-            return matchesEntryPath(resolvedEntryPath);
+            std::string entryName;
+            return resolvePublishedLateCollectionMemberName(
+                       candidateExpr,
+                       primec::StdlibSurfaceId::CollectionsMapConstructors,
+                       entryName) &&
+                   entryName == "entry";
           };
           if (!rewrittenExpr.args.empty()) {
             bool allEntryArgs = true;
@@ -233,37 +262,8 @@
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
             return false;
           }
-          auto resolveDirectHelperPath = [&](const Expr &candidate) {
-            if (!candidate.name.empty() && candidate.name.front() == '/') {
-              return candidate.name;
-            }
-            if (!candidate.namespacePrefix.empty()) {
-              std::string scoped = candidate.namespacePrefix;
-              if (!scoped.empty() && scoped.front() != '/') {
-                scoped.insert(scoped.begin(), '/');
-              }
-              return scoped + "/" + candidate.name;
-            }
-            return candidate.name;
-          };
-          auto resolvePublishedLateMapHelperName =
-              [&](const Expr &candidate, std::string &helperNameOut) {
-                helperNameOut.clear();
-                return ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
-                           candidate,
-                           primec::StdlibSurfaceId::CollectionsMapHelpers,
-                           helperNameOut) ||
-                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                           resolveExprPath(candidate),
-                           primec::StdlibSurfaceId::CollectionsMapHelpers,
-                           helperNameOut) ||
-                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                           resolveDirectHelperPath(candidate),
-                           primec::StdlibSurfaceId::CollectionsMapHelpers,
-                           helperNameOut);
-              };
           auto isRootedAliasSamePathCountLikeCall = [&](const Expr &candidate) {
-            const std::string rawPath = resolveDirectHelperPath(candidate);
+            const std::string rawPath = resolveCollectionExprDirectPath(candidate);
             if (rawPath.rfind("/map/", 0) != 0) {
               return false;
             }
@@ -273,12 +273,15 @@
           };
           std::string helperName;
           if ((!resolveMapHelperAliasName(callExpr, helperName) &&
-               !resolvePublishedLateMapHelperName(callExpr, helperName)) ||
+               !resolvePublishedLateCollectionMemberName(
+                   callExpr,
+                   primec::StdlibSurfaceId::CollectionsMapHelpers,
+                   helperName)) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "insert")) {
             return false;
           }
-          const std::string directHelperPath = resolveDirectHelperPath(callExpr);
+          const std::string directHelperPath = resolveCollectionExprDirectPath(callExpr);
           if (ir_lowerer::isPublishedStdlibSurfaceLoweringPath(
                   directHelperPath,
                   primec::StdlibSurfaceId::CollectionsMapHelpers) &&
@@ -316,22 +319,10 @@
           } else if (callExpr.args.size() == 2 && getBuiltinArrayAccessName(callExpr, helperName)) {
             receiverExpr = &callExpr.args.front();
           } else {
-            std::string normalizedName = callExpr.name;
-            if (!normalizedName.empty() && normalizedName.front() == '/') {
-              normalizedName.erase(normalizedName.begin());
-            }
-            auto matchDirectVectorHelper = [&](std::string_view path) {
-              return normalizedName == path;
-            };
-            if (matchDirectVectorHelper("std/collections/vector/count")) {
-              helperName = "count";
-            } else if (matchDirectVectorHelper("std/collections/vector/capacity")) {
-              helperName = "capacity";
-            } else if (matchDirectVectorHelper("std/collections/vector/at")) {
-              helperName = "at";
-            } else if (matchDirectVectorHelper("std/collections/vector/at_unsafe")) {
-              helperName = "at_unsafe";
-            } else {
+            if (!resolvePublishedLateCollectionMemberName(
+                    callExpr,
+                    primec::StdlibSurfaceId::CollectionsVectorHelpers,
+                    helperName)) {
               return false;
             }
             receiverExpr = &callExpr.args.front();
@@ -345,14 +336,11 @@
             return false;
           }
           if (!callExpr.isMethodCall) {
-            std::string normalizedCallName = callExpr.name;
-            if (!normalizedCallName.empty() && normalizedCallName.front() == '/') {
-              normalizedCallName.erase(normalizedCallName.begin());
-            }
-            const bool explicitVectorHelperPath =
-                normalizedCallName.rfind("vector/", 0) == 0 ||
-                normalizedCallName.rfind("std/collections/vector/", 0) == 0;
-            if (!explicitVectorHelperPath) {
+            std::string publishedHelperName;
+            if (!resolvePublishedLateCollectionMemberName(
+                    callExpr,
+                    primec::StdlibSurfaceId::CollectionsVectorHelpers,
+                    publishedHelperName)) {
               return false;
             }
           }
@@ -361,34 +349,11 @@
           if (receiverDef == nullptr) {
             return false;
           }
-          auto matchesVectorConstructorPath = [&](std::string_view basePath) {
-            return receiverDef->fullPath == basePath ||
-                   receiverDef->fullPath.rfind(std::string(basePath) + "__", 0) == 0;
-          };
-          const bool isTemporaryVectorConstructorReceiver =
-              matchesVectorConstructorPath("/std/collections/vector/vector") ||
-              matchesVectorConstructorPath("/std/collections/vectorNew") ||
-              matchesVectorConstructorPath("/std/collections/vectorSingle") ||
-              matchesVectorConstructorPath("/std/collections/vectorDouble") ||
-              matchesVectorConstructorPath("/std/collections/vectorPair") ||
-              matchesVectorConstructorPath("/std/collections/vectorTriple") ||
-              matchesVectorConstructorPath("/std/collections/vectorQuad") ||
-              matchesVectorConstructorPath("/std/collections/vectorQuint") ||
-              matchesVectorConstructorPath("/std/collections/vectorSext") ||
-              matchesVectorConstructorPath("/std/collections/vectorSept") ||
-              matchesVectorConstructorPath("/std/collections/vectorOct") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vector") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorNew") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorSingle") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorDouble") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorPair") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorTriple") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorQuad") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorQuint") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorSext") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorSept") ||
-              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorOct");
-          if (!isTemporaryVectorConstructorReceiver) {
+          std::string constructorName;
+          if (!ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                  receiverDef->fullPath,
+                  primec::StdlibSurfaceId::CollectionsVectorConstructors,
+                  constructorName)) {
             return false;
           }
 
@@ -440,41 +405,12 @@
                 if (resolveMapHelperAliasName(candidate, helperNameOut)) {
                   return true;
                 }
-                auto resolveDirectHelperPath = [&](const Expr &exprIn) {
-                  if (!exprIn.name.empty() && exprIn.name.front() == '/') {
-                    return exprIn.name;
-                  }
-                  if (!exprIn.namespacePrefix.empty()) {
-                    std::string scoped = exprIn.namespacePrefix;
-                    if (!scoped.empty() && scoped.front() != '/') {
-                      scoped.insert(scoped.begin(), '/');
-                    }
-                    return scoped + "/" + exprIn.name;
-                  }
-                  return exprIn.name;
-                };
-                return ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
+                return resolvePublishedLateCollectionMemberName(
                            candidate,
                            primec::StdlibSurfaceId::CollectionsMapHelpers,
                            helperNameOut) ||
-                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                           resolveExprPath(candidate),
-                           primec::StdlibSurfaceId::CollectionsMapHelpers,
-                           helperNameOut) ||
-                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                           resolveDirectHelperPath(candidate),
-                           primec::StdlibSurfaceId::CollectionsMapHelpers,
-                           helperNameOut) ||
-                       ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
+                       resolvePublishedLateCollectionMemberName(
                            candidate,
-                           primec::StdlibSurfaceId::CollectionsVectorHelpers,
-                           helperNameOut) ||
-                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                           resolveExprPath(candidate),
-                           primec::StdlibSurfaceId::CollectionsVectorHelpers,
-                           helperNameOut) ||
-                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                           resolveDirectHelperPath(candidate),
                            primec::StdlibSurfaceId::CollectionsVectorHelpers,
                            helperNameOut);
               };
