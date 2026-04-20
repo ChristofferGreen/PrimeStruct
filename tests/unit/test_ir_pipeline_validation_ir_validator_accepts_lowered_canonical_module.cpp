@@ -1125,6 +1125,14 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
       namespacedCheckedPlusCall, builtinName));
   CHECK(builtinName == "plus");
 
+  primec::Expr rootedCheckedPlusCall;
+  rootedCheckedPlusCall.kind = primec::Expr::Kind::Call;
+  rootedCheckedPlusCall.name =
+      "/std/collections/internal_buffer_checked/plus";
+  CHECK(primec::ir_lowerer::getBuiltinOperatorName(
+      rootedCheckedPlusCall, builtinName));
+  CHECK(builtinName == "plus");
+
   char op = '\0';
   CHECK(primec::emitter::getBuiltinOperator(namespacedCheckedPlusCall, op));
   CHECK(op == '+');
@@ -1149,6 +1157,14 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
 
   CHECK(primec::ir_lowerer::getBuiltinComparisonName(
       namespacedSoaLessThanCall, builtinName));
+  CHECK(builtinName == "less_than");
+
+  primec::Expr rootedSoaLessThanCall;
+  rootedSoaLessThanCall.kind = primec::Expr::Kind::Call;
+  rootedSoaLessThanCall.name =
+      "/std/collections/experimental_soa_vector/less_than";
+  CHECK(primec::ir_lowerer::getBuiltinComparisonName(
+      rootedSoaLessThanCall, builtinName));
   CHECK(builtinName == "less_than");
 
   const char *comparison = nullptr;

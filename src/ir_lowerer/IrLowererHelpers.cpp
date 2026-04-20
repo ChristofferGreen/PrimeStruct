@@ -4,6 +4,16 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string resolveScopedExprName(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    return expr.namespacePrefix + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 bool isScopedBuiltinControlAlias(const std::string &name) {
   return name == "return" || name == "then" || name == "else" ||
          name == "if" || name == "block" || name == "loop" ||
@@ -381,10 +391,8 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
+  std::string name =
+      normalizeInternalSoaStorageBuiltinAlias(resolveScopedExprName(expr));
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -399,10 +407,8 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
+  std::string name =
+      normalizeInternalSoaStorageBuiltinAlias(resolveScopedExprName(expr));
   if (name.find('/') != std::string::npos) {
     return false;
   }
