@@ -931,7 +931,7 @@ main() {
   CHECK(runCommand(exePath) == 65);
 }
 
-TEST_CASE("keeps builtin array access on native user array at call shadow") {
+TEST_CASE("compiles and runs native user array at call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {
@@ -950,7 +950,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 61);
 }
 
 TEST_SUITE_END();
