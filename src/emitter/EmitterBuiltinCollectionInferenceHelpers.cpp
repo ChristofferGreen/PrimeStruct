@@ -123,7 +123,7 @@ bool isExplicitArrayCountName(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
+  std::string normalized = resolveExprPath(expr);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
@@ -134,7 +134,7 @@ bool isExplicitMapCountNameLocal(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
+  std::string normalized = resolveExprPath(expr);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }

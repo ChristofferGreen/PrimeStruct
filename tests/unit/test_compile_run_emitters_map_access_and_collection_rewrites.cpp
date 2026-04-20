@@ -641,6 +641,26 @@ TEST_CASE("C++ emitter helper keeps explicit stdlib vector count and capacity me
   expectCanonicalMethodPath("/std/collections/vector/capacity");
 }
 
+TEST_CASE("C++ emitter helper keeps parser-shaped canonical map count explicit") {
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.name = "count";
+  call.namespacePrefix = "/std/collections/map";
+
+  primec::Expr values;
+  values.kind = primec::Expr::Kind::Name;
+  values.name = "values";
+  call.args.push_back(values);
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "map";
+  receiverInfo.typeTemplateArg = "i32, i32";
+  localTypes.emplace("values", receiverInfo);
+
+  CHECK_FALSE(primec::emitter::isMapCountCall(call, localTypes));
+}
+
 TEST_CASE("C++ emitter helper prefers stdlib File flush helper when present") {
   primec::Expr call;
   call.kind = primec::Expr::Kind::Call;
