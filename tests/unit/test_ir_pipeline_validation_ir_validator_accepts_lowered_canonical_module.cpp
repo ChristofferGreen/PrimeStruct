@@ -452,7 +452,7 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   CHECK(builtin == "at");
 }
 
-TEST_CASE("simple-call helpers keep rooted internal soa storage bare builtins") {
+TEST_CASE("simple-call helpers keep rooted and namespaced internal soa storage bare builtins") {
   primec::Expr rootedAssignCall;
   rootedAssignCall.kind = primec::Expr::Kind::Call;
   rootedAssignCall.name = "/std/collections/internal_soa_storage/assign";
@@ -470,6 +470,31 @@ TEST_CASE("simple-call helpers keep rooted internal soa storage bare builtins") 
   rootedTakeCall.name = "/std/collections/internal_soa_storage/take";
   CHECK(primec::ir_lowerer::isSimpleCallName(rootedTakeCall, "take"));
   CHECK(primec::emitter::isSimpleCallName(rootedTakeCall, "take"));
+
+  auto makeNamespacedInternalSoaCall = [](const char *name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = name;
+    expr.namespacePrefix = "/std/collections/internal_soa_storage";
+    return expr;
+  };
+
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("assign"), "assign"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("if"), "if"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("take"), "take"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("borrow"), "borrow"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("init"), "init"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("drop"), "drop"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("while"), "while"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("do"), "do"));
 
   primec::Expr generatedAssignCall;
   generatedAssignCall.kind = primec::Expr::Kind::Call;

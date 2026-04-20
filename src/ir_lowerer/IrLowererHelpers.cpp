@@ -59,6 +59,15 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "repeat";
   };
   std::string name = expr.name;
+  if (!expr.namespacePrefix.empty() && name.find('/') == std::string::npos) {
+    std::string scopedPrefix = expr.namespacePrefix;
+    if (!scopedPrefix.empty() && scopedPrefix.front() != '/') {
+      scopedPrefix.insert(scopedPrefix.begin(), '/');
+    }
+    if (!scopedPrefix.empty()) {
+      name = scopedPrefix + "/" + name;
+    }
+  }
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
