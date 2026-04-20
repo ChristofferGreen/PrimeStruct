@@ -2530,7 +2530,7 @@ main() {
 
 TEST_CASE("experimental soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2550,7 +2550,7 @@ main() {
 
 TEST_CASE("experimental soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2575,7 +2575,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrowed ref helper validates on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2593,7 +2593,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrowed view helper validates on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2611,7 +2611,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrowed view helper validates shared writes") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2630,7 +2630,7 @@ main() {
 
 TEST_CASE("experimental soa storage borrow-slot helper validates reference return") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [return<Reference<i32>>]
 borrow_second([SoaColumn<i32>] values) {
@@ -2674,7 +2674,7 @@ main() {
 
 TEST_CASE("experimental two-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2694,7 +2694,7 @@ main() {
 
 TEST_CASE("experimental two-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2719,7 +2719,7 @@ main() {
 
 TEST_CASE("experimental three-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2739,7 +2739,7 @@ main() {
 
 TEST_CASE("experimental three-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2764,7 +2764,7 @@ main() {
 
 TEST_CASE("experimental four-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2784,7 +2784,7 @@ main() {
 
 TEST_CASE("experimental four-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2809,7 +2809,7 @@ main() {
 
 TEST_CASE("experimental five-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2829,7 +2829,7 @@ main() {
 
 TEST_CASE("experimental five-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2854,7 +2854,7 @@ main() {
 
 TEST_CASE("experimental six-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2874,7 +2874,7 @@ main() {
 
 TEST_CASE("experimental six-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2899,7 +2899,7 @@ main() {
 
 TEST_CASE("experimental seven-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2919,7 +2919,7 @@ main() {
 
 TEST_CASE("experimental seven-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2944,7 +2944,7 @@ main() {
 
 TEST_CASE("experimental eight-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2964,7 +2964,7 @@ main() {
 
 TEST_CASE("experimental eight-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -2989,7 +2989,7 @@ main() {
 
 TEST_CASE("experimental nine-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3009,7 +3009,7 @@ main() {
 
 TEST_CASE("experimental nine-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3034,7 +3034,7 @@ main() {
 
 TEST_CASE("experimental ten-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3054,7 +3054,7 @@ main() {
 
 TEST_CASE("experimental ten-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3079,7 +3079,7 @@ main() {
 
 TEST_CASE("experimental eleven-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3099,7 +3099,7 @@ main() {
 
 TEST_CASE("experimental eleven-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3124,7 +3124,7 @@ main() {
 
 TEST_CASE("experimental twelve-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3144,7 +3144,7 @@ main() {
 
 TEST_CASE("experimental twelve-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3169,7 +3169,7 @@ main() {
 
 TEST_CASE("experimental thirteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3189,7 +3189,7 @@ main() {
 
 TEST_CASE("experimental thirteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3214,7 +3214,7 @@ main() {
 
 TEST_CASE("experimental fourteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3234,7 +3234,7 @@ main() {
 
 TEST_CASE("experimental fourteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3259,7 +3259,7 @@ main() {
 
 TEST_CASE("experimental fifteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3279,7 +3279,7 @@ main() {
 
 TEST_CASE("experimental fifteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}
@@ -3305,7 +3305,7 @@ main() {
 
 TEST_CASE("experimental sixteen-column soa storage helpers validate on explicit column bindings") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3325,7 +3325,7 @@ main() {
 
 TEST_CASE("experimental sixteen-column soa storage helpers validate ownership-sensitive elements") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 Mover() {
   [i32] value{0i32}

@@ -166,7 +166,7 @@ main() {
 
 TEST_CASE("generate SoaSchema emits reflected dynamic field-dispatch helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [struct reflect generate(SoaSchema)]
 Item() {
@@ -347,7 +347,7 @@ main() {
   CHECK(storageChunk.name == "chunk0");
   REQUIRE(storageChunk.args.size() == 1);
   REQUIRE(storageChunk.transforms.size() >= 3);
-  CHECK(storageChunk.transforms[0].name.rfind("/std/collections/experimental_soa_storage/SoaColumns2", 0) == 0);
+  CHECK(storageChunk.transforms[0].name.rfind("/std/collections/internal_soa_storage/SoaColumns2", 0) == 0);
   CHECK(storageChunk.transforms[0].templateArgs.empty());
   CHECK(storageChunk.transforms[1].name == "mut");
   CHECK(storageChunk.transforms[2].name == "public");
@@ -358,12 +358,12 @@ main() {
   REQUIRE(storageCountHelper->returnExpr.has_value());
   CHECK(storageCountHelper->returnExpr->kind == primec::Expr::Kind::Call);
   CHECK(storageCountHelper->returnExpr->name.rfind(
-            "/std/collections/experimental_soa_storage/soaColumns2Count", 0) == 0);
+            "/std/collections/internal_soa_storage/soaColumns2Count", 0) == 0);
   REQUIRE(storageCapacityHelper->parameters.size() == 1);
   REQUIRE(storageCapacityHelper->returnExpr.has_value());
   CHECK(storageCapacityHelper->returnExpr->kind == primec::Expr::Kind::Call);
   CHECK(storageCapacityHelper->returnExpr->name.rfind(
-            "/std/collections/experimental_soa_storage/soaColumns2Capacity", 0) == 0);
+            "/std/collections/internal_soa_storage/soaColumns2Capacity", 0) == 0);
   REQUIRE(storageReserveHelper->parameters.size() == 2);
   CHECK(storageReserveHelper->statements.size() == 3);
   REQUIRE(storageClearHelper->parameters.size() == 1);
@@ -375,7 +375,7 @@ main() {
 
 TEST_CASE("generate SoaSchema chunk helpers split wide reflected schemas deterministically") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [struct reflect generate(SoaSchema)]
 Item() {
@@ -476,19 +476,19 @@ main() {
   CHECK(secondChunk.name == "chunk1");
   REQUIRE(firstChunk.transforms.size() >= 3);
   REQUIRE(secondChunk.transforms.size() >= 3);
-  CHECK(firstChunk.transforms[0].name.rfind("/std/collections/experimental_soa_storage/SoaColumns16", 0) == 0);
+  CHECK(firstChunk.transforms[0].name.rfind("/std/collections/internal_soa_storage/SoaColumns16", 0) == 0);
   CHECK(firstChunk.transforms[0].templateArgs.empty());
-  CHECK(secondChunk.transforms[0].name.rfind("/std/collections/experimental_soa_storage/SoaColumn", 0) == 0);
+  CHECK(secondChunk.transforms[0].name.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0);
   CHECK(secondChunk.transforms[0].templateArgs.empty());
   REQUIRE(storageNewHelper->returnExpr.has_value());
   CHECK(storageNewHelper->returnExpr->kind == primec::Expr::Kind::Call);
   CHECK(storageNewHelper->returnExpr->name == "/Item/SoaSchemaStorage");
   REQUIRE(storageCountHelper->returnExpr.has_value());
   CHECK(storageCountHelper->returnExpr->name.rfind(
-            "/std/collections/experimental_soa_storage/soaColumns16Count", 0) == 0);
+            "/std/collections/internal_soa_storage/soaColumns16Count", 0) == 0);
   REQUIRE(storageCapacityHelper->returnExpr.has_value());
   CHECK(storageCapacityHelper->returnExpr->name.rfind(
-            "/std/collections/experimental_soa_storage/soaColumns16Capacity", 0) == 0);
+            "/std/collections/internal_soa_storage/soaColumns16Capacity", 0) == 0);
   CHECK(storageReserveHelper->statements.size() == 6);
   CHECK(storageClearHelper->statements.size() == 6);
   CHECK(storageDestroyHelper->parameters.empty());
@@ -498,7 +498,7 @@ main() {
 
 TEST_CASE("generate SoaSchema rejects helper collisions deterministically") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [struct reflect generate(SoaSchema)]
 Item() {

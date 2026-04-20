@@ -56,20 +56,19 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4103
+- TODO-4059
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4059
+- none
 
 ### Priority Lanes (Current)
 
-- Stdlib de-experimentalization: TODO-4103 and TODO-4059
+- Stdlib de-experimentalization: TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4103
-2. TODO-4059
+1. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -79,7 +78,7 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4103, TODO-4059 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -99,7 +98,7 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | TODO-4103, TODO-4059 |
+| De-experimentalization surface and namespace parity | TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
@@ -143,7 +142,7 @@ Task template:
 - Internal substrate/helper namespaces:
   `/std/collections/internal_buffer_checked/*`,
   `/std/collections/internal_buffer_unchecked/*`, and
-  `/std/collections/experimental_soa_storage/*` are implementation-facing
+  `/std/collections/internal_soa_storage/*` are implementation-facing
   plumbing rather than public API.
 - Default rule: no `experimental` namespace is canonical public API unless the
   docs call out a temporary incubating exception explicitly.
@@ -160,7 +159,7 @@ Task template:
   `/std/collections/experimental_soa_vector_conversions/*` remain bridge seams
   behind the canonical experiment surface.
 - Internal substrate namespace:
-  `/std/collections/experimental_soa_storage/*` remains implementation-facing
+  `/std/collections/internal_soa_storage/*` remains implementation-facing
   SoA storage/layout plumbing.
 - Promotion requires borrowed-view/lifetime rules, backend/runtime parity, and
   retirement of direct experimental implementation imports before `soa_vector`
@@ -172,22 +171,10 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4103
+  - depends_on: none
   - scope: Remove stale experimental naming from public docs, examples, and user-facing guidance once the corresponding stdlib surfaces have been reclassified or renamed so the documented public contract no longer advertises transitional namespaces that are no longer meant for direct use.
   - acceptance:
     - Public docs and guidance no longer present completed collection/gfx/substrate de-experimentalization work as still experimental.
     - Any remaining intentionally incubating surface, especially SoA if still deferred, is documented explicitly rather than hidden behind blanket wording.
     - The resulting docs distinguish canonical public surfaces, compatibility shims, and internal substrate namespaces consistently.
   - stop_rule: Stop once the completed de-experimentalized surfaces are reflected in docs and any intentionally retained incubating surfaces are called out explicitly; split broader unrelated docs cleanup into separate tasks.
-
-- [ ] TODO-4103: Rename the remaining experimental SoA storage namespace to an explicit internal name
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib De-Experimentalization
-  - depends_on: none
-  - scope: Rename `/std/collections/experimental_soa_storage/*` to an explicit internal/substrate namespace now that the checked and unchecked buffer helper namespaces have already moved to explicit internal names.
-  - acceptance:
-    - The SoA storage substrate no longer advertises itself as a public-facing experimental stdlib API purely by name.
-    - The new naming makes the storage/layout role explicit while keeping canonical SoA-facing APIs routed through wrapper surfaces instead.
-    - Any import, bridge, lowering, or docs updates needed by the rename stay limited to the SoA storage namespace and do not fold in broader SoA API redesign.
-  - stop_rule: Stop once the SoA storage namespace is explicitly internal by name and usage; split any broader SoA storage/runtime redesign into separate tasks.

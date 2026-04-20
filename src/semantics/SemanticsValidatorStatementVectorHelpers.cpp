@@ -145,7 +145,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       normalized = normalizeBindingTypeName(base);
     }
     return normalized == "SoaFieldView" ||
-           normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+           normalized == "std/collections/internal_soa_storage/SoaFieldView";
   };
   auto referenceRootForBorrowBinding =
       [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {

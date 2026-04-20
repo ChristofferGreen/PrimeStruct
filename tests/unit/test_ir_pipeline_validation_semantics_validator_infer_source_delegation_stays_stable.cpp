@@ -1180,7 +1180,7 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("isExperimentalSoaColumnSlotHelperPath(resolvedCallPath)") !=
         std::string::npos);
-  CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/experimental_soa_storage/soaColumnSlotUnsafe\", 0) == 0") ==
+  CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/internal_soa_storage/soaColumnSlotUnsafe\", 0) == 0") ==
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/experimental_vector/vectorSlotUnsafe\", 0) == 0") !=
         std::string::npos);

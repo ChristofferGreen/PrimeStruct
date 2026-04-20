@@ -276,7 +276,7 @@ bool extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(const std
     }
     if (fieldBinding.typeTemplateArg.empty() ||
         (normalizedFieldType != "SoaColumn" &&
-         normalizedFieldType != "std/collections/experimental_soa_storage/SoaColumn")) {
+         normalizedFieldType != "std/collections/internal_soa_storage/SoaColumn")) {
       continue;
     }
     return splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, templateArgsOut) &&

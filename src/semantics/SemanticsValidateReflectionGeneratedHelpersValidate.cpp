@@ -461,18 +461,18 @@ bool emitReflectionSoaSchemaStorageHelpers(ReflectionGeneratedHelperContext &con
 
   auto makeChunkTypeName = [](const std::vector<std::string> &fieldTypes) {
     if (fieldTypes.size() == 1) {
-      return std::string("/std/collections/experimental_soa_storage/SoaColumn<") + formatTemplateArgs(fieldTypes) +
+      return std::string("/std/collections/internal_soa_storage/SoaColumn<") + formatTemplateArgs(fieldTypes) +
              ">";
     }
-    return std::string("/std/collections/experimental_soa_storage/SoaColumns") +
+    return std::string("/std/collections/internal_soa_storage/SoaColumns") +
            std::to_string(fieldTypes.size()) + "<" + formatTemplateArgs(fieldTypes) + ">";
   };
 
   auto makeChunkHelperBasePath = [](const std::string &suffix, size_t fieldCount) {
     if (fieldCount == 1) {
-      return std::string("/std/collections/experimental_soa_storage/soaColumn") + suffix;
+      return std::string("/std/collections/internal_soa_storage/soaColumn") + suffix;
     }
-    return std::string("/std/collections/experimental_soa_storage/soaColumns") + std::to_string(fieldCount) +
+    return std::string("/std/collections/internal_soa_storage/soaColumns") + std::to_string(fieldCount) +
            suffix;
   };
 

@@ -106,7 +106,7 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
         normalized = normalizeBindingTypeName(base);
       }
       return normalized == "SoaFieldView" ||
-             normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+             normalized == "std/collections/internal_soa_storage/SoaFieldView";
     };
     auto referenceRootForBinding =
         [&](const std::string &bindingName,

@@ -3,7 +3,7 @@ import /std/collections/internal_buffer_unchecked/*
 
 namespace std {
   namespace collections {
-  namespace experimental_soa_storage {
+  namespace internal_soa_storage {
   [public struct]
   SoaColumn<T>() {
     [public i32] count

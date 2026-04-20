@@ -93,7 +93,7 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("no longer part of the public gfx contract") != std::string::npos);
   CHECK(design.find("/std/collections/internal_buffer_checked/*") != std::string::npos);
   CHECK(design.find("/std/collections/internal_buffer_unchecked/*") != std::string::npos);
-  CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
+  CHECK(design.find("/std/collections/internal_soa_storage/*") != std::string::npos);
 }
 
 TEST_CASE("design doc records soa maturity track") {
@@ -111,7 +111,7 @@ TEST_CASE("design doc records soa maturity track") {
         std::string::npos);
   CHECK(design.find("/std/collections/soa_vector/*") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
-  CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
+  CHECK(design.find("/std/collections/internal_soa_storage/*") != std::string::npos);
 }
 
 TEST_CASE("stdlib surface registry stays source locked") {

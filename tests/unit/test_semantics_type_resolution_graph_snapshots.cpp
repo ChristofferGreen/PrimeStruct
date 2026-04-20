@@ -1041,7 +1041,7 @@ TEST_CASE("semantic product method-call targets carry interned path ids") {
 
 TEST_CASE("semantic product publishes specialized SoaColumn field access targets") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -1056,13 +1056,13 @@ main() {
       source, "/main", dumps, error));
   CHECK(error.empty());
   CHECK(dumps.semanticProduct.find(
-            "scope_path=\"/std/collections/experimental_soa_storage/SoaColumn__") !=
+            "scope_path=\"/std/collections/internal_soa_storage/SoaColumn__") !=
         std::string::npos);
   CHECK(dumps.semanticProduct.find(
-            "/field_capacity\" method_name=\"capacity\" receiver_type_text=\"Reference</std/collections/experimental_soa_storage/SoaColumn__") !=
+            "/field_capacity\" method_name=\"capacity\" receiver_type_text=\"Reference</std/collections/internal_soa_storage/SoaColumn__") !=
         std::string::npos);
   CHECK(dumps.semanticProduct.find(
-            "resolved_path=\"/std/collections/experimental_soa_storage/SoaColumn__") !=
+            "resolved_path=\"/std/collections/internal_soa_storage/SoaColumn__") !=
         std::string::npos);
   CHECK(dumps.semanticProduct.find("/capacity\" provenance_handle=") !=
         std::string::npos);
@@ -1070,7 +1070,7 @@ main() {
 
 TEST_CASE("semantic product publishes explicit SoaColumn helper parameter binding facts") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {

@@ -832,7 +832,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorRef\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "canonicalPath == \"/std/collections/experimental_soa_storage/soaColumnRef\"") !=
+            "canonicalPath == \"/std/collections/internal_soa_storage/soaColumnRef\"") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "helperName == \"push\" || helperName == \"reserve\" ||") !=
@@ -847,13 +847,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "canonicalPath.rfind(kExperimentalSoaColumnFieldViewUnsafePrefix, 0) == 0") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "/std/collections/experimental_soa_storage/soaFieldViewRead") !=
+            "/std/collections/internal_soa_storage/soaFieldViewRead") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "/std/collections/experimental_soa_storage/soaColumnSlotUnsafe") !=
+            "/std/collections/internal_soa_storage/soaColumnSlotUnsafe") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
-            "/std/collections/experimental_soa_storage/soaColumnField") !=
+            "/std/collections/internal_soa_storage/soaColumnField") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "bool isExperimentalSoaVectorConversionFamilyPath(std::string_view path)") !=
@@ -1235,11 +1235,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         std::string::npos);
   CHECK(exprSource.find(
             "resolvedPath.rfind(\n"
-            "              \"/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\",") ==
+            "              \"/std/collections/internal_soa_storage/soaColumnFieldViewUnsafe\",") ==
         std::string::npos);
   CHECK(exprSource.find(
             "definitionPath.rfind(\n"
-            "                 \"/std/collections/experimental_soa_storage/soaColumnField\", 0) == 0") ==
+            "                 \"/std/collections/internal_soa_storage/soaColumnField\", 0) == 0") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("unknown method: /std/collections/soa_vector/field_view/") ==
         std::string::npos);
@@ -1786,7 +1786,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
         std::string::npos);
   CHECK(exprResolvedCallArgumentsSource.find(
-            "/std/collections/experimental_soa_storage/soaColumnRef") ==
+            "/std/collections/internal_soa_storage/soaColumnRef") ==
         std::string::npos);
   CHECK(exprResolvedCallArgumentsSource.find(
             "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
@@ -1845,14 +1845,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "resolvedPath.rfind(\n"
-            "                  \"/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\",") ==
+            "                  \"/std/collections/internal_soa_storage/soaColumnFieldViewUnsafe\",") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "canonicalResolvedPath.rfind(\n"
             "                   \"/std/collections/experimental_soa_vector/\", 0) == 0 &&") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
-            "\"/std/collections/experimental_soa_storage/soaFieldViewRef\"") ==
+            "\"/std/collections/internal_soa_storage/soaFieldViewRef\"") ==
         std::string::npos);
   CHECK(exprMutationBorrowsSource.find(
             "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
@@ -1905,7 +1905,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical)") !=
         std::string::npos);
   CHECK(statementBindingsSource.find(
-            "/std/collections/experimental_soa_storage/soaColumnRef") ==
+            "/std/collections/internal_soa_storage/soaColumnRef") ==
         std::string::npos);
   CHECK(statementBindingsSource.find(
             "/std/collections/experimental_soa_vector/soaVectorRef\"") ==
@@ -1937,7 +1937,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "isExperimentalSoaRefLikeHelperPath(resolvedPathNoTemplate)") !=
         std::string::npos);
   CHECK(statementReturnsSource.find(
-            "/std/collections/experimental_soa_storage/soaColumnRef") ==
+            "/std/collections/internal_soa_storage/soaColumnRef") ==
         std::string::npos);
   CHECK(statementReturnsSource.find(
             "isExperimentalSoaFieldViewHelperPath(resolvedPath)") !=
@@ -1952,7 +1952,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         std::string::npos);
   CHECK(statementReturnsSource.find(
             "resolvedPath.rfind(\n"
-            "              \"/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe\",") ==
+            "              \"/std/collections/internal_soa_storage/soaColumnFieldViewUnsafe\",") ==
         std::string::npos);
   CHECK(statementReturnsSource.find(
             "resolvedPathNoTemplate.rfind(\n"

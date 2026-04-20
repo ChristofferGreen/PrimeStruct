@@ -553,7 +553,7 @@ bool isExperimentalSoaFieldViewHelperPath(std::string_view path) {
   constexpr std::string_view kExperimentalSoaFieldViewPrefix =
       "/std/collections/experimental_soa_vector/soaVectorFieldView";
   constexpr std::string_view kExperimentalSoaColumnFieldViewUnsafePrefix =
-      "/std/collections/experimental_soa_storage/soaColumnFieldViewUnsafe";
+      "/std/collections/internal_soa_storage/soaColumnFieldViewUnsafe";
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");
   if (specializationSuffix != std::string::npos) {
@@ -570,7 +570,7 @@ bool isExperimentalSoaFieldViewReadHelperPath(std::string_view path) {
     canonicalPath.erase(specializationSuffix);
   }
   return canonicalPath.rfind(
-             "/std/collections/experimental_soa_storage/soaFieldViewRead",
+             "/std/collections/internal_soa_storage/soaFieldViewRead",
              0) == 0;
 }
 
@@ -580,7 +580,7 @@ bool isExperimentalSoaFieldViewRefHelperPath(std::string_view path) {
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath == "/std/collections/experimental_soa_storage/soaFieldViewRef";
+  return canonicalPath == "/std/collections/internal_soa_storage/soaFieldViewRef";
 }
 
 bool isExperimentalSoaColumnSlotHelperPath(std::string_view path) {
@@ -590,7 +590,7 @@ bool isExperimentalSoaColumnSlotHelperPath(std::string_view path) {
     canonicalPath.erase(specializationSuffix);
   }
   return canonicalPath.rfind(
-             "/std/collections/experimental_soa_storage/soaColumnSlotUnsafe",
+             "/std/collections/internal_soa_storage/soaColumnSlotUnsafe",
              0) == 0;
 }
 
@@ -601,7 +601,7 @@ bool isExperimentalSoaColumnFieldSchemaHelperPath(std::string_view path) {
     canonicalPath.erase(specializationSuffix);
   }
   return canonicalPath.rfind(
-             "/std/collections/experimental_soa_storage/soaColumnField",
+             "/std/collections/internal_soa_storage/soaColumnField",
              0) == 0;
 }
 
@@ -628,7 +628,7 @@ bool isExperimentalSoaRefLikeHelperPath(std::string_view path) {
   }
   return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRef" ||
          canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRefRef" ||
-         canonicalPath == "/std/collections/experimental_soa_storage/soaColumnRef";
+         canonicalPath == "/std/collections/internal_soa_storage/soaColumnRef";
 }
 
 bool isExperimentalSoaVectorHelperFamilyPath(std::string_view path) {

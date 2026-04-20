@@ -82,7 +82,7 @@ std::string inferExperimentalSoaElementStructPathFromReceiverStruct(
     columnStructPath.insert(columnStructPath.begin(), '/');
   }
   if (columnStructPath.rfind(
-          "/std/collections/experimental_soa_storage/SoaColumn__", 0) != 0) {
+          "/std/collections/internal_soa_storage/SoaColumn__", 0) != 0) {
     return "";
   }
 

@@ -16,7 +16,7 @@ bool isSoaFieldViewBindingType(const BindingInfo &binding) {
     normalized = normalizeBindingTypeName(base);
   }
   return normalized == "SoaFieldView" ||
-         normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+         normalized == "std/collections/internal_soa_storage/SoaFieldView";
 }
 
 bool isExperimentalSoaColumnBindingType(const BindingInfo &binding) {
@@ -33,9 +33,9 @@ bool isExperimentalSoaColumnBindingType(const BindingInfo &binding) {
     normalized.erase(normalized.begin());
   }
   return normalized == "SoaColumn" ||
-         normalized == "std/collections/experimental_soa_storage/SoaColumn" ||
+         normalized == "std/collections/internal_soa_storage/SoaColumn" ||
          normalized.rfind(
-             "std/collections/experimental_soa_storage/SoaColumn__", 0) == 0;
+             "std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
 }
 
 std::string referenceRootForBorrowBinding(const std::string &bindingName, const BindingInfo &binding) {

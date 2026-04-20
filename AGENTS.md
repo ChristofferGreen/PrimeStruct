@@ -35,7 +35,8 @@ build and layout solidify.
   `ui`, the public collection wrapper files, and `stdlib/std/gfx/gfx.prime`
   as style-aligned surface code; treat `stdlib/std/bench_non_math`,
   `stdlib/std/collections/collections.prime`,
-  `stdlib/std/collections/experimental_*`, and
+  `stdlib/std/collections/experimental_*`,
+  `stdlib/std/collections/internal_*`, and
   `stdlib/std/gfx/experimental.prime` as canonical/bridge code unless an
   active TODO explicitly retargets them.
 - When ownership classification changes for a public type/surface, update the canonical `core` / `hybrid` / `stdlib-owned` matrix in `docs/PrimeStruct.md` and keep the summary note in `docs/todo.md` aligned in the same change.

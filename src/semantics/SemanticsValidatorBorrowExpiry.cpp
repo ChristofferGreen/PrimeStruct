@@ -212,7 +212,7 @@ void SemanticsValidator::expireReferenceBorrowsForRanges(const std::vector<Param
       normalized = normalizeBindingTypeName(base);
     }
     return normalized == "SoaFieldView" ||
-           normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+           normalized == "std/collections/internal_soa_storage/SoaFieldView";
   };
   auto referenceRootForBinding = [&](const std::string &bindingName, const BindingInfo &binding) -> std::string {
     if (binding.typeName != "Reference" &&

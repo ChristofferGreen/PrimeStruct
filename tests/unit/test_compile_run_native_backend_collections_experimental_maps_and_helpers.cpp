@@ -2531,7 +2531,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2548,9 +2548,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage.prime", source);
+      writeTemp("compile_native_internal_soa_storage.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2559,7 +2559,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental soa storage borrowed ref helper") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2571,9 +2571,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_ref.prime", source);
+      writeTemp("compile_native_internal_soa_storage_ref.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_ref_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_ref_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2582,7 +2582,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental soa storage borrowed view helper") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2595,9 +2595,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_view.prime", source);
+      writeTemp("compile_native_internal_soa_storage_view.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_view_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_view_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2606,7 +2606,7 @@ main() {
 
 TEST_CASE("rejects native experimental soa storage reserve overflow") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2616,11 +2616,11 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_reserve_overflow.prime", source);
+      writeTemp("compile_native_internal_soa_storage_reserve_overflow.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_reserve_overflow_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_reserve_overflow_exe").string();
   const std::string errPath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_reserve_overflow_err.txt").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_reserve_overflow_err.txt").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2631,7 +2631,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental two-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2649,9 +2649,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_two_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_two_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_two_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_two_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2660,7 +2660,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental three-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2679,9 +2679,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_three_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_three_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_three_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_three_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2690,7 +2690,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental four-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2710,9 +2710,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_four_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_four_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_four_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_four_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2721,7 +2721,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental five-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2742,9 +2742,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_five_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_five_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_five_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_five_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2753,7 +2753,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental six-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2775,9 +2775,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_six_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_six_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_six_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_six_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2786,7 +2786,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental seven-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2809,9 +2809,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_seven_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_seven_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_seven_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_seven_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2820,7 +2820,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental eight-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2844,9 +2844,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_eight_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_eight_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_eight_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_eight_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2855,7 +2855,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental nine-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2875,9 +2875,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_nine_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_nine_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_nine_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_nine_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2886,7 +2886,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental ten-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2907,9 +2907,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_ten_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_ten_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_ten_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_ten_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2918,7 +2918,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental eleven-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2933,9 +2933,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_eleven_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_eleven_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_eleven_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_eleven_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2944,7 +2944,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental twelve-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2959,9 +2959,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_twelve_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_twelve_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_twelve_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_twelve_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2970,7 +2970,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental thirteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -2985,9 +2985,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_thirteen_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_thirteen_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_thirteen_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_thirteen_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -2996,7 +2996,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental fourteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3011,9 +3011,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_fourteen_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_fourteen_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_fourteen_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_fourteen_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -3022,7 +3022,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental fifteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3037,9 +3037,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_fifteen_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_fifteen_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_fifteen_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_fifteen_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
@@ -3049,7 +3049,7 @@ main() {
 
 TEST_CASE("compiles and runs native experimental sixteen-column soa storage helpers") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [effects(heap_alloc), return<int>]
 main() {
@@ -3064,9 +3064,9 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_experimental_soa_storage_sixteen_columns.prime", source);
+      writeTemp("compile_native_internal_soa_storage_sixteen_columns.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_soa_storage_sixteen_columns_exe").string();
+      (testScratchPath("") / "primec_native_internal_soa_storage_sixteen_columns_exe").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

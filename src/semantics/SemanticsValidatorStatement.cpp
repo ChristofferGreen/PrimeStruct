@@ -412,7 +412,7 @@ bool SemanticsValidator::validateStatement(const std::vector<ParameterInfo> &par
         normalized = normalizeBindingTypeName(base);
       }
       const bool isSoaFieldView = normalized == "SoaFieldView" ||
-                                  normalized == "std/collections/experimental_soa_storage/SoaFieldView";
+                                  normalized == "std/collections/internal_soa_storage/SoaFieldView";
       if (binding.typeName != "Reference" && !isSoaFieldView) {
         return "";
       }

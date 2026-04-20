@@ -2569,7 +2569,8 @@ flight.
   `stdlib/std/gfx/gfx.prime`.
 - **Internal implementation, bridge, or substrate code:** `stdlib/std/bench_non_math/*`,
   `stdlib/std/collections/collections.prime`,
-  `stdlib/std/collections/experimental_*`, and
+  `stdlib/std/collections/experimental_*`,
+  `stdlib/std/collections/internal_*`, and
   `stdlib/std/gfx/experimental.prime`.
 - **Mixed-directory rule:** `stdlib/std/collections` and `stdlib/std/gfx`
   remain mixed on purpose, so contributors should follow the file-level mapping
@@ -2634,13 +2635,13 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
-| `/std/collections/experimental_soa_storage/*` | Internal substrate/helper namespace | SoA storage/layout substrate used by wrappers and lowering bridges, not a canonical surface contract. | `TODO-4103` |
+| `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
 
 The policy implication is immediate: vector/map/gfx work should prefer canonical
 non-`experimental` namespaces in docs and compiler authority, SoA work must say
 explicitly that it is still on a separate maturity track, and substrate helpers
-should be treated as implementation namespaces waiting for explicit internal
-renames rather than as candidate public APIs.
+should be treated as explicit implementation namespaces rather than as
+candidate public APIs.
 
 ### SoA Maturity Track
 This section is the scope reference for the SoA-specific maturity decision lane
@@ -2657,7 +2658,7 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
   seams behind that canonical experiment surface. They may stay importable while
   the SoA surface is incubating, but they are not the intended long-term
   user-facing contract.
-- **Internal substrate namespace:** `/std/collections/experimental_soa_storage/*`
+- **Internal substrate namespace:** `/std/collections/internal_soa_storage/*`
   stays implementation-facing storage/layout plumbing rather than public API.
 - **Promotion gate:** SoA should only move from incubating to promoted public
   contract after borrowed-view/lifetime rules, backend/runtime parity, and the
@@ -3754,7 +3755,7 @@ read-only path.
     and provenance/escape rules once the next standalone borrowed field-view lifetime rules
     land.
   - **Experimental SoA storage substrate:** the completed fixed-width reusable `.prime` storage layer now exists at
-    `/std/collections/experimental_soa_storage/*` with single-column `SoaColumn<T>` helpers
+    `/std/collections/internal_soa_storage/*` with single-column `SoaColumn<T>` helpers
     (`soaColumnNew<T>()`, `soaColumnCount<T>()`, `soaColumnCapacity<T>()`, `soaColumnReserve<T>()`,
     `soaColumnPush<T>()`, `soaColumnRead<T>()`, `soaColumnWrite<T>()`, `soaColumnClear<T>()`) plus
     reusable fixed-width multi-column primitives `SoaColumns2<T0, T1>`, `SoaColumns3<T0, T1, T2>`,

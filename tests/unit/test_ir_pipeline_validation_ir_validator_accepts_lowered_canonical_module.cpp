@@ -409,7 +409,7 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
   primec::Expr namespacedExperimentalSoaStorageAccessCall;
   namespacedExperimentalSoaStorageAccessCall.kind = primec::Expr::Kind::Call;
   namespacedExperimentalSoaStorageAccessCall.namespacePrefix =
-      "/std/collections/experimental_soa_storage";
+      "/std/collections/internal_soa_storage";
   namespacedExperimentalSoaStorageAccessCall.name = "at_unsafe";
 
   helperName.clear();
@@ -420,7 +420,7 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
   primec::Expr specializedExperimentalSoaColumnAccessCall;
   specializedExperimentalSoaColumnAccessCall.kind = primec::Expr::Kind::Call;
   specializedExperimentalSoaColumnAccessCall.namespacePrefix =
-      "/std/collections/experimental_soa_storage/SoaColumn__tabcdef01";
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01";
   specializedExperimentalSoaColumnAccessCall.name = "at";
 
   helperName.clear();

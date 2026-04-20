@@ -216,7 +216,7 @@ main() {
 
 TEST_CASE("reflection SoaSchema helper runtime stays aligned across backends") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [struct reflect generate(SoaSchema)]
 Pair() {
@@ -262,7 +262,7 @@ main() {
 
 TEST_CASE("reflection SoaSchema chunk helper runtime stays aligned across backends") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [struct reflect generate(SoaSchema)]
 Wide() {
@@ -318,7 +318,7 @@ main() {
 
 TEST_CASE("reflection SoaSchema storage helper runtime stays aligned across backends") {
   const std::string source = R"(
-import /std/collections/experimental_soa_storage/*
+import /std/collections/internal_soa_storage/*
 
 [struct reflect generate(SoaSchema)]
 Wide() {

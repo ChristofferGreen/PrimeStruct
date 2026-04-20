@@ -264,7 +264,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementTypeFromStructPath(
     }
     if (!fieldBinding.typeTemplateArg.empty() &&
         (normalizedFieldType == "SoaColumn" ||
-         normalizedFieldType == "std/collections/experimental_soa_storage/SoaColumn")) {
+         normalizedFieldType == "std/collections/internal_soa_storage/SoaColumn")) {
       std::vector<std::string> args;
       if (!splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, args) || args.size() != 1) {
         continue;
@@ -276,7 +276,7 @@ bool SemanticsValidator::extractExperimentalSoaVectorElementTypeFromStructPath(
     if (!resolvedFieldPath.empty() && resolvedFieldPath.front() != '/') {
       resolvedFieldPath.insert(resolvedFieldPath.begin(), '/');
     }
-    if (normalizedFieldType.rfind("std/collections/experimental_soa_storage/SoaColumn__", 0) != 0 ||
+    if (normalizedFieldType.rfind("std/collections/internal_soa_storage/SoaColumn__", 0) != 0 ||
         !extractExperimentalSoaColumnElementTypeFromStructPath(resolvedFieldPath, elemTypeOut)) {
       continue;
     }
@@ -289,7 +289,7 @@ bool SemanticsValidator::extractExperimentalSoaColumnElementTypeFromStructPath(
     const std::string &structPath,
     std::string &elemTypeOut) const {
   elemTypeOut.clear();
-  if (structPath.rfind("/std/collections/experimental_soa_storage/SoaColumn__", 0) != 0) {
+  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) != 0) {
     return false;
   }
   auto defIt = defMap_.find(structPath);

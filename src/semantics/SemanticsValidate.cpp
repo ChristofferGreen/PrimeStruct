@@ -784,7 +784,7 @@ bool extractSoaFieldViewElementTypeText(std::string typeText, std::string &elemT
       continue;
     }
     if (base == "SoaFieldView" ||
-        base == "std/collections/experimental_soa_storage/SoaFieldView") {
+        base == "std/collections/internal_soa_storage/SoaFieldView") {
       std::vector<std::string> args;
       if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
         return false;
@@ -845,7 +845,7 @@ bool extractExperimentalSoaColumnElementTypeFromSpecializedDefinition(
     const Definition &def,
     std::string &elemTypeOut) {
   elemTypeOut.clear();
-  if (def.fullPath.rfind("/std/collections/experimental_soa_storage/SoaColumn__", 0) != 0) {
+  if (def.fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) != 0) {
     return false;
   }
   for (const auto &fieldExpr : def.statements) {
@@ -921,7 +921,7 @@ bool extractExperimentalSoaVectorElementTypeFromSpecializedDefinition(
     }
     if (!fieldBinding.typeTemplateArg.empty() &&
         (normalizedFieldType == "SoaColumn" ||
-         normalizedFieldType == "std/collections/experimental_soa_storage/SoaColumn")) {
+         normalizedFieldType == "std/collections/internal_soa_storage/SoaColumn")) {
       std::vector<std::string> args;
       if (!semantics::splitTopLevelTemplateArgs(fieldBinding.typeTemplateArg, args) || args.size() != 1) {
         continue;
@@ -4514,7 +4514,7 @@ void rewriteExperimentalSoaFieldViewCarrierIndexExpr(
 
   Expr readCall;
   readCall.kind = Expr::Kind::Call;
-  readCall.name = "/std/collections/experimental_soa_storage/soaFieldViewRead";
+  readCall.name = "/std/collections/internal_soa_storage/soaFieldViewRead";
   readCall.templateArgs = {elemType};
   readCall.args.push_back(fieldViewExpr);
   readCall.args.push_back(expr.args[1]);
@@ -4588,7 +4588,7 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
   Expr &target = expr.args.front();
   if (target.kind == Expr::Kind::Call && !target.isBinding) {
     static constexpr std::string_view fieldRefPrefix =
-        "/std/collections/experimental_soa_storage/soaFieldViewRef";
+        "/std/collections/internal_soa_storage/soaFieldViewRef";
     if (semantics::isExperimentalSoaFieldViewReadHelperPath(target.name) &&
         target.args.size() == 2 && !target.templateArgs.empty()) {
       Expr refCall;
@@ -4630,9 +4630,9 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
   static constexpr std::string_view refPrefix =
       "/std/collections/experimental_soa_vector/soaVectorRef";
   static constexpr std::string_view fieldReadPrefix =
-      "/std/collections/experimental_soa_storage/soaFieldViewRead";
+      "/std/collections/internal_soa_storage/soaFieldViewRead";
   static constexpr std::string_view fieldRefPrefix =
-      "/std/collections/experimental_soa_storage/soaFieldViewRef";
+      "/std/collections/internal_soa_storage/soaFieldViewRef";
   if (!semantics::isExperimentalSoaGetLikeHelperPath(receiver.name)) {
     if (!semantics::isExperimentalSoaFieldViewReadHelperPath(receiver.name)) {
       return;

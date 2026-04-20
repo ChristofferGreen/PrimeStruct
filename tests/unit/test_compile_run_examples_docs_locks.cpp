@@ -60,6 +60,7 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(codeExamples.find("`stdlib/std/bench_non_math/*`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/collections.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/experimental_*`") != std::string::npos);
+  CHECK(codeExamples.find("`stdlib/std/collections/internal_*`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/gfx/experimental.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections` is intentionally mixed") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/gfx` is intentionally mixed") != std::string::npos);
@@ -70,13 +71,15 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(primeStructDoc.find("`stdlib/std/collections/vector.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/collections.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections/experimental_*`") != std::string::npos);
+  CHECK(primeStructDoc.find("`stdlib/std/collections/internal_*`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/gfx/experimental.prime`") != std::string::npos);
   CHECK(primeStructDoc.find("`stdlib/std/collections` and `stdlib/std/gfx`") != std::string::npos);
 
   CHECK(agents.find("For stdlib style work, treat `stdlib/std/math`, `maybe`, `file`, `image`,") !=
         std::string::npos);
   CHECK(agents.find("`stdlib/std/collections/collections.prime`,") != std::string::npos);
-  CHECK(agents.find("`stdlib/std/collections/experimental_*`, and") != std::string::npos);
+  CHECK(agents.find("`stdlib/std/collections/experimental_*`,") != std::string::npos);
+  CHECK(agents.find("`stdlib/std/collections/internal_*`, and") != std::string::npos);
   CHECK(agents.find("`stdlib/std/gfx/experimental.prime` as canonical/bridge code") !=
         std::string::npos);
 }
@@ -165,9 +168,9 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_vector/*` and") != std::string::npos);
   CHECK(todo.find("/std/collections/experimental_map/*` now remain implementation-owned seams") !=
         std::string::npos);
-  CHECK(todo.find("Stdlib de-experimentalization: TODO-4103 and TODO-4059") !=
+  CHECK(todo.find("Stdlib de-experimentalization: TODO-4059") != std::string::npos);
+  CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") ==
         std::string::npos);
-  CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") != std::string::npos);
   CHECK(todo.find("  - depends_on: none") != std::string::npos);
   CHECK(todo.find("Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable") !=
         std::string::npos);
@@ -175,8 +178,9 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("/std/collections/internal_buffer_checked/*`,") != std::string::npos);
   CHECK(todo.find("/std/collections/internal_buffer_unchecked/*`, and") != std::string::npos);
-  CHECK(todo.find("/std/collections/experimental_soa_storage/*` are implementation-facing") !=
+  CHECK(todo.find("/std/collections/internal_soa_storage/*` are implementation-facing") !=
         std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4103:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4053:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4054:") == std::string::npos);
@@ -205,7 +209,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(primeStructDoc.find("/std/collections/soa_vector/*` and `/std/collections/soa_vector_conversions/*`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
-  CHECK(primeStructDoc.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
+  CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") != std::string::npos);
   CHECK(primeStructDoc.find("Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes.") !=
         std::string::npos);
   CHECK(primeStructDoc.find("borrowed-view/lifetime rules, backend/runtime parity") !=
@@ -218,7 +222,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
-  CHECK(todo.find("TODO-4103") != std::string::npos);
+  CHECK(todo.find("TODO-4103") == std::string::npos);
   CHECK(todo.find("TODO-4059") != std::string::npos);
 }
 

@@ -152,7 +152,7 @@ main() {
       ast.find("[public, return<i32>] /std/collections/experimental_soa_vector/SoaVector__");
   CHECK(countPos != std::string::npos);
   CHECK(ast.find("/count()", countPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_storage/soaColumnCount", countPos) !=
+  CHECK(ast.find("/std/collections/internal_soa_storage/soaColumnCount", countPos) !=
         std::string::npos);
   CHECK(ast.find("this.storage", countPos) != std::string::npos);
   CHECK(ast.find("countValue", countPos) == std::string::npos);

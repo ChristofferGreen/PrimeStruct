@@ -51,6 +51,7 @@ Internal implementation, bridge, or substrate-oriented code:
 - `stdlib/std/bench_non_math/*`
 - `stdlib/std/collections/collections.prime`
 - `stdlib/std/collections/experimental_*`
+- `stdlib/std/collections/internal_*`
 - `stdlib/std/gfx/experimental.prime`
 
 These files may stay helper-heavy or bridge-oriented while they define
