@@ -265,9 +265,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
 }
 
 std::string resolveMethodReceiverTypeNameFromCallExpr(const Expr &receiverCallExpr,
-                                                      LocalInfo::ValueKind inferredKind) {
+                                                      LocalInfo::ValueKind inferredKind,
+                                                      const ResolveReceiverExprPathFn &resolveExprPath) {
   auto isBufferConstructorCall = [&](const Expr &candidate) {
-    const std::string scopedName = resolveExprPath(candidate);
+    const std::string scopedName = resolveExprPath ? resolveExprPath(candidate) : std::string();
     return scopedName == "Buffer" || scopedName == "/std/gfx/Buffer" ||
            scopedName == "/std/gfx/experimental/Buffer" ||
            scopedName.rfind("/std/gfx/Buffer__t", 0) == 0 ||
@@ -651,7 +652,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
          !blocksExplicitVectorReceiverProbeKindFallback)
             ? inferExprKind(receiverExpr, localsIn)
             : LocalInfo::ValueKind::Unknown;
-    typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind);
+    typeNameOut = resolveMethodReceiverTypeNameFromCallExpr(receiverExpr, inferredKind, resolveExprPath);
     if (typeNameOut.empty() && !blocksExplicitMapReceiverProbeKindFallback &&
         !blocksBareMapAccessReceiverProbeKindFallback &&
         !blocksBareMapTryAtReceiverProbeKindFallback &&

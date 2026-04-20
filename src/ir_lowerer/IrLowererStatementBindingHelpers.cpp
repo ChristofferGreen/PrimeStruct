@@ -492,7 +492,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isBinding) {
       return false;
     }
-    const std::string scopedName = resolveExprPath(candidate);
+    const std::string &scopedName = candidate.name;
     return scopedName == "Buffer" || scopedName == "/std/gfx/Buffer" ||
            scopedName == "/std/gfx/experimental/Buffer" ||
            scopedName.rfind("/std/gfx/Buffer__t", 0) == 0 ||
