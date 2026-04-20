@@ -10,6 +10,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Compile-run suites invoke `./primec` and `./primevm` from the active build directory, so focused reruns need fresh standalone tool binaries and not just freshly linked test binaries.
 - Evidence: `tests/unit/test_compile_run_smoke_core_basic.cpp` and many other compile-run suites build shell commands like `./primec --emit=...` and `./primevm ...`.
 
+### cpp-emitter-vector-mutator-shadow-precedence
+- Updated: 2026-04-20
+- Tags: tests, emitters, collections
+- Fact: In the C++ emitter, imported stdlib vector mutators outrank rooted `/vector/*` shadows for direct and named calls, while positional `push(value, values)` shadow calls still reject during EXE lowering.
+- Evidence: `tests/unit/test_compile_run_emitters_lambda_mutator_resolution.cpp` now passes focused release reruns that return `0` for the full mutator matrix, `3` for the named-call case, and `push requires mutable vector binding` for the positional shadow reject.
+
 ### exact-stdlib-vector-import-covers-helper-surface
 - Updated: 2026-04-19
 - Tags: semantics, imports, collections
