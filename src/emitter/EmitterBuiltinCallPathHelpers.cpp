@@ -310,7 +310,8 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "borrow" || name == "init" || name == "drop" || name == "increment" ||
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
-           name == "repeat" || name == "location" || name == "dereference";
+           name == "repeat" || name == "location" || name == "dereference" ||
+           name == "get" || name == "ref";
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {
     std::string alias = candidate;
