@@ -10,6 +10,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Compile-run suites invoke `./primec` and `./primevm` from the active build directory, so focused reruns need fresh standalone tool binaries and not just freshly linked test binaries.
 - Evidence: `tests/unit/test_compile_run_smoke_core_basic.cpp` and many other compile-run suites build shell commands like `./primec --emit=...` and `./primevm ...`.
 
+### cpp-emitter-wrapper-map-direct-count-diagnostics
+- Updated: 2026-04-20
+- Tags: tests, emitters, collections
+- Fact: In the C++ emitter, wrapper-returned canonical map indexing and non-imported direct reference count flows reject with `unknown call target: /std/collections/map/at`, imported wrapper-reference count falls through to `unknown call target: /map/at`, and direct custom `/std/collections/map/at(wrapMap(), ...)` count calls fail later with `EXE IR lowering error: debug: branch=inferExprString`.
+- Evidence: Focused release reruns of `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_emitters_explicit_vector_mutator_statement_helpers.cpp` plus direct `./primec --emit=exe` reproductions against those wrapper-map fixtures.
+
 ### cpp-emitter-vector-mutator-shadow-precedence
 - Updated: 2026-04-20
 - Tags: tests, emitters, collections
