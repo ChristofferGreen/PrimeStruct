@@ -2559,6 +2559,63 @@ TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
         &aliasMapAtDef);
 }
 
+TEST_CASE("ir lowerer call helpers keep bare semantic map sugar on canonical defs") {
+  primec::Definition canonicalMapCountDef;
+  canonicalMapCountDef.fullPath = "/std/collections/map/count";
+  primec::Definition canonicalMapAtDef;
+  canonicalMapAtDef.fullPath = "/std/collections/map/at";
+  primec::Definition canonicalMapAtUnsafeDef;
+  canonicalMapAtUnsafeDef.fullPath = "/std/collections/map/at_unsafe";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalMapCountDef.fullPath, &canonicalMapCountDef},
+      {canonicalMapAtDef.fullPath, &canonicalMapAtDef},
+      {canonicalMapAtUnsafeDef.fullPath, &canonicalMapAtUnsafeDef},
+  };
+  const auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.name == "count") {
+      return std::string("/std/collections/map/count");
+    }
+    if (expr.name == "at") {
+      return std::string("/std/collections/map/at");
+    }
+    if (expr.name == "at_unsafe") {
+      return std::string("/std/collections/map/at_unsafe");
+    }
+    return expr.name;
+  };
+
+  primec::Expr valuesArg;
+  valuesArg.kind = primec::Expr::Kind::Name;
+  valuesArg.name = "values";
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Literal;
+  keyArg.intWidth = 32;
+  keyArg.literalValue = 1;
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+  countCall.semanticNodeId = 91;
+  countCall.args = {valuesArg};
+
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.semanticNodeId = 92;
+  atCall.args = {valuesArg, keyArg};
+
+  primec::Expr atUnsafeCall = atCall;
+  atUnsafeCall.name = "at_unsafe";
+  atUnsafeCall.semanticNodeId = 93;
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(countCall, defMap, resolveExprPath) ==
+        &canonicalMapCountDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(atCall, defMap, resolveExprPath) ==
+        &canonicalMapAtDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(atUnsafeCall, defMap, resolveExprPath) ==
+        &canonicalMapAtUnsafeDef);
+}
+
 TEST_CASE("ir lowerer call helpers keep rooted map alias defs under canonical semantic remaps") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";

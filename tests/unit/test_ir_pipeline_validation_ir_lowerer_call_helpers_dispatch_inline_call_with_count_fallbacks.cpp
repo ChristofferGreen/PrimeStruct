@@ -604,5 +604,90 @@ TEST_CASE("ir lowerer call helpers keep map count and local access same-path def
   CHECK(wrapperAtEmitCalls == 0);
 }
 
+TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo mapInfo;
+  mapInfo.kind = LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
+  mapInfo.mapValueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("values", mapInfo);
+
+  primec::Definition canonicalCount;
+  canonicalCount.fullPath = "/std/collections/map/count";
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/map/at";
+  primec::Definition canonicalAtUnsafe;
+  canonicalAtUnsafe.fullPath = "/std/collections/map/at_unsafe";
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  auto expectEmitted = [&](primec::Expr callExpr, const primec::Definition &expectedCallee) {
+    int emitCalls = 0;
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+              callExpr,
+              locals,
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+                CHECK(false);
+                return nullptr;
+              },
+              [&](const primec::Expr &expr) -> const primec::Definition * {
+                if (expr.name == "count") {
+                  return &canonicalCount;
+                }
+                if (expr.name == "at") {
+                  return &canonicalAt;
+                }
+                if (expr.name == "at_unsafe") {
+                  return &canonicalAtUnsafe;
+                }
+                return nullptr;
+              },
+              [&](const primec::Expr &emittedExpr,
+                  const primec::Definition &resolvedCallee,
+                  const primec::ir_lowerer::LocalMap &) {
+                ++emitCalls;
+                CHECK(emittedExpr.name == callExpr.name);
+                CHECK(resolvedCallee.fullPath == expectedCallee.fullPath);
+                return true;
+              },
+              error) == Result::Emitted);
+    CHECK(error == "stale");
+    CHECK(emitCalls == 1);
+  };
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "count";
+  countCall.semanticNodeId = 101;
+  countCall.args = {valuesName};
+  expectEmitted(countCall, canonicalCount);
+
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.semanticNodeId = 102;
+  atCall.args = {valuesName, keyLiteral};
+  expectEmitted(atCall, canonicalAt);
+
+  primec::Expr atUnsafeCall = atCall;
+  atUnsafeCall.name = "at_unsafe";
+  atUnsafeCall.semanticNodeId = 103;
+  expectEmitted(atUnsafeCall, canonicalAtUnsafe);
+}
+
 
 TEST_SUITE_END();

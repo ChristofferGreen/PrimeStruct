@@ -473,7 +473,8 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         (resolveMapHelperAliasName(expr, mapHelperName) ||
          (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2)) &&
         resolveMapAccessTargetInfo(expr.args.front(), localsIn).isMapTarget &&
-        !isCanonicalStdMapHelperCall) {
+        !isCanonicalStdMapHelperCall &&
+        resolveDefinitionCallFn(expr) == nullptr) {
       return InlineCallDispatchResult::NotHandled;
     }
     std::string accessName;

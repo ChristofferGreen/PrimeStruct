@@ -170,6 +170,28 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
          normalizeCollectionHelperPath(resolvedPath);
 }
 
+bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
+                                          const std::string &resolvedPath) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.semanticNodeId == 0 ||
+      !expr.namespacePrefix.empty() || expr.name.empty() || expr.name.front() == '/') {
+    return false;
+  }
+  if (resolvedPath.rfind("/std/collections/map/", 0) != 0) {
+    return false;
+  }
+
+  std::string helperName;
+  if (resolveMapHelperAliasName(expr, helperName)) {
+    return helperName == "count" || helperName == "contains" ||
+           helperName == "tryAt" || helperName == "at" ||
+           helperName == "at_unsafe";
+  }
+
+  std::string accessName;
+  return getBuiltinArrayAccessName(expr, accessName) &&
+         (accessName == "at" || accessName == "at_unsafe");
+}
+
 bool isExactRootedMapAliasDefinitionCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty() ||
       expr.name.front() != '/') {
@@ -259,6 +281,9 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
       return resolvedDef;
     }
     if (isExplicitSamePathPublishedMapHelperCall(callExpr, resolved)) {
+      return resolvedDef;
+    }
+    if (isSemanticBarePublishedMapHelperCall(callExpr, resolved)) {
       return resolvedDef;
     }
     if (isExplicitMapContainsOrTryAtMethodPath(callExpr.name) &&
