@@ -665,6 +665,22 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
       "/std/collections/experimental_soa_vector";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaIncrementCall, "increment"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaIncrementCall, "increment"));
+
+  primec::Expr namespacedSoaLocationCall;
+  namespacedSoaLocationCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaLocationCall.name = "location";
+  namespacedSoaLocationCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaLocationCall, "location"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaLocationCall, "location"));
+
+  primec::Expr namespacedSoaDereferenceCall;
+  namespacedSoaDereferenceCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaDereferenceCall.name = "dereference";
+  namespacedSoaDereferenceCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaDereferenceCall, "dereference"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaDereferenceCall, "dereference"));
 }
 
 TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
@@ -692,10 +708,19 @@ TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   generatedDereferenceCall.kind = primec::Expr::Kind::Call;
   generatedDereferenceCall.name =
       "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/dereference";
+  CHECK(primec::emitter::isSimpleCallName(
+      generatedDereferenceCall, "dereference"));
   char pointerOp = '\0';
   CHECK(primec::emitter::getBuiltinPointerOperator(
       generatedDereferenceCall, pointerOp));
   CHECK(pointerOp == '*');
+
+  primec::Expr generatedLocationCall;
+  generatedLocationCall.kind = primec::Expr::Kind::Call;
+  generatedLocationCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/location";
+  CHECK(primec::emitter::isSimpleCallName(
+      generatedLocationCall, "location"));
 
   primec::Expr generatedPlusCall;
   generatedPlusCall.kind = primec::Expr::Kind::Call;
