@@ -741,6 +741,33 @@ TEST_CASE("ir lowerer helper keeps parser-shaped rooted convert builtin") {
   CHECK(primec::ir_lowerer::getBuiltinConvertName(convertCall));
 }
 
+TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespaced paths") {
+  primec::Expr rootedPlusCall;
+  rootedPlusCall.kind = primec::Expr::Kind::Call;
+  rootedPlusCall.name = "/std/collections/internal_soa_storage/plus";
+
+  char op = '\0';
+  CHECK(primec::emitter::getBuiltinOperator(rootedPlusCall, op));
+  CHECK(op == '+');
+
+  primec::Expr namespacedLessThanCall;
+  namespacedLessThanCall.kind = primec::Expr::Kind::Call;
+  namespacedLessThanCall.name = "less_than";
+  namespacedLessThanCall.namespacePrefix = "/std/collections/internal_soa_storage";
+
+  const char *comparison = nullptr;
+  CHECK(primec::emitter::getBuiltinComparison(namespacedLessThanCall, comparison));
+  CHECK(std::string(comparison) == "<");
+
+  primec::Expr rootedIncrementCall;
+  rootedIncrementCall.kind = primec::Expr::Kind::Call;
+  rootedIncrementCall.name = "/std/collections/internal_soa_storage/increment";
+
+  std::string mutation;
+  CHECK(primec::emitter::getBuiltinMutationName(rootedIncrementCall, mutation));
+  CHECK(mutation == "increment");
+}
+
 TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *vectorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_vector/vectorPush");

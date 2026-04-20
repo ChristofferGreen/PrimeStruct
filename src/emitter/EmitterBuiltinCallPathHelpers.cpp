@@ -163,9 +163,18 @@ bool getBuiltinOperator(const Expr &expr, char &out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
+  std::string name = resolveExprPath(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
+  }
+  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias =
+        name.substr(std::string("std/collections/internal_soa_storage/").size());
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    name = alias;
   }
   if (name.rfind("std/gpu/", 0) == 0) {
     name.erase(0, 8);
@@ -196,9 +205,18 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
+  std::string name = resolveExprPath(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
+  }
+  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias =
+        name.substr(std::string("std/collections/internal_soa_storage/").size());
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    name = alias;
   }
   if (name.find('/') != std::string::npos) {
     return false;
@@ -246,9 +264,18 @@ bool getBuiltinMutationName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
+  std::string name = resolveExprPath(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
+  }
+  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias =
+        name.substr(std::string("std/collections/internal_soa_storage/").size());
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    name = alias;
   }
   if (name.find('/') != std::string::npos) {
     return false;
