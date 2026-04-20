@@ -507,7 +507,10 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         return true;
       }
       std::string publishedHelperName;
-      if (resolvePublishedStatementMapHelperName(expr.name, publishedHelperName) &&
+      if (resolvePublishedStdlibSurfaceExprMemberName(
+              expr,
+              StdlibSurfaceId::CollectionsMapHelpers,
+              publishedHelperName) &&
           (publishedHelperName == "at" || publishedHelperName == "at_ref" ||
            publishedHelperName == "at_unsafe" ||
            publishedHelperName == "at_unsafe_ref")) {

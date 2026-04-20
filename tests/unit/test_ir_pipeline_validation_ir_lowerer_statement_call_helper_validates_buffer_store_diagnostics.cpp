@@ -524,6 +524,54 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
+  primec::Expr namespacedMapInsertStmt = mapInsertStmt;
+  namespacedMapInsertStmt.name = "insert";
+  namespacedMapInsertStmt.namespacePrefix = "/std/collections/map";
+
+  inlineCalls = 0;
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitDirectCallStatement(
+            namespacedMapInsertStmt,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "/main/makeValues") {
+                return &mapValuesFactoryDef;
+              }
+              if (callExpr.name == "/std/collections/map/insert_builtin") {
+                return &mapInsertBuiltinDef;
+              }
+              return nullptr;
+            },
+            [](const std::string &path, primec::ir_lowerer::ReturnInfo &info) {
+              if (path == "/std/collections/map/insert_builtin") {
+                info.returnsVoid = true;
+                return true;
+              }
+              return false;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &callee,
+                const primec::ir_lowerer::LocalMap &,
+                bool expectValue) {
+              ++inlineCalls;
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(expectValue);
+              return true;
+            },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(inlineCalls == 1);
+  CHECK(instructions.empty());
+
   primec::Expr mapInsertMethodStmt = mapInsertStmt;
   mapInsertMethodStmt.name = "insert";
   mapInsertMethodStmt.isMethodCall = true;
@@ -5721,6 +5769,8 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
   CHECK(source.find("resolvePublishedStatementVectorHelperName(") !=
         std::string::npos);
   CHECK(source.find("resolvePublishedStatementMapHelperName(") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
         std::string::npos);
   CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
         std::string::npos);
