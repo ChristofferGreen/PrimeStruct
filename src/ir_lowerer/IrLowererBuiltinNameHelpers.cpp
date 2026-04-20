@@ -340,55 +340,59 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return false;
   };
-  std::string name = resolveScopedExprName(expr);
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
+  std::string scopedName = resolveScopedExprName(expr);
+  if (!scopedName.empty() && scopedName[0] == '/') {
+    scopedName.erase(0, 1);
   }
-  if (matchAccessAlias(name, "std/collections/vector/", "Vector")) {
+  std::string rawName = expr.name;
+  if (!rawName.empty() && rawName[0] == '/') {
+    rawName.erase(0, 1);
+  }
+  if (matchAccessAlias(scopedName, "std/collections/vector/", "Vector")) {
     return true;
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
+  if (scopedName.rfind("std/collections/vector/", 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(name, "std/collections/experimental_vector/", "Vector")) {
+  if (matchAccessAlias(scopedName, "std/collections/experimental_vector/", "Vector")) {
     return true;
   }
-  if (name.rfind("std/collections/experimental_vector/", 0) == 0) {
+  if (scopedName.rfind("std/collections/experimental_vector/", 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(name, "std/collections/internal_soa_storage/", "SoaColumn")) {
+  if (matchAccessAlias(scopedName, "std/collections/internal_soa_storage/", "SoaColumn")) {
     return true;
   }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
     std::string alias = stripGeneratedSuffix(
-        name.substr(std::string("std/collections/internal_soa_storage/").size()));
+        scopedName.substr(std::string("std/collections/internal_soa_storage/").size()));
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
     }
     return false;
   }
-  if (name.rfind("array/", 0) == 0) {
+  if (scopedName.rfind("array/", 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(name, "map/", "Map")) {
+  if (matchAccessAlias(scopedName, "map/", "Map")) {
     return true;
   }
-  if (name.rfind("map/", 0) == 0) {
+  if (scopedName.rfind("map/", 0) == 0) {
     return false;
   }
-  if (matchAccessAlias(name, "std/collections/map/", "Map")) {
+  if (matchAccessAlias(scopedName, "std/collections/map/", "Map")) {
     return true;
   }
-  if (name.rfind("std/collections/map/", 0) == 0) {
+  if (scopedName.rfind("std/collections/map/", 0) == 0) {
     return false;
   }
-  name = stripGeneratedSuffix(std::move(name));
-  if (name.find('/') != std::string::npos) {
+  rawName = stripGeneratedSuffix(std::move(rawName));
+  if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "at" || name == "at_unsafe") {
-    out = name;
+  if (rawName == "at" || rawName == "at_unsafe") {
+    out = rawName;
     return true;
   }
   return false;

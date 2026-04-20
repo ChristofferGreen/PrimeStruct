@@ -296,6 +296,27 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   CHECK(builtin == "location");
 }
 
+TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced stdlib internals") {
+  primec::Expr namespacedAtCall;
+  namespacedAtCall.kind = primec::Expr::Kind::Call;
+  namespacedAtCall.name = "at";
+  namespacedAtCall.namespacePrefix = "/std/collections/internal_soa_storage";
+
+  std::string builtin;
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      namespacedAtCall, builtin));
+  CHECK(builtin == "at");
+
+  primec::Expr namespacedAtUnsafeCall;
+  namespacedAtUnsafeCall.kind = primec::Expr::Kind::Call;
+  namespacedAtUnsafeCall.name = "at_unsafe";
+  namespacedAtUnsafeCall.namespacePrefix = "/std/collections/internal_soa_storage";
+
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      namespacedAtUnsafeCall, builtin));
+  CHECK(builtin == "at_unsafe");
+}
+
 TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map") {
   primec::Expr entryCall;
   entryCall.kind = primec::Expr::Kind::Call;
