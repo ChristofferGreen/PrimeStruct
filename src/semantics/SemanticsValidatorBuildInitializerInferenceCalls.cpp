@@ -6,6 +6,36 @@ std::string bindingTypeText(const BindingInfo &binding) {
   return binding.typeTemplateArg.empty() ? binding.typeName
                                          : binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
+
+bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
+                                                    std::string &elemTypeOut) {
+  elemTypeOut.clear();
+  const std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedType, base, argText)) {
+    return false;
+  }
+  base = normalizeBindingTypeName(base);
+  if (base == "soa_vector" && !argText.empty()) {
+    elemTypeOut = argText;
+    return true;
+  }
+  if ((base != "Reference" && base != "Pointer") || argText.empty()) {
+    return false;
+  }
+  std::string wrappedBase;
+  std::string wrappedArgText;
+  if (!splitTemplateTypeName(argText, wrappedBase, wrappedArgText)) {
+    return false;
+  }
+  wrappedBase = normalizeBindingTypeName(wrappedBase);
+  if (wrappedBase != "soa_vector" || wrappedArgText.empty()) {
+    return false;
+  }
+  elemTypeOut = wrappedArgText;
+  return true;
+}
 } // namespace
 bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
                                                         const std::vector<ParameterInfo> &params,
@@ -393,6 +423,33 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
     return false;
   };
+  auto inferRawBuiltinSoaCanonicalToAosBinding = [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 1) {
+      return false;
+    }
+    const std::string resolvedPath = resolveCalleePath(candidate);
+    if (resolvedPath == "/to_aos" || resolvedPath == "/to_aos_ref") {
+      return false;
+    }
+    const std::string resolvedCanonical =
+        canonicalizeLegacySoaToAosHelperPath(resolvedPath);
+    if (resolvedCanonical != "/std/collections/soa_vector/to_aos" &&
+        resolvedCanonical != "/std/collections/soa_vector/to_aos_ref") {
+      return false;
+    }
+    std::string receiverTypeText;
+    if (!inferQueryExprTypeText(candidate.args.front(), params, locals, receiverTypeText)) {
+      return false;
+    }
+    std::string elemType;
+    if (!extractBuiltinSoaVectorElementTypeFromTypeText(receiverTypeText, elemType) ||
+        elemType.empty()) {
+      return false;
+    }
+    bindingOut.typeName = "/std/collections/experimental_vector/Vector";
+    bindingOut.typeTemplateArg = elemType;
+    return true;
+  };
   auto isUnresolvedActiveInferenceCall = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call) {
       return false;
@@ -432,6 +489,9 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
                                                               ? preferredCollectionHelperResolvedPath(initializer)
                                                               : std::string{});
   if (!preferredResolvedInitializer.empty()) {
+    if (inferRawBuiltinSoaCanonicalToAosBinding(initializer)) {
+      return true;
+    }
     if (inferResolvedDirectCallBindingType(preferredResolvedInitializer, bindingOut)) {
       return true;
     }
@@ -463,6 +523,9 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
 
   if (initializerExprForInference != nullptr &&
       !isUnresolvedActiveInferenceCall(*initializerExprForInference)) {
+    if (inferRawBuiltinSoaCanonicalToAosBinding(*initializerExprForInference)) {
+      return true;
+    }
     std::string builtinCollectionName;
     const bool isBuiltinCollectionCall =
         getBuiltinCollectionName(*initializerExprForInference, builtinCollectionName);

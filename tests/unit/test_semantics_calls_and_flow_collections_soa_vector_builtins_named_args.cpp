@@ -722,6 +722,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("raw builtin soa_vector canonical to_aos bindings keep experimental vector contract") {
+  const std::string source = R"(
+import /std/collections/*
+
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [vector<Particle>] unpackedA{/std/collections/soa_vector/to_aos<Particle>(values)}
+  [vector<Particle>] unpackedB{location(values)./std/collections/soa_vector/to_aos_ref<Particle>()}
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+}
+
 TEST_CASE("vector-target old-explicit push and reserve keep same-path soa helpers") {
   const std::string source = R"(
 [return<int>]
