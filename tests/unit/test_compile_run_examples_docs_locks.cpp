@@ -1046,10 +1046,10 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
         std::string::npos);
   CHECK(source.find("[i32] contentWidth{widget_text_width(textSizePx, text) + multiply(paddingPx, 2i32)}") ==
         std::string::npos);
-  CHECK(source.find("[i32 mut] nodeId{count(self.kinds) - 1i32}") == std::string::npos);
+  CHECK(source.find("[mut] nodeId{count(self.kinds) - 1i32}") == std::string::npos);
   CHECK(source.find("[i32] totalNodes{count(self.kinds)}") == std::string::npos);
   CHECK(source.find("[i32] paddingPx{self.paddingPxs[nodeId]}") == std::string::npos);
-  CHECK(source.find("[i32 mut] childY{innerY}") == std::string::npos);
+  CHECK(source.find("[mut] childY{innerY}") == std::string::npos);
 }
 
 TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operators") {
