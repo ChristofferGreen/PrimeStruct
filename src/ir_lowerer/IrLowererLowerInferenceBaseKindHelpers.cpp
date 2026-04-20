@@ -7,6 +7,16 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string resolveScopedExprPath(const Expr &expr) {
+  if (expr.name.empty()) {
+    return {};
+  }
+  if (!expr.namespacePrefix.empty()) {
+    return expr.namespacePrefix + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 bool isBaseSetupResultOrTryCall(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call) {
     return false;
@@ -404,7 +414,8 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     if (!expr.args.empty() && expr.name == "why") {
       const Expr &receiver = expr.args.front();
       if (receiver.kind == Expr::Kind::Name) {
-        if (receiver.name == "FileError") {
+        const std::string receiverPath = resolveScopedExprPath(receiver);
+        if (receiverPath == "FileError" || receiverPath == "/std/file/FileError") {
           kindOut = LocalInfo::ValueKind::String;
           return true;
         }

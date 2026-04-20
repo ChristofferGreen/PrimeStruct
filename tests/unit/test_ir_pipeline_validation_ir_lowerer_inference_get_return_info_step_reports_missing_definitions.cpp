@@ -700,6 +700,19 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
   pointerExpr.name = "pointer";
   CHECK(state.inferExprKind(pointerExpr, primec::ir_lowerer::LocalMap{}) == primec::ir_lowerer::LocalInfo::ValueKind::String);
 
+  primec::Expr scopedFileErrorExpr;
+  scopedFileErrorExpr.kind = primec::Expr::Kind::Name;
+  scopedFileErrorExpr.name = "FileError";
+  scopedFileErrorExpr.namespacePrefix = "/std/file";
+
+  primec::Expr scopedWhyExpr;
+  scopedWhyExpr.kind = primec::Expr::Kind::Call;
+  scopedWhyExpr.isMethodCall = true;
+  scopedWhyExpr.name = "why";
+  scopedWhyExpr.args.push_back(scopedFileErrorExpr);
+  CHECK(state.inferExprKind(scopedWhyExpr, primec::ir_lowerer::LocalMap{}) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::String);
+
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo resultLocal;
   resultLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
