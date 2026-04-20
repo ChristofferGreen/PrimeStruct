@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "primec/Ast.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
@@ -44,6 +45,11 @@ bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr);
 
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath);
 bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const std::string &resolvedPath);
+bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,
+                                             StdlibSurfaceId surfaceId,
+                                             std::string &memberNameOut);
+bool isCanonicalPublishedStdlibSurfaceHelperPath(std::string_view path,
+                                                 StdlibSurfaceId surfaceId);
 
 std::string normalizeMapImportAliasPath(const std::string &path);
 std::vector<std::string> collectionHelperPathCandidates(const std::string &path);

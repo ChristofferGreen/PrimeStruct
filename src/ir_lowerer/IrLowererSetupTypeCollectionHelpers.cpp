@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include "IrLowererHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::ir_lowerer {
 
@@ -13,6 +14,27 @@ std::string stripGeneratedHelperSuffix(std::string helperName) {
     helperName.erase(generatedSuffix);
   }
   return helperName;
+}
+
+bool matchesRegistrySpellingSet(std::span<const std::string_view> spellings,
+                                std::string_view spelling) {
+  return std::any_of(
+      spellings.begin(), spellings.end(), [&](std::string_view candidate) {
+        return candidate == spelling;
+      });
+}
+
+const StdlibSurfaceMetadata *findPublishedStdlibSurfaceMetadata(std::string_view path,
+                                                                StdlibSurfaceId surfaceId) {
+  if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(path);
+      metadata != nullptr && metadata->id == surfaceId) {
+    return metadata;
+  }
+  if (const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(path);
+      metadata != nullptr && metadata->id == surfaceId) {
+    return metadata;
+  }
+  return nullptr;
 }
 
 bool resolveExperimentalVectorHelperAliasName(std::string helperName, std::string &helperNameOut) {
@@ -621,6 +643,34 @@ bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const st
   return std::any_of(allowedCandidates.begin(), allowedCandidates.end(), [&](const std::string &candidate) {
     return candidate == normalizedResolvedPath;
   });
+}
+
+bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,
+                                             StdlibSurfaceId surfaceId,
+                                             std::string &memberNameOut) {
+  memberNameOut.clear();
+  const auto *metadata = findPublishedStdlibSurfaceMetadata(path, surfaceId);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view memberName = resolveStdlibSurfaceMemberName(*metadata, path);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+bool isCanonicalPublishedStdlibSurfaceHelperPath(std::string_view path,
+                                                 StdlibSurfaceId surfaceId) {
+  const auto *metadata = findPublishedStdlibSurfaceMetadata(path, surfaceId);
+  if (metadata == nullptr || metadata->canonicalImportRoot.empty()) {
+    return false;
+  }
+  const std::string canonicalPrefix = std::string(metadata->canonicalImportRoot) + "/";
+  return path.rfind(canonicalPrefix, 0) == 0 ||
+         (matchesRegistrySpellingSet(metadata->loweringSpellings, path) &&
+          path.rfind(canonicalPrefix, 0) == 0);
 }
 
 std::string normalizeMapImportAliasPath(const std::string &path) {

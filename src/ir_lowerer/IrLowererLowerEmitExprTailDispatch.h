@@ -1,7 +1,15 @@
-        auto matchesGeneratedMapHelperPath = [&](const Expr &callExpr, const char *basePath) {
-          const std::string base(basePath == nullptr ? "" : basePath);
-          return callExpr.name == base ||
-                 callExpr.name.rfind(base + "__t", 0) == 0;
+        auto resolveTailDispatchDirectHelperPath = [&](const Expr &candidate) {
+          if (!candidate.name.empty() && candidate.name.front() == '/') {
+            return candidate.name;
+          }
+          if (!candidate.namespacePrefix.empty()) {
+            std::string scoped = candidate.namespacePrefix;
+            if (!scoped.empty() && scoped.front() != '/') {
+              scoped.insert(scoped.begin(), '/');
+            }
+            return scoped + "/" + candidate.name;
+          }
+          return candidate.name;
         };
         auto resolveBuiltinMapHelperName =
             [&](const Expr &callExpr, bool allowMethodCall, std::string &helperNameOut) {
@@ -24,35 +32,10 @@
               if (ir_lowerer::resolveMapHelperAliasName(callExpr, helperNameOut)) {
                 return true;
               }
-              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapCount")) {
-                helperNameOut = "count";
-                return true;
-              }
-              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapContains")) {
-                helperNameOut = "contains";
-                return true;
-              }
-              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/map/contains")) {
-                helperNameOut = "contains";
-                return true;
-              }
-              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapTryAt")) {
-                helperNameOut = "tryAt";
-                return true;
-              }
-              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/map/tryAt")) {
-                helperNameOut = "tryAt";
-                return true;
-              }
-              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapAt")) {
-                helperNameOut = "at";
-                return true;
-              }
-              if (matchesGeneratedMapHelperPath(callExpr, "/std/collections/mapAtUnsafe")) {
-                helperNameOut = "at_unsafe";
-                return true;
-              }
-              return false;
+              return ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                  resolveTailDispatchDirectHelperPath(callExpr),
+                  primec::StdlibSurfaceId::CollectionsMapHelpers,
+                  helperNameOut);
             };
         auto rewriteBuiltinMapInsertBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
@@ -331,30 +314,15 @@
           const auto receiverTargetInfo =
               ir_lowerer::resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
           const bool isCanonicalStdMapHelperPath =
-              callExpr.name.rfind("/std/collections/map/", 0) == 0 ||
-              callExpr.name.rfind("std/collections/map/", 0) == 0 ||
-              (callExpr.name == helperName &&
-               (callExpr.namespacePrefix == "/std/collections/map" ||
-                callExpr.namespacePrefix == "std/collections/map"));
+              ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                  resolveTailDispatchDirectHelperPath(callExpr),
+                  primec::StdlibSurfaceId::CollectionsMapHelpers);
           if (isCanonicalStdMapHelperPath) {
             // Keep canonical stdlib helper calls intact so direct overrides on
             // /std/collections/map/* are honored.
             return false;
           }
-          auto resolveDirectHelperPath = [&](const Expr &candidate) {
-            if (!candidate.name.empty() && candidate.name.front() == '/') {
-              return candidate.name;
-            }
-            if (!candidate.namespacePrefix.empty()) {
-              std::string scoped = candidate.namespacePrefix;
-              if (!scoped.empty() && scoped.front() != '/') {
-                scoped.insert(scoped.begin(), '/');
-              }
-              return scoped + "/" + candidate.name;
-            }
-            return candidate.name;
-          };
-          const std::string rawPath = resolveDirectHelperPath(callExpr);
+          const std::string rawPath = resolveTailDispatchDirectHelperPath(callExpr);
           if ((helperName == "count" || helperName == "contains" ||
                helperName == "tryAt") &&
               rawPath.rfind("/map/", 0) == 0 &&
@@ -368,7 +336,9 @@
             return false;
           }
           const std::string resolvedHelperPath = resolveExprPath(callExpr);
-          if (resolvedHelperPath.rfind("/std/collections/map/", 0) == 0) {
+          if (ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                  resolvedHelperPath,
+                  primec::StdlibSurfaceId::CollectionsMapHelpers)) {
             // Keep canonical stdlib helper paths intact so custom overrides on
             // /std/collections/map/* retain their resolved return types.
             return false;

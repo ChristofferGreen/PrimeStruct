@@ -447,6 +447,67 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
         std::string::npos);
 }
 
+TEST_CASE("native tail and late collection helper metadata dispatch stays source locked") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                            : std::filesystem::path("..");
+
+  const std::filesystem::path setupHelpersHeaderPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.h";
+  const std::filesystem::path setupHelpersSourcePath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.cpp";
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+  const std::filesystem::path nativeTailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
+
+  REQUIRE(std::filesystem::exists(setupHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(setupHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
+
+  const std::string setupHelpersHeader = readText(setupHelpersHeaderPath);
+  const std::string setupHelpersSource = readText(setupHelpersSourcePath);
+  const std::string collectionHelpersSource = readText(collectionHelpersPath);
+  const std::string tailDispatchSource = readText(tailDispatchPath);
+  const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
+
+  CHECK(setupHelpersHeader.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
+        std::string::npos);
+  CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(setupHelpersHeader.find("bool isCanonicalPublishedStdlibSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("findPublishedStdlibSurfaceMetadata(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, path)") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsMapHelpers") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
+        std::string::npos);
+}
+
 namespace {
 
 primec::Definition *findLowererDefinitionByPathMutable(primec::Program &program, std::string_view fullPath) {
@@ -2806,7 +2867,7 @@ TEST_CASE("ir lowerer call helpers keep rooted map alias def families under same
         &aliasMapTryAtDef);
 }
 
-TEST_CASE("ir lowerer call helpers suppress lowered collection helper paths from published surface ids") {
+TEST_CASE("ir lowerer call helpers keep lowered collection helper paths reachable via published surface ids") {
   primec::Definition loweredMapContainsDef;
   loweredMapContainsDef.fullPath = "/std/collections/mapContains";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -2841,8 +2902,9 @@ TEST_CASE("ir lowerer call helpers suppress lowered collection helper paths from
   callExpr.name = "/std/collections/mapContains";
   callExpr.semanticNodeId = 81;
 
-  CHECK(resolveExprPath(callExpr).empty());
-  CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == nullptr);
+  CHECK(resolveExprPath(callExpr) == "/std/collections/mapContains");
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) ==
+        &loweredMapContainsDef);
 }
 
 TEST_CASE("ir lowerer call helpers keep experimental map helper aliases off specialized method defs") {

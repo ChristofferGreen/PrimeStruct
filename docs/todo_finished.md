@@ -5,6 +5,9 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 20, 2026)**
+- ✓ TODO-4095: Replace remaining lowerer stdlib path dispatch after the statement-call handoff. Completed: `IrLowererSetupTypeCollectionHelpers.{h,cpp}` now expose shared registry-backed helper-name and canonical-path adapters, and `IrLowererNativeTailDispatch.cpp`, `IrLowererLowerEmitExprTailDispatch.h`, and `IrLowererLowerEmitExprCollectionHelpers.h` now route the targeted native-tail and late expression map/vector helper classification through shared stdlib surface metadata instead of repeated raw stdlib path checks. Focused backend IR coverage now pins the new metadata adapters plus the updated lowered-helper published-surface-id contract, and the remaining late map insert / experimental helper path tables were split into follow-up `TODO-4096`.
+
 **Todo Cleanup (April 19, 2026)**
 - ✓ TODO-1167: Audit VM user vector clear call-expression shadow skip debt. Completed: the stale skipped VM user-vector `clear(values)` call-expression shadow coverage in `test_compile_run_vm_collections_vector_limits_a.cpp` is active again and now locks the current VM lowering rejection contract instead of the stale `8` runtime expectation. The case no longer relies on `doctest::skip(true)` and now checks the stable unsupported-expression diagnostic with `call=/clear`.
 - ✓ TODO-1166: Audit VM user vector reserve call-expression shadow skip debt. Completed: the stale skipped VM user-vector `reserve(values, capacity)` call-expression shadow coverage in `test_compile_run_vm_collections_vector_limits_a.cpp` is active again and now locks the existing `9` exit-code runtime contract already written in the test body. The case no longer relies on `doctest::skip(true)`.

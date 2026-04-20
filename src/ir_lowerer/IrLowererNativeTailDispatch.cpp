@@ -26,16 +26,12 @@ bool isExplicitDirectMapCountContainsTryAtCall(const Expr &expr) {
   if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
     return false;
   }
-  std::string normalizedName = resolveNativeTailCallPathWithoutFallbackProbes(expr);
-  if (!normalizedName.empty() && normalizedName.front() == '/') {
-    normalizedName.erase(normalizedName.begin());
-  }
-  return normalizedName == "map/count" ||
-         normalizedName == "std/collections/map/count" ||
-         normalizedName == "map/contains" ||
-         normalizedName == "std/collections/map/contains" ||
-         normalizedName == "map/tryAt" ||
-         normalizedName == "std/collections/map/tryAt";
+  std::string helperName;
+  return resolvePublishedStdlibSurfaceMemberName(
+             resolveNativeTailCallPathWithoutFallbackProbes(expr),
+             StdlibSurfaceId::CollectionsMapHelpers,
+             helperName) &&
+         (helperName == "count" || helperName == "contains" || helperName == "tryAt");
 }
 
 } // namespace
@@ -326,21 +322,30 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
                                            ? resolveArrayVectorAccessTargetInfo(
                                                  expr.args.front(), localsIn, resolveCallArrayVectorAccessTargetInfo)
                                            : ArrayVectorAccessTargetInfo{};
+    const std::string directHelperPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
+    std::string explicitHelperName;
     const bool isExplicitVectorAccessCall =
         !expr.isMethodCall &&
-        (expr.name == "/std/collections/vector/at" ||
-         expr.name == "/std/collections/vector/at_unsafe");
+        isCanonicalPublishedStdlibSurfaceHelperPath(
+            directHelperPath,
+            StdlibSurfaceId::CollectionsVectorHelpers) &&
+        resolvePublishedStdlibSurfaceMemberName(
+            directHelperPath,
+            StdlibSurfaceId::CollectionsVectorHelpers,
+            explicitHelperName) &&
+        (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
     if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const bool isExplicitMapAccessCall =
         !expr.isMethodCall &&
-        (expr.name == "/map/at" || expr.name == "/map/at_ref" ||
-         expr.name == "/map/at_unsafe" || expr.name == "/map/at_unsafe_ref" ||
-         expr.name == "/std/collections/map/at" ||
-         expr.name == "/std/collections/map/at_ref" ||
-         expr.name == "/std/collections/map/at_unsafe" ||
-         expr.name == "/std/collections/map/at_unsafe_ref");
+        resolvePublishedStdlibSurfaceMemberName(
+            directHelperPath,
+            StdlibSurfaceId::CollectionsMapHelpers,
+            explicitHelperName) &&
+        (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
+         explicitHelperName == "at_unsafe" ||
+         explicitHelperName == "at_unsafe_ref");
     if (isExplicitMapAccessCall && !expr.args.empty() &&
         resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
       return NativeCallTailDispatchResult::NotHandled;
