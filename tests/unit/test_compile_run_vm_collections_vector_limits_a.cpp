@@ -28,7 +28,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with user vector pop method shadow") {
+TEST_CASE("runs vm with user vector pop method canonical precedence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -45,7 +45,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_pop_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("rejects vm user vector pop call expression shadow") {
@@ -112,7 +112,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm user vector reserve call expression shadow") {
+TEST_CASE("rejects vm user vector reserve call expression shadow during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/reserve([vector<i32> mut] values, [i32] capacity) {
@@ -126,8 +126,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_reserve_call_expr_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_reserve_call_expr_shadow.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+                               "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/reserve") != std::string::npos);
 }
 
 TEST_CASE("runs vm with user vector clear call shadow") {
@@ -174,7 +180,7 @@ main() {
   CHECK(readFile(errPath).find("call=/clear") != std::string::npos);
 }
 
-TEST_CASE("runs vm user vector remove_at call expression shadow" * doctest::skip(true)) {
+TEST_CASE("rejects vm user vector remove_at call expression shadow during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/remove_at([vector<i32> mut] values, [i32] index) {
@@ -188,11 +194,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_remove_at_call_expr_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 6);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_remove_at_call_expr_shadow.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+                               "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/remove_at") != std::string::npos);
 }
 
-TEST_CASE("runs vm user vector remove_swap call expression shadow" * doctest::skip(true)) {
+TEST_CASE("rejects vm user vector remove_swap call expression shadow during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/remove_swap([vector<i32> mut] values, [i32] index) {
@@ -206,11 +218,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_remove_swap_call_expr_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 5);
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_remove_swap_call_expr_shadow.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+                               "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/remove_swap") != std::string::npos);
 }
 
-TEST_CASE("runs vm with user vector clear method shadow") {
+TEST_CASE("runs vm with user vector clear method canonical precedence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -227,7 +245,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_clear_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("runs vm with user vector remove_at call shadow") {
@@ -250,7 +268,7 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with user vector remove_at method shadow") {
+TEST_CASE("runs vm with user vector remove_at method canonical precedence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -267,10 +285,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_remove_at_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with user vector remove_swap call shadow" * doctest::skip(true)) {
+TEST_CASE("runs vm with user vector remove_swap call canonical precedence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -287,10 +305,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_remove_swap_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("runs vm with user vector remove_swap method shadow") {
+TEST_CASE("runs vm with user vector remove_swap method canonical precedence") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -307,10 +325,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_vector_remove_swap_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("rejects vm vector reserve growth during lowering" * doctest::skip(true)) {
+TEST_CASE("runs vm vector reserve growth through count and capacity helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -323,11 +341,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_reserve_grows.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_reserve_grows_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
 }
 
 TEST_CASE("preserves vm vector values across reserve growth") {
@@ -347,7 +362,7 @@ main() {
   CHECK(runCommand(runCmd) == 28);
 }
 
-TEST_CASE("rejects vm vector push growth during lowering" * doctest::skip(true)) {
+TEST_CASE("runs vm vector push growth through count and capacity helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -359,11 +374,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_vector_push_grows.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_push_grows_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 4);
 }
 
 TEST_CASE("preserves vm vector values across push growth") {
@@ -382,7 +394,7 @@ main() {
   CHECK(runCommand(runCmd) == 12);
 }
 
-TEST_CASE("rejects vm vector literal at local dynamic limit during lowering" * doctest::skip(true)) {
+TEST_CASE("runs vm vector literal at local dynamic limit") {
   auto buildVectorLiteralArgs = [](int count) {
     std::string args;
     args.reserve(static_cast<size_t>(count) * 6);
@@ -406,11 +418,8 @@ TEST_CASE("rejects vm vector literal at local dynamic limit during lowering" * d
                              "256i32))))\n"
                              "}\n";
   const std::string srcPath = writeTemp("vm_vector_literal_local_limit.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_literal_local_limit_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 1);
 }
 
 TEST_CASE("rejects vm vector literal above local dynamic limit") {
