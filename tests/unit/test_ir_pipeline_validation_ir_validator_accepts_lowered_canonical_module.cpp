@@ -609,6 +609,22 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   rootedCustomReturnCall.name = "/MyError/return";
   CHECK(primec::ir_lowerer::isReturnCall(rootedCustomReturnCall));
   CHECK(primec::emitter::isReturnCall(rootedCustomReturnCall));
+
+  primec::Expr namespacedSoaWhileCall;
+  namespacedSoaWhileCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaWhileCall.name = "while";
+  namespacedSoaWhileCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isWhileCall(namespacedSoaWhileCall));
+  CHECK(primec::emitter::isWhileCall(namespacedSoaWhileCall));
+
+  primec::Expr namespacedSoaDoCall;
+  namespacedSoaDoCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaDoCall.name = "do";
+  namespacedSoaDoCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaDoCall, "do"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaDoCall, "do"));
 }
 
 TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {

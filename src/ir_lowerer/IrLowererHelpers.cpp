@@ -4,8 +4,11 @@ namespace primec::ir_lowerer {
 
 namespace {
 
-bool isScopedBuiltinReturnAlias(const std::string &name) {
-  return name == "return";
+bool isScopedBuiltinControlAlias(const std::string &name) {
+  return name == "return" || name == "then" || name == "else" ||
+         name == "if" || name == "block" || name == "loop" ||
+         name == "while" || name == "for" || name == "repeat" ||
+         name == "do";
 }
 
 std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
@@ -30,7 +33,7 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
   if (slash != std::string::npos) {
     alias = alias.substr(slash + 1);
   }
-  if (isScopedBuiltinReturnAlias(alias)) {
+  if (isScopedBuiltinControlAlias(alias)) {
     return alias;
   }
   return name;
