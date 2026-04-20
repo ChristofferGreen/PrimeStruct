@@ -530,6 +530,46 @@ TEST_CASE("emitter builtin assign keeps internal soa storage helper paths") {
   CHECK(primec::emitter::isBuiltinAssign(namespacedAssignCall, nameMap));
 }
 
+TEST_CASE("emitter control helpers keep internal soa storage helper paths") {
+  std::unordered_map<std::string, std::string> nameMap;
+
+  primec::Expr namespacedIfCall;
+  namespacedIfCall.kind = primec::Expr::Kind::Call;
+  namespacedIfCall.name = "if";
+  namespacedIfCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  CHECK(primec::emitter::isBuiltinIf(namespacedIfCall, nameMap));
+
+  primec::Expr namespacedBlockCall;
+  namespacedBlockCall.kind = primec::Expr::Kind::Call;
+  namespacedBlockCall.name = "block";
+  namespacedBlockCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  CHECK(primec::emitter::isBuiltinBlock(namespacedBlockCall, nameMap));
+
+  primec::Expr namespacedWhileCall;
+  namespacedWhileCall.kind = primec::Expr::Kind::Call;
+  namespacedWhileCall.name = "while";
+  namespacedWhileCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  CHECK(primec::emitter::isWhileCall(namespacedWhileCall));
+
+  primec::Expr generatedIfCall;
+  generatedIfCall.kind = primec::Expr::Kind::Call;
+  generatedIfCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+  CHECK(primec::emitter::isBuiltinIf(generatedIfCall, nameMap));
+
+  primec::Expr generatedLoopCall;
+  generatedLoopCall.kind = primec::Expr::Kind::Call;
+  generatedLoopCall.name =
+      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/loop";
+  CHECK(primec::emitter::isLoopCall(generatedLoopCall));
+
+  primec::Expr generatedReturnCall;
+  generatedReturnCall.kind = primec::Expr::Kind::Call;
+  generatedReturnCall.name =
+      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/return";
+  CHECK(primec::emitter::isReturnCall(generatedReturnCall));
+}
+
 TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   std::unordered_map<std::string, std::string> nameMap;
 

@@ -3,6 +3,17 @@
 
 namespace primec::emitter {
 
+static bool matchesScopedBuiltinSimpleCall(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  const std::string resolved = resolveExprPath(expr);
+  if (normalizeInternalSoaStorageBuiltinAlias(resolved) == nameToMatch) {
+    return true;
+  }
+  return isSimpleCallName(expr, nameToMatch);
+}
+
 bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
@@ -155,7 +166,7 @@ bool isBuiltinIf(const Expr &expr, const std::unordered_map<std::string, std::st
   if (nameMap.count(full) > 0) {
     return false;
   }
-  return isSimpleCallName(expr, "if");
+  return matchesScopedBuiltinSimpleCall(expr, "if");
 }
 
 bool isBuiltinBlock(const Expr &expr, const std::unordered_map<std::string, std::string> &nameMap) {
@@ -163,23 +174,23 @@ bool isBuiltinBlock(const Expr &expr, const std::unordered_map<std::string, std:
   if (nameMap.count(full) > 0) {
     return false;
   }
-  return isSimpleCallName(expr, "block");
+  return matchesScopedBuiltinSimpleCall(expr, "block");
 }
 
 bool isLoopCall(const Expr &expr) {
-  return isSimpleCallName(expr, "loop");
+  return matchesScopedBuiltinSimpleCall(expr, "loop");
 }
 
 bool isWhileCall(const Expr &expr) {
-  return isSimpleCallName(expr, "while");
+  return matchesScopedBuiltinSimpleCall(expr, "while");
 }
 
 bool isForCall(const Expr &expr) {
-  return isSimpleCallName(expr, "for");
+  return matchesScopedBuiltinSimpleCall(expr, "for");
 }
 
 bool isRepeatCall(const Expr &expr) {
-  return isSimpleCallName(expr, "repeat");
+  return matchesScopedBuiltinSimpleCall(expr, "repeat");
 }
 
 bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) {
@@ -192,7 +203,7 @@ bool hasNamedArguments(const std::vector<std::optional<std::string>> &argNames) 
 }
 
 bool isReturnCall(const Expr &expr) {
-  return isSimpleCallName(expr, "return");
+  return matchesScopedBuiltinSimpleCall(expr, "return");
 }
 
 } // namespace primec::emitter
