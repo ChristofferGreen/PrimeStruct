@@ -693,7 +693,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
 
   const std::string pngBody = imageStdlib.substr(pngStart);
   CHECK(pngBody.find("return(unsupported_read())") != std::string::npos);
-  CHECK(pngBody.find("pngWriteByte(file, byte)") != std::string::npos);
+  CHECK(imageStdlib.find("pngWriteByte([File<Write>] file, [i32] value)") != std::string::npos);
   CHECK(imageStdlib.find("if(value < 0i32 || value > 255i32)") != std::string::npos);
   CHECK(pngBody.find("if(status == 1i32)") != std::string::npos);
   CHECK(pngBody.find("if(status == 2i32)") != std::string::npos);
