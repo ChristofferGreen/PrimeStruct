@@ -46,6 +46,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: The VM compile-run path currently rejects map indexing and direct `at`/`at_unsafe` helper use for numeric, bool, and `u64` map keys with `unknown call target: /std/collections/map/at` rather than executing those helper forms.
 - Evidence: Focused release reruns of `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_vm_maps.cpp` now lock those rejects in `tests/unit/test_compile_run_vm_maps.cpp`.
 
+### vm-math-support-matrix-lowering-split
+- Updated: 2026-04-20
+- Tags: tests, vm, math
+- Fact: In the VM compile-run math shard, nominal support-matrix helpers execute successfully, but quaternion-reference and matrix-composition reference flows still fail in VM lowering through `/std/math/quat_multiply_internal` and `/std/math/mat3_mul_vec3_internal`, while the broad matrix and quaternion arithmetic tolerance tests intentionally accept either success or the current unsupported-call fallback.
+- Evidence: Focused release reruns of `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_vm_math.cpp --no-skip --duration=true` plus direct `./primec --emit=vm` reproductions against the rewritten fixtures.
+
 ### vm-vector-limits-growth-and-expression-blockers
 - Updated: 2026-04-20
 - Tags: tests, vm, collections

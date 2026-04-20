@@ -87,7 +87,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm support-matrix math nominal helpers" * doctest::skip(true)) {
+TEST_CASE("runs vm support-matrix math nominal helpers") {
   const std::string source = R"(
 import /std/math/*
 
@@ -112,7 +112,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("runs vm quaternion reference multiply and rotation" * doctest::skip(true)) {
+TEST_CASE("rejects vm quaternion reference multiply and rotation during lowering") {
   const std::string source = R"(
 import /std/math/*
 
@@ -126,13 +126,20 @@ main() {
   [f32] total{product.z - product.x - product.y - product.w + rotated.z - rotated.x - rotated.y}
   return(convert<int>(total))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_math_quaternion_reference_multiply_rotation.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 7);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_math_quaternion_reference_multiply_rotation.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/multiply, name=/std/math/quat_multiply_internal") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm matrix composition order references with tolerance" * doctest::skip(true)) {
+TEST_CASE("rejects vm matrix composition order references during lowering") {
   const std::string source = R"(
 import /std/math/*
 
@@ -161,13 +168,22 @@ main() {
   [f32] wrongOrderError{abs(wrongOrder.x + 6.0f32) + abs(wrongOrder.y - 2.0f32) + abs(wrongOrder.z - 4.0f32)}
   return(convert<int>(nestedError <= tolerance && combinedError <= tolerance && wrongOrderError <= tolerance))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_math_matrix_composition_reference.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 1);
+  const std::string errPath =
+      (testScratchPath("") / "primec_vm_math_matrix_composition_reference.err").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/multiply, name=/std/math/mat3_mul_vec3_internal") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm matrix arithmetic helpers with tolerance" * doctest::skip(true)) {
+TEST_CASE("runs vm matrix arithmetic helpers with tolerance") {
+  // Single-focus support-matrix coverage is intentionally broad and currently
+  // takes longer than 5s in release mode because it exercises many matrix ops.
   const std::string source = R"(
 import /std/math/*
 
@@ -238,7 +254,9 @@ main() {
   }
 }
 
-TEST_CASE("runs vm quaternion arithmetic helpers with tolerance" * doctest::skip(true)) {
+TEST_CASE("runs vm quaternion arithmetic helpers with tolerance") {
+  // Single-focus support-matrix coverage is intentionally broad and currently
+  // takes longer than 5s in release mode because it exercises many quat ops.
   const std::string source = R"(
 import /std/math/*
 
