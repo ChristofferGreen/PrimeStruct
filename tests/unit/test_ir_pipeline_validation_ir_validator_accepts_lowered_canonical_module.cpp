@@ -1089,6 +1089,61 @@ TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespace
   CHECK(mutation == "increment");
 }
 
+TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
+  primec::Expr namespacedCheckedPlusCall;
+  namespacedCheckedPlusCall.kind = primec::Expr::Kind::Call;
+  namespacedCheckedPlusCall.name = "plus";
+  namespacedCheckedPlusCall.namespacePrefix =
+      "/std/collections/internal_buffer_checked";
+
+  std::string builtinName;
+  CHECK(primec::ir_lowerer::getBuiltinOperatorName(
+      namespacedCheckedPlusCall, builtinName));
+  CHECK(builtinName == "plus");
+
+  char op = '\0';
+  CHECK(primec::emitter::getBuiltinOperator(namespacedCheckedPlusCall, op));
+  CHECK(op == '+');
+
+  primec::Expr namespacedUncheckedPlusCall;
+  namespacedUncheckedPlusCall.kind = primec::Expr::Kind::Call;
+  namespacedUncheckedPlusCall.name = "plus";
+  namespacedUncheckedPlusCall.namespacePrefix =
+      "/std/collections/internal_buffer_unchecked";
+
+  CHECK(primec::ir_lowerer::getBuiltinOperatorName(
+      namespacedUncheckedPlusCall, builtinName));
+  CHECK(builtinName == "plus");
+  CHECK(primec::emitter::getBuiltinOperator(namespacedUncheckedPlusCall, op));
+  CHECK(op == '+');
+
+  primec::Expr namespacedSoaLessThanCall;
+  namespacedSoaLessThanCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaLessThanCall.name = "less_than";
+  namespacedSoaLessThanCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+
+  CHECK(primec::ir_lowerer::getBuiltinComparisonName(
+      namespacedSoaLessThanCall, builtinName));
+  CHECK(builtinName == "less_than");
+
+  const char *comparison = nullptr;
+  CHECK(primec::emitter::getBuiltinComparison(
+      namespacedSoaLessThanCall, comparison));
+  CHECK(std::string(comparison) == "<");
+
+  primec::Expr namespacedSoaIncrementCall;
+  namespacedSoaIncrementCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaIncrementCall.name = "increment";
+  namespacedSoaIncrementCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+
+  std::string mutation;
+  CHECK(primec::emitter::getBuiltinMutationName(
+      namespacedSoaIncrementCall, mutation));
+  CHECK(mutation == "increment");
+}
+
 TEST_CASE("emitter collection inference keeps namespaced internal soa builtins") {
   std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
 
