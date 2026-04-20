@@ -344,6 +344,22 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   CHECK(primec::emitter::getBuiltinPointerOperator(
       rootedLocationCall, pointerOp));
   CHECK(pointerOp == '&');
+
+  primec::Expr generatedDereferenceCall;
+  generatedDereferenceCall.kind = primec::Expr::Kind::Call;
+  generatedDereferenceCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/dereference";
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(
+      generatedDereferenceCall, builtin));
+  CHECK(builtin == "dereference");
+
+  primec::Expr generatedLocationCall;
+  generatedLocationCall.kind = primec::Expr::Kind::Call;
+  generatedLocationCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/location";
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(
+      generatedLocationCall, builtin));
+  CHECK(builtin == "location");
 }
 
 TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced stdlib internals") {
@@ -423,6 +439,24 @@ TEST_CASE("simple-call helpers keep rooted internal soa storage bare builtins") 
   rootedTakeCall.name = "/std/collections/internal_soa_storage/take";
   CHECK(primec::ir_lowerer::isSimpleCallName(rootedTakeCall, "take"));
   CHECK(primec::emitter::isSimpleCallName(rootedTakeCall, "take"));
+
+  primec::Expr generatedAssignCall;
+  generatedAssignCall.kind = primec::Expr::Kind::Call;
+  generatedAssignCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/assign";
+  CHECK(primec::ir_lowerer::isSimpleCallName(generatedAssignCall, "assign"));
+
+  primec::Expr generatedIfCall;
+  generatedIfCall.kind = primec::Expr::Kind::Call;
+  generatedIfCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+  CHECK(primec::ir_lowerer::isSimpleCallName(generatedIfCall, "if"));
+
+  primec::Expr generatedTakeCall;
+  generatedTakeCall.kind = primec::Expr::Kind::Call;
+  generatedTakeCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/take";
+  CHECK(primec::ir_lowerer::isSimpleCallName(generatedTakeCall, "take"));
 }
 
 TEST_CASE("emitter builtin assign keeps internal soa storage helper paths") {

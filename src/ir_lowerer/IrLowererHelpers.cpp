@@ -2,6 +2,30 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  const std::string prefix = "std/collections/internal_soa_storage/";
+  if (name.rfind(prefix, 0) != 0) {
+    return name;
+  }
+  std::string alias = name.substr(prefix.size());
+  const size_t slash = alias.find_last_of('/');
+  if (slash != std::string::npos) {
+    alias = alias.substr(slash + 1);
+  }
+  const size_t generatedSuffix = alias.find("__");
+  if (generatedSuffix != std::string::npos) {
+    alias.erase(generatedSuffix);
+  }
+  return alias;
+}
+
+} // namespace
+
 std::string vectorLocalCapacityLimitExceededMessage() {
   return "vector local capacity limit exceeded (" + std::to_string(kVectorLocalDynamicCapacityLimit) + ")";
 }
@@ -64,15 +88,11 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
       return alias == targetName;
     }
   }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/internal_soa_storage/").size());
-    const size_t generatedSuffix = alias.find("__");
-    if (generatedSuffix != std::string::npos) {
-      alias.erase(generatedSuffix);
-    }
-    if (alias.find('/') == std::string::npos && isInternalSoaStorageBareBuiltin(alias)) {
-      return alias == targetName;
-    }
+  const std::string internalSoaAlias =
+      normalizeInternalSoaStorageBuiltinAlias(name);
+  if (internalSoaAlias.find('/') == std::string::npos &&
+      isInternalSoaStorageBareBuiltin(internalSoaAlias)) {
+    return internalSoaAlias == targetName;
   }
   if (name.find('/') != std::string::npos) {
     return false;

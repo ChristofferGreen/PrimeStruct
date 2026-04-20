@@ -16,6 +16,26 @@ std::string resolveMathExprName(const Expr &expr) {
   return resolveScopedExprName(expr);
 }
 
+std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  const std::string prefix = "std/collections/internal_soa_storage/";
+  if (name.rfind(prefix, 0) != 0) {
+    return name;
+  }
+  std::string alias = name.substr(prefix.size());
+  const size_t slash = alias.find_last_of('/');
+  if (slash != std::string::npos) {
+    alias = alias.substr(slash + 1);
+  }
+  const size_t generatedSuffix = alias.find("__");
+  if (generatedSuffix != std::string::npos) {
+    alias.erase(generatedSuffix);
+  }
+  return alias;
+}
+
 bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
   if (name.empty()) {
     return false;
@@ -364,8 +384,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return true;
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias = stripGeneratedSuffix(
-        scopedName.substr(std::string("std/collections/internal_soa_storage/").size()));
+    std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
     if (alias == "at" || alias == "at_unsafe") {
       out = alias;
       return true;
@@ -422,7 +441,7 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
     const std::string helperName =
-        stripGeneratedSuffix(scopedName.substr(std::string("std/collections/internal_soa_storage/").size()));
+        normalizeInternalSoaStorageBuiltinAlias(scopedName);
     if (helperName == "dereference" || helperName == "location") {
       out = helperName;
       return true;
@@ -505,8 +524,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     return false;
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias =
-        stripGeneratedSuffix(scopedName.substr(std::string("std/collections/internal_soa_storage/").size()));
+    std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
     if (alias == "array" || alias == "soa_vector") {
       out = alias;
       return true;
