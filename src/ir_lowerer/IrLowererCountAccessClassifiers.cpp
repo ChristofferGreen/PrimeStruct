@@ -230,6 +230,15 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
     return false;
   }
   std::string normalized = expr.name;
+  if (!expr.namespacePrefix.empty() && normalized.find('/') == std::string::npos) {
+    std::string scopedPrefix = expr.namespacePrefix;
+    if (!scopedPrefix.empty() && scopedPrefix.front() == '/') {
+      scopedPrefix.erase(scopedPrefix.begin());
+    }
+    if (!scopedPrefix.empty()) {
+      normalized = scopedPrefix + "/" + normalized;
+    }
+  }
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(0, 1);
   }
