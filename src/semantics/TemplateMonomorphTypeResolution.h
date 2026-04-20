@@ -1,5 +1,7 @@
 #pragma once
 
+#include "MapConstructorHelpers.h"
+
 ResolvedType resolveTypeStringImpl(std::string input,
                                    const SubstMap &mapping,
                                    const std::unordered_set<std::string> &allowedParams,
@@ -285,34 +287,9 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
         (ctx.sourceDefs.count(resolvedPath) > 0 || ctx.helperOverloads.count(resolvedPath) > 0)) {
       return resolvedPath;
     }
-    auto mapConstructorHelperPath = [&]() -> std::string {
-      switch (expr.args.size()) {
-      case 0:
-        return "/std/collections/mapNew";
-      case 2:
-        return "/std/collections/mapSingle";
-      case 4:
-        return "/std/collections/mapPair";
-      case 6:
-        return "/std/collections/mapTriple";
-      case 8:
-        return "/std/collections/mapQuad";
-      case 10:
-        return "/std/collections/mapQuint";
-      case 12:
-        return "/std/collections/mapSext";
-      case 14:
-        return "/std/collections/mapSept";
-      case 16:
-        return "/std/collections/mapOct";
-      default:
-        return {};
-      }
-    };
-    std::string helperPath;
-    if (resolvedPath == "/std/collections/map/map") {
-      helperPath = mapConstructorHelperPath();
-    }
+    const std::string helperPath =
+        metadataBackedCanonicalMapConstructorRewritePath(resolvedPath,
+                                                         expr.args.size());
     if (!helperPath.empty() && ctx.sourceDefs.count(helperPath) > 0) {
       return helperPath;
     }

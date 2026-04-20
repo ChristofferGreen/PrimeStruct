@@ -192,6 +192,17 @@ inline std::string canonicalMapConstructorHelperPath(size_t argumentCount) {
       metadata->loweringSpellings, "/std/collections/");
 }
 
+inline std::string metadataBackedCanonicalMapConstructorRewritePath(
+    const std::string &resolvedPath, size_t argumentCount) {
+  const std::string normalizedPath =
+      stripCollectionConstructorSuffixes(resolvedPath);
+  if (normalizedPath != "/map/map" &&
+      normalizedPath != "/std/collections/map/map") {
+    return {};
+  }
+  return canonicalMapConstructorHelperPath(argumentCount);
+}
+
 inline std::string experimentalMapConstructorHelperPath(size_t argumentCount) {
   const std::string memberName =
       mapConstructorMemberNameForArgumentCount(argumentCount);

@@ -3,12 +3,7 @@
 #include "MapConstructorHelpers.h"
 
 std::string experimentalMapConstructorInferencePath(const std::string &resolvedPath) {
-  const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
-  if (normalizedPath == "/std/collections/map/map" ||
-      normalizedPath == "/std/collections/mapNew") {
-    return experimentalMapConstructorHelperPath(0);
-  }
-  return canonicalMapConstructorToExperimental(normalizedPath);
+  return metadataBackedExperimentalMapConstructorRewritePath(resolvedPath, 0);
 }
 
 bool isExperimentalMapConstructorHelperPath(const std::string &resolvedPath) {

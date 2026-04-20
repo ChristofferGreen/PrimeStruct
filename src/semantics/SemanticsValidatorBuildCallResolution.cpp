@@ -258,23 +258,20 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     if (expr.isMethodCall) {
       return rewriteCanonicalCollectionHelperPath(resolvedPath);
     }
-    auto mapConstructorHelperPath = [&](size_t argumentCount) -> std::string {
-      return canonicalMapConstructorHelperPath(argumentCount);
-    };
-    std::string helperPath;
-    if (resolvedPath == "/std/collections/map/map") {
-      if (hasDefinitionFamilyPath(resolvedPath) || hasImportedDefinitionPath(resolvedPath)) {
-        return resolvedPath;
-      }
-      helperPath = mapConstructorHelperPath(expr.args.size());
-    } else if (resolvedPath == "/map/map") {
-      helperPath = mapConstructorHelperPath(expr.args.size());
+    if (resolvedPath == "/std/collections/map/map" &&
+        (hasDefinitionFamilyPath(resolvedPath) || hasImportedDefinitionPath(resolvedPath))) {
+      return resolvedPath;
     }
+    const std::string helperPath =
+        metadataBackedCanonicalMapConstructorRewritePath(resolvedPath,
+                                                         expr.args.size());
     if (!helperPath.empty()) {
       if (defMap_.count(helperPath) > 0) {
         return helperPath;
       }
-      const std::string experimentalHelper = canonicalMapConstructorToExperimental(helperPath);
+      const std::string experimentalHelper =
+          metadataBackedExperimentalMapConstructorRewritePath(helperPath,
+                                                              expr.args.size());
       if (!experimentalHelper.empty() && defMap_.count(experimentalHelper) > 0) {
         return experimentalHelper;
       }

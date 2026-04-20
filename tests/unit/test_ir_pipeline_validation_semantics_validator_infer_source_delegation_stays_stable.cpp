@@ -1745,6 +1745,15 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   CHECK(buildCallResolutionSource.find(
             "this->preferredGfxErrorHelperTarget(expr.name, normalizedPrefix)") !=
         std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "metadataBackedCanonicalMapConstructorRewritePath(") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "auto mapConstructorHelperPath = [&](size_t argumentCount) -> std::string {") ==
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
+            "canonicalMapConstructorToExperimental(helperPath)") ==
+        std::string::npos);
 
   CHECK(resultHelpersSource.find("auto preferredFileErrorHelperTarget =") ==
         std::string::npos);

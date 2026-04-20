@@ -56,30 +56,28 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4101
+- TODO-4051
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4051
 - TODO-4052
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4101, TODO-4051
+- Vector/map bridge rollout and ownership cutover: TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4101
-2. TODO-4051
-3. TODO-4052
-4. TODO-4058
-5. TODO-4053
-6. TODO-4055
-7. TODO-4054
-8. TODO-4056
-9. TODO-4057
-10. TODO-4059
+1. TODO-4051
+2. TODO-4052
+3. TODO-4058
+4. TODO-4053
+5. TODO-4055
+6. TODO-4054
+7. TODO-4056
+8. TODO-4057
+9. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -88,7 +86,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4101, TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -108,7 +106,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4101, TODO-4051 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4051 |
 | De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
@@ -240,15 +238,3 @@ Task template:
     - The parity coverage is specific enough to detect behavior drift while the bridge-backed collection migration is in flight.
     - The new coverage is wired into the existing validation surfaces instead of remaining as ad hoc local-only checks.
   - stop_rule: Stop once vector/map bridge parity is pinned well enough that the migration tasks can safely delete duplicated path tables without guessing about current behavior.
-
-- [ ] TODO-4101: Retire remaining semantics constructor-path tables after the lowerer bridge cutover
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: none
-  - scope: Replace the remaining semantics/template-monomorph constructor-path switches and canonical-to-experimental constructor translation seams with shared bridge-backed constructor metadata now that the lowerer-side constructor tables have been centralized.
-  - acceptance:
-    - The remaining semantics/template constructor-path switches route through shared constructor metadata helpers instead of local vector/map argument-count ladders.
-    - No broad vector/map-only canonical-to-experimental constructor translation tables remain outside the shared bridge helper layer.
-    - Any residual constructor edge case that still cannot move is left behind with a narrowly scoped follow-up instead of preserving the old broad task.
-  - stop_rule: Stop once the remaining semantics/template constructor-path tables are gone; split any stubborn residual edge case into an explicit follow-up rather than keeping another umbrella task alive.

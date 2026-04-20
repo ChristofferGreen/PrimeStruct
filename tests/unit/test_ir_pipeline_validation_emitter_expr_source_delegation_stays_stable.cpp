@@ -186,6 +186,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReceiverResolution.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionConstructorPathsPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionConstructorPaths.h";
+  const std::filesystem::path templateMonomorphExperimentalCollectionTypeHelpersPath =
+      repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionTypeHelpers.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionReturnRewritesPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphExperimentalCollectionReturnRewrites.h";
   const std::filesystem::path templateMonomorphExperimentalCollectionReturnSetupPath =
@@ -221,6 +223,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionValueRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReceiverResolutionPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionConstructorPathsPath));
+  REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionTypeHelpersPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnRewritesPath));
   REQUIRE(std::filesystem::exists(templateMonomorphExperimentalCollectionReturnSetupPath));
   REQUIRE(std::filesystem::exists(templateMonomorphDefinitionBindingSetupPath));
@@ -252,6 +255,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExperimentalCollectionReceiverResolutionPath);
   const std::string templateMonomorphExperimentalCollectionConstructorPathsSource =
       readText(templateMonomorphExperimentalCollectionConstructorPathsPath);
+  const std::string templateMonomorphExperimentalCollectionTypeHelpersSource =
+      readText(templateMonomorphExperimentalCollectionTypeHelpersPath);
   const std::string templateMonomorphExperimentalCollectionReturnRewritesSource =
       readText(templateMonomorphExperimentalCollectionReturnRewritesPath);
   const std::string templateMonomorphExperimentalCollectionReturnSetupSource =
@@ -1860,10 +1865,22 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string resolveCalleePath(const Expr &expr, const std::string &namespacePrefix, const Context &ctx)") !=
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
+            "#include \"MapConstructorHelpers.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "metadataBackedCanonicalMapConstructorRewritePath(") !=
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
             "auto vectorConstructorHelperPath = [&]() -> std::string {") ==
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
+            "auto mapConstructorHelperPath = [&]() -> std::string {") ==
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
             "helperPath = vectorConstructorHelperPath();") ==
+        std::string::npos);
+  CHECK(templateMonomorphTypeResolutionSource.find(
+            "helperPath = mapConstructorHelperPath();") ==
         std::string::npos);
   CHECK(templateMonomorphTypeResolutionSource.find(
             "resolvedPath == \"/std/collections/vector/vector\" ||") ==
@@ -2086,6 +2103,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "if (resolvedPath == \"/std/collections/vectorSingle\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
+            "metadataBackedExperimentalMapConstructorRewritePath(resolvedPath, 0)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
+            "normalizedPath == \"/std/collections/mapNew\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionTypeHelpersSource.find(
+            "return canonicalMapConstructorToExperimental(normalizedPath);") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReturnRewritesSource.find(
             "void rewriteExperimentalConstructorReturnTree(Expr &candidate, RewriteCurrentFn &&rewriteCurrent)") !=
