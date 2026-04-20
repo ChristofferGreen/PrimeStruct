@@ -98,6 +98,42 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies
   CHECK(error == "native backend missing inference expr-kind call-base setup dependency: inferStructExprPath");
 }
 
+TEST_CASE("ir lowerer inference base-kind helpers resolve parser-shaped canonical map result helpers") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo mapInfo;
+  mapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  mapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  locals.emplace("values", mapInfo);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr tryAtCall;
+  tryAtCall.kind = primec::Expr::Kind::Call;
+  tryAtCall.name = "tryAt";
+  tryAtCall.namespacePrefix = "/std/collections/map";
+  tryAtCall.args = {valuesName};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut =
+      primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::isMapTryAtCallName(tryAtCall));
+  CHECK(primec::ir_lowerer::inferMapTryAtResultValueKind(tryAtCall, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.name = "contains";
+  containsCall.namespacePrefix = "/std/collections/map";
+  containsCall.args = {valuesName};
+
+  kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(primec::ir_lowerer::isMapContainsCallName(containsCall));
+  CHECK(primec::ir_lowerer::inferMapContainsResultKind(containsCall, locals, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-return setup wires callback") {
   primec::Definition callee;
   callee.fullPath = "/callee";

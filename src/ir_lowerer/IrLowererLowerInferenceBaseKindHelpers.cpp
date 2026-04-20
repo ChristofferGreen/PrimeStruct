@@ -153,6 +153,16 @@ bool isIndexedPointerArgsPackFileHandleReceiver(const Expr &receiverExpr, const 
          it->second.argsPackElementKind == LocalInfo::Kind::Pointer;
 }
 
+std::string resolveScopedCallName(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
+
 bool isMapTryAtCallName(const Expr &expr) {
   if (isSimpleCallName(expr, "tryAt")) {
     return true;
@@ -160,7 +170,7 @@ bool isMapTryAtCallName(const Expr &expr) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
+  std::string normalized = resolveScopedCallName(expr);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
@@ -174,7 +184,7 @@ bool isMapContainsCallName(const Expr &expr) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
+  std::string normalized = resolveScopedCallName(expr);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
