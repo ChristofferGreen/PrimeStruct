@@ -191,7 +191,7 @@
           const auto targetInfo =
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn, inferCallMapTargetInfo);
           if (!targetInfo.isMapTarget &&
-              !matchesPublishedMapInsertPath(resolveExprPath(callExpr))) {
+              !matchesPublishedMapInsertPath(callExpr)) {
             return false;
           }
 

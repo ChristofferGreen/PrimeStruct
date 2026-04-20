@@ -224,7 +224,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   if (!expr.isMethodCall && isMapContainsHelperName(expr)) {
-    if (isExplicitDirectMapCountContainsTryAtCall(expr)) {
+    if (isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if (expr.args.size() != 2) {
@@ -287,7 +287,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   if (!expr.isMethodCall && isMapTryAtHelperName(expr)) {
-    if (isExplicitDirectMapCountContainsTryAtCall(expr)) {
+    if (isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr)) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     if (expr.args.size() != 2) {

@@ -1117,6 +1117,9 @@ TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in p
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .bindingNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "selected"),
       .initializerResolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),

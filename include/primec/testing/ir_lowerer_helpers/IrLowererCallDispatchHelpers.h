@@ -236,7 +236,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -259,7 +260,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -281,7 +283,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -302,7 +305,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);
 BufferBuiltinDispatchResult tryEmitBufferBuiltinDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -336,7 +340,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -359,7 +364,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -381,7 +387,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -402,4 +409,5 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error);
+    std::string &error,
+    const SemanticProgram *semanticProgram = nullptr);

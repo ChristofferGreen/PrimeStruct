@@ -1763,6 +1763,9 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id with r
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .initializerResolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
@@ -2039,6 +2042,9 @@ TEST_CASE("ir lowerer semantic-product adapter indexes local-auto facts by initi
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .bindingNameId = bindingNameId,
       .initializerResolvedPathId = initializerPathId,
   });
@@ -2109,6 +2115,9 @@ TEST_CASE("ir lowerer semantic-product index resolves local-auto facts without b
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .bindingNameId = bindingNameId,
       .initializerResolvedPathId = initializerPathId,
   });
@@ -2186,6 +2195,9 @@ TEST_CASE("ir lowerer semantic-product adapter prefers local-auto semantic-id ma
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .bindingNameId = bindingNameId,
       .initializerResolvedPathId = initializerPathId,
   };
@@ -2220,6 +2232,9 @@ TEST_CASE("ir lowerer semantic-product adapter prefers local-auto semantic-id ma
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .bindingNameId = bindingNameId,
       .initializerResolvedPathId = initializerPathId,
   };

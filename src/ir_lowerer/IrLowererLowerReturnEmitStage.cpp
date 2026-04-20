@@ -102,6 +102,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
   const auto &entryCallOnErrorSetup = setupLocalsOrchestration.entryCallOnErrorSetup;
   const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
+  const SemanticProgram *semanticProgram = callResolutionAdapters.semanticProgram;
   auto &resolveExprPath = callResolutionAdapters.resolveExprPath;
   OnErrorByDefinition &onErrorByDef = *input.onErrorByDef;
 

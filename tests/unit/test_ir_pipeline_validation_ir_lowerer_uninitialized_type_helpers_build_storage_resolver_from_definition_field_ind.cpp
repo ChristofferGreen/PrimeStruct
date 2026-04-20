@@ -618,6 +618,9 @@ TEST_CASE("ir lowerer binding type helpers treat semantic local-auto facts as no
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .initializerResolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });

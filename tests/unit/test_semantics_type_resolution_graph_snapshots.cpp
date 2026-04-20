@@ -4510,6 +4510,9 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .initializerDirectCallReturnKind = "",
       .initializerMethodCallResolvedPath = "",
       .initializerMethodCallReturnKind = "",
+      .initializerStdlibSurfaceId = std::nullopt,
+      .initializerDirectCallStdlibSurfaceId = std::nullopt,
+      .initializerMethodCallStdlibSurfaceId = std::nullopt,
       .initializerResolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
   });
