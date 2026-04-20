@@ -285,7 +285,21 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(int32_t)> &emitFileErrorWhyFn,
     std::string &error) {
-  if (!expr.isMethodCall && expr.name == "/file_error/why") {
+  auto resolveDirectCallPath = [&]() {
+    if (!expr.name.empty() && expr.name.front() == '/') {
+      return expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      std::string scoped = expr.namespacePrefix;
+      if (!scoped.empty() && scoped.front() != '/') {
+        scoped.insert(scoped.begin(), '/');
+      }
+      return scoped + "/" + expr.name;
+    }
+    return expr.name;
+  };
+
+  if (!expr.isMethodCall && resolveDirectCallPath() == "/file_error/why") {
     if (expr.args.size() != 1) {
       error = "FileError.why requires exactly one argument";
       return FileErrorWhyCallEmitResult::Error;
