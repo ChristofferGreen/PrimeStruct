@@ -47,6 +47,14 @@ bool isBufferHandleCall(const Expr &expr) {
          scopedName.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
 }
 
+bool isFileHandleCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
+    return false;
+  }
+  const std::string scopedName = resolveScopedCallPath(expr);
+  return scopedName == "File" || scopedName == "/std/file/File";
+}
+
 bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {
   valueTypeOut.clear();
   std::string base;
@@ -853,6 +861,12 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
       out.valueStructType.clear();
       return;
     }
+  }
+  if (isFileHandleCall(valueExpr)) {
+    out.valueKind = LocalInfo::ValueKind::Int64;
+    out.valueIsFileHandle = true;
+    out.valueStructType.clear();
+    return;
   }
   LocalInfo::Kind valueCollectionKind = LocalInfo::Kind::Value;
   LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;

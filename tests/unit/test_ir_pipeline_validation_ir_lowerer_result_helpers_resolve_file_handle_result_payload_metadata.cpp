@@ -31,6 +31,19 @@ TEST_CASE("ir lowerer result helpers resolve file handle Result payload metadata
   okExpr.name = "ok";
   okExpr.args = {resultName, fileExpr};
 
+  primec::Expr fileCtorExpr;
+  fileCtorExpr.kind = primec::Expr::Kind::Call;
+  fileCtorExpr.name = "File";
+
+  primec::Expr okCtorExpr = okExpr;
+  okCtorExpr.args = {resultName, fileCtorExpr};
+
+  primec::Expr scopedFileCtorExpr = fileCtorExpr;
+  scopedFileCtorExpr.namespacePrefix = "/std/file";
+
+  primec::Expr scopedOkCtorExpr = okExpr;
+  scopedOkCtorExpr.args = {resultName, scopedFileCtorExpr};
+
   primec::Expr sourceExpr;
   sourceExpr.kind = primec::Expr::Kind::Name;
   sourceExpr.name = "source";
@@ -110,6 +123,24 @@ TEST_CASE("ir lowerer result helpers resolve file handle Result payload metadata
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       okExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      okCtorExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      scopedOkCtorExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
