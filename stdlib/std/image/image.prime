@@ -122,6 +122,10 @@ namespace std {
   ignoreFileError([FileError] err) {
   }
 
+  // The codec and deflate helpers below intentionally keep explicit
+  // /std/collections/vector/* calls because they are byte-oriented
+  // substrate plumbing rather than the public-facing image wrapper layer.
+
   [return<bool>]
   ppmIsWhitespace([i32] value) {
     return(or(or(equal(value, 32i32), equal(value, 9i32)), or(equal(value, 10i32), equal(value, 13i32))))
@@ -250,7 +254,7 @@ namespace std {
   resetReadOutputs([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels) {
     width = 0i32
     height = 0i32
-    /std/collections/vector/clear(pixels)
+    pixels.clear()
   }
 
   [return<bool>]

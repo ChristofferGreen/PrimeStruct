@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4030
+- TODO-4031
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4031
 - TODO-4032
 - TODO-4033
 - TODO-4034
@@ -68,45 +67,45 @@ Task template:
 - TODO-4042
 - TODO-4043
 - TODO-4044
+- TODO-4045
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4030 through TODO-4035
+- Stdlib surface-style alignment: TODO-4031 through TODO-4035
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4030
-2. TODO-4031
-3. TODO-4032
-4. TODO-4033
-5. TODO-4034
-6. TODO-4035
-7. TODO-4042
-8. TODO-4043
-9. TODO-4044
-10. TODO-4045
-11. TODO-4046
-12. TODO-4047
-13. TODO-4048
-14. TODO-4049
-15. TODO-4050
-16. TODO-4052
-17. TODO-4058
-18. TODO-4053
-19. TODO-4055
-20. TODO-4054
-21. TODO-4056
-22. TODO-4057
-23. TODO-4059
+1. TODO-4031
+2. TODO-4032
+3. TODO-4033
+4. TODO-4034
+5. TODO-4035
+6. TODO-4042
+7. TODO-4043
+8. TODO-4044
+9. TODO-4045
+10. TODO-4046
+11. TODO-4047
+12. TODO-4048
+13. TODO-4049
+14. TODO-4050
+15. TODO-4052
+16. TODO-4058
+17. TODO-4053
+18. TODO-4055
+19. TODO-4054
+20. TODO-4056
+21. TODO-4057
+22. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -125,7 +124,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -414,15 +413,3 @@ Task template:
     - Member-method versus free-function presentation is normalized where the existing language surface already supports the preferred form.
     - Compatibility shims or follow-up renames that need broader migration work are captured explicitly instead of being hidden in this cleanup.
   - stop_rule: Stop once public helper naming is normalized across the intended surface modules and any required compatibility migration has been split out.
-
-- [ ] TODO-4030: Prefer member-style collection APIs over /std/collections helper calls in public stdlib modules
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026
-  - scope: Update public and high-level stdlib modules to prefer member-style collection calls over explicit `/std/collections/*` helper invocations where the language already supports the member-facing surface and the change improves readability.
-  - acceptance:
-    - Public/high-level stdlib code uses member-style collection APIs in place of direct helper-path calls where the semantics are already equivalent.
-    - Remaining direct helper-path calls are limited to substrate, migration, or unsupported-language-surface cases and are documented as such in the touched modules.
-    - The cleanup does not change collection semantics or ownership boundaries as part of the same slice.
-  - stop_rule: Stop once user-facing collection usage is expressed in the preferred member style and only justified substrate-only helper calls remain.

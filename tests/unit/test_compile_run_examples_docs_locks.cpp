@@ -316,6 +316,15 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(primeStructDoc.find("print_line(Result.why(png.write(\"output.png\"utf8, width, height, pixels)))") !=
         std::string::npos);
 
+  const size_t resetReadOutputsStart = imageStdlib.find("resetReadOutputs(");
+  const size_t imageRgbWritePixelCountStart =
+      imageStdlib.find("\n  [return<bool>]\n  imageRgbWritePixelCount(", resetReadOutputsStart);
+  REQUIRE(resetReadOutputsStart != std::string::npos);
+  REQUIRE(imageRgbWritePixelCountStart != std::string::npos);
+  REQUIRE(imageRgbWritePixelCountStart > resetReadOutputsStart);
+  const std::string resetReadOutputsBody =
+      imageStdlib.substr(resetReadOutputsStart, imageRgbWritePixelCountStart - resetReadOutputsStart);
+
   CHECK(imageStdlib.find("[public struct]\n  ImageError()") != std::string::npos);
   CHECK(imageStdlib.find("ImageError(1i32)") != std::string::npos);
   CHECK(imageStdlib.find("ImageError(2i32)") != std::string::npos);
@@ -338,6 +347,9 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("pngScanlineBytesValid") != std::string::npos);
   CHECK(imageStdlib.find("pngScalePackedSampleToByte") != std::string::npos);
   CHECK(imageStdlib.find("pngScaleU16SampleToByte") != std::string::npos);
+  CHECK(imageStdlib.find("The codec and deflate helpers below intentionally keep explicit") != std::string::npos);
+  CHECK(resetReadOutputsBody.find("pixels.clear()") != std::string::npos);
+  CHECK(resetReadOutputsBody.find("/std/collections/vector/clear(pixels)") == std::string::npos);
   CHECK(imageStdlib.find("pngScanlineChannelByte") != std::string::npos);
   CHECK(imageStdlib.find("pngAdam7PassStartX") != std::string::npos);
   CHECK(imageStdlib.find("pngDecodeRows") != std::string::npos);
@@ -1042,6 +1054,10 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
   CHECK(source.find("for([i32 mut] index{0i32}, less_than(index, len), ++index)") != std::string::npos);
   CHECK(source.find("[mut] words{vector<i32>()}") != std::string::npos);
   CHECK(source.find("[mut] kinds{self.kinds}") != std::string::npos);
+  CHECK(source.find("records.push(value)") != std::string::npos);
+  CHECK(source.find("words.push(1i32)") != std::string::npos);
+  CHECK(source.find("kinds.push(kind)") != std::string::npos);
+  CHECK(source.find("rectHeights.push(0i32)") != std::string::npos);
   CHECK(source.find("panel{self.append_panel(parentIndex, panelPaddingPx, panelGapPx, 0i32, 0i32)}") !=
         std::string::npos);
   CHECK(source.find("contentWidth{widget_text_width(textSizePx, text) + multiply(paddingPx, 2i32)}") !=
@@ -1063,6 +1079,7 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
   CHECK(source.find("[i32] totalNodes{count(self.kinds)}") == std::string::npos);
   CHECK(source.find("[i32] paddingPx{self.paddingPxs[nodeId]}") == std::string::npos);
   CHECK(source.find("[mut] childY{innerY}") == std::string::npos);
+  CHECK(source.find("/std/collections/vector/push(") == std::string::npos);
 }
 
 TEST_CASE("surface examples stay source locked to lowering-compatible helper forms") {
