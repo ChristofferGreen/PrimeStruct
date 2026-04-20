@@ -554,42 +554,48 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     out = "map";
     return true;
   }
-  std::string name = expr.name;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
+  std::string scopedName = resolvedPath;
+  if (!scopedName.empty() && scopedName[0] == '/') {
+    scopedName.erase(0, 1);
   }
-  if (name.rfind("std/collections/vector/", 0) == 0) {
+  std::string rawName = expr.name;
+  if (!rawName.empty() && rawName[0] == '/') {
+    rawName.erase(0, 1);
+  }
+  if (scopedName.rfind("std/collections/vector/", 0) == 0) {
     return false;
   }
-  if (name.rfind("map/", 0) == 0) {
-    std::string alias = name.substr(std::string("map/").size());
+  if (scopedName.rfind("map/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("map/").size());
     if (alias == "map") {
       out = "map";
       return true;
     }
     return false;
   }
-  if (name.rfind("std/collections/map/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/map/").size());
+  if (scopedName.rfind("std/collections/map/", 0) == 0) {
+    std::string alias =
+        scopedName.substr(std::string("std/collections/map/").size());
     if (alias == "map") {
       out = "map";
       return true;
     }
     return false;
   }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias = normalizeInternalSoaStorageBuiltinAlias(name);
+  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias = normalizeInternalSoaStorageBuiltinAlias(scopedName);
     if (alias == "array" || alias == "soa_vector") {
       out = alias;
       return true;
     }
     return false;
   }
-  if (name.find('/') != std::string::npos) {
+  if (rawName.find('/') != std::string::npos) {
     return false;
   }
-  if (name == "array" || name == "vector" || name == "map") {
-    out = name;
+  if (rawName == "array" || rawName == "vector" || rawName == "map" ||
+      rawName == "soa_vector") {
+    out = rawName;
     return true;
   }
   return false;

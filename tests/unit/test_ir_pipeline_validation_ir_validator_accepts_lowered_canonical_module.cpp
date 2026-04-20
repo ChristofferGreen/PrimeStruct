@@ -276,6 +276,19 @@ TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib i
   CHECK(primec::emitter::getBuiltinCollectionName(namespacedArrayCall, builtin));
   CHECK(builtin == "array");
 
+  primec::Expr namespacedSoaVectorCall;
+  namespacedSoaVectorCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaVectorCall.name = "soa_vector";
+  namespacedSoaVectorCall.namespacePrefix =
+      "/std/collections/internal_soa_storage";
+
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(
+      namespacedSoaVectorCall, builtin));
+  CHECK(builtin == "soa_vector");
+  CHECK(primec::emitter::getBuiltinCollectionName(
+      namespacedSoaVectorCall, builtin));
+  CHECK(builtin == "soa_vector");
+
   primec::Expr rootedArrayCall;
   rootedArrayCall.kind = primec::Expr::Kind::Call;
   rootedArrayCall.name = "/std/collections/internal_soa_storage/array";
