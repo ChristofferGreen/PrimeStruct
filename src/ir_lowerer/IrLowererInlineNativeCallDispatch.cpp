@@ -89,6 +89,22 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
          normalizeCollectionHelperPath(resolvedPath);
 }
 
+bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
+                                                  const Definition &callee) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty() ||
+      expr.name.front() != '/') {
+    return false;
+  }
+  std::string helperName;
+  if (!resolveMapHelperAliasName(expr, helperName) ||
+      (helperName != "count" && helperName != "contains" &&
+       helperName != "tryAt")) {
+    return false;
+  }
+  return normalizeCollectionHelperPath(expr.name) ==
+         normalizeCollectionHelperPath(callee.fullPath);
+}
+
 bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
                                   std::string_view resolvedHelperName) {
   if (requestedHelperName == resolvedHelperName) {
@@ -375,6 +391,18 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error) {
+  if (!expr.isMethodCall) {
+    if (const Definition *directCallee = resolveDefinitionCall(expr);
+        directCallee != nullptr &&
+        isExplicitSamePathMapCountLikeDefinitionCall(expr, *directCallee)) {
+      const auto emitResult = emitResolvedInlineDefinitionCall(
+          expr, directCallee, emitInlineDefinitionCall, error);
+      return emitResult == ResolvedInlineCallResult::Emitted
+                 ? InlineCallDispatchResult::Emitted
+                 : InlineCallDispatchResult::Error;
+    }
+  }
+
   const auto firstCountFallbackResult = tryEmitNonMethodCountFallback(
       expr,
       isArrayCountCall,

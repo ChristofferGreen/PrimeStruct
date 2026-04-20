@@ -139,17 +139,21 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
               ++canonicalMapCountResolveMethodCalls;
               return &callee;
             },
-            [&](const primec::Expr &) -> const primec::Definition * {
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
               ++canonicalMapCountResolveDefinitionCalls;
+              CHECK(callExpr.name == "/std/collections/map/count");
+              CHECK_FALSE(callExpr.isMethodCall);
               return &callee;
             },
-            [&](const primec::Expr &, const primec::Definition &) {
+            [&](const primec::Expr &callExpr, const primec::Definition &) {
               ++canonicalMapCountEmitCalls;
+              CHECK(callExpr.name == "/std/collections/map/count");
+              CHECK_FALSE(callExpr.isMethodCall);
               return true;
             },
             error) == Result::Emitted);
-  CHECK(canonicalMapCountResolveMethodCalls == 1);
-  CHECK(canonicalMapCountResolveDefinitionCalls == 0);
+  CHECK(canonicalMapCountResolveMethodCalls == 0);
+  CHECK(canonicalMapCountResolveDefinitionCalls == 1);
   CHECK(canonicalMapCountEmitCalls == 1);
 
   primec::Expr explicitVectorCountCall = countCall;
@@ -488,6 +492,74 @@ TEST_CASE("ir lowerer call helpers preserve canonical map helper method return c
             error) == Result::NotHandled);
   CHECK(error == "stale");
   CHECK(builtinTryAtEmitCalls == 0);
+}
+
+TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  auto makeDirectCall = [](const std::string &name, std::vector<primec::Expr> args) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.name = name;
+    callExpr.args = std::move(args);
+    return callExpr;
+  };
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  primec::Definition rootedCount;
+  rootedCount.fullPath = "/map/count";
+
+  primec::Definition rootedContains;
+  rootedContains.fullPath = "/map/contains";
+
+  primec::Definition rootedTryAt;
+  rootedTryAt.fullPath = "/map/tryAt";
+
+  auto expectDirectDefWins = [&](primec::Expr callExpr, const primec::Definition &expectedCallee) {
+    int resolveMethodCalls = 0;
+    int resolveDefinitionCalls = 0;
+    int emitCalls = 0;
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+              callExpr,
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              [&](const primec::Expr &) -> const primec::Definition * {
+                ++resolveMethodCalls;
+                return &expectedCallee;
+              },
+              [&](const primec::Expr &candidate) -> const primec::Definition * {
+                ++resolveDefinitionCalls;
+                CHECK(candidate.name == callExpr.name);
+                CHECK_FALSE(candidate.isMethodCall);
+                return &expectedCallee;
+              },
+              [&](const primec::Expr &emittedExpr, const primec::Definition &resolvedCallee) {
+                ++emitCalls;
+                CHECK(emittedExpr.name == callExpr.name);
+                CHECK_FALSE(emittedExpr.isMethodCall);
+                CHECK(resolvedCallee.fullPath == expectedCallee.fullPath);
+                return true;
+              },
+              error) == Result::Emitted);
+    CHECK(error == "stale");
+    CHECK(resolveMethodCalls == 0);
+    CHECK(resolveDefinitionCalls == 1);
+    CHECK(emitCalls == 1);
+  };
+
+  expectDirectDefWins(makeDirectCall("/map/count", {valuesName}), rootedCount);
+  expectDirectDefWins(makeDirectCall("/map/contains", {valuesName, keyLiteral}), rootedContains);
+  expectDirectDefWins(makeDirectCall("/map/tryAt", {valuesName, keyLiteral}), rootedTryAt);
 }
 
 TEST_CASE("ir lowerer call helpers keep map count and local access same-path defs") {
