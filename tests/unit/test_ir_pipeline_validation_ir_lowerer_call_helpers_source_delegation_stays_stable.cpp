@@ -488,15 +488,25 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
+  CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceMemberToken(") !=
+        std::string::npos);
+  CHECK(setupHelpersHeader.find("bool resolvePublishedStdlibSurfaceExprMemberName(") !=
+        std::string::npos);
   CHECK(setupHelpersHeader.find("bool isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);
   CHECK(setupHelpersHeader.find("bool isCanonicalPublishedStdlibSurfaceHelperPath(") !=
         std::string::npos);
   CHECK(setupHelpersSource.find("findPublishedStdlibSurfaceMetadata(") !=
         std::string::npos);
+  CHECK(setupHelpersSource.find("rebuildScopedCollectionHelperPath(") !=
+        std::string::npos);
   CHECK(setupHelpersSource.find("matchesRegistrySpellingSet(metadata->loweringSpellings, path)") !=
         std::string::npos);
+  CHECK(setupHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, normalizedToken)") !=
+        std::string::npos);
   CHECK(setupHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, path)") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
@@ -513,6 +523,12 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
   CHECK(nativeTailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("IrLowererSetupTypeCollectionHelpers.h") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveVectorHelperAliasName(") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveMapHelperAliasName(") !=
         std::string::npos);
 }
 

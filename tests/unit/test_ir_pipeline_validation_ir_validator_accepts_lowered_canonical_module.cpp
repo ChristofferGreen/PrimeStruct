@@ -448,6 +448,24 @@ TEST_CASE("ir lowerer stdlib surface metadata recognizes experimental map loweri
             *atUnsafeMetadata, "/std/collections/experimental_map/mapAtUnsafe") == "at_unsafe");
 }
 
+TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
+  const auto *vectorMetadata =
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  REQUIRE(vectorMetadata != nullptr);
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "vectorCount") == "count");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*vectorMetadata, "vectorRemoveSwap") ==
+        "remove_swap");
+
+  const auto *mapMetadata =
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);
+  REQUIRE(mapMetadata != nullptr);
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "mapAtUnsafeRef") ==
+        "at_unsafe_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "Insert") == "insert");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "MapInsertRef") ==
+        "insert_ref");
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*

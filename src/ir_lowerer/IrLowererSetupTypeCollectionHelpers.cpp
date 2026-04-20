@@ -6,6 +6,8 @@
 
 namespace primec::ir_lowerer {
 
+std::string normalizeCollectionHelperPath(const std::string &path);
+
 namespace {
 
 std::string stripGeneratedHelperSuffix(std::string helperName) {
@@ -37,145 +39,30 @@ const StdlibSurfaceMetadata *findPublishedStdlibSurfaceMetadata(std::string_view
   return nullptr;
 }
 
-bool resolveExperimentalVectorHelperAliasName(std::string helperName, std::string &helperNameOut) {
-  helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "vectorCount") {
-    helperNameOut = "count";
-    return true;
+std::string rebuildScopedCollectionHelperPath(const Expr &expr) {
+  std::string normalized = expr.name;
+  if (!expr.namespacePrefix.empty() && normalized.find('/') == std::string::npos) {
+    std::string scopedPrefix = expr.namespacePrefix;
+    if (!scopedPrefix.empty() && scopedPrefix.front() != '/') {
+      scopedPrefix.insert(scopedPrefix.begin(), '/');
+    }
+    if (!scopedPrefix.empty()) {
+      normalized = scopedPrefix + "/" + normalized;
+    }
   }
-  if (helperName == "vectorCapacity") {
-    helperNameOut = "capacity";
-    return true;
-  }
-  if (helperName == "vectorAt") {
-    helperNameOut = "at";
-    return true;
-  }
-  if (helperName == "vectorAtUnsafe") {
-    helperNameOut = "at_unsafe";
-    return true;
-  }
-  if (helperName == "vectorPush") {
-    helperNameOut = "push";
-    return true;
-  }
-  if (helperName == "vectorPop") {
-    helperNameOut = "pop";
-    return true;
-  }
-  if (helperName == "vectorReserve") {
-    helperNameOut = "reserve";
-    return true;
-  }
-  if (helperName == "vectorClear") {
-    helperNameOut = "clear";
-    return true;
-  }
-  if (helperName == "vectorRemoveAt") {
-    helperNameOut = "remove_at";
-    return true;
-  }
-  if (helperName == "vectorRemoveSwap") {
-    helperNameOut = "remove_swap";
-    return true;
-  }
-  return false;
-}
-
-bool resolveCollectionsMapWrapperAliasName(std::string helperName, std::string &helperNameOut) {
-  helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "count" || helperName == "count_ref" ||
-      helperName == "Count" || helperName == "CountRef" ||
-      helperName == "mapCount" || helperName == "mapCountRef") {
-    helperNameOut = "count";
-    return true;
-  }
-  if (helperName == "contains" || helperName == "contains_ref" ||
-      helperName == "Contains" || helperName == "ContainsRef" ||
-      helperName == "mapContains" || helperName == "mapContainsRef") {
-    helperNameOut = "contains";
-    return true;
-  }
-  if (helperName == "tryAt" || helperName == "tryAt_ref" ||
-      helperName == "TryAt" || helperName == "TryAtRef" ||
-      helperName == "mapTryAt" || helperName == "mapTryAtRef") {
-    helperNameOut = "tryAt";
-    return true;
-  }
-  if (helperName == "at" || helperName == "at_ref" ||
-      helperName == "At" || helperName == "AtRef" ||
-      helperName == "mapAt" || helperName == "mapAtRef") {
-    helperNameOut = "at";
-    return true;
-  }
-  if (helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-      helperName == "AtUnsafe" || helperName == "AtUnsafeRef" ||
-      helperName == "mapAtUnsafe" || helperName == "mapAtUnsafeRef") {
-    helperNameOut = "at_unsafe";
-    return true;
-  }
-  if (helperName == "insert" || helperName == "insert_ref" ||
-      helperName == "Insert" || helperName == "InsertRef" ||
-      helperName == "mapInsert" || helperName == "mapInsertRef" ||
-      helperName == "MapInsert" || helperName == "MapInsertRef") {
-    helperNameOut = "insert";
-    return true;
-  }
-  return false;
-}
-
-bool resolveCollectionsBorrowedMapWrapperAliasName(std::string helperName, std::string &helperNameOut) {
-  helperName = stripGeneratedHelperSuffix(std::move(helperName));
-  if (helperName == "count_ref" || helperName == "CountRef" || helperName == "mapCountRef") {
-    helperNameOut = "count_ref";
-    return true;
-  }
-  if (helperName == "contains_ref" || helperName == "ContainsRef" || helperName == "mapContainsRef") {
-    helperNameOut = "contains_ref";
-    return true;
-  }
-  if (helperName == "tryAt_ref" || helperName == "TryAtRef" || helperName == "mapTryAtRef") {
-    helperNameOut = "tryAt_ref";
-    return true;
-  }
-  if (helperName == "at_ref" || helperName == "AtRef" || helperName == "mapAtRef") {
-    helperNameOut = "at_ref";
-    return true;
-  }
-  if (helperName == "at_unsafe_ref" || helperName == "AtUnsafeRef" || helperName == "mapAtUnsafeRef") {
-    helperNameOut = "at_unsafe_ref";
-    return true;
-  }
-  if (helperName == "insert_ref" || helperName == "InsertRef" ||
-      helperName == "mapInsertRef" || helperName == "MapInsertRef") {
-    helperNameOut = "insert_ref";
-    return true;
-  }
-  return false;
+  return normalizeCollectionHelperPath(normalized);
 }
 
 bool isBorrowedMapHelperSurface(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string normalizedName = expr.name;
-  if (!normalizedName.empty() && normalizedName.front() == '/') {
-    normalizedName.erase(normalizedName.begin());
-  }
-  normalizedName = stripGeneratedHelperSuffix(std::move(normalizedName));
-  const size_t lastSlash = normalizedName.find_last_of('/');
-  const std::string helperName =
-      lastSlash == std::string::npos ? normalizedName : normalizedName.substr(lastSlash + 1);
-  return helperName == "count_ref" || helperName == "contains_ref" ||
-         helperName == "tryAt_ref" || helperName == "at_ref" ||
-         helperName == "at_unsafe_ref" || helperName == "insert_ref" ||
-         helperName == "CountRef" || helperName == "ContainsRef" ||
-         helperName == "TryAtRef" || helperName == "AtRef" ||
-         helperName == "AtUnsafeRef" || helperName == "InsertRef" ||
-         helperName == "mapCountRef" || helperName == "mapContainsRef" ||
-         helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
-         helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef" ||
-         helperName == "MapInsertRef";
+  std::string helperName;
+  return resolvePublishedStdlibSurfaceExprMemberName(
+             expr,
+             StdlibSurfaceId::CollectionsMapHelpers,
+             helperName) &&
+         helperName.ends_with("_ref");
 }
 
 } // namespace
@@ -354,9 +241,12 @@ std::string preferredGfxErrorHelperTarget(
 }
 
 bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" || helperName == "at_unsafe" ||
-         helperName == "push" || helperName == "pop" || helperName == "reserve" || helperName == "clear" ||
-         helperName == "remove_at" || helperName == "remove_swap";
+  std::string canonicalMemberName;
+  return resolvePublishedStdlibSurfaceMemberToken(
+             helperName,
+             StdlibSurfaceId::CollectionsVectorHelpers,
+             canonicalMemberName) &&
+         canonicalMemberName == stripGeneratedHelperSuffix(helperName);
 }
 
 bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) {
@@ -369,6 +259,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   }
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";
+  const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";
   const std::string experimentalVectorPrefix = "std/collections/experimental_vector/";
   if (normalized.rfind(arrayPrefix, 0) == 0) {
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(arrayPrefix.size()));
@@ -381,8 +272,16 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
   }
+  if (normalized.rfind(stdSoaVectorPrefix, 0) == 0) {
+    helperNameOut = stripGeneratedHelperSuffix(
+        normalized.substr(stdSoaVectorPrefix.size()));
+    return helperNameOut == "count";
+  }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
-    return resolveExperimentalVectorHelperAliasName(normalized.substr(experimentalVectorPrefix.size()), helperNameOut);
+    return resolvePublishedStdlibSurfaceExprMemberName(
+        expr,
+        StdlibSurfaceId::CollectionsVectorHelpers,
+        helperNameOut);
   }
   return false;
 }
@@ -391,83 +290,18 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
-  if (!expr.namespacePrefix.empty() && normalized.find('/') == std::string::npos) {
-    std::string scopedPrefix = expr.namespacePrefix;
-    if (!scopedPrefix.empty() && scopedPrefix.front() == '/') {
-      scopedPrefix.erase(scopedPrefix.begin());
-    }
-    if (!scopedPrefix.empty()) {
-      normalized = scopedPrefix + "/" + normalized;
-    }
-  }
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(0, 1);
-  }
-  const std::string mapPrefix = "map/";
-  const std::string stdMapPrefix = "std/collections/map/";
-  const std::string collectionsMapWrapperPrefix = "std/collections/map";
-  const std::string collectionsMapPascalWrapperPrefix = "std/collections/Map";
-  const std::string experimentalMapPrefix = "std/collections/experimental_map/";
-  if (normalized.rfind(mapPrefix, 0) == 0) {
-    return resolveCollectionsMapWrapperAliasName(
-        normalized.substr(mapPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    return resolveCollectionsMapWrapperAliasName(
-        normalized.substr(stdMapPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(collectionsMapWrapperPrefix, 0) == 0 &&
-      normalized.rfind(stdMapPrefix, 0) != 0) {
-    return resolveCollectionsMapWrapperAliasName(
-        normalized.substr(collectionsMapWrapperPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(collectionsMapPascalWrapperPrefix, 0) == 0) {
-    return resolveCollectionsMapWrapperAliasName(
-        normalized.substr(collectionsMapPascalWrapperPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(experimentalMapPrefix, 0) == 0) {
-    return resolveCollectionsMapWrapperAliasName(
-        normalized.substr(experimentalMapPrefix.size()), helperNameOut);
-  }
-  return false;
+  return resolvePublishedStdlibSurfaceExprMemberName(
+      expr,
+      StdlibSurfaceId::CollectionsMapHelpers,
+      helperNameOut);
 }
 
 bool resolveBorrowedMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
-  if (expr.name.empty()) {
-    return false;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(0, 1);
-  }
-  const std::string mapPrefix = "map/";
-  const std::string stdMapPrefix = "std/collections/map/";
-  const std::string collectionsMapWrapperPrefix = "std/collections/map";
-  const std::string collectionsMapPascalWrapperPrefix = "std/collections/Map";
-  const std::string experimentalMapPrefix = "std/collections/experimental_map/";
-  if (normalized.rfind(mapPrefix, 0) == 0) {
-    return resolveCollectionsBorrowedMapWrapperAliasName(
-        normalized.substr(mapPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(stdMapPrefix, 0) == 0) {
-    return resolveCollectionsBorrowedMapWrapperAliasName(
-        normalized.substr(stdMapPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(collectionsMapWrapperPrefix, 0) == 0 &&
-      normalized.rfind(stdMapPrefix, 0) != 0) {
-    return resolveCollectionsBorrowedMapWrapperAliasName(
-        normalized.substr(collectionsMapWrapperPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(collectionsMapPascalWrapperPrefix, 0) == 0) {
-    return resolveCollectionsBorrowedMapWrapperAliasName(
-        normalized.substr(collectionsMapPascalWrapperPrefix.size()), helperNameOut);
-  }
-  if (normalized.rfind(experimentalMapPrefix, 0) == 0) {
-    return resolveCollectionsBorrowedMapWrapperAliasName(
-        normalized.substr(experimentalMapPrefix.size()), helperNameOut);
-  }
-  return false;
+  return resolvePublishedStdlibSurfaceExprMemberName(
+             expr,
+             StdlibSurfaceId::CollectionsMapHelpers,
+             helperNameOut) &&
+         helperNameOut.ends_with("_ref");
 }
 
 std::string normalizeCollectionHelperPath(const std::string &path) {
@@ -504,7 +338,10 @@ bool isExplicitRemovedVectorMethodAliasPath(const std::string &methodName) {
   }
   if (normalized.rfind(experimentalVectorPrefix, 0) == 0) {
     std::string helperName;
-    return resolveExperimentalVectorHelperAliasName(normalized.substr(experimentalVectorPrefix.size()), helperName);
+    return resolvePublishedStdlibSurfaceMemberToken(
+        normalized.substr(experimentalVectorPrefix.size()),
+        StdlibSurfaceId::CollectionsVectorHelpers,
+        helperName);
   }
   return false;
 }
@@ -521,13 +358,19 @@ bool isExplicitMapMethodAliasPath(const std::string &methodName) {
   const std::string stdMapPrefix = "std/collections/map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
-    return resolveCollectionsMapWrapperAliasName(normalized.substr(mapPrefix.size()), helperName) &&
+    return resolvePublishedStdlibSurfaceMemberToken(
+               normalized.substr(mapPrefix.size()),
+               StdlibSurfaceId::CollectionsMapHelpers,
+               helperName) &&
            (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe" || helperName == "insert");
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
     std::string helperName;
-    return resolveCollectionsMapWrapperAliasName(normalized.substr(stdMapPrefix.size()), helperName) &&
+    return resolvePublishedStdlibSurfaceMemberToken(
+               normalized.substr(stdMapPrefix.size()),
+               StdlibSurfaceId::CollectionsMapHelpers,
+               helperName) &&
            (helperName == "count" || helperName == "at" ||
             helperName == "at_unsafe" || helperName == "insert");
   }
@@ -546,12 +389,18 @@ bool isExplicitMapContainsOrTryAtMethodPath(const std::string &methodName) {
   const std::string stdMapPrefix = "std/collections/map/";
   if (normalized.rfind(mapPrefix, 0) == 0) {
     std::string helperName;
-    return resolveCollectionsMapWrapperAliasName(normalized.substr(mapPrefix.size()), helperName) &&
+    return resolvePublishedStdlibSurfaceMemberToken(
+               normalized.substr(mapPrefix.size()),
+               StdlibSurfaceId::CollectionsMapHelpers,
+               helperName) &&
            (helperName == "contains" || helperName == "tryAt");
   }
   if (normalized.rfind(stdMapPrefix, 0) == 0) {
     std::string helperName;
-    return resolveCollectionsMapWrapperAliasName(normalized.substr(stdMapPrefix.size()), helperName) &&
+    return resolvePublishedStdlibSurfaceMemberToken(
+               normalized.substr(stdMapPrefix.size()),
+               StdlibSurfaceId::CollectionsMapHelpers,
+               helperName) &&
            (helperName == "contains" || helperName == "tryAt");
   }
   return false;
@@ -643,6 +492,53 @@ bool isAllowedResolvedVectorDirectCallPath(const std::string &callPath, const st
   return std::any_of(allowedCandidates.begin(), allowedCandidates.end(), [&](const std::string &candidate) {
     return candidate == normalizedResolvedPath;
   });
+}
+
+bool resolvePublishedStdlibSurfaceMemberToken(std::string_view memberToken,
+                                              StdlibSurfaceId surfaceId,
+                                              std::string &memberNameOut) {
+  memberNameOut.clear();
+  const auto *metadata = findStdlibSurfaceMetadata(surfaceId);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string normalizedToken =
+      stripGeneratedHelperSuffix(std::string(memberToken));
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, normalizedToken);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+bool resolvePublishedStdlibSurfaceExprMemberName(const Expr &expr,
+                                                 StdlibSurfaceId surfaceId,
+                                                 std::string &memberNameOut) {
+  memberNameOut.clear();
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (expr.namespacePrefix.empty() && expr.name.find('/') == std::string::npos) {
+    return false;
+  }
+
+  const std::string normalizedPath = rebuildScopedCollectionHelperPath(expr);
+  if (resolvePublishedStdlibSurfaceMemberName(
+          normalizedPath, surfaceId, memberNameOut)) {
+    return true;
+  }
+
+  if (surfaceId == StdlibSurfaceId::CollectionsMapHelpers &&
+      normalizedPath.rfind("/std/collections/Map", 0) == 0) {
+    return resolvePublishedStdlibSurfaceMemberToken(
+        normalizedPath.substr(std::string("/std/collections/Map").size()),
+        surfaceId,
+        memberNameOut);
+  }
+
+  return false;
 }
 
 bool resolvePublishedStdlibSurfaceMemberName(std::string_view path,
