@@ -449,6 +449,46 @@ TEST_CASE("ir lowerer setup math helper resolves root namespace builtin paths wi
   CHECK(builtinName == "abs");
 }
 
+TEST_CASE("ir lowerer builtin root helper resolves rooted paths without imports") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/sqrt";
+
+  std::string builtinName;
+  CHECK(primec::ir_lowerer::getBuiltinRootName(callExpr, builtinName, false));
+  CHECK(builtinName == "sqrt");
+}
+
+TEST_CASE("ir lowerer builtin root helper resolves root namespace paths without imports") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "cbrt";
+  callExpr.namespacePrefix = "/";
+
+  std::string builtinName;
+  CHECK(primec::ir_lowerer::getBuiltinRootName(callExpr, builtinName, false));
+  CHECK(builtinName == "cbrt");
+}
+
+TEST_CASE("ir lowerer pointer helper resolves parser-shaped soa_vector builtins") {
+  primec::Expr dereferenceCall;
+  dereferenceCall.kind = primec::Expr::Kind::Call;
+  dereferenceCall.name = "dereference";
+  dereferenceCall.namespacePrefix = "soa_vector";
+
+  std::string builtinName;
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(dereferenceCall, builtinName));
+  CHECK(builtinName == "dereference");
+
+  primec::Expr locationCall;
+  locationCall.kind = primec::Expr::Kind::Call;
+  locationCall.name = "location";
+  locationCall.namespacePrefix = "soa_vector";
+
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(locationCall, builtinName));
+  CHECK(builtinName == "location");
+}
+
 TEST_CASE("ir lowerer setup math helper validates builtin support names") {
   CHECK(primec::ir_lowerer::isSupportedMathBuiltinName("sin"));
   CHECK(primec::ir_lowerer::isSupportedMathBuiltinName("is_finite"));

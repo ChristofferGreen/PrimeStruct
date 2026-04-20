@@ -2,7 +2,7 @@
 
 namespace primec::ir_lowerer {
 namespace {
-std::string resolveMathExprName(const Expr &expr) {
+std::string resolveScopedExprName(const Expr &expr) {
   if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
     return expr.name;
   }
@@ -10,6 +10,10 @@ std::string resolveMathExprName(const Expr &expr) {
     return "/" + expr.name;
   }
   return expr.namespacePrefix + "/" + expr.name;
+}
+
+std::string resolveMathExprName(const Expr &expr) {
+  return resolveScopedExprName(expr);
 }
 
 bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
@@ -236,7 +240,7 @@ bool getBuiltinRootName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "sqrt" || out == "cbrt";
@@ -336,18 +340,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return false;
   };
-  std::string name;
-  if (!expr.name.empty() && expr.name[0] == '/') {
-    name = expr.name;
-  } else if (!expr.namespacePrefix.empty()) {
-    name = expr.namespacePrefix;
-    if (!name.empty() && name.front() != '/') {
-      name.insert(name.begin(), '/');
-    }
-    name += "/" + expr.name;
-  } else {
-    name = expr.name;
-  }
+  std::string name = resolveScopedExprName(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
@@ -405,7 +398,7 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
+  std::string name = resolveScopedExprName(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
@@ -455,7 +448,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }();
-  std::string name = expr.name;
+  std::string name = resolveScopedExprName(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }

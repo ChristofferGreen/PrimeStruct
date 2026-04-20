@@ -253,6 +253,17 @@ TEST_CASE("ir lowerer helper keeps canonical vector constructor builtin") {
   CHECK(builtin == "vector");
 }
 
+TEST_CASE("ir lowerer helper keeps parser-shaped canonical vector constructor builtin") {
+  primec::Expr canonicalVectorCall;
+  canonicalVectorCall.kind = primec::Expr::Kind::Call;
+  canonicalVectorCall.name = "vector";
+  canonicalVectorCall.namespacePrefix = "/std/collections/vector";
+
+  std::string builtin;
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(canonicalVectorCall, builtin));
+  CHECK(builtin == "vector");
+}
+
 TEST_CASE("shared simple-call helpers reject removed array count alias") {
   primec::Expr bareCountCall;
   bareCountCall.kind = primec::Expr::Kind::Call;
