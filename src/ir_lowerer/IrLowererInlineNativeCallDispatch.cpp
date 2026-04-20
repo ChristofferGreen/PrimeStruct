@@ -74,25 +74,47 @@ bool resolvePublishedInlineMapHelperName(std::string_view resolvedPath, std::str
   return !helperNameOut.empty();
 }
 
+std::string resolveInlineCallPathWithoutFallbackProbes(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    return scoped + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
                                               const std::string &resolvedPath) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty() ||
-      expr.name.front() != '/') {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+  if (rawPath.empty() || rawPath.front() != '/') {
     return false;
   }
   std::string helperName;
   if (!resolveMapHelperAliasName(expr, helperName) &&
+      rawPath.rfind("/map/", 0) != 0 &&
+      rawPath.rfind("/std/collections/map/", 0) != 0 &&
       resolvedPath.rfind("/std/collections/map/", 0) != 0) {
     return false;
   }
-  return normalizeCollectionHelperPath(expr.name) ==
+  return normalizeCollectionHelperPath(rawPath) ==
          normalizeCollectionHelperPath(resolvedPath);
 }
 
 bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
                                                   const Definition &callee) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty() ||
-      expr.name.front() != '/') {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+  if (rawPath.empty() || rawPath.front() != '/') {
     return false;
   }
   std::string helperName;
@@ -101,7 +123,7 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
        helperName != "tryAt")) {
     return false;
   }
-  return normalizeCollectionHelperPath(expr.name) ==
+  return normalizeCollectionHelperPath(rawPath) ==
          normalizeCollectionHelperPath(callee.fullPath);
 }
 

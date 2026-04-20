@@ -504,6 +504,16 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
     callExpr.args = std::move(args);
     return callExpr;
   };
+  auto makeNamespacedDirectCall = [](const std::string &namespacePrefix,
+                                     const std::string &name,
+                                     std::vector<primec::Expr> args) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.namespacePrefix = namespacePrefix;
+    callExpr.name = name;
+    callExpr.args = std::move(args);
+    return callExpr;
+  };
 
   primec::Expr valuesName;
   valuesName.kind = primec::Expr::Kind::Name;
@@ -540,12 +550,14 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
               [&](const primec::Expr &candidate) -> const primec::Definition * {
                 ++resolveDefinitionCalls;
                 CHECK(candidate.name == callExpr.name);
+                CHECK(candidate.namespacePrefix == callExpr.namespacePrefix);
                 CHECK_FALSE(candidate.isMethodCall);
                 return &expectedCallee;
               },
               [&](const primec::Expr &emittedExpr, const primec::Definition &resolvedCallee) {
                 ++emitCalls;
                 CHECK(emittedExpr.name == callExpr.name);
+                CHECK(emittedExpr.namespacePrefix == callExpr.namespacePrefix);
                 CHECK_FALSE(emittedExpr.isMethodCall);
                 CHECK(resolvedCallee.fullPath == expectedCallee.fullPath);
                 return true;
@@ -560,6 +572,12 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
   expectDirectDefWins(makeDirectCall("/map/count", {valuesName}), rootedCount);
   expectDirectDefWins(makeDirectCall("/map/contains", {valuesName, keyLiteral}), rootedContains);
   expectDirectDefWins(makeDirectCall("/map/tryAt", {valuesName, keyLiteral}), rootedTryAt);
+  expectDirectDefWins(
+      makeNamespacedDirectCall("/std/collections/map", "contains", {valuesName, keyLiteral}),
+      rootedContains);
+  expectDirectDefWins(
+      makeNamespacedDirectCall("/std/collections/map", "tryAt", {valuesName, keyLiteral}),
+      rootedTryAt);
 }
 
 TEST_CASE("ir lowerer call helpers keep map count and local access same-path defs") {
