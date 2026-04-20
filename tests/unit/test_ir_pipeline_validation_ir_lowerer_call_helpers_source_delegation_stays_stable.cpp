@@ -2460,6 +2460,38 @@ TEST_CASE("ir lowerer call helpers resolve definition calls through slashless ma
   CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == &canonicalMapCountDef);
 }
 
+TEST_CASE("ir lowerer call helpers keep explicit canonical map contains and tryAt same-path defs") {
+  primec::Definition canonicalMapContainsDef;
+  canonicalMapContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition canonicalMapTryAtDef;
+  canonicalMapTryAtDef.fullPath = "/std/collections/map/tryAt";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalMapContainsDef.fullPath, &canonicalMapContainsDef},
+      {canonicalMapTryAtDef.fullPath, &canonicalMapTryAtDef},
+  };
+  const auto resolveExprPath = [](const primec::Expr &expr) { return expr.name; };
+
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.name = "/std/collections/map/contains";
+  primec::Expr valuesArg;
+  valuesArg.kind = primec::Expr::Kind::Name;
+  valuesArg.name = "values";
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Literal;
+  keyArg.intWidth = 32;
+  keyArg.literalValue = 1;
+  containsCall.args = {valuesArg, keyArg};
+
+  primec::Expr tryAtCall = containsCall;
+  tryAtCall.name = "/std/collections/map/tryAt";
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(containsCall, defMap, resolveExprPath) ==
+        &canonicalMapContainsDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(tryAtCall, defMap, resolveExprPath) ==
+        &canonicalMapTryAtDef);
+}
+
 TEST_CASE("ir lowerer call helpers suppress lowered collection helper paths from published surface ids") {
   primec::Definition loweredMapContainsDef;
   loweredMapContainsDef.fullPath = "/std/collections/mapContains";

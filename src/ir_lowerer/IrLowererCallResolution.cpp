@@ -218,10 +218,22 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     return nullptr;
   }
   const std::string resolved = resolveExprPath(callExpr);
+  if (const Definition *resolvedDef = resolveDefinitionByPath(defMap, resolved);
+      resolvedDef != nullptr) {
+    if (!isMapBuiltinResolvedPath(callExpr, resolved)) {
+      return resolvedDef;
+    }
+    if (isExplicitMapContainsOrTryAtMethodPath(callExpr.name) &&
+        normalizeCollectionHelperPath(callExpr.name) ==
+            normalizeCollectionHelperPath(resolved)) {
+      return resolvedDef;
+    }
+    return nullptr;
+  }
   if (isMapBuiltinResolvedPath(callExpr, resolved)) {
     return nullptr;
   }
-  return resolveDefinitionByPath(defMap, resolved);
+  return nullptr;
 }
 
 ResolveDefinitionCallFn makeResolveDefinitionCall(

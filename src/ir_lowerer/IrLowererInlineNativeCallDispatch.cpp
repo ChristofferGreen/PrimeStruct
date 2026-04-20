@@ -96,6 +96,11 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   const bool hasPublishedResolvedHelper =
       resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
   if (!expr.isMethodCall) {
+    if (isExplicitMapContainsOrTryAtMethodPath(expr.name) &&
+        normalizeCollectionHelperPath(expr.name) ==
+            normalizeCollectionHelperPath(callee.fullPath)) {
+      return false;
+    }
     std::string aliasName;
     std::string normalizedName = expr.name;
     if (!normalizedName.empty() && normalizedName.front() == '/') {
