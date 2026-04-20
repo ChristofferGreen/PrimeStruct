@@ -571,6 +571,15 @@ TEST_CASE("ir lowerer helper keeps parser-shaped gpu builtins") {
   CHECK(builtin == "global_id_z");
 }
 
+TEST_CASE("ir lowerer helper keeps parser-shaped rooted convert builtin") {
+  primec::Expr convertCall;
+  convertCall.kind = primec::Expr::Kind::Call;
+  convertCall.name = "convert";
+  convertCall.namespacePrefix = "/";
+
+  CHECK(primec::ir_lowerer::getBuiltinConvertName(convertCall));
+}
+
 TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *vectorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_vector/vectorPush");

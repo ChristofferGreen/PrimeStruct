@@ -250,7 +250,7 @@ bool getBuiltinConvertName(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
+  std::string name = resolveScopedExprName(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
