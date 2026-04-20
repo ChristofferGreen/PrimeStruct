@@ -403,6 +403,14 @@ TEST_CASE("ir lowerer uninitialized type helpers build expression struct path in
   valuesExpr.name = "values";
   accessExpr.args = {valuesExpr, indexExpr};
   CHECK(inferStructExprPath(accessExpr, locals) == "/pkg/Ctor");
+
+  primec::Expr namespacedAccessExpr;
+  namespacedAccessExpr.kind = primec::Expr::Kind::Call;
+  namespacedAccessExpr.name = "at";
+  namespacedAccessExpr.namespacePrefix = "/std/collections/map";
+  namespacedAccessExpr.isMethodCall = false;
+  namespacedAccessExpr.args = {valuesExpr, indexExpr};
+  CHECK(inferStructExprPath(namespacedAccessExpr, locals) == "/pkg/Ctor");
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers infer dereference expression struct paths") {

@@ -29,6 +29,16 @@ bool isBuiltinVectorTypeName(const std::string &typeName) {
          typeName == "/std/collections/vector";
 }
 
+std::string resolveScopedCallPath(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
+
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
     return "/vector";
@@ -378,9 +388,10 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         }
       }
       std::string accessName;
+      const std::string scopedCallPath = resolveScopedCallPath(exprIn);
       const bool isExplicitMapArgsPackAt =
           !exprIn.isMethodCall &&
-          (exprIn.name == "/map/at" || exprIn.name == "/std/collections/map/at") &&
+          (scopedCallPath == "/map/at" || scopedCallPath == "/std/collections/map/at") &&
           exprIn.args.size() == 2;
       if ((getBuiltinArrayAccessName(exprIn, accessName) && exprIn.args.size() == 2) ||
           isExplicitMapArgsPackAt) {
