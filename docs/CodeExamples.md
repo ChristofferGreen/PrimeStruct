@@ -1,7 +1,7 @@
 # PrimeStruct Code Examples
 
 Status: Draft
-Last updated: 2026-04-19
+Last updated: 2026-04-20
 
 This document captures practical code-quality guidance for user-facing
 PrimeStruct code examples. It focuses on readable top-level source form rather
@@ -155,6 +155,31 @@ Why this is good:
 - The mutable binding is marked directly without repeating the inferred type.
 - The fixed local (`limit`) stays concise because the initializer already shows enough.
 - The loop still reads clearly even with the shorter local-binding syntax.
+
+### Borrow Checker with Last-Use Flow
+
+When a borrow is only needed for one read, consume it early and let later
+mutation happen after that last use.
+
+```prime
+[int]
+borrow_checker_window() {
+  [int mut] value{4}
+
+  [Reference<int>] shared{location(value)}
+  before{shared}
+
+  [Reference<int> mut] exclusive{location(value)}
+  exclusive = before + 5
+
+  return(value)
+}
+```
+
+Why this is good:
+- The immutable borrow is used once and becomes inactive before the mutable borrow starts.
+- The example shows the current `Reference<T>` surface without dropping into pointer-heavy spelling.
+- Moving the mutable borrow above `before{shared}` would trigger a `borrow conflict` diagnostic.
 
 ### Simple Struct Helper
 
