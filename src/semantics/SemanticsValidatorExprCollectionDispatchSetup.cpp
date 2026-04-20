@@ -1,5 +1,5 @@
 #include "SemanticsValidator.h"
-#include "SemanticsVectorCompatibilityHelpers.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
 

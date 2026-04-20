@@ -1791,6 +1791,15 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "resolvePublishedCollectionHelperMemberToken(") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
+            "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "inline std::string classifyStdNamespacedVectorCountDiagnosticMessage(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "SemanticsVectorCompatibilityHelpers.h") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
             "return isResolvedMapConstructorPath(std::string(resolvedCandidate));") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(

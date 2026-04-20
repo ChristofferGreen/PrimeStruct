@@ -485,6 +485,27 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
         "insert_ref");
 }
 
+TEST_CASE("stdlib surface metadata classifies collection helper categories") {
+  CHECK(primec::isStdlibSurfaceMemberName(
+      primec::StdlibSurfaceId::CollectionsVectorHelpers, "capacity"));
+  CHECK(primec::isStdlibSurfaceMemberName(
+      primec::StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref"));
+  CHECK_FALSE(primec::isStdlibSurfaceMemberName(
+      primec::StdlibSurfaceId::CollectionsVectorHelpers, "insert"));
+
+  CHECK(primec::isStdlibVectorStatementHelperName("push"));
+  CHECK(primec::isStdlibVectorStatementHelperName("remove_swap"));
+  CHECK_FALSE(primec::isStdlibVectorStatementHelperName("count"));
+
+  CHECK(primec::isStdlibMapBaseHelperName("contains"));
+  CHECK(primec::isStdlibMapBaseHelperName("insert"));
+  CHECK_FALSE(primec::isStdlibMapBaseHelperName("contains_ref"));
+
+  CHECK(primec::isStdlibMapBorrowedHelperName("contains_ref"));
+  CHECK(primec::isStdlibMapBorrowedHelperName("at_ref"));
+  CHECK_FALSE(primec::isStdlibMapBorrowedHelperName("contains"));
+}
+
 TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *vectorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_vector/vectorPush");

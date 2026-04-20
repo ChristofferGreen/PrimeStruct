@@ -133,6 +133,16 @@ constexpr auto CollectionsVectorLoweringSpellings = std::to_array<std::string_vi
     "/std/collections/vector/at_unsafe",
 });
 
+constexpr auto CollectionsVectorStatementHelperMembers =
+    std::to_array<std::string_view>({
+        "push",
+        "pop",
+        "reserve",
+        "clear",
+        "remove_at",
+        "remove_swap",
+    });
+
 constexpr auto CollectionsVectorConstructorMembers = std::to_array<std::string_view>({
     "vector",
     "vectorNew",
@@ -246,6 +256,24 @@ constexpr auto CollectionsMapLoweringSpellings = std::to_array<std::string_view>
     "/std/collections/mapInsert",
     "/std/collections/experimental_map/mapInsert",
     "/std/collections/experimental_map/mapInsertRef",
+});
+
+constexpr auto CollectionsMapBaseHelperMembers = std::to_array<std::string_view>({
+    "count",
+    "contains",
+    "tryAt",
+    "at",
+    "at_unsafe",
+    "insert",
+});
+
+constexpr auto CollectionsMapBorrowedHelperMembers = std::to_array<std::string_view>({
+    "count_ref",
+    "contains_ref",
+    "tryAt_ref",
+    "at_ref",
+    "at_unsafe_ref",
+    "insert_ref",
 });
 
 constexpr auto CollectionsMapConstructorMembers = std::to_array<std::string_view>({
@@ -700,6 +728,23 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByBridgeKey(std::string_vi
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling) {
   return metadata.canonicalPath == spelling || matchesAny(metadata.importAliasSpellings, spelling) ||
          matchesAny(metadata.compatibilitySpellings, spelling) || matchesAny(metadata.loweringSpellings, spelling);
+}
+
+bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName) {
+  const auto *metadata = findStdlibSurfaceMetadata(id);
+  return metadata != nullptr && matchesAny(metadata->memberNames, memberName);
+}
+
+bool isStdlibVectorStatementHelperName(std::string_view memberName) {
+  return matchesAny(CollectionsVectorStatementHelperMembers, memberName);
+}
+
+bool isStdlibMapBaseHelperName(std::string_view memberName) {
+  return matchesAny(CollectionsMapBaseHelperMembers, memberName);
+}
+
+bool isStdlibMapBorrowedHelperName(std::string_view memberName) {
+  return matchesAny(CollectionsMapBorrowedHelperMembers, memberName);
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_view spelling) {

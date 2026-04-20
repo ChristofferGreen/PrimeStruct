@@ -113,8 +113,9 @@
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprResultFile.cpp";
   const std::filesystem::path semanticsExprVectorHelpersPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
-  const std::filesystem::path semanticsVectorCompatibilityHelpersPath =
-      repoRoot / "src" / "semantics" / "SemanticsVectorCompatibilityHelpers.h";
+  const std::filesystem::path semanticsCollectionCompatibilityInternalPath =
+      repoRoot / "src" / "semantics" /
+      "SemanticsValidatorInferCollectionCompatibilityInternal.h";
   const std::filesystem::path semanticsExprPrivateValidationPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPrivateExprValidation.h";
   REQUIRE(std::filesystem::exists(semanticsExprPath));
@@ -165,7 +166,7 @@
   REQUIRE(std::filesystem::exists(semanticsExprMapSoaBuiltinsPath));
   REQUIRE(std::filesystem::exists(semanticsExprResultFilePath));
   REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
-  REQUIRE(std::filesystem::exists(semanticsVectorCompatibilityHelpersPath));
+  REQUIRE(std::filesystem::exists(semanticsCollectionCompatibilityInternalPath));
   REQUIRE(std::filesystem::exists(semanticsExprPrivateValidationPath));
   const std::string semanticsExprSource = readText(semanticsExprPath);
   const std::string semanticsExprDispatchBootstrapSource =
@@ -243,8 +244,8 @@
   const std::string semanticsExprMapSoaBuiltinsSource = readText(semanticsExprMapSoaBuiltinsPath);
   const std::string semanticsExprResultFileSource = readText(semanticsExprResultFilePath);
   const std::string semanticsExprVectorHelpersSource = readText(semanticsExprVectorHelpersPath);
-  const std::string semanticsVectorCompatibilityHelpersSource =
-      readText(semanticsVectorCompatibilityHelpersPath);
+  const std::string semanticsCollectionCompatibilityInternalSource =
+      readText(semanticsCollectionCompatibilityInternalPath);
   const std::string semanticsExprPrivateValidationSource =
       readText(semanticsExprPrivateValidationPath);
   CHECK(semanticsExprSource.find("bool SemanticsValidator::validateExpr") != std::string::npos);
@@ -1161,75 +1162,86 @@
             "                  false, false, resolvesMapAfterValidation,\n"
             "                  resolvesNonVectorCountTarget);") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "rejectsVectorLikeTargetWithoutVisibleHelper(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "rejectsWrapperMapTargetWithoutDeclaredHelper(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "lacksDeclaredHelper(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "lacksVisibleHelper(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "enum class VectorCompatibilityCountMapTargetDiagnostic") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "vectorCompatibilityCountMapTargetDiagnosticMessage(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "classifyCountTargetDiagnosticMessage(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "makeStdNamespacedVectorCompatibilityHelperState(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "classifyVectorLikeCountTargetDiagnosticMessage(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "classifyCountMapTargetDiagnosticMessage(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "classifyNonVectorCountTargetDiagnosticMessage(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
-            "return path.rfind(\"/std/collections/vector/\" + std::string(helperName), 0) ==\n"
-            "         0;") !=
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
+            "findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelpers)") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
+            "metadata->canonicalPath) + \"/\" +\n"
+            "                        std::string(helperName),") !=
+        std::string::npos);
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
+            "return metadata != nullptr &&\n"
+            "         isVectorCompatibilityHelperName(helperName) &&") !=
+        std::string::npos);
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
+            "return path.rfind(\"/std/collections/vector/\" + std::string(helperName), 0) ==\n"
+            "         0;") ==
+        std::string::npos);
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "return !isMethodCall &&\n"
             "         isStdNamespacedVectorCompatibilityHelperPath(path, helperName);") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isImportedStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "return hasImportedHelper &&\n"
             "         isStdNamespacedVectorCompatibilityDirectCall(isMethodCall,\n"
             "                                                      path,\n"
             "                                                      helperName);") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isUnimportedStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "return !hasImportedHelper &&\n"
             "         isStdNamespacedVectorCompatibilityDirectCall(isMethodCall,\n"
             "                                                      path,\n"
             "                                                      helperName);") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "return !resolvedMethod &&\n"
             "         argCount == 1 &&\n"
             "         isImportedStdNamespacedVectorCompatibilityDirectCall(isMethodCall,\n"
@@ -1589,7 +1601,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "classifyNonVectorCountTargetDiagnosticMessage(") ==
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "StdNamespacedVectorCompatibilityHelperState") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -4624,19 +4636,19 @@
             "        return true;\n"
             "      }") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isUnavailableStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isInvisibleStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isUndeclaredStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline bool isUnresolvableStdNamespacedVectorCompatibilityDirectCall(") !=
         std::string::npos);
-  CHECK(semanticsVectorCompatibilityHelpersSource.find(
+  CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "inline std::string classifyStdNamespacedVectorCountDiagnosticMessage(") !=
         std::string::npos);
   CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(

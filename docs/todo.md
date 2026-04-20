@@ -56,35 +56,33 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4046
+- TODO-4047
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4047
 - TODO-4048
 - TODO-4049
 - TODO-4050
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4046 through TODO-4051
+- Vector/map bridge rollout and ownership cutover: TODO-4047 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4046
-2. TODO-4047
-3. TODO-4048
-4. TODO-4049
-5. TODO-4050
-6. TODO-4052
-7. TODO-4058
-8. TODO-4053
-9. TODO-4055
-10. TODO-4054
-11. TODO-4056
-12. TODO-4057
-13. TODO-4059
+1. TODO-4047
+2. TODO-4048
+3. TODO-4049
+4. TODO-4050
+5. TODO-4052
+6. TODO-4058
+7. TODO-4053
+8. TODO-4055
+9. TODO-4054
+10. TODO-4056
+11. TODO-4057
+12. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -93,7 +91,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -293,15 +291,3 @@ Task template:
     - Rewrite behavior remains covered by focused parity tests after the migration.
     - The refactor reduces duplicated collection path knowledge instead of merely moving the same lists into another rewrite-local helper.
   - stop_rule: Stop once vector/map rewrites are bridge-backed and parity-tested; split any rewrite family that still needs a separate migration seam into its own follow-up item.
-
-- [ ] TODO-4046: Route vector/map helper compatibility resolution through the shared bridge
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4045
-  - scope: Centralize vector/map helper-family matching, removed-helper diagnostics, and canonical-versus-compatibility spelling handling behind shared bridge queries so semantics stops carrying separate collection compatibility tables.
-  - acceptance:
-    - Vector/map helper compatibility resolution uses bridge metadata rather than duplicated collection descriptor arrays in production semantics code.
-    - Removed-helper and compatibility diagnostics for vector/map remain stable under focused parity coverage.
-    - Helper compatibility authority is centralized enough that later cleanup can delete the superseded vector/map tables.
-  - stop_rule: Stop once vector/map helper compatibility resolution is bridge-backed; if one helper family still needs a temporary compatibility seam, split it into an explicit follow-up leaf.

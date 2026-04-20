@@ -75,23 +75,152 @@ enum class RemovedCollectionHelperFamily {
   return true;
 }
 
+[[maybe_unused]] inline bool isVectorCompatibilityHelperName(
+    std::string_view helperName) {
+  return isStdlibSurfaceMemberName(StdlibSurfaceId::CollectionsVectorHelpers,
+                                   helperName);
+}
+
+[[maybe_unused]] inline bool isStdNamespacedVectorCompatibilityHelperPath(
+    std::string_view path,
+    std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelpers);
+  return metadata != nullptr &&
+         isVectorCompatibilityHelperName(helperName) &&
+         path.rfind(std::string(metadata->canonicalPath) + "/" +
+                        std::string(helperName),
+                    0) == 0;
+}
+
+[[maybe_unused]] inline bool isStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName) {
+  return !isMethodCall &&
+         isStdNamespacedVectorCompatibilityHelperPath(path, helperName);
+}
+
+[[maybe_unused]] inline bool isImportedStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasImportedHelper) {
+  return hasImportedHelper &&
+         isStdNamespacedVectorCompatibilityDirectCall(isMethodCall,
+                                                      path,
+                                                      helperName);
+}
+
+[[maybe_unused]] inline bool isUnimportedStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasImportedHelper) {
+  return !hasImportedHelper &&
+         isStdNamespacedVectorCompatibilityDirectCall(isMethodCall,
+                                                      path,
+                                                      helperName);
+}
+
+[[maybe_unused]] inline bool isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool helperAvailable) {
+  return !helperAvailable &&
+         isStdNamespacedVectorCompatibilityDirectCall(isMethodCall,
+                                                      path,
+                                                      helperName);
+}
+
+[[maybe_unused]] inline bool isInvisibleStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasVisibleHelper) {
+  return isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isMethodCall, path, helperName, hasVisibleHelper);
+}
+
+[[maybe_unused]] inline bool isUndeclaredStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasDeclaredHelper) {
+  return isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isMethodCall, path, helperName, hasDeclaredHelper);
+}
+
+[[maybe_unused]] inline bool isUnresolvableStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasResolvableHelper) {
+  return isUnavailableStdNamespacedVectorCompatibilityDirectCall(
+      isMethodCall, path, helperName, hasResolvableHelper);
+}
+
+[[maybe_unused]] inline bool isImportedResolvedStdNamespacedVectorCompatibilityDirectCall(
+    bool isMethodCall,
+    std::string_view path,
+    std::string_view helperName,
+    bool hasImportedHelper,
+    bool resolvedMethod,
+    size_t argCount,
+    std::string_view resolvedPath) {
+  return !resolvedMethod &&
+         argCount == 1 &&
+         isImportedStdNamespacedVectorCompatibilityDirectCall(isMethodCall,
+                                                              path,
+                                                              helperName,
+                                                              hasImportedHelper) &&
+         isStdNamespacedVectorCompatibilityHelperPath(resolvedPath, helperName);
+}
+
+[[maybe_unused]] inline std::string vectorCompatibilityRequiresVectorTargetDiagnostic(
+    std::string_view helperName) {
+  return std::string(helperName) + " requires vector target";
+}
+
+[[maybe_unused]] inline std::string vectorCompatibilityUnknownCallTargetDiagnostic(
+    std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsVectorHelpers);
+  const std::string_view canonicalPath =
+      metadata != nullptr ? metadata->canonicalPath
+                          : std::string_view("/std/collections/vector");
+  return "unknown call target: " + std::string(canonicalPath) + "/" +
+         std::string(helperName);
+}
+
+[[maybe_unused]] inline std::string classifyStdNamespacedVectorCountDiagnosticMessage(
+    bool callsInvisibleHelper,
+    bool isDirectWrapperMapTarget,
+    bool callsUndeclaredHelper,
+    bool resolvesMapTarget,
+    bool callsUnresolvableHelper) {
+  if (callsInvisibleHelper ||
+      (isDirectWrapperMapTarget && callsUndeclaredHelper)) {
+    return vectorCompatibilityUnknownCallTargetDiagnostic("count");
+  }
+  if (resolvesMapTarget && callsUnresolvableHelper) {
+    return vectorCompatibilityRequiresVectorTargetDiagnostic("count");
+  }
+  return "";
+}
+
 [[maybe_unused]] bool isPublishedMapBaseHelperName(std::string_view helperName) {
-  return helperName == "count" || helperName == "contains" ||
-         helperName == "tryAt" || helperName == "at" ||
-         helperName == "at_unsafe" || helperName == "insert";
+  return isStdlibMapBaseHelperName(helperName);
 }
 
 [[maybe_unused]] bool isPublishedBorrowedMapHelperName(std::string_view helperName) {
-  return helperName == "count_ref" || helperName == "contains_ref" ||
-         helperName == "tryAt_ref" || helperName == "at_ref" ||
-         helperName == "at_unsafe_ref" || helperName == "insert_ref";
+  return isStdlibMapBorrowedHelperName(helperName);
 }
 
 [[maybe_unused]] bool isRemovedPublishedVectorStatementHelperName(
     std::string_view helperName) {
-  return helperName == "push" || helperName == "pop" ||
-         helperName == "reserve" || helperName == "clear" ||
-         helperName == "remove_at" || helperName == "remove_swap";
+  return isStdlibVectorStatementHelperName(helperName);
 }
 
 [[maybe_unused]] std::string canonicalCollectionHelperPath(

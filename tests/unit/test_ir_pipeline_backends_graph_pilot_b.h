@@ -90,6 +90,14 @@
   CHECK(validatorCollections.find("state->resolveExperimentalMapValueTarget =") != std::string::npos);
   CHECK(validatorCollections.find("resolvePublishedCollectionHelperMemberToken(") !=
         std::string::npos);
+  CHECK(validatorCollections.find(
+            "inline bool isStdNamespacedVectorCompatibilityHelperPath(") !=
+        std::string::npos);
+  CHECK(validatorCollections.find(
+            "inline std::string classifyStdNamespacedVectorCountDiagnosticMessage(") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("SemanticsVectorCompatibilityHelpers.h") ==
+        std::string::npos);
   CHECK(validatorCollections.find("preferredPublishedCollectionLoweringPath(") !=
         std::string::npos);
   CHECK(validatorCollections.find("resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
