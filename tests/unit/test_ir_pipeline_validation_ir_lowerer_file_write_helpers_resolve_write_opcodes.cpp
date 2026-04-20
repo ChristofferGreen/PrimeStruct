@@ -95,6 +95,30 @@ TEST_CASE("ir lowerer file write helpers dispatch File constructor calls") {
   CHECK(instructions[0].imm == 41);
 
   instructions.clear();
+  primec::Expr scopedFileCallExpr = fileCallExpr;
+  scopedFileCallExpr.namespacePrefix = "/std/file";
+  CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(
+            scopedFileCallExpr,
+            locals,
+            [&](const primec::Expr &valueExpr,
+                const primec::ir_lowerer::LocalMap &localMap,
+                int32_t &stringIndexOut,
+                size_t &lengthOut) {
+              CHECK(valueExpr.kind == primec::Expr::Kind::StringLiteral);
+              CHECK(localMap.empty());
+              stringIndexOut = 52;
+              lengthOut = 7;
+              return true;
+            },
+            emitInstruction,
+            error) ==
+        Result::Emitted);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::FileOpenRead);
+  CHECK(instructions[0].imm == 52);
+
+  instructions.clear();
   primec::Expr nonMatchExpr = fileCallExpr;
   nonMatchExpr.name = "open_file";
   CHECK(primec::ir_lowerer::tryEmitFileConstructorCall(

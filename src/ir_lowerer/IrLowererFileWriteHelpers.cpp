@@ -3,6 +3,20 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+std::string resolveScopedExprPath(const Expr &expr) {
+  if (expr.name.empty()) {
+    return {};
+  }
+  if (!expr.namespacePrefix.empty()) {
+    return expr.namespacePrefix + "/" + expr.name;
+  }
+  return expr.name;
+}
+
+} // namespace
+
 bool resolveFileOpenModeOpcode(const std::string &mode, IrOpcode &opcodeOut) {
   if (mode == "Read") {
     opcodeOut = IrOpcode::FileOpenRead;
@@ -57,7 +71,8 @@ FileConstructorCallEmitResult tryEmitFileConstructorCall(
     const IsEntryArgsNameWithLocalsForWriteFn &isEntryArgsName,
     const EmitInstructionForWriteFn &emitInstruction,
     std::string &error) {
-  if (expr.isMethodCall || !isSimpleCallName(expr, "File")) {
+  const std::string directPath = resolveScopedExprPath(expr);
+  if (expr.isMethodCall || !(directPath == "File" || directPath == "/std/file/File")) {
     return FileConstructorCallEmitResult::NotMatched;
   }
   if (expr.templateArgs.size() != 1) {
