@@ -177,24 +177,6 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm map indexing with argv key" * doctest::skip(true)) {
-  const std::string source = R"(
-[return<int>]
-main([array<string>] args) {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32)}
-  [string] key{args[0i32]}
-  return(values[key])
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_indexing_argv_key.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_map_indexing_argv_key_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
-        std::string::npos);
-}
-
 TEST_CASE("rejects vm map literal string key from argv binding") {
   const std::string source = R"(
 [return<int>]

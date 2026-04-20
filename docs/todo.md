@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4114
+- TODO-4116
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -66,11 +66,11 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Skipped doctest debt: TODO-4114, TODO-4110, TODO-4106, TODO-4107
+- Skipped doctest debt: TODO-4116, TODO-4110, TODO-4106, TODO-4107
 
 ### Execution Queue (Recommended)
 
-1. TODO-4114
+1. TODO-4116
 2. TODO-4110
 3. TODO-4106
 4. TODO-4107
@@ -109,7 +109,7 @@ Task template:
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | TODO-4114, TODO-4110, TODO-4106, TODO-4107 |
+| Release benchmark/example suite stability and doctest governance | TODO-4116, TODO-4110, TODO-4106, TODO-4107 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -173,9 +173,8 @@ Task template:
 ### Skipped Doctest Debt Summary
 
 - Retained `doctest::skip(true)` coverage is now tracked in four active
-  clusters: `TODO-4114` for the remaining legacy VM map numeric-key and
-  argv-indexing blockers, `TODO-4110` for the remaining VM support-matrix math
-  skips,
+  clusters: `TODO-4116` for the remaining legacy VM map numeric-key runtime
+  blockers, `TODO-4110` for the remaining VM support-matrix math skips,
   `TODO-4106` for collection compatibility and alias-precedence coverage, and
   `TODO-4107` for residual IR/docs/gfx/smoke skips.
 - New skipped doctest coverage must either attach to one of those active leaves
@@ -185,26 +184,24 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4114: Re-enable or prune remaining VM numeric-key map and argv-indexing skips
+- [ ] TODO-4116: Re-enable or prune remaining VM numeric-key map runtime skips
   - owner: ai
   - created_at: 2026-04-20
   - phase: Skipped Doctest Debt
   - depends_on: none
-  - scope: Audit the remaining uniquely valuable skipped numeric-key and
-      argv-indexing cases in `tests/unit/test_compile_run_vm_maps.cpp`,
-      especially the legacy `values[3i32]`, bool/u64 key access, and argv-key
-      indexing blockers, then re-enable or delete them so the file no longer
-      carries a residual legacy VM map skip cluster.
+  - scope: Audit the remaining uniquely valuable skipped numeric-key runtime
+      cases in `tests/unit/test_compile_run_vm_maps.cpp`, especially the legacy
+      `values[3i32]`, bool-key, and u64-key VM access blockers, then re-enable
+      or delete them so the file no longer carries a residual legacy VM map
+      runtime skip cluster.
   - acceptance:
     - `tests/unit/test_compile_run_vm_maps.cpp` no longer carries the remaining
-      numeric-key and argv-indexing VM skips as one undifferentiated legacy
-      cluster.
+      numeric-key VM runtime skips as one undifferentiated legacy cluster.
     - Any residual skipped map cases in that file are narrowed to explicit
       uniquely valuable blockers with clear rationale.
     - The queue/docs state stays aligned with the reduced VM map skip surface.
-  - stop_rule: Stop once the remaining VM numeric-key and argv-indexing skips
-      are either active, deleted, or narrowed into explicit blocker-owned
-      follow-ups.
+  - stop_rule: Stop once the remaining VM numeric-key runtime skips are either
+      active, deleted, or narrowed into explicit blocker-owned follow-ups.
 
 - [ ] TODO-4110: Re-enable or prune remaining VM support-matrix math skips
   - owner: ai
