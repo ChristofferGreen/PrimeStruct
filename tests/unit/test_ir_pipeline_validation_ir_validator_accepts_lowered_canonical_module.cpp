@@ -495,6 +495,10 @@ TEST_CASE("simple-call helpers keep rooted and namespaced internal soa storage b
       makeNamespacedInternalSoaCall("while"), "while"));
   CHECK(primec::ir_lowerer::isSimpleCallName(
       makeNamespacedInternalSoaCall("do"), "do"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("location"), "location"));
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      makeNamespacedInternalSoaCall("dereference"), "dereference"));
 
   primec::Expr generatedAssignCall;
   generatedAssignCall.kind = primec::Expr::Kind::Call;
@@ -513,6 +517,19 @@ TEST_CASE("simple-call helpers keep rooted and namespaced internal soa storage b
   generatedTakeCall.name =
       "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/take";
   CHECK(primec::ir_lowerer::isSimpleCallName(generatedTakeCall, "take"));
+
+  primec::Expr generatedLocationCall;
+  generatedLocationCall.kind = primec::Expr::Kind::Call;
+  generatedLocationCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/location";
+  CHECK(primec::ir_lowerer::isSimpleCallName(generatedLocationCall, "location"));
+
+  primec::Expr generatedDereferenceCall;
+  generatedDereferenceCall.kind = primec::Expr::Kind::Call;
+  generatedDereferenceCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/dereference";
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      generatedDereferenceCall, "dereference"));
 }
 
 TEST_CASE("emitter builtin assign keeps internal soa storage helper paths") {
