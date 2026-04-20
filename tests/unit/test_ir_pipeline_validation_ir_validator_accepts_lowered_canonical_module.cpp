@@ -697,6 +697,22 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
       "/std/collections/experimental_soa_vector";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaRefCall, "ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaRefCall, "ref"));
+
+  primec::Expr namespacedSoaPlusCall;
+  namespacedSoaPlusCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaPlusCall.name = "plus";
+  namespacedSoaPlusCall.namespacePrefix =
+      "/std/collections/internal_buffer_checked";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaPlusCall, "plus"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaPlusCall, "plus"));
+
+  primec::Expr namespacedSoaLessThanCall;
+  namespacedSoaLessThanCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaLessThanCall.name = "less_than";
+  namespacedSoaLessThanCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaLessThanCall, "less_than"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaLessThanCall, "less_than"));
 }
 
 TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
