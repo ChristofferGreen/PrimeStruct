@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles and runs native named vector push expression receiver precedence" * doctest::skip(true)) {
+TEST_CASE("rejects native named vector push expression receiver precedence during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -30,17 +30,21 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_user_vector_push_expr_named_receiver_precedence.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_user_vector_push_expr_named_receiver_precedence_exe")
+       "primec_native_user_vector_push_expr_named_receiver_precedence.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/push") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native auto-inferred named vector push expression receiver precedence" * doctest::skip(true)) {
+TEST_CASE("rejects native auto-inferred named vector push expression receiver precedence during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -62,17 +66,21 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_user_vector_push_expr_named_receiver_precedence_auto.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_user_vector_push_expr_named_receiver_precedence_auto_exe")
+       "primec_native_user_vector_push_expr_named_receiver_precedence_auto.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(readFile(errPath).find("call=/push") != std::string::npos);
 }
 
-TEST_CASE("rejects native auto-inferred std namespaced vector push compatibility alias precedence" * doctest::skip(true)) {
+TEST_CASE("rejects native auto-inferred std namespaced vector push compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -106,7 +114,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
+  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native auto-inferred std namespaced vector push canonical definition") {
@@ -137,7 +145,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("rejects native auto-inferred std namespaced count helper compatibility alias precedence" * doctest::skip(true)) {
+TEST_CASE("rejects native auto-inferred std namespaced count helper compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -170,7 +178,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
+  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("compiles native auto-inferred std namespaced count helper canonical fallback") {
@@ -204,7 +212,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("rejects native std namespaced count expression compatibility alias precedence" * doctest::skip(true)) {
+TEST_CASE("rejects native std namespaced count expression compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values) {
@@ -236,7 +244,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
+  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("rejects native std namespaced count without imported helper") {
@@ -506,7 +514,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native std namespaced capacity expression compatibility alias precedence" * doctest::skip(true)) {
+TEST_CASE("rejects native std namespaced capacity expression compatibility alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -538,7 +546,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("return type mismatch: expected int") != std::string::npos);
+  CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native std namespaced capacity expression canonical fallback") {
