@@ -132,14 +132,39 @@ bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
   if (rawPath.empty() || rawPath.front() != '/') {
     return false;
   }
-  std::string helperName;
-  if (!resolveMapHelperAliasName(expr, helperName) ||
-      (helperName != "count" && helperName != "contains" &&
-       helperName != "tryAt")) {
+  const std::string normalizedCalleePath =
+      normalizeCollectionHelperPath(callee.fullPath);
+  if (normalizedCalleePath.rfind("/map/", 0) != 0 &&
+      normalizedCalleePath.rfind("/std/collections/map/", 0) != 0 &&
+      normalizedCalleePath.rfind("/std/collections/experimental_map/", 0) != 0) {
     return false;
   }
-  return normalizeCollectionHelperPath(rawPath) ==
-         normalizeCollectionHelperPath(callee.fullPath);
+  const size_t slash = callee.fullPath.find_last_of('/');
+  if (slash == std::string::npos || slash + 1 >= callee.fullPath.size()) {
+    return false;
+  }
+  const std::string helperName =
+      canonicalInlineMapHelperName(callee.fullPath.substr(slash + 1));
+  if (helperName != "count" && helperName != "contains" &&
+      helperName != "tryAt" && helperName != "count_ref" &&
+      helperName != "contains_ref" && helperName != "tryAt_ref") {
+    return false;
+  }
+  const auto normalizeCountLikeHelperPath = [](const std::string &path) {
+    std::string normalized = normalizeCollectionHelperPath(path);
+    const auto rewriteCanonicalPrefix = [&](std::string_view prefix) {
+      if (normalized.rfind(prefix, 0) != 0) {
+        return false;
+      }
+      normalized = "/map/" + normalized.substr(prefix.size());
+      return true;
+    };
+    rewriteCanonicalPrefix("/std/collections/map/");
+    rewriteCanonicalPrefix("/std/collections/experimental_map/");
+    return normalized;
+  };
+  return normalizeCountLikeHelperPath(rawPath) ==
+         normalizeCountLikeHelperPath(callee.fullPath);
 }
 
 bool isDirectMapAccessHelperCall(const Expr &expr) {
@@ -149,6 +174,36 @@ bool isDirectMapAccessHelperCall(const Expr &expr) {
   std::string helperName;
   return resolveMapHelperAliasName(expr, helperName) &&
          (helperName == "at" || helperName == "at_unsafe");
+}
+
+bool isExplicitDirectMapAccessHelperCall(const Expr &expr) {
+  if (!isDirectMapAccessHelperCall(expr)) {
+    return false;
+  }
+  const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+  return !rawPath.empty() && rawPath.front() == '/';
+}
+
+bool isSemanticBarePreferredMapHelperDefinitionCall(const Expr &expr,
+                                                    const Definition &callee) {
+  std::string helperName;
+  if (!resolvePublishedInlineMapHelperName(callee.fullPath, helperName)) {
+    return false;
+  }
+  return isSemanticBarePublishedMapHelperCall(
+      expr, canonicalInlineMapHelperName(helperName));
+}
+
+bool isBareDirectWrapperMapAccessDefinitionCall(const Expr &expr) {
+  const bool isBareAccessHelper =
+      expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
+      expr.namespacePrefix.empty() &&
+      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe"));
+  return expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
+         isBareAccessHelper &&
+         !isExplicitDirectMapAccessHelperCall(expr) &&
+         !expr.args.empty() &&
+         expr.args.front().kind == Expr::Kind::Call;
 }
 
 bool prefersBuiltinCountFallbackOverRemovedShadow(
@@ -468,7 +523,7 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     directCallee = resolveDefinitionCall(expr);
     if (directCallee != nullptr && isCollectionAccessReceiverExpr &&
         !expr.args.empty() && isCollectionAccessReceiverExpr(expr.args.front()) &&
-        isDirectMapAccessHelperCall(expr)) {
+        isExplicitDirectMapAccessHelperCall(expr)) {
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&
@@ -477,7 +532,9 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&
-        isExplicitSamePathMapCountLikeDefinitionCall(expr, *directCallee)) {
+        (isSemanticBarePreferredMapHelperDefinitionCall(expr, *directCallee) ||
+         isBareDirectWrapperMapAccessDefinitionCall(expr) ||
+         isExplicitSamePathMapCountLikeDefinitionCall(expr, *directCallee))) {
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, directCallee, emitInlineDefinitionCall, error);
       return emitResult == ResolvedInlineCallResult::Emitted

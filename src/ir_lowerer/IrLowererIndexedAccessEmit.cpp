@@ -300,6 +300,9 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
   const bool isPointerSoaVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Pointer &&
       targetInfo.isSoaVector;
+  const bool isBorrowedVectorArgsPackTarget =
+      targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
+      targetInfo.isVectorTarget;
   const bool isBorrowedSoaVectorArgsPackTarget =
       targetInfo.isArgsPackTarget && targetInfo.argsPackElementKind == LocalInfo::Kind::Reference &&
       targetInfo.isSoaVector;
@@ -307,7 +310,7 @@ bool validateArrayVectorAccessTargetInfo(const ArrayVectorAccessTargetInfo &targ
       (targetInfo.elemKind == LocalInfo::ValueKind::Unknown && !isStructArgsPackTarget &&
        !isWrappedStructArgsPackTarget && !isMapArgsPackTarget && !isWrappedMapArgsPackTarget &&
        !isVectorArgsPackTarget && !isPointerVectorArgsPackTarget && !isPointerSoaVectorArgsPackTarget &&
-       !isBorrowedSoaVectorArgsPackTarget)) {
+       !isBorrowedVectorArgsPackTarget && !isBorrowedSoaVectorArgsPackTarget)) {
     error =
         "native backend only supports at() on numeric/bool/string arrays or vectors, plus "
         "args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/"
