@@ -22,6 +22,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: Some source-lock IR and semantics tests read individual `src/semantics/*.h` and `*.cpp` fragments directly, including private headers, so moving logic between fragments requires updating those file-path assertions instead of assuming the assembled include surface is enough.
 - Evidence: `tests/unit/test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_01.h` explicitly loads `SemanticsValidatorPrivateExprValidation.h` and many sibling fragments with `readText(...)`.
 
+### text-filter-collect-diagnostics-locks-stdlib-fallback-messages
+- Updated: 2026-04-20
+- Tags: tests, diagnostics, text-filter
+- Fact: The wrapper-temporary collect-diagnostics coverage in `tests/unit/test_compile_run_text_filters_diagnostics_c.cpp` currently locks the stdlib fallback messages `unknown call target: /std/collections/map/at` and `unknown method: /vector/capacity` rather than the older user-helper arg-mismatch wording.
+- Evidence: Release reruns from `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_text_filters_diagnostics_c.cpp` plus direct `./primec --emit-diagnostics --collect-diagnostics` reproductions against the same sources emitted those messages.
+
 ## Maintenance Notes
 
 - Keep entries sorted by slug within the section.

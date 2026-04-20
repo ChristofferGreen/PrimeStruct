@@ -64,7 +64,7 @@ main() {
         "primec",
         "semantic_intra_definition_wrapper_temp_index_shadow",
         source,
-        "\"message\":\"argument type mismatch for /map/at parameter key");
+        "\"message\":\"unknown call target: /std/collections/map/at\"");
   }
 
   SUBCASE("primevm") {
@@ -72,7 +72,7 @@ main() {
         "primevm",
         "semantic_intra_definition_wrapper_temp_index_shadow",
         source,
-        "\"message\":\"argument type mismatch for /map/at parameter key");
+        "\"message\":\"unknown call target: /std/collections/map/at\"");
   }
 }
 
@@ -168,7 +168,7 @@ main() {
         "primec",
         "semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow",
         source,
-        "\"message\":\"argument count mismatch for /vector/capacity\"");
+        "\"message\":\"unknown method: /vector/capacity\"");
   }
 
   SUBCASE("primevm") {
@@ -176,7 +176,7 @@ main() {
         "primevm",
         "semantic_intra_definition_wrapper_temp_count_capacity_reverse_shadow",
         source,
-        "\"message\":\"argument count mismatch for /vector/capacity\"");
+        "\"message\":\"unknown method: /vector/capacity\"");
   }
 }
 
@@ -324,7 +324,7 @@ main() {
         "primec",
         "semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_shape_reverse_shadow",
         source,
-        "\"message\":\"argument count mismatch for /vector/capacity\"");
+        "\"message\":\"unknown method: /vector/capacity\"");
   }
 
   SUBCASE("primevm") {
@@ -332,7 +332,7 @@ main() {
         "primevm",
         "semantic_intra_definition_wrapper_temp_count_capacity_pair_missing_arg_shape_reverse_shadow",
         source,
-        "\"message\":\"argument count mismatch for /vector/capacity\"");
+        "\"message\":\"unknown method: /vector/capacity\"");
   }
 }
 
