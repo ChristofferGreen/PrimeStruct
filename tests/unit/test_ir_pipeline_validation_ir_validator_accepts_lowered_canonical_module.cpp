@@ -264,6 +264,22 @@ TEST_CASE("ir lowerer helper keeps parser-shaped canonical vector constructor bu
   CHECK(builtin == "vector");
 }
 
+TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map") {
+  primec::Expr entryCall;
+  entryCall.kind = primec::Expr::Kind::Call;
+  entryCall.name = "entry";
+  entryCall.namespacePrefix = "/std/collections/map";
+
+  primec::Expr canonicalMapCall;
+  canonicalMapCall.kind = primec::Expr::Kind::Call;
+  canonicalMapCall.name = "map";
+  canonicalMapCall.namespacePrefix = "/std/collections/map";
+  canonicalMapCall.args = {entryCall};
+
+  std::string builtin;
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinCollectionName(canonicalMapCall, builtin));
+}
+
 TEST_CASE("shared simple-call helpers reject removed array count alias") {
   primec::Expr bareCountCall;
   bareCountCall.kind = primec::Expr::Kind::Call;

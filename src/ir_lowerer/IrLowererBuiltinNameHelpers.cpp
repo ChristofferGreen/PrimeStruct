@@ -429,7 +429,7 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
       return false;
     }
-    std::string normalizedName = candidate.name;
+    std::string normalizedName = resolveScopedExprName(candidate);
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
     }
