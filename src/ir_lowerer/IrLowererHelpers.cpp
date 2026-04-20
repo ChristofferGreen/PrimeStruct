@@ -73,6 +73,18 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "location" || name == "dereference";
   };
+  auto matchScopedBuiltinTail = [&](const std::string &candidate) {
+    std::string alias = candidate;
+    const size_t slash = alias.find_last_of('/');
+    if (slash != std::string::npos) {
+      alias = alias.substr(slash + 1);
+    }
+    if (alias.find('/') == std::string::npos &&
+        isInternalSoaStorageBareBuiltin(alias)) {
+      return alias == targetName;
+    }
+    return false;
+  };
   std::string name = expr.name;
   if (!expr.namespacePrefix.empty() && name.find('/') == std::string::npos) {
     std::string scopedPrefix = expr.namespacePrefix;
@@ -117,6 +129,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   if (internalSoaAlias.find('/') == std::string::npos &&
       isInternalSoaStorageBareBuiltin(internalSoaAlias)) {
     return internalSoaAlias == targetName;
+  }
+  if (name.find('/') != std::string::npos && matchScopedBuiltinTail(name)) {
+    return true;
   }
   if (name.find('/') != std::string::npos) {
     return false;
