@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4032
+- TODO-4033
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4033
 - TODO-4034
 - TODO-4035
 - TODO-4042
@@ -68,43 +67,43 @@ Task template:
 - TODO-4044
 - TODO-4045
 - TODO-4046
+- TODO-4047
 
 ### Priority Lanes (Current)
 
-- Stdlib surface-style alignment: TODO-4032 through TODO-4035
+- Stdlib surface-style alignment: TODO-4033 through TODO-4035
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4032
-2. TODO-4033
-3. TODO-4034
-4. TODO-4035
-5. TODO-4042
-6. TODO-4043
-7. TODO-4044
-8. TODO-4045
-9. TODO-4046
-10. TODO-4047
-11. TODO-4048
-12. TODO-4049
-13. TODO-4050
-14. TODO-4052
-15. TODO-4058
-16. TODO-4053
-17. TODO-4055
-18. TODO-4054
-19. TODO-4056
-20. TODO-4057
-21. TODO-4059
+1. TODO-4033
+2. TODO-4034
+3. TODO-4035
+4. TODO-4042
+5. TODO-4043
+6. TODO-4044
+7. TODO-4045
+8. TODO-4046
+9. TODO-4047
+10. TODO-4048
+11. TODO-4049
+12. TODO-4050
+13. TODO-4052
+14. TODO-4058
+15. TODO-4053
+16. TODO-4055
+17. TODO-4054
+18. TODO-4056
+19. TODO-4057
+20. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| Stdlib surface-style alignment and public helper readability | TODO-4033, TODO-4034, TODO-4035 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
@@ -123,7 +122,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4033, TODO-4034, TODO-4035 |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
@@ -388,15 +387,3 @@ Task template:
     - Collection-heavy UI helpers prefer the intended surface syntax instead of canonical plumbing-style calls when readability improves.
     - Any UI cleanup that would require ownership, runtime, or behavior changes is split into a separate follow-up item.
   - stop_rule: Stop once the high-level `/std/ui` workflows read like standard library example code and any deeper architectural cleanup has been separated from the style pass.
-
-- [ ] TODO-4032: Refactor stdlib error-helper modules to read like user-facing library code rather than canonical plumbing
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Surface Style Alignment
-  - depends_on: TODO-4026
-  - scope: Rewrite public stdlib error-helper modules so they use the supported surface-form naming, control flow, and binding style expected of user-facing library code instead of canonical compiler-plumbing idioms.
-  - acceptance:
-    - Error-helper modules exposed through the stdlib read like ordinary library code rather than migration scaffolding or canonical lowering fixtures.
-    - Helper naming, local bindings, and control flow in those modules align with `docs/CodeExamples.md` where the syntax is already supported.
-    - The cleanup does not change public error domains or runtime behavior as part of the same slice.
-  - stop_rule: Stop once the public error-helper layer is style-aligned; split any behavior or API changes into separate TODOs.

@@ -184,20 +184,32 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib ContainerError constructor wrappers expose type-owned error values") {
+TEST_CASE("stdlib ContainerError camelCase constructor helpers expose type-owned error values") {
   const std::string source = R"(
 import /std/collections/*
 
 [return<void>]
 main() {
-  [ContainerError] missing{/ContainerError/missing_key()}
-  [ContainerError] oob{/ContainerError/index_out_of_bounds()}
-  [ContainerError] emptyErr{/ContainerError/empty()}
-  [ContainerError] capacity{/ContainerError/capacity_exceeded()}
+  [ContainerError] missing{ContainerError.missingKey()}
+  [ContainerError] oob{ContainerError.indexOutOfBounds()}
+  [ContainerError] emptyErr{ContainerError.empty()}
+  [ContainerError] capacity{ContainerError.capacityExceeded()}
+  [ContainerError] rootMissing{/ContainerError/missingKey()}
+  [ContainerError] rootOob{/ContainerError/indexOutOfBounds()}
+  [ContainerError] rootCapacity{/ContainerError/capacityExceeded()}
+  [ContainerError] compatMissing{/ContainerError/missing_key()}
+  [ContainerError] compatOob{/ContainerError/index_out_of_bounds()}
+  [ContainerError] compatCapacity{/ContainerError/capacity_exceeded()}
   [string] missingWhy{Result.why(containerErrorStatus(missing))}
   [string] oobWhy{Result.why(containerErrorStatus(oob))}
   [string] emptyWhy{Result.why(containerErrorStatus(emptyErr))}
   [string] capacityWhy{Result.why(containerErrorStatus(capacity))}
+  [string] rootMissingWhy{Result.why(containerErrorStatus(rootMissing))}
+  [string] rootOobWhy{Result.why(containerErrorStatus(rootOob))}
+  [string] rootCapacityWhy{Result.why(containerErrorStatus(rootCapacity))}
+  [string] compatMissingWhy{Result.why(containerErrorStatus(compatMissing))}
+  [string] compatOobWhy{Result.why(containerErrorStatus(compatOob))}
+  [string] compatCapacityWhy{Result.why(containerErrorStatus(compatCapacity))}
   return()
 }
 )";
@@ -212,7 +224,7 @@ import /std/collections/ContainerError
 
 [return<void>]
 main() {
-  [ContainerError] err{ContainerError.missing_key()}
+  [ContainerError] err{ContainerError.missingKey()}
   [Result<ContainerError>] status{err.status()}
   [Result<i32, ContainerError>] value{err.result<i32>()}
   [string] whyText{err.why()}
@@ -275,19 +287,20 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("stdlib ContainerError constructor wrappers reject unexpected arguments") {
+TEST_CASE("stdlib ContainerError camelCase constructor helpers reject unexpected arguments") {
   const std::string source = R"(
 import /std/collections/*
 
 [return<void>]
 main() {
-  [ContainerError] err{/ContainerError/missing_key(true)}
+  [ContainerError] err{ContainerError.missingKey(true)}
   return()
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /ContainerError/missing_key") != std::string::npos);
+  CHECK(error.find("argument count mismatch for /std/collections/ContainerError/missingKey") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib ContainerError why wrapper rejects non container errors") {

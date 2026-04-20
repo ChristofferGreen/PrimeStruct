@@ -9,13 +9,23 @@
 }
 
 [public return</std/collections/ContainerError>]
+/ContainerError/missingKey() {
+  return(/std/collections/ContainerError/missingKey())
+}
+
+[public return</std/collections/ContainerError>]
 /ContainerError/missing_key() {
-  return(/std/collections/ContainerError/missing_key())
+  return(/ContainerError/missingKey())
+}
+
+[public return</std/collections/ContainerError>]
+/ContainerError/indexOutOfBounds() {
+  return(/std/collections/ContainerError/indexOutOfBounds())
 }
 
 [public return</std/collections/ContainerError>]
 /ContainerError/index_out_of_bounds() {
-  return(/std/collections/ContainerError/index_out_of_bounds())
+  return(/ContainerError/indexOutOfBounds())
 }
 
 [public return</std/collections/ContainerError>]
@@ -24,8 +34,13 @@
 }
 
 [public return</std/collections/ContainerError>]
+/ContainerError/capacityExceeded() {
+  return(/std/collections/ContainerError/capacityExceeded())
+}
+
+[public return</std/collections/ContainerError>]
 /ContainerError/capacity_exceeded() {
-  return(/std/collections/ContainerError/capacity_exceeded())
+  return(/ContainerError/capacityExceeded())
 }
 
 [public return<Result<T, /std/collections/ContainerError>>]
@@ -64,13 +79,23 @@ namespace std {
     }
 
     [public return<ContainerError>]
-    missing_key() {
+    missingKey() {
       return(ContainerError(1i32))
     }
 
     [public return<ContainerError>]
-    index_out_of_bounds() {
+    missing_key() {
+      return(missingKey())
+    }
+
+    [public return<ContainerError>]
+    indexOutOfBounds() {
       return(ContainerError(2i32))
+    }
+
+    [public return<ContainerError>]
+    index_out_of_bounds() {
+      return(indexOutOfBounds())
     }
 
     [public return<ContainerError>]
@@ -79,8 +104,13 @@ namespace std {
     }
 
     [public return<ContainerError>]
-    capacity_exceeded() {
+    capacityExceeded() {
       return(ContainerError(4i32))
+    }
+
+    [public return<ContainerError>]
+    capacity_exceeded() {
+      return(capacityExceeded())
     }
 
     [public return<Result<T, ContainerError>>]
@@ -91,12 +121,12 @@ namespace std {
 
   [public return<ContainerError>]
   containerMissingKey() {
-    return(/std/collections/ContainerError/missing_key())
+    return(/std/collections/ContainerError/missingKey())
   }
 
   [public return<ContainerError>]
   containerIndexOutOfBounds() {
-    return(/std/collections/ContainerError/index_out_of_bounds())
+    return(/std/collections/ContainerError/indexOutOfBounds())
   }
 
   [public return<ContainerError>]
@@ -106,7 +136,7 @@ namespace std {
 
   [public return<ContainerError>]
   containerCapacityExceeded() {
-    return(/std/collections/ContainerError/capacity_exceeded())
+    return(/std/collections/ContainerError/capacityExceeded())
   }
 
   [public return<Result<ContainerError>>]

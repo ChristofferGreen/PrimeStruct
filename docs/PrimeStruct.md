@@ -1992,9 +1992,12 @@ for(
     `containerErrorStatus(err)` packs a status-only `Result<ContainerError>`, `containerErrorResult<T>(err)` packs a
     `Result<T, ContainerError>` error value for the current IR-backed backends, the public
     `/ContainerError/why([ContainerError] err)` wrapper keeps explicit type-owned error strings on the stdlib surface,
-    the public `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
-    `/ContainerError/capacity_exceeded()` wrappers keep the current constructor values on that same type-owned surface,
-    and `Result.why(Result<ContainerError>)` maps container error codes to the same stable literal-backed messages.
+    the canonical type-owned `ContainerError.missingKey()`, `ContainerError.indexOutOfBounds()`,
+    `ContainerError.empty()`, and `ContainerError.capacityExceeded()` helpers keep the current constructor values on
+    that same surface, the public camelCase root wrappers `/ContainerError/missingKey()`,
+    `/ContainerError/indexOutOfBounds()`, `/ContainerError/empty()`, and `/ContainerError/capacityExceeded()` expose
+    those same values for slash-call code, compatibility wrappers keep the older snake_case root spellings, and
+    `Result.why(Result<ContainerError>)` maps container error codes to the same stable literal-backed messages.
     Builtin empty-vector `pop` runtime aborts and checked vector indexing/removal aborts now use the same `"container
     empty"` / `"container index out of bounds"` wording across VM/native/C++ flows.
   - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_vector/*`
@@ -2136,10 +2139,13 @@ for(
     `containerErrorStatus(err)` / `containerErrorResult<T>(err)` remain compatibility helpers,
     `/ContainerError/status([ContainerError] err)` and `/ContainerError/result<T>([ContainerError] err)` are the
     public root wrappers for those packers, `/ContainerError/why([ContainerError] err)` is the explicit public
-    wrapper for container error strings, `/ContainerError/missing_key()`,
-    `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
-    `/ContainerError/capacity_exceeded()` expose the current constructor values on the same public type-owned
-    surface, and unknown codes fall back to `"container error"`. On current IR-backed backends, `Result.ok(value)`
+    wrapper for container error strings, `ContainerError.missingKey()`, `ContainerError.indexOutOfBounds()`,
+    `ContainerError.empty()`, and `ContainerError.capacityExceeded()` are the canonical constructor helpers,
+    `/ContainerError/missingKey()`, `/ContainerError/indexOutOfBounds()`, `/ContainerError/empty()`, and
+    `/ContainerError/capacityExceeded()` expose the same values on the public root surface, compatibility wrappers keep
+    `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, and
+    `/ContainerError/capacity_exceeded()` available for migration, and unknown codes fall back to
+    `"container error"`. On current IR-backed backends, `Result.ok(value)`
     plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` support `i32`, `bool`, `f32`, `string`,
     ordinary user structs whose payload storage stays on the existing stack-backed struct path, the single-slot
     int-backed stdlib error structs (`FileError`, `ImageError`, `ContainerError`, `GfxError`), packed
@@ -2208,12 +2214,14 @@ sum_two_files([string] a, [string] b) {
     substrate remains builtin and effect-gated underneath.
     Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` /
     `containerErrorResult<T>(err)` compatibility helpers, the type-owned `ContainerError.status(err)` /
-    `ContainerError.result<T>(err)` namespace surface, or the public `/ContainerError/status(err)` /
+    `ContainerError.result<T>(err)` namespace surface, the canonical constructor helpers
+    `ContainerError.missingKey()` / `ContainerError.indexOutOfBounds()` / `ContainerError.empty()` /
+    `ContainerError.capacityExceeded()`, or the public `/ContainerError/status(err)` /
     `/ContainerError/result<T>(err)` wrappers plus `/ContainerError/why([ContainerError] err)`,
-    `/ContainerError/missing_key()`, `/ContainerError/index_out_of_bounds()`, `/ContainerError/empty()`, and
-    `/ContainerError/capacity_exceeded()` wrappers, plus receiver-style `err.why()` / `err.status()` /
-    `err.result<T>()`, instead of hand-packing container error codes or reaching through namespace-private helper
-    paths.
+    `/ContainerError/missingKey()`, `/ContainerError/indexOutOfBounds()`, `/ContainerError/empty()`, and
+    `/ContainerError/capacityExceeded()` wrappers. Compatibility wrappers keep the older snake_case root spellings for
+    migration, and receiver-style `err.why()` / `err.status()` / `err.result<T>()` stay available instead of
+    hand-packing container error codes or reaching through namespace-private helper paths.
     Import `/std/image/*` to use `.prime`-authored `imageReadUnsupported()`, `imageWriteUnsupported()`,
     `imageInvalidOperation()`, `imageErrorStatus(err)`, and `imageErrorResult<T>(err)` compatibility helpers, the
     type-owned `ImageError.status(err)` / `ImageError.result<T>(err)` namespace surface, or the public

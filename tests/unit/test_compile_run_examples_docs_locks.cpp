@@ -307,7 +307,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`ImageError.why()` currently returns") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`/ContainerError/why([ContainerError] err)` wrapper keeps explicit type-owned error strings") !=
+  CHECK(primeStructDoc.find("`ContainerError.missingKey()`, `ContainerError.indexOutOfBounds()`,") !=
         std::string::npos);
   CHECK(primeStructDoc.find("The image stdlib layer also defines `/ImageError/why([ImageError] err)` as the public wrapper over the") !=
         std::string::npos);
@@ -565,6 +565,67 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(lowerer.find("read_byte requires exactly one argument") != std::string::npos);
   CHECK(lowerer.find("read_byte requires mutable integer binding") != std::string::npos);
   CHECK(lowerer.find("emitInstruction(IrOpcode::FileReadByte") != std::string::npos);
+}
+
+TEST_CASE("container error docs and helpers stay source locked") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path collectionErrorsPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "errors.prime";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(collectionErrorsPath)) {
+    collectionErrorsPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "errors.prime";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(collectionErrorsPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string collectionErrors = readFile(collectionErrorsPath.string());
+
+  CHECK(primeStructDoc.find("`ContainerError.missingKey()`, `ContainerError.indexOutOfBounds()`,") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`ContainerError.empty()`, and `ContainerError.capacityExceeded()`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("the public camelCase root wrappers `/ContainerError/missingKey()`,") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Compatibility wrappers keep the older snake_case root spellings") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("wrapper for container error strings, `/ContainerError/missing_key()`,") ==
+        std::string::npos);
+
+  CHECK(collectionErrors.find("/ContainerError/missingKey()") != std::string::npos);
+  CHECK(collectionErrors.find("/ContainerError/indexOutOfBounds()") != std::string::npos);
+  CHECK(collectionErrors.find("/ContainerError/capacityExceeded()") != std::string::npos);
+  CHECK(collectionErrors.find("/ContainerError/missing_key() {\n  return(/ContainerError/missingKey())\n}") !=
+        std::string::npos);
+  CHECK(collectionErrors.find(
+            "/ContainerError/index_out_of_bounds() {\n  return(/ContainerError/indexOutOfBounds())\n}") !=
+        std::string::npos);
+  CHECK(collectionErrors.find(
+            "/ContainerError/capacity_exceeded() {\n  return(/ContainerError/capacityExceeded())\n}") !=
+        std::string::npos);
+  CHECK(collectionErrors.find("missingKey() {\n      return(ContainerError(1i32))\n    }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find("missing_key() {\n      return(missingKey())\n    }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find("indexOutOfBounds() {\n      return(ContainerError(2i32))\n    }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find("index_out_of_bounds() {\n      return(indexOutOfBounds())\n    }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find("capacityExceeded() {\n      return(ContainerError(4i32))\n    }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find("capacity_exceeded() {\n      return(capacityExceeded())\n    }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find("containerMissingKey() {\n    return(/std/collections/ContainerError/missingKey())\n  }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find(
+            "containerIndexOutOfBounds() {\n    return(/std/collections/ContainerError/indexOutOfBounds())\n  }") !=
+        std::string::npos);
+  CHECK(collectionErrors.find(
+            "containerCapacityExceeded() {\n    return(/std/collections/ContainerError/capacityExceeded())\n  }") !=
+        std::string::npos);
 }
 
 TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") {
