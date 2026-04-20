@@ -318,6 +318,9 @@
                helperName != "at_unsafe")) {
             return false;
           }
+          if (resolveDefinitionCall(callExpr) != nullptr) {
+            return false;
+          }
           const auto mapTargetInfo =
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args.front(), localsIn);
           const auto receiverTargetInfo =

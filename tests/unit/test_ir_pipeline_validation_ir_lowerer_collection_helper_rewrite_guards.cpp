@@ -34,4 +34,32 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
   CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string source = readText(tailDispatchPath);
+
+  CHECK(source.find(
+            "auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {") !=
+        std::string::npos);
+  CHECK(source.find("if (resolveDefinitionCall(callExpr) != nullptr)") != std::string::npos);
+  CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);
+}
+
 TEST_SUITE_END();
