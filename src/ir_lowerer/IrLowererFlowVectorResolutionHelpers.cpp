@@ -473,9 +473,10 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   if (!resolveVectorMutatorName(stmt, vectorHelper)) {
     return VectorStatementHelperPrepareResult::NotMatched;
   }
+  const std::string qualifiedHelperName = normalizeQualifiedHelperName(stmt);
   const bool explicitVectorHelperPath =
       !stmt.isMethodCall &&
-      (stmt.name.rfind("/std/collections/vector/", 0) == 0);
+      (qualifiedHelperName.rfind("std/collections/vector/", 0) == 0);
   Expr normalizedStmt = stmt;
   const Expr *activeStmt = &stmt;
   bool useBuiltinCompatibilityStmt = false;
