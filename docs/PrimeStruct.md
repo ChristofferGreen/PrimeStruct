@@ -2542,7 +2542,7 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
 
 - `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that
   should not be read as a permanent compiler-owned collection contract.
-- `soa_vector<T>` remains a draft extension today, but its intended end-state is the same
+- `soa_vector<T>` remains an incubating public extension today, but its intended end-state is the same
   stdlib-owned public surface with only generic SoA substrate left in C++.
 
 ### Stdlib Surface-Style Boundary
@@ -2619,17 +2619,40 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Transitional public-facing namespace while canonical `/std/collections/vector/*` finishes promotion and the old implementation path is hidden behind canonical vector contracts. | `TODO-4053`, `TODO-4054` |
 | `/std/collections/experimental_map/*` | Temporary compatibility namespace | Transitional public-facing namespace while canonical `/std/collections/map/*` finishes promotion and the old implementation path is hidden behind canonical map contracts. | `TODO-4053`, `TODO-4054` |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Transitional gfx namespace while canonical `/std/gfx/*` remains the intended public contract and the experimental path is reduced to a shim. | `TODO-4055`, `TODO-4056` |
-| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity decision. | `TODO-4058` |
-| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only until the SoA maturity track decides whether it promotes or retreats. | `TODO-4058` |
+| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity track. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
+| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |
 | `/std/collections/experimental_buffer_unchecked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |
-| `/std/collections/experimental_soa_storage/*` | Internal substrate/helper namespace | SoA storage/layout substrate used by wrappers and lowering bridges, not a canonical surface contract. | `TODO-4057`, `TODO-4058` |
+| `/std/collections/experimental_soa_storage/*` | Internal substrate/helper namespace | SoA storage/layout substrate used by wrappers and lowering bridges, not a canonical surface contract. | `TODO-4057` |
 
 The policy implication is immediate: vector/map/gfx work should prefer canonical
 non-`experimental` namespaces in docs and compiler authority, SoA work must say
 explicitly that it is still on a separate maturity track, and substrate helpers
 should be treated as implementation namespaces waiting for explicit internal
 renames rather than as candidate public APIs.
+
+### SoA Maturity Track
+This section is the scope reference for the SoA-specific maturity decision lane
+in `docs/todo.md`. It is intentionally separate from vector/map promotion.
+
+- **Current status:** `soa_vector<T>` remains an incubating public extension,
+  not a fully promoted public contract on the same maturity level as
+  `vector<T>` and `map<K, V>`.
+- **Current user-facing experiment surface:** `/std/collections/soa_vector/*`
+  and `/std/collections/soa_vector_conversions/*` are the canonical spellings
+  to use when docs or examples need to demonstrate the current SoA feature set.
+- **Compatibility-only namespaces:** `/std/collections/experimental_soa_vector/*`
+  and `/std/collections/experimental_soa_vector_conversions/*` remain bridge
+  seams behind that canonical experiment surface. They may stay importable while
+  the SoA surface is incubating, but they are not the intended long-term
+  user-facing contract.
+- **Internal substrate namespace:** `/std/collections/experimental_soa_storage/*`
+  stays implementation-facing storage/layout plumbing rather than public API.
+- **Promotion gate:** SoA should only move from incubating to promoted public
+  contract after borrowed-view/lifetime rules, backend/runtime parity, and the
+  remaining direct experimental implementation imports are retired. Until then,
+  docs should call `soa_vector<T>` incubating explicitly instead of implying it
+  has already graduated with vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.

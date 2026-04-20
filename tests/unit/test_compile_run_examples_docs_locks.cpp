@@ -149,7 +149,44 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_storage/*` are implementation-facing") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
-  CHECK(todo.find("TODO-4058") != std::string::npos);
+  CHECK(todo.find("TODO-4053") != std::string::npos);
+}
+
+TEST_CASE("soa maturity track docs stay source locked") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todo = readFile(todoPath.string());
+
+  CHECK(primeStructDoc.find("### SoA Maturity Track") != std::string::npos);
+  CHECK(primeStructDoc.find("`soa_vector<T>` remains an incubating public extension") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("/std/collections/soa_vector/*` and `/std/collections/soa_vector_conversions/*`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
+  CHECK(primeStructDoc.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
+  CHECK(primeStructDoc.find("Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes.") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("borrowed-view/lifetime rules, backend/runtime parity") !=
+        std::string::npos);
+
+  CHECK(todo.find("### SoA Maturity Track Summary") != std::string::npos);
+  CHECK(todo.find("`soa_vector<T>` remains an incubating public extension") !=
+        std::string::npos);
+  CHECK(todo.find("/std/collections/soa_vector/*` and") != std::string::npos);
+  CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
+  CHECK(todo.find("TODO-4053") != std::string::npos);
 }
 
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {

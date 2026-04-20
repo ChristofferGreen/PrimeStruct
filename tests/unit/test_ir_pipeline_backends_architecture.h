@@ -86,6 +86,24 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
 }
 
+TEST_CASE("design doc records soa maturity track") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(designPath)) {
+    designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
+  }
+
+  REQUIRE(std::filesystem::exists(designPath));
+
+  const std::string design = readTextFile(designPath);
+  CHECK(design.find("### SoA Maturity Track") != std::string::npos);
+  CHECK(design.find("`soa_vector<T>` remains an incubating public extension") !=
+        std::string::npos);
+  CHECK(design.find("/std/collections/soa_vector/*") != std::string::npos);
+  CHECK(design.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
+  CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
+}
+
 TEST_CASE("stdlib surface registry stays source locked") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";
