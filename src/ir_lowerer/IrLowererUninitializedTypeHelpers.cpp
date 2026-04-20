@@ -12,6 +12,30 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+std::string resolveScopedCallPath(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
+
+bool isBareOrInternalSoaHelperCall(const Expr &expr, const char *helperName) {
+  if (isSimpleCallName(expr, helperName)) {
+    return true;
+  }
+  const std::string scopedCallPath = resolveScopedCallPath(expr);
+  const std::string helperPath = helperName == nullptr ? std::string() : std::string(helperName);
+  return scopedCallPath == "/" + helperPath ||
+         scopedCallPath == "/std/collections/internal_soa_storage/" + helperPath;
+}
+
+} // namespace
+
 bool resolveUninitializedTypeInfo(const std::string &typeText,
                                   const std::string &namespacePrefix,
                                   const ResolveStructTypeNameFn &resolveStructTypePath,
@@ -338,7 +362,8 @@ bool resolveUninitializedFieldReceiverInfo(const Expr &receiverExpr,
     return false;
   }
 
-  if ((isSimpleCallName(receiverExpr, "location") || isSimpleCallName(receiverExpr, "dereference")) &&
+  if ((isBareOrInternalSoaHelperCall(receiverExpr, "location") ||
+       isBareOrInternalSoaHelperCall(receiverExpr, "dereference")) &&
       receiverExpr.args.size() == 1) {
     return resolveUninitializedFieldReceiverInfo(receiverExpr.args.front(),
                                                  localsIn,
@@ -511,9 +536,10 @@ bool resolveUninitializedStorageAccessWithDefinitions(
   out = UninitializedStorageAccessInfo{};
   resolvedOut = false;
 
-  if (storage.kind == Expr::Kind::Call && isSimpleCallName(storage, "dereference") && storage.args.size() == 1) {
+  if (storage.kind == Expr::Kind::Call && isBareOrInternalSoaHelperCall(storage, "dereference") &&
+      storage.args.size() == 1) {
     const Expr &pointerExpr = storage.args.front();
-    if (pointerExpr.kind == Expr::Kind::Call && isSimpleCallName(pointerExpr, "location") &&
+    if (pointerExpr.kind == Expr::Kind::Call && isBareOrInternalSoaHelperCall(pointerExpr, "location") &&
         pointerExpr.args.size() == 1) {
       return resolveUninitializedStorageAccessWithDefinitions(pointerExpr.args.front(),
                                                               localsIn,

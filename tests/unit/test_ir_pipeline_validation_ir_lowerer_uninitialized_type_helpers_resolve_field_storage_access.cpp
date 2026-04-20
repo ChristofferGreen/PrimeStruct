@@ -290,6 +290,14 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve indirect storage access
   CHECK(resolved);
   CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local);
   CHECK(out.local == &slotIt->second);
+
+  locationExpr.namespacePrefix = "/std/collections/internal_soa_storage";
+  derefLocation.namespacePrefix = "/std/collections/internal_soa_storage";
+  REQUIRE(primec::ir_lowerer::resolveUninitializedStorageAccess(
+      derefLocation, locals, findField, resolveNamespacePrefix, resolveTypeInfo, resolveSlot, out, resolved, error));
+  CHECK(resolved);
+  CHECK(out.location == primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local);
+  CHECK(out.local == &slotIt->second);
 }
 
 TEST_CASE("ir lowerer uninitialized type helpers resolve indexed args-pack pointer storage access") {
