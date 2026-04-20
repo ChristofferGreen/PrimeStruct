@@ -32,7 +32,8 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
     return false;
   }
   std::string normalized = name;
-  if (!normalized.empty() && normalized[0] == '/') {
+  const bool hasLeadingSlash = !normalized.empty() && normalized[0] == '/';
+  if (hasLeadingSlash) {
     normalized.erase(0, 1);
   }
   if (normalized.rfind("std/math/", 0) == 0) {
@@ -41,6 +42,10 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
   }
   if (normalized.find('/') != std::string::npos) {
     return false;
+  }
+  if (hasLeadingSlash) {
+    out = normalized;
+    return true;
   }
   if (!allowBare) {
     return false;

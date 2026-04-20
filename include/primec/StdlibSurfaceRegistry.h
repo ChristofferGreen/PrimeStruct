@@ -47,6 +47,8 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByCanonicalPath(std::strin
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByBridgeKey(std::string_view bridgeKey);
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_view spelling);
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string_view path);
+std::string_view resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,
+                                                std::string_view path);
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling);
 
 } // namespace primec

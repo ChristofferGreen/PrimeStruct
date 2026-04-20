@@ -421,7 +421,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                                         structNames,
                                                         inferExprKind,
                                                         resolveExprPath,
-                                                        semanticProductTargets,
+                                                        semanticProgram,
                                                         getReturnInfo,
                                                         defMap,
                                                         nestedError);

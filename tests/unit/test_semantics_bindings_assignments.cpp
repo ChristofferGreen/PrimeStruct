@@ -98,6 +98,20 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("assign to inferred mutable binding from convert call succeeds") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  [mut] current{convert<u64>(1i32)}
+  assign(current, plus(current, 2u64))
+  return(convert<int>(current))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("assign to indexed vector element succeeds") {
   const std::string source = R"(
 import /std/collections/*

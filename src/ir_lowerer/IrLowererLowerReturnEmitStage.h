@@ -15,6 +15,7 @@
 #include "IrLowererLowerSetupStage.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererStatementBindingHelpers.h"
 #include "IrLowererStringCallHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -51,6 +52,7 @@ struct LowerReturnEmitStageInput {
 struct LowerReturnEmitStageState {
   LowerReturnEmitInlineContext *activeInlineContext = nullptr;
   std::unordered_set<std::string> inlineStack;
+  bool hasMathImport = false;
 
   LowerReturnCallsEmitFileErrorWhyFn emitFileErrorWhy;
   LowerExprEmitMovePassthroughCallFn emitMovePassthroughCall;
@@ -60,9 +62,12 @@ struct LowerReturnEmitStageState {
   std::function<bool(const Expr &)> hasExplicitBindingTypeTransform;
   std::function<bool(const Expr &)> emitFloatLiteral;
   LowerReturnEmitCompareToZeroFn emitCompareToZero;
+  GetSetupMathBuiltinNameFn getMathBuiltinName;
+  GetSetupMathConstantNameFn getMathConstantName;
   ResolveDefinitionCallFn resolveDefinitionCall;
   ResolveResultExprInfoWithLocalsFn resolveResultExprInfo;
   LowerReturnEmitStringValueForCallFn emitStringValueForCall;
+  EmitPrintArgForStatementFn emitPrintArg;
 
   LowerReturnEmitExprFn emitExpr;
   LowerReturnEmitStatementFn emitStatement;

@@ -80,6 +80,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(header.find("std::span<const std::string_view> loweringSpellings;") != std::string::npos);
   CHECK(header.find("findStdlibSurfaceMetadataBySpelling") != std::string::npos);
   CHECK(header.find("findStdlibSurfaceMetadataByResolvedPath") != std::string::npos);
+  CHECK(header.find("resolveStdlibSurfaceMemberName") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::FileHelpers") != std::string::npos);
   CHECK(source.find("\"file.file_helpers\"") != std::string::npos);
@@ -118,6 +119,10 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/std/collections/experimental_map/mapAtUnsafeRef\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapInsertRef\"") != std::string::npos);
   CHECK(source.find("stripResolvedPathSpecializationSuffix(") != std::string::npos);
+  CHECK(source.find("resolveCollectionsVectorMemberName(") != std::string::npos);
+  CHECK(source.find("resolveCollectionsMapHelperMemberName(") != std::string::npos);
+  CHECK(source.find("resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,") !=
+        std::string::npos);
   CHECK(source.find("matchesResolvedRootedMemberPath(") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::CollectionsMapConstructors") != std::string::npos);

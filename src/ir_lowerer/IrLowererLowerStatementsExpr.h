@@ -60,7 +60,7 @@
     }
   };
 
-  auto emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn, const PrintBuiltin &builtin) -> bool {
+  emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn, const PrintBuiltin &builtin) -> bool {
     uint64_t flags = encodePrintFlags(builtin.newline, builtin.target == PrintTarget::Err);
     if (arg.kind == Expr::Kind::Call) {
       std::string accessName;

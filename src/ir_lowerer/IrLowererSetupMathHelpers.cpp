@@ -3,12 +3,23 @@
 namespace primec::ir_lowerer {
 
 namespace {
+std::string resolveMathExprName(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
+
 bool parseMathName(const std::string &name, bool hasMathImport, std::string &out) {
   if (name.empty()) {
     return false;
   }
   std::string normalized = name;
-  if (!normalized.empty() && normalized[0] == '/') {
+  const bool hasLeadingSlash = !normalized.empty() && normalized[0] == '/';
+  if (hasLeadingSlash) {
     normalized.erase(0, 1);
   }
   if (normalized.rfind("std/math/", 0) == 0) {
@@ -17,6 +28,10 @@ bool parseMathName(const std::string &name, bool hasMathImport, std::string &out
   }
   if (normalized.find('/') != std::string::npos) {
     return false;
+  }
+  if (hasLeadingSlash) {
+    out = normalized;
+    return true;
   }
   if (!hasMathImport) {
     return false;
@@ -87,7 +102,7 @@ bool getSetupMathBuiltinName(const Expr &expr, bool hasMathImport, std::string &
   if (expr.kind != Expr::Kind::Call) {
     return false;
   }
-  if (!parseMathName(expr.name, hasMathImport, out)) {
+  if (!parseMathName(resolveMathExprName(expr), hasMathImport, out)) {
     return false;
   }
   return isSupportedMathBuiltinName(out);

@@ -3,13 +3,13 @@
 
 
 
-bool findEntryDefinition(const Program &program,
+bool findEntryDefinition(const ::primec::Program &program,
                          const std::string &entryPath,
-                         const Definition *&entryDefOut,
+                         const ::primec::Definition *&entryDefOut,
                          std::string &error);
 
-bool validateNoSoftwareNumericTypes(const Program &program, std::string &error);
-bool validateNoRuntimeReflectionQueries(const Program &program, std::string &error);
+bool validateNoSoftwareNumericTypes(const ::primec::Program &program, std::string &error);
+bool validateNoRuntimeReflectionQueries(const ::primec::Program &program, std::string &error);
 
 bool effectBitForName(const std::string &name, uint64_t &outBit);
 bool isSupportedEffect(const std::string &name);
@@ -30,28 +30,28 @@ bool validateActiveEffects(const std::vector<Transform> &transforms,
                            const std::vector<std::string> &entryDefaultEffects,
                            std::string &error);
 
-bool validateProgramEffects(const Program &program,
+bool validateProgramEffects(const ::primec::Program &program,
                             const std::string &entryPath,
                             const std::vector<std::string> &defaultEffects,
                             const std::vector<std::string> &entryDefaultEffects,
                             std::string &error);
 
-bool validateProgramEffects(const Program &program,
-                            const SemanticProgram *semanticProgram,
+bool validateProgramEffects(const ::primec::Program &program,
+                            const ::primec::SemanticProgram *semanticProgram,
                             const std::string &entryPath,
                             const std::vector<std::string> &defaultEffects,
                             const std::vector<std::string> &entryDefaultEffects,
                             std::string &error);
 
-bool resolveEntryMetadataMasks(const Definition &entryDef,
+bool resolveEntryMetadataMasks(const ::primec::Definition &entryDef,
                                const std::string &entryPath,
                                const std::vector<std::string> &defaultEffects,
                                const std::vector<std::string> &entryDefaultEffects,
                                uint64_t &entryEffectMaskOut,
                                uint64_t &entryCapabilityMaskOut,
                                std::string &error);
-bool resolveEntryMetadataMasks(const Definition &entryDef,
-                               const SemanticProgram *semanticProgram,
+bool resolveEntryMetadataMasks(const ::primec::Definition &entryDef,
+                               const ::primec::SemanticProgram *semanticProgram,
                                const std::string &entryPath,
                                const std::vector<std::string> &defaultEffects,
                                const std::vector<std::string> &entryDefaultEffects,

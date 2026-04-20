@@ -476,6 +476,119 @@ bool matchesResolvedRootedMemberPath(std::string_view path,
   return matchesAny(memberNames, memberName);
 }
 
+std::string_view pathLeaf(std::string_view path) {
+  const std::size_t slash = path.find_last_of('/');
+  return slash == std::string_view::npos ? path : path.substr(slash + 1);
+}
+
+std::string_view resolveCollectionsVectorMemberName(std::string_view memberName) {
+  if (matchesAny(CollectionsVectorHelperMembers, memberName)) {
+    return memberName;
+  }
+  if (memberName == "vectorPair") {
+    return "vector";
+  }
+  if (memberName == "vectorCount") {
+    return "count";
+  }
+  if (memberName == "vectorCapacity") {
+    return "capacity";
+  }
+  if (memberName == "vectorPush") {
+    return "push";
+  }
+  if (memberName == "vectorPop") {
+    return "pop";
+  }
+  if (memberName == "vectorReserve") {
+    return "reserve";
+  }
+  if (memberName == "vectorClear") {
+    return "clear";
+  }
+  if (memberName == "vectorRemoveAt") {
+    return "remove_at";
+  }
+  if (memberName == "vectorRemoveSwap") {
+    return "remove_swap";
+  }
+  if (memberName == "vectorAt") {
+    return "at";
+  }
+  if (memberName == "vectorAtUnsafe") {
+    return "at_unsafe";
+  }
+  return {};
+}
+
+std::string_view resolveCollectionsMapHelperMemberName(std::string_view memberName) {
+  if (matchesAny(CollectionsMapHelperMembers, memberName)) {
+    return memberName;
+  }
+  if (memberName == "Count" || memberName == "mapCount") {
+    return "count";
+  }
+  if (memberName == "CountRef" || memberName == "mapCountRef") {
+    return "count_ref";
+  }
+  if (memberName == "Contains" || memberName == "mapContains") {
+    return "contains";
+  }
+  if (memberName == "ContainsRef" || memberName == "mapContainsRef") {
+    return "contains_ref";
+  }
+  if (memberName == "TryAt" || memberName == "mapTryAt") {
+    return "tryAt";
+  }
+  if (memberName == "TryAtRef" || memberName == "mapTryAtRef") {
+    return "tryAt_ref";
+  }
+  if (memberName == "At" || memberName == "mapAt") {
+    return "at";
+  }
+  if (memberName == "AtRef" || memberName == "mapAtRef") {
+    return "at_ref";
+  }
+  if (memberName == "AtUnsafe" || memberName == "mapAtUnsafe") {
+    return "at_unsafe";
+  }
+  if (memberName == "AtUnsafeRef" || memberName == "mapAtUnsafeRef") {
+    return "at_unsafe_ref";
+  }
+  if (memberName == "Insert" || memberName == "mapInsert") {
+    return "insert";
+  }
+  if (memberName == "InsertRef" || memberName == "mapInsertRef" ||
+      memberName == "MapInsertRef") {
+    return "insert_ref";
+  }
+  return {};
+}
+
+std::string_view resolveCollectionsMapConstructorMemberName(std::string_view memberName) {
+  if (matchesAny(CollectionsMapConstructorMembers, memberName)) {
+    return memberName;
+  }
+  return {};
+}
+
+std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metadata,
+                                              std::string_view memberName) {
+  switch (metadata.id) {
+    case StdlibSurfaceId::CollectionsVectorHelpers:
+      return resolveCollectionsVectorMemberName(memberName);
+    case StdlibSurfaceId::CollectionsMapHelpers:
+      return resolveCollectionsMapHelperMemberName(memberName);
+    case StdlibSurfaceId::CollectionsMapConstructors:
+      return resolveCollectionsMapConstructorMemberName(memberName);
+    default:
+      if (matchesAny(metadata.memberNames, memberName)) {
+        return memberName;
+      }
+      return {};
+  }
+}
+
 } // namespace
 
 std::span<const StdlibSurfaceMetadata> stdlibSurfaceRegistry() {
@@ -545,6 +658,13 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string
                            });
       });
   return it == Registry.end() ? nullptr : &*it;
+}
+
+std::string_view resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,
+                                                std::string_view path) {
+  const std::string_view normalizedPath = stripResolvedPathSpecializationSuffix(path);
+  const std::string_view memberName = pathLeaf(normalizedPath);
+  return resolveSurfaceMemberNameImpl(metadata, memberName);
 }
 
 } // namespace primec

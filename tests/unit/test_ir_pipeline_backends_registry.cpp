@@ -344,6 +344,7 @@ TEST_CASE("ir lowerer keeps semantic-product direct-call targets authoritative o
       .semanticNodeId = 41,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/semantic/target"),
+      .stdlibSurfaceId = std::nullopt,
   });
 
   primec::IrLowerer lowerer;
@@ -447,6 +448,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path
       .sourceColumn = 1,
       .semanticNodeId = 4201,
       .resolvedPathId = primec::InvalidSymbolId,
+      .stdlibSurfaceId = std::nullopt,
   });
 
   primec::IrLowerer lowerer;
@@ -484,6 +486,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
       .sourceColumn = 1,
       .semanticNodeId = 52,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+      .stdlibSurfaceId = std::nullopt,
   });
 
   primec::IrLowerer lowerer;
@@ -521,6 +524,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") 
       .sourceColumn = 1,
       .semanticNodeId = 5201,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
@@ -530,6 +534,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") 
       .semanticNodeId = 5201,
       .helperNameId = primec::InvalidSymbolId,
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+      .stdlibSurfaceId = std::nullopt,
   });
 
   primec::IrLowerer lowerer;
@@ -568,6 +573,7 @@ TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target 
       .semanticNodeId = 5202,
       .helperNameId = primec::InvalidSymbolId,
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+      .stdlibSurfaceId = std::nullopt,
   });
 
   primec::IrLowerer lowerer;
@@ -605,6 +611,7 @@ TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper 
       .sourceColumn = 1,
       .semanticNodeId = 5203,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
@@ -615,6 +622,7 @@ TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper 
       .helperNameId =
           static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+      .stdlibSurfaceId = std::nullopt,
   });
 
   primec::IrLowerer lowerer;
@@ -885,6 +893,7 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
       .sourceColumn = 0,
       .semanticNodeId = 46,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+      .stdlibSurfaceId = std::nullopt,
   });
 
   error.clear();
@@ -1061,6 +1070,7 @@ TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in p
       .sourceColumn = 0,
       .semanticNodeId = 182,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
@@ -1526,6 +1536,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
       .sourceColumn = 1,
       .semanticNodeId = 83,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
@@ -1578,6 +1589,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product query resolved path id") 
       .sourceColumn = 1,
       .semanticNodeId = 8301,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/main",
@@ -1634,6 +1646,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
       .sourceColumn = 1,
       .semanticNodeId = 84,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/try"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       .scopePath = "/main",
@@ -1692,6 +1705,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product try operand resolved path
       .sourceColumn = 1,
       .semanticNodeId = 8401,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/try"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       .scopePath = "/main",

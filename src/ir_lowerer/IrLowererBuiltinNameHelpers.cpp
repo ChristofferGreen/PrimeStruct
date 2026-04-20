@@ -2,13 +2,23 @@
 
 namespace primec::ir_lowerer {
 namespace {
+std::string resolveMathExprName(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
 
 bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
   if (name.empty()) {
     return false;
   }
   std::string normalized = name;
-  if (!normalized.empty() && normalized[0] == '/') {
+  const bool hasLeadingSlash = !normalized.empty() && normalized[0] == '/';
+  if (hasLeadingSlash) {
     normalized.erase(0, 1);
   }
   if (normalized.rfind("std/math/", 0) == 0) {
@@ -17,6 +27,10 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
   }
   if (normalized.find('/') != std::string::npos) {
     return false;
+  }
+  if (hasLeadingSlash) {
+    out = normalized;
+    return true;
   }
   if (!allowBare) {
     return false;
@@ -32,7 +46,7 @@ bool getBuiltinClampName(const Expr &expr, bool allowBare) {
     return false;
   }
   std::string name;
-  if (!parseMathName(expr.name, name, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), name, allowBare)) {
     return false;
   }
   return name == "clamp";
@@ -42,7 +56,7 @@ bool getBuiltinMinMaxName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "min" || out == "max";
@@ -52,7 +66,7 @@ bool getBuiltinLerpName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "lerp";
@@ -62,7 +76,7 @@ bool getBuiltinFmaName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "fma";
@@ -72,7 +86,7 @@ bool getBuiltinHypotName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "hypot";
@@ -82,7 +96,7 @@ bool getBuiltinCopysignName(const Expr &expr, std::string &out, bool allowBare) 
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "copysign";
@@ -92,7 +106,7 @@ bool getBuiltinAngleName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "radians" || out == "degrees";
@@ -102,7 +116,7 @@ bool getBuiltinTrigName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "sin" || out == "cos" || out == "tan";
@@ -112,7 +126,7 @@ bool getBuiltinTrig2Name(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "atan2";
@@ -122,7 +136,7 @@ bool getBuiltinArcTrigName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "asin" || out == "acos" || out == "atan";
@@ -132,7 +146,7 @@ bool getBuiltinHyperbolicName(const Expr &expr, std::string &out, bool allowBare
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "sinh" || out == "cosh" || out == "tanh";
@@ -142,7 +156,7 @@ bool getBuiltinArcHyperbolicName(const Expr &expr, std::string &out, bool allowB
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "asinh" || out == "acosh" || out == "atanh";
@@ -152,7 +166,7 @@ bool getBuiltinExpName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "exp" || out == "exp2";
@@ -162,7 +176,7 @@ bool getBuiltinLogName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "log" || out == "log2" || out == "log10";
@@ -172,7 +186,7 @@ bool getBuiltinAbsSignName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "abs" || out == "sign";
@@ -182,7 +196,7 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare) 
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "saturate";
@@ -192,7 +206,7 @@ bool getBuiltinPowName(const Expr &expr, std::string &out, bool allowBare) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "pow";
@@ -202,7 +216,7 @@ bool getBuiltinMathPredicateName(const Expr &expr, std::string &out, bool allowB
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "is_nan" || out == "is_inf" || out == "is_finite";
@@ -212,7 +226,7 @@ bool getBuiltinRoundingName(const Expr &expr, std::string &out, bool allowBare) 
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  if (!parseMathName(expr.name, out, allowBare)) {
+  if (!parseMathName(resolveMathExprName(expr), out, allowBare)) {
     return false;
   }
   return out == "floor" || out == "ceil" || out == "round" || out == "trunc" || out == "fract";

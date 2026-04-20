@@ -126,9 +126,6 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
   locals.emplace("values", valuesLocal);
 
   primec::SemanticProgram semanticProgram;
-  const auto semanticTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
       methodCall,
@@ -142,7 +139,7 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](const primec::Expr &) { return std::string(); },
-      &semanticTargets,
+      &semanticProgram,
       defMap,
       error);
   CHECK(resolved == nullptr);
@@ -160,9 +157,8 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/soa_vector/push"),
+      .stdlibSurfaceId = std::nullopt,
   });
-  const auto populatedTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
   error.clear();
   resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -177,7 +173,7 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](const primec::Expr &) { return std::string(); },
-      &populatedTargets,
+      &semanticProgram,
       defMap,
       error);
   CHECK(resolved == &soaPushDef);
@@ -216,9 +212,8 @@ TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets 
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/std/collections/map/contains"),
+      .stdlibSurfaceId = std::nullopt,
   });
-  const auto semanticTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -233,7 +228,7 @@ TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets 
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](const primec::Expr &) { return std::string(); },
-      &semanticTargets,
+      &semanticProgram,
       defMap,
       error);
   CHECK(resolved == nullptr);
@@ -276,9 +271,8 @@ TEST_CASE("ir lowerer setup type helper does not reconstruct method targets from
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram,
                                                         "/semantic/method/contains"),
+      .stdlibSurfaceId = std::nullopt,
   });
-  const auto semanticTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
@@ -293,7 +287,7 @@ TEST_CASE("ir lowerer setup type helper does not reconstruct method targets from
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       },
       [](const primec::Expr &) { return std::string(); },
-      &semanticTargets,
+      &semanticProgram,
       defMap,
       error);
   CHECK(resolved == nullptr);

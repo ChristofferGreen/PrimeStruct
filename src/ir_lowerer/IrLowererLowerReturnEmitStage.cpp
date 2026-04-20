@@ -15,6 +15,7 @@
 #include "IrLowererLowerInlineCallGpuLocalsStep.h"
 #include "IrLowererLowerInlineCallReturnValueStep.h"
 #include "IrLowererLowerInlineCallStatementStep.h"
+#include "IrLowererLowerStatementsCallsStep.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererOperatorArithmeticHelpers.h"
 #include "IrLowererOperatorArcHyperbolicHelpers.h"
@@ -77,6 +78,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &emitArrayIndexOutOfBounds = runtimeErrorEmitters.emitArrayIndexOutOfBounds;
   auto &emitPointerIndexOutOfBounds = runtimeErrorEmitters.emitPointerIndexOutOfBounds;
   auto &emitStringIndexOutOfBounds = runtimeErrorEmitters.emitStringIndexOutOfBounds;
+  auto &emitMapKeyNotFound = runtimeErrorEmitters.emitMapKeyNotFound;
   auto &emitVectorIndexOutOfBounds = runtimeErrorEmitters.emitVectorIndexOutOfBounds;
   auto &emitVectorPopOnEmpty = runtimeErrorEmitters.emitVectorPopOnEmpty;
   auto &emitVectorCapacityExceeded = runtimeErrorEmitters.emitVectorCapacityExceeded;
@@ -104,7 +106,8 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   OnErrorByDefinition &onErrorByDef = *input.onErrorByDef;
 
   const auto &setupMathResolvers = setupLocalsOrchestration.setupMathResolvers;
-  auto &getMathConstantName = setupMathResolvers.getMathConstantName;
+  stateOut.getMathBuiltinName = setupMathResolvers.getMathBuiltinName;
+  stateOut.getMathConstantName = setupMathResolvers.getMathConstantName;
 
   const auto &bindingTypeAdapters = setupLocalsOrchestration.bindingTypeAdapters;
   auto &isBindingMutable = bindingTypeAdapters.isBindingMutable;
@@ -135,13 +138,17 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &resolveStructSlotLayout = structSlotResolutionAdapters.resolveStructSlotLayout;
   auto &resolveStructFieldSlot = structSlotResolutionAdapters.resolveStructFieldSlot;
 
+  using UninitializedStorageAccess = ir_lowerer::UninitializedStorageAccessInfo;
   const auto &uninitializedResolutionAdapters = setupLocalsOrchestration.uninitializedResolutionAdapters;
+  auto &resolveUninitializedTypeInfo = uninitializedResolutionAdapters.resolveUninitializedTypeInfo;
   auto &resolveUninitializedStorage = uninitializedResolutionAdapters.resolveUninitializedStorage;
   auto &inferStructExprPath = uninitializedResolutionAdapters.inferStructExprPath;
 
   auto &applyStructValueInfo = setupLocalsOrchestration.applyStructValueInfo;
-  const bool hasMathImport = setupStage.hasMathImport;
+  stateOut.hasMathImport = setupStage.hasMathImport;
+  const bool &hasMathImport = stateOut.hasMathImport;
   auto &combineNumericKinds = setupTypeAndStructTypeAdapters.combineNumericKinds;
+  auto &stringTable = setupStage.stringTable;
 
   auto &getReturnInfo = setupStage.inferenceSetupBootstrap.getReturnInfo;
   auto &inferExprKind = setupStage.inferenceSetupBootstrap.inferExprKind;
@@ -177,9 +184,12 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &emitReadbackPassthroughCall = stateOut.emitReadbackPassthroughCall;
   auto &emitFloatLiteral = stateOut.emitFloatLiteral;
   auto &emitCompareToZero = stateOut.emitCompareToZero;
+  auto &getMathBuiltinName = stateOut.getMathBuiltinName;
+  auto &getMathConstantName = stateOut.getMathConstantName;
   auto &resolveDefinitionCall = stateOut.resolveDefinitionCall;
   auto &resolveResultExprInfo = stateOut.resolveResultExprInfo;
   auto &emitStringValueForCall = stateOut.emitStringValueForCall;
+  auto &emitPrintArg = stateOut.emitPrintArg;
   auto &emitExpr = stateOut.emitExpr;
   auto &emitStatement = stateOut.emitStatement;
   auto &emitInlineDefinitionCall = stateOut.emitInlineDefinitionCall;
@@ -203,6 +213,44 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 #include "IrLowererLowerStatementsExpr.h"
 #include "IrLowererLowerStatementsBindings.h"
 #include "IrLowererLowerStatementsLoops.h"
+    return ir_lowerer::runLowerStatementsCallsStep(
+        {
+            .inferExprKind =
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+            .emitExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
+            .allocTempLocal = [&]() { return allocTempLocal(); },
+            .resolveExprPath = [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
+            .findDefinitionByPath = [&](const std::string &path) -> const Definition * {
+              auto it = defMap.find(path);
+              return it == defMap.end() ? nullptr : it->second;
+            },
+            .isArrayCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return isArrayCountCall(callExpr, callLocals);
+            },
+            .isStringCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return isStringCountCall(callExpr, callLocals);
+            },
+            .isVectorCapacityCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return isVectorCapacityCall(callExpr, callLocals);
+            },
+            .resolveMethodCallDefinition = [&](const Expr &callExpr, const LocalMap &callLocals) {
+              return resolveMethodCallDefinition(callExpr, callLocals);
+            },
+            .resolveDefinitionCall = [&](const Expr &callExpr) { return resolveDefinitionCall(callExpr); },
+            .getReturnInfo =
+                [&](const std::string &definitionPath, ReturnInfo &returnInfo) {
+                  return getReturnInfo(definitionPath, returnInfo);
+                },
+            .emitInlineDefinitionCall =
+                [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
+                  return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
+                },
+            .instructions = &function.instructions,
+        },
+        stmt,
+        localsIn,
+        error);
+  };
 
   return true;
 }

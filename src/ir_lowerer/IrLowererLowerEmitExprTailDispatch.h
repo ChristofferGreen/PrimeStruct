@@ -480,11 +480,22 @@
         if (rewriteImplicitBorrowedMapReceiverExpr(nativeTailExpr, rewrittenBorrowedMapReceiverExpr)) {
           nativeTailExpr = rewrittenBorrowedMapReceiverExpr;
         }
+        const auto resolveCanonicalMathBuiltinName = [&](const Expr &callExpr, std::string &mathBuiltinName) {
+          if (getMathBuiltinName(callExpr, mathBuiltinName)) {
+            return true;
+          }
+
+          Expr resolvedCallExpr = callExpr;
+          resolvedCallExpr.name = resolveExprPath(callExpr);
+          resolvedCallExpr.namespacePrefix.clear();
+          return getMathBuiltinName(resolvedCallExpr, mathBuiltinName);
+        };
+
         const auto nativeTailResult = ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
             nativeTailExpr,
             localsIn,
             [&](const Expr &callExpr, std::string &mathBuiltinName) {
-              return getMathBuiltinName(callExpr, mathBuiltinName);
+              return resolveCanonicalMathBuiltinName(callExpr, mathBuiltinName);
             },
             [&](const std::string &mathBuiltinName) {
               return ir_lowerer::isSupportedMathBuiltinName(mathBuiltinName);

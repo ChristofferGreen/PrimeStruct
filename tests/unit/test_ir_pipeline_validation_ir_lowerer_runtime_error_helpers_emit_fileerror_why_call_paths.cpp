@@ -428,6 +428,27 @@ TEST_CASE("ir lowerer setup math helper resolves namespaced builtins") {
   CHECK(builtinName == "sin");
 }
 
+TEST_CASE("ir lowerer setup math helper resolves root builtin paths without imports") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/round";
+
+  std::string builtinName;
+  CHECK(primec::ir_lowerer::getSetupMathBuiltinName(callExpr, false, builtinName));
+  CHECK(builtinName == "round");
+}
+
+TEST_CASE("ir lowerer setup math helper resolves root namespace builtin paths without imports") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "abs";
+  callExpr.namespacePrefix = "/";
+
+  std::string builtinName;
+  CHECK(primec::ir_lowerer::getSetupMathBuiltinName(callExpr, false, builtinName));
+  CHECK(builtinName == "abs");
+}
+
 TEST_CASE("ir lowerer setup math helper validates builtin support names") {
   CHECK(primec::ir_lowerer::isSupportedMathBuiltinName("sin"));
   CHECK(primec::ir_lowerer::isSupportedMathBuiltinName("is_finite"));

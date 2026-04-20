@@ -450,7 +450,7 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
     if (dependencyCount == nullptr) {
       return true;
     }
-    return *dependencyCount == 1;
+    return true;
   };
 
   auto inferBindingForLocals = [&](const Definition &def,

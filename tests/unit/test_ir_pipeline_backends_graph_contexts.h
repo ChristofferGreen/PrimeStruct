@@ -1971,6 +1971,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") != std::string::npos);
   CHECK(semanticsSnapshots.find("collectPilotRoutingSemanticProductFacts()") !=
         std::string::npos);
+  CHECK(semanticsSnapshots.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("resolveStdlibSurfaceMemberName(*metadata, resolvedPath)") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("return std::pair<std::string, std::string>(\"soa_vector\"") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("/std/collections/experimental_soa_vector/") !=
+        std::string::npos);
   CHECK(semanticsSnapshots.find("takeSemanticPublicationSurfaceForSemanticProduct(") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find("takeCollectedBridgePathChoicesForSemanticProduct()") !=

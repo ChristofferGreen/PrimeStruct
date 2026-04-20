@@ -1001,9 +1001,9 @@ namespace std {
   [return<i32>]
   pngPaethPredictor([i32] left, [i32] up, [i32] upLeft) {
     predictor{left + up - upLeft}
-    leftDistance{abs(predictor - left)}
-    upDistance{abs(predictor - up)}
-    upLeftDistance{abs(predictor - upLeft)}
+    leftDistance{/std/math/abs(predictor - left)}
+    upDistance{/std/math/abs(predictor - up)}
+    upLeftDistance{/std/math/abs(predictor - upLeft)}
     if(and(less_equal(leftDistance, upDistance), less_equal(leftDistance, upLeftDistance)),
        then() { return(left) },
        else() { })

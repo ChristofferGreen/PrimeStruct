@@ -9,15 +9,16 @@ struct LowerStatementsCallsStepInput {
   std::function<int32_t()> allocTempLocal;
 
   std::function<std::string(const Expr &)> resolveExprPath;
-  std::function<const Definition *(const std::string &)> findDefinitionByPath;
+  std::function<const ::primec::Definition *(const std::string &)> findDefinitionByPath;
 
   std::function<bool(const Expr &, const LocalMap &)> isArrayCountCall;
   std::function<bool(const Expr &, const LocalMap &)> isStringCountCall;
   std::function<bool(const Expr &, const LocalMap &)> isVectorCapacityCall;
-  std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
-  std::function<const Definition *(const Expr &)> resolveDefinitionCall;
+  std::function<const ::primec::Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
+  std::function<const ::primec::Definition *(const Expr &)> resolveDefinitionCall;
   std::function<bool(const std::string &, ReturnInfo &)> getReturnInfo;
-  std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> emitInlineDefinitionCall;
+  std::function<bool(const Expr &, const ::primec::Definition &, const LocalMap &, bool)>
+      emitInlineDefinitionCall;
 
   std::vector<IrInstruction> *instructions = nullptr;
 };

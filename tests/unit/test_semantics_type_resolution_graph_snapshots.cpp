@@ -793,6 +793,117 @@ main() {
   CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
 }
 
+TEST_CASE("semantic product normalizes experimental vector bridge helper aliases") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  return(vectorCount<i32>(values))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  CHECK_MESSAGE(
+      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                         &semanticProgram),
+      error);
+  if (!error.empty()) {
+    return;
+  }
+  CHECK(error.empty());
+
+  const auto *directEntry = findSemanticEntry(
+      primec::semanticProgramDirectCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "vectorCount" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry).find(
+                   "/std/collections/experimental_vector/vectorCount") == 0;
+      });
+  REQUIRE(directEntry != nullptr);
+  REQUIRE(directEntry->stdlibSurfaceId.has_value());
+  CHECK(*directEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+
+  const auto *bridgeEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.collectionFamily == "vector" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
+                       .find("/std/collections/experimental_vector/vectorCount") == 0;
+      });
+  REQUIRE(bridgeEntry != nullptr);
+  REQUIRE(bridgeEntry->stdlibSurfaceId.has_value());
+  CHECK(*bridgeEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+
+  const auto bridgeSurfaceId =
+      primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+          semanticProgram, bridgeEntry->semanticNodeId);
+  REQUIRE(bridgeSurfaceId.has_value());
+  CHECK(*bridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+}
+
+TEST_CASE("semantic product publishes soa_vector bridge choices for canonical and experimental helpers") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<void>]
+/std/collections/soa_vector/push<T>([soa_vector<T>] values, [T] value) {
+}
+
+[return<int>]
+/std/collections/soa_vector/count<T>([soa_vector<T>] values) {
+  return(1i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  /std/collections/soa_vector/push<Particle>(values, Particle(7i32))
+  return(/std/collections/soa_vector/count<Particle>(values))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *pushBridgeEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "push" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
+                       .find("/std/collections/soa_vector/push") == 0;
+      });
+  REQUIRE(pushBridgeEntry != nullptr);
+  CHECK_FALSE(pushBridgeEntry->stdlibSurfaceId.has_value());
+
+  const auto *countBridgeEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" && entry.collectionFamily == "soa_vector" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId)
+                       .find("/std/collections/soa_vector/count") == 0;
+      });
+  REQUIRE(countBridgeEntry != nullptr);
+  CHECK_FALSE(countBridgeEntry->stdlibSurfaceId.has_value());
+}
+
 TEST_CASE("semantic product method-call targets stay separated by receiver type") {
   const std::string source =
       "[struct]\n"
@@ -1895,6 +2006,44 @@ main() {
   CHECK(localAutoEntry->initializerDirectCallReturnKind == "i32");
 }
 
+TEST_CASE("semantic product keeps graph-backed local auto facts for nested borrowed array access helpers") {
+  const std::string source = R"(
+[return<int>]
+score_refs([args<Reference<array<i32>>>] values) {
+  [auto] head{at_unsafe(dereference(at(values, 0i32)), 1i32)}
+  return(head)
+}
+
+[return<int>]
+main() {
+  [array<i32>] values{array<i32>(1i32, 2i32)}
+  [Reference<array<i32>>] ref{location(values)}
+  return(score_refs(ref))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *localAutoEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/score_refs" && entry.bindingName == "head";
+      });
+  REQUIRE(localAutoEntry != nullptr);
+  CHECK(localAutoEntry->bindingTypeText == "i32");
+  CHECK_FALSE(
+      primec::semanticProgramLocalAutoFactInitializerResolvedPath(semanticProgram, *localAutoEntry)
+          .empty());
+  CHECK_FALSE(localAutoEntry->initializerDirectCallResolvedPath.empty());
+}
+
 TEST_CASE("semantic product source locations stay aligned with AST-owned lowering facts") {
   const std::string source =
       "Packet {\n"
@@ -2667,6 +2816,7 @@ TEST_CASE("semantic product formatter keeps bridge-path-choice text parity for f
         .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "length"),
         .chosenPathId =
             primec::semanticProgramInternCallTargetString(semanticProgram, "/std/math/vector/length"),
+        .stdlibSurfaceId = std::nullopt,
     });
     semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
         .scopePath = "/second",
@@ -2680,6 +2830,7 @@ TEST_CASE("semantic product formatter keeps bridge-path-choice text parity for f
         .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "scale"),
         .chosenPathId =
             primec::semanticProgramInternCallTargetString(semanticProgram, "/std/math/matrix/scale"),
+        .stdlibSurfaceId = std::nullopt,
     });
 
     if (useModuleIndices) {
@@ -4055,6 +4206,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .semanticNodeId = 13,
       .provenanceHandle = 103,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/id"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",

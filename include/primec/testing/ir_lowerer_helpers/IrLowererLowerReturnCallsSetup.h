@@ -5,7 +5,7 @@
 using LowerReturnCallsEmitFileErrorWhyFn = std::function<bool(int32_t)>;
 
 struct LowerReturnCallsSetupInput {
-  IrFunction *function = nullptr;
+  ::primec::IrFunction *function = nullptr;
   InternRuntimeErrorStringFn internString;
 };
 

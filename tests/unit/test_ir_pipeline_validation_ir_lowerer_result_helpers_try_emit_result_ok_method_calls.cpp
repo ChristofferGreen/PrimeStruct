@@ -604,6 +604,7 @@ TEST_CASE("ir lowerer result helpers reject resolved-path semantic query fallbac
       .sourceColumn = 7,
       .semanticNodeId = 163,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .stdlibSurfaceId = std::nullopt,
   });
   const primec::SymbolId callNameId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "lookup");
@@ -713,9 +714,10 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
       .semanticNodeId = 64,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
-  const auto semanticTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  state.semanticProductTargets = &semanticTargets;
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
@@ -730,9 +732,10 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
   CHECK(error.empty());
 
   primec::SemanticProgram missingSemanticProgram;
-  const auto missingTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
-  state.semanticProductTargets = &missingTargets;
+  const auto missingSemanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&missingSemanticProgram);
+  state.semanticProgram = &missingSemanticProgram;
+  state.semanticIndex = &missingSemanticIndex;
   error.clear();
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
       {
@@ -812,6 +815,7 @@ TEST_CASE("ir lowerer inference dispatch rejects operand-path semantic try fallb
       .sourceColumn = 9,
       .semanticNodeId = 164,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .stdlibSurfaceId = std::nullopt,
   });
   semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
       .scopePath = "/main",
@@ -829,9 +833,10 @@ TEST_CASE("ir lowerer inference dispatch rejects operand-path semantic try fallb
       .semanticNodeId = 0,
       .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
   });
-  const auto semanticTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
-  state.semanticProductTargets = &semanticTargets;
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
 
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(

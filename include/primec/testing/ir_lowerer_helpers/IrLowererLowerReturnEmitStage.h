@@ -1,4 +1,4 @@
-struct Definition;
+using ::primec::Definition;
 struct LowerSetupStageState;
 
 struct LowerReturnEmitInlineContext;

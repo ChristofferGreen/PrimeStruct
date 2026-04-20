@@ -319,14 +319,15 @@ TEST_CASE("ir lowerer inference get-return-info step uses semantic-product retur
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/legacy"),
   });
-  const auto semanticProductTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   const primec::ir_lowerer::LowerInferenceGetReturnInfoStepInput input = {
       .defMap = &defMap,
       .returnInfoCache = &returnInfoCache,
       .returnInferenceStack = &returnInferenceStack,
       .returnInfoSetupInput = &returnInfoSetupInput,
-      .semanticProductTargets = &semanticProductTargets,
+      .semanticProgram = &semanticProgram,
+      .semanticIndex = &semanticIndex,
   };
 
   primec::ir_lowerer::ReturnInfo outInfo;
@@ -388,7 +389,7 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/current"),
   });
-  const auto semanticProductTargets = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
 
   std::function<bool(const std::string &, primec::ir_lowerer::ReturnInfo &)> getReturnInfo;
   std::string inferenceError;
@@ -399,7 +400,8 @@ TEST_CASE("ir lowerer inference get-return-info setup precomputes semantic-produ
           .defMap = &defMap,
           .returnInfoCache = &returnInfoCache,
           .returnInferenceStack = &returnInferenceStack,
-          .semanticProductTargets = &semanticProductTargets,
+          .semanticProgram = &semanticProgram,
+          .semanticIndex = &semanticIndex,
           .resolveStructTypeName = [](const std::string &typeName, const std::string &, std::string &structPathOut) {
             if (typeName == "Pair") {
               structPathOut = "/pkg/Pair";

@@ -3,7 +3,7 @@
 
 
 struct ReturnInfo;
-struct SemanticProgram;
+using ::primec::SemanticProgram;
 struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
 struct StructSlotLayoutInfo;

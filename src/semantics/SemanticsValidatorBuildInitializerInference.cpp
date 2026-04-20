@@ -748,6 +748,13 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     const std::unordered_map<std::string, BindingInfo> &locals,
     BindingInfo &bindingOut,
     const Expr *bindingExpr) {
+  const bool preservedIsMutable = bindingOut.isMutable;
+  const bool preservedIsEntryArgString = bindingOut.isEntryArgString;
+  auto preserveBindingQualifiers = [&]() -> bool {
+    bindingOut.isMutable = bindingOut.isMutable || preservedIsMutable;
+    bindingOut.isEntryArgString = bindingOut.isEntryArgString || preservedIsEntryArgString;
+    return true;
+  };
   auto assignBindingTypeFromText = [&](const std::string &typeText) -> bool {
     const std::string normalizedType = normalizeBindingTypeName(typeText);
     if (normalizedType.empty()) {
@@ -782,7 +789,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   if (initializer.isLambda) {
     bindingOut.typeName = "lambda";
     bindingOut.typeTemplateArg.clear();
-    return true;
+    return preserveBindingQualifiers();
   }
   auto inferUninitializedTakeBorrowBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
@@ -807,7 +814,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   if (bindingExpr != nullptr && !shouldBypassGraphBindingLookup(*bindingExpr) &&
       lookupGraphLocalAutoBinding(*bindingExpr, bindingOut)) {
     if (graphBindingIsUsable(bindingOut)) {
-      return true;
+      return preserveBindingQualifiers();
     }
     bindingOut = {};
   }
@@ -818,11 +825,11 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     if (!hasDirectExperimentalVectorImport()) {
       bindingOut.typeName = "vector";
       bindingOut.typeTemplateArg = initializer.templateArgs.front();
-      return true;
+      return preserveBindingQualifiers();
     }
     bindingOut.typeName = "Vector";
     bindingOut.typeTemplateArg = initializer.templateArgs.front();
-    return true;
+    return preserveBindingQualifiers();
   }
   auto inferTryInitializerBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall || !isSimpleCallName(initializer, "try") ||
@@ -838,7 +845,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     return assignBindingTypeFromText(resultInfo.valueType);
   };
   if (inferUninitializedTakeBorrowBinding()) {
-    return true;
+    return preserveBindingQualifiers();
   }
   auto inferDirectResultOkBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || !initializer.isMethodCall || initializer.name != "ok" ||
@@ -886,14 +893,14 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   };
   if (initializer.kind == Expr::Kind::Call) {
     if (inferBuiltinPointerBinding(initializer, params, locals, bindingOut)) {
-      return true;
+      return preserveBindingQualifiers();
     }
     const BindingInfo previousBinding = bindingOut;
     bindingOut = {};
     if (inferCallInitializerBinding(initializer, params, locals, bindingOut, bindingExpr)) {
       (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
       if (!(bindingOut.typeName == "array" && bindingOut.typeTemplateArg.empty())) {
-        return true;
+        return preserveBindingQualifiers();
       }
     }
     bindingOut = previousBinding;
@@ -901,41 +908,41 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   if (tryInferBindingTypeFromInitializer(initializer, params, locals, bindingOut, hasAnyMathImport())) {
     (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
     if (!(bindingOut.typeName == "array" && bindingOut.typeTemplateArg.empty())) {
-      return true;
+      return preserveBindingQualifiers();
     }
     if (inferCallInitializerBinding(initializer, params, locals, bindingOut, bindingExpr)) {
       (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
-      return true;
+      return preserveBindingQualifiers();
     }
     if (inferBuiltinCollectionValueBinding(initializer, params, locals, bindingOut)) {
-      return true;
+      return preserveBindingQualifiers();
     }
     if (inferBuiltinPointerBinding(initializer, params, locals, bindingOut)) {
-      return true;
+      return preserveBindingQualifiers();
     }
-    return true;
+    return preserveBindingQualifiers();
   }
   if (inferTryInitializerBinding()) {
     (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
-    return true;
+    return preserveBindingQualifiers();
   }
   if (inferDirectResultOkBinding()) {
-    return true;
+    return preserveBindingQualifiers();
   }
   ResultTypeInfo resultInfo;
   if (resolveResultTypeForExpr(initializer, params, locals, resultInfo) &&
       assignBindingTypeFromResultInfo(resultInfo)) {
-    return true;
+    return preserveBindingQualifiers();
   }
   if (inferCallInitializerBinding(initializer, params, locals, bindingOut, bindingExpr)) {
     (void)canonicalizeInferredCollectionBinding(&initializer, params, locals, bindingOut);
-    return true;
+    return preserveBindingQualifiers();
   }
   if (inferBuiltinCollectionValueBinding(initializer, params, locals, bindingOut)) {
-    return true;
+    return preserveBindingQualifiers();
   }
   if (inferBuiltinPointerBinding(initializer, params, locals, bindingOut)) {
-    return true;
+    return preserveBindingQualifiers();
   }
   ReturnKind kind = inferExprReturnKind(initializer, params, locals);
   if (kind == ReturnKind::Unknown || kind == ReturnKind::Void) {
@@ -947,7 +954,7 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   }
   bindingOut.typeName = inferred;
   bindingOut.typeTemplateArg.clear();
-  return true;
+  return preserveBindingQualifiers();
 }
 
 }  // namespace primec::semantics

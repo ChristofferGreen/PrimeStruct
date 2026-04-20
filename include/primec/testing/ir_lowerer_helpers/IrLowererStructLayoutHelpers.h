@@ -24,8 +24,8 @@ bool resolveBindingTypeLayout(
     const LayoutFieldBinding &binding,
     const std::string &namespacePrefix,
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
-    const std::unordered_map<std::string, const Definition *> &defMap,
-    const std::function<bool(const Definition &, IrStructLayout &, std::string &)> &computeStructLayout,
+    const std::unordered_map<std::string, const ::primec::Definition *> &defMap,
+    const std::function<bool(const ::primec::Definition &, IrStructLayout &, std::string &)> &computeStructLayout,
     BindingTypeLayout &layoutOut,
     std::string &errorOut);
 bool computeStructLayoutWithCache(
@@ -36,14 +36,14 @@ bool computeStructLayoutWithCache(
     IrStructLayout &layoutOut,
     std::string &errorOut);
 bool computeStructLayoutUncached(
-    const Definition &def,
+    const ::primec::Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,
     const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
     const SemanticProgramTypeMetadata *typeMetadata,
     IrStructLayout &layoutOut,
     std::string &errorOut);
 inline bool computeStructLayoutUncached(
-    const Definition &def,
+    const ::primec::Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,
     const std::function<bool(const LayoutFieldBinding &, BindingTypeLayout &, std::string &)> &resolveFieldTypeLayout,
     IrStructLayout &layoutOut,
@@ -51,46 +51,46 @@ inline bool computeStructLayoutUncached(
   return computeStructLayoutUncached(def, fieldBindings, resolveFieldTypeLayout, nullptr, layoutOut, errorOut);
 }
 bool computeStructLayoutFromFieldInfo(
-    const Definition &def,
+    const ::primec::Definition &def,
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
-    const std::unordered_map<std::string, const Definition *> &defMap,
-    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
-    const SemanticProgram *semanticProgram,
+    const std::unordered_map<std::string, const ::primec::Definition *> &defMap,
+    const std::function<bool(const ::primec::Definition &, IrStructLayout &)> &computeStructLayout,
+    const ::primec::SemanticProgram *semanticProgram,
     IrStructLayout &layoutOut,
     std::string &errorOut);
 inline bool computeStructLayoutFromFieldInfo(
-    const Definition &def,
+    const ::primec::Definition &def,
     const std::unordered_map<std::string, std::vector<LayoutFieldBinding>> &structFieldInfoByName,
     const std::function<std::string(const std::string &, const std::string &)> &resolveStructTypePath,
-    const std::unordered_map<std::string, const Definition *> &defMap,
-    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    const std::unordered_map<std::string, const ::primec::Definition *> &defMap,
+    const std::function<bool(const ::primec::Definition &, IrStructLayout &)> &computeStructLayout,
     IrStructLayout &layoutOut,
     std::string &errorOut) {
   return computeStructLayoutFromFieldInfo(
       def, structFieldInfoByName, resolveStructTypePath, defMap, computeStructLayout, nullptr, layoutOut, errorOut);
 }
 bool appendProgramStructLayouts(
-    const Program &program,
-    const std::unordered_map<std::string, const Definition *> &defMap,
-    const SemanticProgram *semanticProgram,
-    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    const ::primec::Program &program,
+    const std::unordered_map<std::string, const ::primec::Definition *> &defMap,
+    const ::primec::SemanticProgram *semanticProgram,
+    const std::function<bool(const ::primec::Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut);
 inline bool appendProgramStructLayouts(
-    const Program &program,
-    const std::unordered_map<std::string, const Definition *> &defMap,
-    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    const ::primec::Program &program,
+    const std::unordered_map<std::string, const ::primec::Definition *> &defMap,
+    const std::function<bool(const ::primec::Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut) {
   return appendProgramStructLayouts(program, defMap, nullptr, computeStructLayout, layoutsOut, errorOut);
 }
 inline bool appendProgramStructLayouts(
-    const Program &program,
-    const std::function<bool(const Definition &, IrStructLayout &)> &computeStructLayout,
+    const ::primec::Program &program,
+    const std::function<bool(const ::primec::Definition &, IrStructLayout &)> &computeStructLayout,
     std::vector<IrStructLayout> &layoutsOut,
     std::string &errorOut) {
-  std::unordered_map<std::string, const Definition *> defMap;
+  std::unordered_map<std::string, const ::primec::Definition *> defMap;
   defMap.reserve(program.definitions.size());
   for (const auto &def : program.definitions) {
     defMap.emplace(def.fullPath, &def);

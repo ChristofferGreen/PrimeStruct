@@ -437,9 +437,16 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(returnEmitStageHeaderSource.find("struct LowerReturnEmitInlineContext {") != std::string::npos);
   CHECK(returnEmitStageHeaderSource.find("struct LowerReturnEmitStageInput {") != std::string::npos);
   CHECK(returnEmitStageHeaderSource.find("struct LowerReturnEmitStageState {") != std::string::npos);
+  CHECK(returnEmitStageHeaderSource.find("bool hasMathImport = false;") != std::string::npos);
   CHECK(returnEmitStageHeaderSource.find("LowerReturnCallsEmitFileErrorWhyFn emitFileErrorWhy;") !=
         std::string::npos);
   CHECK(returnEmitStageHeaderSource.find("ResolveResultExprInfoWithLocalsFn resolveResultExprInfo;") !=
+        std::string::npos);
+  CHECK(returnEmitStageHeaderSource.find("GetSetupMathBuiltinNameFn getMathBuiltinName;") !=
+        std::string::npos);
+  CHECK(returnEmitStageHeaderSource.find("GetSetupMathConstantNameFn getMathConstantName;") !=
+        std::string::npos);
+  CHECK(returnEmitStageHeaderSource.find("EmitPrintArgForStatementFn emitPrintArg;") !=
         std::string::npos);
   CHECK(returnEmitStageHeaderSource.find("bool runLowerReturnEmitStage(") != std::string::npos);
 
@@ -488,6 +495,15 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
         std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitMovePassthroughStep(") != std::string::npos);
   CHECK(emitExprHeaderSource.find("runLowerExprEmitUploadReadbackPassthroughStep(") != std::string::npos);
+
+  const std::filesystem::path statementsExprHeaderPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+  REQUIRE(std::filesystem::exists(statementsExprHeaderPath));
+  const std::string statementsExprHeaderSource = readText(statementsExprHeaderPath);
+  CHECK(statementsExprHeaderSource.find("emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn,") !=
+        std::string::npos);
+  CHECK(statementsExprHeaderSource.find("auto emitPrintArg = [&](const Expr &arg, const LocalMap &localsIn,") ==
+        std::string::npos);
 
   const std::filesystem::path statementsCallsHeaderPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsCallsStage.h";

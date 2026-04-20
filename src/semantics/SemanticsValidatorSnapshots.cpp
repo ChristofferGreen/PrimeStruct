@@ -1,5 +1,7 @@
 #include "SemanticsValidator.h"
 
+#include "primec/StdlibSurfaceRegistry.h"
+
 #include <algorithm>
 #include <cctype>
 #include <functional>
@@ -25,75 +27,111 @@ bool isSemanticCollectorEnabled(const SemanticProductBuildConfig *buildConfig,
                    collectorFamily) != buildConfig->collectorAllowlist.end();
 }
 
-bool isBridgeHelperName(std::string_view collectionFamily, std::string_view helperName) {
-  if (collectionFamily == "vector") {
-    return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-           helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-           helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-           helperName == "remove_swap";
-  }
-  if (collectionFamily == "map") {
-    return helperName == "count" || helperName == "count_ref" ||
-           helperName == "contains" || helperName == "contains_ref" ||
-           helperName == "tryAt" || helperName == "tryAt_ref" ||
-           helperName == "at" || helperName == "at_ref" ||
-           helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-           helperName == "insert" || helperName == "insert_ref" || helperName == "mapInsert" ||
-           helperName == "mapCountRef" || helperName == "mapContainsRef" ||
-           helperName == "mapTryAtRef" || helperName == "mapAtRef" ||
-           helperName == "mapAtUnsafeRef" || helperName == "mapInsertRef";
-  }
-  if (collectionFamily == "soa_vector") {
-    return helperName == "count" || helperName == "count_ref" ||
-           helperName == "get" || helperName == "get_ref" ||
-           helperName == "ref" || helperName == "ref_ref" ||
-           helperName == "to_aos" || helperName == "to_aos_ref" ||
-           helperName == "push" || helperName == "reserve";
-  }
-  return false;
-}
-
 std::optional<std::pair<std::string, std::string>>
 collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
-  auto parsePrefixedHelper = [&](std::string_view prefix,
-                                std::string_view collectionFamily)
-      -> std::optional<std::pair<std::string, std::string>> {
-    if (resolvedPath.rfind(prefix, 0) != 0) {
-      return std::nullopt;
-    }
-    std::string helperName = resolvedPath.substr(prefix.size());
-    const size_t specializationSuffix = helperName.find("__t");
-    if (specializationSuffix != std::string::npos) {
-      helperName.erase(specializationSuffix);
-    }
-    if (!isBridgeHelperName(collectionFamily, helperName)) {
-      return std::nullopt;
-    }
-    return std::pair<std::string, std::string>(std::string(collectionFamily), std::move(helperName));
-  };
+  const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+  if (metadata == nullptr) {
+    auto stripSpecializationSuffix = [](std::string_view path) {
+      const std::size_t lastSlash = path.rfind('/');
+      const std::size_t marker = path.rfind("__t");
+      if (marker == std::string_view::npos || lastSlash == std::string_view::npos ||
+          marker <= lastSlash) {
+        return path;
+      }
+      return path.substr(0, marker);
+    };
+    auto resolveSoaHelperName = [&](std::string_view path) -> std::string_view {
+      const std::string_view normalizedPath = stripSpecializationSuffix(path);
+      auto matchCanonicalPrefix = [&](std::string_view prefix) -> std::string_view {
+        if (!normalizedPath.starts_with(prefix)) {
+          return {};
+        }
+        const std::string_view helperName = normalizedPath.substr(prefix.size());
+        if (helperName == "count" || helperName == "count_ref" || helperName == "get" ||
+            helperName == "get_ref" || helperName == "ref" || helperName == "ref_ref" ||
+            helperName == "to_aos" || helperName == "to_aos_ref" || helperName == "push" ||
+            helperName == "reserve") {
+          return helperName;
+        }
+        return {};
+      };
+      if (const std::string_view helperName = matchCanonicalPrefix("/soa_vector/");
+          !helperName.empty()) {
+        return helperName;
+      }
+      if (const std::string_view helperName =
+              matchCanonicalPrefix("/std/collections/soa_vector/");
+          !helperName.empty()) {
+        return helperName;
+      }
+      if (normalizedPath.starts_with("/std/collections/experimental_soa_vector/")) {
+        const std::string_view helperName = normalizedPath.substr(
+            std::string_view("/std/collections/experimental_soa_vector/").size());
+        if (helperName == "soaVectorCount") {
+          return "count";
+        }
+        if (helperName == "soaVectorCountRef") {
+          return "count_ref";
+        }
+        if (helperName == "soaVectorGet") {
+          return "get";
+        }
+        if (helperName == "soaVectorGetRef") {
+          return "get_ref";
+        }
+        if (helperName == "soaVectorRef") {
+          return "ref";
+        }
+        if (helperName == "soaVectorRefRef") {
+          return "ref_ref";
+        }
+        if (helperName == "soaVectorPush") {
+          return "push";
+        }
+        if (helperName == "soaVectorReserve") {
+          return "reserve";
+        }
+      }
+      if (normalizedPath.starts_with("/std/collections/experimental_soa_vector_conversions/")) {
+        const std::string_view helperName = normalizedPath.substr(
+            std::string_view("/std/collections/experimental_soa_vector_conversions/").size());
+        if (helperName == "soaVectorToAos") {
+          return "to_aos";
+        }
+        if (helperName == "soaVectorToAosRef") {
+          return "to_aos_ref";
+        }
+      }
+      return {};
+    };
 
-  if (auto parsed = parsePrefixedHelper("/std/collections/vector/", "vector")) {
-    return parsed;
+    if (const std::string_view helperName = resolveSoaHelperName(resolvedPath);
+        !helperName.empty()) {
+      return std::pair<std::string, std::string>("soa_vector", std::string(helperName));
+    }
+    return std::nullopt;
   }
-  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_vector/", "vector")) {
-    return parsed;
+
+  std::string_view collectionFamily;
+  switch (metadata->id) {
+    case StdlibSurfaceId::CollectionsVectorHelpers:
+      collectionFamily = "vector";
+      break;
+    case StdlibSurfaceId::CollectionsMapHelpers:
+    case StdlibSurfaceId::CollectionsMapConstructors:
+      collectionFamily = "map";
+      break;
+    default:
+      return std::nullopt;
   }
-  if (auto parsed = parsePrefixedHelper("/map/", "map")) {
-    return parsed;
+
+  const std::string_view helperName = resolveStdlibSurfaceMemberName(*metadata, resolvedPath);
+  if (helperName.empty()) {
+    return std::nullopt;
   }
-  if (auto parsed = parsePrefixedHelper("/std/collections/map/", "map")) {
-    return parsed;
-  }
-  if (auto parsed = parsePrefixedHelper("/std/collections/experimental_map/", "map")) {
-    return parsed;
-  }
-  if (auto parsed = parsePrefixedHelper("/soa_vector/", "soa_vector")) {
-    return parsed;
-  }
-  if (auto parsed = parsePrefixedHelper("/std/collections/soa_vector/", "soa_vector")) {
-    return parsed;
-  }
-  return std::nullopt;
+
+  return std::pair<std::string, std::string>(std::string(collectionFamily),
+                                             std::string(helperName));
 }
 
 template <typename ResolveFn, typename VisitorFn>
