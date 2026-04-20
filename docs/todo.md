@@ -56,19 +56,22 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- none
+- TODO-4105
 
 ### Immediate Next 10 (After Ready Now)
 
-- none
+- TODO-4106
+- TODO-4107
 
 ### Priority Lanes (Current)
 
-- none
+- Skipped doctest debt: TODO-4105, TODO-4106, TODO-4107
 
 ### Execution Queue (Recommended)
 
-- none
+1. TODO-4105
+2. TODO-4106
+3. TODO-4107
 
 ### PrimeStruct Coverage Snapshot
 
@@ -104,7 +107,7 @@ Task template:
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | none |
+| Release benchmark/example suite stability and doctest governance | TODO-4105, TODO-4106, TODO-4107 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -165,6 +168,74 @@ Task template:
   retirement of direct experimental implementation imports before `soa_vector`
   can be treated as a promoted public contract.
 
+### Skipped Doctest Debt Summary
+
+- Retained `doctest::skip(true)` coverage is now tracked in three active
+  clusters: `TODO-4105` for VM math/maps runtime coverage, `TODO-4106` for
+  collection compatibility and alias-precedence coverage, and `TODO-4107` for
+  residual IR/docs/gfx/smoke skips.
+- New skipped doctest coverage must either attach to one of those active leaves
+  or replace them with a narrower explicit follow-up before it lands.
+- The success condition for each lane is re-enable-or-delete; indefinite
+  skipped coverage is not a stable end state.
+
 ### Task Blocks
 
-- none
+- [ ] TODO-4105: Re-enable or prune skipped VM math and map suites
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Skipped Doctest Debt
+  - depends_on: none
+  - scope: Audit the bulk-skipped VM math and VM map runtime suites, re-enable
+      the cases that now pass, and delete or split stale coverage so VM runtime
+      behavior is no longer hidden behind the current umbrella skip clusters.
+  - acceptance:
+    - `tests/unit/test_compile_run_vm_math.cpp` and
+      `tests/unit/test_compile_run_vm_maps.cpp` no longer rely on their current
+      bulk `doctest::skip(true)` clusters.
+    - Any residual VM runtime skips in adjacent math/map runtime files are
+      either removed or reduced to smaller focused follow-up leaves with clear
+      backend blockers.
+    - The resulting queue/docs state stays aligned with the reduced VM skip
+      surface.
+  - stop_rule: Stop once the current VM math/maps umbrella skip clusters are
+      gone; split any residual backend-specific blockers into narrower leaves.
+
+- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Skipped Doctest Debt
+  - depends_on: none
+  - scope: Audit the retained skipped collection compatibility and
+      alias-precedence suites across semantics, IR lowerer validation, VM,
+      native, and C++ emitter coverage, then re-enable or delete stale cases so
+      collection bridge parity stops depending on broad skipped clusters.
+  - acceptance:
+    - The largest skipped collection compatibility clusters in semantics,
+      VM/native compile-run, and C++ emitter files are either re-enabled or
+      broken into smaller explicit follow-up leaves.
+    - Skipped alias-precedence and helper-routing coverage no longer sits in
+      broad umbrella files without an active owning TODO.
+    - Docs/todo and adjacent source locks reflect the narrowed collection skip
+      surface.
+  - stop_rule: Stop once the current collection compatibility umbrella skips
+      are reduced to actively owned narrow blockers or deleted entirely.
+
+- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Skipped Doctest Debt
+  - depends_on: none
+  - scope: Audit the remaining skipped IR/source-lock, docs, gfx, wasm, demo,
+      and registry/pilot suites, then either re-enable them or delete stale
+      coverage so residual skipped tests no longer drift without queue
+      ownership.
+  - acceptance:
+    - Retained skipped IR/source-lock and docs/smoke suites are each either
+      re-enabled or explicitly covered by this lane rather than orphaned.
+    - Gfx/wasm/demo/pilot skipped suites are reduced to narrower blockers or
+      removed when stale.
+    - The residual skipped-test queue remains explicit and synchronized with the
+      surviving clusters.
+  - stop_rule: Stop once every remaining non-collection skipped suite is either
+      active and explicitly owned here or no longer skipped.

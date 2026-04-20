@@ -128,7 +128,7 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4042:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4043:") == std::string::npos);
-  CHECK(todo.find("TODO-4044") != std::string::npos);
+  CHECK(todo.find("TODO-4044") == std::string::npos);
 }
 
 TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
@@ -179,8 +179,6 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("Internal collection implementation modules:") != std::string::npos);
   CHECK(todo.find("/std/collections/experimental_vector/*` and") != std::string::npos);
   CHECK(todo.find("/std/collections/experimental_map/*` now remain implementation-owned seams") !=
-        std::string::npos);
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- none") !=
         std::string::npos);
   CHECK(todo.find("Stdlib de-experimentalization: TODO-4059") == std::string::npos);
   CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") ==
@@ -240,6 +238,53 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
   CHECK(todo.find("TODO-4103") == std::string::npos);
   CHECK(todo.find("TODO-4059") == std::string::npos);
+}
+
+TEST_CASE("skipped doctest debt queue stays source locked") {
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4105") !=
+        std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4106\n- TODO-4107") !=
+        std::string::npos);
+  CHECK(todo.find("### Priority Lanes (Current)\n\n- Skipped doctest debt: TODO-4105, TODO-4106, TODO-4107") !=
+        std::string::npos);
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4105\n2. TODO-4106\n3. TODO-4107") !=
+        std::string::npos);
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4105, TODO-4106, TODO-4107 |") !=
+        std::string::npos);
+  CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
+  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in three active") !=
+        std::string::npos);
+  CHECK(todo.find("`TODO-4105` for VM math/maps runtime coverage, `TODO-4106` for") !=
+        std::string::npos);
+  CHECK(todo.find("collection compatibility and alias-precedence coverage, and `TODO-4107` for") !=
+        std::string::npos);
+  CHECK(todo.find("New skipped doctest coverage must either attach to one of those active leaves") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4105: Re-enable or prune skipped VM math and map suites") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites") !=
+        std::string::npos);
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- none") ==
+        std::string::npos);
+
+  CHECK(todoFinished.find("✓ TODO-4104: Restore skipped doctest debt tracking in the active queue.") !=
+        std::string::npos);
 }
 
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
