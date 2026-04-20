@@ -311,6 +311,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "location" || name == "dereference" ||
+           name == "move" ||
            name == "get" || name == "ref";
   };
   auto matchScopedBuiltinTail = [&](const std::string &candidate) {

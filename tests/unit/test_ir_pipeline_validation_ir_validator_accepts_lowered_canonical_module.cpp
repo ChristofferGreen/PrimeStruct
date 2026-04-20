@@ -1223,6 +1223,17 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   CHECK(primec::emitter::getBuiltinMutationName(
       namespacedSoaIncrementCall, mutation));
   CHECK(mutation == "increment");
+
+  primec::Expr namespacedSoaMoveCall;
+  namespacedSoaMoveCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaMoveCall.name = "move";
+  namespacedSoaMoveCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      namespacedSoaMoveCall, "move"));
+  CHECK(primec::emitter::isSimpleCallName(
+      namespacedSoaMoveCall, "move"));
 }
 
 TEST_CASE("emitter collection inference keeps namespaced internal soa builtins") {
