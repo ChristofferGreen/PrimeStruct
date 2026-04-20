@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("rejects native auto-inferred named access helper receiver precedence in lowering") {
+TEST_CASE("rejects native auto-inferred named access helper receiver precedence before lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/get([vector<i32>] values, [string] index) {
@@ -43,9 +43,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/"
-                               "saturate/convert/pointer/assign/increment/decrement calls in expressions "
-                               "(call=/get") != std::string::npos);
+  CHECK(readFile(outPath).find("missing semantic-product local-auto fact: /main -> local inferred") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native auto-inferred std namespaced access helper compatibility alias precedence") {
