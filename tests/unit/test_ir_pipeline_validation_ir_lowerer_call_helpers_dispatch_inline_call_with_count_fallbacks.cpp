@@ -490,5 +490,119 @@ TEST_CASE("ir lowerer call helpers preserve canonical map helper method return c
   CHECK(builtinTryAtEmitCalls == 0);
 }
 
+TEST_CASE("ir lowerer call helpers keep map count and local access same-path defs") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  auto isMapReceiver = [](const primec::Expr &receiverExpr) {
+    return receiverExpr.kind == primec::Expr::Kind::Name ||
+           receiverExpr.kind == primec::Expr::Kind::Call;
+  };
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  primec::Definition canonicalCount;
+  canonicalCount.fullPath = "/std/collections/map/count";
+  canonicalCount.transforms.push_back(primec::Transform{.name = "return", .arguments = {"i32"}});
+
+  primec::Expr countMethod;
+  countMethod.kind = primec::Expr::Kind::Call;
+  countMethod.name = "count";
+  countMethod.isMethodCall = true;
+  countMethod.args = {valuesName};
+
+  int countEmitCalls = 0;
+  std::string error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            countMethod,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            isMapReceiver,
+            [&](const primec::Expr &) -> const primec::Definition * { return &canonicalCount; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
+              ++countEmitCalls;
+              CHECK(callExpr.name == "count");
+              CHECK(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/map/count");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error == "stale");
+  CHECK(countEmitCalls == 1);
+
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/map/at";
+  canonicalAt.transforms.push_back(primec::Transform{.name = "return", .arguments = {"i32"}});
+
+  primec::Expr atMethod;
+  atMethod.kind = primec::Expr::Kind::Call;
+  atMethod.name = "at";
+  atMethod.isMethodCall = true;
+  atMethod.args = {valuesName, keyLiteral};
+
+  int atEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            atMethod,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            isMapReceiver,
+            [&](const primec::Expr &) -> const primec::Definition * { return &canonicalAt; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
+              ++atEmitCalls;
+              CHECK(callExpr.name == "at");
+              CHECK(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/map/at");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error == "stale");
+  CHECK(atEmitCalls == 1);
+
+  primec::Expr wrapCall;
+  wrapCall.kind = primec::Expr::Kind::Call;
+  wrapCall.name = "wrapValues";
+
+  primec::Expr wrapperAtMethod = atMethod;
+  wrapperAtMethod.args.front() = wrapCall;
+
+  int wrapperAtEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            wrapperAtMethod,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            isMapReceiver,
+            [&](const primec::Expr &) -> const primec::Definition * { return &canonicalAt; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++wrapperAtEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(wrapperAtEmitCalls == 0);
+}
+
 
 TEST_SUITE_END();

@@ -2492,6 +2492,73 @@ TEST_CASE("ir lowerer call helpers keep explicit canonical map contains and tryA
         &canonicalMapTryAtDef);
 }
 
+TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
+  primec::Definition canonicalMapCountDef;
+  canonicalMapCountDef.fullPath = "/std/collections/map/count";
+  primec::Definition canonicalMapAtDef;
+  canonicalMapAtDef.fullPath = "/std/collections/map/at";
+  primec::Definition aliasMapCountDef;
+  aliasMapCountDef.fullPath = "/map/count";
+  primec::Definition aliasMapContainsDef;
+  aliasMapContainsDef.fullPath = "/map/contains";
+  primec::Definition aliasMapTryAtDef;
+  aliasMapTryAtDef.fullPath = "/map/tryAt";
+  primec::Definition aliasMapAtDef;
+  aliasMapAtDef.fullPath = "/map/at";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalMapCountDef.fullPath, &canonicalMapCountDef},
+      {canonicalMapAtDef.fullPath, &canonicalMapAtDef},
+      {aliasMapCountDef.fullPath, &aliasMapCountDef},
+      {aliasMapContainsDef.fullPath, &aliasMapContainsDef},
+      {aliasMapTryAtDef.fullPath, &aliasMapTryAtDef},
+      {aliasMapAtDef.fullPath, &aliasMapAtDef},
+  };
+  const auto resolveExprPath = [](const primec::Expr &expr) { return expr.name; };
+
+  primec::Expr valuesArg;
+  valuesArg.kind = primec::Expr::Kind::Name;
+  valuesArg.name = "values";
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Literal;
+  keyArg.intWidth = 32;
+  keyArg.literalValue = 1;
+
+  primec::Expr canonicalCountCall;
+  canonicalCountCall.kind = primec::Expr::Kind::Call;
+  canonicalCountCall.name = "/std/collections/map/count";
+  canonicalCountCall.args = {valuesArg};
+
+  primec::Expr canonicalAtCall;
+  canonicalAtCall.kind = primec::Expr::Kind::Call;
+  canonicalAtCall.name = "/std/collections/map/at";
+  canonicalAtCall.args = {valuesArg, keyArg};
+
+  primec::Expr aliasCountCall = canonicalCountCall;
+  aliasCountCall.name = "/map/count";
+
+  primec::Expr aliasContainsCall = canonicalAtCall;
+  aliasContainsCall.name = "/map/contains";
+
+  primec::Expr aliasTryAtCall = canonicalAtCall;
+  aliasTryAtCall.name = "/map/tryAt";
+
+  primec::Expr aliasAtCall = canonicalAtCall;
+  aliasAtCall.name = "/map/at";
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(canonicalCountCall, defMap, resolveExprPath) ==
+        &canonicalMapCountDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(canonicalAtCall, defMap, resolveExprPath) ==
+        &canonicalMapAtDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasCountCall, defMap, resolveExprPath) ==
+        &aliasMapCountDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasContainsCall, defMap, resolveExprPath) ==
+        &aliasMapContainsDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasTryAtCall, defMap, resolveExprPath) ==
+        &aliasMapTryAtDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasAtCall, defMap, resolveExprPath) ==
+        &aliasMapAtDef);
+}
+
 TEST_CASE("ir lowerer call helpers suppress lowered collection helper paths from published surface ids") {
   primec::Definition loweredMapContainsDef;
   loweredMapContainsDef.fullPath = "/std/collections/mapContains";

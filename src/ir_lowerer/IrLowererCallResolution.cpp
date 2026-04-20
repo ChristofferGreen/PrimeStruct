@@ -155,6 +155,21 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
   return false;
 }
 
+bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
+                                              const std::string &resolvedPath) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty() ||
+      expr.name.front() != '/') {
+    return false;
+  }
+  std::string helperName;
+  if (!resolveMapHelperAliasName(expr, helperName) &&
+      resolvedPath.rfind("/std/collections/map/", 0) != 0) {
+    return false;
+  }
+  return normalizeCollectionHelperPath(expr.name) ==
+         normalizeCollectionHelperPath(resolvedPath);
+}
+
 bool resolvesToDefinitionFamilyTarget(
     const std::string &resolvedPath,
     const std::unordered_map<std::string, const Definition *> &defMap) {
@@ -221,6 +236,9 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
   if (const Definition *resolvedDef = resolveDefinitionByPath(defMap, resolved);
       resolvedDef != nullptr) {
     if (!isMapBuiltinResolvedPath(callExpr, resolved)) {
+      return resolvedDef;
+    }
+    if (isExplicitSamePathPublishedMapHelperCall(callExpr, resolved)) {
       return resolvedDef;
     }
     if (isExplicitMapContainsOrTryAtMethodPath(callExpr.name) &&

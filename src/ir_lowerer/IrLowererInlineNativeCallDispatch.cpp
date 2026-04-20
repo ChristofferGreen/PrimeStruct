@@ -74,6 +74,21 @@ bool resolvePublishedInlineMapHelperName(std::string_view resolvedPath, std::str
   return !helperNameOut.empty();
 }
 
+bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
+                                              const std::string &resolvedPath) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty() ||
+      expr.name.front() != '/') {
+    return false;
+  }
+  std::string helperName;
+  if (!resolveMapHelperAliasName(expr, helperName) &&
+      resolvedPath.rfind("/std/collections/map/", 0) != 0) {
+    return false;
+  }
+  return normalizeCollectionHelperPath(expr.name) ==
+         normalizeCollectionHelperPath(resolvedPath);
+}
+
 bool matchesInlineMapHelperFamily(std::string_view requestedHelperName,
                                   std::string_view resolvedHelperName) {
   if (requestedHelperName == resolvedHelperName) {
@@ -106,11 +121,31 @@ bool keepsBuiltinInlineReturnForPublishedMapHelper(std::string_view helperName,
   return true;
 }
 
+bool prefersPublishedMapHelperDefinition(const Expr &expr,
+                                         std::string_view helperName,
+                                         const Definition &callee) {
+  if (!expr.isMethodCall) {
+    return isExplicitSamePathPublishedMapHelperCall(expr, callee.fullPath);
+  }
+  if (helperName == "count" || helperName == "count_ref") {
+    return true;
+  }
+  if ((helperName == "at" || helperName == "at_ref" ||
+       helperName == "at_unsafe" || helperName == "at_unsafe_ref") &&
+      !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
+    return true;
+  }
+  return false;
+}
+
 bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   std::string resolvedHelperName;
   const bool hasPublishedResolvedHelper =
       resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
   if (!expr.isMethodCall) {
+    if (prefersPublishedMapHelperDefinition(expr, resolvedHelperName, callee)) {
+      return false;
+    }
     if (isExplicitMapContainsOrTryAtMethodPath(expr.name) &&
         normalizeCollectionHelperPath(expr.name) ==
             normalizeCollectionHelperPath(callee.fullPath)) {
@@ -162,6 +197,9 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
     return false;
   }
   if (hasPublishedResolvedHelper && isInlineMapBuiltinHelperName(resolvedHelperName)) {
+    if (prefersPublishedMapHelperDefinition(expr, resolvedHelperName, callee)) {
+      return false;
+    }
     if (!keepsBuiltinInlineReturnForPublishedMapHelper(resolvedHelperName, callee)) {
       return false;
     }
