@@ -56,39 +56,57 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
+- TODO-4119
+- TODO-4120
+- TODO-4121
 - TODO-4117
-
-### Immediate Next 10 (After Ready Now)
-
 - TODO-4118
 - TODO-4110
 - TODO-4106
 - TODO-4107
 
+### Immediate Next 10 (After Ready Now)
+
+- TODO-4122
+- TODO-4123
+- TODO-4124
+- TODO-4125
+- TODO-4126
+- TODO-4127
+- TODO-4128
+
 ### Priority Lanes (Current)
 
+- Semantic-product authority and lowerer ownership: TODO-4119, TODO-4120,
+  TODO-4121, TODO-4122
+- Validator/runtime boundary simplification: TODO-4123, TODO-4126,
+  TODO-4127, TODO-4128
+- Test-surface contraction: TODO-4124, TODO-4125
 - Skipped doctest debt: TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107
 
 ### Execution Queue (Recommended)
 
-1. TODO-4117
-2. TODO-4118
-3. TODO-4110
-4. TODO-4106
-5. TODO-4107
+1. TODO-4119
+2. TODO-4120
+3. TODO-4121
+4. TODO-4117
+5. TODO-4118
+6. TODO-4110
+7. TODO-4106
+8. TODO-4107
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | none |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4119, TODO-4120, TODO-4121, TODO-4122, TODO-4126, TODO-4127 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | none |
-| IR lowerer compile-unit breakup | none |
+| Validator entrypoint and benchmark-plumbing split | TODO-4123, TODO-4127 |
+| Semantic-product publication by module and fact family | TODO-4119, TODO-4121, TODO-4122, TODO-4127 |
+| IR lowerer compile-unit breakup | TODO-4128 |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
@@ -100,10 +118,10 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | none |
+| Semantic-product-authority conformance | TODO-4119, TODO-4121, TODO-4122 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
-| Semantic-product publication parity and deterministic ordering | none |
-| Lowerer/source-composition contract coverage | none |
+| Semantic-product publication parity and deterministic ordering | TODO-4121, TODO-4122, TODO-4127 |
+| Lowerer/source-composition contract coverage | TODO-4120, TODO-4128 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -186,6 +204,197 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
+
+- [ ] TODO-4128: Split lowering contracts by backend surface
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: TODO-4120, TODO-4122
+  - scope: Carve VM, native, and GPU lowering contracts out of the shared
+      fallback helpers so backend-specific behavior is carried by explicit
+      backend-scoped modules with clear inputs and validation boundaries.
+  - acceptance:
+    - At least one representative lowering contract family each for VM,
+      native, and GPU no longer routes through shared backend-specific
+      fallback branches.
+    - Backend-specific lowering contracts are pinned by focused conformance or
+      source-lock coverage.
+    - Shared lowerer helpers retain only backend-agnostic orchestration.
+  - stop_rule: Stop once representative VM/native/GPU lowering contracts are
+      explicit modules and the shared fallback path for those families is
+      deleted or reduced to backend-agnostic glue.
+
+- [ ] TODO-4127: Publish semantic facts from deterministic worker merges
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: TODO-4119, TODO-4122
+  - scope: Extend the parallel definition-validation path from
+      benchmark-oriented worker chunks into a production semantic-product
+      publication path with deterministic worker-local fact and diagnostic
+      merges.
+  - acceptance:
+    - Worker-count `1`, `2`, and `4` runs produce identical published
+      semantic-product output for the selected production fact families.
+    - Worker-local fact publication merges through one deterministic
+      single-writer boundary rather than benchmark-only shadow plumbing.
+    - Parity coverage pins diagnostics and semantic-product output across the
+      supported worker counts.
+  - stop_rule: Stop once at least one production semantic-product publication
+      path uses deterministic worker-fact merges with parity coverage.
+
+- [ ] TODO-4126: Release AST bodies after a lowered semantic handoff
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: TODO-4120
+  - scope: Introduce a body-scoped lowered semantic handoff so heavy AST body
+      storage can be released earlier without breaking provenance, source-map,
+      or backend emission requirements.
+  - acceptance:
+    - A compile-pipeline path can release AST body-heavy state earlier than the
+      current post-IR-preparation cutoff while preserving required provenance.
+    - A representative RSS or allocation benchmark shows a measurable memory
+      improvement on that path.
+    - Source-map or debugger-oriented coverage proves the earlier release does
+      not break provenance consumers.
+  - stop_rule: Stop once one measured earlier-release path lands with preserved
+      provenance behavior and documented memory improvement.
+
+- [ ] TODO-4125: Replace semantics step helpers with contract probes
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Testing API Contraction
+  - depends_on: TODO-4121, TODO-4122
+  - scope: Narrow `include/primec/testing/SemanticsValidationHelpers.h` from
+      step-level helper exports toward graph and semantic-product contract
+      probes, then migrate representative tests onto the contract surface.
+  - acceptance:
+    - The selected step-level semantics helper exports are removed or narrowed
+      behind contract-oriented graph or semantic-product probes.
+    - Representative tests move off the removed step helpers without regressing
+      coverage intent.
+    - Architecture/source-lock coverage records the narrower testing surface.
+  - stop_rule: Stop once representative step-level semantics helpers are
+      replaced by contract probes and the migrated tests hold the same
+      validation signal.
+
+- [ ] TODO-4124: Replace bulk lowerer helper exports with scenario contracts
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Testing API Contraction
+  - depends_on: TODO-4120, TODO-4121
+  - scope: Shrink `include/primec/testing/IrLowererHelpers.h` from a blanket
+      internal-helper export surface into smaller scenario-focused semantic-
+      product and backend-conformance helpers.
+  - acceptance:
+    - `IrLowererHelpers.h` no longer bulk-reexports at least one significant
+      cluster of internal lowerer helper headers.
+    - Replacement scenario helpers cover the migrated test cases without
+      restoring `tests -> src` includes.
+    - Source-lock or architecture tests pin the narrower lowerer testing API.
+  - stop_rule: Stop once one significant lowerer helper cluster is removed from
+      the public testing aggregator and its tests use scenario contracts
+      instead.
+
+- [ ] TODO-4123: Split validator core from publication and benchmark shadows
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: none
+  - scope: Separate `SemanticsValidator` production validation logic from
+      semantic-publication collectors and benchmark/shadow instrumentation so
+      benchmark-only state stops sharing the same hot-path class boundary.
+  - acceptance:
+    - Production validation, semantic-publication collection, and benchmark or
+      shadow instrumentation have explicit component boundaries.
+    - Benchmark-only state is no longer carried through unaffected production
+      validation paths.
+    - Compile-pipeline and benchmark coverage confirm behavior parity after the
+      split.
+  - stop_rule: Stop once one explicit production/publication/instrumentation
+      split lands and removes benchmark-only state from the unaffected
+      validation hot path.
+
+- [ ] TODO-4122: Publish indexed graph-backed facts for lowering
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: TODO-4119, TODO-4121
+  - scope: Publish lowerer-authoritative indexed `query`, `try(...)`,
+      `on_error`, and local-`auto` semantic facts in `SemanticProgram` so
+      lowering can consume exact indexed facts instead of AST compatibility
+      lookups.
+  - acceptance:
+    - `SemanticProgram` publishes indexed lookup surfaces for `query`,
+      `try(...)`, `on_error`, and local-`auto` fact families.
+    - At least one lowering path consumes each of those fact families directly
+      from the semantic product.
+    - Deterministic ordering and lookup parity are pinned by semantic-product
+      dump or compile-pipeline conformance coverage.
+  - stop_rule: Stop once all four fact families exist in lowerer-ready indexed
+      form and representative lowering paths consume them directly.
+
+- [ ] TODO-4121: Move semantic-product coverage checks to publication time
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: none
+  - scope: Replace lowerer-time AST rewalks in
+      `validateSemanticProduct*Coverage` with semantic-product builder-time
+      invariants plus compile-pipeline conformance coverage.
+  - acceptance:
+    - Lowerer entry setup no longer performs the selected AST rewalk coverage
+      checks for semantic-product completeness.
+    - Incomplete required fact families fail during semantic-product
+      publication or compile-pipeline conformance checks instead of later in
+      lowerer setup.
+    - Conformance coverage pins the moved invariant at the semantic-product
+      boundary.
+  - stop_rule: Stop once representative semantic-product completeness checks
+      fail at publication time and the corresponding lowerer-time AST rewalks
+      are removed.
+
+- [ ] TODO-4120: Remove raw `Program` from `IrLowerer` ownership
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: none
+  - scope: Cut `IrLowerer::lower` away from raw semantic ownership of
+      `Program`, replacing AST-dependent lowering decisions with a
+      semantic-product-first interface plus provenance-only access keyed by
+      semantic node identity.
+  - acceptance:
+    - `IrLowerer::lower` no longer requires raw `Program` for representative
+      lowering-facing semantic decisions.
+    - Lowering reads meaning from semantic-product inputs and AST data only for
+      provenance or syntax-owned executable structure.
+    - Compile-pipeline and lowerer contract coverage prove parity for the
+      migrated path.
+  - stop_rule: Stop once representative lowerer entry/setup paths no longer
+      depend on raw `Program` for semantic meaning and rely on provenance-only
+      AST access instead.
+
+- [ ] TODO-4119: Publish lowerer-ready entry and routing lookup indexes
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: none
+  - scope: Add `SemanticProgram` lookup indexes for entry metadata,
+      effect/capability masks, and alias-equivalent routing data so lowerer
+      entry setup stops rebuilding AST-side definition and import maps for
+      those lookups.
+  - acceptance:
+    - `SemanticProgram` exposes direct lookup surfaces for entry metadata and
+      the routing facts currently rebuilt in `runLowerEntrySetup`.
+    - Lowerer entry setup resolves at least one representative entry or routing
+      metadata path without rebuilding AST-side definition or import alias
+      maps.
+    - Semantic-product conformance coverage pins lookup parity for the migrated
+      data.
+  - stop_rule: Stop once representative entry/routing lookups are served
+      directly from `SemanticProgram` and the matching AST rebuild path is
+      deleted or narrowed to provenance-only use.
 
 - [ ] TODO-4117: Re-enable or prune remaining VM numeric map indexing sugar skip
   - owner: ai

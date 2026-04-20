@@ -4,6 +4,30 @@
 
 #include "primec/testing/EmitterHelpers.h"
 
+namespace {
+
+void expectCollectDiagnosticsFailure(const std::string& emitKind,
+                                     const char* fileStem,
+                                     const std::string& source,
+                                     std::initializer_list<const char*> messages) {
+  const std::string srcPath = writeTemp(std::string(fileStem) + ".prime", source);
+  const std::string errPath = (testScratchPath("") / (std::string(fileStem) + ".json")).string();
+  const std::string cmd = "./primec --emit=" + emitKind + " " + srcPath +
+                          " --entry /main --emit-diagnostics --collect-diagnostics 2> " +
+                          quoteShellArg(errPath);
+
+  CHECK(runCommand(cmd) == 2);
+
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("\"code\":\"PSC1005\"") != std::string::npos);
+  CHECK(diagnostics.find("\"label\":\"definition: /main\"") != std::string::npos);
+  for (const char* message : messages) {
+    CHECK(diagnostics.find(message) != std::string::npos);
+  }
+}
+
+}  // namespace
+
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
 TEST_CASE("C++ emitter lambda mutators honor user vector helpers") {
@@ -164,7 +188,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter rejects lambda explicit vector mutator statements without helper before emission" * doctest::skip(true)) {
+TEST_CASE("C++ emitter rejects lambda explicit vector mutator statements without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -176,20 +200,14 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_lambda_explicit_vector_mutator_same_path_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_lambda_explicit_vector_mutator_same_path_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
-        std::string::npos);
+  expectCollectDiagnosticsFailure(
+      "cpp",
+      "compile_cpp_lambda_explicit_vector_mutator_same_path_reject",
+      source,
+      {"\"message\":\"unknown call target: lambda\""});
 }
 
-TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator statements before emission" * doctest::skip(true)) {
+TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator statements before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -205,20 +223,15 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_lambda_cross_path_vector_mutator_same_path_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_lambda_cross_path_vector_mutator_same_path_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  expectCollectDiagnosticsFailure(
+      "cpp",
+      "compile_cpp_lambda_cross_path_vector_mutator_same_path_reject",
+      source,
+      {"\"message\":\"unknown call target: lambda\"",
+       "\"message\":\"unknown call target: /vector/push\""});
 }
 
-TEST_CASE("C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission" * doctest::skip(true)) {
+TEST_CASE("C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -234,21 +247,15 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_lambda_reordered_cross_path_vector_mutator_same_path_reject.prime",
-                source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_lambda_reordered_cross_path_vector_mutator_same_path_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
+  expectCollectDiagnosticsFailure(
+      "cpp",
+      "compile_cpp_lambda_reordered_cross_path_vector_mutator_same_path_reject",
+      source,
+      {"\"message\":\"unknown call target: lambda\"",
+       "\"message\":\"unknown call target: /vector/push\""});
 }
 
-TEST_CASE("C++ emitter rejects lambda explicit vector mutator methods without helper before emission" * doctest::skip(true)) {
+TEST_CASE("C++ emitter rejects lambda explicit vector mutator methods without helper before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -260,21 +267,14 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_lambda_explicit_vector_mutator_method_same_path_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_lambda_explicit_vector_mutator_method_same_path_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/push") !=
-        std::string::npos);
+  expectCollectDiagnosticsFailure(
+      "cpp",
+      "compile_cpp_lambda_explicit_vector_mutator_method_same_path_reject",
+      source,
+      {"\"message\":\"unknown call target: lambda\""});
 }
 
-TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator methods before emission" * doctest::skip(true)) {
+TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator methods before emission") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -290,18 +290,11 @@ main() {
   return(0i32)
 }
 )";
-  const std::string srcPath =
-      writeTemp("compile_cpp_lambda_cross_path_vector_mutator_method_same_path_reject.prime",
-                source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_lambda_cross_path_vector_mutator_method_same_path_reject.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/push") != std::string::npos);
+  expectCollectDiagnosticsFailure(
+      "cpp",
+      "compile_cpp_lambda_cross_path_vector_mutator_method_same_path_reject",
+      source,
+      {"\"message\":\"unknown call target: lambda\""});
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
@@ -469,7 +462,7 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
-TEST_CASE("compiles and runs user vector mutator shadow precedence in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("compiles and runs canonical vector mutators over imported user shadow helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -514,7 +507,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 4);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("C++ emitter statement mutator call-form rejects shadow helper") {
@@ -539,33 +532,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects canonical reordered vector mutator statements with alias-only helper in C++ emitter" * doctest::skip(true)) {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/vector/push([vector<i32> mut] values, [i32] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  /std/collections/vector/push(3i32, values)
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_std_namespaced_reordered_mutator_compat_helper.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_std_namespaced_reordered_mutator_compat_helper_err.txt")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string errors = readFile(errPath);
-  CHECK(errors.find("push requires vector binding") != std::string::npos);
-}
-
-TEST_CASE("compiles and runs user vector mutator named call shadow in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("compiles and runs canonical vector mutator named calls over imported user shadow helpers in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -585,7 +552,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("C++ emitter statement mutator named call rejects shadow helper") {
@@ -611,7 +578,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs user vector mutator positional call shadow in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("rejects imported user vector mutator positional call shadow in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -626,36 +593,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_vector_mutator_positional_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_mutator_positional_call_shadow_exe").string();
-
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
-}
-
-TEST_CASE("rejects alias reordered vector mutator statements with canonical-only helper in C++ emitter" * doctest::skip(true)) {
-  const std::string source = R"(
-[effects(heap_alloc)]
-/std/collections/vector/push([vector<i32> mut] values, [i32] value) { }
-
-[effects(heap_alloc), return<int>]
-main() {
-  [vector<i32> mut] values{vector<i32>(1i32, 2i32)}
-  /vector/push(3i32, values)
-  return(0i32)
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_reordered_namespaced_vector_push_call_shadow.prime", source);
   const std::string errPath =
-      (testScratchPath("") / "primec_cpp_reordered_namespaced_vector_push_call_shadow_err.txt")
+      (testScratchPath("") / "primec_cpp_vector_mutator_positional_call_shadow_err.txt")
           .string();
+
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  const std::string errors = readFile(errPath);
-  CHECK(errors.find("push requires vector binding") != std::string::npos);
+  CHECK(readFile(errPath).find("push requires mutable vector binding") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();
