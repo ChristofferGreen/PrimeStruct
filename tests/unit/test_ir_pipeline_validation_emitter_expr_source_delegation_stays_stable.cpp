@@ -141,6 +141,19 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
   CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
+
+  const std::filesystem::path emitterExprCollectionAccessAtCallsPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionAccessAtCalls.h";
+  REQUIRE(std::filesystem::exists(emitterExprCollectionAccessAtCallsPath));
+  const std::string emitterExprCollectionAccessAtCallsSource = readText(emitterExprCollectionAccessAtCallsPath);
+  CHECK(emitterExprCollectionAccessAtCallsSource.find("getBuiltinArrayAccessNameLocal(expr, builtinAccessName)") !=
+        std::string::npos);
+  CHECK(emitterExprCollectionAccessAtCallsSource.find("builtinAccessName == \"at\"") != std::string::npos);
+  CHECK(emitterExprCollectionAccessAtCallsSource.find("builtinAccessName == \"at_unsafe\"") !=
+        std::string::npos);
+  CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at\")") == std::string::npos);
+  CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at_unsafe\")") ==
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable" * doctest::skip(true)) {
