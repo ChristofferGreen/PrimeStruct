@@ -72,79 +72,13 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     return normalizedName == basePath || normalizedName.rfind(basePath + "__", 0) == 0;
   };
   auto inferExperimentalMapStructPath = [&](const std::string &path) -> std::string {
-    constexpr std::string_view prefix = "std/collections/experimental_map/";
-    if (path.rfind(prefix, 0) != 0) {
-      return "";
-    }
-    const std::string suffix = path.substr(prefix.size());
-    auto remap = [&](std::string_view helperStem) -> std::string {
-      const std::string helperPrefix = std::string(helperStem) + "__";
-      if (suffix.rfind(helperPrefix, 0) != 0) {
-        return "";
-      }
-      return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
-    };
-    if (std::string structPath = remap("mapNew"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSingle"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapDouble"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapPair"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapTriple"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapQuad"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapQuint"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSext"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSept"); !structPath.empty()) {
-      return structPath;
-    }
-    return remap("mapOct");
+    return inferPublishedExperimentalMapStructPathFromConstructorPath(path);
   };
   auto isDirectMapConstructor = [&]() {
     return matchesPath("std/collections/map/map") ||
-           matchesPath("std/collections/mapNew") ||
-           matchesPath("std/collections/mapSingle") ||
-           matchesPath("std/collections/mapDouble") ||
-           matchesPath("std/collections/mapPair") ||
-           matchesPath("std/collections/mapTriple") ||
-           matchesPath("std/collections/mapQuad") ||
-           matchesPath("std/collections/mapQuint") ||
-           matchesPath("std/collections/mapSext") ||
-           matchesPath("std/collections/mapSept") ||
-           matchesPath("std/collections/mapOct") ||
-           matchesPath("std/collections/experimental_map/mapNew") ||
-           matchesPath("std/collections/experimental_map/mapSingle") ||
-           matchesPath("std/collections/experimental_map/mapDouble") ||
-           matchesPath("std/collections/experimental_map/mapPair") ||
-           matchesPath("std/collections/experimental_map/mapTriple") ||
-           matchesPath("std/collections/experimental_map/mapQuad") ||
-           matchesPath("std/collections/experimental_map/mapQuint") ||
-           matchesPath("std/collections/experimental_map/mapSext") ||
-           matchesPath("std/collections/experimental_map/mapSept") ||
-           matchesPath("std/collections/experimental_map/mapOct") ||
-           isSimpleCallName(target, "mapNew") ||
-           isSimpleCallName(target, "mapSingle") ||
-           isSimpleCallName(target, "mapDouble") ||
-           isSimpleCallName(target, "mapPair") ||
-           isSimpleCallName(target, "mapTriple") ||
-           isSimpleCallName(target, "mapQuad") ||
-           isSimpleCallName(target, "mapQuint") ||
-           isSimpleCallName(target, "mapSext") ||
-           isSimpleCallName(target, "mapSept") ||
-           isSimpleCallName(target, "mapOct");
+           isPublishedStdlibSurfaceConstructorExpr(
+               target,
+               primec::StdlibSurfaceId::CollectionsMapConstructors);
   };
   auto inferLiteralKind = [&](const Expr &valueExpr, LocalInfo::ValueKind &kindOut) {
     kindOut = LocalInfo::ValueKind::Unknown;

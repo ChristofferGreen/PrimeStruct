@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4050
+- TODO-4101
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -65,12 +65,12 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4050, TODO-4051
+- Vector/map bridge rollout and ownership cutover: TODO-4101, TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4050
+1. TODO-4101
 2. TODO-4051
 3. TODO-4052
 4. TODO-4058
@@ -88,7 +88,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4050, TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4101, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -108,7 +108,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4050, TODO-4051 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4101, TODO-4051 |
 | De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
@@ -197,7 +197,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4053, TODO-4050
+  - depends_on: TODO-4053, TODO-4101
   - scope: Reclassify the current experimental vector/map implementation namespaces as internal implementation modules or internal names once the canonical vector/map public contract and bridge-backed ownership cutover are complete.
   - acceptance:
     - `experimental_vector` and `experimental_map` no longer act as public transition namespaces for ordinary stdlib consumers.
@@ -209,7 +209,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4052, TODO-4050
+  - depends_on: TODO-4052, TODO-4101
   - scope: Make `/std/collections/vector/*` and `/std/collections/map/*` the only public collection contracts for the promoted surface area so users, docs, and compiler-facing authority no longer treat the experimental collection namespaces as peer public APIs.
   - acceptance:
     - Canonical vector/map namespaces are the only documented public collection contracts for the promoted collection surface.
@@ -241,14 +241,14 @@ Task template:
     - The new coverage is wired into the existing validation surfaces instead of remaining as ad hoc local-only checks.
   - stop_rule: Stop once vector/map bridge parity is pinned well enough that the migration tasks can safely delete duplicated path tables without guessing about current behavior.
 
-- [ ] TODO-4050: Retire duplicated vector/map compatibility and canonical-to-experimental tables
+- [ ] TODO-4101: Retire remaining semantics constructor-path tables after the lowerer bridge cutover
   - owner: ai
-  - created_at: 2026-04-19
+  - created_at: 2026-04-20
   - phase: Vector/Map Stdlib Ownership Cutover
   - depends_on: none
-  - scope: Delete the remaining vector/map-specific compatibility tables, constructor-path mappings, and canonical-to-experimental translation helpers once the shared bridge and semantic/lowerer surface-ID flow fully cover the collection behavior they currently protect.
+  - scope: Replace the remaining semantics/template-monomorph constructor-path switches and canonical-to-experimental constructor translation seams with shared bridge-backed constructor metadata now that the lowerer-side constructor tables have been centralized.
   - acceptance:
-    - Vector/map-specific compatibility and canonical-to-experimental tables that are superseded by the bridge-backed flow are removed from production code.
-    - Collection behavior continues to resolve through shared bridge metadata and semantic IDs rather than residual vector/map-only translation helpers.
-    - Any residual edge-case table that cannot yet move is left behind with a narrowly scoped follow-up instead of preserving a broad duplicate compatibility layer.
-  - stop_rule: Stop once the superseded vector/map path-translation tables are gone; split any stubborn residual edge cases into explicit follow-up leaves instead of keeping general duplicate tables alive.
+    - The remaining semantics/template constructor-path switches route through shared constructor metadata helpers instead of local vector/map argument-count ladders.
+    - No broad vector/map-only canonical-to-experimental constructor translation tables remain outside the shared bridge helper layer.
+    - Any residual constructor edge case that still cannot move is left behind with a narrowly scoped follow-up instead of preserving the old broad task.
+  - stop_rule: Stop once the remaining semantics/template constructor-path tables are gone; split any stubborn residual edge case into an explicit follow-up rather than keeping another umbrella task alive.

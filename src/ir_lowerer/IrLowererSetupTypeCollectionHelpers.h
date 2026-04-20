@@ -55,6 +55,17 @@ bool resolvePublishedStdlibSurfaceMemberToken(std::string_view memberToken,
 bool resolvePublishedStdlibSurfaceExprMemberName(const Expr &expr,
                                                  StdlibSurfaceId surfaceId,
                                                  std::string &memberNameOut);
+bool resolvePublishedStdlibSurfaceConstructorMemberName(std::string_view path,
+                                                        StdlibSurfaceId surfaceId,
+                                                        std::string &memberNameOut);
+bool resolvePublishedStdlibSurfaceConstructorExprMemberName(const Expr &expr,
+                                                            StdlibSurfaceId surfaceId,
+                                                            std::string &memberNameOut);
+bool isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(std::string_view path,
+                                                              StdlibSurfaceId surfaceId);
+bool isPublishedStdlibSurfaceConstructorExpr(const Expr &expr,
+                                             StdlibSurfaceId surfaceId);
+std::string inferPublishedExperimentalMapStructPathFromConstructorPath(std::string_view path);
 bool resolvePublishedSemanticStdlibSurfaceMemberName(const SemanticProgram *semanticProgram,
                                                      const Expr &expr,
                                                      StdlibSurfaceId surfaceId,

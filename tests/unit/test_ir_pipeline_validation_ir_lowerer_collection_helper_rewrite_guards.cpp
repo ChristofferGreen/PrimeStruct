@@ -108,6 +108,81 @@ TEST_CASE("ir lowerer late collection constructor guards use published construct
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer constructor metadata helpers retire duplicated constructor tables") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path setupHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.cpp";
+  const std::filesystem::path accessTargetResolutionPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererAccessTargetResolution.cpp";
+  const std::filesystem::path inlineParamHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineParamHelpers.cpp";
+  const std::filesystem::path declaredInferencePath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeDeclaredCollectionInference.cpp";
+
+  REQUIRE(std::filesystem::exists(setupHelpersPath));
+  REQUIRE(std::filesystem::exists(accessTargetResolutionPath));
+  REQUIRE(std::filesystem::exists(inlineParamHelpersPath));
+  REQUIRE(std::filesystem::exists(declaredInferencePath));
+
+  const std::string setupHelpersSource = readText(setupHelpersPath);
+  const std::string accessTargetResolutionSource =
+      readText(accessTargetResolutionPath);
+  const std::string inlineParamHelpersSource =
+      readText(inlineParamHelpersPath);
+  const std::string declaredInferenceSource =
+      readText(declaredInferencePath);
+
+  CHECK(setupHelpersSource.find(
+            "bool resolvePublishedStdlibSurfaceConstructorMemberName(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find(
+            "bool resolvePublishedStdlibSurfaceConstructorExprMemberName(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find(
+            "bool isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(") !=
+        std::string::npos);
+  CHECK(setupHelpersSource.find(
+            "std::string inferPublishedExperimentalMapStructPathFromConstructorPath(") !=
+        std::string::npos);
+
+  CHECK(accessTargetResolutionSource.find(
+            "inferPublishedExperimentalMapStructPathFromConstructorPath(path)") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find(
+            "isPublishedStdlibSurfaceConstructorExpr(") !=
+        std::string::npos);
+  CHECK(accessTargetResolutionSource.find("matchesPath(\"std/collections/mapSingle\")") ==
+        std::string::npos);
+
+  CHECK(inlineParamHelpersSource.find(
+            "isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "isPublishedStdlibSurfaceConstructorExpr(") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("isSimpleCallName(callExpr, \"mapSingle\")") ==
+        std::string::npos);
+
+  CHECK(declaredInferenceSource.find(
+            "isPublishedStdlibSurfaceConstructorExpr(") !=
+        std::string::npos);
+  CHECK(declaredInferenceSource.find("isSimpleCallName(candidate, \"mapSingle\")") ==
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

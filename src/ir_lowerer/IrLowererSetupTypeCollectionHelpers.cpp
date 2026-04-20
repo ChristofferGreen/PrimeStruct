@@ -27,6 +27,26 @@ bool matchesRegistrySpellingSet(std::span<const std::string_view> spellings,
       });
 }
 
+std::string normalizePublishedCollectionPath(std::string path) {
+  path = normalizeCollectionHelperPath(path);
+  if (!path.empty() && path.front() != '/' &&
+      (path.rfind("std/collections/", 0) == 0 ||
+       path.rfind("map/", 0) == 0 ||
+       path.rfind("vector/", 0) == 0)) {
+    path.insert(path.begin(), '/');
+  }
+  return path;
+}
+
+std::string stripCollectionConstructorPathSuffix(std::string path) {
+  const size_t leafStart = path.find_last_of('/');
+  const size_t suffixStart = path.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (suffixStart != std::string::npos) {
+    path.erase(suffixStart);
+  }
+  return path;
+}
+
 const StdlibSurfaceMetadata *findPublishedStdlibSurfaceMetadata(std::string_view path,
                                                                 StdlibSurfaceId surfaceId) {
   if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(path);
@@ -38,6 +58,22 @@ const StdlibSurfaceMetadata *findPublishedStdlibSurfaceMetadata(std::string_view
     return metadata;
   }
   return nullptr;
+}
+
+bool matchesResolvedRootedPublishedCollectionMemberPath(
+    std::string_view path,
+    std::string_view rootPath,
+    std::span<const std::string_view> memberNames) {
+  if (rootPath.empty() || path.size() <= rootPath.size() ||
+      path.rfind(rootPath, 0) != 0 || path[rootPath.size()] != '/') {
+    return false;
+  }
+  const std::string memberPath =
+      stripCollectionConstructorPathSuffix(std::string(path.substr(rootPath.size() + 1)));
+  if (memberPath.empty() || memberPath.find('/') != std::string::npos) {
+    return false;
+  }
+  return std::find(memberNames.begin(), memberNames.end(), memberPath) != memberNames.end();
 }
 
 std::string rebuildScopedCollectionHelperPath(const Expr &expr) {
@@ -540,6 +576,120 @@ bool resolvePublishedStdlibSurfaceExprMemberName(const Expr &expr,
   }
 
   return false;
+}
+
+bool resolvePublishedStdlibSurfaceConstructorMemberName(std::string_view path,
+                                                        StdlibSurfaceId surfaceId,
+                                                        std::string &memberNameOut) {
+  memberNameOut.clear();
+  const auto *metadata = findStdlibSurfaceMetadata(surfaceId);
+  if (metadata == nullptr ||
+      metadata->shape != StdlibSurfaceShape::ConstructorFamily) {
+    return false;
+  }
+
+  const std::string normalizedPath =
+      stripCollectionConstructorPathSuffix(
+          normalizePublishedCollectionPath(std::string(path)));
+  const auto matchesRootedMemberPath = [&](std::string_view rootPath) {
+    return matchesResolvedRootedPublishedCollectionMemberPath(
+        normalizedPath,
+        rootPath,
+        metadata->memberNames);
+  };
+
+  if (!stdlibSurfaceMatchesSpelling(*metadata, normalizedPath) &&
+      !matchesRootedMemberPath(metadata->canonicalPath)) {
+    bool matchedImportAliasRoot = false;
+    for (const std::string_view alias : metadata->importAliasSpellings) {
+      if (matchesRootedMemberPath(alias)) {
+        matchedImportAliasRoot = true;
+        break;
+      }
+    }
+    if (!matchedImportAliasRoot) {
+      return false;
+    }
+  }
+
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, normalizedPath);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+bool resolvePublishedStdlibSurfaceConstructorExprMemberName(const Expr &expr,
+                                                            StdlibSurfaceId surfaceId,
+                                                            std::string &memberNameOut) {
+  memberNameOut.clear();
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+
+  if (resolvePublishedStdlibSurfaceConstructorMemberName(
+          rebuildScopedCollectionHelperPath(expr),
+          surfaceId,
+          memberNameOut)) {
+    return true;
+  }
+
+  if (!expr.namespacePrefix.empty() || expr.name.find('/') != std::string::npos) {
+    return false;
+  }
+
+  if (!resolvePublishedStdlibSurfaceMemberToken(expr.name, surfaceId, memberNameOut)) {
+    return false;
+  }
+  return memberNameOut != "map" && memberNameOut != "vector";
+}
+
+bool isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(std::string_view path,
+                                                              StdlibSurfaceId surfaceId) {
+  std::string memberName;
+  if (!resolvePublishedStdlibSurfaceConstructorMemberName(path, surfaceId, memberName)) {
+    return false;
+  }
+  const auto *metadata = findStdlibSurfaceMetadata(surfaceId);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string normalizedPath =
+      stripCollectionConstructorPathSuffix(
+          normalizePublishedCollectionPath(std::string(path)));
+  return !matchesRegistrySpellingSet(metadata->compatibilitySpellings, normalizedPath);
+}
+
+bool isPublishedStdlibSurfaceConstructorExpr(const Expr &expr,
+                                             StdlibSurfaceId surfaceId) {
+  std::string memberName;
+  return resolvePublishedStdlibSurfaceConstructorExprMemberName(
+      expr, surfaceId, memberName);
+}
+
+std::string inferPublishedExperimentalMapStructPathFromConstructorPath(std::string_view path) {
+  std::string memberName;
+  if (!resolvePublishedStdlibSurfaceConstructorMemberName(
+          path,
+          StdlibSurfaceId::CollectionsMapConstructors,
+          memberName) ||
+      memberName == "map") {
+    return "";
+  }
+
+  const std::string normalizedPath =
+      normalizePublishedCollectionPath(std::string(path));
+  const size_t slash = normalizedPath.find_last_of('/');
+  const std::string leaf =
+      slash == std::string::npos ? normalizedPath : normalizedPath.substr(slash + 1);
+  const std::string memberPrefix = memberName + "__";
+  if (leaf.rfind(memberPrefix, 0) != 0) {
+    return "";
+  }
+  return "/std/collections/experimental_map/Map__" +
+         leaf.substr(memberPrefix.size());
 }
 
 bool resolvePublishedSemanticStdlibSurfaceMemberName(const SemanticProgram *semanticProgram,

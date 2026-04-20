@@ -7,6 +7,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -889,49 +890,7 @@ std::string inferStructPathFromCallTarget(
     normalizedName.erase(normalizedName.begin());
   }
   auto resolveExperimentalMapConstructorStructPath = [&](const std::string &path) -> std::string {
-    constexpr std::string_view prefix = "std/collections/experimental_map/";
-    if (path.rfind(prefix, 0) != 0) {
-      return "";
-    }
-    const std::string suffix = path.substr(prefix.size());
-    auto remap = [&](std::string_view helperStem) -> std::string {
-      const std::string helperPrefix = std::string(helperStem) + "__";
-      if (suffix.rfind(helperPrefix, 0) != 0) {
-        return "";
-      }
-      return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
-    };
-    if (std::string structPath = remap("mapNew"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSingle"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapDouble"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapPair"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapTriple"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapQuad"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapQuint"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSext"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapSept"); !structPath.empty()) {
-      return structPath;
-    }
-    if (std::string structPath = remap("mapOct"); !structPath.empty()) {
-      return structPath;
-    }
-    return "";
+    return inferPublishedExperimentalMapStructPathFromConstructorPath(path);
   };
   if (const std::string experimentalStructPath = resolveExperimentalMapConstructorStructPath(normalizedName);
       !experimentalStructPath.empty() && isKnownStructPath(experimentalStructPath)) {

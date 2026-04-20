@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -117,48 +118,19 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
     }
-    auto matchesPath = [&](std::string_view basePath) {
-      return normalizedName == basePath || normalizedName.rfind(std::string(basePath) + "__", 0) == 0;
-    };
     auto isDirectMapConstructor = [&]() {
-      return matchesPath("std/collections/map/map") ||
-             matchesPath("std/collections/mapNew") ||
-             matchesPath("std/collections/mapSingle") ||
-             matchesPath("std/collections/mapDouble") ||
-             matchesPath("std/collections/mapPair") ||
-             matchesPath("std/collections/mapTriple") ||
-             matchesPath("std/collections/mapQuad") ||
-             matchesPath("std/collections/mapQuint") ||
-             matchesPath("std/collections/mapSext") ||
-             matchesPath("std/collections/mapSept") ||
-             matchesPath("std/collections/mapOct") ||
-             matchesPath("std/collections/experimental_map/mapNew") ||
-             matchesPath("std/collections/experimental_map/mapSingle") ||
-             matchesPath("std/collections/experimental_map/mapDouble") ||
-             matchesPath("std/collections/experimental_map/mapPair") ||
-             matchesPath("std/collections/experimental_map/mapTriple") ||
-             matchesPath("std/collections/experimental_map/mapQuad") ||
-             matchesPath("std/collections/experimental_map/mapQuint") ||
-             matchesPath("std/collections/experimental_map/mapSext") ||
-             matchesPath("std/collections/experimental_map/mapSept") ||
-             matchesPath("std/collections/experimental_map/mapOct") ||
-             isSimpleCallName(candidate, "mapNew") ||
-             isSimpleCallName(candidate, "mapSingle") ||
-             isSimpleCallName(candidate, "mapDouble") ||
-             isSimpleCallName(candidate, "mapPair") ||
-             isSimpleCallName(candidate, "mapTriple") ||
-             isSimpleCallName(candidate, "mapQuad") ||
-             isSimpleCallName(candidate, "mapQuint") ||
-             isSimpleCallName(candidate, "mapSext") ||
-             isSimpleCallName(candidate, "mapSept") ||
-             isSimpleCallName(candidate, "mapOct");
+      return normalizedName == "std/collections/map/map" ||
+             normalizedName.rfind("std/collections/map/map__", 0) == 0 ||
+             isPublishedStdlibSurfaceConstructorExpr(
+                 candidate,
+                 primec::StdlibSurfaceId::CollectionsMapConstructors);
     };
     auto isDirectVectorConstructor = [&]() {
-      return matchesPath("std/collections/vector/vector") ||
-             matchesPath("std/collections/vectorNew") ||
-             matchesPath("std/collections/vectorSingle") ||
-             isSimpleCallName(candidate, "vectorNew") ||
-             isSimpleCallName(candidate, "vectorSingle");
+      return normalizedName == "std/collections/vector/vector" ||
+             normalizedName.rfind("std/collections/vector/vector__", 0) == 0 ||
+             isPublishedStdlibSurfaceConstructorExpr(
+                 candidate,
+                 primec::StdlibSurfaceId::CollectionsVectorConstructors);
     };
     if (isDirectMapConstructor() && candidate.templateArgs.size() == 2) {
       nameOut = "map";

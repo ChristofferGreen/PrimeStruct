@@ -2,6 +2,7 @@
 
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -18,21 +19,10 @@ bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
     return false;
   }
   const Definition *callee = resolveDefinitionCall ? resolveDefinitionCall(callExpr) : nullptr;
-  auto matchesResolvedMapConstructor = [&](std::string_view basePath) {
-    return callee != nullptr &&
-           (callee->fullPath == basePath || callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0);
-  };
-  if (!(matchesResolvedMapConstructor("/std/collections/map/map") ||
-        matchesResolvedMapConstructor("/std/collections/mapNew") ||
-        matchesResolvedMapConstructor("/std/collections/mapSingle") ||
-        matchesResolvedMapConstructor("/std/collections/mapDouble") ||
-        matchesResolvedMapConstructor("/std/collections/mapPair") ||
-        matchesResolvedMapConstructor("/std/collections/mapTriple") ||
-        matchesResolvedMapConstructor("/std/collections/mapQuad") ||
-        matchesResolvedMapConstructor("/std/collections/mapQuint") ||
-        matchesResolvedMapConstructor("/std/collections/mapSext") ||
-        matchesResolvedMapConstructor("/std/collections/mapSept") ||
-        matchesResolvedMapConstructor("/std/collections/mapOct"))) {
+  if (callee == nullptr ||
+      !isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
+          callee->fullPath,
+          primec::StdlibSurfaceId::CollectionsMapConstructors)) {
     return false;
   }
 

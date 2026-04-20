@@ -74,23 +74,10 @@
         return false;
       }
       const Definition *callee = resolveDefinitionCall(callExpr);
-      if (callee == nullptr) {
-        return false;
-      }
-      auto matchesExperimentalMapConstructor = [&](std::string_view basePath) {
-        return callee->fullPath == basePath || callee->fullPath.rfind(std::string(basePath) + "__t", 0) == 0;
-      };
-      if (!(matchesExperimentalMapConstructor("/std/collections/map/map") ||
-            matchesExperimentalMapConstructor("/std/collections/mapNew") ||
-            matchesExperimentalMapConstructor("/std/collections/mapSingle") ||
-            matchesExperimentalMapConstructor("/std/collections/mapDouble") ||
-            matchesExperimentalMapConstructor("/std/collections/mapPair") ||
-            matchesExperimentalMapConstructor("/std/collections/mapTriple") ||
-            matchesExperimentalMapConstructor("/std/collections/mapQuad") ||
-            matchesExperimentalMapConstructor("/std/collections/mapQuint") ||
-            matchesExperimentalMapConstructor("/std/collections/mapSext") ||
-            matchesExperimentalMapConstructor("/std/collections/mapSept") ||
-            matchesExperimentalMapConstructor("/std/collections/mapOct"))) {
+      if (callee == nullptr ||
+          !isResolvedCanonicalPublishedStdlibSurfaceConstructorPath(
+              callee->fullPath,
+              primec::StdlibSurfaceId::CollectionsMapConstructors)) {
         return false;
       }
       rewrittenExpr = callExpr;

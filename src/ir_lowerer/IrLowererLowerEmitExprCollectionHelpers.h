@@ -502,44 +502,9 @@
             collectionStructPath = inferStructExprPath(*receiverExpr, localsIn);
             if (collectionStructPath.empty() &&
                 receiverDef->fullPath.rfind("/std/collections/experimental_map/", 0) == 0) {
-              const std::string suffix =
-                  receiverDef->fullPath.substr(std::string("/std/collections/experimental_map/").size());
-              auto remapExperimentalMapConstructor = [&](std::string_view helperStem) -> std::string {
-                const std::string helperPrefix = std::string(helperStem) + "__";
-                if (suffix.rfind(helperPrefix, 0) != 0) {
-                  return {};
-                }
-                return "/std/collections/experimental_map/Map__" + suffix.substr(helperPrefix.size());
-              };
-              if (std::string structPath = remapExperimentalMapConstructor("mapNew"); !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapSingle");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapDouble");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapPair");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapTriple");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapQuad");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapQuint");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapSext");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else if (std::string structPath = remapExperimentalMapConstructor("mapSept");
-                         !structPath.empty()) {
-                collectionStructPath = std::move(structPath);
-              } else {
-                collectionStructPath = remapExperimentalMapConstructor("mapOct");
-              }
+              collectionStructPath =
+                  inferPublishedExperimentalMapStructPathFromConstructorPath(
+                      receiverDef->fullPath);
             }
           }
           if (!resolvedCollectionFromDef) {
