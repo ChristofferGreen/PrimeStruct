@@ -33,6 +33,19 @@ bool isBufferHandleCall(const Expr &expr) {
          expr.name.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
 }
 
+std::string resolveScopedCallPath(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  if (!expr.namespacePrefix.empty() && expr.namespacePrefix.back() == '/') {
+    return expr.namespacePrefix + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
+
 bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {
   valueTypeOut.clear();
   std::string base;
@@ -469,15 +482,9 @@ bool inferPackedErrorStructPath(const Expr &expr, std::string &pathOut) {
     return true;
   }
 
-  if (!expr.namespacePrefix.empty()) {
-    std::string qualifiedName = expr.namespacePrefix;
-    if (!qualifiedName.empty() && qualifiedName.back() != '/') {
-      qualifiedName.push_back('/');
-    }
-    qualifiedName += expr.name;
-    if (inferPackedErrorStructPathText(qualifiedName, pathOut)) {
-      return true;
-    }
+  const std::string scopedName = resolveScopedCallPath(expr);
+  if (scopedName != expr.name && inferPackedErrorStructPathText(scopedName, pathOut)) {
+    return true;
   }
 
   return false;
@@ -613,13 +620,14 @@ bool inferDirectResultValueCollectionInfo(const Expr &expr,
   }
   if (!expr.isMethodCall) {
     auto matchesDirectMapConstructor = [&](const Expr &candidate) {
+      const std::string scopedPath = resolveScopedCallPath(candidate);
       return isPublishedStdlibSurfaceConstructorExpr(
                  candidate,
                  primec::StdlibSurfaceId::CollectionsMapConstructors) ||
-             candidate.name == "/std/collections/map/map" ||
-             candidate.name.rfind("/std/collections/map/map__", 0) == 0 ||
-             candidate.name == "std/collections/map/map" ||
-             candidate.name.rfind("std/collections/map/map__", 0) == 0;
+             scopedPath == "/std/collections/map/map" ||
+             scopedPath.rfind("/std/collections/map/map__", 0) == 0 ||
+             scopedPath == "std/collections/map/map" ||
+             scopedPath.rfind("std/collections/map/map__", 0) == 0;
     };
     if (matchesDirectMapConstructor(expr) && expr.templateArgs.size() == 2) {
       return assignCollection(

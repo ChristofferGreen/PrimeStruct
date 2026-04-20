@@ -437,6 +437,18 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   valuesExpr.kind = primec::Expr::Kind::Name;
   valuesExpr.name = "values";
 
+  primec::Expr directMapCtorExpr;
+  directMapCtorExpr.kind = primec::Expr::Kind::Call;
+  directMapCtorExpr.name = "map";
+  directMapCtorExpr.namespacePrefix = "/std/collections/map";
+  directMapCtorExpr.templateArgs = {"i32", "i32"};
+
+  primec::Expr okCtorExpr;
+  okCtorExpr.kind = primec::Expr::Kind::Call;
+  okCtorExpr.isMethodCall = true;
+  okCtorExpr.name = "ok";
+  okCtorExpr.args = {resultName, directMapCtorExpr};
+
   primec::Expr okExpr;
   okExpr.kind = primec::Expr::Kind::Call;
   okExpr.isMethodCall = true;
@@ -523,6 +535,15 @@ TEST_CASE("ir lowerer result helpers resolve map Result payload metadata") {
   primec::ir_lowerer::ResultExprInfo out;
   CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
       okExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(out.valueMapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      okCtorExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
   CHECK(out.isResult);
   CHECK(out.hasValue);
   CHECK(out.valueCollectionKind == primec::ir_lowerer::LocalInfo::Kind::Map);
