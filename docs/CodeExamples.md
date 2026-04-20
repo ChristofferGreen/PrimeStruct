@@ -237,6 +237,37 @@ Why this is good:
 - The public instance helper shows the normal method-style surface for owned behavior.
 - The example also documents the current direct-call spelling for static helpers.
 
+### Public Imports Respect Visibility
+
+When a namespace exports a small public surface, import the public helpers
+directly and leave private helpers hidden behind the namespace boundary.
+
+```prime
+namespace demo {
+  [public int]
+  add_one([int] value) {
+    return(value + 1)
+  }
+
+  [private int]
+  hidden_value() {
+    return(99)
+  }
+}
+
+import /demo/*
+
+[int]
+use_public_import() {
+  return(add_one(4))
+}
+```
+
+Why this is good:
+- The example makes the public import boundary explicit without extra syntax noise.
+- The call site stays short because only the intended helper is imported.
+- The private helper still documents the boundary the import will not cross.
+
 ### Concise Local Binding with Labeled Construction
 
 When the initializer already makes the type obvious, prefer the concise local
