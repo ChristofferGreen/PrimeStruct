@@ -111,7 +111,8 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todo.find("Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4042:") == std::string::npos);
-  CHECK(todo.find("TODO-4043") != std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4043:") == std::string::npos);
+  CHECK(todo.find("TODO-4044") != std::string::npos);
 }
 
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {

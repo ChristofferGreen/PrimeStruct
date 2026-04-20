@@ -115,6 +115,7 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
   std::string_view collectionFamily;
   switch (metadata->id) {
     case StdlibSurfaceId::CollectionsVectorHelpers:
+    case StdlibSurfaceId::CollectionsVectorConstructors:
       collectionFamily = "vector";
       break;
     case StdlibSurfaceId::CollectionsMapHelpers:

@@ -127,6 +127,13 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"remove_swap\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_vector/vectorRemoveSwap\"") != std::string::npos);
 
+  CHECK(source.find("StdlibSurfaceId::CollectionsVectorConstructors") != std::string::npos);
+  CHECK(source.find("\"collections.vector_constructors\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/vector/vector\"") != std::string::npos);
+  CHECK(source.find("\"vectorSingle\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_vector/vectorPair\"") !=
+        std::string::npos);
+
   CHECK(source.find("StdlibSurfaceId::CollectionsMapHelpers") != std::string::npos);
   CHECK(source.find("\"collections.map_helpers\"") != std::string::npos);
   CHECK(source.find("\"/map/count\"") != std::string::npos);

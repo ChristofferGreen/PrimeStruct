@@ -125,6 +125,50 @@ constexpr auto CollectionsVectorLoweringSpellings = std::to_array<std::string_vi
     "/std/collections/vector/at_unsafe",
 });
 
+constexpr auto CollectionsVectorConstructorMembers = std::to_array<std::string_view>({
+    "vector",
+    "vectorNew",
+    "vectorSingle",
+    "vectorPair",
+    "vectorTriple",
+    "vectorQuad",
+    "vectorQuint",
+    "vectorSext",
+    "vectorSept",
+    "vectorOct",
+});
+
+constexpr auto CollectionsVectorConstructorImportAliases = std::to_array<std::string_view>({
+    "/std/collections/vector",
+    "vector",
+});
+
+constexpr auto CollectionsVectorConstructorCompatibilitySpellings = std::to_array<std::string_view>({
+    "/std/collections/experimental_vector/vector",
+    "/std/collections/experimental_vector/vectorNew",
+    "/std/collections/experimental_vector/vectorSingle",
+    "/std/collections/experimental_vector/vectorPair",
+    "/std/collections/experimental_vector/vectorTriple",
+    "/std/collections/experimental_vector/vectorQuad",
+    "/std/collections/experimental_vector/vectorQuint",
+    "/std/collections/experimental_vector/vectorSext",
+    "/std/collections/experimental_vector/vectorSept",
+    "/std/collections/experimental_vector/vectorOct",
+});
+
+constexpr auto CollectionsVectorConstructorLoweringSpellings = std::to_array<std::string_view>({
+    "/std/collections/vector/vector",
+    "/std/collections/vectorNew",
+    "/std/collections/vectorSingle",
+    "/std/collections/vectorPair",
+    "/std/collections/vectorTriple",
+    "/std/collections/vectorQuad",
+    "/std/collections/vectorQuint",
+    "/std/collections/vectorSext",
+    "/std/collections/vectorSept",
+    "/std/collections/vectorOct",
+});
+
 constexpr auto CollectionsMapHelperMembers = std::to_array<std::string_view>({
     "entry",
     "map",
@@ -355,7 +399,7 @@ constexpr auto GfxErrorLoweringSpellings = std::to_array<std::string_view>({
     "/std/gfx/experimental/GfxError/result",
 });
 
-const std::array<StdlibSurfaceMetadata, 8> Registry = {{
+const std::array<StdlibSurfaceMetadata, 9> Registry = {{
     {
         .id = StdlibSurfaceId::FileHelpers,
         .domain = StdlibSurfaceDomain::File,
@@ -391,6 +435,18 @@ const std::array<StdlibSurfaceMetadata, 8> Registry = {{
         .importAliasSpellings = CollectionsVectorImportAliases,
         .compatibilitySpellings = CollectionsVectorCompatibilitySpellings,
         .loweringSpellings = CollectionsVectorLoweringSpellings,
+    },
+    {
+        .id = StdlibSurfaceId::CollectionsVectorConstructors,
+        .domain = StdlibSurfaceDomain::Collections,
+        .shape = StdlibSurfaceShape::ConstructorFamily,
+        .bridgeKey = "collections.vector_constructors",
+        .canonicalImportRoot = "/std/collections",
+        .canonicalPath = "/std/collections/vector/vector",
+        .memberNames = CollectionsVectorConstructorMembers,
+        .importAliasSpellings = CollectionsVectorConstructorImportAliases,
+        .compatibilitySpellings = CollectionsVectorConstructorCompatibilitySpellings,
+        .loweringSpellings = CollectionsVectorConstructorLoweringSpellings,
     },
     {
         .id = StdlibSurfaceId::CollectionsMapHelpers,
@@ -571,6 +627,13 @@ std::string_view resolveCollectionsMapHelperMemberName(std::string_view memberNa
   return {};
 }
 
+std::string_view resolveCollectionsVectorConstructorMemberName(std::string_view memberName) {
+  if (matchesAny(CollectionsVectorConstructorMembers, memberName)) {
+    return memberName;
+  }
+  return {};
+}
+
 std::string_view resolveCollectionsMapConstructorMemberName(std::string_view memberName) {
   if (matchesAny(CollectionsMapConstructorMembers, memberName)) {
     return memberName;
@@ -583,6 +646,8 @@ std::string_view resolveSurfaceMemberNameImpl(const StdlibSurfaceMetadata &metad
   switch (metadata.id) {
     case StdlibSurfaceId::CollectionsVectorHelpers:
       return resolveCollectionsVectorMemberName(memberName);
+    case StdlibSurfaceId::CollectionsVectorConstructors:
+      return resolveCollectionsVectorConstructorMemberName(memberName);
     case StdlibSurfaceId::CollectionsMapHelpers:
       return resolveCollectionsMapHelperMemberName(memberName);
     case StdlibSurfaceId::CollectionsMapConstructors:

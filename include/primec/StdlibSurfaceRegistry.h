@@ -21,6 +21,7 @@ enum class StdlibSurfaceId {
   FileHelpers,
   FileErrorHelpers,
   CollectionsVectorHelpers,
+  CollectionsVectorConstructors,
   CollectionsMapHelpers,
   CollectionsMapConstructors,
   CollectionsContainerErrorHelpers,
