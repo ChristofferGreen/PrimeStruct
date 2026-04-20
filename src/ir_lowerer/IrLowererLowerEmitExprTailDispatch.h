@@ -670,7 +670,8 @@
             [&]() { return function.instructions.size(); },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             [&](size_t instructionIndex, uint64_t imm) { function.instructions[instructionIndex].imm = imm; },
-            error);
+            error,
+            semanticProgram);
         if (nativeTailResult == ir_lowerer::NativeCallTailDispatchResult::Emitted) {
           return true;
         }

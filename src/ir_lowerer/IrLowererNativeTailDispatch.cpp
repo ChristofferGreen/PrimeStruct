@@ -22,13 +22,27 @@ std::string resolveNativeTailCallPathWithoutFallbackProbes(const Expr &expr) {
   return expr.name;
 }
 
-bool isExplicitDirectMapCountContainsTryAtCall(const Expr &expr) {
+bool resolvePublishedNativeTailHelperName(const SemanticProgram *semanticProgram,
+                                          const Expr &expr,
+                                          StdlibSurfaceId surfaceId,
+                                          std::string &helperNameOut) {
+  return resolvePublishedSemanticStdlibSurfaceMemberName(
+             semanticProgram, expr, surfaceId, helperNameOut) ||
+         resolvePublishedStdlibSurfaceMemberName(
+             resolveNativeTailCallPathWithoutFallbackProbes(expr),
+             surfaceId,
+             helperNameOut);
+}
+
+bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticProgram,
+                                               const Expr &expr) {
   if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
     return false;
   }
   std::string helperName;
-  return resolvePublishedStdlibSurfaceMemberName(
-             resolveNativeTailCallPathWithoutFallbackProbes(expr),
+  return resolvePublishedNativeTailHelperName(
+             semanticProgram,
+             expr,
              StdlibSurfaceId::CollectionsMapHelpers,
              helperName) &&
          (helperName == "count" || helperName == "contains" || helperName == "tryAt");
@@ -137,7 +151,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   std::string mathName;
   if (tryGetMathBuiltinName(expr, mathName) && !isSupportedMathBuiltinName(mathName)) {
     error = "native backend does not support math builtin: " + mathName;
@@ -313,7 +328,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   std::string accessName;
-  if (isExplicitDirectMapCountContainsTryAtCall(expr) && !expr.args.empty() &&
+  if (isExplicitDirectMapCountContainsTryAtCall(semanticProgram, expr) &&
+      !expr.args.empty() &&
       resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
     return NativeCallTailDispatchResult::NotHandled;
   }
@@ -326,21 +342,25 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     std::string explicitHelperName;
     const bool isExplicitVectorAccessCall =
         !expr.isMethodCall &&
-        isCanonicalPublishedStdlibSurfaceHelperPath(
-            directHelperPath,
-            StdlibSurfaceId::CollectionsVectorHelpers) &&
-        resolvePublishedStdlibSurfaceMemberName(
-            directHelperPath,
+        resolvePublishedNativeTailHelperName(
+            semanticProgram,
+            expr,
             StdlibSurfaceId::CollectionsVectorHelpers,
             explicitHelperName) &&
+        (isCanonicalPublishedStdlibSurfaceHelperPath(
+             directHelperPath,
+             StdlibSurfaceId::CollectionsVectorHelpers) ||
+         findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr) ==
+             StdlibSurfaceId::CollectionsVectorHelpers) &&
         (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
     if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const bool isExplicitMapAccessCall =
         !expr.isMethodCall &&
-        resolvePublishedStdlibSurfaceMemberName(
-            directHelperPath,
+        resolvePublishedNativeTailHelperName(
+            semanticProgram,
+            expr,
             StdlibSurfaceId::CollectionsMapHelpers,
             explicitHelperName) &&
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
@@ -403,7 +423,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -427,7 +448,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
@@ -451,7 +473,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -475,7 +498,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
@@ -498,7 +522,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -520,7 +545,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
@@ -546,7 +572,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   return tryEmitNativeCallTailDispatch(
       expr,
       localsIn,
@@ -570,7 +597,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
@@ -595,7 +623,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   return tryEmitNativeCallTailDispatchWithLocals(
       expr,
       localsIn,
@@ -619,7 +648,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
@@ -643,7 +673,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   return tryEmitNativeCallTailDispatchWithLocals(
       expr,
       localsIn,
@@ -667,7 +698,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram);
 }
 
 NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
@@ -690,7 +722,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
     const std::function<size_t()> &instructionCount,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     const std::function<void(size_t, uint64_t)> &patchInstructionImm,
-    std::string &error) {
+    std::string &error,
+    const SemanticProgram *semanticProgram) {
   return tryEmitNativeCallTailDispatchWithLocals(
       expr,
       localsIn,
@@ -712,7 +745,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(
       instructionCount,
       emitInstruction,
       patchInstructionImm,
-      error);
+      error,
+      semanticProgram);
 }
 
 } // namespace primec::ir_lowerer

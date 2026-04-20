@@ -194,6 +194,61 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                            {mapName, keyName},
                            Result::NotHandled,
                            "stale");
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "contains",
+      .sourceLine = 12,
+      .sourceColumn = 3,
+      .semanticNodeId = 91,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/mapContains__ov1"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      91, semanticProgram.directCallTargets.front().resolvedPathId);
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      91, primec::StdlibSurfaceId::CollectionsMapHelpers);
+
+  primec::Expr semanticContainsCall;
+  semanticContainsCall.kind = primec::Expr::Kind::Call;
+  semanticContainsCall.name = "/std/collections/mapContains__ov1";
+  semanticContainsCall.semanticNodeId = 91;
+  semanticContainsCall.args = {mapName, keyName};
+
+  instructions.clear();
+  std::string semanticError = "stale";
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+            semanticContainsCall,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            emitExpr,
+            resolveMapAccessTargetInfo,
+            resolveArrayVectorAccessTargetInfo,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Unknown;
+            },
+            []() { return 0; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            semanticError,
+            &semanticProgram) == Result::NotHandled);
+  CHECK(semanticError == "stale");
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer call helpers emit local vector count capacity calls through native tail dispatch") {
