@@ -133,20 +133,40 @@
             if (candidateValueExpr->kind != Expr::Kind::Call) {
               return false;
             }
+            auto resolveScopedCallPath = [](const Expr &candidateExpr) {
+              if (!candidateExpr.name.empty() && candidateExpr.name.front() == '/') {
+                return candidateExpr.name;
+              }
+              if (candidateExpr.namespacePrefix.empty()) {
+                return candidateExpr.name;
+              }
+              std::string scopedPath = candidateExpr.namespacePrefix;
+              if (!scopedPath.empty() && scopedPath.front() != '/') {
+                scopedPath.insert(scopedPath.begin(), '/');
+              }
+              if (!candidateExpr.name.empty()) {
+                if (!scopedPath.empty() && scopedPath.back() != '/') {
+                  scopedPath.push_back('/');
+                }
+                scopedPath += candidateExpr.name;
+              }
+              return scopedPath;
+            };
             std::string valueStructType;
             const Definition *valueDef = resolveDefinitionCall(*candidateValueExpr);
+            const std::string candidateValuePath = resolveScopedCallPath(*candidateValueExpr);
             if (valueDef != nullptr && isStructDefinition(*valueDef)) {
               valueStructType = valueDef->fullPath;
-            } else if (candidateValueExpr->name == "ContainerError" ||
-                       candidateValueExpr->name == "/std/collections/ContainerError") {
+            } else if (candidateValuePath == "ContainerError" ||
+                       candidateValuePath == "/std/collections/ContainerError") {
               valueStructType = "/std/collections/ContainerError";
-            } else if (candidateValueExpr->name == "ImageError" ||
-                       candidateValueExpr->name == "/std/image/ImageError") {
+            } else if (candidateValuePath == "ImageError" ||
+                       candidateValuePath == "/std/image/ImageError") {
               valueStructType = "/std/image/ImageError";
-            } else if (candidateValueExpr->name == "GfxError" ||
-                       candidateValueExpr->name == "/std/gfx/GfxError" ||
-                       candidateValueExpr->name == "/std/gfx/experimental/GfxError") {
-              valueStructType = candidateValueExpr->name == "/std/gfx/experimental/GfxError"
+            } else if (candidateValuePath == "GfxError" ||
+                       candidateValuePath == "/std/gfx/GfxError" ||
+                       candidateValuePath == "/std/gfx/experimental/GfxError") {
+              valueStructType = candidateValuePath == "/std/gfx/experimental/GfxError"
                                     ? "/std/gfx/experimental/GfxError"
                                     : "/std/gfx/GfxError";
             }

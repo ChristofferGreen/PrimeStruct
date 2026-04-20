@@ -258,6 +258,148 @@ TEST_CASE("ir lowerer result helpers resolve packed error struct Result combinat
   CHECK(out.errorType == "FileError");
 }
 
+TEST_CASE("ir lowerer result helpers resolve parser-shaped packed error struct Result combinator metadata") {
+  primec::ir_lowerer::LocalMap locals;
+
+  primec::ir_lowerer::LocalInfo sourceResult;
+  sourceResult.isResult = true;
+  sourceResult.resultHasValue = true;
+  sourceResult.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  sourceResult.resultValueCollectionKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  sourceResult.resultErrorType = "FileError";
+  locals.emplace("sourceResult", sourceResult);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr sourceResultExpr;
+  sourceResultExpr.kind = primec::Expr::Kind::Name;
+  sourceResultExpr.name = "sourceResult";
+
+  primec::Expr leftResultExpr;
+  leftResultExpr.kind = primec::Expr::Kind::Name;
+  leftResultExpr.name = "leftResult";
+
+  primec::Expr rightResultExpr;
+  rightResultExpr.kind = primec::Expr::Kind::Name;
+  rightResultExpr.name = "rightResult";
+
+  primec::Expr valueParamExpr;
+  valueParamExpr.kind = primec::Expr::Kind::Name;
+  valueParamExpr.name = "value";
+
+  primec::Expr leftParamExpr;
+  leftParamExpr.kind = primec::Expr::Kind::Name;
+  leftParamExpr.name = "left";
+
+  primec::Expr rightParamExpr;
+  rightParamExpr.kind = primec::Expr::Kind::Name;
+  rightParamExpr.name = "right";
+
+  primec::Expr containerCtorExpr;
+  containerCtorExpr.kind = primec::Expr::Kind::Call;
+  containerCtorExpr.name = "ContainerError";
+  containerCtorExpr.namespacePrefix = "/std/collections";
+  containerCtorExpr.args = {valueParamExpr};
+
+  primec::Expr mapLambdaExpr;
+  mapLambdaExpr.isLambda = true;
+  mapLambdaExpr.args.push_back(valueParamExpr);
+  mapLambdaExpr.bodyArguments.push_back(containerCtorExpr);
+
+  primec::Expr mapExpr;
+  mapExpr.kind = primec::Expr::Kind::Call;
+  mapExpr.isMethodCall = true;
+  mapExpr.name = "map";
+  mapExpr.args = {resultName, sourceResultExpr, mapLambdaExpr};
+
+  primec::Expr imageCtorExpr;
+  imageCtorExpr.kind = primec::Expr::Kind::Call;
+  imageCtorExpr.name = "ImageError";
+  imageCtorExpr.namespacePrefix = "/std/image";
+  imageCtorExpr.args = {valueParamExpr};
+
+  primec::Expr okImageExpr;
+  okImageExpr.kind = primec::Expr::Kind::Call;
+  okImageExpr.isMethodCall = true;
+  okImageExpr.name = "ok";
+  okImageExpr.args = {resultName, imageCtorExpr};
+
+  primec::Expr andThenLambdaExpr;
+  andThenLambdaExpr.isLambda = true;
+  andThenLambdaExpr.args.push_back(valueParamExpr);
+  andThenLambdaExpr.bodyArguments.push_back(okImageExpr);
+
+  primec::Expr andThenExpr;
+  andThenExpr.kind = primec::Expr::Kind::Call;
+  andThenExpr.isMethodCall = true;
+  andThenExpr.name = "and_then";
+  andThenExpr.args = {resultName, sourceResultExpr, andThenLambdaExpr};
+
+  primec::ir_lowerer::LocalInfo leftResult = sourceResult;
+  locals.emplace("leftResult", leftResult);
+  primec::ir_lowerer::LocalInfo rightResult = sourceResult;
+  locals.emplace("rightResult", rightResult);
+
+  primec::Expr plusExpr;
+  plusExpr.kind = primec::Expr::Kind::Call;
+  plusExpr.name = "plus";
+  plusExpr.args = {leftParamExpr, rightParamExpr};
+
+  primec::Expr gfxCtorExpr;
+  gfxCtorExpr.kind = primec::Expr::Kind::Call;
+  gfxCtorExpr.name = "GfxError";
+  gfxCtorExpr.namespacePrefix = "/std/gfx";
+  gfxCtorExpr.args = {plusExpr};
+
+  primec::Expr map2LambdaExpr;
+  map2LambdaExpr.isLambda = true;
+  map2LambdaExpr.args = {leftParamExpr, rightParamExpr};
+  map2LambdaExpr.bodyArguments.push_back(gfxCtorExpr);
+
+  primec::Expr map2Expr;
+  map2Expr.kind = primec::Expr::Kind::Call;
+  map2Expr.isMethodCall = true;
+  map2Expr.name = "map2";
+  map2Expr.args = {resultName, leftResultExpr, rightResultExpr, map2LambdaExpr};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    if (expr.kind == primec::Expr::Kind::Name) {
+      auto localIt = localsIn.find(expr.name);
+      if (localIt != localsIn.end()) {
+        return localIt->second.valueKind;
+      }
+    }
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "plus") {
+      return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      mapExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.valueStructType == "/std/collections/ContainerError");
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      andThenExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.valueStructType == "/std/image/ImageError");
+
+  out = {};
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      map2Expr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.valueStructType == "/std/gfx/GfxError");
+}
+
 TEST_CASE("ir lowerer result helpers resolve function-returned array Result payload metadata") {
   primec::Definition makeNumbersDef;
   makeNumbersDef.fullPath = "/make_numbers";
