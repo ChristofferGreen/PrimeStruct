@@ -425,6 +425,21 @@ TEST_CASE("simple-call helpers keep rooted internal soa storage bare builtins") 
   CHECK(primec::emitter::isSimpleCallName(rootedTakeCall, "take"));
 }
 
+TEST_CASE("emitter builtin assign keeps internal soa storage helper paths") {
+  std::unordered_map<std::string, std::string> nameMap;
+
+  primec::Expr rootedAssignCall;
+  rootedAssignCall.kind = primec::Expr::Kind::Call;
+  rootedAssignCall.name = "/std/collections/internal_soa_storage/assign";
+  CHECK(primec::emitter::isBuiltinAssign(rootedAssignCall, nameMap));
+
+  primec::Expr namespacedAssignCall;
+  namespacedAssignCall.kind = primec::Expr::Kind::Call;
+  namespacedAssignCall.name = "assign";
+  namespacedAssignCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  CHECK(primec::emitter::isBuiltinAssign(namespacedAssignCall, nameMap));
+}
+
 TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map") {
   primec::Expr entryCall;
   entryCall.kind = primec::Expr::Kind::Call;
