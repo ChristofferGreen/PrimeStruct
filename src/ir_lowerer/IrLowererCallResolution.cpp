@@ -265,6 +265,7 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
 }
 
 bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
+                                          const SemanticProgram *semanticProgram,
                                           const std::string &resolvedPath) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.semanticNodeId == 0 ||
       !expr.namespacePrefix.empty() || expr.name.empty() || expr.name.front() == '/') {
@@ -275,10 +276,24 @@ bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
   }
 
   std::string helperName;
+  if (resolvePublishedSemanticStdlibSurfaceMemberName(
+          semanticProgram,
+          expr,
+          StdlibSurfaceId::CollectionsMapHelpers,
+          helperName)) {
+    return helperName == "count" || helperName == "contains" ||
+           helperName == "tryAt" || helperName == "at" ||
+           helperName == "at_unsafe";
+  }
   if (resolveMapHelperAliasName(expr, helperName)) {
     return helperName == "count" || helperName == "contains" ||
            helperName == "tryAt" || helperName == "at" ||
            helperName == "at_unsafe";
+  }
+  if (expr.name == "count" || expr.name == "contains" ||
+      expr.name == "tryAt" || expr.name == "at" ||
+      expr.name == "at_unsafe") {
+    return true;
   }
 
   std::string accessName;
@@ -461,7 +476,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     if (isExplicitSamePathPublishedMapHelperCall(callExpr, resolved)) {
       return resolvedDef;
     }
-    if (isSemanticBarePublishedMapHelperCall(callExpr, resolved)) {
+    if (isSemanticBarePublishedMapHelperCall(callExpr, semanticProgram, resolved)) {
       return resolvedDef;
     }
     if (isExplicitMapContainsOrTryAtMethodPath(callExpr.name) &&

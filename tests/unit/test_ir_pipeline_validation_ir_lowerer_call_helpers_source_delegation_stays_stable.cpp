@@ -2819,18 +2819,30 @@ TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
 TEST_CASE("ir lowerer call helpers keep bare semantic map sugar on canonical defs") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
+  primec::Definition canonicalMapContainsDef;
+  canonicalMapContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition canonicalMapTryAtDef;
+  canonicalMapTryAtDef.fullPath = "/std/collections/map/tryAt";
   primec::Definition canonicalMapAtDef;
   canonicalMapAtDef.fullPath = "/std/collections/map/at";
   primec::Definition canonicalMapAtUnsafeDef;
   canonicalMapAtUnsafeDef.fullPath = "/std/collections/map/at_unsafe";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {canonicalMapCountDef.fullPath, &canonicalMapCountDef},
+      {canonicalMapContainsDef.fullPath, &canonicalMapContainsDef},
+      {canonicalMapTryAtDef.fullPath, &canonicalMapTryAtDef},
       {canonicalMapAtDef.fullPath, &canonicalMapAtDef},
       {canonicalMapAtUnsafeDef.fullPath, &canonicalMapAtUnsafeDef},
   };
   const auto resolveExprPath = [](const primec::Expr &expr) {
     if (expr.name == "count") {
       return std::string("/std/collections/map/count");
+    }
+    if (expr.name == "contains") {
+      return std::string("/std/collections/map/contains");
+    }
+    if (expr.name == "tryAt") {
+      return std::string("/std/collections/map/tryAt");
     }
     if (expr.name == "at") {
       return std::string("/std/collections/map/at");
@@ -2855,18 +2867,32 @@ TEST_CASE("ir lowerer call helpers keep bare semantic map sugar on canonical def
   countCall.semanticNodeId = 91;
   countCall.args = {valuesArg};
 
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.name = "contains";
+  containsCall.semanticNodeId = 92;
+  containsCall.args = {valuesArg, keyArg};
+
+  primec::Expr tryAtCall = containsCall;
+  tryAtCall.name = "tryAt";
+  tryAtCall.semanticNodeId = 93;
+
   primec::Expr atCall;
   atCall.kind = primec::Expr::Kind::Call;
   atCall.name = "at";
-  atCall.semanticNodeId = 92;
+  atCall.semanticNodeId = 94;
   atCall.args = {valuesArg, keyArg};
 
   primec::Expr atUnsafeCall = atCall;
   atUnsafeCall.name = "at_unsafe";
-  atUnsafeCall.semanticNodeId = 93;
+  atUnsafeCall.semanticNodeId = 95;
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(countCall, defMap, resolveExprPath) ==
         &canonicalMapCountDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(containsCall, defMap, resolveExprPath) ==
+        &canonicalMapContainsDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(tryAtCall, defMap, resolveExprPath) ==
+        &canonicalMapTryAtDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(atCall, defMap, resolveExprPath) ==
         &canonicalMapAtDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(atUnsafeCall, defMap, resolveExprPath) ==

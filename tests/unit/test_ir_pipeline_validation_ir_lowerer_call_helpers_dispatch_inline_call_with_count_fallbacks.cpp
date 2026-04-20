@@ -911,6 +911,10 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
 
   primec::Definition canonicalCount;
   canonicalCount.fullPath = "/std/collections/map/count";
+  primec::Definition canonicalContains;
+  canonicalContains.fullPath = "/std/collections/map/contains";
+  primec::Definition canonicalTryAt;
+  canonicalTryAt.fullPath = "/std/collections/map/tryAt";
   primec::Definition canonicalAt;
   canonicalAt.fullPath = "/std/collections/map/at";
   primec::Definition canonicalAtUnsafe;
@@ -942,6 +946,12 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
                 if (expr.name == "count") {
                   return &canonicalCount;
                 }
+                if (expr.name == "contains") {
+                  return &canonicalContains;
+                }
+                if (expr.name == "tryAt") {
+                  return &canonicalTryAt;
+                }
                 if (expr.name == "at") {
                   return &canonicalAt;
                 }
@@ -970,16 +980,28 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
   countCall.args = {valuesName};
   expectEmitted(countCall, canonicalCount);
 
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.name = "contains";
+  containsCall.semanticNodeId = 102;
+  containsCall.args = {valuesName, keyLiteral};
+  expectEmitted(containsCall, canonicalContains);
+
+  primec::Expr tryAtCall = containsCall;
+  tryAtCall.name = "tryAt";
+  tryAtCall.semanticNodeId = 103;
+  expectEmitted(tryAtCall, canonicalTryAt);
+
   primec::Expr atCall;
   atCall.kind = primec::Expr::Kind::Call;
   atCall.name = "at";
-  atCall.semanticNodeId = 102;
+  atCall.semanticNodeId = 104;
   atCall.args = {valuesName, keyLiteral};
   expectEmitted(atCall, canonicalAt);
 
   primec::Expr atUnsafeCall = atCall;
   atUnsafeCall.name = "at_unsafe";
-  atUnsafeCall.semanticNodeId = 103;
+  atUnsafeCall.semanticNodeId = 105;
   expectEmitted(atUnsafeCall, canonicalAtUnsafe);
 }
 

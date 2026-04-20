@@ -110,6 +110,19 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
          normalizeCollectionHelperPath(resolvedPath);
 }
 
+bool isSemanticBarePublishedMapHelperCall(const Expr &expr,
+                                          std::string_view helperName) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.semanticNodeId == 0 ||
+      !expr.namespacePrefix.empty() || expr.name.empty() || expr.name.front() == '/') {
+    return false;
+  }
+  if (expr.name == helperName) {
+    return true;
+  }
+  std::string accessName;
+  return getBuiltinArrayAccessName(expr, accessName) && accessName == helperName;
+}
+
 bool isExplicitSamePathMapCountLikeDefinitionCall(const Expr &expr,
                                                   const Definition &callee) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
@@ -192,6 +205,9 @@ bool prefersPublishedMapHelperDefinition(const Expr &expr,
                                          std::string_view helperName,
                                          const Definition &callee) {
   if (!expr.isMethodCall) {
+    if (isSemanticBarePublishedMapHelperCall(expr, helperName)) {
+      return true;
+    }
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
     if (rawPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
         callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
