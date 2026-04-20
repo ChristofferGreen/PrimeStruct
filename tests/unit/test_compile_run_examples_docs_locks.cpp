@@ -1268,11 +1268,29 @@ TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operator
   const std::string gfxExperimental = readFile(gfxExperimentalPath.string());
 
   CHECK(gfxStdlib.find("return(Queue([token] this.token + 1i32))") != std::string::npos);
+  CHECK(gfxStdlib.find("return(this.token > 0i32)") != std::string::npos);
+  CHECK(gfxStdlib.find("if(this.height < 1i32)") != std::string::npos);
+  CHECK(gfxStdlib.find("if(this.token < 1i32 || window.token < 1i32)") != std::string::npos);
+  CHECK(gfxStdlib.find("if(this.token < 1i32 || vertexCount < 1i32 || indexCount < 1i32)") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("if(this.token < 1i32)") != std::string::npos);
+  CHECK(gfxStdlib.find("if(drawToken == 0i32)") != std::string::npos);
+  CHECK(gfxStdlib.find("if(endToken == 0i32)") != std::string::npos);
+  CHECK(gfxStdlib.find("return(this.elementCount < 1i32)") != std::string::npos);
   CHECK(gfxStdlib.find("[swapchainToken] this.token + window.token + 1i32") != std::string::npos);
   CHECK(gfxStdlib.find("[meshToken] this.token + vertexCount + indexCount") != std::string::npos);
   CHECK(gfxStdlib.find("[pipelineToken] shader.value + this.token + 5i32") != std::string::npos);
   CHECK(gfxStdlib.find("[drawToken] this.token + mesh.token + material.token") != std::string::npos);
   CHECK(gfxStdlib.find("if(not_equal(queueToken, deviceToken + 1i32))") != std::string::npos);
+  CHECK(gfxStdlib.find("return(less_than(0i32, this.token))") == std::string::npos);
+  CHECK(gfxStdlib.find("if(less_than(this.height, 1i32))") == std::string::npos);
+  CHECK(gfxStdlib.find("if(or(less_than(this.token, 1i32), less_than(window.token, 1i32)))") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("if(or(less_than(this.token, 1i32),\n"
+                       "            or(less_than(vertexCount, 1i32), less_than(indexCount, 1i32))))") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("if(equal(drawToken, 0i32))") == std::string::npos);
+  CHECK(gfxStdlib.find("if(equal(endToken, 0i32))") == std::string::npos);
   CHECK(gfxStdlib.find("plus(") == std::string::npos);
   CHECK(gfxExperimental.find("plus(") != std::string::npos);
 }

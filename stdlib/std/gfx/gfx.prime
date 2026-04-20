@@ -38,7 +38,7 @@ namespace std {
 
     [public return<bool>]
     is_open() {
-      return(less_than(0i32, this.token))
+      return(this.token > 0i32)
     }
 
     [public return<void>]
@@ -48,7 +48,7 @@ namespace std {
 
     [public return<f32>]
     aspect_ratio() {
-      if(less_than(this.height, 1i32)) {
+      if(this.height < 1i32) {
         return(1.0f32)
       }
       return(convert<f32>(this.width) / convert<f32>(this.height))
@@ -69,7 +69,7 @@ namespace std {
                      [ColorFormat] color_format,
                      [DepthFormat] depth_format,
                      [PresentMode] present_mode) {
-      if(or(less_than(this.token, 1i32), less_than(window.token, 1i32))) {
+      if(this.token < 1i32 || window.token < 1i32) {
         return(/std/gfx/GfxError/result<Swapchain>(swapchainCreateFailed()))
       }
       config{
@@ -95,8 +95,7 @@ namespace std {
     create_mesh([array<VertexColored>] vertices, [array<i32>] indices) {
       vertexCount{count(vertices)}
       indexCount{count(indices)}
-      if(or(less_than(this.token, 1i32),
-            or(less_than(vertexCount, 1i32), less_than(indexCount, 1i32)))) {
+      if(this.token < 1i32 || vertexCount < 1i32 || indexCount < 1i32) {
         return(/std/gfx/GfxError/result<Mesh>(meshCreateFailed()))
       }
       config{
@@ -118,7 +117,7 @@ namespace std {
     create_pipeline_VertexColored([ShaderLibrary] shader,
                                   [ColorFormat] color_format,
                                   [DepthFormat] depth_format) {
-      if(less_than(this.token, 1i32)) {
+      if(this.token < 1i32) {
         return(/std/gfx/GfxError/result<Pipeline>(pipelineCreateFailed()))
       }
       config{
@@ -148,7 +147,7 @@ namespace std {
 
     [public return<Result<Frame, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     frame() {
-      if(less_than(this.token, 1i32)) {
+      if(this.token < 1i32) {
         return(/std/gfx/GfxError/result<Frame>(frameAcquireFailed()))
       }
       config{
@@ -203,7 +202,7 @@ namespace std {
         )
       }
       drawToken{GraphicsSubstrate.drawMesh(config)}
-      if(equal(drawToken, 0i32)) {
+      if(drawToken == 0i32) {
         return()
       }
       return()
@@ -215,7 +214,7 @@ namespace std {
         SubstrateRenderPassEndConfig([renderPass] this, [endToken] this.token + 1i32)
       }
       endToken{GraphicsSubstrate.endRenderPass(config)}
-      if(equal(endToken, 0i32)) {
+      if(endToken == 0i32) {
         return()
       }
       return()
@@ -407,12 +406,12 @@ namespace std {
 
     [public return<bool>]
     empty() {
-      return(less_than(this.elementCount, 1i32))
+      return(this.elementCount < 1i32)
     }
 
     [public return<bool>]
     is_valid() {
-      return(less_than(0i32, this.token))
+      return(this.token > 0i32)
     }
   }
 
@@ -465,7 +464,7 @@ namespace std {
 
     [public return<Result<Material, GfxError>> on_error<GfxError, /std/gfx/ignoreGfxError>]
     material() {
-      if(less_than(this.token, 1i32)) {
+      if(this.token < 1i32) {
         return(/std/gfx/GfxError/result<Material>(materialCreateFailed()))
       }
       return(Result.ok(Material([token] this.token + 1i32)))
