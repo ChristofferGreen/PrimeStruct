@@ -10,15 +10,31 @@ The same source language can be:
 
 Everything lowers through one canonical IR first. The project is aiming for
 explicit structure, deterministic compilation, and a surface language that
-stays readable without hiding what the compiler is doing.
+stays readable while still making important behavior visible at the boundary.
 
-## Language At A Glance
+PrimeStruct is for readers who want a systems language to be explicit without
+becoming syntactically heavy:
+- Pure helpers can stay lightweight.
+- Effects such as allocation and IO can be stated at the function boundary.
+- Locals can stay concise when the initializer already tells the story.
+- The readable surface still lowers through one small canonical core before IR.
 
-Top-level code can stay concise. The compiler fills in common bottom-level
-details such as `return<...>` wrapping, common literal suffixes, and some
-low-risk default effects.
+## Why It Feels Different
 
-Hello world:
+PrimeStruct's surface syntax is intentionally compact. A few quick reading rules
+make the examples below much easier to parse:
+- `name{expr}` introduces a local binding when the initializer already fixes
+  the type.
+- `[Type] name{expr}` is the same idea with an explicit type pin.
+- `[effects(io_err), int]` means "this helper returns an `int` and may perform
+  `io_err` effects." A pure helper can often stay as just `[int]`.
+- The top-level readable surface is not the compiler's bottom-level internal
+  spelling. The compiler fills in common `return<...>` wrapping, literal
+  suffixes, and some low-risk default effects before lowering.
+
+## Small Tour
+
+Hello world stays minimal:
 
 ```prime
 [int]
@@ -28,7 +44,7 @@ main() {
 }
 ```
 
-Struct:
+Struct defaults and field labels stay close to the data:
 
 ```prime
 [struct]
@@ -43,7 +59,26 @@ area_with_default_height() {
 }
 ```
 
-Error handling:
+Initializer-first local bindings keep obvious code short:
+
+```prime
+[int]
+clamp_to_limit([int] start) {
+  [mut] current{start}
+  limit{5}
+
+  while(current < limit) {
+    current = current + 1
+  }
+
+  return(current)
+}
+```
+
+If you want the type spelled out instead of inferred from the initializer, use
+`[int] limit{5}`.
+
+Error handling keeps fallibility and effects visible at the boundary:
 
 ```prime
 import /std/file/*
@@ -65,7 +100,10 @@ main() {
 }
 ```
 
-Named parameters:
+The entrypoint stays explicit about both error handling and effects without
+forcing that ceremony onto every pure helper.
+
+Named arguments are available when a call benefits from them:
 
 ```prime
 [int]
@@ -79,7 +117,7 @@ main() {
 }
 ```
 
-Collections:
+Collections use the same surface style:
 
 ```prime
 import /std/collections/*
@@ -92,6 +130,18 @@ lookup_value() {
 
 Current note: use `import /std/collections/*` for top-level collection examples
 that rely on bare collection names, method sugar, or direct indexing.
+
+## What PrimeStruct Is Trying To Buy
+
+PrimeStruct is not trying to win by being maximally familiar. It is trying to
+make a few things easier to see in source code:
+- what a function returns
+- what effects it may perform
+- when a local binding is just "bind this name to this initializer"
+- how readable surface syntax maps to one deterministic canonical core
+
+If the syntax looks unusual at first glance, that is usually because PrimeStruct
+prefers making structure explicit over inheriting C-family defaults.
 
 ## Quick Start
 

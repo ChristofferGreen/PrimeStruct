@@ -112,11 +112,11 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   const std::string todo = readFile(todoPath.string());
 
   CHECK(primeStructDoc.find("### Vector/Map Bridge Contract") != std::string::npos);
-  CHECK(primeStructDoc.find("Bridge-owned public contract: exact and wildcard `/std/collections`") !=
+  CHECK(primeStructDoc.find("**Bridge-owned public contract:** exact and wildcard `/std/collections`") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Migration-only seams: rooted `/vector/*` and `/map/*` spellings,") !=
+  CHECK(primeStructDoc.find("**Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Out of scope for this bridge lane: `array<T>` core ownership,") !=
+  CHECK(primeStructDoc.find("**Out of scope for this bridge lane:** `array<T>` core ownership,") !=
         std::string::npos);
 
   CHECK(todo.find("### Vector/Map Bridge Contract Summary") != std::string::npos);
@@ -218,7 +218,9 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(primeStructDoc.find("### SoA Maturity Track") != std::string::npos);
   CHECK(primeStructDoc.find("`soa_vector<T>` remains an incubating public extension") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("/std/collections/soa_vector/*` and `/std/collections/soa_vector_conversions/*`") !=
+  CHECK(primeStructDoc.find("**Current user-facing experiment surface:** `/std/collections/soa_vector/*`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`/std/collections/soa_vector_conversions/*` are the canonical spellings") !=
         std::string::npos);
   CHECK(primeStructDoc.find("**Current canonical SoA experiment surface:** public docs/examples should now use") !=
         std::string::npos);
@@ -267,31 +269,28 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   const std::string vmMath = readFile(vmMathPath.string());
   const std::string vmMaps = readFile(vmMapsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4117") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4119\n- TODO-4120\n- TODO-4121\n- TODO-4106\n- TODO-4107") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4118\n- TODO-4110\n- TODO-4106\n- TODO-4107") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4134\n- TODO-4133\n- TODO-4132\n- TODO-4122") !=
         std::string::npos);
-  CHECK(todo.find("### Priority Lanes (Current)\n\n- Skipped doctest debt: TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107") !=
+  CHECK(todo.find("- Skipped doctest debt: TODO-4106, TODO-4107") !=
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4117\n2. TODO-4118\n3. TODO-4110\n4. TODO-4106\n5. TODO-4107") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4119\n2. TODO-4120\n3. TODO-4121\n4. TODO-4106\n5. TODO-4107") !=
         std::string::npos);
-  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107 |") !=
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4106, TODO-4107 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
-  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in five active") !=
+  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in two active") !=
         std::string::npos);
-  CHECK(todo.find("`TODO-4117` for the remaining legacy VM numeric index-sugar") !=
+  CHECK(todo.find("`TODO-4106` for collection compatibility and alias-precedence") !=
         std::string::npos);
-  CHECK(todo.find("blocker, `TODO-4118` for the remaining non-i32 VM map key runtime blockers,") !=
+  CHECK(todo.find("coverage, and `TODO-4107` for residual IR/docs/gfx/smoke skips.") !=
         std::string::npos);
   CHECK(todo.find("New skipped doctest coverage must either attach to one of those active leaves") !=
         std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4117: Re-enable or prune remaining VM numeric map indexing sugar skip") !=
-        std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4118: Re-enable or prune remaining VM non-i32 map key runtime skips") !=
-        std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4110: Re-enable or prune remaining VM support-matrix math skips") !=
-        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4117:") == std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4118:") == std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4110:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites") !=
@@ -304,6 +303,12 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("- [ ] TODO-4114:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4116:") == std::string::npos);
 
+  CHECK(todoFinished.find("✓ TODO-4118: Re-enable or prune remaining VM non-i32 map key runtime skips.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4117: Re-enable or prune remaining VM numeric map indexing sugar skip.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4110: Re-enable or prune remaining VM support-matrix math skips.") !=
+        std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4116: Narrow remaining VM numeric-key map skip debt into explicit blocker-owned leaves.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4115: Prune stale skipped VM argv-key map indexing duplicate.") !=
@@ -318,8 +323,13 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
 
   CHECK(vmMath.find("TEST_CASE(\"runs vm with qualified math names\")") != std::string::npos);
-  CHECK(vmMath.find("TEST_CASE(\"runs vm support-matrix math nominal helpers\" * doctest::skip(true))") !=
+  CHECK(vmMath.find("TEST_CASE(\"runs vm support-matrix math nominal helpers\")") !=
         std::string::npos);
+  CHECK(vmMath.find("TEST_CASE(\"rejects vm quaternion reference multiply and rotation during lowering\")") !=
+        std::string::npos);
+  CHECK(vmMath.find("TEST_CASE(\"rejects vm matrix composition order references during lowering\")") !=
+        std::string::npos);
+  CHECK(vmMath.find("doctest::skip(true)") == std::string::npos);
   CHECK(vmMath.find("TEST_CASE(\"runs vm with math abs/sign/min/max\" * doctest::skip(true))") ==
         std::string::npos);
   CHECK(vmMath.find("TEST_CASE(\"runs vm with math saturate/lerp\" * doctest::skip(true))") ==
@@ -333,16 +343,13 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(vmMath.find("TEST_CASE(\"runs vm with math exp/log\" * doctest::skip(true))") ==
         std::string::npos);
 
-  CHECK(vmMaps.find("TEST_CASE(\"runs vm with map indexing sugar\" * doctest::skip(true))") !=
+  CHECK(vmMaps.find("TEST_CASE(\"rejects vm map indexing sugar without canonical helper\")") !=
         std::string::npos);
-  CHECK(vmMaps.find("// Residual blocker: only remaining canonical VM numeric index-sugar case.") !=
+  CHECK(vmMaps.find("TEST_CASE(\"rejects vm bool map access helpers without canonical helper\")") !=
         std::string::npos);
-  CHECK(vmMaps.find("TEST_CASE(\"runs vm with bool map access helpers\" * doctest::skip(true))") !=
+  CHECK(vmMaps.find("TEST_CASE(\"rejects vm u64 map access helpers without canonical helper\")") !=
         std::string::npos);
-  CHECK(vmMaps.find("TEST_CASE(\"runs vm with u64 map access helpers\" * doctest::skip(true))") !=
-        std::string::npos);
-  CHECK(vmMaps.find("// Residual blockers: only remaining non-i32 VM map key runtime cases.") !=
-        std::string::npos);
+  CHECK(vmMaps.find("doctest::skip(true)") == std::string::npos);
   CHECK(vmMaps.find("TEST_CASE(\"rejects vm map indexing with argv key\" * doctest::skip(true))") ==
         std::string::npos);
   CHECK(vmMaps.find("TEST_CASE(\"runs vm with string-valued map literals\" * doctest::skip(true))") ==
@@ -359,7 +366,7 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
 }
 
-TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
+TEST_CASE("software renderer command list docs stay source locked") {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   if (!std::filesystem::exists(graphicsDocPath)) {
@@ -482,13 +489,13 @@ TEST_CASE("software renderer command list docs stay source locked" * doctest::sk
         std::string::npos);
   CHECK(graphicsDoc.find("`append_word`, `append_color`, or `append_string` directly.") !=
         std::string::npos);
-  CHECK(graphicsDoc.find("`push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer event record shape") !=
+  CHECK(graphicsDoc.find("`push_pointer_move(...)`, `push_pointer_down(...)`, and `push_pointer_up(...)` normalize through one pointer") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`push_key_down(...)` and `push_key_up(...)` normalize through one key event record shape") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`push_ime_preedit(...)` and `push_ime_commit(...)` normalize through one IME event record shape") !=
         std::string::npos);
-  CHECK(graphicsDoc.find("`push_resize(...)`, `push_focus_gained(...)`, and `push_focus_lost(...)` normalize through one view event record shape") !=
+  CHECK(graphicsDoc.find("`push_resize(...)`, `push_focus_gained(...)`, and `push_focus_lost(...)` normalize through one view event record") !=
         std::string::npos);
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
@@ -515,14 +522,15 @@ TEST_CASE("software renderer command list docs stay source locked" * doctest::sk
   CHECK(graphicsDoc.find("events.push_resize(login.panel, 40i32, 57i32)") != std::string::npos);
   CHECK(graphicsDoc.find("events.push_focus_gained(login.usernameInput)") != std::string::npos);
   CHECK(graphicsDoc.find("events.push_focus_lost(login.usernameInput)") != std::string::npos);
-  CHECK(specDoc.find("the first `/std/ui/*` foundation now includes deterministic command-list rendering, a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite widget helper") !=
+  CHECK(specDoc.find("deterministic HTML/backend adapter records and deterministic platform input records") !=
         std::string::npos);
-  CHECK(specDoc.find("`draw_label`, `draw_button`, `draw_input`, `begin_panel`, `end_panel`, `draw_login_form`, `HtmlCommandList`, `emit_panel`, `emit_label`, `emit_button`, `emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`, `push_pointer_up`, `push_key_down`, `push_key_up`, `push_ime_preedit`, `push_ime_commit`, `push_resize`, `push_focus_gained`, `push_focus_lost`, `LayoutTree`, `LoginFormNodes`, `append_root_column`, `append_column`, `append_leaf`, `append_label`, `append_button`, `append_input`, `append_panel`, `append_login_form`, `measure`, `arrange`, deterministic `serialize()` output") != std::string::npos);
-  CHECK(specDoc.find("blit a deterministic BGRA8 software surface through the native window presenter") !=
+  CHECK(specDoc.find("`emit_input`, `bind_event`, `emit_login_form`, `UiEventStream`, `push_pointer_move`, `push_pointer_down`,") !=
         std::string::npos);
-  CHECK(specDoc.find("shared widget/layout model can also emit deterministic HTML/backend adapter records") !=
+  CHECK(specDoc.find("host bridge can blit a deterministic BGRA8 software") !=
         std::string::npos);
-  CHECK(specDoc.find("normalize pointer, keyboard, IME, resize, and focus input into deterministic UI event-stream records") !=
+  CHECK(specDoc.find("emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into") !=
+        std::string::npos);
+  CHECK(specDoc.find("deterministic UI event-stream records") !=
         std::string::npos);
 }
 
@@ -630,7 +638,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("public-facing image wrapper layer\n  // above, which should prefer the readable surface syntax when possible.") !=
         std::string::npos);
   CHECK(resetReadOutputsBody.find("/std/collections/vector/clear(pixels)") != std::string::npos);
-  CHECK(resetReadOutputsBody.find("/std/collections/vector/clear(pixels)") == std::string::npos);
+  CHECK(resetReadOutputsBody.find("pixels.clear()") == std::string::npos);
   CHECK(imageStdlib.find("pngScanlineChannelByte") != std::string::npos);
   CHECK(imageStdlib.find("pngAdam7PassStartX") != std::string::npos);
   CHECK(imageStdlib.find("pngDecodeRows") != std::string::npos);
@@ -685,8 +693,8 @@ TEST_CASE("image api docs and stdlib stay source locked") {
 
   const std::string pngBody = imageStdlib.substr(pngStart);
   CHECK(pngBody.find("return(unsupported_read())") != std::string::npos);
-  CHECK(pngBody.find("file.writeByte(value)?") != std::string::npos);
-  CHECK(pngBody.find("if(value < 0i32 || value > 255i32)") != std::string::npos);
+  CHECK(pngBody.find("pngWriteByte(file, byte)") != std::string::npos);
+  CHECK(imageStdlib.find("if(value < 0i32 || value > 255i32)") != std::string::npos);
   CHECK(pngBody.find("if(status == 1i32)") != std::string::npos);
   CHECK(pngBody.find("if(status == 2i32)") != std::string::npos);
   CHECK(pngBody.find("if(status != 0i32)") != std::string::npos);
@@ -1113,9 +1121,9 @@ TEST_CASE("ppm image workflows keep explicit read locals") {
   CHECK(ppmHelpersBody.find("[mut] started{0i32}") != std::string::npos);
   CHECK(ppmHelpersBody.find("commentStatus{ppmSkipComment(file)}") != std::string::npos);
   CHECK(ppmHelpersBody.find("[mut] sawWhitespace{0i32}") != std::string::npos);
-  CHECK(ppmHelpersBody.find("pixelCountWide{multiply(multiply(convert<i64>(width), convert<i64>(height)), 3i64)}") !=
+  CHECK(ppmHelpersBody.find("pixelCountWide{convert<i64>(width) * convert<i64>(height) * 3i64}") !=
         std::string::npos);
-  CHECK(ppmHelpersBody.find("pixelCount{count(pixels)}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("pixelCount{pixels.count()}") != std::string::npos);
   CHECK(ppmHelpersBody.find("[mut] expectedPixelCount{0i32}") != std::string::npos);
   CHECK(ppmHelpersBody.find("component{pixels[index]}") != std::string::npos);
   CHECK(ppmHelpersBody.find("[File<Read>] file{File<Read>(path)?}") != std::string::npos);
@@ -1609,7 +1617,7 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   CHECK(gfxStdlib.find("if(equal(endToken, 0i32))") == std::string::npos);
   CHECK(gfxStdlib.find("plus(") == std::string::npos);
   CHECK(gfxExperimental.find("import /std/gfx/*") != std::string::npos);
-  CHECK(gfxExperimental.find("Compatibility shim over canonical /std/gfx/*.") != std::string::npos);
+  CHECK(gfxExperimental.find("targeted compatibility coverage and staged migration support.") != std::string::npos);
   CHECK(gfxExperimental.find("return(canonicalWindow(this).is_open())") != std::string::npos);
   CHECK(gfxExperimental.find("return(experimentalQueue(canonicalDevice(this).default_queue()))") !=
         std::string::npos);
@@ -1651,7 +1659,7 @@ TEST_CASE("ui stdlib arithmetic and assignment stay source locked to surface ope
   CHECK(source.find("while(nodeId >= 0i32)") != std::string::npos);
   CHECK(source.find("if(self.kinds.count() == 0i32)") != std::string::npos);
   CHECK(source.find("[i32 mut] nodeId{self.kinds.count() - 1i32}") != std::string::npos);
-  CHECK(source.find("childY = childY + self.measuredHeights[childId] + self.gapPxs[nodeId]") !=
+  CHECK(source.find("childY = childY + /std/collections/vector/at(self.measuredHeights, childId) +") !=
         std::string::npos);
   CHECK(source.find("return(max(1i32, (textSizePx + 1i32) / 2i32))") != std::string::npos);
   CHECK(source.find("return(widget_text_advance(textSizePx) * text.count())") != std::string::npos);

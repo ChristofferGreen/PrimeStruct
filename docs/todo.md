@@ -59,9 +59,6 @@ Task template:
 - TODO-4119
 - TODO-4120
 - TODO-4121
-- TODO-4117
-- TODO-4118
-- TODO-4110
 - TODO-4106
 - TODO-4107
 
@@ -89,18 +86,15 @@ Task template:
 - Test-surface contraction: TODO-4124, TODO-4125
 - Runtime execution unification: TODO-4130
 - Parallel semantic publication determinism: TODO-4131
-- Skipped doctest debt: TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107
+- Skipped doctest debt: TODO-4106, TODO-4107
 
 ### Execution Queue (Recommended)
 
 1. TODO-4119
 2. TODO-4120
 3. TODO-4121
-4. TODO-4117
-5. TODO-4118
-6. TODO-4110
-7. TODO-4106
-8. TODO-4107
+4. TODO-4106
+5. TODO-4107
 
 ### PrimeStruct Coverage Snapshot
 
@@ -136,7 +130,7 @@ Task template:
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | TODO-4130 |
-| Release benchmark/example suite stability and doctest governance | TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107 |
+| Release benchmark/example suite stability and doctest governance | TODO-4106, TODO-4107 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -199,12 +193,9 @@ Task template:
 
 ### Skipped Doctest Debt Summary
 
-- Retained `doctest::skip(true)` coverage is now tracked in five active
-  clusters: `TODO-4117` for the remaining legacy VM numeric index-sugar
-  blocker, `TODO-4118` for the remaining non-i32 VM map key runtime blockers,
-  `TODO-4110` for the remaining VM support-matrix math skips, `TODO-4106` for
-  collection compatibility and alias-precedence coverage, and `TODO-4107` for
-  residual IR/docs/gfx/smoke skips.
+- Retained `doctest::skip(true)` coverage is now tracked in two active
+  clusters: `TODO-4106` for collection compatibility and alias-precedence
+  coverage, and `TODO-4107` for residual IR/docs/gfx/smoke skips.
 - New skipped doctest coverage must either attach to one of those active leaves
   or replace them with a narrower explicit follow-up before it lands.
 - The success condition for each lane is re-enable-or-delete; indefinite
@@ -523,60 +514,6 @@ Task template:
   - stop_rule: Stop once representative entry/routing lookups are served
       directly from `SemanticProgram` and the matching AST rebuild path is
       deleted or narrowed to provenance-only use.
-
-- [ ] TODO-4117: Re-enable or prune remaining VM numeric map indexing sugar skip
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Skipped Doctest Debt
-  - depends_on: none
-  - scope: Audit the remaining skipped canonical VM numeric map indexing-sugar
-      case in `tests/unit/test_compile_run_vm_maps.cpp`, then either re-enable
-      it or delete it if the surrounding active helper coverage already makes
-      the bracket-sugar duplicate stale.
-  - acceptance:
-    - The remaining `values[3i32]` VM map indexing-sugar skip is either active,
-      deleted, or still explicitly owned as a narrow blocker with rationale.
-    - `tests/unit/test_compile_run_vm_maps.cpp` and the queue/docs state no
-      longer treat canonical VM numeric bracket sugar as part of a broad
-      umbrella skip cluster.
-  - stop_rule: Stop once the canonical numeric indexing-sugar case is either
-      active, deleted, or explicitly justified as a narrow blocker.
-
-- [ ] TODO-4118: Re-enable or prune remaining VM non-i32 map key runtime skips
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Skipped Doctest Debt
-  - depends_on: none
-  - scope: Audit the remaining skipped bool-key and u64-key VM map runtime
-      cases in `tests/unit/test_compile_run_vm_maps.cpp`, then either re-enable
-      them or delete them if adjacent active VM collection coverage already
-      makes them stale.
-  - acceptance:
-    - The remaining bool-key and u64-key VM map runtime skips are either
-      active, deleted, or still explicitly owned as narrow blockers with clear
-      rationale.
-    - `tests/unit/test_compile_run_vm_maps.cpp` and the queue/docs state no
-      longer treat non-i32 VM map key runtime as part of a broad umbrella skip
-      cluster.
-  - stop_rule: Stop once the remaining non-i32 VM map key runtime cases are
-      either active, deleted, or explicitly justified as narrow blockers.
-
-- [ ] TODO-4110: Re-enable or prune remaining VM support-matrix math skips
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Skipped Doctest Debt
-  - depends_on: none
-  - scope: Audit the remaining skipped support-matrix and quaternion/matrix math
-      cases in `tests/unit/test_compile_run_vm_math.cpp`, then re-enable or
-      delete stale coverage so only current VM-specific blockers remain.
-  - acceptance:
-    - `tests/unit/test_compile_run_vm_math.cpp` no longer carries the remaining
-      support-matrix skip cluster without explicit queue ownership.
-    - Any residual VM math skips are reduced to narrow blockers with clear
-      backend rationale instead of one broad umbrella.
-    - The queue/docs state stays aligned with the narrowed VM math skip surface.
-  - stop_rule: Stop once the remaining VM support-matrix math skips are either
-      active, deleted, or narrowed into explicit blocker-owned follow-ups.
 
 - [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites
   - owner: ai
