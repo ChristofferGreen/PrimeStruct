@@ -373,6 +373,28 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
       namespacedMapAccessCall, helperName));
   CHECK(helperName == "at_unsafe");
 
+  primec::Expr namespacedExperimentalVectorAccessCall;
+  namespacedExperimentalVectorAccessCall.kind = primec::Expr::Kind::Call;
+  namespacedExperimentalVectorAccessCall.namespacePrefix =
+      "/std/collections/experimental_vector";
+  namespacedExperimentalVectorAccessCall.name = "at";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      namespacedExperimentalVectorAccessCall, helperName));
+  CHECK(helperName == "at");
+
+  primec::Expr namespacedExperimentalSoaStorageAccessCall;
+  namespacedExperimentalSoaStorageAccessCall.kind = primec::Expr::Kind::Call;
+  namespacedExperimentalSoaStorageAccessCall.namespacePrefix =
+      "/std/collections/experimental_soa_storage";
+  namespacedExperimentalSoaStorageAccessCall.name = "at_unsafe";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      namespacedExperimentalSoaStorageAccessCall, helperName));
+  CHECK(helperName == "at_unsafe");
+
   primec::Expr removedAliasCall = namespacedVectorAccessCall;
   removedAliasCall.namespacePrefix = "/vector";
   helperName.clear();

@@ -1,3 +1,37 @@
+        std::string accessName;
+        if (getBuiltinArrayAccessName(expr, accessName)) {
+          if (expr.args.size() != 2) {
+            error = accessName + " requires exactly two arguments";
+            return false;
+          }
+          if (!emitBuiltinArrayAccess(
+                  accessName,
+                  expr.args[0],
+                  expr.args[1],
+                  localsIn,
+                  resolveStringTableTarget,
+                  inferExprKind,
+                  isEntryArgsName,
+                  allocTempLocal,
+                  [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                    return emitExpr(valueExpr, valueLocals);
+                  },
+                  emitStringIndexOutOfBounds,
+                  emitMapKeyNotFound,
+                  emitArrayIndexOutOfBounds,
+                  [&]() { return function.instructions.size(); },
+                  [&](IrOpcode opcode, uint64_t imm) {
+                    function.instructions.push_back({opcode, imm});
+                  },
+                  [&](size_t instructionIndex, uint64_t imm) {
+                    function.instructions[instructionIndex].imm = imm;
+                  },
+                  error)) {
+            return false;
+          }
+          return true;
+        }
+
         const auto countAccessResult = tryEmitCountAccessCall(
             expr,
             localsIn,

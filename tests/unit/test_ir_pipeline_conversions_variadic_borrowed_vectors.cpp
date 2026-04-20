@@ -392,7 +392,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 9898);
+  CHECK(result == 60);
 }
 
 TEST_CASE("ir lowerer materializes variadic experimental map packs with indexed canonical count calls") {

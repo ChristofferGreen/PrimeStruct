@@ -2802,6 +2802,64 @@ TEST_CASE("ir lowerer call helpers suppress lowered collection helper paths from
   CHECK(primec::ir_lowerer::resolveDefinitionCall(callExpr, defMap, resolveExprPath) == nullptr);
 }
 
+TEST_CASE("ir lowerer call helpers keep experimental map helper aliases off specialized method defs") {
+  primec::Definition experimentalMapCountDef;
+  experimentalMapCountDef.fullPath = "/std/collections/experimental_map/mapCount";
+  primec::Definition specializedMapMethodDef;
+  specializedMapMethodDef.fullPath = "/std/collections/experimental_map/Map__t1234/count";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {experimentalMapCountDef.fullPath, &experimentalMapCountDef},
+      {specializedMapMethodDef.fullPath, &specializedMapMethodDef},
+  };
+
+  const auto resolveExprPath = [&](const primec::Expr &) {
+    return specializedMapMethodDef.fullPath;
+  };
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "/std/collections/experimental_map/mapCount";
+  primec::Expr valuesArg;
+  valuesArg.kind = primec::Expr::Kind::Name;
+  valuesArg.name = "values";
+  countCall.args.push_back(valuesArg);
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(countCall, defMap, resolveExprPath) ==
+        &experimentalMapCountDef);
+
+  primec::Expr bareCountCall = countCall;
+  bareCountCall.name = "mapCount";
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(bareCountCall, defMap, resolveExprPath) == nullptr);
+
+  primec::Definition specializedHelperDef;
+  specializedHelperDef.fullPath = "/std/collections/experimental_map/mapCount__t1234";
+  const std::unordered_map<std::string, const primec::Definition *> specializedDefMap = {
+      {specializedHelperDef.fullPath, &specializedHelperDef},
+  };
+  const auto specializedResolveExprPath = [&](const primec::Expr &) {
+    return specializedHelperDef.fullPath;
+  };
+
+  primec::Expr explicitSpecializedHelperCall;
+  explicitSpecializedHelperCall.kind = primec::Expr::Kind::Call;
+  explicitSpecializedHelperCall.name = specializedHelperDef.fullPath;
+  explicitSpecializedHelperCall.args.push_back(valuesArg);
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(
+            explicitSpecializedHelperCall, specializedDefMap, specializedResolveExprPath) ==
+        &specializedHelperDef);
+
+  primec::Expr explicitUnspecializedHelperCall;
+  explicitUnspecializedHelperCall.kind = primec::Expr::Kind::Call;
+  explicitUnspecializedHelperCall.name = "/std/collections/experimental_map/mapCount";
+  explicitUnspecializedHelperCall.args.push_back(valuesArg);
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(
+            explicitUnspecializedHelperCall, specializedDefMap, specializedResolveExprPath) ==
+        &specializedHelperDef);
+}
+
 TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for lowered helper spellings") {
   primec::Program program;
   primec::Definition mainDef;

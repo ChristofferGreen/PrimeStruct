@@ -177,6 +177,16 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<bool(const Expr &)> &isArrayCountCall,
     const std::function<bool(const Expr &)> &isStringCountCall,
     const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &)> &isCollectionAccessReceiverExpr,
+    const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error);
+InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
+    const Expr &expr,
+    const std::function<bool(const Expr &)> &isArrayCountCall,
+    const std::function<bool(const Expr &)> &isStringCountCall,
+    const std::function<bool(const Expr &)> &isVectorCapacityCall,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,

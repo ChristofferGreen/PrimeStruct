@@ -335,6 +335,24 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return false;
   }
+  if (name.rfind("std/collections/experimental_vector/", 0) == 0) {
+    std::string alias =
+        stripGeneratedSuffix(name.substr(std::string("std/collections/experimental_vector/").size()));
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (name.rfind("std/collections/experimental_soa_storage/", 0) == 0) {
+    std::string alias = stripGeneratedSuffix(
+        name.substr(std::string("std/collections/experimental_soa_storage/").size()));
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
   if (name.rfind("array/", 0) == 0) {
     return false;
   }

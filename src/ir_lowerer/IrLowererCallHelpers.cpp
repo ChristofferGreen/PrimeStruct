@@ -86,8 +86,25 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
   std::string &error,
   std::function<bool(const Expr &)> isCollectionAccessReceiverExpr) {
-  if (!expr.isMethodCall && expr.name.rfind("/std/collections/experimental_vector/", 0) == 0) {
-    return CountMethodFallbackResult::NotHandled;
+  auto resolveDirectHelperPath = [&]() {
+    if (!expr.name.empty() && expr.name.front() == '/') {
+      return expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      std::string scoped = expr.namespacePrefix;
+      if (!scoped.empty() && scoped.front() != '/') {
+        scoped.insert(scoped.begin(), '/');
+      }
+      return scoped + "/" + expr.name;
+    }
+    return expr.name;
+  };
+  if (!expr.isMethodCall) {
+    const std::string directHelperPath = resolveDirectHelperPath();
+    if (directHelperPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+        directHelperPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+      return CountMethodFallbackResult::NotHandled;
+    }
   }
   std::string normalizedVectorHelperName;
   std::string normalizedMapHelperName;

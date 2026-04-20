@@ -206,6 +206,52 @@ TEST_CASE("ir lowerer call helpers emit builtin array access") {
   CHECK(arrayIndexOutOfBoundsCalls == 2);
   REQUIRE(instructions.size() >= 6);
   CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
+  error.clear();
+  primec::Expr argsPackTarget;
+  argsPackTarget.kind = primec::Expr::Kind::Name;
+  argsPackTarget.name = "packs";
+  primec::ir_lowerer::LocalInfo argsPackInfo;
+  argsPackInfo.isArgsPack = true;
+  argsPackInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  argsPackInfo.referenceToVector = true;
+  locals.clear();
+  locals.emplace("packs", argsPackInfo);
+  int argsPackEmitExprCalls = 0;
+  int argsPackArrayIndexOutOfBoundsCalls = 0;
+  int argsPackNextLocal = 40;
+  CHECK(primec::ir_lowerer::emitBuiltinArrayAccess(
+      "at",
+      argsPackTarget,
+      indexExpr,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [&]() { return argsPackNextLocal++; },
+      [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        ++argsPackEmitExprCalls;
+        if (expr.kind == primec::Expr::Kind::Name && expr.name == "packs") {
+          instructions.push_back({primec::IrOpcode::LoadLocal, 12});
+          return true;
+        }
+        instructions.push_back({primec::IrOpcode::PushI32, 1});
+        return true;
+      },
+      []() {},
+      []() {},
+      [&]() { ++argsPackArrayIndexOutOfBoundsCalls; },
+      [&]() { return instructions.size(); },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](size_t instructionIndex, uint64_t imm) { instructions[instructionIndex].imm = imm; },
+      error));
+  CHECK(error.empty());
+  CHECK(argsPackEmitExprCalls == 2);
+  CHECK(argsPackArrayIndexOutOfBoundsCalls == 2);
+  REQUIRE(instructions.size() >= 6);
+  CHECK(instructions.front().op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions.back().op == primec::IrOpcode::LoadIndirect);
 }
 
 TEST_CASE("ir lowerer call helpers validate non literal string access target") {

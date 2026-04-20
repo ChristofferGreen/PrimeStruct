@@ -233,10 +233,26 @@
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall || callExpr.args.empty()) {
             return false;
           }
+          auto resolveDirectHelperPath = [&](const Expr &candidate) {
+            if (!candidate.name.empty() && candidate.name.front() == '/') {
+              return candidate.name;
+            }
+            if (!candidate.namespacePrefix.empty()) {
+              std::string scoped = candidate.namespacePrefix;
+              if (!scoped.empty() && scoped.front() != '/') {
+                scoped.insert(scoped.begin(), '/');
+              }
+              return scoped + "/" + candidate.name;
+            }
+            return candidate.name;
+          };
           std::string helperName;
           if (!resolveMapHelperAliasName(callExpr, helperName) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "insert")) {
+            return false;
+          }
+          if (resolveDirectHelperPath(callExpr).rfind("/std/collections/experimental_map/", 0) == 0) {
             return false;
           }
           if (resolveDefinitionCall(callExpr) != nullptr) {

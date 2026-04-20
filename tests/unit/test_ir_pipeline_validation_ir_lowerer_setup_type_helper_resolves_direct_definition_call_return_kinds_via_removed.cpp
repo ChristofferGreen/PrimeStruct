@@ -340,48 +340,31 @@ TEST_CASE("ir lowerer setup type helper prefers exact direct map count-like retu
   defMap.emplace(canonicalTryAtDef.fullPath, &canonicalTryAtDef);
 
   std::unordered_map<std::string, primec::ir_lowerer::ReturnInfo> infoByPath;
+  auto makeReturnInfo = [](primec::ir_lowerer::LocalInfo::ValueKind kind) {
+    primec::ir_lowerer::ReturnInfo info;
+    info.returnsVoid = false;
+    info.returnsArray = false;
+    info.kind = kind;
+    return info;
+  };
   infoByPath.emplace(
       "/map/count",
-      primec::ir_lowerer::ReturnInfo{
-          .returnsVoid = false,
-          .returnsArray = false,
-          .kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt64,
-      });
+      makeReturnInfo(primec::ir_lowerer::LocalInfo::ValueKind::UInt64));
   infoByPath.emplace(
       "/std/collections/map/count",
-      primec::ir_lowerer::ReturnInfo{
-          .returnsVoid = false,
-          .returnsArray = false,
-          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32,
-      });
+      makeReturnInfo(primec::ir_lowerer::LocalInfo::ValueKind::Int32));
   infoByPath.emplace(
       "/map/contains",
-      primec::ir_lowerer::ReturnInfo{
-          .returnsVoid = false,
-          .returnsArray = false,
-          .kind = primec::ir_lowerer::LocalInfo::ValueKind::UInt8,
-      });
+      makeReturnInfo(primec::ir_lowerer::LocalInfo::ValueKind::UInt64));
   infoByPath.emplace(
       "/std/collections/map/contains",
-      primec::ir_lowerer::ReturnInfo{
-          .returnsVoid = false,
-          .returnsArray = false,
-          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Bool,
-      });
+      makeReturnInfo(primec::ir_lowerer::LocalInfo::ValueKind::Bool));
   infoByPath.emplace(
       "/map/tryAt",
-      primec::ir_lowerer::ReturnInfo{
-          .returnsVoid = false,
-          .returnsArray = false,
-          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Int64,
-      });
+      makeReturnInfo(primec::ir_lowerer::LocalInfo::ValueKind::Int64));
   infoByPath.emplace(
       "/std/collections/map/tryAt",
-      primec::ir_lowerer::ReturnInfo{
-          .returnsVoid = false,
-          .returnsArray = false,
-          .kind = primec::ir_lowerer::LocalInfo::ValueKind::Int32,
-      });
+      makeReturnInfo(primec::ir_lowerer::LocalInfo::ValueKind::Int32));
 
   auto getReturnInfo = [&infoByPath](const std::string &path, primec::ir_lowerer::ReturnInfo &out) {
     auto it = infoByPath.find(path);
@@ -418,7 +401,7 @@ TEST_CASE("ir lowerer setup type helper prefers exact direct map count-like retu
                       primec::ir_lowerer::LocalInfo::ValueKind::UInt64,
                       "/std/collections/map/count");
   expectExactPathWins("/map/contains",
-                      primec::ir_lowerer::LocalInfo::ValueKind::UInt8,
+                      primec::ir_lowerer::LocalInfo::ValueKind::UInt64,
                       "/std/collections/map/contains");
   expectExactPathWins("/map/tryAt",
                       primec::ir_lowerer::LocalInfo::ValueKind::Int64,

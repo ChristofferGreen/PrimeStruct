@@ -101,7 +101,9 @@ bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
   if (!resolveMapHelperAliasName(expr, helperName) &&
       rawPath.rfind("/map/", 0) != 0 &&
       rawPath.rfind("/std/collections/map/", 0) != 0 &&
-      resolvedPath.rfind("/std/collections/map/", 0) != 0) {
+      rawPath.rfind("/std/collections/experimental_map/", 0) != 0 &&
+      resolvedPath.rfind("/std/collections/map/", 0) != 0 &&
+      resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
     return false;
   }
   return normalizeCollectionHelperPath(rawPath) ==
@@ -163,6 +165,11 @@ bool prefersPublishedMapHelperDefinition(const Expr &expr,
                                          std::string_view helperName,
                                          const Definition &callee) {
   if (!expr.isMethodCall) {
+    const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+    if (rawPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+        callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
+      return true;
+    }
     if (isExplicitSamePathPublishedMapHelperCall(expr, callee.fullPath)) {
       return true;
     }

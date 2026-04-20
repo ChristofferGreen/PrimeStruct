@@ -40,7 +40,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             error) == Result::Emitted);
   CHECK(firstResolveMethodCalls == 1);
-  CHECK(firstResolveDefinitionCalls == 0);
+  CHECK(firstResolveDefinitionCalls == 1);
   CHECK(firstEmitCalls == 1);
 
   primec::Expr methodCall;
@@ -147,12 +147,12 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             },
             [&](const primec::Expr &callExpr, const primec::Definition &) {
               ++canonicalMapCountEmitCalls;
-              CHECK(callExpr.name == "/std/collections/map/count");
-              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callExpr.name == "count");
+              CHECK(callExpr.isMethodCall);
               return true;
             },
             error) == Result::Emitted);
-  CHECK(canonicalMapCountResolveMethodCalls == 0);
+  CHECK(canonicalMapCountResolveMethodCalls == 1);
   CHECK(canonicalMapCountResolveDefinitionCalls == 1);
   CHECK(canonicalMapCountEmitCalls == 1);
 
@@ -182,7 +182,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::NotHandled);
   CHECK(error == "stale");
   CHECK(explicitVectorCountResolveMethodCalls == 0);
-  CHECK(explicitVectorCountResolveDefinitionCalls == 1);
+  CHECK(explicitVectorCountResolveDefinitionCalls == 2);
   CHECK(explicitVectorCountEmitCalls == 0);
 
   primec::Definition vectorAccessDef;
@@ -219,7 +219,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::Emitted);
   CHECK(error.empty());
   CHECK(explicitVectorAtResolveMethodCalls == 1);
-  CHECK(explicitVectorAtResolveDefinitionCalls == 0);
+  CHECK(explicitVectorAtResolveDefinitionCalls == 1);
   CHECK(explicitVectorAtEmitCalls == 1);
 
   primec::Expr canonicalPushCall = countCall;
@@ -249,7 +249,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::Emitted);
   CHECK(error == "stale");
   CHECK(canonicalPushResolveMethodCalls == 1);
-  CHECK(canonicalPushResolveDefinitionCalls == 0);
+  CHECK(canonicalPushResolveDefinitionCalls == 1);
   CHECK(canonicalPushEmitCalls == 1);
 
   primec::Definition vectorPushDef;
@@ -283,8 +283,37 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::Emitted);
   CHECK(error.empty());
   CHECK(canonicalPushDirectResolveMethodCalls == 1);
-  CHECK(canonicalPushDirectResolveDefinitionCalls == 0);
+  CHECK(canonicalPushDirectResolveDefinitionCalls == 1);
   CHECK(canonicalPushDirectEmitCalls == 1);
+
+  primec::Expr experimentalMapCountCall = countCall;
+  experimentalMapCountCall.name = "/std/collections/experimental_map/mapCount";
+  int experimentalMapCountResolveMethodCalls = 0;
+  int experimentalMapCountResolveDefinitionCalls = 0;
+  int experimentalMapCountEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            experimentalMapCountCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++experimentalMapCountResolveMethodCalls;
+              return &callee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++experimentalMapCountResolveDefinitionCalls;
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++experimentalMapCountEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(experimentalMapCountResolveMethodCalls == 0);
+  CHECK(experimentalMapCountResolveDefinitionCalls == 2);
+  CHECK(experimentalMapCountEmitCalls == 0);
 
   int secondResolveMethodCalls = 0;
   error.clear();
