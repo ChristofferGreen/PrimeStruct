@@ -246,6 +246,22 @@
             }
             return candidate.name;
           };
+          auto resolvePublishedLateMapHelperName =
+              [&](const Expr &candidate, std::string &helperNameOut) {
+                helperNameOut.clear();
+                return ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
+                           candidate,
+                           primec::StdlibSurfaceId::CollectionsMapHelpers,
+                           helperNameOut) ||
+                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                           resolveExprPath(candidate),
+                           primec::StdlibSurfaceId::CollectionsMapHelpers,
+                           helperNameOut) ||
+                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                           resolveDirectHelperPath(candidate),
+                           primec::StdlibSurfaceId::CollectionsMapHelpers,
+                           helperNameOut);
+              };
           auto isRootedAliasSamePathCountLikeCall = [&](const Expr &candidate) {
             const std::string rawPath = resolveDirectHelperPath(candidate);
             if (rawPath.rfind("/map/", 0) != 0) {
@@ -256,7 +272,8 @@
                    normalizeCollectionHelperPath(resolvedPath);
           };
           std::string helperName;
-          if (!resolveMapHelperAliasName(callExpr, helperName) ||
+          if ((!resolveMapHelperAliasName(callExpr, helperName) &&
+               !resolvePublishedLateMapHelperName(callExpr, helperName)) ||
               (helperName != "count" && helperName != "contains" &&
                helperName != "tryAt" && helperName != "insert")) {
             return false;

@@ -30,6 +30,10 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
   CHECK(source.find(
             "auto rewriteExplicitBuiltinMapHelperExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {") !=
         std::string::npos);
+  CHECK(source.find("auto resolvePublishedLateMapHelperName =") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
+        std::string::npos);
   CHECK(source.find("auto isRootedAliasSamePathCountLikeCall = [&](const Expr &candidate) {") !=
         std::string::npos);
   CHECK(source.find("if (helperName != \"insert\" && isRootedAliasSamePathCountLikeCall(callExpr)) {") !=
