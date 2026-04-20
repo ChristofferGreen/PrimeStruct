@@ -2261,4 +2261,32 @@ TEST_CASE("emitter collection helper metadata delegation stays source locked") {
         std::string::npos);
 }
 
+TEST_CASE("emitter collection fallback helpers stay scoped path aware") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                            : std::filesystem::path("..");
+  const std::filesystem::path fallbackHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionFallbackHelpers.h";
+
+  REQUIRE(std::filesystem::exists(fallbackHelpersPath));
+
+  const std::string fallbackHelpersSource = readText(fallbackHelpersPath);
+
+  CHECK(fallbackHelpersSource.find("std::string normalized = resolveExprPath(candidate);") !=
+        std::string::npos);
+  CHECK(fallbackHelpersSource.find("const std::string resolvedPath = resolveExprPath(candidate);") !=
+        std::string::npos);
+  CHECK(fallbackHelpersSource.find("std::string normalized = candidate.name;") ==
+        std::string::npos);
+}
+
 TEST_SUITE_END();

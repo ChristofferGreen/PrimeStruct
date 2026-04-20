@@ -2,7 +2,7 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -13,7 +13,7 @@
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.name.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolveExprPath(candidate);
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
@@ -41,10 +41,11 @@
     if (isSimpleCallName(candidate, helper)) {
       return true;
     }
-    if (candidate.name.empty()) {
+    const std::string resolvedPath = resolveExprPath(candidate);
+    if (resolvedPath.empty()) {
       return false;
     }
-    std::string normalized = candidate.name;
+    std::string normalized = resolvedPath;
     if (!normalized.empty() && normalized.front() == '/') {
       normalized.erase(normalized.begin());
     }
