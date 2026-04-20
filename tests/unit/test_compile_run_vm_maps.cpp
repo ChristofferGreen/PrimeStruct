@@ -58,19 +58,6 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with map at helper" * doctest::skip(true)) {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(at(values, 3i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_at.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 4);
-}
-
 TEST_CASE("runs vm with map indexing sugar" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
@@ -121,21 +108,6 @@ main() {
   const std::string srcPath = writeTemp("vm_map_u64_access.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 12);
-}
-
-TEST_CASE("vm map at rejects missing key" * doctest::skip(true)) {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
-  return(at(values, 9i32))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_at_missing.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_vm_map_at_missing_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
-  CHECK(readFile(errPath) == "map key not found\n");
 }
 
 TEST_CASE("rejects vm map literal odd args") {
@@ -263,24 +235,6 @@ main() {
   const std::string srcPath = writeTemp("vm_map_literal_string_binding.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 4);
-}
-
-TEST_CASE("rejects vm map lookup with argv string key" * doctest::skip(true)) {
-  const std::string source = R"(
-[return<int>]
-main([array<string>] args) {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32)}
-  [string] key{args[0i32]}
-  return(at_unsafe(values, key))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_lookup_argv_key.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_vm_map_lookup_argv_key_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
-        std::string::npos);
 }
 
 TEST_CASE("rejects vm map literal string key from argv binding") {

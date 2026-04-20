@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4109
+- TODO-4112
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -66,11 +66,11 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Skipped doctest debt: TODO-4109, TODO-4110, TODO-4106, TODO-4107
+- Skipped doctest debt: TODO-4112, TODO-4110, TODO-4106, TODO-4107
 
 ### Execution Queue (Recommended)
 
-1. TODO-4109
+1. TODO-4112
 2. TODO-4110
 3. TODO-4106
 4. TODO-4107
@@ -109,7 +109,7 @@ Task template:
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | TODO-4109, TODO-4110, TODO-4106, TODO-4107 |
+| Release benchmark/example suite stability and doctest governance | TODO-4112, TODO-4110, TODO-4106, TODO-4107 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -173,10 +173,10 @@ Task template:
 ### Skipped Doctest Debt Summary
 
 - Retained `doctest::skip(true)` coverage is now tracked in four active
-  clusters: `TODO-4109` for the legacy VM map runtime suite, `TODO-4110` for
-  the remaining VM support-matrix math skips, `TODO-4106` for collection
-  compatibility and alias-precedence coverage, and `TODO-4107` for residual
-  IR/docs/gfx/smoke skips.
+  clusters: `TODO-4112` for the remaining legacy VM map indexing/string-path
+  blockers, `TODO-4110` for the remaining VM support-matrix math skips,
+  `TODO-4106` for collection compatibility and alias-precedence coverage, and
+  `TODO-4107` for residual IR/docs/gfx/smoke skips.
 - New skipped doctest coverage must either attach to one of those active leaves
   or replace them with a narrower explicit follow-up before it lands.
 - The success condition for each lane is re-enable-or-delete; indefinite
@@ -184,23 +184,24 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4109: Re-enable or prune skipped legacy VM map suite
+- [ ] TODO-4112: Re-enable or prune remaining legacy VM map indexing and string-path skips
   - owner: ai
   - created_at: 2026-04-20
   - phase: Skipped Doctest Debt
   - depends_on: none
-  - scope: Audit the remaining skipped legacy cases in
-      `tests/unit/test_compile_run_vm_maps.cpp`, re-enable the cases that still
-      add unique VM runtime signal, and delete or split stale duplicates now
-      covered by the import-aware map conformance suites.
+  - scope: Audit the remaining uniquely valuable skipped cases in
+      `tests/unit/test_compile_run_vm_maps.cpp`, especially the legacy indexing
+      sugar and string-path VM blockers, then re-enable or delete them so the
+      file no longer carries a residual umbrella skip cluster.
   - acceptance:
-    - `tests/unit/test_compile_run_vm_maps.cpp` no longer carries stale skipped
-      cases that are already covered elsewhere in active VM map coverage.
-    - Any residual skipped map cases in that file are narrowed to uniquely
-      valuable blockers rather than the old legacy umbrella.
+    - `tests/unit/test_compile_run_vm_maps.cpp` no longer carries the remaining
+      indexing/string-path VM skips as one undifferentiated legacy cluster.
+    - Any residual skipped map cases in that file are narrowed to explicit
+      uniquely valuable blockers with clear rationale.
     - The queue/docs state stays aligned with the reduced VM map skip surface.
-  - stop_rule: Stop once the legacy VM map suite no longer hides stale
-      duplicate coverage behind its retained skips.
+  - stop_rule: Stop once the remaining legacy VM map indexing/string-path skips
+      are either active, deleted, or narrowed into explicit blocker-owned
+      follow-ups.
 
 - [ ] TODO-4110: Re-enable or prune remaining VM support-matrix math skips
   - owner: ai
