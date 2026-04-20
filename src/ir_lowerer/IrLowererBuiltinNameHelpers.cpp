@@ -420,6 +420,15 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
       return true;
     }
   }
+  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    const std::string helperName =
+        stripGeneratedSuffix(scopedName.substr(std::string("std/collections/internal_soa_storage/").size()));
+    if (helperName == "dereference" || helperName == "location") {
+      out = helperName;
+      return true;
+    }
+    return false;
+  }
   if (rawName.find('/') != std::string::npos) {
     return false;
   }
@@ -491,6 +500,15 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
         return false;
       }
       out = "map";
+      return true;
+    }
+    return false;
+  }
+  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias =
+        stripGeneratedSuffix(scopedName.substr(std::string("std/collections/internal_soa_storage/").size()));
+    if (alias == "array" || alias == "soa_vector") {
+      out = alias;
       return true;
     }
     return false;

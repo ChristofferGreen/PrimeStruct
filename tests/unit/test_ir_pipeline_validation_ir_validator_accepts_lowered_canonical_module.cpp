@@ -273,6 +273,13 @@ TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib i
   std::string builtin;
   CHECK(primec::ir_lowerer::getBuiltinCollectionName(namespacedArrayCall, builtin));
   CHECK(builtin == "array");
+
+  primec::Expr rootedArrayCall;
+  rootedArrayCall.kind = primec::Expr::Kind::Call;
+  rootedArrayCall.name = "/std/collections/internal_soa_storage/array";
+
+  CHECK(primec::ir_lowerer::getBuiltinCollectionName(rootedArrayCall, builtin));
+  CHECK(builtin == "array");
 }
 
 TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdlib internals") {
@@ -286,6 +293,15 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
       namespacedDereferenceCall, builtin));
   CHECK(builtin == "dereference");
 
+  primec::Expr rootedDereferenceCall;
+  rootedDereferenceCall.kind = primec::Expr::Kind::Call;
+  rootedDereferenceCall.name =
+      "/std/collections/internal_soa_storage/dereference";
+
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(
+      rootedDereferenceCall, builtin));
+  CHECK(builtin == "dereference");
+
   primec::Expr namespacedLocationCall;
   namespacedLocationCall.kind = primec::Expr::Kind::Call;
   namespacedLocationCall.name = "location";
@@ -293,6 +309,14 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
 
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       namespacedLocationCall, builtin));
+  CHECK(builtin == "location");
+
+  primec::Expr rootedLocationCall;
+  rootedLocationCall.kind = primec::Expr::Kind::Call;
+  rootedLocationCall.name = "/std/collections/internal_soa_storage/location";
+
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(
+      rootedLocationCall, builtin));
   CHECK(builtin == "location");
 }
 
@@ -307,6 +331,14 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
       namespacedAtCall, builtin));
   CHECK(builtin == "at");
 
+  primec::Expr rootedAtCall;
+  rootedAtCall.kind = primec::Expr::Kind::Call;
+  rootedAtCall.name = "/std/collections/internal_soa_storage/at";
+
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedAtCall, builtin));
+  CHECK(builtin == "at");
+
   primec::Expr namespacedAtUnsafeCall;
   namespacedAtUnsafeCall.kind = primec::Expr::Kind::Call;
   namespacedAtUnsafeCall.name = "at_unsafe";
@@ -314,6 +346,15 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
       namespacedAtUnsafeCall, builtin));
+  CHECK(builtin == "at_unsafe");
+
+  primec::Expr rootedAtUnsafeCall;
+  rootedAtUnsafeCall.kind = primec::Expr::Kind::Call;
+  rootedAtUnsafeCall.name =
+      "/std/collections/internal_soa_storage/at_unsafe";
+
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedAtUnsafeCall, builtin));
   CHECK(builtin == "at_unsafe");
 }
 
