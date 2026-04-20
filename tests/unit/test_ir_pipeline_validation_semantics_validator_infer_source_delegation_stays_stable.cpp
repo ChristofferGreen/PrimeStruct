@@ -1782,10 +1782,16 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
         std::string::npos);
 
   CHECK(collectionCompatibilityInternalSource.find(
+            "#include \"MapConstructorHelpers.h\"") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
             "#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "resolvePublishedCollectionHelperMemberToken(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "return isResolvedMapConstructorPath(std::string(resolvedCandidate));") !=
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "preferredPublishedCollectionLoweringPath(") !=
@@ -1801,6 +1807,9 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
         std::string::npos);
   CHECK(collectionCompatibilityInternalSource.find(
             "constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "matchesDirectMapConstructorPath(\"/mapSingle\")") ==
         std::string::npos);
 
   CHECK(collectionCompatibilitySource.find(

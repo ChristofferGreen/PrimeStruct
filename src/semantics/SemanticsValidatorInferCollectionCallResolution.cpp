@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "MapConstructorHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
@@ -112,27 +113,11 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
            explicitTarget == basePath ||
            explicitTarget.rfind(specializedPrefix, 0) == 0;
   };
-  const bool matchesExperimentalVectorCtorFamily =
+  const bool matchesVectorCtorFamily =
       !inferredNonCollectionTargetType &&
-      (matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct"));
-  if (matchesCollectionCtorPath("/std/collections/vectorNew") ||
-      matchesCollectionCtorPath("/std/collections/vectorSingle") ||
-      matchesCollectionCtorPath("/std/collections/vectorPair") ||
-      matchesCollectionCtorPath("/std/collections/vectorTriple") ||
-      matchesCollectionCtorPath("/std/collections/vectorQuad") ||
-      matchesCollectionCtorPath("/std/collections/vectorQuint") ||
-      matchesCollectionCtorPath("/std/collections/vectorSext") ||
-      matchesCollectionCtorPath("/std/collections/vectorSept") ||
-      matchesCollectionCtorPath("/std/collections/vectorOct") ||
-      matchesExperimentalVectorCtorFamily) {
+      (isResolvedVectorConstructorHelperPath(resolvedTarget) ||
+       isResolvedVectorConstructorHelperPath(explicitTarget));
+  if (matchesVectorCtorFamily) {
     typePathOut = "/vector";
     return true;
   }
@@ -316,28 +301,10 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     }
   }
 
-  const bool matchesExperimentalVectorCtorFamily =
-      !inferredNonCollectionTargetType &&
-      (matchesCollectionCtorPath("/std/collections/experimental_vector/vectorNew") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSingle") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorPair") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorTriple") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuad") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorQuint") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSext") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorSept") ||
-       matchesCollectionCtorPath("/std/collections/experimental_vector/vectorOct"));
   if (expectedBase == "vector" &&
-      (matchesCollectionCtorPath("/std/collections/vectorNew") ||
-       matchesCollectionCtorPath("/std/collections/vectorSingle") ||
-       matchesCollectionCtorPath("/std/collections/vectorPair") ||
-       matchesCollectionCtorPath("/std/collections/vectorTriple") ||
-       matchesCollectionCtorPath("/std/collections/vectorQuad") ||
-       matchesCollectionCtorPath("/std/collections/vectorQuint") ||
-       matchesCollectionCtorPath("/std/collections/vectorSext") ||
-       matchesCollectionCtorPath("/std/collections/vectorSept") ||
-       matchesCollectionCtorPath("/std/collections/vectorOct") ||
-       matchesExperimentalVectorCtorFamily) &&
+      !inferredNonCollectionTargetType &&
+      (isResolvedVectorConstructorHelperPath(resolvedTarget) ||
+       isResolvedVectorConstructorHelperPath(explicitTarget)) &&
       target.templateArgs.size() == 1) {
     argsOut = target.templateArgs;
     return true;

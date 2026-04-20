@@ -362,28 +362,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
   if (initializer.kind != Expr::Kind::Call) return false;
   const Expr *initializerExprForInference = &initializer;
   auto isResolvedMapConstructorPath = [](std::string resolvedPath) {
-    resolvedPath = stripMapConstructorSuffixes(std::move(resolvedPath));
-    return resolvedPath == "/std/collections/map/map" ||
-           resolvedPath == "/std/collections/mapNew" ||
-           resolvedPath == "/std/collections/mapSingle" ||
-           resolvedPath == "/std/collections/mapPair" ||
-           resolvedPath == "/std/collections/mapDouble" ||
-           resolvedPath == "/std/collections/mapTriple" ||
-           resolvedPath == "/std/collections/mapQuad" ||
-           resolvedPath == "/std/collections/mapQuint" ||
-           resolvedPath == "/std/collections/mapSext" ||
-           resolvedPath == "/std/collections/mapSept" ||
-           resolvedPath == "/std/collections/mapOct" ||
-           resolvedPath == "/std/collections/experimental_map/mapNew" ||
-           resolvedPath == "/std/collections/experimental_map/mapSingle" ||
-           resolvedPath == "/std/collections/experimental_map/mapPair" ||
-           resolvedPath == "/std/collections/experimental_map/mapDouble" ||
-           resolvedPath == "/std/collections/experimental_map/mapTriple" ||
-           resolvedPath == "/std/collections/experimental_map/mapQuad" ||
-           resolvedPath == "/std/collections/experimental_map/mapQuint" ||
-           resolvedPath == "/std/collections/experimental_map/mapSext" ||
-           resolvedPath == "/std/collections/experimental_map/mapSept" ||
-           resolvedPath == "/std/collections/experimental_map/mapOct";
+    return ::isResolvedPublishedMapConstructorPath(std::move(resolvedPath));
   };
   auto inferDeclaredDirectCallBinding = [&](const std::string &resolvedPath) -> bool {
     const auto defIt = defMap_.find(resolvedPath);

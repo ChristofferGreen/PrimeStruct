@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MapConstructorHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <string>
@@ -21,42 +22,7 @@ enum class RemovedCollectionHelperFamily {
 }
 
 [[maybe_unused]] bool isDirectMapConstructorPath(std::string_view resolvedCandidate) {
-  auto matchesDirectMapConstructorPath = [&](std::string_view basePath) {
-    return resolvedCandidate == basePath ||
-           resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
-  };
-  return matchesDirectMapConstructorPath("/map") ||
-         matchesDirectMapConstructorPath("/std/collections/map/map") ||
-         matchesDirectMapConstructorPath("/mapNew") ||
-         matchesDirectMapConstructorPath("/std/collections/mapNew") ||
-         matchesDirectMapConstructorPath("/mapSingle") ||
-         matchesDirectMapConstructorPath("/std/collections/mapSingle") ||
-         matchesDirectMapConstructorPath("/mapDouble") ||
-         matchesDirectMapConstructorPath("/std/collections/mapDouble") ||
-         matchesDirectMapConstructorPath("/mapPair") ||
-         matchesDirectMapConstructorPath("/std/collections/mapPair") ||
-         matchesDirectMapConstructorPath("/mapTriple") ||
-         matchesDirectMapConstructorPath("/std/collections/mapTriple") ||
-         matchesDirectMapConstructorPath("/mapQuad") ||
-         matchesDirectMapConstructorPath("/std/collections/mapQuad") ||
-         matchesDirectMapConstructorPath("/mapQuint") ||
-         matchesDirectMapConstructorPath("/std/collections/mapQuint") ||
-         matchesDirectMapConstructorPath("/mapSext") ||
-         matchesDirectMapConstructorPath("/std/collections/mapSext") ||
-         matchesDirectMapConstructorPath("/mapSept") ||
-         matchesDirectMapConstructorPath("/std/collections/mapSept") ||
-         matchesDirectMapConstructorPath("/mapOct") ||
-         matchesDirectMapConstructorPath("/std/collections/mapOct") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapNew") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSingle") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapDouble") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapPair") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapTriple") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuad") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapQuint") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSext") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapSept") ||
-         matchesDirectMapConstructorPath("/std/collections/experimental_map/mapOct");
+  return isResolvedMapConstructorPath(std::string(resolvedCandidate));
 }
 
 [[maybe_unused]] bool matchesResolvedPath(std::string_view resolvedPath,

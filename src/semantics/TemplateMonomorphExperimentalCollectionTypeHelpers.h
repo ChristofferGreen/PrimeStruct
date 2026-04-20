@@ -1,107 +1,34 @@
 #pragma once
 
+#include "MapConstructorHelpers.h"
+
 std::string experimentalMapConstructorInferencePath(const std::string &resolvedPath) {
   const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
-  auto matchesPath = [&](std::string_view basePath) {
-    return normalizedPath == basePath;
-  };
-  if (matchesPath("/std/collections/map/map") || matchesPath("/std/collections/mapNew")) {
-    return "/std/collections/experimental_map/mapNew";
+  if (normalizedPath == "/std/collections/map/map" ||
+      normalizedPath == "/std/collections/mapNew") {
+    return experimentalMapConstructorHelperPath(0);
   }
-  if (matchesPath("/std/collections/mapSingle")) {
-    return "/std/collections/experimental_map/mapSingle";
-  }
-  if (matchesPath("/std/collections/mapDouble")) {
-    return "/std/collections/experimental_map/mapDouble";
-  }
-  if (matchesPath("/std/collections/mapPair")) {
-    return "/std/collections/experimental_map/mapPair";
-  }
-  if (matchesPath("/std/collections/mapTriple")) {
-    return "/std/collections/experimental_map/mapTriple";
-  }
-  if (matchesPath("/std/collections/mapQuad")) {
-    return "/std/collections/experimental_map/mapQuad";
-  }
-  if (matchesPath("/std/collections/mapQuint")) {
-    return "/std/collections/experimental_map/mapQuint";
-  }
-  if (matchesPath("/std/collections/mapSext")) {
-    return "/std/collections/experimental_map/mapSext";
-  }
-  if (matchesPath("/std/collections/mapSept")) {
-    return "/std/collections/experimental_map/mapSept";
-  }
-  if (matchesPath("/std/collections/mapOct")) {
-    return "/std/collections/experimental_map/mapOct";
-  }
-  return {};
+  return canonicalMapConstructorToExperimental(normalizedPath);
 }
 
 bool isExperimentalMapConstructorHelperPath(const std::string &resolvedPath) {
   const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
-  auto matchesPath = [&](std::string_view basePath) {
-    return normalizedPath == basePath;
-  };
-  return matchesPath("/std/collections/experimental_map/mapNew") ||
-         matchesPath("/std/collections/experimental_map/mapSingle") ||
-         matchesPath("/std/collections/experimental_map/mapDouble") ||
-         matchesPath("/std/collections/experimental_map/mapPair") ||
-         matchesPath("/std/collections/experimental_map/mapTriple") ||
-         matchesPath("/std/collections/experimental_map/mapQuad") ||
-         matchesPath("/std/collections/experimental_map/mapQuint") ||
-         matchesPath("/std/collections/experimental_map/mapSext") ||
-         matchesPath("/std/collections/experimental_map/mapSept") ||
-         matchesPath("/std/collections/experimental_map/mapOct");
+  return normalizedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+         isResolvedPublishedMapConstructorPath(normalizedPath) &&
+         normalizedPath != "/std/collections/experimental_map/map";
 }
 
 std::string experimentalVectorConstructorInferencePath(const std::string &resolvedPath) {
-  auto matchesPath = [&](std::string_view basePath) {
-    return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
-  };
-  if (matchesPath("/std/collections/vectorNew")) {
-    return "/std/collections/experimental_vector/vectorNew";
-  }
-  if (matchesPath("/std/collections/vectorSingle")) {
-    return "/std/collections/experimental_vector/vectorSingle";
-  }
-  if (matchesPath("/std/collections/vectorPair")) {
-    return "/std/collections/experimental_vector/vectorPair";
-  }
-  if (matchesPath("/std/collections/vectorTriple")) {
-    return "/std/collections/experimental_vector/vectorTriple";
-  }
-  if (matchesPath("/std/collections/vectorQuad")) {
-    return "/std/collections/experimental_vector/vectorQuad";
-  }
-  if (matchesPath("/std/collections/vectorQuint")) {
-    return "/std/collections/experimental_vector/vectorQuint";
-  }
-  if (matchesPath("/std/collections/vectorSext")) {
-    return "/std/collections/experimental_vector/vectorSext";
-  }
-  if (matchesPath("/std/collections/vectorSept")) {
-    return "/std/collections/experimental_vector/vectorSept";
-  }
-  if (matchesPath("/std/collections/vectorOct")) {
-    return "/std/collections/experimental_vector/vectorOct";
-  }
-  return {};
+  return metadataBackedExperimentalVectorConstructorCompatibilityPath(
+      resolvedPath);
 }
 
 bool isExperimentalVectorConstructorHelperPath(const std::string &resolvedPath) {
-  auto matchesPath = [&](std::string_view basePath) {
-    return resolvedPath == basePath || resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
-  };
-  return matchesPath("/std/collections/experimental_vector/vectorNew") ||
-         matchesPath("/std/collections/experimental_vector/vectorSingle") ||
-         matchesPath("/std/collections/experimental_vector/vectorPair") ||
-         matchesPath("/std/collections/experimental_vector/vectorTriple") ||
-         matchesPath("/std/collections/experimental_vector/vectorQuad") ||
-         matchesPath("/std/collections/experimental_vector/vectorQuint") ||
-         matchesPath("/std/collections/experimental_vector/vectorSext") ||
-         matchesPath("/std/collections/experimental_vector/vectorSept") ||
-         matchesPath("/std/collections/experimental_vector/vectorOct");
+  const std::string normalizedPath =
+      stripCollectionConstructorSuffixes(resolvedPath);
+  return normalizedPath.rfind("/std/collections/experimental_vector/", 0) ==
+             0 &&
+         isResolvedVectorConstructorHelperPath(normalizedPath);
 }
 
 bool resolvesExperimentalVectorValueTypeText(const std::string &typeText) {

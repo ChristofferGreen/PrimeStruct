@@ -2070,10 +2070,22 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "std::string experimentalVectorConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
+            "#include \"MapConstructorHelpers.h\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
+            "metadataBackedExperimentalMapConstructorRewritePath(") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
+            "metadataBackedExperimentalVectorConstructorCompatibilityPath(") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "resolvedPath == \"/vector\" || resolvedPath == \"/std/collections/vector/vector\"") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
             "resolvedPath == \"/std/collections/vector/vector\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
+            "if (resolvedPath == \"/std/collections/vectorSingle\")") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReturnRewritesSource.find(
             "void rewriteExperimentalConstructorReturnTree(Expr &candidate, RewriteCurrentFn &&rewriteCurrent)") !=

@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "MapConstructorHelpers.h"
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 namespace primec::semantics {
@@ -319,31 +320,7 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
     }
-    const std::string resolvedCandidate = resolveCalleePath(candidate);
-    auto matchesPath = [&](std::string_view basePath) {
-      return resolvedCandidate == basePath || resolvedCandidate.rfind(std::string(basePath) + "__t", 0) == 0;
-    };
-    return matchesPath("/std/collections/map/map") ||
-           matchesPath("/std/collections/mapNew") ||
-           matchesPath("/std/collections/mapSingle") ||
-           matchesPath("/std/collections/mapDouble") ||
-           matchesPath("/std/collections/mapPair") ||
-           matchesPath("/std/collections/mapTriple") ||
-           matchesPath("/std/collections/mapQuad") ||
-           matchesPath("/std/collections/mapQuint") ||
-           matchesPath("/std/collections/mapSext") ||
-           matchesPath("/std/collections/mapSept") ||
-           matchesPath("/std/collections/mapOct") ||
-           matchesPath("/std/collections/experimental_map/mapNew") ||
-           matchesPath("/std/collections/experimental_map/mapSingle") ||
-           matchesPath("/std/collections/experimental_map/mapDouble") ||
-           matchesPath("/std/collections/experimental_map/mapPair") ||
-           matchesPath("/std/collections/experimental_map/mapTriple") ||
-           matchesPath("/std/collections/experimental_map/mapQuad") ||
-           matchesPath("/std/collections/experimental_map/mapQuint") ||
-           matchesPath("/std/collections/experimental_map/mapSext") ||
-           matchesPath("/std/collections/experimental_map/mapSept") ||
-           matchesPath("/std/collections/experimental_map/mapOct");
+    return isResolvedPublishedMapConstructorPath(resolveCalleePath(candidate));
   };
 
   auto state = std::make_shared<BuiltinCollectionDispatchResolvers>();

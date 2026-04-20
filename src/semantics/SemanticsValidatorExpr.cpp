@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 #include "primec/StringLiteral.h"
 
 #include <algorithm>
@@ -399,20 +400,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return false;
       }
       const std::string resolvedReceiver = resolveCalleePath(receiver);
-      auto matchesCtorPath = [&](std::string_view ctorPath) {
-        return resolvedReceiver == ctorPath ||
-               resolvedReceiver.rfind(std::string(ctorPath) + "__t", 0) == 0;
-      };
-      if (matchesCtorPath("/std/collections/experimental_vector/vector") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorNew") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorSingle") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorPair") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorTriple") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorQuad") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorQuint") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorSext") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorSept") ||
-          matchesCtorPath("/std/collections/experimental_vector/vectorOct")) {
+      if (isResolvedExperimentalVectorConstructorPath(resolvedReceiver)) {
         return false;
       }
       std::string builtinCollectionName;

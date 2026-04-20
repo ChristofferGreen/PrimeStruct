@@ -11,18 +11,7 @@ namespace primec::semantics {
 namespace {
 
 bool isCanonicalMapConstructorResolvedPath(const std::string &resolvedPath) {
-  const std::string normalizedPath = stripMapConstructorSuffixes(resolvedPath);
-  return normalizedPath == "/std/collections/map/map" ||
-         normalizedPath == "/std/collections/mapNew" ||
-         normalizedPath == "/std/collections/mapSingle" ||
-         normalizedPath == "/std/collections/mapDouble" ||
-         normalizedPath == "/std/collections/mapPair" ||
-         normalizedPath == "/std/collections/mapTriple" ||
-         normalizedPath == "/std/collections/mapQuad" ||
-         normalizedPath == "/std/collections/mapQuint" ||
-         normalizedPath == "/std/collections/mapSext" ||
-         normalizedPath == "/std/collections/mapSept" ||
-         normalizedPath == "/std/collections/mapOct";
+  return isResolvedCanonicalMapConstructorPath(resolvedPath);
 }
 
 } // namespace
