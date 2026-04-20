@@ -35,7 +35,10 @@ build and layout solidify.
   `ui`, the public collection wrapper files, and `stdlib/std/gfx/gfx.prime`
   as style-aligned surface code; treat `stdlib/std/bench_non_math`,
   `stdlib/std/collections/collections.prime`,
-  `stdlib/std/collections/experimental_*`,
+  `stdlib/std/collections/experimental_vector.prime`,
+  `stdlib/std/collections/experimental_map.prime`,
+  `stdlib/std/collections/experimental_soa_vector.prime`,
+  `stdlib/std/collections/experimental_soa_vector_conversions.prime`,
   `stdlib/std/collections/internal_*`, and
   `stdlib/std/gfx/experimental.prime` as canonical/bridge code unless an
   active TODO explicitly retargets them.

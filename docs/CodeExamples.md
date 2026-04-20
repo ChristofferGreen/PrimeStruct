@@ -50,7 +50,10 @@ user-facing names whenever the current language surface already supports them.
 Internal implementation, bridge, or substrate-oriented code:
 - `stdlib/std/bench_non_math/*`
 - `stdlib/std/collections/collections.prime`
-- `stdlib/std/collections/experimental_*`
+- `stdlib/std/collections/experimental_vector.prime`
+- `stdlib/std/collections/experimental_map.prime`
+- `stdlib/std/collections/experimental_soa_vector.prime`
+- `stdlib/std/collections/experimental_soa_vector_conversions.prime`
 - `stdlib/std/collections/internal_*`
 - `stdlib/std/gfx/experimental.prime`
 

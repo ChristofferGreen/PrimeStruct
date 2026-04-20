@@ -2569,7 +2569,10 @@ flight.
   `stdlib/std/gfx/gfx.prime`.
 - **Internal implementation, bridge, or substrate code:** `stdlib/std/bench_non_math/*`,
   `stdlib/std/collections/collections.prime`,
-  `stdlib/std/collections/experimental_*`,
+  `stdlib/std/collections/experimental_vector.prime`,
+  `stdlib/std/collections/experimental_map.prime`,
+  `stdlib/std/collections/experimental_soa_vector.prime`,
+  `stdlib/std/collections/experimental_soa_vector_conversions.prime`,
   `stdlib/std/collections/internal_*`, and
   `stdlib/std/gfx/experimental.prime`.
 - **Mixed-directory rule:** `stdlib/std/collections` and `stdlib/std/gfx`
@@ -3279,13 +3282,15 @@ bad_use_after_take() {
     `meta.field_visibility<T>(i)`. Those queries validate only on reflect-enabled structs and are eliminated before IR
     emission, so future SoA stdlib code can derive column schemas from `T` without adding new compiler-owned
     collection-specific reflection primitives.
-  - **Experimental stdlib status:** the first core stdlib namespace foothold now exists at
-    `/std/collections/experimental_soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
+  - **Current canonical SoA experiment surface:** public docs/examples should now use
+    `/std/collections/soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
     `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorCount<T>()`, `soaVectorGet<T>()`,
     `soaVectorReserve<T>()`, and `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`,
     `.get(i)`, `.reserve(...)`, and `.push(...)`. The explicit AoS conversion surface now lives in
-    the dedicated `/std/collections/experimental_soa_vector_conversions/*` module with
-    `soaVectorToAos<T>()`.
+    the canonical `/std/collections/soa_vector_conversions/*` module with `soaVectorToAos<T>()`,
+    while `/std/collections/experimental_soa_vector/*` and
+    `/std/collections/experimental_soa_vector_conversions/*` remain compatibility-only bridge seams
+    behind that canonical experiment surface.
     The wrapper now stores real `.prime` `SoaColumn<T>` state rather than the old builtin header-only
     `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
     `meta.field_count<T>()` so non-SoA-safe element types fail early. Today the first real single-column
@@ -3351,13 +3356,13 @@ bad_use_after_take() {
     `soaVectorFromAos<T>()`
     already targets the same substrate semantically, but backend lowering still stops on the current `* backend
     requires typed bindings` boundary.
-    `soaVectorToAos<T>()` now lives in the dedicated `/std/collections/experimental_soa_vector_conversions/*` import
+    `soaVectorToAos<T>()` now lives in the canonical `/std/collections/soa_vector_conversions/*` import
     surface so the core wrapper module stays usable for read/mutate paths. Wrapper method-sugar `values.to_aos()`
-    now resolves onto that imported helper surface cleanly. Shared lowering now treats declared
+    now resolves onto that canonical helper surface cleanly while the compatibility namespace remains implementation-only. Shared lowering now treats declared
     `vector<Struct>` helper returns as opaque array-handle returns, so imported `soaVectorToAos<T>()`
     and wrapper method-sugar `values.to_aos()` both lower successfully across C++/native/VM for
     empty and non-empty wrapper state instead of stopping on the old `* backend does not support
-    return type on /std/collections/experimental_soa_vector_conversions/soaVectorToAos__...`
+    return type on /std/collections/soa_vector_conversions/soaVectorToAos__...`
     boundary.
     The first canonical bridges also exist now: explicit `/std/collections/soa_vector/count<T>(...)`,
     `/std/collections/soa_vector/get<T>(...)`, `/std/collections/soa_vector/ref<T>(...)`,
