@@ -268,6 +268,33 @@ Why this is good:
 - The call site stays short because only the intended helper is imported.
 - The private helper still documents the boundary the import will not cross.
 
+### Compile-time Reflection Metadata
+
+When a struct opts into reflection, prefer small metadata queries that show
+what the type exposes at compile time.
+
+```prime
+[struct reflect]
+Pair {
+  [int] x{0}
+  [private int] y{0}
+}
+
+[effects(io_out), int]
+show_pair_metadata() {
+  print_line(meta.type_name<Pair>())
+  print_line(meta.field_name<Pair>(0))
+  print_line(meta.field_visibility<Pair>(1))
+
+  return(meta.field_count<Pair>())
+}
+```
+
+Why this is good:
+- The example shows exactly what `reflect` unlocks on the type.
+- The metadata queries stay concrete and readable instead of feeling abstract.
+- Field visibility is visible in the output, so the example teaches more than just field count.
+
 ### Concise Local Binding with Labeled Construction
 
 When the initializer already makes the type obvious, prefer the concise local
@@ -404,6 +431,29 @@ Why this is good:
 - Mutation stays on the collection that owns the state.
 - The return expression demonstrates readable `at(...)` and `count()` usage without extra ceremony.
 
+### Reinitialize After Move
+
+When a helper consumes an owning heap-backed value, show the replacement value
+explicitly if the binding becomes valid again later in the same scope.
+
+```prime
+import /std/collections/*
+
+[effects(heap_alloc), int]
+reinitialize_after_move() {
+  [vector<int> mut] values{1, 2}
+  moved{move(values)}
+  values = vector<int>{9}
+
+  return(moved.count() + values.count())
+}
+```
+
+Why this is good:
+- The `heap_alloc` effect keeps the ownership change concrete.
+- The reassignment shows exactly how a moved-from binding becomes usable again.
+- The final return proves that both the moved value and the replacement value remain usable.
+
 ### Result Propagation with `?`
 
 When an entrypoint crosses from typed `Result` values into integer status codes,
@@ -458,6 +508,50 @@ Current note:
 
 These examples are intentionally invalid. Use them to show language rules that
 should fail at compile time.
+
+### Borrowed Value Cannot Mutate
+
+When a borrow is still live, mutating the original binding should fail on the
+line that tries to write through it.
+
+```prime
+[int]
+borrowed_value_cannot_mutate() {
+  [int mut] value{4}
+  [Reference<int>] read_ref{location(value)}
+
+  value = 9 // error: `value` is still borrowed by `read_ref`
+
+  return(read_ref)
+}
+```
+
+Why this is good:
+- The failing line is obvious at a glance.
+- The example maps cleanly to a rule that surprises C++ readers.
+- The borrow stays visible in one small scope with no extra control-flow noise.
+
+### Shared and Mutable Borrows Cannot Overlap
+
+When a shared borrow remains live, an overlapping mutable borrow should be
+shown as invalid even before any write happens.
+
+```prime
+[int]
+shared_and_mutable_borrows_cannot_overlap() {
+  [int mut] value{4}
+  [Reference<int>] read_ref{location(value)}
+
+  [Reference<int> mut] write_ref{location(value)} // error: `read_ref` is still live below
+
+  return(read_ref)
+}
+```
+
+Why this is good:
+- The example teaches the exclusivity rule directly.
+- The later `return(read_ref)` makes it obvious why the shared borrow is still live.
+- The failure happens at the borrow introduction site, which keeps the rule easy to explain.
 
 ### Use-after-move on Owning Collections
 

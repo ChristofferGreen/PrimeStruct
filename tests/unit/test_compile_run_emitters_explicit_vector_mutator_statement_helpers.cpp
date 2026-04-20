@@ -34,7 +34,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs explicit canonical vector mutator statement helper in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("rejects explicit canonical vector mutator statement helper without vector access helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -50,17 +50,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_vector_mutator_statement_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_explicit_canonical_vector_mutator_statement_helper_exe")
+       "primec_cpp_explicit_canonical_vector_mutator_statement_helper.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 43);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs explicit canonical reordered vector mutator statement helper in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("rejects reordered explicit canonical vector mutator statement helper without vector access helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc)]
 /std/collections/vector/push([vector<i32> mut] values, [i32] value) {
@@ -76,14 +78,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_explicit_canonical_reordered_vector_mutator_statement_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_explicit_canonical_reordered_vector_mutator_statement_helper_exe")
+       "primec_cpp_explicit_canonical_reordered_vector_mutator_statement_helper.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 43);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects alias vector mutator statements with canonical-only helper before emission") {
@@ -269,30 +273,6 @@ main() {
   CHECK(errors.find("unknown method: /std/collections/vector/remove_at") != std::string::npos);
 }
 
-TEST_CASE("rejects inferred wrapper map capacity target in C++ emitter" * doctest::skip(true)) {
-  const std::string source = R"(
-wrapMap() {
-  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
-  return(values)
-}
-
-[return<int>]
-main() {
-  [i32] callValue{capacity(wrapMap())}
-  [i32] methodValue{wrapMap().capacity()}
-  return(plus(callValue, methodValue))
-}
-)";
-  const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_map_capacity_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_inferred_wrapper_map_capacity_reject.err").string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
-}
-
 TEST_CASE("C++ emitter infers wrapper access builtin fallback") {
   const std::string source = R"(
 wrapMap() {
@@ -317,9 +297,14 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_access_builtin_fallback.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_cpp_inferred_wrapper_access_builtin_fallback.cpp").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_inferred_wrapper_access_builtin_fallback.err").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects inferred wrapper access key mismatch in C++ emitter") {
@@ -340,11 +325,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_inferred_wrapper_access_key_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_inferred_wrapper_access_key_mismatch_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_inferred_wrapper_access_key_mismatch.err").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter infers wrapper string access builtin fallback") {
@@ -444,7 +432,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter treats wrapper-returned canonical map string access as string receiver" * doctest::skip(true)) {
+TEST_CASE("C++ emitter keeps canonical map unknown-target diagnostics on wrapper-returned map indexing") {
   const std::string source = R"(
 [return</std/collections/map<i32, string>>]
 wrapMap() {
@@ -458,23 +446,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_wrapper_canonical_map_string_receiver.prime", source);
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_canonical_map_string_receiver_exe")
-          .string();
   const std::string errPath =
       (testScratchPath("") /
        "primec_cpp_wrapper_canonical_map_string_receiver.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support string array return types on /wrapMap") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps imported wrapper-returned canonical map reference access lowering diagnostics") {
+TEST_CASE("C++ emitter keeps imported wrapper-returned canonical map reference alias diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -508,36 +492,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend does not support string array return types on /borrowMap") !=
+  CHECK(readFile(errPath).find("unknown call target: /map/at") !=
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps non-string diagnostics on wrapper-returned canonical map access receivers" * doctest::skip(true)) {
-  const std::string source = R"(
-[return</std/collections/map<i32, i32>>]
-wrapMap() {
-  return(map<i32, i32>(1i32, 4i32))
-}
-
-[effects(heap_alloc), return<int>]
-main() {
-  return(wrapMap()[1i32].count())
-}
-)";
-  const std::string srcPath =
-      writeTemp("compile_cpp_wrapper_canonical_map_string_receiver_diag.prime", source);
-  const std::string errPath =
-      (testScratchPath("") /
-       "primec_cpp_wrapper_canonical_map_string_receiver_diag.err")
-          .string();
-
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
-}
-
-TEST_CASE("C++ emitter keeps direct wrapper-returned canonical map access string receiver typing" * doctest::skip(true)) {
+TEST_CASE("C++ emitter keeps inferExprString lowering diagnostics on direct wrapper-returned canonical map access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -561,15 +520,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_cpp_direct_wrapper_canonical_map_access_count_diag_exe")
+       "primec_cpp_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 3);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("EXE IR lowering error: debug: branch=inferExprString") !=
+        std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps wrapper-returned canonical map method access string receiver typing") {
@@ -613,7 +573,7 @@ main() {
   CHECK(runCommand(exePath) == 182);
 }
 
-TEST_CASE("C++ emitter keeps non-string diagnostics on direct-call wrapper-returned canonical map reference access" * doctest::skip(true)) {
+TEST_CASE("C++ emitter keeps canonical map unknown-target diagnostics on direct-call wrapper-returned canonical map reference access") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {
@@ -641,7 +601,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

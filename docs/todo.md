@@ -67,6 +67,7 @@ Task template:
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4134
 - TODO-4133
 - TODO-4132
 - TODO-4122
@@ -76,11 +77,11 @@ Task template:
 - TODO-4126
 - TODO-4127
 - TODO-4128
-- TODO-4129
 
 ### Priority Lanes (Current)
 
 - Reflection ergonomics and docs alignment: TODO-4132, TODO-4133
+- Struct helper call ergonomics: TODO-4134
 - Semantic-product authority and lowerer ownership: TODO-4119, TODO-4120,
   TODO-4121, TODO-4122, TODO-4129
 - Validator/runtime boundary simplification: TODO-4123, TODO-4126,
@@ -106,7 +107,7 @@ Task template:
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4119, TODO-4120, TODO-4121, TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
-| Stdlib surface-style alignment and public helper readability | TODO-4132, TODO-4133 |
+| Stdlib surface-style alignment and public helper readability | TODO-4132, TODO-4133, TODO-4134 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
@@ -125,7 +126,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4119, TODO-4121, TODO-4122 |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4132, TODO-4133 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4132, TODO-4133, TODO-4134 |
 | Semantic-product publication parity and deterministic ordering | TODO-4121, TODO-4122, TODO-4127, TODO-4129, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4120, TODO-4128 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
@@ -210,6 +211,27 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
+
+- [ ] TODO-4134: Accept type-qualified dot-call syntax for static helpers
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Language Surface Alignment
+  - depends_on: none
+  - scope: Extend struct helper call syntax so static helpers accept
+      type-qualified dot calls such as `Counter.default_step()` in addition to
+      the current direct `/Counter/default_step()` spelling, and update the
+      docs under `./docs` to prefer the cleaner surface form once it works.
+  - acceptance:
+    - A representative `[public static int] default_step()` helper compiles
+      through `Counter.default_step()` and preserves the current direct-call
+      behavior of `/Counter/default_step()`.
+    - Deterministic diagnostics still reject genuinely invalid static-helper
+      call sites instead of silently routing unrelated receiver forms.
+    - `docs/CodeExamples.md` and the relevant helper/struct guidance under
+      `./docs` are updated to use the supported type-qualified dot-call form.
+  - stop_rule: Stop once one static-helper slice accepts `Type.helper()`
+      end-to-end with focused validation coverage and the docs no longer need
+      the slash-path workaround for that case.
 
 - [ ] TODO-4133: Let `generate(...)` imply reflection enablement
   - owner: ai
