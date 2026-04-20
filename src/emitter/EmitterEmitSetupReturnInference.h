@@ -76,7 +76,7 @@
       if (isParam(params, expr.name)) {
         return ReturnKind::Unknown;
       }
-      if (isBuiltinMathConstantName(expr.name, hasMathImport)) {
+      if (isBuiltinMathConstantName(resolveExprPath(expr), hasMathImport)) {
         return ReturnKind::Float64;
       }
       auto it = locals.find(expr.name);

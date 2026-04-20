@@ -4,6 +4,8 @@
 
 namespace primec::emitter {
 
+std::string resolveExprPath(const Expr &expr);
+
 std::optional<std::string> runEmitterExprControlNameStep(
     const Expr &expr,
     const std::unordered_map<std::string, Emitter::BindingInfo> &localTypes,
@@ -11,8 +13,10 @@ std::optional<std::string> runEmitterExprControlNameStep(
   if (expr.kind != Expr::Kind::Name) {
     return std::nullopt;
   }
-  if (localTypes.count(expr.name) == 0 && isBuiltinMathConstantName(expr.name, allowMathBare)) {
-    std::string constantName = expr.name;
+  const std::string resolvedPath = resolveExprPath(expr);
+  if (localTypes.count(expr.name) == 0 &&
+      isBuiltinMathConstantName(resolvedPath, allowMathBare)) {
+    std::string constantName = resolvedPath;
     if (!constantName.empty() && constantName[0] == '/') {
       constantName.erase(0, 1);
     }

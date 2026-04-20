@@ -197,6 +197,17 @@ TEST_CASE("emitter expr control name step resolves constants and locals") {
   REQUIRE(namespaced.has_value());
   CHECK(*namespaced == "ps_const_tau");
 
+  primec::Expr parserShapedConstantExpr;
+  parserShapedConstantExpr.kind = primec::Expr::Kind::Name;
+  parserShapedConstantExpr.name = "tau";
+  parserShapedConstantExpr.namespacePrefix = "/std/math";
+  const auto parserShaped = primec::emitter::runEmitterExprControlNameStep(
+      parserShapedConstantExpr,
+      {},
+      false);
+  REQUIRE(parserShaped.has_value());
+  CHECK(*parserShaped == "ps_const_tau");
+
   primec::Emitter::BindingInfo localInfo;
   localInfo.typeName = "f64";
   std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {

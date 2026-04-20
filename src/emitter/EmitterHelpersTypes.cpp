@@ -529,7 +529,7 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     return ReturnKind::String;
   }
   if (expr.kind == Expr::Kind::Name) {
-    if (isBuiltinMathConstantName(expr.name, allowMathBare)) {
+    if (isBuiltinMathConstantName(resolveExprPath(expr), allowMathBare)) {
       return ReturnKind::Float64;
     }
     auto it = localTypes.find(expr.name);
