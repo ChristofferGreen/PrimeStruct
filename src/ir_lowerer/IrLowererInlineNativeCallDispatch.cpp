@@ -125,7 +125,15 @@ bool prefersPublishedMapHelperDefinition(const Expr &expr,
                                          std::string_view helperName,
                                          const Definition &callee) {
   if (!expr.isMethodCall) {
-    return isExplicitSamePathPublishedMapHelperCall(expr, callee.fullPath);
+    if (isExplicitSamePathPublishedMapHelperCall(expr, callee.fullPath)) {
+      return true;
+    }
+    if ((helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref") &&
+        !expr.args.empty() && expr.args.front().kind == Expr::Kind::Call) {
+      return true;
+    }
+    return false;
   }
   if (helperName == "count" || helperName == "count_ref") {
     return true;

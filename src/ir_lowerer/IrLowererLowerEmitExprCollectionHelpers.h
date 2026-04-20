@@ -875,6 +875,9 @@
           if (callExpr.args.front().kind != Expr::Kind::Call) {
             return false;
           }
+          if (resolveDefinitionCall(callExpr) != nullptr) {
+            return false;
+          }
           ir_lowerer::MapAccessTargetInfo targetInfoOut;
           const Definition *callee = resolveDefinitionCall(callExpr.args.front());
           if (callee == nullptr) {

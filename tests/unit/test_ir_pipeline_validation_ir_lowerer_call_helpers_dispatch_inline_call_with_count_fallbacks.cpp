@@ -689,5 +689,75 @@ TEST_CASE("ir lowerer call helpers dispatch bare semantic map sugar inline") {
   expectEmitted(atUnsafeCall, canonicalAtUnsafe);
 }
 
+TEST_CASE("ir lowerer call helpers preserve direct wrapper map access defs") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  auto isMapReceiver = [](const primec::Expr &expr) {
+    return (expr.kind == primec::Expr::Kind::Name && expr.name == "values") ||
+           (expr.kind == primec::Expr::Kind::Call && expr.name == "wrapValues");
+  };
+
+  primec::Definition canonicalAt;
+  canonicalAt.fullPath = "/std/collections/map/at";
+  canonicalAt.transforms.push_back(primec::Transform{.name = "return", .arguments = {"i32"}});
+
+  primec::Definition canonicalAtUnsafe;
+  canonicalAtUnsafe.fullPath = "/std/collections/map/at_unsafe";
+  canonicalAtUnsafe.transforms.push_back(primec::Transform{.name = "return", .arguments = {"i32"}});
+
+  primec::Expr wrapCall;
+  wrapCall.kind = primec::Expr::Kind::Call;
+  wrapCall.name = "wrapValues";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  auto expectEmitted = [&](primec::Expr callExpr, const primec::Definition &expectedCallee) {
+    int emitCalls = 0;
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+              callExpr,
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              [](const primec::Expr &) { return false; },
+              isMapReceiver,
+              [&](const primec::Expr &) -> const primec::Definition * {
+                CHECK(false);
+                return nullptr;
+              },
+              [&](const primec::Expr &expr) -> const primec::Definition * {
+                if (expr.name == "at") {
+                  return &canonicalAt;
+                }
+                if (expr.name == "at_unsafe") {
+                  return &canonicalAtUnsafe;
+                }
+                return nullptr;
+              },
+              [&](const primec::Expr &emittedExpr, const primec::Definition &resolvedCallee) {
+                ++emitCalls;
+                CHECK(emittedExpr.name == callExpr.name);
+                CHECK_FALSE(emittedExpr.isMethodCall);
+                CHECK(resolvedCallee.fullPath == expectedCallee.fullPath);
+                return true;
+              },
+              error) == Result::Emitted);
+    CHECK(error == "stale");
+    CHECK(emitCalls == 1);
+  };
+
+  primec::Expr atCall;
+  atCall.kind = primec::Expr::Kind::Call;
+  atCall.name = "at";
+  atCall.args = {wrapCall, keyLiteral};
+  expectEmitted(atCall, canonicalAt);
+
+  primec::Expr atUnsafeCall = atCall;
+  atUnsafeCall.name = "at_unsafe";
+  expectEmitted(atUnsafeCall, canonicalAtUnsafe);
+}
+
 
 TEST_SUITE_END();
