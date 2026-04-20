@@ -97,6 +97,8 @@ std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path) {
       "std/collections/internal_buffer_checked/",
       "std/collections/internal_buffer_unchecked/",
       "std/collections/experimental_soa_vector/",
+      "std/collections/experimental_soa_vector_conversions/",
+      "std/collections/soa_vector_conversions/",
   };
   for (const char *prefix : builtinPrefixes) {
     const std::string prefixText(prefix);

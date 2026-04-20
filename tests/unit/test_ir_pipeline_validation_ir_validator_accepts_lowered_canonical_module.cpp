@@ -1234,6 +1234,34 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
       namespacedSoaMoveCall, "move"));
   CHECK(primec::emitter::isSimpleCallName(
       namespacedSoaMoveCall, "move"));
+
+  primec::Expr namespacedSoaConversionsLessThanCall;
+  namespacedSoaConversionsLessThanCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaConversionsLessThanCall.name = "less_than";
+  namespacedSoaConversionsLessThanCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector_conversions";
+
+  CHECK(primec::ir_lowerer::getBuiltinComparisonName(
+      namespacedSoaConversionsLessThanCall, builtinName));
+  CHECK(builtinName == "less_than");
+  CHECK(primec::emitter::getBuiltinComparison(
+      namespacedSoaConversionsLessThanCall, comparison));
+  CHECK(std::string(comparison) == "<");
+
+  primec::Expr namespacedCanonicalSoaConversionsIncrementCall;
+  namespacedCanonicalSoaConversionsIncrementCall.kind =
+      primec::Expr::Kind::Call;
+  namespacedCanonicalSoaConversionsIncrementCall.name = "increment";
+  namespacedCanonicalSoaConversionsIncrementCall.namespacePrefix =
+      "/std/collections/soa_vector_conversions";
+
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      namespacedCanonicalSoaConversionsIncrementCall, "increment"));
+  CHECK(primec::emitter::isSimpleCallName(
+      namespacedCanonicalSoaConversionsIncrementCall, "increment"));
+  CHECK(primec::emitter::getBuiltinMutationName(
+      namespacedCanonicalSoaConversionsIncrementCall, mutation));
+  CHECK(mutation == "increment");
 }
 
 TEST_CASE("emitter collection inference keeps namespaced internal soa builtins") {
