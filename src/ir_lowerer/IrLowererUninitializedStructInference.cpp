@@ -310,6 +310,15 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       return "";
     }
     if (exprIn.kind == Expr::Kind::Call) {
+      const std::string scopedCallPath = resolveScopedCallPath(exprIn);
+      const auto isBareOrInternalSoaHelper = [&](std::string_view helperName) {
+        const std::string helperText(helperName);
+        if (isSimpleCallName(exprIn, helperText.c_str())) {
+          return true;
+        }
+        return scopedCallPath == "/" + helperText ||
+               scopedCallPath == "/std/collections/internal_soa_storage/" + helperText;
+      };
       if (!exprIn.isMethodCall && exprIn.args.empty() && exprIn.templateArgs.empty() &&
           exprIn.bodyArguments.empty()) {
         Expr syntheticNameExpr;
@@ -326,10 +335,10 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         return inferUninitializedTargetStructPath(
             exprIn.templateArgs.front(), exprIn.namespacePrefix, resolveStructTypeName);
       }
-      if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "location") && exprIn.args.size() == 1) {
+      if (!exprIn.isMethodCall && isBareOrInternalSoaHelper("location") && exprIn.args.size() == 1) {
         return inferStructExprPath(exprIn.args.front(), localsInExpr);
       }
-      if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "dereference") && exprIn.args.size() == 1) {
+      if (!exprIn.isMethodCall && isBareOrInternalSoaHelper("dereference") && exprIn.args.size() == 1) {
         return inferStructExprPath(exprIn.args.front(), localsInExpr);
       }
       if (!exprIn.isMethodCall && isSimpleCallName(exprIn, "try") && exprIn.args.size() == 1) {
@@ -358,7 +367,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           }
         }
       }
-      if ((isSimpleCallName(exprIn, "get") || isSimpleCallName(exprIn, "ref")) &&
+      if ((isBareOrInternalSoaHelper("get") || isBareOrInternalSoaHelper("ref")) &&
           exprIn.args.size() == 2) {
         const std::string receiverStruct = inferStructExprPath(exprIn.args.front(),
                                                                localsInExpr);
@@ -388,7 +397,6 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         }
       }
       std::string accessName;
-      const std::string scopedCallPath = resolveScopedCallPath(exprIn);
       const bool isExplicitMapArgsPackAt =
           !exprIn.isMethodCall &&
           (scopedCallPath == "/map/at" || scopedCallPath == "/std/collections/map/at") &&

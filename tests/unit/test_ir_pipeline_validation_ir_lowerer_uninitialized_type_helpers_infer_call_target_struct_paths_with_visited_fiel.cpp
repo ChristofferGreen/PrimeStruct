@@ -443,6 +443,86 @@ TEST_CASE("ir lowerer uninitialized type helpers infer dereference expression st
         "/pkg/Ctor");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer namespaced internal SoA helper struct paths") {
+  primec::Definition soaVectorDef;
+  soaVectorDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__tc123";
+  soaVectorDef.namespacePrefix = "/std/collections/experimental_soa_vector";
+  primec::Expr storageBinding;
+  storageBinding.kind = primec::Expr::Kind::Name;
+  storageBinding.isBinding = true;
+  storageBinding.name = "storage";
+  primec::Transform storageType;
+  storageType.name = "/std/collections/internal_soa_storage/SoaColumn__tc999";
+  storageBinding.transforms = {storageType};
+  soaVectorDef.statements = {storageBinding};
+
+  primec::Definition soaColumnDef;
+  soaColumnDef.fullPath = "/std/collections/internal_soa_storage/SoaColumn__tc999";
+  soaColumnDef.namespacePrefix = "/std/collections/internal_soa_storage";
+  primec::Expr dataBinding;
+  dataBinding.kind = primec::Expr::Kind::Name;
+  dataBinding.isBinding = true;
+  dataBinding.name = "data";
+  primec::Transform dataType;
+  dataType.name = "Pointer";
+  dataType.templateArgs = {"/pkg/Ctor"};
+  dataBinding.transforms = {dataType};
+  soaColumnDef.statements = {dataBinding};
+
+  primec::Definition ctorDef;
+  ctorDef.fullPath = "/pkg/Ctor";
+  ctorDef.namespacePrefix = "/pkg";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {soaVectorDef.fullPath, &soaVectorDef},
+      {soaColumnDef.fullPath, &soaColumnDef},
+      {ctorDef.fullPath, &ctorDef},
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveExprPath = [](const primec::Expr &) { return std::string(); };
+  auto resolveStructFieldSlot = [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo pointerInfo;
+  pointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  pointerInfo.structTypeName = "/pkg/Ctor";
+  locals.emplace("ptr", pointerInfo);
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.structTypeName = soaVectorDef.fullPath;
+  locals.emplace("columns", soaInfo);
+
+  primec::Expr ptrExpr;
+  ptrExpr.kind = primec::Expr::Kind::Name;
+  ptrExpr.name = "ptr";
+  primec::Expr locationExpr;
+  locationExpr.kind = primec::Expr::Kind::Call;
+  locationExpr.name = "location";
+  locationExpr.namespacePrefix = "/std/collections/internal_soa_storage";
+  locationExpr.args = {ptrExpr};
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            locationExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
+        "/pkg/Ctor");
+
+  primec::Expr columnsExpr;
+  columnsExpr.kind = primec::Expr::Kind::Name;
+  columnsExpr.name = "columns";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr refExpr;
+  refExpr.kind = primec::Expr::Kind::Call;
+  refExpr.name = "ref";
+  refExpr.namespacePrefix = "/std/collections/internal_soa_storage";
+  refExpr.args = {columnsExpr, indexExpr};
+  CHECK(primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+            refExpr, locals, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot) ==
+        "/pkg/Ctor");
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers find field template args") {
   std::vector<primec::ir_lowerer::UninitializedFieldBindingInfo> fields;
   fields.push_back({"skip_static", "uninitialized", "i64", true});
