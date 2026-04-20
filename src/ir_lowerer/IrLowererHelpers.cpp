@@ -4,24 +4,36 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isScopedBuiltinReturnAlias(const std::string &name) {
+  return name == "return";
+}
+
 std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
   const std::string prefix = "std/collections/internal_soa_storage/";
-  if (name.rfind(prefix, 0) != 0) {
-    return name;
+  if (name.rfind(prefix, 0) == 0) {
+    std::string alias = name.substr(prefix.size());
+    const size_t slash = alias.find_last_of('/');
+    if (slash != std::string::npos) {
+      alias = alias.substr(slash + 1);
+    }
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    return alias;
   }
-  std::string alias = name.substr(prefix.size());
+  std::string alias = name;
   const size_t slash = alias.find_last_of('/');
   if (slash != std::string::npos) {
     alias = alias.substr(slash + 1);
   }
-  const size_t generatedSuffix = alias.find("__");
-  if (generatedSuffix != std::string::npos) {
-    alias.erase(generatedSuffix);
+  if (isScopedBuiltinReturnAlias(alias)) {
+    return alias;
   }
-  return alias;
+  return name;
 }
 
 } // namespace

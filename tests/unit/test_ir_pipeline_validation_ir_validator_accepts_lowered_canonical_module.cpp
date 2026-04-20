@@ -587,6 +587,30 @@ TEST_CASE("emitter control helpers keep internal soa storage helper paths") {
   CHECK(primec::emitter::isReturnCall(generatedReturnCall));
 }
 
+TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
+  primec::Expr namespacedBufferReturnCall;
+  namespacedBufferReturnCall.kind = primec::Expr::Kind::Call;
+  namespacedBufferReturnCall.name = "return";
+  namespacedBufferReturnCall.namespacePrefix =
+      "/std/collections/internal_buffer_checked";
+  CHECK(primec::ir_lowerer::isReturnCall(namespacedBufferReturnCall));
+  CHECK(primec::emitter::isReturnCall(namespacedBufferReturnCall));
+
+  primec::Expr namespacedSoaVectorReturnCall;
+  namespacedSoaVectorReturnCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaVectorReturnCall.name = "return";
+  namespacedSoaVectorReturnCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isReturnCall(namespacedSoaVectorReturnCall));
+  CHECK(primec::emitter::isReturnCall(namespacedSoaVectorReturnCall));
+
+  primec::Expr rootedCustomReturnCall;
+  rootedCustomReturnCall.kind = primec::Expr::Kind::Call;
+  rootedCustomReturnCall.name = "/MyError/return";
+  CHECK(primec::ir_lowerer::isReturnCall(rootedCustomReturnCall));
+  CHECK(primec::emitter::isReturnCall(rootedCustomReturnCall));
+}
+
 TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
   std::unordered_map<std::string, std::string> nameMap;
 
