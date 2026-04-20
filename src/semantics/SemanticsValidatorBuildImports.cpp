@@ -142,19 +142,6 @@ bool SemanticsValidator::buildImportAliases() {
     return true;
   };
 
-  auto hasPublicDefinitionUnderPrefix = [&](const std::string &prefix) {
-    const std::string scopedPrefix = prefix + "/";
-    for (const auto &[path, defPtr] : defMap_) {
-      if (defPtr == nullptr || publicDefinitions_.count(path) == 0) {
-        continue;
-      }
-      if (path.rfind(scopedPrefix, 0) == 0) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
     if (importPath == "/std/math") {
@@ -266,8 +253,7 @@ bool SemanticsValidator::buildImportAliases() {
     }
     const std::string aliasTargetPath = resolveStdlibSurfaceImportAliasTarget(importPath);
     if (findStdlibSurfaceImportAliasMetadata(importPath) != nullptr &&
-        defMap_.find(aliasTargetPath) == defMap_.end() &&
-        hasPublicDefinitionUnderPrefix(importPath)) {
+        defMap_.find(aliasTargetPath) == defMap_.end()) {
       const std::string aliasName = importPath.substr(importPath.find_last_of('/') + 1);
       auto [it, inserted] = importAliases_.emplace(aliasName, aliasTargetPath);
       if (!inserted && it->second != aliasTargetPath) {
@@ -371,6 +357,17 @@ bool SemanticsValidator::buildImportAliases() {
         return;
       }
       const std::string aliasTargetPath = resolveStdlibSurfaceImportAliasTarget(importPath);
+      if (findStdlibSurfaceImportAliasMetadata(importPath) != nullptr &&
+          defMap_.find(aliasTargetPath) == defMap_.end()) {
+        const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
+        if (!remainder.empty()) {
+          const std::string rootPath = "/" + remainder;
+          if (defMap_.find(rootPath) == defMap_.end()) {
+            importAliases_.emplace(remainder, aliasTargetPath);
+          }
+        }
+        return;
+      }
       auto defIt = defMap_.find(aliasTargetPath);
       if (defIt == defMap_.end() || publicDefinitions_.count(aliasTargetPath) == 0) {
         return;

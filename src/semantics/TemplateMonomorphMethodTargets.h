@@ -110,9 +110,11 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     const std::string templatedPrefix = pathString + "<";
     const std::string specializedPrefix = pathString + "__t";
+    const std::string overloadPrefix = pathString + "__ov";
     for (const auto &[defPath, _] : ctx.sourceDefs) {
       if (defPath.rfind(templatedPrefix, 0) == 0 ||
-          defPath.rfind(specializedPrefix, 0) == 0) {
+          defPath.rfind(specializedPrefix, 0) == 0 ||
+          defPath.rfind(overloadPrefix, 0) == 0) {
         return true;
       }
     }
@@ -254,7 +256,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return builtinPath;
   };
   const std::string normalizedMethodName = normalizeCollectionMethodName(typeName, methodName);
-  if (typeName == "File" && isFileMethodName(normalizedMethodName)) {
+  std::string normalizedTypeName = typeName;
+  if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
+    normalizedTypeName.erase(normalizedTypeName.begin());
+  }
+  const auto normalizedReceiverLeafName = [&]() {
+    const size_t slash = normalizedTypeName.find_last_of('/');
+    return slash == std::string::npos ? normalizedTypeName
+                                      : normalizedTypeName.substr(slash + 1);
+  }();
+  if ((typeName == "File" || normalizedReceiverLeafName == "File") &&
+      isFileMethodName(normalizedMethodName)) {
     pathOut = preferredFileMethodTarget(normalizedMethodName);
     return true;
   }
@@ -265,9 +277,29 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
     return true;
   }
-  std::string normalizedTypeName = typeName;
-  if (!normalizedTypeName.empty() && normalizedTypeName.front() == '/') {
-    normalizedTypeName.erase(normalizedTypeName.begin());
+  if (normalizedReceiverLeafName == "FileError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
+       normalizedMethodName == "status" || normalizedMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + normalizedMethodName);
+    return true;
+  }
+  if (normalizedReceiverLeafName == "ImageError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/image/ImageError/" + normalizedMethodName);
+    return true;
+  }
+  if (normalizedReceiverLeafName == "ContainerError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/collections/ContainerError/" + normalizedMethodName);
+    return true;
+  }
+  if (normalizedReceiverLeafName == "GfxError" &&
+      (normalizedMethodName == "why" || normalizedMethodName == "status" ||
+       normalizedMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/gfx/GfxError/" + normalizedMethodName);
+    return true;
   }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref")) {

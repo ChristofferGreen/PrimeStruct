@@ -1,4 +1,5 @@
 #include "SemanticsValidateExperimentalGfxConstructorsInternal.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include "SemanticsHelpers.h"
 
@@ -141,6 +142,12 @@ bool hasExperimentalGfxImportedDefinitionPath(const Program &program, const std:
   }
   for (const auto &importPath : program.imports) {
     if (importPath == canonicalPath) {
+      return true;
+    }
+    if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(importPath);
+        metadata != nullptr &&
+        metadata->shape != StdlibSurfaceShape::ConstructorFamily &&
+        canonicalPath.rfind(std::string(metadata->canonicalPath) + "/", 0) == 0) {
       return true;
     }
     if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {

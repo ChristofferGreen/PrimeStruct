@@ -316,25 +316,25 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     const std::string_view suffix = lastSlash == std::string::npos
                                         ? std::string_view(normalizedPrefix)
                                         : std::string_view(normalizedPrefix).substr(lastSlash + 1);
-    if (normalizedPrefix == "/FileError") {
+    if (suffix == "FileError") {
       const std::string preferred = this->preferredFileErrorHelperTarget(expr.name);
       if (!preferred.empty()) {
         return preferred;
       }
     }
-    if (normalizedPrefix == "/ImageError") {
+    if (suffix == "ImageError") {
       const std::string preferred = preferredImageErrorHelperTarget(expr.name);
       if (!preferred.empty()) {
         return preferred;
       }
     }
-    if (normalizedPrefix == "/ContainerError") {
+    if (suffix == "ContainerError") {
       const std::string preferred = this->preferredContainerErrorHelperTarget(expr.name);
       if (!preferred.empty()) {
         return preferred;
       }
     }
-    if (normalizedPrefix == "/GfxError") {
+    if (suffix == "GfxError") {
       const std::string preferred = this->preferredGfxErrorHelperTarget(expr.name, normalizedPrefix);
       if (!preferred.empty()) {
         return preferred;

@@ -495,30 +495,46 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       }
       return std::string();
     }();
+    auto normalizedTypeLeafName = [](std::string value) {
+      value = normalizeBindingTypeName(value);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
+        value = base;
+      }
+      if (!value.empty() && value.front() == '/') {
+        value.erase(value.begin());
+      }
+      const size_t slash = value.find_last_of('/');
+      return slash == std::string::npos ? value : value.substr(slash + 1);
+    };
+    auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
+      return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
+    };
     if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
         (expr.name == "why" || expr.name == "is_eof" || expr.name == "eof" || expr.name == "status" ||
          expr.name == "result")) {
       return this->preferredFileErrorHelperTarget(expr.name);
     }
-    if (receiverTypeName == "FileError" &&
+    if (typeMatches(receiverTypeName, "FileError") &&
         (expr.name == "why" || expr.name == "is_eof" || expr.name == "status" || expr.name == "result")) {
       return this->preferredFileErrorHelperTarget(expr.name);
     }
-    if (receiverTypeName == "ImageError" &&
+    if (typeMatches(receiverTypeName, "ImageError") &&
         (expr.name == "why" || expr.name == "status" || expr.name == "result")) {
       return preferredImageErrorHelperTarget(expr.name);
     }
-    if (receiverTypeName == "ContainerError" &&
+    if (typeMatches(receiverTypeName, "ContainerError") &&
         (expr.name == "why" || expr.name == "status" || expr.name == "result")) {
       return this->preferredContainerErrorHelperTarget(expr.name);
     }
-    if (receiverTypeName == "GfxError" &&
+    if (typeMatches(receiverTypeName, "GfxError") &&
         (expr.name == "why" || expr.name == "status" || expr.name == "result")) {
       return this->preferredGfxErrorHelperTarget(
           expr.name,
           resolveStructTypePath(receiverTypeName, receiver.namespacePrefix, structNames_));
     }
-    if (receiverTypeName.empty() || receiverTypeName == "File") {
+    if (receiverTypeName.empty() || typeMatches(receiverTypeName, "File")) {
       return "";
     }
     if (isPrimitiveBindingTypeName(receiverTypeName)) {
@@ -682,7 +698,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       out.errorType = "FileError";
       return true;
     }
-    const std::string resolvedMethodPath = resolveMethodResultPath();
+    const std::string resolvedMethodPath =
+        resolveExprConcreteCallPath(params, locals, expr, resolveMethodResultPath());
     if (!resolvedMethodPath.empty()) {
       auto it = defMap_.find(resolvedMethodPath);
       if (it != defMap_.end() && it->second != nullptr) {

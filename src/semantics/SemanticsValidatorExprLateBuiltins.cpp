@@ -14,7 +14,6 @@ bool SemanticsValidator::validateExprLateBuiltins(
   if (defMap_.find(resolved) != defMap_.end() && !resolvedMethod) {
     return true;
   }
-
   bool handledTryBuiltin = false;
   if (!validateExprTryBuiltin(params, locals, expr, context.tryBuiltinContext,
                               handledTryBuiltin)) {

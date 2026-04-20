@@ -162,6 +162,18 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (defIt != defMap.end() && defIt->second != nullptr) {
       return defIt->second;
     }
+    const std::string overloadPrefix =
+        resolvedPath + "__ov" + std::to_string(callExpr.args.size());
+    for (const auto &[candidatePath, candidateDef] : defMap) {
+      if (candidateDef == nullptr) {
+        continue;
+      }
+      if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
+          candidatePath.rfind(resolvedPath + "__t", 0) == 0 ||
+          candidatePath.rfind(resolvedPath + "__ov", 0) == 0) {
+        return candidateDef;
+      }
+    }
     errorOut =
         "semantic-product method-call target missing lowered definition: " +
         resolvedPath;

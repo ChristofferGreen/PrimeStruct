@@ -45,6 +45,23 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
+  const std::string resolvedTarget = resolveCalleePath(expr);
+  if (!expr.isMethodCall && resolvedTarget == "/file_error/why") {
+    handledOut = true;
+    if (hasNamedArguments(expr.argNames)) {
+      return failLateUnknownTargetDiagnostic("named arguments not supported for builtin calls");
+    }
+    if (!expr.templateArgs.empty()) {
+      return failLateUnknownTargetDiagnostic("why does not accept template arguments");
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failLateUnknownTargetDiagnostic("why does not accept block arguments");
+    }
+    if (expr.args.size() != 1) {
+      return failLateUnknownTargetDiagnostic("why does not accept arguments");
+    }
+    return validateExpr(params, locals, expr.args.front());
+  }
   std::string normalizedMethodName = expr.name;
   if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
     normalizedMethodName.erase(normalizedMethodName.begin());
@@ -207,11 +224,41 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     }
   }
 
-  const std::string resolvedTarget = resolveCalleePath(expr);
   if (splitSoaFieldViewHelperPath(resolvedTarget)) {
     handledOut = true;
     return failLateUnknownTargetDiagnostic(
         soaUnavailableMethodDiagnostic(resolvedTarget));
+  }
+
+  if (expr.isMethodCall &&
+      (expr.name == "write" || expr.name == "write_line" ||
+       expr.name == "write_byte" || expr.name == "read_byte" ||
+       expr.name == "write_bytes" || expr.name == "flush" ||
+       expr.name == "close") &&
+      !expr.args.empty()) {
+    auto normalizedTypeLeafName = [](std::string value) {
+      value = normalizeBindingTypeName(value);
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
+        value = base;
+      }
+      if (!value.empty() && value.front() == '/') {
+        value.erase(value.begin());
+      }
+      const size_t slash = value.find_last_of('/');
+      return slash == std::string::npos ? value : value.substr(slash + 1);
+    };
+    std::string receiverTypeText;
+    if (inferQueryExprTypeText(expr.args.front(), params, locals, receiverTypeText) &&
+        normalizedTypeLeafName(receiverTypeText) == "File") {
+      Expr rewrittenFileBuiltin = expr;
+      rewrittenFileBuiltin.isMethodCall = false;
+      rewrittenFileBuiltin.namespacePrefix.clear();
+      rewrittenFileBuiltin.name = "/file/" + expr.name;
+      handledOut = true;
+      return validateExpr(params, locals, rewrittenFileBuiltin);
+    }
   }
 
   handledOut = true;

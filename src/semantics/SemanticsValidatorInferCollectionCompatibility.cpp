@@ -11,6 +11,7 @@
 #include <utility>
 
 #include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::semantics {
 namespace {
@@ -130,6 +131,12 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
     if (importPath == canonicalPath) {
+      return true;
+    }
+    if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(importPath);
+        metadata != nullptr &&
+        metadata->shape != StdlibSurfaceShape::ConstructorFamily &&
+        canonicalPath.rfind(std::string(metadata->canonicalPath) + "/", 0) == 0) {
       return true;
     }
     if (importPath == "/std/collections/vector" &&

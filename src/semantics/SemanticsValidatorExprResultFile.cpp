@@ -267,7 +267,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     return true;
   }
 
-  if (resolvedMethod && resolved == "/file_error/why") {
+  if (resolved == "/file_error/why") {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {
       return failResultFileDiagnostic("named arguments not supported for builtin calls");
@@ -287,7 +287,8 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     return true;
   }
 
-  if (resolvedMethod && resolved.rfind("/file/", 0) == 0) {
+  if (resolved.rfind("/file/", 0) == 0) {
+    const std::string fileHelperName = resolved.substr(std::string("/file/").size());
     if (hasNamedArguments(expr.argNames)) {
       return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }
@@ -300,7 +301,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
     if (expr.args.empty()) {
       return failResultFileDiagnostic("file method missing receiver");
     }
-    const bool requiresRead = expr.name == "read_byte" || expr.name == "close";
+    const bool requiresRead = fileHelperName == "read_byte" || fileHelperName == "close";
     const char *requiredEffect = requiresRead ? "file_read" : "file_write";
     if (currentValidationState_.context.activeEffects.count(requiredEffect) == 0) {
       return failResultFileDiagnostic(std::string("file operations require ") + requiredEffect +
@@ -398,7 +399,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       return false;
     };
 
-    if (expr.name == "write" || expr.name == "write_line") {
+    if (fileHelperName == "write" || fileHelperName == "write_line") {
       handledOut = true;
       for (size_t i = 1; i < expr.args.size(); ++i) {
         if (!validateExpr(params, locals, expr.args[i])) {
@@ -411,7 +412,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       }
       return true;
     }
-    if (expr.name == "write_byte") {
+    if (fileHelperName == "write_byte") {
       handledOut = true;
       if (expr.args.size() != 2) {
         return failResultFileDiagnostic("write_byte requires exactly one argument");
@@ -424,7 +425,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       }
       return true;
     }
-    if (expr.name == "read_byte") {
+    if (fileHelperName == "read_byte") {
       handledOut = true;
       if (expr.args.size() != 2) {
         return failResultFileDiagnostic("read_byte requires exactly one argument");
@@ -449,7 +450,7 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       }
       return true;
     }
-    if (expr.name == "write_bytes") {
+    if (fileHelperName == "write_bytes") {
       handledOut = true;
       if (expr.args.size() != 2) {
         return failResultFileDiagnostic("write_bytes requires exactly one argument");
@@ -478,10 +479,10 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
       }
       return true;
     }
-    if (expr.name == "flush" || expr.name == "close") {
+    if (fileHelperName == "flush" || fileHelperName == "close") {
       handledOut = true;
       if (expr.args.size() != 1) {
-        return failResultFileDiagnostic(expr.name + " does not accept arguments");
+        return failResultFileDiagnostic(fileHelperName + " does not accept arguments");
       }
       return true;
     }

@@ -360,10 +360,10 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(ppmBody.find("File<Write>(path)?") != std::string::npos);
   CHECK(ppmBody.find("return(invalidOperation())") != std::string::npos);
   CHECK(ppmBody.find("return(Result.ok())") != std::string::npos);
-  CHECK(ppmBody.find("return(value - 48i32)") != std::string::npos);
-  CHECK(ppmBody.find("value = pendingByte") != std::string::npos);
-  CHECK(ppmBody.find("value = multiply(value, 10i32) + ppmDigitValue(byte)") != std::string::npos);
-  CHECK(ppmBody.find("pixelCount = convert<i32>(pixelCountWide)") != std::string::npos);
+  CHECK(imageStdlib.find("return(value - 48i32)") != std::string::npos);
+  CHECK(imageStdlib.find("value = pendingByte") != std::string::npos);
+  CHECK(imageStdlib.find("value = multiply(value, 10i32) + ppmDigitValue(byte)") != std::string::npos);
+  CHECK(imageStdlib.find("pixelCount = convert<i32>(pixelCountWide)") != std::string::npos);
   CHECK(ppmBody.find("status = ppmReadAsciiInt(file, hasPending, pendingByte, parsedWidth)") != std::string::npos);
   CHECK(ppmBody.find("status = ppmWriteComponent(file, pixels[index])") != std::string::npos);
   CHECK(ppmBody.find("assign(") == std::string::npos);
@@ -387,10 +387,12 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(pngBody.find("File<Read>(path)?") != std::string::npos);
   CHECK(pngBody.find("File<Write>(path)?") != std::string::npos);
   CHECK(pngBody.find("pngAppendBytes") != std::string::npos);
+  const size_t pngPreludeStart = imageStdlib.find("pngReadU32Be(");
   const size_t pngDecodeStart = imageStdlib.find("pngPaethPredictor");
+  REQUIRE(pngPreludeStart != std::string::npos);
   REQUIRE(pngDecodeStart != std::string::npos);
-  REQUIRE(pngDecodeStart > pngStart);
-  const std::string pngPreludeBody = imageStdlib.substr(pngStart, pngDecodeStart - pngStart);
+  REQUIRE(pngDecodeStart > pngPreludeStart);
+  const std::string pngPreludeBody = imageStdlib.substr(pngPreludeStart, pngDecodeStart - pngPreludeStart);
   CHECK(pngPreludeBody.find("pngReadU32Be") != std::string::npos);
   CHECK(pngPreludeBody.find("pngReadIhdr") != std::string::npos);
   CHECK(pngPreludeBody.find("pngChunkCrc") != std::string::npos);
@@ -626,7 +628,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
 }
 
-TEST_CASE("ppm image workflows stay source locked to inferred locals") {
+TEST_CASE("ppm image workflows keep explicit read locals") {
   std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
   if (!std::filesystem::exists(imageStdlibPath)) {
     imageStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "image" / "image.prime";
@@ -651,14 +653,14 @@ TEST_CASE("ppm image workflows stay source locked to inferred locals") {
   CHECK(ppmHelpersBody.find("pixelCount{count(pixels)}") != std::string::npos);
   CHECK(ppmHelpersBody.find("[mut] expectedPixelCount{0i32}") != std::string::npos);
   CHECK(ppmHelpersBody.find("component{pixels[index]}") != std::string::npos);
-  CHECK(ppmHelpersBody.find("file{File<Read>(path)?}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[File<Read>] file{File<Read>(path)?}") != std::string::npos);
   CHECK(ppmHelpersBody.find("[mut] formatByte{0i32}") != std::string::npos);
   CHECK(ppmHelpersBody.find("[mut] status{ppmNextByte(file, hasPending, pendingByte, byte)}") !=
         std::string::npos);
   CHECK(ppmHelpersBody.find("[mut] parsedWidth{0i32}") != std::string::npos);
   CHECK(ppmHelpersBody.find("[mut] pixelCount{0i32}") != std::string::npos);
   CHECK(ppmHelpersBody.find("status{readImpl(width, height, pixels, path)}") != std::string::npos);
-  CHECK(ppmHelpersBody.find("file{File<Write>(path)?}") != std::string::npos);
+  CHECK(ppmHelpersBody.find("[File<Write>] file{File<Write>(path)?}") != std::string::npos);
 
   CHECK(ppmHelpersBody.find("[i32] status{ppmReadByteStatus(file, byte)}") == std::string::npos);
   CHECK(ppmHelpersBody.find("[i32 mut] started{0i32}") == std::string::npos);
@@ -669,17 +671,17 @@ TEST_CASE("ppm image workflows stay source locked to inferred locals") {
   CHECK(ppmHelpersBody.find("[i32] pixelCount{count(pixels)}") == std::string::npos);
   CHECK(ppmHelpersBody.find("[i32 mut] expectedPixelCount{0i32}") == std::string::npos);
   CHECK(ppmHelpersBody.find("[i32] component{pixels[index]}") == std::string::npos);
-  CHECK(ppmHelpersBody.find("[File<Read>] file{File<Read>(path)?}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("      file{File<Read>(path)?}") == std::string::npos);
   CHECK(ppmHelpersBody.find("[i32 mut] formatByte{0i32}") == std::string::npos);
   CHECK(ppmHelpersBody.find("[i32 mut] status{ppmNextByte(file, hasPending, pendingByte, byte)}") ==
         std::string::npos);
   CHECK(ppmHelpersBody.find("[i32 mut] parsedWidth{0i32}") == std::string::npos);
   CHECK(ppmHelpersBody.find("[i32 mut] pixelCount{0i32}") == std::string::npos);
   CHECK(ppmHelpersBody.find("[i32] status{readImpl(width, height, pixels, path)}") == std::string::npos);
-  CHECK(ppmHelpersBody.find("[File<Write>] file{File<Write>(path)?}") == std::string::npos);
+  CHECK(ppmHelpersBody.find("      file{File<Write>(path)?}") == std::string::npos);
 }
 
-TEST_CASE("png prelude image workflows stay source locked to inferred locals") {
+TEST_CASE("png prelude image workflows keep explicit read locals") {
   std::filesystem::path imageStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "image" / "image.prime";
   if (!std::filesystem::exists(imageStdlibPath)) {
     imageStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "image" / "image.prime";
@@ -688,11 +690,13 @@ TEST_CASE("png prelude image workflows stay source locked to inferred locals") {
 
   const std::string imageStdlib = readFile(imageStdlibPath.string());
   const size_t pngStart = imageStdlib.find("namespace png");
+  const size_t pngPreludeStart = imageStdlib.find("pngReadU32Be(");
   const size_t pngDecodeStart = imageStdlib.find("pngPaethPredictor");
   REQUIRE(pngStart != std::string::npos);
+  REQUIRE(pngPreludeStart != std::string::npos);
   REQUIRE(pngDecodeStart != std::string::npos);
-  REQUIRE(pngDecodeStart > pngStart);
-  const std::string pngPreludeBody = imageStdlib.substr(pngStart, pngDecodeStart - pngStart);
+  REQUIRE(pngDecodeStart > pngPreludeStart);
+  const std::string pngPreludeBody = imageStdlib.substr(pngPreludeStart, pngDecodeStart - pngPreludeStart);
 
   CHECK(pngPreludeBody.find("[mut] index{0i32}") != std::string::npos);
   CHECK(pngPreludeBody.find("status{ppmReadByteStatus(file, byte)}") != std::string::npos);
@@ -895,7 +899,7 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
   CHECK(pngReadBody.find("[mut] passColumn{0i32}") != std::string::npos);
   CHECK(pngReadBody.find("imageX{passStartX + multiply(passColumn, passStepX)}") != std::string::npos);
   CHECK(pngReadBody.find("targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}") != std::string::npos);
-  CHECK(pngReadBody.find("file{File<Read>(path)?}") != std::string::npos);
+  CHECK(pngReadBody.find("[File<Read>] file{File<Read>(path)?}") != std::string::npos);
   CHECK(pngReadBody.find("signatureStatus{pngValidateSignature(file)}") != std::string::npos);
   CHECK(pngReadBody.find("[mut] sawIhdr{0i32}") != std::string::npos);
   CHECK(pngReadBody.find("[mut] idatBytes{vector<i32>()}") != std::string::npos);
@@ -924,7 +928,7 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
   CHECK(pngReadBody.find("[i32 mut] passColumn{0i32}") == std::string::npos);
   CHECK(pngReadBody.find("[i32] imageX{passStartX + multiply(passColumn, passStepX)}") == std::string::npos);
   CHECK(pngReadBody.find("[i32] targetOffset{multiply(multiply(imageY, width) + imageX, 3i32)}") == std::string::npos);
-  CHECK(pngReadBody.find("[File<Read>] file{File<Read>(path)?}") == std::string::npos);
+  CHECK(pngReadBody.find("      file{File<Read>(path)?}") == std::string::npos);
   CHECK(pngReadBody.find("[i32] signatureStatus{pngValidateSignature(file)}") == std::string::npos);
   CHECK(pngReadBody.find("[i32 mut] sawIhdr{0i32}") == std::string::npos);
   CHECK(pngReadBody.find("[vector<i32> mut] idatBytes{vector<i32>()}") == std::string::npos);
@@ -942,7 +946,7 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
 
   CHECK(pngWriteBody.find("[mut] rawByteCount{0i32}") != std::string::npos);
   CHECK(pngWriteBody.find("[mut] payloadLength{0i32}") != std::string::npos);
-  CHECK(pngWriteBody.find("file{File<Write>(path)?}") != std::string::npos);
+  CHECK(pngWriteBody.find("[File<Write>] file{File<Write>(path)?}") != std::string::npos);
   CHECK(pngWriteBody.find("signatureStatus{pngWriteSignature(file)}") != std::string::npos);
   CHECK(pngWriteBody.find("ihdrStatus{pngWriteIhdrChunk(file, width, height)}") != std::string::npos);
   CHECK(pngWriteBody.find("idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}") !=
@@ -951,7 +955,7 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
 
   CHECK(pngWriteBody.find("[i32 mut] rawByteCount{0i32}") == std::string::npos);
   CHECK(pngWriteBody.find("[i32 mut] payloadLength{0i32}") == std::string::npos);
-  CHECK(pngWriteBody.find("[File<Write>] file{File<Write>(path)?}") == std::string::npos);
+  CHECK(pngWriteBody.find("      file{File<Write>(path)?}") == std::string::npos);
   CHECK(pngWriteBody.find("[i32] signatureStatus{pngWriteSignature(file)}") == std::string::npos);
   CHECK(pngWriteBody.find("[i32] ihdrStatus{pngWriteIhdrChunk(file, width, height)}") == std::string::npos);
   CHECK(pngWriteBody.find("[i32] idatStatus{pngWriteIdatChunk(file, width, height, pixels, rawByteCount, payloadLength)}") ==

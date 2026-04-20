@@ -519,10 +519,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, const Definition *> &defMap,
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram) {
-  static const std::unordered_map<std::string, std::string> noImportAliases;
-  const auto &semanticAwareImportAliases =
-      semanticProgram != nullptr ? noImportAliases : importAliases;
-  return [defMap, importAliases, semanticProgram, semanticAwareImportAliases](const Expr &expr) {
+  return [defMap, importAliases, semanticProgram](const Expr &expr) {
     if (const std::string chosenPath = findSemanticProductBridgePathChoice(semanticProgram, expr);
         !chosenPath.empty()) {
       return chosenPath;
@@ -534,10 +531,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
             !resolvedPath.empty()) {
           return resolvedPath;
         }
-        if (expr.semanticNodeId != 0) {
-          return std::string{};
-        }
-        return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
+        return resolveCallPathFromScope(expr, defMap, importAliases);
       }
       if (const std::string resolvedPath =
               findSemanticProductDirectCallTarget(semanticProgram, expr);
@@ -547,10 +541,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
           !isResidualBridgeHelperPath(resolvedPath)) {
         return resolvedPath;
       }
-      if (expr.semanticNodeId != 0) {
-        return std::string{};
-      }
-      return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
+      return resolveCallPathFromScope(expr, defMap, importAliases);
     }
     if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProgram, expr);
         !resolvedPath.empty()) {
@@ -559,7 +550,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     if (semanticProgram != nullptr) {
       return resolveCallPathWithoutSemanticFallbackProbes(expr);
     }
-    return resolveCallPathFromScope(expr, defMap, semanticAwareImportAliases);
+    return resolveCallPathFromScope(expr, defMap, importAliases);
   };
 }
 

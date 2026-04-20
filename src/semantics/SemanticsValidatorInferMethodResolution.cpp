@@ -79,6 +79,22 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return normalizedMethodName;
   };
+  auto normalizedTypeLeafName = [](std::string value) {
+    value = normalizeBindingTypeName(value);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
+      value = base;
+    }
+    if (!value.empty() && value.front() == '/') {
+      value.erase(value.begin());
+    }
+    const size_t slash = value.find_last_of('/');
+    return slash == std::string::npos ? value : value.substr(slash + 1);
+  };
+  auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
+    return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
+  };
   auto lookupNormalizedMethodName = [&](const std::string &rawMethodName,
                                         std::string &normalizedMethodNameOut) {
     if (!hasScopedOwner) {
@@ -1039,31 +1055,31 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return returnWithMethodTargetMemo(true);
     }
   }
-  if (typeName == "File" &&
+  if (typeMatches(typeName, "File") &&
       (normalizedMethodName == "write" || normalizedMethodName == "write_line") &&
       expr.args.size() > 10) {
     resolvedOut = "/file/" + normalizedMethodName;
     return returnWithMethodTargetMemo(true);
   }
-  if (typeName == "FileError" &&
+  if (typeMatches(typeName, "FileError") &&
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
        normalizedMethodName == "status" || normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);
     return returnWithMethodTargetMemo(!resolvedOut.empty());
   }
-  if (typeName == "ImageError" &&
+  if (typeMatches(typeName, "ImageError") &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
        normalizedMethodName == "result")) {
     resolvedOut = preferredImageErrorHelperTarget(normalizedMethodName);
     return returnWithMethodTargetMemo(!resolvedOut.empty());
   }
-  if (typeName == "ContainerError" &&
+  if (typeMatches(typeName, "ContainerError") &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
        normalizedMethodName == "result")) {
     resolvedOut = preferredContainerErrorHelperTarget(normalizedMethodName);
     return returnWithMethodTargetMemo(!resolvedOut.empty());
   }
-  if (typeName == "GfxError" &&
+  if (typeMatches(typeName, "GfxError") &&
       (normalizedMethodName == "why" || normalizedMethodName == "status" ||
        normalizedMethodName == "result")) {
     resolvedOut =

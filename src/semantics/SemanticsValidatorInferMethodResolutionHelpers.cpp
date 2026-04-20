@@ -175,14 +175,27 @@ std::string SemanticsValidator::resolveMethodStructTypePath(const std::string &t
 }
 
 bool SemanticsValidator::hasDefinitionFamilyPath(std::string_view path) const {
-  if (defMap_.count(std::string(path)) > 0) {
+  const std::string pathText(path);
+  if (defMap_.count(pathText) > 0 || paramsByDef_.count(pathText) > 0) {
     return true;
   }
-  const std::string templatedPrefix = std::string(path) + "<";
-  const std::string specializedPrefix = std::string(path) + "__t";
+  const std::string templatedPrefix = pathText + "<";
+  const std::string specializedPrefix = pathText + "__t";
+  const std::string overloadPrefix = pathText + "__ov";
+  auto matchesFamilyPath = [&](std::string_view candidate) {
+    return candidate == path ||
+           candidate.rfind(templatedPrefix, 0) == 0 ||
+           candidate.rfind(specializedPrefix, 0) == 0 ||
+           candidate.rfind(overloadPrefix, 0) == 0;
+  };
+  for (const auto &[resolvedPath, params] : paramsByDef_) {
+    (void)params;
+    if (matchesFamilyPath(resolvedPath)) {
+      return true;
+    }
+  }
   for (const auto &def : program_.definitions) {
-    if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-        def.fullPath.rfind(specializedPrefix, 0) == 0) {
+    if (matchesFamilyPath(def.fullPath)) {
       return true;
     }
   }
@@ -231,6 +244,13 @@ std::string SemanticsValidator::preferredFileErrorHelperTarget(std::string_view 
       });
   if (!preferred.empty()) {
     return preferred;
+  }
+  const std::string importedPreferred = firstMatchingPath(
+      helperPaths, [&](const std::string &candidate) {
+        return hasImportedDefinitionPath(candidate);
+      });
+  if (!importedPreferred.empty()) {
+    return importedPreferred;
   }
   return helperName == "why" ? "/file_error/why" : std::string{};
 }

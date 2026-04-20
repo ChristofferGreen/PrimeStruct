@@ -2538,7 +2538,7 @@ namespace std {
   namespace ppm {
     [effects(file_read, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
     readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
-      file{File<Read>(path)?}
+      [File<Read>] file{File<Read>(path)?}
       [mut] hasPending{0i32}
       [mut] pendingByte{0i32}
       [mut] byte{0i32}
@@ -2644,7 +2644,7 @@ namespace std {
          then() { return(1i32) },
          else() { })
 
-      file{File<Write>(path)?}
+      [File<Write>] file{File<Write>(path)?}
       [mut] status{ppmWriteHeader(file, width, height)}
       if(not_equal(status, 0i32),
          then() { return(1i32) },
@@ -2675,7 +2675,7 @@ namespace std {
   namespace png {
     [effects(file_read, heap_alloc), return<int> on_error<FileError, /std/image/ignoreFileError>]
     readImpl([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels, [string] path) {
-      file{File<Read>(path)?}
+      [File<Read>] file{File<Read>(path)?}
       signatureStatus{pngValidateSignature(file)}
       if(not_equal(signatureStatus, 0i32),
          then() { return(1i32) },
@@ -2868,7 +2868,7 @@ namespace std {
          then() { return(1i32) },
          else() { })
 
-      file{File<Write>(path)?}
+      [File<Write>] file{File<Write>(path)?}
       signatureStatus{pngWriteSignature(file)}
       if(not_equal(signatureStatus, 0i32),
          then() { return(signatureStatus) },

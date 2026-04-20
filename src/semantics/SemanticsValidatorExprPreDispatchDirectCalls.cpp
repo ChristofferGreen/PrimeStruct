@@ -48,6 +48,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   auto failPreDispatchDirectCallDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
+  if (!expr.isMethodCall && expr.name.rfind("/file/", 0) == 0) {
+    resolvedOut = expr.name;
+    return true;
+  }
+  if (!expr.isMethodCall && resolvedOut == "/file_error/why") {
+    return true;
+  }
   if (expr.isFieldAccess) {
     return true;
   }

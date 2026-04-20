@@ -336,6 +336,22 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return "";
   };
+  auto normalizedTypeLeafName = [](std::string value) {
+    value = normalizeBindingTypeName(value);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(value, base, argText) && !base.empty()) {
+      value = base;
+    }
+    if (!value.empty() && value.front() == '/') {
+      value.erase(value.begin());
+    }
+    const size_t slash = value.find_last_of('/');
+    return slash == std::string::npos ? value : value.substr(slash + 1);
+  };
+  auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
+    return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
+  };
   auto resolveExperimentalVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
     auto extractValueBinding = [&](const BindingInfo &binding) {
@@ -2589,7 +2605,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       typeName = inferred;
     }
   }
-  if (typeName == "File" && isFileMethodName(normalizedMethodName)) {
+  if (typeMatches(typeName, "File") && isFileMethodName(normalizedMethodName)) {
     resolvedOut = preferredFileHelperTarget(normalizedMethodName,
                                            currentValidationState_.context.definitionPath);
     isBuiltinOut = (resolvedOut.rfind("/file/", 0) == 0);
@@ -2662,7 +2678,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = resolvedOut == "/file_error/why";
     return !resolvedOut.empty();
   }
-  if (typeName == "FileError" &&
+  if (typeMatches(typeName, "FileError") &&
       (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
        normalizedMethodName == "status" || normalizedMethodName == "result")) {
     resolvedOut = preferredFileErrorHelperTarget(normalizedMethodName);

@@ -6,6 +6,7 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
+#include "primec/StdlibSurfaceRegistry.h"
 #include "primec/TextFilterPipeline.h"
 #include "primec/TransformRules.h"
 #include "semantics/TypeResolutionGraph.h"
@@ -361,6 +362,12 @@ std::vector<std::string> collectStdlibAutoIncludeKeys(const std::string &importP
   std::string key = importPath;
   if (key.size() >= 2 && key.compare(key.size() - 2, 2, "/*") == 0) {
     key.erase(key.size() - 2);
+  }
+  if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(key);
+      metadata != nullptr &&
+      (metadata->domain == StdlibSurfaceDomain::File ||
+       metadata->domain == StdlibSurfaceDomain::Gfx)) {
+    key = std::string(metadata->canonicalImportRoot);
   }
 
   while (!key.empty()) {

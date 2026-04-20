@@ -91,6 +91,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
         (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
          isBuiltinCollectionHelperName(namespacedHelper));
     const bool isCollectionBuiltin = defMap_.count(resolved) == 0 && getBuiltinCollectionName(expr, builtinName);
+    const bool isDirectFileErrorBuiltin = resolved == "/file_error/why";
     return getBuiltinOperatorName(expr, builtinName) || getBuiltinComparisonName(expr, builtinName) ||
            getBuiltinMutationName(expr, builtinName) ||
            getBuiltinClampName(expr, builtinName, allowMathBareName(expr.name)) ||
@@ -102,7 +103,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
            getBuiltinArrayAccessName(expr, builtinName) || getBuiltinPointerName(expr, builtinName) ||
            (!expr.isMethodCall && isSimpleCallName(expr, "contains")) ||
            getBuiltinMemoryName(expr, builtinName) ||
-           isCollectionBuiltin || isCollectionHelperBuiltin;
+           isCollectionBuiltin || isCollectionHelperBuiltin || isDirectFileErrorBuiltin;
   };
 
   auto describeReflectionCallDiagnostic = [&](const Expr &expr, std::string &messageOut) -> bool {

@@ -641,10 +641,10 @@ import /std/file/FileError
 
 [effects(file_read), return<int>]
 main() {
-  [File<Read>] file{File<Read>("in.txt"utf8)?}
+  [Result<File<Read>, FileError>] fileStatus{File<Read>("in.txt"utf8)}
   [FileError] err{FileError.eof()}
   [Result<FileError>] status{FileError.status(err)}
-  return(count(Result.why(status)))
+  return(plus(count(Result.why(fileStatus)), count(Result.why(status))))
 }
 )";
   std::string error;
