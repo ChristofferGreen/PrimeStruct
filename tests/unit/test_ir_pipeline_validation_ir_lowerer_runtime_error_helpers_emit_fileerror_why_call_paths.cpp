@@ -90,6 +90,33 @@ TEST_CASE("ir lowerer runtime error helpers emit FileError.why call paths") {
   instructions.clear();
   error.clear();
   emittedWhyLocal = -1;
+  primec::Expr scopedFileErrorType = fileErrorType;
+  scopedFileErrorType.namespacePrefix = "/std/file";
+  expr.args = {scopedFileErrorType, errValue};
+  emitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 78});
+              return true;
+            },
+            []() { return 45; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            [&](int32_t local) { emittedWhyLocal = local; },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  CHECK(emittedWhyLocal == 45);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 45);
+
+  instructions.clear();
+  error.clear();
+  emittedWhyLocal = -1;
   expr.args = {fileErrorType};
   CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
             expr,
