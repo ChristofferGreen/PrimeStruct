@@ -224,6 +224,52 @@ TEST_CASE("emitter expr control name step resolves constants and locals") {
   CHECK(*localResolved == "e");
 }
 
+TEST_CASE("emitter primitive return inference keeps scoped builtin control calls") {
+  std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Name;
+  lhs.name = "value";
+  primec::Emitter::BindingInfo lhsInfo;
+  lhsInfo.typeName = "i32";
+  localTypes.emplace("value", lhsInfo);
+
+  primec::Expr rhs;
+  rhs.kind = primec::Expr::Kind::Literal;
+  rhs.literalValue = 7;
+
+  primec::Expr namespacedAssignCall;
+  namespacedAssignCall.kind = primec::Expr::Kind::Call;
+  namespacedAssignCall.name = "assign";
+  namespacedAssignCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedAssignCall.args = {lhs, rhs};
+  CHECK(primec::emitter::inferPrimitiveReturnKind(
+            namespacedAssignCall, localTypes, returnKinds, false) ==
+        primec::emitter::ReturnKind::Int);
+
+  primec::Expr cond;
+  cond.kind = primec::Expr::Kind::BoolLiteral;
+  cond.boolValue = true;
+
+  primec::Expr thenExpr;
+  thenExpr.kind = primec::Expr::Kind::Literal;
+  thenExpr.literalValue = 1;
+
+  primec::Expr elseExpr;
+  elseExpr.kind = primec::Expr::Kind::Literal;
+  elseExpr.literalValue = 2;
+
+  primec::Expr generatedIfCall;
+  generatedIfCall.kind = primec::Expr::Kind::Call;
+  generatedIfCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+  generatedIfCall.args = {cond, thenExpr, elseExpr};
+  CHECK(primec::emitter::inferPrimitiveReturnKind(
+            generatedIfCall, localTypes, returnKinds, false) ==
+        primec::emitter::ReturnKind::Int);
+}
+
 TEST_CASE("emitter expr control float-literal step formats literals") {
   primec::Expr notFloatExpr;
   notFloatExpr.kind = primec::Expr::Kind::Literal;

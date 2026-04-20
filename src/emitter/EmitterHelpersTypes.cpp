@@ -1,4 +1,5 @@
 #include "EmitterHelpers.h"
+#include "EmitterBuiltinCallPathHelpersInternal.h"
 
 #include <cctype>
 
@@ -106,6 +107,21 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
 bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 std::string resolveExprPath(const Expr &expr);
+
+namespace {
+
+bool matchesScopedBuiltinSimpleCall(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  const std::string resolved = resolveExprPath(expr);
+  if (normalizeInternalSoaStorageBuiltinAlias(resolved) == nameToMatch) {
+    return true;
+  }
+  return isSimpleCallName(expr, nameToMatch);
+}
+
+} // namespace
 
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
   base.clear();
@@ -584,24 +600,24 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
   if (getBuiltinConvertName(expr, builtinName) && expr.templateArgs.size() == 1) {
     return returnKindForTypeName(normalizeBindingTypeName(expr.templateArgs.front()));
   }
-  if (isSimpleCallName(expr, "negate") && expr.args.size() == 1) {
+  if (matchesScopedBuiltinSimpleCall(expr, "negate") && expr.args.size() == 1) {
     ReturnKind argKind = inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
     if (argKind == ReturnKind::Bool || argKind == ReturnKind::Void) {
       return ReturnKind::Unknown;
     }
     return argKind;
   }
-  if (isSimpleCallName(expr, "assign") && expr.args.size() == 2) {
+  if (matchesScopedBuiltinSimpleCall(expr, "assign") && expr.args.size() == 2) {
     return inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare);
   }
-  if (isSimpleCallName(expr, "move") && expr.args.size() == 1) {
+  if (matchesScopedBuiltinSimpleCall(expr, "move") && expr.args.size() == 1) {
     return inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
   }
   std::string mutateName;
   if (getBuiltinMutationName(expr, mutateName) && expr.args.size() == 1) {
     return inferPrimitiveReturnKind(expr.args.front(), localTypes, returnKinds, allowMathBare);
   }
-  if (isSimpleCallName(expr, "if") && expr.args.size() == 3) {
+  if (matchesScopedBuiltinSimpleCall(expr, "if") && expr.args.size() == 3) {
     ReturnKind thenKind = inferPrimitiveReturnKind(expr.args[1], localTypes, returnKinds, allowMathBare);
     ReturnKind elseKind = inferPrimitiveReturnKind(expr.args[2], localTypes, returnKinds, allowMathBare);
     if (thenKind == elseKind) {
@@ -609,7 +625,8 @@ ReturnKind inferPrimitiveReturnKind(const Expr &expr,
     }
     return combineNumericKinds(thenKind, elseKind);
   }
-  if (isSimpleCallName(expr, "and") || isSimpleCallName(expr, "or") || isSimpleCallName(expr, "not")) {
+  if (matchesScopedBuiltinSimpleCall(expr, "and") || matchesScopedBuiltinSimpleCall(expr, "or") ||
+      matchesScopedBuiltinSimpleCall(expr, "not")) {
     return ReturnKind::Bool;
   }
   if (isBuiltinClamp(expr, allowMathBare) && expr.args.size() == 3) {
