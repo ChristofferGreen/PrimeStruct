@@ -239,6 +239,9 @@
                helperName != "tryAt" && helperName != "insert")) {
             return false;
           }
+          if (resolveDefinitionCall(callExpr) != nullptr) {
+            return false;
+          }
           rewrittenExpr = callExpr;
           rewrittenExpr.name = helperName;
           rewrittenExpr.namespacePrefix.clear();
