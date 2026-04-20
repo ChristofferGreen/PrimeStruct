@@ -714,6 +714,9 @@ TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs")
   expectDirectDefWins(makeDirectCall("/map/contains", {valuesName, keyLiteral}), rootedContains);
   expectDirectDefWins(makeDirectCall("/map/tryAt", {valuesName, keyLiteral}), rootedTryAt);
   expectDirectDefWins(
+      makeNamespacedDirectCall("/std/collections/map", "count", {valuesName}),
+      rootedCount);
+  expectDirectDefWins(
       makeNamespacedDirectCall("/std/collections/map", "contains", {valuesName, keyLiteral}),
       rootedContains);
   expectDirectDefWins(

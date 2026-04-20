@@ -583,12 +583,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   };
   if (!expr.isMethodCall) {
     std::string mapHelperName;
+    const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
     const bool isCanonicalStdMapHelperCall =
-        expr.name.rfind("/std/collections/map/", 0) == 0 ||
-        expr.name.rfind("std/collections/map/", 0) == 0 ||
-        (!expr.name.empty() &&
-         (expr.namespacePrefix == "/std/collections/map" ||
-          expr.namespacePrefix == "std/collections/map"));
+        rawPath.rfind("/std/collections/map/", 0) == 0 ||
+        rawPath.rfind("std/collections/map/", 0) == 0;
     if (!expr.args.empty() &&
         (resolveMapHelperAliasName(expr, mapHelperName) ||
          (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2)) &&
