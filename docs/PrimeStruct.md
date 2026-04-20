@@ -2591,6 +2591,46 @@ re-defining it piecemeal.
   redesign stay outside the vector/map bridge contract and require separate
   TODO lanes when they move.
 
+### Stdlib De-Experimentalization Policy
+This policy is the scope reference for the stdlib de-experimentalization lane
+in `docs/todo.md`. Use it to classify every `experimental` stdlib namespace
+before renaming, deleting, or promoting that surface.
+
+- **Canonical public API:** a non-`experimental` namespace that docs, examples,
+  and future compiler-path authority should treat as the long-term user-facing
+  contract.
+- **Temporary compatibility namespace:** an `experimental` namespace that
+  remains importable only to preserve current behavior while the canonical
+  namespace or maturity decision finishes. Every compatibility namespace must
+  have an explicit exit or downgrade TODO.
+- **Internal substrate/helper namespace:** an `experimental` namespace that is
+  implementation plumbing rather than public API. It may stay imported by
+  wrappers, conformance harnesses, or bridge code, but it should not be
+  presented as an ordinary user-facing contract.
+- **Default rule:** no `experimental` namespace counts as canonical public API
+  by default. If a surface still needs public incubation, the docs must say so
+  explicitly and tie that state to a follow-up TODO instead of relying on
+  blanket `experimental` wording.
+
+Current `stdlib/std` experimental module classification:
+
+| Namespace family | Current role | Current interpretation | Follow-up |
+| --- | --- | --- | --- |
+| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Transitional public-facing namespace while canonical `/std/collections/vector/*` finishes promotion and the old implementation path is hidden behind canonical vector contracts. | `TODO-4053`, `TODO-4054` |
+| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Transitional public-facing namespace while canonical `/std/collections/map/*` finishes promotion and the old implementation path is hidden behind canonical map contracts. | `TODO-4053`, `TODO-4054` |
+| `/std/gfx/experimental/*` | Temporary compatibility namespace | Transitional gfx namespace while canonical `/std/gfx/*` remains the intended public contract and the experimental path is reduced to a shim. | `TODO-4055`, `TODO-4056` |
+| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity decision. | `TODO-4058` |
+| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only until the SoA maturity track decides whether it promotes or retreats. | `TODO-4058` |
+| `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |
+| `/std/collections/experimental_buffer_unchecked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |
+| `/std/collections/experimental_soa_storage/*` | Internal substrate/helper namespace | SoA storage/layout substrate used by wrappers and lowering bridges, not a canonical surface contract. | `TODO-4057`, `TODO-4058` |
+
+The policy implication is immediate: vector/map/gfx work should prefer canonical
+non-`experimental` namespaces in docs and compiler authority, SoA work must say
+explicitly that it is still on a separate maturity track, and substrate helpers
+should be treated as implementation namespaces waiting for explicit internal
+renames rather than as candidate public APIs.
+
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
 - Profiles include: `vm_native`, `glsl`, `cpp`.

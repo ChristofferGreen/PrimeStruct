@@ -67,6 +67,25 @@ TEST_CASE("design doc records vector map bridge contract") {
         std::string::npos);
 }
 
+TEST_CASE("design doc records stdlib de-experimentalization policy") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(designPath)) {
+    designPath = cwd.parent_path() / "docs" / "PrimeStruct.md";
+  }
+
+  REQUIRE(std::filesystem::exists(designPath));
+
+  const std::string design = readTextFile(designPath);
+  CHECK(design.find("### Stdlib De-Experimentalization Policy") != std::string::npos);
+  CHECK(design.find("Canonical public API:") != std::string::npos);
+  CHECK(design.find("Temporary compatibility namespace:") != std::string::npos);
+  CHECK(design.find("Internal substrate/helper namespace:") != std::string::npos);
+  CHECK(design.find("/std/collections/experimental_vector/*") != std::string::npos);
+  CHECK(design.find("/std/gfx/experimental/*") != std::string::npos);
+  CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
+}
+
 TEST_CASE("stdlib surface registry stays source locked") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path cmakePath = cwd / "CMakeLists.txt";

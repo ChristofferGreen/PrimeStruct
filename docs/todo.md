@@ -56,11 +56,16 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4052
+- TODO-4058
+- TODO-4053
+- TODO-4055
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4058
+- TODO-4054
+- TODO-4056
+- TODO-4057
+- TODO-4059
 
 ### Priority Lanes (Current)
 
@@ -68,14 +73,13 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4052
-2. TODO-4058
-3. TODO-4053
-4. TODO-4055
-5. TODO-4054
-6. TODO-4056
-7. TODO-4057
-8. TODO-4059
+1. TODO-4058
+2. TODO-4053
+3. TODO-4055
+4. TODO-4054
+5. TODO-4056
+6. TODO-4057
+7. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -85,7 +89,7 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -126,6 +130,25 @@ Task template:
 - Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and
   runtime/storage redesign remain separate boundaries and should not be folded
   into the vector/map bridge tasks below.
+
+### Stdlib De-Experimentalization Policy Summary
+
+- Canonical public API: non-`experimental` namespaces are the intended
+  long-term user-facing contracts.
+- Temporary compatibility namespaces:
+  `/std/collections/experimental_vector/*`,
+  `/std/collections/experimental_map/*`,
+  `/std/gfx/experimental/*`,
+  `/std/collections/experimental_soa_vector/*`, and
+  `/std/collections/experimental_soa_vector_conversions/*` stay transitional
+  until their explicit promotion, shim, or maturity TODOs land.
+- Internal substrate/helper namespaces:
+  `/std/collections/experimental_buffer_checked/*`,
+  `/std/collections/experimental_buffer_unchecked/*`, and
+  `/std/collections/experimental_soa_storage/*` are implementation-facing
+  plumbing rather than public API.
+- Default rule: no `experimental` namespace is canonical public API unless the
+  docs call out a temporary incubating exception explicitly.
 
 ### Task Blocks
 
@@ -212,15 +235,3 @@ Task template:
     - Experimental collection namespaces are no longer required by user-facing docs, examples, or compiler path authority for ordinary vector/map behavior.
     - The promotion stays aligned with the completed bridge and ownership-cutover tasks instead of introducing a second compatibility layer.
   - stop_rule: Stop once canonical vector/map are the sole public collection contracts; split any remaining implementation visibility or rename work into separate follow-up tasks.
-
-- [ ] TODO-4052: Define de-experimentalization policy and classify current stdlib experimental modules
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4026, TODO-4036
-  - scope: Define the repo-wide stdlib policy that distinguishes canonical public surfaces, compatibility shims, and internal substrate modules, then classify the current `experimental` stdlib modules against that policy so follow-on renames and removals have an explicit target.
-  - acceptance:
-    - The de-experimentalization policy explicitly separates public canonical API, temporary compatibility namespace, and internal substrate/helper namespace roles.
-    - Current `stdlib/std` experimental modules are classified against that policy with enough precision to drive follow-on collection, gfx, SoA, and substrate cleanup tasks.
-    - `docs/todo.md` and any touched design docs reflect that classification instead of relying on blanket “experimental” wording.
-  - stop_rule: Stop once the policy and module classification are explicit enough to guide implementation; split any concrete rename/removal work into dedicated follow-up leaves.

@@ -115,6 +115,43 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
   CHECK(todo.find("TODO-4044") != std::string::npos);
 }
 
+TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todo = readFile(todoPath.string());
+
+  CHECK(primeStructDoc.find("### Stdlib De-Experimentalization Policy") != std::string::npos);
+  CHECK(primeStructDoc.find("Canonical public API:") != std::string::npos);
+  CHECK(primeStructDoc.find("Temporary compatibility namespace:") != std::string::npos);
+  CHECK(primeStructDoc.find("Internal substrate/helper namespace:") != std::string::npos);
+  CHECK(primeStructDoc.find("no `experimental` namespace counts as canonical public API") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Temporary compatibility namespace |") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace |") !=
+        std::string::npos);
+
+  CHECK(todo.find("### Stdlib De-Experimentalization Policy Summary") != std::string::npos);
+  CHECK(todo.find("Canonical public API: non-`experimental` namespaces are the intended") !=
+        std::string::npos);
+  CHECK(todo.find("/std/collections/experimental_soa_vector/*`, and") !=
+        std::string::npos);
+  CHECK(todo.find("/std/collections/experimental_soa_storage/*` are implementation-facing") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
+  CHECK(todo.find("TODO-4058") != std::string::npos);
+}
+
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
   std::filesystem::path graphicsDocPath = std::filesystem::path("..") / "docs" / "Graphics_API_Design.md";
   std::filesystem::path specDocPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
