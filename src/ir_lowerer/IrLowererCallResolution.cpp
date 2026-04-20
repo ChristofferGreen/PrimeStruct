@@ -132,12 +132,14 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
     if ((normalizedName == "contains" || normalizedName == "map/contains" ||
          normalizedName == "std/collections/map/contains") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/mapContains");
+      return matchesResolvedPath("/std/collections/map/contains") ||
+             matchesResolvedPath("/std/collections/mapContains");
     }
     if ((normalizedName == "tryAt" || normalizedName == "map/tryAt" ||
          normalizedName == "std/collections/map/tryAt") &&
         expr.args.size() == 2) {
-      return matchesResolvedPath("/std/collections/mapTryAt");
+      return matchesResolvedPath("/std/collections/map/tryAt") ||
+             matchesResolvedPath("/std/collections/mapTryAt");
     }
     if ((normalizedName == "count" || normalizedName == "map/count" ||
          normalizedName == "std/collections/map/count") &&
@@ -157,16 +159,21 @@ bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)
 
 bool isExplicitSamePathPublishedMapHelperCall(const Expr &expr,
                                               const std::string &resolvedPath) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.name.empty() ||
-      expr.name.front() != '/') {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);
+  if (rawPath.empty() || rawPath.front() != '/') {
     return false;
   }
   std::string helperName;
   if (!resolveMapHelperAliasName(expr, helperName) &&
+      rawPath.rfind("/map/", 0) != 0 &&
+      rawPath.rfind("/std/collections/map/", 0) != 0 &&
       resolvedPath.rfind("/std/collections/map/", 0) != 0) {
     return false;
   }
-  return normalizeCollectionHelperPath(expr.name) ==
+  return normalizeCollectionHelperPath(rawPath) ==
          normalizeCollectionHelperPath(resolvedPath);
 }
 

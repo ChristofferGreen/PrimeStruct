@@ -256,6 +256,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
         std::string::npos);
   CHECK(callResolutionSource.find("bool isMapBuiltinResolvedPath(const Expr &expr, const std::string &resolvedPath)") !=
         std::string::npos);
+  CHECK(callResolutionSource.find("return matchesResolvedPath(\"/std/collections/map/contains\") ||") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("return matchesResolvedPath(\"/std/collections/map/tryAt\") ||") !=
+        std::string::npos);
   CHECK(callResolutionSource.find("bool isPublishedCollectionBridgeStdlibSurfaceId(") !=
         std::string::npos);
   CHECK(callResolutionSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, expr)") !=
@@ -267,6 +271,13 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
   CHECK(callResolutionSource.find("StdlibSurfaceId::CollectionsMapHelpers") !=
         std::string::npos);
   CHECK(callResolutionSource.find("normalizeMapImportAliasPath(") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find(
+            "const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("rawPath.rfind(\"/map/\", 0) != 0 &&") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("return normalizeCollectionHelperPath(rawPath) ==") !=
         std::string::npos);
   CHECK(callResolutionSource.find("std::string resolveCallPathFromScopeWithoutImportAliases(") ==
         std::string::npos);
@@ -2646,6 +2657,47 @@ TEST_CASE("ir lowerer call helpers keep bare semantic map sugar on canonical def
         &canonicalMapAtDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(atUnsafeCall, defMap, resolveExprPath) ==
         &canonicalMapAtUnsafeDef);
+}
+
+TEST_CASE("ir lowerer call helpers keep bare non-semantic contains and tryAt on builtin dispatch") {
+  primec::Definition canonicalMapContainsDef;
+  canonicalMapContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Definition canonicalMapTryAtDef;
+  canonicalMapTryAtDef.fullPath = "/std/collections/map/tryAt";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalMapContainsDef.fullPath, &canonicalMapContainsDef},
+      {canonicalMapTryAtDef.fullPath, &canonicalMapTryAtDef},
+  };
+  const auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.name == "contains") {
+      return std::string("/std/collections/map/contains");
+    }
+    if (expr.name == "tryAt") {
+      return std::string("/std/collections/map/tryAt");
+    }
+    return expr.name;
+  };
+
+  primec::Expr valuesArg;
+  valuesArg.kind = primec::Expr::Kind::Name;
+  valuesArg.name = "values";
+  primec::Expr keyArg;
+  keyArg.kind = primec::Expr::Kind::Literal;
+  keyArg.intWidth = 32;
+  keyArg.literalValue = 1;
+
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.name = "contains";
+  containsCall.args = {valuesArg, keyArg};
+
+  primec::Expr tryAtCall = containsCall;
+  tryAtCall.name = "tryAt";
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(containsCall, defMap, resolveExprPath) ==
+        nullptr);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(tryAtCall, defMap, resolveExprPath) ==
+        nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers keep rooted map alias defs under canonical semantic remaps") {
