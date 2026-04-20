@@ -2497,6 +2497,8 @@ TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
   primec::Definition canonicalMapAtDef;
   canonicalMapAtDef.fullPath = "/std/collections/map/at";
+  primec::Definition canonicalMapAtUnsafeDef;
+  canonicalMapAtUnsafeDef.fullPath = "/std/collections/map/at_unsafe";
   primec::Definition aliasMapCountDef;
   aliasMapCountDef.fullPath = "/map/count";
   primec::Definition aliasMapContainsDef;
@@ -2505,15 +2507,29 @@ TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
   aliasMapTryAtDef.fullPath = "/map/tryAt";
   primec::Definition aliasMapAtDef;
   aliasMapAtDef.fullPath = "/map/at";
+  primec::Definition aliasMapAtUnsafeDef;
+  aliasMapAtUnsafeDef.fullPath = "/map/at_unsafe";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {canonicalMapCountDef.fullPath, &canonicalMapCountDef},
       {canonicalMapAtDef.fullPath, &canonicalMapAtDef},
+      {canonicalMapAtUnsafeDef.fullPath, &canonicalMapAtUnsafeDef},
       {aliasMapCountDef.fullPath, &aliasMapCountDef},
       {aliasMapContainsDef.fullPath, &aliasMapContainsDef},
       {aliasMapTryAtDef.fullPath, &aliasMapTryAtDef},
       {aliasMapAtDef.fullPath, &aliasMapAtDef},
+      {aliasMapAtUnsafeDef.fullPath, &aliasMapAtUnsafeDef},
   };
   const auto resolveExprPath = [](const primec::Expr &expr) { return expr.name; };
+  const auto resolveExprPathWithCanonicalAliasAccessFallback =
+      [](const primec::Expr &expr) {
+        if (expr.name == "/map/at") {
+          return std::string("/std/collections/map/at");
+        }
+        if (expr.name == "/map/at_unsafe") {
+          return std::string("/std/collections/map/at_unsafe");
+        }
+        return expr.name;
+      };
 
   primec::Expr valuesArg;
   valuesArg.kind = primec::Expr::Kind::Name;
@@ -2545,10 +2561,18 @@ TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
   primec::Expr aliasAtCall = canonicalAtCall;
   aliasAtCall.name = "/map/at";
 
+  primec::Expr canonicalAtUnsafeCall = canonicalAtCall;
+  canonicalAtUnsafeCall.name = "/std/collections/map/at_unsafe";
+
+  primec::Expr aliasAtUnsafeCall = canonicalAtUnsafeCall;
+  aliasAtUnsafeCall.name = "/map/at_unsafe";
+
   CHECK(primec::ir_lowerer::resolveDefinitionCall(canonicalCountCall, defMap, resolveExprPath) ==
         &canonicalMapCountDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(canonicalAtCall, defMap, resolveExprPath) ==
         &canonicalMapAtDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(canonicalAtUnsafeCall, defMap, resolveExprPath) ==
+        &canonicalMapAtUnsafeDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasCountCall, defMap, resolveExprPath) ==
         &aliasMapCountDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasContainsCall, defMap, resolveExprPath) ==
@@ -2557,6 +2581,14 @@ TEST_CASE("ir lowerer call helpers keep explicit map helper same-path defs") {
         &aliasMapTryAtDef);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasAtCall, defMap, resolveExprPath) ==
         &aliasMapAtDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasAtUnsafeCall, defMap, resolveExprPath) ==
+        &aliasMapAtUnsafeDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(
+            aliasAtCall, defMap, resolveExprPathWithCanonicalAliasAccessFallback) ==
+        &aliasMapAtDef);
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(
+            aliasAtUnsafeCall, defMap, resolveExprPathWithCanonicalAliasAccessFallback) ==
+        &aliasMapAtUnsafeDef);
 }
 
 TEST_CASE("ir lowerer call helpers keep bare semantic map sugar on canonical defs") {

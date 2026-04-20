@@ -200,7 +200,8 @@ bool isExactRootedMapAliasDefinitionCall(const Expr &expr) {
   std::string helperName;
   return resolveMapHelperAliasName(expr, helperName) &&
          (helperName == "count" || helperName == "contains" ||
-          helperName == "tryAt");
+          helperName == "tryAt" || helperName == "at" ||
+          helperName == "at_unsafe");
 }
 
 bool resolvesToDefinitionFamilyTarget(
