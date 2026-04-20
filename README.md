@@ -75,6 +75,30 @@ The `examples/` tree follows the same naming, so `examples/0.Concrete/` shows
 the fully explicit form and `examples/3.Surface/` shows the intended user-facing
 surface.
 
+## Feature Snapshot
+
+Current language features include:
+- envelope-based definitions and executions
+- explicit effects with purity by default
+- structs with defaults, methods, visibility, and static members
+- template parameters plus omitted-envelope and `auto`-based inference
+- namespaces, slash-path imports, and public/private import visibility
+- arrays, vectors, maps, indexing, and collection method sugar
+- labeled arguments and labeled struct construction
+- `if`, `while`, `for`, and operator surface syntax that lower into the
+  canonical core
+- ownership-aware moves with `move(...)`
+- borrowing through `Reference<T>` with exclusivity rules
+- `Result<T, Error>` plus `?` propagation and `on_error` handlers
+- struct reflection through `reflect` and `meta.*` queries
+- multiple execution targets: VM, direct native, C++-backed native, Wasm, and
+  GPU-oriented backends
+
+Current concurrency model:
+- the language makes mutability, effects, moves, and borrows explicit
+- thread and queue placement are still host-driven rather than spelled as core
+  language annotations
+
 ## Examples
 
 Hello world:
