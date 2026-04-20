@@ -67,6 +67,7 @@ Task template:
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4132
 - TODO-4122
 - TODO-4123
 - TODO-4124
@@ -74,14 +75,19 @@ Task template:
 - TODO-4126
 - TODO-4127
 - TODO-4128
+- TODO-4129
+- TODO-4130
 
 ### Priority Lanes (Current)
 
+- Reflection operator ergonomics and docs alignment: TODO-4132
 - Semantic-product authority and lowerer ownership: TODO-4119, TODO-4120,
-  TODO-4121, TODO-4122
+  TODO-4121, TODO-4122, TODO-4129
 - Validator/runtime boundary simplification: TODO-4123, TODO-4126,
   TODO-4127, TODO-4128
 - Test-surface contraction: TODO-4124, TODO-4125
+- Runtime execution unification: TODO-4130
+- Parallel semantic publication determinism: TODO-4131
 - Skipped doctest debt: TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107
 
 ### Execution Queue (Recommended)
@@ -99,8 +105,8 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4119, TODO-4120, TODO-4121, TODO-4122, TODO-4126, TODO-4127 |
-| Stdlib surface-style alignment and public helper readability | none |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4119, TODO-4120, TODO-4121, TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
+| Stdlib surface-style alignment and public helper readability | TODO-4132 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
@@ -111,7 +117,7 @@ Task template:
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
 | Debug trace replay robustness | none |
-| VM/runtime debug numeric opcode parity | none |
+| VM/runtime debug numeric opcode parity | TODO-4130 |
 | Test-suite audit follow-up and release-gate stability | none |
 
 ### Validation Coverage Snapshot
@@ -119,8 +125,8 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4119, TODO-4121, TODO-4122 |
-| CodeExamples-aligned stdlib surface syntax conformance | none |
-| Semantic-product publication parity and deterministic ordering | TODO-4121, TODO-4122, TODO-4127 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4132 |
+| Semantic-product publication parity and deterministic ordering | TODO-4121, TODO-4122, TODO-4127, TODO-4129, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4120, TODO-4128 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
@@ -128,7 +134,7 @@ Task template:
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
-| Shared VM/debug numeric opcode behavior | none |
+| Shared VM/debug numeric opcode behavior | TODO-4130 |
 | Release benchmark/example suite stability and doctest governance | TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107 |
 
 ### Vector/Map Bridge Contract Summary
@@ -204,6 +210,84 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
+
+- [ ] TODO-4132: Add `==` support for reflected `Equal` helpers
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Language Surface Alignment
+  - depends_on: none
+  - scope: Teach the surface comparison operator path to route reflected
+      struct equality through generated `Equal` helpers where that contract is
+      available, and update the docs under `./docs` to show the operator form
+      instead of the current explicit helper-call workaround.
+  - acceptance:
+    - A representative `[struct reflect generate(Equal)]` type accepts
+      `left == right` and preserves the current `/Type/Equal(left, right)`
+      helper behavior.
+    - Deterministic diagnostics still reject unsupported `==` uses on struct
+      types that do not expose the reflected `Equal` contract.
+    - `docs/CodeExamples.md` and the relevant reflection/spec guidance under
+      `./docs` are updated to prefer the supported operator spelling once the
+      language surface lands.
+  - stop_rule: Stop once one reflected-struct equality slice supports `==`
+      end-to-end with focused validation coverage and the docs no longer need
+      to teach the explicit `/Type/Equal(...)` workaround for that case.
+
+- [ ] TODO-4131: Implement origin-key worker interner merges
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: TODO-4127
+  - scope: Replace the current worker-id and local-order symbol-interner merge
+      helper with the documented semantic-origin-key merge policy once
+      production worker-fact publication depends on merged worker symbol
+      tables.
+  - acceptance:
+    - Worker-local interner snapshots carry the earliest semantic origin key
+      needed by the documented merge contract.
+    - Global merged symbol ids are assigned by origin-key policy rather than
+      worker-id and local-order only.
+    - Worker-count and repeated-run parity coverage pins identical merged
+      symbol-id views for the production publication path.
+  - stop_rule: Stop once production worker symbol merges use origin-key
+      ordering and parity coverage proves stability across worker counts and
+      repeated runs.
+
+- [ ] TODO-4130: Unify VM and debug-session interpreter cores
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Runtime Architecture
+  - depends_on: none
+  - scope: Consolidate the duplicated opcode execution logic in `VmExecution`
+      and `VmDebugSession` behind one shared interpreter core with hooks or
+      adapters for debug events and session state.
+  - acceptance:
+    - The selected opcode families no longer have separate production and
+      debug-session implementations.
+    - VM execution and debug-session stepping share one interpreter core for
+      the migrated opcode surface.
+    - Parity coverage proves identical execution behavior between normal VM and
+      debug stepping for the migrated surface.
+  - stop_rule: Stop once one representative interpreter slice runs through a
+      shared VM/debug execution core with parity coverage.
+
+- [ ] TODO-4129: Align `ResolvedModule` publication with import-order contract
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: none
+  - scope: Rework semantic-product module publication so `ResolvedModule`
+      identity and ordering match the documented contract of parsed or imported
+      source units in deterministic import order, instead of top-level-path-key
+      grouping plus lexical resorting.
+  - acceptance:
+    - `SemanticProgram.moduleResolvedArtifacts` groups facts by parsed or
+      imported source unit rather than only by top-level path prefix.
+    - Published module ordering follows deterministic import order.
+    - Semantic-product dump or conformance coverage pins the new module
+      identity and ordering contract.
+  - stop_rule: Stop once published resolved modules match the documented
+      source-unit and import-order contract with conformance coverage.
 
 - [ ] TODO-4128: Split lowering contracts by backend surface
   - owner: ai
