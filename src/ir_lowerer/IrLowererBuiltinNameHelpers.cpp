@@ -264,7 +264,7 @@ bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
+  std::string normalized = resolveScopedExprName(expr);
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }
@@ -287,7 +287,7 @@ bool getBuiltinGpuName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
+  std::string normalized = resolveScopedExprName(expr);
   if (!normalized.empty() && normalized[0] == '/') {
     normalized.erase(0, 1);
   }

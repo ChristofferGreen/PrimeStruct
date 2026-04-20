@@ -517,6 +517,44 @@ TEST_CASE("stdlib surface metadata classifies collection helper categories") {
   CHECK_FALSE(primec::isStdlibMapBorrowedHelperName("contains"));
 }
 
+TEST_CASE("ir lowerer helper keeps parser-shaped intrinsic memory builtins") {
+  primec::Expr allocCall;
+  allocCall.kind = primec::Expr::Kind::Call;
+  allocCall.name = "alloc";
+  allocCall.namespacePrefix = "/std/intrinsics/memory";
+
+  std::string builtin;
+  CHECK(primec::ir_lowerer::getBuiltinMemoryName(allocCall, builtin));
+  CHECK(builtin == "alloc");
+
+  primec::Expr reinterpretCall;
+  reinterpretCall.kind = primec::Expr::Kind::Call;
+  reinterpretCall.name = "reinterpret";
+  reinterpretCall.namespacePrefix = "/std/intrinsics/memory";
+
+  CHECK(primec::ir_lowerer::getBuiltinMemoryName(reinterpretCall, builtin));
+  CHECK(builtin == "reinterpret");
+}
+
+TEST_CASE("ir lowerer helper keeps parser-shaped gpu builtins") {
+  primec::Expr globalIdXCall;
+  globalIdXCall.kind = primec::Expr::Kind::Call;
+  globalIdXCall.name = "global_id_x";
+  globalIdXCall.namespacePrefix = "/std/gpu";
+
+  std::string builtin;
+  CHECK(primec::ir_lowerer::getBuiltinGpuName(globalIdXCall, builtin));
+  CHECK(builtin == "global_id_x");
+
+  primec::Expr globalIdZCall;
+  globalIdZCall.kind = primec::Expr::Kind::Call;
+  globalIdZCall.name = "global_id_z";
+  globalIdZCall.namespacePrefix = "/std/gpu";
+
+  CHECK(primec::ir_lowerer::getBuiltinGpuName(globalIdZCall, builtin));
+  CHECK(builtin == "global_id_z");
+}
+
 TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *vectorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_vector/vectorPush");
