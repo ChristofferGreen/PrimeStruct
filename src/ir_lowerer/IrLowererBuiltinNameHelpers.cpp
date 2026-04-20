@@ -363,6 +363,9 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (name.rfind("std/collections/experimental_vector/", 0) == 0) {
     return false;
   }
+  if (matchAccessAlias(name, "std/collections/experimental_soa_storage/", "SoaColumn")) {
+    return true;
+  }
   if (name.rfind("std/collections/experimental_soa_storage/", 0) == 0) {
     std::string alias = stripGeneratedSuffix(
         name.substr(std::string("std/collections/experimental_soa_storage/").size()));

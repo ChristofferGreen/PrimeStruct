@@ -417,6 +417,17 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
       namespacedExperimentalSoaStorageAccessCall, helperName));
   CHECK(helperName == "at_unsafe");
 
+  primec::Expr specializedExperimentalSoaColumnAccessCall;
+  specializedExperimentalSoaColumnAccessCall.kind = primec::Expr::Kind::Call;
+  specializedExperimentalSoaColumnAccessCall.namespacePrefix =
+      "/std/collections/experimental_soa_storage/SoaColumn__tabcdef01";
+  specializedExperimentalSoaColumnAccessCall.name = "at";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      specializedExperimentalSoaColumnAccessCall, helperName));
+  CHECK(helperName == "at");
+
   primec::Expr removedAliasCall = namespacedVectorAccessCall;
   removedAliasCall.namespacePrefix = "/vector";
   helperName.clear();
