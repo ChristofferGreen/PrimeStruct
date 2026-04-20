@@ -521,6 +521,19 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     }
     return false;
   }
+  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias =
+        name.substr(std::string("std/collections/internal_soa_storage/").size());
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    if (alias == "array" || alias == "soa_vector") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
   if (name.find('/') != std::string::npos) {
     return false;
   }
