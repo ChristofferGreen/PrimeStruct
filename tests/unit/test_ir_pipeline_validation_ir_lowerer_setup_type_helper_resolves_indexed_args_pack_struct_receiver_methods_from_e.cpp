@@ -180,6 +180,66 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper falls back from synthetic direct-call probes to receiver resolution") {
+  primec::Definition canonicalMapCountDef;
+  canonicalMapCountDef.fullPath = "/std/collections/map/count";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {canonicalMapCountDef.fullPath, &canonicalMapCountDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "count";
+  methodCall.isMethodCall = true;
+  methodCall.semanticNodeId = 51;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo valuesLocal;
+  valuesLocal.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesLocal.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesLocal.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("values", valuesLocal);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "count",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 51,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/map/count"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      locals,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticProgram,
+      defMap,
+      error);
+  CHECK(resolved == &canonicalMapCountDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets without lowered definitions") {
   const std::unordered_map<std::string, const primec::Definition *> defMap = {};
 

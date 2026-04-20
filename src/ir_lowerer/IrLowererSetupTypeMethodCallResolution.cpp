@@ -154,30 +154,35 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::string resolvedPath =
         findSemanticProductMethodCallTarget(semanticProgram, callExpr);
     if (resolvedPath.empty()) {
-      errorOut = "missing semantic-product method-call target: " +
-                 describeMethodCallExpr(callExpr);
+      if (!findSemanticProductDirectCallTarget(semanticProgram, callExpr).empty()) {
+        errorOut.clear();
+      } else {
+        errorOut = "missing semantic-product method-call target: " +
+                   describeMethodCallExpr(callExpr);
+        return nullptr;
+      }
+    } else {
+      auto defIt = defMap.find(resolvedPath);
+      if (defIt != defMap.end() && defIt->second != nullptr) {
+        return defIt->second;
+      }
+      const std::string overloadPrefix =
+          resolvedPath + "__ov" + std::to_string(callExpr.args.size());
+      for (const auto &[candidatePath, candidateDef] : defMap) {
+        if (candidateDef == nullptr) {
+          continue;
+        }
+        if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
+            candidatePath.rfind(resolvedPath + "__t", 0) == 0 ||
+            candidatePath.rfind(resolvedPath + "__ov", 0) == 0) {
+          return candidateDef;
+        }
+      }
+      errorOut =
+          "semantic-product method-call target missing lowered definition: " +
+          resolvedPath;
       return nullptr;
     }
-    auto defIt = defMap.find(resolvedPath);
-    if (defIt != defMap.end() && defIt->second != nullptr) {
-      return defIt->second;
-    }
-    const std::string overloadPrefix =
-        resolvedPath + "__ov" + std::to_string(callExpr.args.size());
-    for (const auto &[candidatePath, candidateDef] : defMap) {
-      if (candidateDef == nullptr) {
-        continue;
-      }
-      if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
-          candidatePath.rfind(resolvedPath + "__t", 0) == 0 ||
-          candidatePath.rfind(resolvedPath + "__ov", 0) == 0) {
-        return candidateDef;
-      }
-    }
-    errorOut =
-        "semantic-product method-call target missing lowered definition: " +
-        resolvedPath;
-    return nullptr;
   }
 
   std::string accessName;
