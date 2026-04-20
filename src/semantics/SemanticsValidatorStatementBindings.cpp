@@ -170,6 +170,89 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     return true;
   }
 
+  auto isUnsupportedRootSoaToAosBindingInitializer = [&]() {
+    if (initializer.kind != Expr::Kind::Call || initializer.args.size() != 1) {
+      return false;
+    }
+    std::string normalizedCallName = initializer.name;
+    if (!normalizedCallName.empty() && normalizedCallName.front() == '/') {
+      normalizedCallName.erase(normalizedCallName.begin());
+    }
+    std::string normalizedCallPrefix = initializer.namespacePrefix;
+    if (!normalizedCallPrefix.empty() && normalizedCallPrefix.front() == '/') {
+      normalizedCallPrefix.erase(normalizedCallPrefix.begin());
+    }
+    const std::string resolvedCallPath =
+        canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(initializer));
+    const bool isRootToAosHelper =
+        normalizedCallName == "to_aos" || normalizedCallName == "to_aos_ref" ||
+        normalizedCallName == "soa_vector/to_aos" ||
+        normalizedCallName == "soa_vector/to_aos_ref" ||
+        normalizedCallName == "std/collections/soa_vector/to_aos" ||
+        normalizedCallName == "std/collections/soa_vector/to_aos_ref" ||
+        ((normalizedCallPrefix == "soa_vector" ||
+          normalizedCallPrefix == "std/collections/soa_vector") &&
+         (normalizedCallName == "to_aos" ||
+          normalizedCallName == "to_aos_ref")) ||
+        resolvedCallPath == "/std/collections/soa_vector/to_aos" ||
+        resolvedCallPath == "/std/collections/soa_vector/to_aos_ref";
+    if (!isRootToAosHelper) {
+      return false;
+    }
+    const bool isBorrowedToAosHelper =
+        normalizedCallName == "to_aos_ref" ||
+        normalizedCallName == "soa_vector/to_aos_ref" ||
+        normalizedCallName == "std/collections/soa_vector/to_aos_ref" ||
+        (((normalizedCallPrefix == "std/collections/soa_vector" ||
+           normalizedCallPrefix == "soa_vector") &&
+          normalizedCallName == "to_aos_ref")) ||
+        resolvedCallPath == "/std/collections/soa_vector/to_aos_ref";
+    const std::string helperPath =
+        isBorrowedToAosHelper ? "/to_aos_ref" : "/to_aos";
+    const std::string canonicalHelperPath =
+        isBorrowedToAosHelper
+            ? "/std/collections/soa_vector/to_aos_ref"
+            : "/std/collections/soa_vector/to_aos";
+    auto hasExplicitSourceImportPath = [&](const std::string &path) {
+      for (const auto &importPath : program_.sourceImports) {
+        if (importPath == path) {
+          return true;
+        }
+        if (importPath.size() >= 2 &&
+            importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+          const std::string prefix = importPath.substr(0, importPath.size() - 2);
+          if (path == prefix || path.rfind(prefix + "/", 0) == 0) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    if (hasDeclaredDefinitionPath(helperPath) ||
+        hasExplicitSourceImportPath(helperPath) ||
+        hasExplicitSourceImportPath(canonicalHelperPath)) {
+      return false;
+    }
+    const Expr &receiver = initializer.args.front();
+    const BindingInfo *receiverBinding = nullptr;
+    if (receiver.kind == Expr::Kind::Name) {
+      receiverBinding = findParamBinding(params, receiver.name);
+      if (receiverBinding == nullptr) {
+        auto localIt = locals.find(receiver.name);
+        if (localIt != locals.end()) {
+          receiverBinding = &localIt->second;
+        }
+      }
+    }
+    return receiverBinding != nullptr &&
+           normalizeBindingTypeName(receiverBinding->typeName) == "soa_vector" &&
+           !receiverBinding->typeTemplateArg.empty();
+  };
+  if (normalizedBindingType == "vector" &&
+      isUnsupportedRootSoaToAosBindingInitializer()) {
+    return failBindingDiagnostic("binding initializer type mismatch");
+  }
+
   const bool entryArgInit = isEntryArgsAccess(initializer);
   const bool entryArgStringInit = isEntryArgStringBinding(locals, initializer);
   std::optional<EntryArgStringScope> entryArgScope;

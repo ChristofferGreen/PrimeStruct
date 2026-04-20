@@ -4,7 +4,7 @@ import /std/collections/experimental_soa_vector/*
 [public effects(heap_alloc), return<vector<T>>]
 /std/collections/soa_vector/to_aos<T>([/std/collections/experimental_soa_vector/SoaVector<T>] values) {
   valueCount{/std/collections/soa_vector/count<T>(values)}
-  [mut] out{vector<T>()}
+  [vector<T> mut] out{vector<T>()}
   [mut] index{0i32}
   while(less_than(index, valueCount), do() {
     /std/collections/vector/push<T>(
@@ -18,7 +18,7 @@ import /std/collections/experimental_soa_vector/*
 /std/collections/soa_vector/to_aos_ref<T>(
     [Reference</std/collections/experimental_soa_vector/SoaVector<T>>] values) {
   valueCount{/std/collections/soa_vector/count_ref<T>(values)}
-  [mut] out{vector<T>()}
+  [vector<T> mut] out{vector<T>()}
   [mut] index{0i32}
   while(less_than(index, valueCount), do() {
     /std/collections/vector/push<T>(

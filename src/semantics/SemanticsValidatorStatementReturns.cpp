@@ -875,16 +875,23 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             if (actualStruct.empty()) {
               BindingInfo actualReturnBinding;
               if (inferBindingTypeFromInitializer(stmt.args.front(), params, locals, actualReturnBinding)) {
+                std::string actualTypeText = actualReturnBinding.typeName;
                 if (!actualReturnBinding.typeTemplateArg.empty()) {
-                  actualStruct = resolveStructTypePath(
-                      actualReturnBinding.typeName + "<" + actualReturnBinding.typeTemplateArg + ">",
-                      namespacePrefix,
-                      structNames_);
+                  actualTypeText += "<" + actualReturnBinding.typeTemplateArg + ">";
+                }
+                actualStruct = normalizeCollectionStructPath(actualTypeText);
+                if (!actualReturnBinding.typeTemplateArg.empty()) {
+                  if (actualStruct.empty()) {
+                    actualStruct = resolveStructTypePath(actualTypeText,
+                                                        namespacePrefix,
+                                                        structNames_);
+                  }
                 } else if (!actualReturnBinding.typeName.empty()) {
-                  actualStruct = resolveStructTypePath(
-                      actualReturnBinding.typeName,
-                      namespacePrefix,
-                      structNames_);
+                  if (actualStruct.empty()) {
+                    actualStruct = resolveStructTypePath(actualReturnBinding.typeName,
+                                                        namespacePrefix,
+                                                        structNames_);
+                  }
                   if (actualStruct.empty() && actualReturnBinding.typeName.front() == '/') {
                     actualStruct = actualReturnBinding.typeName;
                   }

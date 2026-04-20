@@ -14,6 +14,41 @@
 
 namespace primec::semantics {
 
+namespace {
+
+bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
+    const std::string &typeText,
+    std::string &elemTypeOut) {
+  elemTypeOut.clear();
+  const std::string normalizedType = normalizeBindingTypeName(typeText);
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedType, base, argText)) {
+    return false;
+  }
+  base = normalizeBindingTypeName(base);
+  if (base == "soa_vector" && !argText.empty()) {
+    elemTypeOut = argText;
+    return true;
+  }
+  if ((base != "Reference" && base != "Pointer") || argText.empty()) {
+    return false;
+  }
+  std::string wrappedBase;
+  std::string wrappedArgText;
+  if (!splitTemplateTypeName(argText, wrappedBase, wrappedArgText)) {
+    return false;
+  }
+  wrappedBase = normalizeBindingTypeName(wrappedBase);
+  if (wrappedBase != "soa_vector" || wrappedArgText.empty()) {
+    return false;
+  }
+  elemTypeOut = wrappedArgText;
+  return true;
+}
+
+} // namespace
+
 bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, BindingInfo &bindingOut) {
   auto findDefParamBinding = [&](const std::vector<ParameterInfo> &defParams,
                                  const std::string &name) -> const BindingInfo * {
@@ -292,6 +327,77 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     resolvedTypeTextOut = bindingTypeText(localIt->second);
     return !resolvedTypeTextOut.empty();
   };
+  auto inferOldSurfaceSoaToAosTypeTextWithoutDispatchResolvers =
+      [&](const Expr &candidate) -> bool {
+    if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 1) {
+      return false;
+    }
+    const std::string resolvedCandidate = resolveCalleePath(candidate);
+    const bool isBareToAosCall =
+        isSimpleCallName(candidate, "to_aos") ||
+        isSimpleCallName(candidate, "to_aos_ref");
+    const bool isRootToAosDirectCall =
+        resolvedCandidate == "/to_aos" ||
+        resolvedCandidate == "/to_aos_ref";
+    const bool isRootToAosMethodCall =
+        candidate.isMethodCall &&
+        (candidate.name == "to_aos" || candidate.name == "to_aos_ref" ||
+         candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
+    if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
+      return false;
+    }
+    const std::string samePathHelper =
+        (resolvedCandidate == "/to_aos_ref" ||
+         isSimpleCallName(candidate, "to_aos_ref") ||
+         candidate.name == "to_aos_ref" ||
+         candidate.name == "/to_aos_ref")
+            ? "/to_aos_ref"
+            : "/to_aos";
+    if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
+      return false;
+    }
+    std::function<bool(const Expr &, std::string &)> resolveReceiverTypeText =
+        [&](const Expr &receiver, std::string &receiverTypeTextOut) -> bool {
+      receiverTypeTextOut.clear();
+      if (receiver.kind == Expr::Kind::Name) {
+        return resolveBindingTypeText(receiver.name, receiverTypeTextOut);
+      }
+      if (isSimpleCallName(receiver, "location") && receiver.args.size() == 1 &&
+          receiver.args.front().kind == Expr::Kind::Name) {
+        std::string pointeeTypeText;
+        if (!resolveBindingTypeText(receiver.args.front().name, pointeeTypeText) ||
+            pointeeTypeText.empty()) {
+          return false;
+        }
+        receiverTypeTextOut = "Reference<" + pointeeTypeText + ">";
+        return true;
+      }
+      if (isSimpleCallName(receiver, "dereference") && receiver.args.size() == 1) {
+        std::string wrappedTypeText;
+        if (!resolveReceiverTypeText(receiver.args.front(), wrappedTypeText) ||
+            wrappedTypeText.empty()) {
+          return false;
+        }
+        receiverTypeTextOut = unwrapReferencePointerTypeText(wrappedTypeText);
+        return !receiverTypeTextOut.empty();
+      }
+      return false;
+    };
+    std::string receiverTypeText;
+    if (!resolveReceiverTypeText(candidate.args.front(), receiverTypeText)) {
+      return false;
+    }
+    std::string elemType;
+    if (!extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(receiverTypeText, elemType) ||
+        elemType.empty()) {
+      return false;
+    }
+    typeTextOut = "/std/collections/experimental_vector/Vector<" + elemType + ">";
+    return true;
+  };
+  if (inferOldSurfaceSoaToAosTypeTextWithoutDispatchResolvers(expr)) {
+    return true;
+  }
   BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
   const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
       makeBuiltinCollectionDispatchResolvers(params, locals, builtinCollectionDispatchResolverAdapters);
@@ -443,6 +549,48 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       return !currentTypeTextOut.empty();
     }
     const std::string resolvedCandidate = resolveCalleePath(candidate);
+    auto inferOldSurfaceSoaToAosTypeText = [&]() -> bool {
+      if (candidate.args.size() != 1) {
+        return false;
+      }
+      const bool isBareToAosCall =
+          isSimpleCallName(candidate, "to_aos") ||
+          isSimpleCallName(candidate, "to_aos_ref");
+      const bool isRootToAosDirectCall =
+          resolvedCandidate == "/to_aos" ||
+          resolvedCandidate == "/to_aos_ref";
+      const bool isRootToAosMethodCall =
+          candidate.isMethodCall &&
+          (candidate.name == "to_aos" || candidate.name == "to_aos_ref" ||
+           candidate.name == "/to_aos" || candidate.name == "/to_aos_ref");
+      if (!isBareToAosCall && !isRootToAosDirectCall && !isRootToAosMethodCall) {
+        return false;
+      }
+      const std::string samePathHelper =
+          (resolvedCandidate == "/to_aos_ref" ||
+           isSimpleCallName(candidate, "to_aos_ref") ||
+           candidate.name == "to_aos_ref" ||
+           candidate.name == "/to_aos_ref")
+              ? "/to_aos_ref"
+              : "/to_aos";
+      if (hasVisibleDefinitionPathForCurrentImports(samePathHelper)) {
+        return false;
+      }
+      std::string receiverTypeText;
+      if (!inferExprTypeText(candidate.args.front(), receiverTypeText)) {
+        return false;
+      }
+      std::string elemType;
+      if (!extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(receiverTypeText, elemType) ||
+          elemType.empty()) {
+        return false;
+      }
+      currentTypeTextOut = "/std/collections/experimental_vector/Vector<" + elemType + ">";
+      return true;
+    };
+    if (inferOldSurfaceSoaToAosTypeText()) {
+      return true;
+    }
     std::string resolvedSoaCanonical =
         canonicalizeLegacySoaGetHelperPath(resolvedCandidate);
     const auto soaAccessHelper =

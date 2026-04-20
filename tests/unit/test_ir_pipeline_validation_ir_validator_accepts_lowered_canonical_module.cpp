@@ -883,7 +883,7 @@ main() {
   CHECK(error == "reserve requires mutable vector binding");
 }
 
-TEST_CASE("root to_aos bare and direct helper forms still need compile-pipeline helper materialization") {
+TEST_CASE("root to_aos bare and direct helper forms reject during semantics") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -900,13 +900,8 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK_FALSE(error.empty());
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("imported root to_aos bare and direct helper forms still need compile-pipeline helper materialization") {
@@ -937,7 +932,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("root to_aos method helper forms still need compile-pipeline helper materialization") {
+TEST_CASE("root to_aos method helper forms reject during semantics") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -954,13 +949,8 @@ main() {
   primec::Program program;
   primec::SemanticProgram semanticProgram;
   std::string error;
-  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
-  CHECK(error.empty());
-
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK_FALSE(error.empty());
+  CHECK_FALSE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("imported root to_aos method helper forms still need compile-pipeline helper materialization") {

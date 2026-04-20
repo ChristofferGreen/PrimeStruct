@@ -631,13 +631,13 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count_ref<T>(values)}") !=
         std::string::npos);
-  CHECK(soaConversions.find("[mut] out{vector<T>()}") != std::string::npos);
+  CHECK(soaConversions.find("[vector<T> mut] out{vector<T>()}") != std::string::npos);
   CHECK(soaConversions.find("[mut] index{0i32}") != std::string::npos);
   CHECK(soaConversions.find("[i32] valueCount{/std/collections/soa_vector/count<T>(values)}") ==
         std::string::npos);
   CHECK(soaConversions.find("[i32] valueCount{/std/collections/soa_vector/count_ref<T>(values)}") ==
         std::string::npos);
-  CHECK(soaConversions.find("[vector<T> mut] out{vector<T>()}") == std::string::npos);
+  CHECK(soaConversions.find("[mut] out{vector<T>()}") == std::string::npos);
   CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
 }
 

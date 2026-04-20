@@ -4456,6 +4456,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("vector return accepts local builtin vector binding") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+copyValues() {
+  [mut] out{vector<Particle>()}
+  return(out)
+}
+
+[return<int>]
+main() {
+  [vector<Particle>] unpacked{copyValues()}
+  return(count(unpacked))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit old-surface to_aos slash-method rejects without same-path helper") {
   const std::string source = R"(
 Particle() {

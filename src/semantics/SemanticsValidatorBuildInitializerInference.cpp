@@ -218,9 +218,6 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
            builtinCollection == "soa_vector";
   };
 
-  const std::string resolved = resolveCalleePath(candidate);
-  const std::string resolvedCanonical =
-      canonicalizeLegacySoaGetHelperPath(resolved);
   std::string normalizedName = candidate.name;
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
@@ -229,6 +226,26 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
+  const bool isSoaConversionSurfaceSpelling =
+      normalizedName == "to_soa" || normalizedName == "to_aos" ||
+      normalizedName == "to_aos_ref" ||
+      normalizedName == "soa_vector/to_soa" ||
+      normalizedName == "soa_vector/to_aos" ||
+      normalizedName == "soa_vector/to_aos_ref" ||
+      normalizedName == "std/collections/soa_vector/to_soa" ||
+      normalizedName == "std/collections/soa_vector/to_aos" ||
+      normalizedName == "std/collections/soa_vector/to_aos_ref" ||
+      ((normalizedPrefix == "soa_vector" ||
+        normalizedPrefix == "std/collections/soa_vector") &&
+       (normalizedName == "to_soa" || normalizedName == "to_aos" ||
+        normalizedName == "to_aos_ref"));
+  if (isSoaConversionSurfaceSpelling) {
+    return std::nullopt;
+  }
+
+  const std::string resolved = resolveCalleePath(candidate);
+  const std::string resolvedCanonical =
+      canonicalizeLegacySoaGetHelperPath(resolved);
 
   const bool isExplicitSoaRefCall =
       (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
@@ -361,11 +378,6 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
            !elemTypeOut.empty();
   };
 
-  const std::string resolved = resolveCalleePath(candidate);
-  if (splitSoaFieldViewHelperPath(resolved, fieldNameOut)) {
-    return true;
-  }
-
   std::string normalizedName = candidate.name;
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
@@ -374,10 +386,38 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
     normalizedPrefix.erase(normalizedPrefix.begin());
   }
+  const bool isSoaConversionSurfaceSpelling =
+      normalizedName == "to_soa" || normalizedName == "to_aos" ||
+      normalizedName == "to_aos_ref" ||
+      normalizedName == "soa_vector/to_soa" ||
+      normalizedName == "soa_vector/to_aos" ||
+      normalizedName == "soa_vector/to_aos_ref" ||
+      normalizedName == "std/collections/soa_vector/to_soa" ||
+      normalizedName == "std/collections/soa_vector/to_aos" ||
+      normalizedName == "std/collections/soa_vector/to_aos_ref" ||
+      ((normalizedPrefix == "soa_vector" ||
+        normalizedPrefix == "std/collections/soa_vector") &&
+       (normalizedName == "to_soa" || normalizedName == "to_aos" ||
+        normalizedName == "to_aos_ref"));
   if (normalizedName.empty() || normalizedName == "count" || normalizedName == "get" ||
-      normalizedName == "ref" || normalizedName == "to_soa" ||
-      normalizedName == "to_aos" || normalizedName == "to_aos_ref") {
-    return false;
+      normalizedName == "ref" || isSoaConversionSurfaceSpelling) {
+      return false;
+  }
+  if (candidate.isMethodCall) {
+    if (candidate.args.empty()) {
+      return false;
+    }
+  } else {
+    if ((!normalizedPrefix.empty() && normalizedPrefix != "soa_vector" &&
+         normalizedPrefix != "std/collections/soa_vector") ||
+        candidate.args.size() != 1) {
+      return false;
+    }
+  }
+
+  const std::string resolved = resolveCalleePath(candidate);
+  if (splitSoaFieldViewHelperPath(resolved, fieldNameOut)) {
+    return true;
   }
 
   if (hasVisibleSoaHelperTargetForCurrentImports(normalizedName)) {
@@ -386,14 +426,8 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
 
   const Expr *receiver = nullptr;
   if (candidate.isMethodCall) {
-    if (candidate.args.empty()) {
-      return false;
-    }
     receiver = &candidate.args.front();
   } else {
-    if (!normalizedPrefix.empty() || candidate.args.size() != 1) {
-      return false;
-    }
     receiver = &candidate.args.front();
   }
 

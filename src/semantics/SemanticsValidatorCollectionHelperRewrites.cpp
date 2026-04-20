@@ -268,7 +268,36 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
   if (hasDeclaredDefinitionPath(directHelperPath) || hasImportedDefinitionPath(directHelperPath)) {
     return false;
   }
-  const size_t receiverIndex = mapHelperReceiverIndex(candidate, dispatchResolvers);
+  size_t receiverIndex = 0;
+  if (hasNamedArguments(candidate.argNames)) {
+    for (size_t i = 0; i < candidate.args.size(); ++i) {
+      if (i < candidate.argNames.size() && candidate.argNames[i].has_value() &&
+          *candidate.argNames[i] == "values") {
+        receiverIndex = i;
+        break;
+      }
+    }
+  } else {
+    auto resolvesVectorTarget = [&](const Expr &receiverCandidate) {
+      std::string elemType;
+      return (dispatchResolvers.resolveVectorTarget != nullptr &&
+              dispatchResolvers.resolveVectorTarget(receiverCandidate, elemType)) ||
+             (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
+              dispatchResolvers.resolveExperimentalVectorValueTarget(receiverCandidate,
+                                                                    elemType)) ||
+             (dispatchResolvers.resolveExperimentalVectorTarget != nullptr &&
+              dispatchResolvers.resolveExperimentalVectorTarget(receiverCandidate,
+                                                               elemType));
+    };
+    if (!resolvesVectorTarget(candidate.args.front())) {
+      for (size_t i = 1; i < candidate.args.size(); ++i) {
+        if (resolvesVectorTarget(candidate.args[i])) {
+          receiverIndex = i;
+          break;
+        }
+      }
+    }
+  }
   if (receiverIndex >= candidate.args.size()) {
     return false;
   }
@@ -343,6 +372,15 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
       dispatchResolvers.resolveExperimentalVectorValueTarget == nullptr) {
     return false;
   }
+  const std::string resolvedCandidatePath =
+      canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(candidate));
+  if (resolvedCandidatePath == "/std/collections/soa_vector/to_aos" ||
+      resolvedCandidatePath == "/std/collections/soa_vector/to_aos_ref" ||
+      isSimpleCallName(candidate, "to_soa") ||
+      isSimpleCallName(candidate, "to_aos") ||
+      isSimpleCallName(candidate, "to_aos_ref")) {
+    return false;
+  }
 
   std::string canonicalPath;
   std::string helperName;
@@ -372,8 +410,37 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     return false;
   }
 
-  const size_t receiverIndex =
-      candidate.isMethodCall ? 0 : mapHelperReceiverIndex(canonicalCandidate, dispatchResolvers);
+  size_t receiverIndex = 0;
+  if (!candidate.isMethodCall && hasNamedArguments(canonicalCandidate.argNames)) {
+    for (size_t i = 0; i < canonicalCandidate.args.size(); ++i) {
+      if (i < canonicalCandidate.argNames.size() &&
+          canonicalCandidate.argNames[i].has_value() &&
+          *canonicalCandidate.argNames[i] == "values") {
+        receiverIndex = i;
+        break;
+      }
+    }
+  } else if (!candidate.isMethodCall) {
+    auto resolvesVectorTarget = [&](const Expr &receiverCandidate) {
+      std::string elemType;
+      return (dispatchResolvers.resolveVectorTarget != nullptr &&
+              dispatchResolvers.resolveVectorTarget(receiverCandidate, elemType)) ||
+             (dispatchResolvers.resolveExperimentalVectorValueTarget != nullptr &&
+              dispatchResolvers.resolveExperimentalVectorValueTarget(receiverCandidate,
+                                                                    elemType)) ||
+             (dispatchResolvers.resolveExperimentalVectorTarget != nullptr &&
+              dispatchResolvers.resolveExperimentalVectorTarget(receiverCandidate,
+                                                               elemType));
+    };
+    if (!resolvesVectorTarget(canonicalCandidate.args.front())) {
+      for (size_t i = 1; i < canonicalCandidate.args.size(); ++i) {
+        if (resolvesVectorTarget(canonicalCandidate.args[i])) {
+          receiverIndex = i;
+          break;
+        }
+      }
+    }
+  }
   if (receiverIndex >= canonicalCandidate.args.size()) {
     return false;
   }
@@ -416,7 +483,8 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     return true;
   }
   const bool alreadyCanonicalDirectCall =
-      resolveCalleePath(candidate) == canonicalPath &&
+      (resolvedCandidatePath == canonicalPath ||
+       resolvedCandidatePath.rfind(canonicalPath + "__t", 0) == 0) &&
       !candidate.isMethodCall;
   if (alreadyCanonicalDirectCall) {
     return false;

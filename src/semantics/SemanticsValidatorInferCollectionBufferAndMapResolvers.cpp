@@ -9,6 +9,25 @@
 
 namespace primec::semantics {
 
+namespace {
+
+bool isNonMapSoaConversionCall(const Expr &candidate,
+                               const std::function<std::string(const Expr &)> &resolveCalleePathFn) {
+  if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 1) {
+    return false;
+  }
+  if (isSimpleCallName(candidate, "to_soa") ||
+      isSimpleCallName(candidate, "to_aos") ||
+      isSimpleCallName(candidate, "to_aos_ref")) {
+    return true;
+  }
+  const std::string resolvedPath = resolveCalleePathFn(candidate);
+  return resolvedPath == "/std/collections/soa_vector/to_aos" ||
+         resolvedPath == "/std/collections/soa_vector/to_aos_ref";
+}
+
+} // namespace
+
 void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -201,7 +220,12 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       return true;
     }
     std::string inferredTypeText;
-    if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+    if (queryTypeInferenceExprStack_.empty() &&
+        !isNonMapSoaConversionCall(target,
+                                   [&](const Expr &candidate) {
+                                     return resolveCalleePath(candidate);
+                                   }) &&
+        inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
       const bool skipRootMapAliasInference =
           target.kind == Expr::Kind::Call &&
           ([&]() {
@@ -363,7 +387,12 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       }
     }
     std::string inferredTypeText;
-    if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+    if (queryTypeInferenceExprStack_.empty() &&
+        !isNonMapSoaConversionCall(target,
+                                   [&](const Expr &candidate) {
+                                     return resolveCalleePath(candidate);
+                                   }) &&
+        inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
       assignBindingFromTypeText(inferredTypeText, binding);
       if (extractExperimentalMapFieldTypes(binding, keyTypeOut, valueTypeOut)) {
         return true;
@@ -400,7 +429,12 @@ void SemanticsValidator::populateBuiltinCollectionDispatchBufferAndMapResolvers(
       return extractValueBinding(binding);
     }
     std::string inferredTypeText;
-    if (inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
+    if (queryTypeInferenceExprStack_.empty() &&
+        !isNonMapSoaConversionCall(target,
+                                   [&](const Expr &candidate) {
+                                     return resolveCalleePath(candidate);
+                                   }) &&
+        inferQueryExprTypeText(target, params, locals, inferredTypeText)) {
       assignBindingFromTypeText(inferredTypeText, binding);
       if (extractValueBinding(binding)) {
         return true;
