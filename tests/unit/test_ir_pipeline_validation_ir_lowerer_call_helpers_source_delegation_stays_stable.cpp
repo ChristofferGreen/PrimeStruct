@@ -524,6 +524,12 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
+  CHECK(collectionHelpersSource.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("auto resolveMaterializedCollectionHelperName =") !=
+        std::string::npos);
+  CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") !=
+        std::string::npos);
   CHECK(collectionHelpersSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);
   CHECK(collectionHelpersSource.find("primec::StdlibSurfaceId::CollectionsMapHelpers") !=

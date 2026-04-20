@@ -40,6 +40,37 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
   CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer materialized collection receivers use published helper queries") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  const std::string source = readText(collectionHelpersPath);
+
+  CHECK(source.find("auto resolveMaterializedCollectionHelperName =") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
+        std::string::npos);
+  CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") !=
+        std::string::npos);
+  CHECK(source.find("resolveMaterializedCollectionHelperName(callExpr, helperName)") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

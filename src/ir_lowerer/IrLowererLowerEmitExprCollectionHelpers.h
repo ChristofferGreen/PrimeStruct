@@ -389,40 +389,82 @@
           const Expr *receiverExpr = nullptr;
           bool materializedWrappedMapReceiver = false;
           ir_lowerer::LocalInfo::Kind materializedMapReceiverKind = ir_lowerer::LocalInfo::Kind::Map;
-          auto matchesDirectHelperName = [&](const Expr &candidate, std::string_view bareName) {
-            if (isSimpleCallName(candidate, bareName.data())) {
-              return true;
-            }
-            std::string aliasName;
-            if (resolveMapHelperAliasName(candidate, aliasName) && aliasName == bareName) {
-              return true;
-            }
-            auto resolveDirectHelperPath = [&](const Expr &exprIn) {
-              if (!exprIn.name.empty() && exprIn.name.front() == '/') {
-                return exprIn.name;
-              }
-              if (!exprIn.namespacePrefix.empty()) {
-                std::string scoped = exprIn.namespacePrefix;
-                if (!scoped.empty() && scoped.front() != '/') {
-                  scoped.insert(scoped.begin(), '/');
+          auto resolveMaterializedCollectionHelperName =
+              [&](const Expr &candidate, std::string &helperNameOut) {
+                helperNameOut.clear();
+                if (isSimpleCallName(candidate, "count")) {
+                  helperNameOut = "count";
+                  return true;
                 }
-                return scoped + "/" + exprIn.name;
-              }
-              return exprIn.name;
-            };
-            std::string publishedHelperName;
-            if (ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                    resolveDirectHelperPath(candidate),
-                    primec::StdlibSurfaceId::CollectionsMapHelpers,
-                    publishedHelperName) &&
-                publishedHelperName == bareName) {
-              return true;
-            }
-            return ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                       resolveExprPath(candidate),
-                       primec::StdlibSurfaceId::CollectionsMapHelpers,
-                       publishedHelperName) &&
-                   publishedHelperName == bareName;
+                if (isSimpleCallName(candidate, "contains")) {
+                  helperNameOut = "contains";
+                  return true;
+                }
+                if (isSimpleCallName(candidate, "tryAt")) {
+                  helperNameOut = "tryAt";
+                  return true;
+                }
+                if (isSimpleCallName(candidate, "at")) {
+                  helperNameOut = "at";
+                  return true;
+                }
+                if (isSimpleCallName(candidate, "at_unsafe")) {
+                  helperNameOut = "at_unsafe";
+                  return true;
+                }
+                if (isSimpleCallName(candidate, "insert")) {
+                  helperNameOut = "insert";
+                  return true;
+                }
+                if (isSimpleCallName(candidate, "capacity")) {
+                  helperNameOut = "capacity";
+                  return true;
+                }
+                if (resolveMapHelperAliasName(candidate, helperNameOut)) {
+                  return true;
+                }
+                auto resolveDirectHelperPath = [&](const Expr &exprIn) {
+                  if (!exprIn.name.empty() && exprIn.name.front() == '/') {
+                    return exprIn.name;
+                  }
+                  if (!exprIn.namespacePrefix.empty()) {
+                    std::string scoped = exprIn.namespacePrefix;
+                    if (!scoped.empty() && scoped.front() != '/') {
+                      scoped.insert(scoped.begin(), '/');
+                    }
+                    return scoped + "/" + exprIn.name;
+                  }
+                  return exprIn.name;
+                };
+                return ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
+                           candidate,
+                           primec::StdlibSurfaceId::CollectionsMapHelpers,
+                           helperNameOut) ||
+                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                           resolveExprPath(candidate),
+                           primec::StdlibSurfaceId::CollectionsMapHelpers,
+                           helperNameOut) ||
+                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                           resolveDirectHelperPath(candidate),
+                           primec::StdlibSurfaceId::CollectionsMapHelpers,
+                           helperNameOut) ||
+                       ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
+                           candidate,
+                           primec::StdlibSurfaceId::CollectionsVectorHelpers,
+                           helperNameOut) ||
+                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                           resolveExprPath(candidate),
+                           primec::StdlibSurfaceId::CollectionsVectorHelpers,
+                           helperNameOut) ||
+                       ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                           resolveDirectHelperPath(candidate),
+                           primec::StdlibSurfaceId::CollectionsVectorHelpers,
+                           helperNameOut);
+              };
+          auto matchesDirectHelperName = [&](const Expr &candidate, std::string_view bareName) {
+            std::string helperName;
+            return resolveMaterializedCollectionHelperName(candidate, helperName) &&
+                   helperName == bareName;
           };
           if (callExpr.isMethodCall) {
             helperName = callExpr.name;
@@ -437,54 +479,56 @@
                       matchesDirectHelperName(callExpr, "insert") ||
                       matchesDirectHelperName(callExpr, "capacity")) &&
                      !callExpr.args.empty()) {
-            helperName = callExpr.name;
-            if (!helperName.empty() && helperName.front() == '/') {
-              helperName.erase(helperName.begin());
-            }
-            const size_t lastSlash = helperName.find_last_of('/');
-            if (lastSlash != std::string::npos) {
-              helperName = helperName.substr(lastSlash + 1);
-            }
-            const size_t specializationSuffix = helperName.find("__t");
-            if (specializationSuffix != std::string::npos) {
-              helperName.erase(specializationSuffix);
-            }
-            if (helperName == "mapCount") {
-              helperName = "count";
-            } else if (helperName == "mapCountRef") {
-              helperName = "count";
-            } else if (helperName == "count_ref") {
-              helperName = "count";
-            } else if (helperName == "mapContains") {
-              helperName = "contains";
-            } else if (helperName == "mapContainsRef") {
-              helperName = "contains";
-            } else if (helperName == "contains_ref") {
-              helperName = "contains";
-            } else if (helperName == "mapTryAt") {
-              helperName = "tryAt";
-            } else if (helperName == "mapTryAtRef") {
-              helperName = "tryAt";
-            } else if (helperName == "tryAt_ref") {
-              helperName = "tryAt";
-            } else if (helperName == "mapAt") {
-              helperName = "at";
-            } else if (helperName == "mapAtRef") {
-              helperName = "at";
-            } else if (helperName == "at_ref") {
-              helperName = "at";
-            } else if (helperName == "mapAtUnsafe") {
-              helperName = "at_unsafe";
-            } else if (helperName == "mapAtUnsafeRef") {
-              helperName = "at_unsafe";
-            } else if (helperName == "at_unsafe_ref") {
-              helperName = "at_unsafe";
-            } else if (helperName == "mapInsert") {
-              helperName = "insert";
-            } else if (helperName == "mapInsertRef") {
-              helperName = "insert";
-            } else if (helperName == "insert_ref") {
-              helperName = "insert";
+            if (!resolveMaterializedCollectionHelperName(callExpr, helperName)) {
+              helperName = callExpr.name;
+              if (!helperName.empty() && helperName.front() == '/') {
+                helperName.erase(helperName.begin());
+              }
+              const size_t lastSlash = helperName.find_last_of('/');
+              if (lastSlash != std::string::npos) {
+                helperName = helperName.substr(lastSlash + 1);
+              }
+              const size_t generatedSuffix = helperName.find("__");
+              if (generatedSuffix != std::string::npos) {
+                helperName.erase(generatedSuffix);
+              }
+              if (helperName == "mapCount") {
+                helperName = "count";
+              } else if (helperName == "mapCountRef") {
+                helperName = "count";
+              } else if (helperName == "count_ref") {
+                helperName = "count";
+              } else if (helperName == "mapContains") {
+                helperName = "contains";
+              } else if (helperName == "mapContainsRef") {
+                helperName = "contains";
+              } else if (helperName == "contains_ref") {
+                helperName = "contains";
+              } else if (helperName == "mapTryAt") {
+                helperName = "tryAt";
+              } else if (helperName == "mapTryAtRef") {
+                helperName = "tryAt";
+              } else if (helperName == "tryAt_ref") {
+                helperName = "tryAt";
+              } else if (helperName == "mapAt") {
+                helperName = "at";
+              } else if (helperName == "mapAtRef") {
+                helperName = "at";
+              } else if (helperName == "at_ref") {
+                helperName = "at";
+              } else if (helperName == "mapAtUnsafe") {
+                helperName = "at_unsafe";
+              } else if (helperName == "mapAtUnsafeRef") {
+                helperName = "at_unsafe";
+              } else if (helperName == "at_unsafe_ref") {
+                helperName = "at_unsafe";
+              } else if (helperName == "mapInsert") {
+                helperName = "insert";
+              } else if (helperName == "mapInsertRef") {
+                helperName = "insert";
+              } else if (helperName == "insert_ref") {
+                helperName = "insert";
+              }
             }
             receiverExpr = &callExpr.args.front();
           } else {
