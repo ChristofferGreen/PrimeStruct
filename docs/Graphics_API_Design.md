@@ -10,10 +10,9 @@ language namespaces in v1.
 
 Implementation status note (2026-03-17): this document locks the source-level
 contract. Current repo status:
-- **Source surfaces:** the repo now ships both an experimental `.prime`
-  graphics surface at `/std/gfx/experimental/*` and a first canonical
-  `/std/gfx/*` stdlib surface that mirrors the proven wrapper slice in
-  `.prime`.
+- **Source surfaces:** canonical `/std/gfx/*` is now the authoritative public
+  graphics surface, while `/std/gfx/experimental/*` remains a temporary
+  compatibility shim over that canonical helper layer for legacy imports.
 - **Coverage breadth:** current coverage includes contract checks plus
   canonical and experimental import/type-surface coverage.
 - **Substrate boundaries:** the experimental path has an explicit `.prime`
@@ -61,8 +60,8 @@ contract. Current repo status:
   the browser launcher delegates to `scripts/run_canonical_browser_sample.sh`
   through `scripts/run_browser_spinning_cube.sh`.
 - **Compile-run conformance:** the repo now ships real compile-run conformance
-  programs that import both `/std/gfx/experimental/*` and `/std/gfx/*` and
-  exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
+  programs that import both canonical `/std/gfx/*` and the
+  `/std/gfx/experimental/*` compatibility shim and exercise `Window(...)`, `Device()`, `create_swapchain(...)`,
   `create_mesh(...)`, `create_pipeline(...)`, `frame()`, `render_pass(...)`,
   `draw_mesh(...)`, `submit(...)`, and `present()` across exe/vm/native instead
   of relying only on doc-lock coverage for that API surface.

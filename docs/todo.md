@@ -56,12 +56,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4055
 - TODO-4054
+- TODO-4056
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4056
 - TODO-4057
 - TODO-4059
 
@@ -71,11 +70,10 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4055
-2. TODO-4054
-3. TODO-4056
-4. TODO-4057
-5. TODO-4059
+1. TODO-4054
+2. TODO-4056
+3. TODO-4057
+4. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -85,7 +83,7 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4059 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4054, TODO-4056, TODO-4057, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -105,7 +103,7 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4059 |
+| De-experimentalization surface and namespace parity | TODO-4054, TODO-4056, TODO-4057, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
@@ -140,6 +138,9 @@ Task template:
   `/std/collections/experimental_soa_vector/*`, and
   `/std/collections/experimental_soa_vector_conversions/*` stay transitional
   until their explicit shim, rename, or maturity TODOs land.
+- Compatibility gfx shim: `/std/gfx/experimental/*` now remains only as a
+  legacy compatibility shim over canonical `/std/gfx/*`, not as a peer public
+  graphics namespace.
 - Internal substrate/helper namespaces:
   `/std/collections/experimental_buffer_checked/*`,
   `/std/collections/experimental_buffer_unchecked/*`, and
@@ -196,25 +197,13 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4055
+  - depends_on: none
   - scope: Remove the public `/std/gfx/experimental/*` namespace once the canonical `/std/gfx/*` surface and bridge-backed lowering/method resolution paths cover the same behavior and any needed compatibility window has been exercised.
   - acceptance:
     - Canonical `/std/gfx/*` is the only remaining public gfx namespace for the retired experimental surface area.
     - Any temporary compatibility shim or import alias used during the transition is removed or narrowed to a clearly documented residual seam.
     - Gfx resolution/lowering parity coverage confirms that removing the experimental public namespace does not change supported behavior.
   - stop_rule: Stop once `/std/gfx/experimental/*` is no longer part of the public contract; split any backend-specific residual compatibility need into a separate follow-up item.
-
-- [ ] TODO-4055: Collapse `/std/gfx/experimental/*` into a compatibility shim over canonical `/std/gfx/*`
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib De-Experimentalization
-  - depends_on: none
-  - scope: Refactor the gfx surface so `/std/gfx/*` is the only canonical public contract and `/std/gfx/experimental/*` becomes a temporary compatibility shim rather than a parallel first-class namespace.
-  - acceptance:
-    - Canonical `/std/gfx/*` is identified in code and docs as the authoritative public gfx surface.
-    - The experimental gfx namespace, if retained temporarily, forwards through a compatibility layer instead of carrying a parallel independent public contract.
-    - The migration leaves runtime and backend ownership boundaries unchanged while reducing duplicate public gfx namespace authority.
-  - stop_rule: Stop once gfx has one canonical public namespace and any retained experimental path is clearly downgraded to compatibility-only status.
 
 - [ ] TODO-4054: Convert `experimental_vector` and `experimental_map` into internal implementation modules
   - owner: ai

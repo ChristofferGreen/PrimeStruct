@@ -1,8 +1,13 @@
 import /std/math/*
+import /std/gfx/*
 
 namespace std {
   namespace gfx {
   namespace experimental {
+  // Compatibility shim over canonical /std/gfx/*.
+  // Keep the legacy experimental wrappers importable, but route behavior
+  // through the canonical helper surface whenever the old type boundary does
+  // not force a separate experimental Result contract.
   [public struct]
   ColorFormat() {
     [public i32] value{0i32}
@@ -31,6 +36,69 @@ namespace std {
     [public static ShaderLibrary] CubeBasic{ShaderLibrary(0i32)}
   }
 
+  [return</std/gfx/Window>]
+  canonicalWindow([Window] value) {
+    return(/std/gfx/Window([token] value.token, [width] value.width, [height] value.height))
+  }
+
+  [return<Queue>]
+  experimentalQueue([/std/gfx/Queue] value) {
+    return(Queue([token] value.token))
+  }
+
+  [return</std/gfx/Device>]
+  canonicalDevice([Device] value) {
+    return(/std/gfx/Device([token] value.token))
+  }
+
+  [return</std/gfx/Frame>]
+  canonicalFrame([Frame] value) {
+    return(/std/gfx/Frame([token] value.token))
+  }
+
+  [return<RenderPass>]
+  experimentalRenderPass([/std/gfx/RenderPass] value) {
+    return(RenderPass([token] value.token))
+  }
+
+  [return</std/gfx/RenderPass>]
+  canonicalRenderPass([RenderPass] value) {
+    return(/std/gfx/RenderPass([token] value.token))
+  }
+
+  [return</std/gfx/Mesh>]
+  canonicalMesh([Mesh] value) {
+    return(/std/gfx/Mesh(
+        [token] value.token,
+        [vertexCount] value.vertexCount,
+        [indexCount] value.indexCount))
+  }
+
+  [return</std/gfx/Material>]
+  canonicalMaterial([Material] value) {
+    return(/std/gfx/Material([token] value.token))
+  }
+
+  [return</std/gfx/Buffer<T>>]
+  canonicalBuffer<T>([Buffer<T>] value) {
+    return(/std/gfx/Buffer<T>([token] value.token, [elementCount] value.elementCount))
+  }
+
+  [return<Buffer<T>>]
+  experimentalBuffer<T>([/std/gfx/Buffer<T>] value) {
+    return(Buffer<T>([token] value.token, [elementCount] value.elementCount))
+  }
+
+  [return</std/gfx/GfxError>]
+  canonicalGfxError([GfxError] err) {
+    return(/std/gfx/GfxError([code] err.code))
+  }
+
+  [return<GfxError>]
+  experimentalGfxError([/std/gfx/GfxError] err) {
+    return(GfxError([code] err.code))
+  }
+
   [public struct]
   Window() {
     [public i32] token{0i32}
@@ -39,20 +107,18 @@ namespace std {
 
     [public return<bool>]
     is_open() {
-      return(less_than(0i32, this.token))
+      return(canonicalWindow(this).is_open())
     }
 
     [public return<void>]
     poll_events() {
+      canonicalWindow(this).poll_events()
       return()
     }
 
     [public return<f32>]
     aspect_ratio() {
-      if(less_than(this.height, 1i32)) {
-        return(1.0f32)
-      }
-      return(convert<f32>(this.width) / convert<f32>(this.height))
+      return(canonicalWindow(this).aspect_ratio())
     }
   }
 
@@ -62,7 +128,7 @@ namespace std {
 
     [public return<Queue>]
     default_queue() {
-      return(Queue([token] plus(this.token, 1i32)))
+      return(experimentalQueue(canonicalDevice(this).default_queue()))
     }
 
     [public return<Result<Swapchain, GfxError>> on_error<GfxError, /std/gfx/experimental/ignoreGfxError>]
@@ -166,16 +232,7 @@ namespace std {
 
     [public return<RenderPass>]
     render_pass([ColorRGBA] clear_color, [f32] clear_depth) {
-      [SubstrateRenderPassConfig] config{
-        SubstrateRenderPassConfig(
-          [frame] this,
-          [renderPassToken] plus(this.token, 1i32),
-          [clearColor] clear_color,
-          [clearDepth] clear_depth
-        )
-      }
-      [i32] renderPassToken{GraphicsSubstrate.openRenderPass(config)}
-      return(RenderPass([token] renderPassToken))
+      return(experimentalRenderPass(canonicalFrame(this).render_pass(clear_color, clear_depth)))
     }
 
     [public return<Result<GfxError>>]
@@ -195,30 +252,13 @@ namespace std {
 
     [public return<void>]
     draw_mesh([Mesh] mesh, [Material] material) {
-      [SubstrateDrawMeshConfig] config{
-        SubstrateDrawMeshConfig(
-          [renderPass] this,
-          [mesh] mesh,
-          [material] material,
-          [drawToken] plus(this.token, plus(mesh.token, material.token))
-        )
-      }
-      [i32] drawToken{GraphicsSubstrate.drawMesh(config)}
-      if(equal(drawToken, 0i32)) {
-        return()
-      }
+      canonicalRenderPass(this).draw_mesh(canonicalMesh(mesh), canonicalMaterial(material))
       return()
     }
 
     [public return<void>]
     end() {
-      [SubstrateRenderPassEndConfig] config{
-        SubstrateRenderPassEndConfig([renderPass] this, [endToken] plus(this.token, 1i32))
-      }
-      [i32] endToken{GraphicsSubstrate.endRenderPass(config)}
-      if(equal(endToken, 0i32)) {
-        return()
-      }
+      canonicalRenderPass(this).end()
       return()
     }
   }
@@ -230,44 +270,44 @@ namespace std {
 
     [public return<i32>]
     count() {
-      return(this.elementCount)
+      return(canonicalBuffer<T>(this).count())
     }
 
     [public return<bool>]
     empty() {
-      return(less_than(this.elementCount, 1i32))
+      return(canonicalBuffer<T>(this).empty())
     }
 
     [public return<bool>]
     is_valid() {
-      return(less_than(0i32, this.token))
+      return(canonicalBuffer<T>(this).is_valid())
     }
   }
 
   [public effects(gpu_dispatch), return<array<T>>]
   /Buffer/readback<T>([Buffer<T>] self) {
-    return(/std/gpu/readback(self))
+    return(/std/gfx/Buffer/readback<T>(canonicalBuffer<T>(self)))
   }
 
   [public return<T>]
   /Buffer/load<T>([Buffer<T>] self, [i32] index) {
-    return(/std/gpu/buffer_load(self, index))
+    return(/std/gfx/Buffer/load<T>(canonicalBuffer<T>(self), index))
   }
 
   [public return<void>]
   /Buffer/store<T>([Buffer<T>] self, [i32] index, [T] value) {
-    /std/gpu/buffer_store(self, index, value)
+    /std/gfx/Buffer/store<T>(canonicalBuffer<T>(self), index, value)
     return()
   }
 
   [public effects(gpu_dispatch), return<Buffer<T>>]
   /Buffer/allocate<T>([i32] count) {
-    return(/std/gpu/buffer<T>(count))
+    return(experimentalBuffer<T>(/std/gfx/Buffer/allocate<T>(count)))
   }
 
   [public effects(gpu_dispatch), return<Buffer<T>>]
   /Buffer/upload<T>([array<T>] values) {
-    return(/std/gpu/upload(values))
+    return(experimentalBuffer<T>(/std/gfx/Buffer/upload<T>(values)))
   }
 
   [public struct]
@@ -422,6 +462,7 @@ namespace std {
 
   [return<void>]
   ignoreGfxError([GfxError] err) {
+    /std/gfx/ignoreGfxError(canonicalGfxError(err))
     return()
   }
 
@@ -562,34 +603,7 @@ namespace std {
   namespace GfxError {
     [public return<string>]
     why([GfxError] err) {
-      if(equal(err.code, 1i32)) {
-        return("window_create_failed"utf8)
-      }
-      if(equal(err.code, 2i32)) {
-        return("device_create_failed"utf8)
-      }
-      if(equal(err.code, 3i32)) {
-        return("swapchain_create_failed"utf8)
-      }
-      if(equal(err.code, 4i32)) {
-        return("mesh_create_failed"utf8)
-      }
-      if(equal(err.code, 5i32)) {
-        return("pipeline_create_failed"utf8)
-      }
-      if(equal(err.code, 6i32)) {
-        return("material_create_failed"utf8)
-      }
-      if(equal(err.code, 7i32)) {
-        return("frame_acquire_failed"utf8)
-      }
-      if(equal(err.code, 8i32)) {
-        return("queue_submit_failed"utf8)
-      }
-      if(equal(err.code, 9i32)) {
-        return("frame_present_failed"utf8)
-      }
-      return("gfx_error"utf8)
+      return(/std/gfx/GfxError/why(canonicalGfxError(err)))
     }
 
     [public return<Result<GfxError>>]
@@ -605,47 +619,47 @@ namespace std {
 
   [public return<GfxError>]
   windowCreateFailed() {
-    return(gfxError(1i32))
+    return(experimentalGfxError(/std/gfx/windowCreateFailed()))
   }
 
   [public return<GfxError>]
   deviceCreateFailed() {
-    return(gfxError(2i32))
+    return(experimentalGfxError(/std/gfx/deviceCreateFailed()))
   }
 
   [public return<GfxError>]
   swapchainCreateFailed() {
-    return(gfxError(3i32))
+    return(experimentalGfxError(/std/gfx/swapchainCreateFailed()))
   }
 
   [public return<GfxError>]
   meshCreateFailed() {
-    return(gfxError(4i32))
+    return(experimentalGfxError(/std/gfx/meshCreateFailed()))
   }
 
   [public return<GfxError>]
   pipelineCreateFailed() {
-    return(gfxError(5i32))
+    return(experimentalGfxError(/std/gfx/pipelineCreateFailed()))
   }
 
   [public return<GfxError>]
   materialCreateFailed() {
-    return(gfxError(6i32))
+    return(experimentalGfxError(/std/gfx/materialCreateFailed()))
   }
 
   [public return<GfxError>]
   frameAcquireFailed() {
-    return(gfxError(7i32))
+    return(experimentalGfxError(/std/gfx/frameAcquireFailed()))
   }
 
   [public return<GfxError>]
   queueSubmitFailed() {
-    return(gfxError(8i32))
+    return(experimentalGfxError(/std/gfx/queueSubmitFailed()))
   }
 
   [public return<GfxError>]
   framePresentFailed() {
-    return(gfxError(9i32))
+    return(experimentalGfxError(/std/gfx/framePresentFailed()))
   }
   }
   }

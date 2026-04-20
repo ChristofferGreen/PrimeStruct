@@ -57,8 +57,10 @@ semantics after canonicalization.
   Treat `/std/gfx/*` as a hybrid surface: keep the public API shape in `.prime`
   wherever practical, while device/window/present substrate stays in host/runtime
   code.
-  Current `/std/gfx/experimental/*` status: the constructor-shaped
-  `Window(...)` and `Device()` entry points now rewrite through
+  Current `/std/gfx/experimental/*` status: it is now a compatibility shim
+  over canonical `/std/gfx/*`, so the legacy wrapper imports remain available
+  while new public gfx authority lives under the canonical namespace. The
+  constructor-shaped `Window(...)` and `Device()` entry points now rewrite through
   substrate-backed helpers there, the fallible `create_swapchain(...)`,
   `create_mesh(...)`, and `frame()` wrapper paths now route through
   substrate-backed configs/helpers, the non-Result `render_pass(...)` /

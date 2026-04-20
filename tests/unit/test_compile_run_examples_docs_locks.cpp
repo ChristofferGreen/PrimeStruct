@@ -144,6 +144,8 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/map/*` public contract; not a peer user-facing collection API. | `TODO-4054` |") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Compatibility shim over canonical `/std/gfx/*`; legacy wrapper imports remain only to preserve existing source while behavior continues to move through the canonical helper layer. | `TODO-4056` |") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace |") !=
         std::string::npos);
 
@@ -152,13 +154,16 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("Canonical collection contract: `/std/collections/vector/*` and") !=
         std::string::npos);
+  CHECK(todo.find("Compatibility gfx shim: `/std/gfx/experimental/*` now remains only as a") !=
+        std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_vector/*`, and") !=
         std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_storage/*` are implementation-facing") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4053:") == std::string::npos);
-  CHECK(todo.find("TODO-4055") != std::string::npos);
+  CHECK(todo.find("TODO-4055") == std::string::npos);
+  CHECK(todo.find("TODO-4056") != std::string::npos);
 }
 
 TEST_CASE("soa maturity track docs stay source locked") {
@@ -195,7 +200,8 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
-  CHECK(todo.find("TODO-4055") != std::string::npos);
+  CHECK(todo.find("TODO-4054") != std::string::npos);
+  CHECK(todo.find("TODO-4056") != std::string::npos);
 }
 
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
@@ -1375,7 +1381,7 @@ TEST_CASE("surface examples stay source locked to lowering-compatible helper for
   CHECK(raytracer.find("currentDir.refract(hitNormal, ior)") == std::string::npos);
 }
 
-TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operators") {
+TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   std::filesystem::path gfxExperimentalPath =
       std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "experimental.prime";
@@ -1416,7 +1422,24 @@ TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operator
   CHECK(gfxStdlib.find("if(equal(drawToken, 0i32))") == std::string::npos);
   CHECK(gfxStdlib.find("if(equal(endToken, 0i32))") == std::string::npos);
   CHECK(gfxStdlib.find("plus(") == std::string::npos);
-  CHECK(gfxExperimental.find("plus(") != std::string::npos);
+  CHECK(gfxExperimental.find("import /std/gfx/*") != std::string::npos);
+  CHECK(gfxExperimental.find("Compatibility shim over canonical /std/gfx/*.") != std::string::npos);
+  CHECK(gfxExperimental.find("return(canonicalWindow(this).is_open())") != std::string::npos);
+  CHECK(gfxExperimental.find("return(experimentalQueue(canonicalDevice(this).default_queue()))") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(experimentalRenderPass(canonicalFrame(this).render_pass(clear_color, clear_depth)))") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("canonicalRenderPass(this).draw_mesh(canonicalMesh(mesh), canonicalMaterial(material))") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(/std/gfx/Buffer/readback<T>(canonicalBuffer<T>(self)))") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(experimentalBuffer<T>(/std/gfx/Buffer/upload<T>(values)))") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(/std/gfx/GfxError/why(canonicalGfxError(err)))") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(/std/gpu/readback(self))") == std::string::npos);
+  CHECK(gfxExperimental.find("return(/std/gpu/upload(values))") == std::string::npos);
+  CHECK(gfxExperimental.find("return(less_than(0i32, this.token))") == std::string::npos);
 }
 
 TEST_CASE("ui stdlib arithmetic and assignment stay source locked to surface operators") {

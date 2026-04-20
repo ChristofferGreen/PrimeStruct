@@ -85,6 +85,7 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("sole public namespaced map contract") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_vector/*") != std::string::npos);
   CHECK(design.find("/std/gfx/experimental/*") != std::string::npos);
+  CHECK(design.find("compatibility shim over canonical `/std/gfx/*`") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
 }
 

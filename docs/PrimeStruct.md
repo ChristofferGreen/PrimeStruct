@@ -987,20 +987,22 @@ module {
   happens once; backends never see syntactic sugar.
 - **Graphics contract:** the windowed graphics language surface and locked spinning-cube v1 mini-spec are defined in
   `docs/Graphics_API_Design.md` (`/std/gfx/*`, profile deduction, `VertexColored` wire layout, deterministic `GfxError`
-  codes). Current implementation status: the contract and host/sample coverage exist, the repo now ships an experimental
-  `.prime` graphics type surface plus an explicit `.prime` `GraphicsSubstrate` token/config boundary at
-  `/std/gfx/experimental/*`, the constructor-shaped experimental and canonical `Window(...)`, `Device()`, and
-  `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers, canonical `Window(...)` and `Device()` now
-  also route through a private `.prime` `GraphicsSubstrate.createWindow(...)` / `createDevice(...)` / `createQueue(...)`
-  boundary inside `/std/gfx/*`, the experimental and canonical `create_swapchain(...)`, `create_mesh(...)`, `frame()`,
-  and `Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run through the same proven
-  first-slice logic in `.prime`, canonical `/std/gfx/*` now also routes those fallible resource/frame/pipeline helpers
-  through the same private `GraphicsSubstrate.createSwapchain(...)` / `createMesh(...)` / `createPipeline(...)` /
-  `acquireFrame(...)` layer, the non-Result `render_pass(...)` / `draw_mesh(...)` / `end()` path now routes through
-  minimal pass-encoding helpers with deterministic zero-token / no-op fallback on invalid handles, canonical
-  `/std/gfx/*` now also routes `render_pass(...)`, `draw_mesh(...)`, `end()`, `submit(...)`, and `present()` through the
-  matching private `GraphicsSubstrate.openRenderPass(...)` / `drawMesh(...)` / `endRenderPass(...)` / `submitFrame(...)`
-  / `presentFrame(...)` layer, canonical and experimental `Buffer<T>` now also expose `.prime`-authored `count()`,
+  codes). Current implementation status: the contract and host/sample coverage exist, canonical `/std/gfx/*` is now the
+  authoritative public gfx surface, and `/std/gfx/experimental/*` remains only as a temporary compatibility shim over
+  that canonical helper layer. The experimental path still keeps an explicit `.prime` `GraphicsSubstrate` token/config
+  boundary for its legacy wrapper types, the constructor-shaped experimental and canonical `Window(...)`, `Device()`,
+  and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers, canonical `Window(...)` and `Device()`
+  now also route through a private `.prime` `GraphicsSubstrate.createWindow(...)` / `createDevice(...)` /
+  `createQueue(...)` boundary inside `/std/gfx/*`, the experimental and canonical `create_swapchain(...)`,
+  `create_mesh(...)`, `frame()`, and `Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run
+  through the same proven first-slice logic in `.prime`, canonical `/std/gfx/*` now also routes those fallible
+  resource/frame/pipeline helpers through the same private `GraphicsSubstrate.createSwapchain(...)` / `createMesh(...)`
+  / `createPipeline(...)` / `acquireFrame(...)` layer, the non-Result `render_pass(...)` / `draw_mesh(...)` / `end()`
+  path now routes through minimal pass-encoding helpers with deterministic zero-token / no-op fallback on invalid
+  handles, canonical `/std/gfx/*` now also routes `render_pass(...)`, `draw_mesh(...)`, `end()`, `submit(...)`, and
+  `present()` through the matching private `GraphicsSubstrate.openRenderPass(...)` / `drawMesh(...)` /
+  `endRenderPass(...)` / `submitFrame(...)` / `presentFrame(...)` layer, canonical and experimental `Buffer<T>` now
+  also expose `.prime`-authored `count()`,
   `empty()`, `is_valid()`, `readback()`, compute-only `load(index)`, and compute-only `store(index, value)` plus the
   preferred constructor-shaped `Buffer<T>(count)` entry point and explicit slash-call `allocate<T>(count)` /
   `upload(...)` / `load(...)` / `store(...)` helpers so public buffer inspection, host-side allocation/readback/upload,
@@ -2237,9 +2239,9 @@ sum_two_files([string] a, [string] b) {
     `GfxError.status(err)` namespace surface, the public `windowCreateFailed()` / `deviceCreateFailed()` /
     `swapchainCreateFailed()` / `meshCreateFailed()` / `pipelineCreateFailed()` / `materialCreateFailed()` /
     `frameAcquireFailed()` / `queueSubmitFailed()` / `framePresentFailed()` wrappers, plus receiver-style
-    `err.why()` / `err.status()` / `err.result<T>()`;
-    or import `/std/gfx/experimental/*` to use the same `GfxError.*` and receiver-style helpers without
-    adding duplicate root-level gfx wrapper paths in mixed canonical+experimental import graphs.
+    `err.why()` / `err.status()` / `err.result<T>()`. Import `/std/gfx/experimental/*` only when preserving legacy
+    compatibility imports; that namespace now acts as a compatibility shim over the canonical `/std/gfx/*` helper
+    layer rather than as a peer public graphics contract.
 - **Local handlers:** error handling is explicit and local to the scope that declares it.
   - `on_error<ErrorType, Handler>(args...)` is a semantic transform that attaches an error handler to a definition or
     block body.
@@ -2622,7 +2624,7 @@ Current `stdlib/std` experimental module classification:
 | --- | --- | --- | --- |
 | `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/vector/*` public contract; not a peer user-facing collection API. | `TODO-4054` |
 | `/std/collections/experimental_map/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/map/*` public contract; not a peer user-facing collection API. | `TODO-4054` |
-| `/std/gfx/experimental/*` | Temporary compatibility namespace | Transitional gfx namespace while canonical `/std/gfx/*` remains the intended public contract and the experimental path is reduced to a shim. | `TODO-4055`, `TODO-4056` |
+| `/std/gfx/experimental/*` | Temporary compatibility namespace | Compatibility shim over canonical `/std/gfx/*`; legacy wrapper imports remain only to preserve existing source while behavior continues to move through the canonical helper layer. | `TODO-4056` |
 | `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity track. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |
