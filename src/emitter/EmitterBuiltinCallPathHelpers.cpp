@@ -410,7 +410,7 @@ bool isBuiltinNegate(const Expr &expr) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = expr.name;
+  std::string name = resolveExprPath(expr);
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }

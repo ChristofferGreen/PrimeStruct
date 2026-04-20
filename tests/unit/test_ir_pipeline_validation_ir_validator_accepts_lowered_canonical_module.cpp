@@ -881,6 +881,15 @@ TEST_CASE("ir lowerer helper keeps parser-shaped rooted convert builtin") {
   CHECK(builtin == "convert");
 }
 
+TEST_CASE("emitter helper keeps parser-shaped rooted negate builtin") {
+  primec::Expr negateCall;
+  negateCall.kind = primec::Expr::Kind::Call;
+  negateCall.name = "negate";
+  negateCall.namespacePrefix = "/";
+
+  CHECK(primec::emitter::isBuiltinNegate(negateCall));
+}
+
 TEST_CASE("emitter helpers keep parser-shaped std math builtins") {
   primec::Expr minCall;
   minCall.kind = primec::Expr::Kind::Call;
