@@ -58,6 +58,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+// Residual blocker: only remaining canonical VM numeric index-sugar case.
 TEST_CASE("runs vm with map indexing sugar" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]
@@ -84,6 +85,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
+// Residual blockers: only remaining non-i32 VM map key runtime cases.
 TEST_CASE("runs vm with bool map access helpers" * doctest::skip(true)) {
   const std::string source = R"(
 [return<int>]

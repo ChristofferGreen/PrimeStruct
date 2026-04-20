@@ -267,26 +267,28 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   const std::string vmMath = readFile(vmMathPath.string());
   const std::string vmMaps = readFile(vmMapsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4116") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4117") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4110\n- TODO-4106\n- TODO-4107") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4118\n- TODO-4110\n- TODO-4106\n- TODO-4107") !=
         std::string::npos);
-  CHECK(todo.find("### Priority Lanes (Current)\n\n- Skipped doctest debt: TODO-4116, TODO-4110, TODO-4106, TODO-4107") !=
+  CHECK(todo.find("### Priority Lanes (Current)\n\n- Skipped doctest debt: TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107") !=
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4116\n2. TODO-4110\n3. TODO-4106\n4. TODO-4107") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4117\n2. TODO-4118\n3. TODO-4110\n4. TODO-4106\n5. TODO-4107") !=
         std::string::npos);
-  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4116, TODO-4110, TODO-4106, TODO-4107 |") !=
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4117, TODO-4118, TODO-4110, TODO-4106, TODO-4107 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
-  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in four active") !=
+  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in five active") !=
         std::string::npos);
-  CHECK(todo.find("`TODO-4116` for the remaining legacy VM map numeric-key runtime") !=
+  CHECK(todo.find("`TODO-4117` for the remaining legacy VM numeric index-sugar") !=
         std::string::npos);
-  CHECK(todo.find("blockers, `TODO-4110` for the remaining VM support-matrix math skips,") !=
+  CHECK(todo.find("blocker, `TODO-4118` for the remaining non-i32 VM map key runtime blockers,") !=
         std::string::npos);
   CHECK(todo.find("New skipped doctest coverage must either attach to one of those active leaves") !=
         std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4116: Re-enable or prune remaining VM numeric-key map runtime skips") !=
+  CHECK(todo.find("- [ ] TODO-4117: Re-enable or prune remaining VM numeric map indexing sugar skip") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4118: Re-enable or prune remaining VM non-i32 map key runtime skips") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4110: Re-enable or prune remaining VM support-matrix math skips") !=
         std::string::npos);
@@ -300,7 +302,10 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("- [ ] TODO-4109:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4112:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4114:") == std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4116:") == std::string::npos);
 
+  CHECK(todoFinished.find("✓ TODO-4116: Narrow remaining VM numeric-key map skip debt into explicit blocker-owned leaves.") !=
+        std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4115: Prune stale skipped VM argv-key map indexing duplicate.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4113: Prune stale skipped VM string-key map duplicates.") !=
@@ -330,9 +335,13 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
 
   CHECK(vmMaps.find("TEST_CASE(\"runs vm with map indexing sugar\" * doctest::skip(true))") !=
         std::string::npos);
+  CHECK(vmMaps.find("// Residual blocker: only remaining canonical VM numeric index-sugar case.") !=
+        std::string::npos);
   CHECK(vmMaps.find("TEST_CASE(\"runs vm with bool map access helpers\" * doctest::skip(true))") !=
         std::string::npos);
   CHECK(vmMaps.find("TEST_CASE(\"runs vm with u64 map access helpers\" * doctest::skip(true))") !=
+        std::string::npos);
+  CHECK(vmMaps.find("// Residual blockers: only remaining non-i32 VM map key runtime cases.") !=
         std::string::npos);
   CHECK(vmMaps.find("TEST_CASE(\"rejects vm map indexing with argv key\" * doctest::skip(true))") ==
         std::string::npos);
