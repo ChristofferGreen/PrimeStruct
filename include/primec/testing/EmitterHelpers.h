@@ -69,6 +69,7 @@ bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 bool getBuiltinPointerOperator(const Expr &expr, char &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
+bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out);
 std::string resolveExprPath(const Expr &expr);
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, std::string> &nameMap);

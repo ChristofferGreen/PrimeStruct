@@ -80,6 +80,38 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
+  auto stripGeneratedSuffix = [](std::string alias) {
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    return alias;
+  };
+  auto matchAccessAlias = [&](const std::string &normalizedName,
+                              const char *prefix,
+                              const char *receiverBase) {
+    const std::string prefixText(prefix);
+    if (normalizedName.rfind(prefixText, 0) != 0) {
+      return false;
+    }
+    std::string alias = normalizedName.substr(prefixText.size());
+    const size_t slash = alias.find('/');
+    if (slash != std::string::npos) {
+      const std::string receiverPath = alias.substr(0, slash);
+      const std::string receiverBaseText(receiverBase);
+      if (receiverPath != receiverBaseText &&
+          receiverPath.rfind(receiverBaseText + "__", 0) != 0) {
+        return false;
+      }
+      alias = alias.substr(slash + 1);
+    }
+    alias = stripGeneratedSuffix(std::move(alias));
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
+  };
   const std::string resolvedPath = resolveExprPath(expr);
   if (resolvedPath.rfind("/std/collections/vector/", 0) == 0 &&
       resolvePublishedCollectionSurfaceExprMemberName(
@@ -91,6 +123,25 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
       resolvePublishedCollectionSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapHelpers, out)) {
     return isCanonicalMapAccessHelperName(out);
+  }
+  std::string scopedName = resolvedPath;
+  if (!scopedName.empty() && scopedName[0] == '/') {
+    scopedName.erase(0, 1);
+  }
+  if (matchAccessAlias(scopedName,
+                       "std/collections/internal_soa_storage/",
+                       "SoaColumn")) {
+    return true;
+  }
+  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias = stripGeneratedSuffix(
+        scopedName.substr(
+            std::string("std/collections/internal_soa_storage/").size()));
+    if (alias == "at" || alias == "at_unsafe") {
+      out = alias;
+      return true;
+    }
+    return false;
   }
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {

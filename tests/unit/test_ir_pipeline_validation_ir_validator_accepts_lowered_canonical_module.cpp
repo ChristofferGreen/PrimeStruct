@@ -356,12 +356,18 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
       namespacedAtCall, builtin));
   CHECK(builtin == "at");
+  CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
+      namespacedAtCall, builtin));
+  CHECK(builtin == "at");
 
   primec::Expr rootedAtCall;
   rootedAtCall.kind = primec::Expr::Kind::Call;
   rootedAtCall.name = "/std/collections/internal_soa_storage/at";
 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedAtCall, builtin));
+  CHECK(builtin == "at");
+  CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
       rootedAtCall, builtin));
   CHECK(builtin == "at");
 
@@ -373,6 +379,9 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
       namespacedAtUnsafeCall, builtin));
   CHECK(builtin == "at_unsafe");
+  CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
+      namespacedAtUnsafeCall, builtin));
+  CHECK(builtin == "at_unsafe");
 
   primec::Expr rootedAtUnsafeCall;
   rootedAtUnsafeCall.kind = primec::Expr::Kind::Call;
@@ -382,6 +391,18 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
       rootedAtUnsafeCall, builtin));
   CHECK(builtin == "at_unsafe");
+  CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
+      rootedAtUnsafeCall, builtin));
+  CHECK(builtin == "at_unsafe");
+
+  primec::Expr specializedInternalSoaColumnAccessCall;
+  specializedInternalSoaColumnAccessCall.kind = primec::Expr::Kind::Call;
+  specializedInternalSoaColumnAccessCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/at";
+
+  CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
+      specializedInternalSoaColumnAccessCall, builtin));
+  CHECK(builtin == "at");
 }
 
 TEST_CASE("simple-call helpers keep rooted internal soa storage bare builtins") {
