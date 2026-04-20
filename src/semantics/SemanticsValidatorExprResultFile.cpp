@@ -3,6 +3,25 @@
 #include <string>
 
 namespace primec::semantics {
+namespace {
+
+std::string_view normalizeFileBuiltinHelperName(std::string_view helperName) {
+  if (helperName == "readByte") {
+    return "read_byte";
+  }
+  if (helperName == "writeLine") {
+    return "write_line";
+  }
+  if (helperName == "writeByte") {
+    return "write_byte";
+  }
+  if (helperName == "writeBytes") {
+    return "write_bytes";
+  }
+  return helperName;
+}
+
+} // namespace
 
 bool SemanticsValidator::validateExprResultFileBuiltins(
     const std::vector<ParameterInfo> &params,
@@ -288,7 +307,8 @@ bool SemanticsValidator::validateExprResultFileBuiltins(
   }
 
   if (resolved.rfind("/file/", 0) == 0) {
-    const std::string fileHelperName = resolved.substr(std::string("/file/").size());
+    const std::string fileHelperName = std::string(
+        normalizeFileBuiltinHelperName(resolved.substr(std::string("/file/").size())));
     if (hasNamedArguments(expr.argNames)) {
       return failResultFileDiagnostic("named arguments not supported for builtin calls");
     }

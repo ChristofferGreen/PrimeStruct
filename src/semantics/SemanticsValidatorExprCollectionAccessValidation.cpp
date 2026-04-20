@@ -524,7 +524,8 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
     const bool isStdlibVectorAccessWrapperDefinition =
         currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
         currentValidationState_.context.definitionPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-        currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0;
+        currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0 ||
+        currentValidationState_.context.definitionPath.rfind("/std/ui/", 0) == 0;
     if (!expr.isMethodCall &&
         (isDirectVectorReceiver || isDirectExperimentalVectorReceiver) &&
         !isStdlibVectorAccessWrapperDefinition &&

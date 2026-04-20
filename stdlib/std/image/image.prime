@@ -254,7 +254,7 @@ namespace std {
   resetReadOutputs([i32 mut] width, [i32 mut] height, [vector<i32> mut] pixels) {
     width = 0i32
     height = 0i32
-    pixels.clear()
+    /std/collections/vector/clear(pixels)
   }
 
   [return<bool>]

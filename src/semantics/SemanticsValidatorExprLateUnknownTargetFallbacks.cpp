@@ -33,6 +33,22 @@ bool isVectorFamilyHelperPath(const std::string &path) {
          path.rfind("/std/collections/experimental_vector/", 0) == 0;
 }
 
+std::string_view normalizeFileLateFallbackMethodName(std::string_view methodName) {
+  if (methodName == "readByte") {
+    return "read_byte";
+  }
+  if (methodName == "writeLine") {
+    return "write_line";
+  }
+  if (methodName == "writeByte") {
+    return "write_byte";
+  }
+  if (methodName == "writeBytes") {
+    return "write_bytes";
+  }
+  return methodName;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
@@ -230,11 +246,13 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
         soaUnavailableMethodDiagnostic(resolvedTarget));
   }
 
+  const std::string normalizedFileMethodName =
+      std::string(normalizeFileLateFallbackMethodName(expr.name));
   if (expr.isMethodCall &&
-      (expr.name == "write" || expr.name == "write_line" ||
-       expr.name == "write_byte" || expr.name == "read_byte" ||
-       expr.name == "write_bytes" || expr.name == "flush" ||
-       expr.name == "close") &&
+      (normalizedFileMethodName == "write" || normalizedFileMethodName == "write_line" ||
+       normalizedFileMethodName == "write_byte" || normalizedFileMethodName == "read_byte" ||
+       normalizedFileMethodName == "write_bytes" || normalizedFileMethodName == "flush" ||
+       normalizedFileMethodName == "close") &&
       !expr.args.empty()) {
     auto normalizedTypeLeafName = [](std::string value) {
       value = normalizeBindingTypeName(value);
@@ -255,7 +273,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       Expr rewrittenFileBuiltin = expr;
       rewrittenFileBuiltin.isMethodCall = false;
       rewrittenFileBuiltin.namespacePrefix.clear();
-      rewrittenFileBuiltin.name = "/file/" + expr.name;
+      rewrittenFileBuiltin.name = "/file/" + normalizedFileMethodName;
       handledOut = true;
       return validateExpr(params, locals, rewrittenFileBuiltin);
     }

@@ -366,6 +366,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib File camelCase helpers stay valid through on_error result flows") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+ignore_error([FileError] err) {
+  return()
+}
+
+[effects(file_read), return<int> on_error<FileError, /ignore_error>]
+read_in([File<Read>] file, [i32 mut] value) {
+  file.readByte(value)?
+  return(0i32)
+}
+
+[effects(file_write), return<int> on_error<FileError, /ignore_error>]
+write_out([File<Write>] file, [array<i32>] bytes) {
+  file.writeByte(65i32)?
+  file.writeBytes(bytes)?
+  file.writeLine(7i32)?
+  return(0i32)
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact stdlib file imports keep file and FileError method helpers") {
   const std::string source = R"(
 import /std/file/File

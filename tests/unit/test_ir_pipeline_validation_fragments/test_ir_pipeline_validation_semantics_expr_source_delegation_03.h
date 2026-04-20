@@ -42,6 +42,9 @@
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
             "const bool allowStdNamespacedVectorUserReceiverProbe =") !=
         std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "currentValidationState_.context.definitionPath.rfind(\"/std/ui/\", 0) == 0") !=
+        std::string::npos);
   CHECK(semanticsExprSource.find("auto publishCollectionDispatchDiagnostic = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionDispatchSetupSource.find(
@@ -450,6 +453,9 @@
         std::string::npos);
   CHECK(semanticsExprCollectionAccessValidationSource.find(
             "argument type mismatch for /std/collections/vector/") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessValidationSource.find(
+            "currentValidationState_.context.definitionPath.rfind(\"/std/ui/\", 0) == 0") !=
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "bool SemanticsValidator::validateExprDirectCollectionFallbacks") !=

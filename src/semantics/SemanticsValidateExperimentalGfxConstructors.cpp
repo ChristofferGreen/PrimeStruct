@@ -94,6 +94,34 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
                ? binding.typeName
                : binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
+  auto isFileHandleTypeText = [&](const std::string &typeText) {
+    std::string base;
+    std::string nestedArg;
+    return splitTemplateTypeName(normalizeBindingTypeName(typeText), base, nestedArg) &&
+           normalizeBindingTypeName(base) == "File" && !nestedArg.empty();
+  };
+  auto isKnownFileHandleReceiver = [&](const Expr &expr, const LocalBindings &locals) {
+    if (expr.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = locals.find(expr.name);
+    return it != locals.end() && isFileHandleTypeText(bindingTypeText(it->second.binding));
+  };
+  auto normalizeFileMethodName = [](const std::string &methodName) {
+    if (methodName == "readByte") {
+      return std::string("read_byte");
+    }
+    if (methodName == "writeLine") {
+      return std::string("write_line");
+    }
+    if (methodName == "writeByte") {
+      return std::string("write_byte");
+    }
+    if (methodName == "writeBytes") {
+      return std::string("write_bytes");
+    }
+    return methodName;
+  };
   auto resolveIndexedArgsPackElementTypeText =
       [&](const Expr &expr, const LocalBindings &localsIn, std::string &elemTypeOut) -> bool {
     std::string accessName;
@@ -276,8 +304,13 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
 
   auto isFileOpenWrapperDefinition = [](const std::string &definitionPath) {
     return definitionPath == "/File/open_read" || definitionPath == "/File/open_write" ||
-           definitionPath == "/File/open_append" || definitionPath == "/std/file/File/open_read" ||
-           definitionPath == "/std/file/File/open_write" || definitionPath == "/std/file/File/open_append";
+           definitionPath == "/File/open_append" || definitionPath == "/File/openRead" ||
+           definitionPath == "/File/openWrite" || definitionPath == "/File/openAppend" ||
+           definitionPath == "/std/file/File/open_read" ||
+           definitionPath == "/std/file/File/open_write" || definitionPath == "/std/file/File/open_append" ||
+           definitionPath == "/std/file/File/openRead" ||
+           definitionPath == "/std/file/File/openWrite" ||
+           definitionPath == "/std/file/File/openAppend";
   };
 
   auto rewriteExpr = [&](auto &self, Expr &expr, const std::string &namespacePrefix, const std::string &currentDefinitionPath,
@@ -320,7 +353,8 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
           return true;
         }
       }
-      if (expr.name == "/File/read_byte" && hasImportedDefinitionPath("/File/read_byte")) {
+      if ((expr.name == "/File/read_byte" || expr.name == "/File/readByte") &&
+          hasImportedDefinitionPath("/File/read_byte")) {
         expr.isMethodCall = true;
         expr.name = "read_byte";
         expr.namespacePrefix.clear();
@@ -349,14 +383,16 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr.templateArgs.clear();
         return true;
       }
-      if (expr.name == "/File/write_byte" && hasImportedDefinitionPath("/File/write_byte")) {
+      if ((expr.name == "/File/write_byte" || expr.name == "/File/writeByte") &&
+          hasImportedDefinitionPath("/File/write_byte")) {
         expr.isMethodCall = true;
         expr.name = "write_byte";
         expr.namespacePrefix.clear();
         expr.templateArgs.clear();
         return true;
       }
-      if (expr.name == "/File/write_bytes" && hasImportedDefinitionPath("/File/write_bytes")) {
+      if ((expr.name == "/File/write_bytes" || expr.name == "/File/writeBytes") &&
+          hasImportedDefinitionPath("/File/write_bytes")) {
         expr.isMethodCall = true;
         expr.name = "write_bytes";
         expr.namespacePrefix.clear();
@@ -450,6 +486,9 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       return true;
     }
     if (expr.isMethodCall) {
+      if (!expr.args.empty() && isKnownFileHandleReceiver(expr.args.front(), locals)) {
+        expr.name = normalizeFileMethodName(expr.name);
+      }
       if (!expr.args.empty()) {
         const std::string receiverPath = resolveBufferStructPath(expr.args.front(), namespacePrefix, locals);
         const bool isCanonicalBuffer = receiverPath == "/std/gfx/Buffer";

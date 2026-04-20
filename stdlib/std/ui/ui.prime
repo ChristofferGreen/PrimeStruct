@@ -79,7 +79,7 @@ namespace std {
     [effects(heap_alloc), return<void>]
     append_word([CommandList mut] self, [i32] value) {
       [mut] records{self.records}
-      records.push(value)
+      /std/collections/vector/push(records, value)
       self.records = records
     }
 
@@ -116,7 +116,7 @@ namespace std {
       self.append_color(color)
       self.append_word(len)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        self.append_word(text[index])
+        self.append_word(/std/collections/vector/at(text, index))
       }
       self.commandCount = self.commandCount + 1i32
     }
@@ -252,12 +252,13 @@ namespace std {
 
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([CommandList] self) {
+      [mut] records{self.records}
       [mut] words{vector<i32>()}
-      len{self.records.count()}
-      words.push(1i32)
-      words.push(self.commandCount)
+      len{records.count()}
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.commandCount)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        words.push(self.records[index])
+        /std/collections/vector/push(words, /std/collections/vector/at(records, index))
       }
       return(words)
     }
@@ -267,7 +268,7 @@ namespace std {
     [effects(heap_alloc), return<void>]
     append_word([HtmlCommandList mut] self, [i32] value) {
       [mut] records{self.records}
-      records.push(value)
+      /std/collections/vector/push(records, value)
       self.records = records
     }
 
@@ -284,7 +285,7 @@ namespace std {
       len{text.count()}
       self.append_word(len)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        self.append_word(text[index])
+        self.append_word(/std/collections/vector/at(text, index))
       }
     }
 
@@ -437,12 +438,13 @@ namespace std {
 
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([HtmlCommandList] self) {
+      [mut] records{self.records}
       [mut] words{vector<i32>()}
-      len{self.records.count()}
-      words.push(1i32)
-      words.push(self.commandCount)
+      len{records.count()}
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.commandCount)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        words.push(self.records[index])
+        /std/collections/vector/push(words, /std/collections/vector/at(records, index))
       }
       return(words)
     }
@@ -452,7 +454,7 @@ namespace std {
     [effects(heap_alloc), return<void>]
     append_word([UiEventStream mut] self, [i32] value) {
       [mut] records{self.records}
-      records.push(value)
+      /std/collections/vector/push(records, value)
       self.records = records
     }
 
@@ -461,7 +463,7 @@ namespace std {
       len{text.count()}
       self.append_word(len)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        self.append_word(text[index])
+        self.append_word(/std/collections/vector/at(text, index))
       }
     }
 
@@ -613,12 +615,13 @@ namespace std {
 
     [public effects(heap_alloc), return<vector<i32>>]
     serialize([UiEventStream] self) {
+      [mut] records{self.records}
       [mut] words{vector<i32>()}
-      len{self.records.count()}
-      words.push(1i32)
-      words.push(self.eventCount)
+      len{records.count()}
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, self.eventCount)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        words.push(self.records[index])
+        /std/collections/vector/push(words, /std/collections/vector/at(records, index))
       }
       return(words)
     }
@@ -647,18 +650,18 @@ namespace std {
       [mut] rectWidths{self.rectWidths}
       [mut] rectHeights{self.rectHeights}
       nodeId{kinds.count()}
-      kinds.push(kind)
-      parentIndices.push(parentIndex)
-      paddingPxs.push(paddingPx)
-      gapPxs.push(gapPx)
-      minWidths.push(minWidth)
-      minHeights.push(minHeight)
-      measuredWidths.push(0i32)
-      measuredHeights.push(0i32)
-      rectXs.push(0i32)
-      rectYs.push(0i32)
-      rectWidths.push(0i32)
-      rectHeights.push(0i32)
+      /std/collections/vector/push(kinds, kind)
+      /std/collections/vector/push(parentIndices, parentIndex)
+      /std/collections/vector/push(paddingPxs, paddingPx)
+      /std/collections/vector/push(gapPxs, gapPx)
+      /std/collections/vector/push(minWidths, minWidth)
+      /std/collections/vector/push(minHeights, minHeight)
+      /std/collections/vector/push(measuredWidths, 0i32)
+      /std/collections/vector/push(measuredHeights, 0i32)
+      /std/collections/vector/push(rectXs, 0i32)
+      /std/collections/vector/push(rectYs, 0i32)
+      /std/collections/vector/push(rectWidths, 0i32)
+      /std/collections/vector/push(rectHeights, 0i32)
       self.kinds = kinds
       self.parentIndices = parentIndices
       self.paddingPxs = paddingPxs
@@ -764,71 +767,73 @@ namespace std {
 
     [public return<i32>]
     measured_width([LayoutTree] self, [i32] nodeId) {
-      return(self.measuredWidths[nodeId])
+      return(/std/collections/vector/at(self.measuredWidths, nodeId))
     }
 
     [public return<i32>]
     measured_height([LayoutTree] self, [i32] nodeId) {
-      return(self.measuredHeights[nodeId])
+      return(/std/collections/vector/at(self.measuredHeights, nodeId))
     }
 
     [public return<i32>]
     rect_x([LayoutTree] self, [i32] nodeId) {
-      return(self.rectXs[nodeId])
+      return(/std/collections/vector/at(self.rectXs, nodeId))
     }
 
     [public return<i32>]
     rect_y([LayoutTree] self, [i32] nodeId) {
-      return(self.rectYs[nodeId])
+      return(/std/collections/vector/at(self.rectYs, nodeId))
     }
 
     [public return<i32>]
     rect_width([LayoutTree] self, [i32] nodeId) {
-      return(self.rectWidths[nodeId])
+      return(/std/collections/vector/at(self.rectWidths, nodeId))
     }
 
     [public return<i32>]
     rect_height([LayoutTree] self, [i32] nodeId) {
-      return(self.rectHeights[nodeId])
+      return(/std/collections/vector/at(self.rectHeights, nodeId))
     }
 
     [return<i32>]
     padding_px([LayoutTree] self, [i32] nodeId) {
-      return(self.paddingPxs[nodeId])
+      return(/std/collections/vector/at(self.paddingPxs, nodeId))
     }
 
     [return<i32>]
     parent_index([LayoutTree] self, [i32] nodeId) {
-      return(self.parentIndices[nodeId])
+      return(/std/collections/vector/at(self.parentIndices, nodeId))
     }
 
     [public return<void>]
     measure([LayoutTree mut] self) {
       [i32 mut] nodeId{self.kinds.count() - 1i32}
       while(nodeId >= 0i32) {
-        if(self.kinds[nodeId] == 1i32) {
-          self.measuredWidths[nodeId] = self.minWidths[nodeId]
-          self.measuredHeights[nodeId] = self.minHeights[nodeId]
+        if(/std/collections/vector/at(self.kinds, nodeId) == 1i32) {
+          self.measuredWidths[nodeId] = /std/collections/vector/at(self.minWidths, nodeId)
+          self.measuredHeights[nodeId] = /std/collections/vector/at(self.minHeights, nodeId)
         } else {
           [i32 mut] maxChildWidth{0i32}
           [i32 mut] totalChildHeight{0i32}
           [i32 mut] childCount{0i32}
           totalNodes{self.kinds.count()}
           for([i32 mut] childId{0i32}, childId < totalNodes, ++childId) {
-            if(self.parentIndices[childId] == nodeId) {
-              maxChildWidth = max(maxChildWidth, self.measuredWidths[childId])
-              totalChildHeight = totalChildHeight + self.measuredHeights[childId]
+            if(/std/collections/vector/at(self.parentIndices, childId) == nodeId) {
+              maxChildWidth = max(maxChildWidth, /std/collections/vector/at(self.measuredWidths, childId))
+              totalChildHeight =
+                  totalChildHeight + /std/collections/vector/at(self.measuredHeights, childId)
               childCount = childCount + 1i32
             }
           }
           gapCount{max(0i32, childCount - 1i32)}
-          contentWidth{maxChildWidth + self.paddingPxs[nodeId] * 2i32}
+          contentWidth{maxChildWidth + /std/collections/vector/at(self.paddingPxs, nodeId) * 2i32}
           contentHeight{
-            totalChildHeight + self.gapPxs[nodeId] * gapCount +
-            self.paddingPxs[nodeId] * 2i32
+            totalChildHeight + /std/collections/vector/at(self.gapPxs, nodeId) * gapCount +
+            /std/collections/vector/at(self.paddingPxs, nodeId) * 2i32
           }
-          self.measuredWidths[nodeId] = max(self.minWidths[nodeId], contentWidth)
-          self.measuredHeights[nodeId] = max(self.minHeights[nodeId], contentHeight)
+          self.measuredWidths[nodeId] = max(/std/collections/vector/at(self.minWidths, nodeId), contentWidth)
+          self.measuredHeights[nodeId] =
+              max(/std/collections/vector/at(self.minHeights, nodeId), contentHeight)
         }
         --nodeId
       }
@@ -844,17 +849,19 @@ namespace std {
 
       totalNodes{self.kinds.count()}
       for([i32 mut] nodeId{0i32}, nodeId < totalNodes, ++nodeId) {
-        if(self.kinds[nodeId] == 2i32) {
-          paddingPx{self.paddingPxs[nodeId]}
-          innerX{self.rectXs[nodeId] + paddingPx}
-          innerY{self.rectYs[nodeId] + paddingPx}
-          innerWidth{max(0i32, self.rectWidths[nodeId] - paddingPx * 2i32)}
+        if(/std/collections/vector/at(self.kinds, nodeId) == 2i32) {
+          paddingPx{/std/collections/vector/at(self.paddingPxs, nodeId)}
+          innerX{/std/collections/vector/at(self.rectXs, nodeId) + paddingPx}
+          innerY{/std/collections/vector/at(self.rectYs, nodeId) + paddingPx}
+          innerWidth{max(0i32, /std/collections/vector/at(self.rectWidths, nodeId) - paddingPx * 2i32)}
           [i32 mut] childY{innerY}
 
           for([i32 mut] childId{0i32}, childId < totalNodes, ++childId) {
-            if(self.parentIndices[childId] == nodeId) {
-              self.assign_rect(childId, innerX, childY, innerWidth, self.measuredHeights[childId])
-              childY = childY + self.measuredHeights[childId] + self.gapPxs[nodeId]
+            if(/std/collections/vector/at(self.parentIndices, childId) == nodeId) {
+              self.assign_rect(
+                  childId, innerX, childY, innerWidth, /std/collections/vector/at(self.measuredHeights, childId))
+              childY = childY + /std/collections/vector/at(self.measuredHeights, childId) +
+                  /std/collections/vector/at(self.gapPxs, nodeId)
             }
           }
         }
@@ -865,17 +872,17 @@ namespace std {
     serialize([LayoutTree] self) {
       [mut] words{vector<i32>()}
       totalNodes{self.kinds.count()}
-      words.push(1i32)
-      words.push(totalNodes)
+      /std/collections/vector/push(words, 1i32)
+      /std/collections/vector/push(words, totalNodes)
       for([i32 mut] nodeId{0i32}, nodeId < totalNodes, ++nodeId) {
-        words.push(self.kinds[nodeId])
-        words.push(self.parentIndices[nodeId])
-        words.push(self.measuredWidths[nodeId])
-        words.push(self.measuredHeights[nodeId])
-        words.push(self.rectXs[nodeId])
-        words.push(self.rectYs[nodeId])
-        words.push(self.rectWidths[nodeId])
-        words.push(self.rectHeights[nodeId])
+        /std/collections/vector/push(words, /std/collections/vector/at(self.kinds, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.parentIndices, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.measuredWidths, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.measuredHeights, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.rectXs, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.rectYs, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.rectWidths, nodeId))
+        /std/collections/vector/push(words, /std/collections/vector/at(self.rectHeights, nodeId))
       }
       return(words)
     }

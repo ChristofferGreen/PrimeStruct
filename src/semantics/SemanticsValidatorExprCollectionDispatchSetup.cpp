@@ -97,7 +97,8 @@ bool SemanticsValidator::prepareExprCollectionDispatchSetup(
   auto hasVisibleCanonicalVectorHelperPath = [&](const std::string &path) {
     const bool isStdlibVectorWrapperDefinition =
         currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
-        currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0;
+        currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0 ||
+        currentValidationState_.context.definitionPath.rfind("/std/ui/", 0) == 0;
     if (hasImportedDefinitionPath(path)) {
       return true;
     }

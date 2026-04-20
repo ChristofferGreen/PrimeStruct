@@ -524,12 +524,6 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
         std::string::npos);
-  CHECK(countAccessClassifiersSource.find("IrLowererSetupTypeCollectionHelpers.h") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveVectorHelperAliasName(") !=
-        std::string::npos);
-  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveMapHelperAliasName(") !=
-        std::string::npos);
 }
 
 namespace {
@@ -728,6 +722,12 @@ TEST_CASE("soa field-view backend cleanup stays stable") {
         std::string::npos);
   CHECK(countAccessClassifiersSource.find("soaVectorGet") == std::string::npos);
   CHECK(countAccessClassifiersSource.find("soaVectorRef") == std::string::npos);
+  CHECK(countAccessClassifiersSource.find("IrLowererSetupTypeCollectionHelpers.h") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveVectorHelperAliasName(") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("primec::ir_lowerer::resolveMapHelperAliasName(") !=
+        std::string::npos);
 
   CHECK(nativeTailDispatchSource.find("field_view") == std::string::npos);
   CHECK(nativeTailDispatchSource.find("unknown method: /std/collections/soa_vector/field_view/") ==

@@ -24,8 +24,11 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
 }
 
 bool isFileMethodName(std::string_view methodName) {
-  return methodName == "write" || methodName == "write_line" || methodName == "write_byte" ||
-         methodName == "read_byte" || methodName == "write_bytes" || methodName == "flush" ||
+  return methodName == "write" || methodName == "writeLine" ||
+         methodName == "write_line" || methodName == "writeByte" ||
+         methodName == "write_byte" || methodName == "readByte" ||
+         methodName == "read_byte" || methodName == "writeBytes" ||
+         methodName == "write_bytes" || methodName == "flush" ||
          methodName == "close";
 }
 

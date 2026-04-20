@@ -385,7 +385,7 @@ TEST_CASE("image api docs and stdlib stay source locked") {
   CHECK(imageStdlib.find("The codec and deflate helpers below intentionally keep explicit") != std::string::npos);
   CHECK(imageStdlib.find("public-facing image wrapper layer\n  // above, which should prefer the readable surface syntax when possible.") !=
         std::string::npos);
-  CHECK(resetReadOutputsBody.find("pixels.clear()") != std::string::npos);
+  CHECK(resetReadOutputsBody.find("/std/collections/vector/clear(pixels)") != std::string::npos);
   CHECK(resetReadOutputsBody.find("/std/collections/vector/clear(pixels)") == std::string::npos);
   CHECK(imageStdlib.find("pngScanlineChannelByte") != std::string::npos);
   CHECK(imageStdlib.find("pngAdam7PassStartX") != std::string::npos);
@@ -1220,24 +1220,27 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
 
   CHECK(source.find("[mut] records{self.records}") != std::string::npos);
   CHECK(source.find("len{text.count()}") != std::string::npos);
+  CHECK(source.find("/std/collections/vector/at(text, index)") != std::string::npos);
   CHECK(source.find("for([i32 mut] index{0i32}, index < len, ++index)") != std::string::npos);
   CHECK(source.find("[mut] words{vector<i32>()}") != std::string::npos);
   CHECK(source.find("[mut] kinds{self.kinds}") != std::string::npos);
-  CHECK(source.find("records.push(value)") != std::string::npos);
-  CHECK(source.find("words.push(1i32)") != std::string::npos);
-  CHECK(source.find("kinds.push(kind)") != std::string::npos);
-  CHECK(source.find("rectHeights.push(0i32)") != std::string::npos);
+  CHECK(source.find("/std/collections/vector/push(records, value)") != std::string::npos);
+  CHECK(source.find("/std/collections/vector/push(words, 1i32)") != std::string::npos);
+  CHECK(source.find("/std/collections/vector/at(records, index)") != std::string::npos);
+  CHECK(source.find("/std/collections/vector/push(kinds, kind)") != std::string::npos);
+  CHECK(source.find("/std/collections/vector/push(rectHeights, 0i32)") != std::string::npos);
   CHECK(source.find("panel{self.append_panel(parentIndex, panelPaddingPx, panelGapPx, 0i32, 0i32)}") !=
         std::string::npos);
   CHECK(source.find("contentWidth{widget_text_width(textSizePx, text) + paddingPx * 2i32}") !=
         std::string::npos);
   CHECK(source.find("[i32 mut] nodeId{self.kinds.count() - 1i32}") != std::string::npos);
   CHECK(source.find("totalNodes{self.kinds.count()}") != std::string::npos);
-  CHECK(source.find("paddingPx{self.paddingPxs[nodeId]}") != std::string::npos);
+  CHECK(source.find("paddingPx{/std/collections/vector/at(self.paddingPxs, nodeId)}") != std::string::npos);
   CHECK(source.find("[i32 mut] childY{innerY}") != std::string::npos);
 
   CHECK(source.find("[vector<i32> mut] records{self.records}") == std::string::npos);
   CHECK(source.find("[i32] len{text.count()}") == std::string::npos);
+  CHECK(source.find("text[index]") == std::string::npos);
   CHECK(source.find("[vector<i32> mut] words{vector<i32>()}") == std::string::npos);
   CHECK(source.find("[vector<i32> mut] kinds{self.kinds}") == std::string::npos);
   CHECK(source.find("[i32] panel{self.append_panel(parentIndex, panelPaddingPx, panelGapPx, 0i32, 0i32)}") ==
@@ -1246,9 +1249,11 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
         std::string::npos);
   CHECK(source.find("[mut] nodeId{self.kinds.count() - 1i32}") == std::string::npos);
   CHECK(source.find("[i32] totalNodes{self.kinds.count()}") == std::string::npos);
-  CHECK(source.find("[i32] paddingPx{self.paddingPxs[nodeId]}") == std::string::npos);
+  CHECK(source.find("[i32] paddingPx{/std/collections/vector/at(self.paddingPxs, nodeId)}") ==
+        std::string::npos);
   CHECK(source.find("[mut] childY{innerY}") == std::string::npos);
-  CHECK(source.find("/std/collections/vector/push(") == std::string::npos);
+  CHECK(source.find("self.records[index]") == std::string::npos);
+  CHECK(source.find("self.paddingPxs[nodeId]") == std::string::npos);
 }
 
 TEST_CASE("surface examples stay source locked to lowering-compatible helper forms") {

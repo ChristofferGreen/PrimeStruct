@@ -25,6 +25,29 @@ std::string trimText(const std::string &text) {
   return text.substr(start, end - start);
 }
 
+std::string_view normalizeFileResultMethodName(std::string_view methodName) {
+  if (methodName == "readByte") {
+    return "read_byte";
+  }
+  if (methodName == "writeLine") {
+    return "write_line";
+  }
+  if (methodName == "writeByte") {
+    return "write_byte";
+  }
+  if (methodName == "writeBytes") {
+    return "write_bytes";
+  }
+  return methodName;
+}
+
+std::string_view normalizeFileErrorResultMethodName(std::string_view methodName) {
+  if (methodName == "isEof") {
+    return "is_eof";
+  }
+  return methodName;
+}
+
 } // namespace
 
 bool SemanticsValidator::resolveResultTypeFromTemplateArg(const std::string &templateArg, ResultTypeInfo &out) const {
@@ -511,14 +534,20 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
       return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
     };
+    const std::string normalizedMethodName =
+        std::string(normalizeFileResultMethodName(expr.name));
+    const std::string normalizedFileErrorMethodName =
+        std::string(normalizeFileErrorResultMethodName(expr.name));
     if (receiver.kind == Expr::Kind::Name && receiver.name == "FileError" &&
-        (expr.name == "why" || expr.name == "is_eof" || expr.name == "eof" || expr.name == "status" ||
-         expr.name == "result")) {
-      return this->preferredFileErrorHelperTarget(expr.name);
+        (normalizedFileErrorMethodName == "why" || normalizedFileErrorMethodName == "is_eof" ||
+         normalizedFileErrorMethodName == "eof" || normalizedFileErrorMethodName == "status" ||
+         normalizedFileErrorMethodName == "result")) {
+      return this->preferredFileErrorHelperTarget(normalizedFileErrorMethodName);
     }
     if (typeMatches(receiverTypeName, "FileError") &&
-        (expr.name == "why" || expr.name == "is_eof" || expr.name == "status" || expr.name == "result")) {
-      return this->preferredFileErrorHelperTarget(expr.name);
+        (normalizedFileErrorMethodName == "why" || normalizedFileErrorMethodName == "is_eof" ||
+         normalizedFileErrorMethodName == "status" || normalizedFileErrorMethodName == "result")) {
+      return this->preferredFileErrorHelperTarget(normalizedFileErrorMethodName);
     }
     if (typeMatches(receiverTypeName, "ImageError") &&
         (expr.name == "why" || expr.name == "status" || expr.name == "result")) {
@@ -691,8 +720,12 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
         return true;
       }
     }
-    if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
-        expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
+    const std::string normalizedMethodName =
+        std::string(normalizeFileResultMethodName(expr.name));
+    if (normalizedMethodName == "write" || normalizedMethodName == "write_line" ||
+        normalizedMethodName == "write_byte" || normalizedMethodName == "read_byte" ||
+        normalizedMethodName == "write_bytes" || normalizedMethodName == "flush" ||
+        normalizedMethodName == "close") {
       out.isResult = true;
       out.hasValue = false;
       out.errorType = "FileError";

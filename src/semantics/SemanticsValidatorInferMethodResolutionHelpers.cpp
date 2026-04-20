@@ -81,6 +81,38 @@ void appendSurfaceExactHelperFallbacks(std::vector<std::string> &out,
   appendFrom(metadata.loweringSpellings);
 }
 
+std::string_view normalizeFileHelperName(std::string_view helperName) {
+  if (helperName == "openRead") {
+    return "open_read";
+  }
+  if (helperName == "openWrite") {
+    return "open_write";
+  }
+  if (helperName == "openAppend") {
+    return "open_append";
+  }
+  if (helperName == "readByte") {
+    return "read_byte";
+  }
+  if (helperName == "writeLine") {
+    return "write_line";
+  }
+  if (helperName == "writeByte") {
+    return "write_byte";
+  }
+  if (helperName == "writeBytes") {
+    return "write_bytes";
+  }
+  return helperName;
+}
+
+std::string_view normalizeFileErrorHelperName(std::string_view helperName) {
+  if (helperName == "isEof") {
+    return "is_eof";
+  }
+  return helperName;
+}
+
 template <typename Predicate>
 std::string firstMatchingPath(const std::vector<std::string> &candidates,
                               Predicate &&predicate) {
@@ -205,6 +237,7 @@ bool SemanticsValidator::hasDefinitionFamilyPath(std::string_view path) const {
 std::string SemanticsValidator::preferredFileHelperTarget(
     std::string_view helperName,
     std::string_view currentDefinitionPath) const {
+  helperName = normalizeFileHelperName(helperName);
   const std::string builtinPath = "/file/" + std::string(helperName);
   if (helperName != "write" && helperName != "write_line" && helperName != "close") {
     return builtinPath;
@@ -230,6 +263,7 @@ std::string SemanticsValidator::preferredFileHelperTarget(
 }
 
 std::string SemanticsValidator::preferredFileErrorHelperTarget(std::string_view helperName) const {
+  helperName = normalizeFileErrorHelperName(helperName);
   const StdlibSurfaceMetadata *metadata =
       findStdlibSurfaceMetadata(StdlibSurfaceId::FileErrorHelpers);
   if (metadata == nullptr) {

@@ -8,13 +8,20 @@ namespace primec {
 namespace {
 
 constexpr auto FileHelperMembers = std::to_array<std::string_view>({
+    "openRead",
+    "openWrite",
+    "openAppend",
     "open_read",
     "open_write",
     "open_append",
+    "readByte",
     "read_byte",
     "write",
+    "writeLine",
     "write_line",
+    "writeByte",
     "write_byte",
+    "writeBytes",
     "write_bytes",
     "flush",
     "close",
@@ -52,6 +59,7 @@ constexpr auto FileErrorHelperMembers = std::to_array<std::string_view>({
     "why",
     "status",
     "eof",
+    "isEof",
     "is_eof",
     "result",
 });

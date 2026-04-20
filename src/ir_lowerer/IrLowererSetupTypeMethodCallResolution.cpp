@@ -178,6 +178,10 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           return candidateDef;
         }
       }
+      if (resolvedPath.rfind("/file/", 0) == 0) {
+        errorOut.clear();
+        return nullptr;
+      }
       errorOut =
           "semantic-product method-call target missing lowered definition: " +
           resolvedPath;

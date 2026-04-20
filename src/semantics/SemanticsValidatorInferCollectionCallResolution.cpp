@@ -106,13 +106,6 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
 
   const std::string resolvedTarget = resolvedCallPath(target);
   const std::string explicitTarget = explicitCallPath(target);
-  auto matchesCollectionCtorPath = [&](std::string_view basePath) {
-    const std::string specializedPrefix = std::string(basePath) + "__t";
-    return resolvedTarget == basePath ||
-           resolvedTarget.rfind(specializedPrefix, 0) == 0 ||
-           explicitTarget == basePath ||
-           explicitTarget.rfind(specializedPrefix, 0) == 0;
-  };
   const bool matchesVectorCtorFamily =
       !inferredNonCollectionTargetType &&
       (isResolvedVectorConstructorHelperPath(resolvedTarget) ||
@@ -258,15 +251,6 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
                                      ? binding.typeName
                                      : binding.typeName + "<" + binding.typeTemplateArg + ">";
     return extractCollectionArgsFromType(typeText, extractCollectionArgsFromType);
-  };
-  auto matchesCollectionCtorPath = [&](std::string_view basePath) {
-    const std::string resolvedTarget = resolvedCallPath(target);
-    const std::string explicitTarget = explicitCallPath(target);
-    const std::string specializedPrefix = std::string(basePath) + "__t";
-    return resolvedTarget == basePath ||
-           resolvedTarget.rfind(specializedPrefix, 0) == 0 ||
-           explicitTarget == basePath ||
-           explicitTarget.rfind(specializedPrefix, 0) == 0;
   };
   auto isRootMapAliasPath = [](const std::string &path) {
     return path == "/map" ||
