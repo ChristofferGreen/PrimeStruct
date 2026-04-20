@@ -466,6 +466,20 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
         "insert_ref");
 }
 
+TEST_CASE("stdlib surface metadata resolves collection alias paths") {
+  const auto *vectorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/experimental_vector/vectorPush");
+  REQUIRE(vectorMetadata != nullptr);
+  CHECK(vectorMetadata->id == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *vectorMetadata, "/std/collections/experimental_vector/vectorPush") == "push");
+
+  const auto *mapCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath("/map/map");
+  REQUIRE(mapCtorMetadata != nullptr);
+  CHECK(mapCtorMetadata->id == primec::StdlibSurfaceId::CollectionsMapConstructors);
+  CHECK(primec::resolveStdlibSurfaceMemberName(*mapCtorMetadata, "/map/map") == "map");
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*

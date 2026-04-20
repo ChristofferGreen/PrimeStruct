@@ -1,8 +1,178 @@
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 
 #include "EmitterBuiltinCallPathHelpersInternal.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::emitter {
+
+namespace {
+
+std::string stripGeneratedHelperSuffix(std::string helperName) {
+  const size_t generatedSuffix = helperName.find("__");
+  if (generatedSuffix != std::string::npos) {
+    helperName.erase(generatedSuffix);
+  }
+  return helperName;
+}
+
+std::string normalizeCollectionHelperPath(std::string path) {
+  if (!path.empty() && path.front() != '/' &&
+      (path.rfind("array/", 0) == 0 || path.rfind("vector/", 0) == 0 ||
+       path.rfind("std/collections/vector/", 0) == 0 ||
+       path.rfind("std/collections/experimental_vector/", 0) == 0 ||
+       path.rfind("map/", 0) == 0 ||
+       path.rfind("std/collections/map/", 0) == 0 ||
+       path.rfind("std/collections/experimental_map/", 0) == 0)) {
+    path.insert(path.begin(), '/');
+  }
+  return path;
+}
+
+const StdlibSurfaceMetadata *findPublishedCollectionSurfaceMetadata(
+    std::string_view path,
+    StdlibSurfaceId surfaceId) {
+  if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(path);
+      metadata != nullptr && metadata->id == surfaceId) {
+    return metadata;
+  }
+  if (const auto *metadata = findStdlibSurfaceMetadataByResolvedPath(path);
+      metadata != nullptr && metadata->id == surfaceId) {
+    return metadata;
+  }
+  return nullptr;
+}
+
+bool resolvePublishedCollectionSurfaceMemberName(std::string_view path,
+                                                 StdlibSurfaceId surfaceId,
+                                                 std::string &memberNameOut) {
+  memberNameOut.clear();
+  const auto *metadata = findPublishedCollectionSurfaceMetadata(path, surfaceId);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string_view memberName = resolveStdlibSurfaceMemberName(*metadata, path);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+std::string rebuildScopedCollectionHelperPath(const Expr &expr) {
+  std::string normalized = expr.name;
+  if (!expr.namespacePrefix.empty() && normalized.find('/') == std::string::npos) {
+    std::string scopedPrefix = expr.namespacePrefix;
+    if (!scopedPrefix.empty() && scopedPrefix.front() != '/') {
+      scopedPrefix.insert(scopedPrefix.begin(), '/');
+    }
+    if (!scopedPrefix.empty()) {
+      normalized = scopedPrefix + "/" + normalized;
+    }
+  }
+  return normalizeCollectionHelperPath(std::move(normalized));
+}
+
+bool isRemovedExactPublishedVectorHelper(std::string_view helperName) {
+  std::string canonicalMemberName;
+  return resolvePublishedCollectionSurfaceMemberToken(
+             helperName,
+             StdlibSurfaceId::CollectionsVectorHelpers,
+             canonicalMemberName) &&
+         canonicalMemberName == stripGeneratedHelperSuffix(std::string(helperName));
+}
+
+bool isRemovedExactPublishedMapHelper(std::string_view helperName) {
+  std::string canonicalMemberName;
+  return resolvePublishedCollectionSurfaceMemberToken(
+             helperName,
+             StdlibSurfaceId::CollectionsMapHelpers,
+             canonicalMemberName) &&
+         canonicalMemberName == stripGeneratedHelperSuffix(std::string(helperName)) &&
+         isCanonicalMapHelperName(canonicalMemberName);
+}
+
+} // namespace
+
+bool resolvePublishedCollectionSurfaceMemberToken(std::string_view memberToken,
+                                                  StdlibSurfaceId surfaceId,
+                                                  std::string &memberNameOut) {
+  memberNameOut.clear();
+  const auto *metadata = findStdlibSurfaceMetadata(surfaceId);
+  if (metadata == nullptr) {
+    return false;
+  }
+  const std::string normalizedToken =
+      stripGeneratedHelperSuffix(std::string(memberToken));
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, normalizedToken);
+  if (memberName.empty()) {
+    return false;
+  }
+  memberNameOut.assign(memberName);
+  return true;
+}
+
+bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
+                                                     StdlibSurfaceId surfaceId,
+                                                     std::string &memberNameOut) {
+  memberNameOut.clear();
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (expr.namespacePrefix.empty() && expr.name.find('/') == std::string::npos) {
+    return false;
+  }
+
+  const std::string normalizedPath = rebuildScopedCollectionHelperPath(expr);
+  if (resolvePublishedCollectionSurfaceMemberName(normalizedPath, surfaceId, memberNameOut)) {
+    return true;
+  }
+  if (surfaceId == StdlibSurfaceId::CollectionsMapHelpers &&
+      normalizedPath.rfind("/std/collections/Map", 0) == 0) {
+    return resolvePublishedCollectionSurfaceMemberToken(
+        normalizedPath.substr(std::string("/std/collections/Map").size()),
+        surfaceId,
+        memberNameOut);
+  }
+  return false;
+}
+
+bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName) {
+  std::string candidate(rawMethodName);
+  if (!candidate.empty() && candidate.front() == '/') {
+    candidate.erase(candidate.begin());
+  }
+  if (candidate.rfind("array/", 0) == 0) {
+    return isRemovedExactPublishedVectorHelper(
+        std::string_view(candidate).substr(std::string_view("array/").size()));
+  }
+  if (candidate.rfind("std/collections/vector/", 0) == 0) {
+    return isRemovedExactPublishedVectorHelper(
+        std::string_view(candidate).substr(
+            std::string_view("std/collections/vector/").size()));
+  }
+  if (candidate.rfind("map/", 0) == 0) {
+    return isRemovedExactPublishedMapHelper(
+        std::string_view(candidate).substr(std::string_view("map/").size()));
+  }
+  if (candidate.rfind("std/collections/map/", 0) == 0) {
+    return isRemovedExactPublishedMapHelper(
+        std::string_view(candidate).substr(
+            std::string_view("std/collections/map/").size()));
+  }
+  return false;
+}
+
+bool removedCollectionAliasNeedsDefinitionPath(std::string_view rawMethodName) {
+  const std::string normalizedPath = normalizeCollectionHelperPath(std::string(rawMethodName));
+  const std::string_view mapHelperName = mapHelperNameFromPath(normalizedPath);
+  return (!mapHelperName.empty() &&
+          isCanonicalMapCountHelperName(mapHelperName)) ||
+         normalizedPath == "/array/count" ||
+         normalizedPath == "/array/capacity" ||
+         normalizedPath == "/std/collections/vector/count" ||
+         normalizedPath == "/std/collections/vector/capacity";
+}
 
 void appendUniqueCandidate(std::vector<std::string> &candidates, const std::string &candidate) {
   if (candidate.empty()) {

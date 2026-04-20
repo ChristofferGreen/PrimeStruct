@@ -1,20 +1,7 @@
 #include "EmitterExprControlCallPathStep.h"
+#include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 
 namespace primec::emitter {
-
-namespace {
-
-std::string normalizeMapImportAliasPath(const std::string &path) {
-  if (path.empty() || path.front() == '/') {
-    return path;
-  }
-  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
-    return "/" + path;
-  }
-  return path;
-}
-
-} // namespace
 
 std::optional<std::string> runEmitterExprControlCallPathStep(
     const Expr &expr,

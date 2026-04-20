@@ -2131,4 +2131,83 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
 }
 
+TEST_CASE("emitter collection helper metadata delegation stays source locked") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                            : std::filesystem::path("..");
+
+  const std::filesystem::path metadataHeaderPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionTypeInferenceInternal.h";
+  const std::filesystem::path metadataHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionMetadataHelpers.cpp";
+  const std::filesystem::path callPathHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinCallPathHelpers.cpp";
+  const std::filesystem::path methodResolutionHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterBuiltinMethodResolutionHelpers.cpp";
+  const std::filesystem::path exprControlCallPathStepPath =
+      repoRoot / "src" / "emitter" / "EmitterExprControlCallPathStep.cpp";
+
+  REQUIRE(std::filesystem::exists(metadataHeaderPath));
+  REQUIRE(std::filesystem::exists(metadataHelpersPath));
+  REQUIRE(std::filesystem::exists(callPathHelpersPath));
+  REQUIRE(std::filesystem::exists(methodResolutionHelpersPath));
+  REQUIRE(std::filesystem::exists(exprControlCallPathStepPath));
+
+  const std::string metadataHeaderSource = readText(metadataHeaderPath);
+  const std::string metadataHelpersSource = readText(metadataHelpersPath);
+  const std::string callPathHelpersSource = readText(callPathHelpersPath);
+  const std::string methodResolutionHelpersSource = readText(methodResolutionHelpersPath);
+  const std::string exprControlCallPathStepSource = readText(exprControlCallPathStepPath);
+
+  CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceMemberToken(") !=
+        std::string::npos);
+  CHECK(metadataHeaderSource.find("bool resolvePublishedCollectionSurfaceExprMemberName(") !=
+        std::string::npos);
+  CHECK(metadataHeaderSource.find("bool isRemovedCollectionMethodAliasPath(") !=
+        std::string::npos);
+  CHECK(metadataHeaderSource.find("bool removedCollectionAliasNeedsDefinitionPath(") !=
+        std::string::npos);
+
+  CHECK(metadataHelpersSource.find("findPublishedCollectionSurfaceMetadata(") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("rebuildScopedCollectionHelperPath(") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("resolveStdlibSurfaceMemberName(*metadata, normalizedToken)") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("bool isRemovedCollectionMethodAliasPath(") !=
+        std::string::npos);
+  CHECK(metadataHelpersSource.find("bool removedCollectionAliasNeedsDefinitionPath(") !=
+        std::string::npos);
+
+  CHECK(callPathHelpersSource.find("resolvePublishedCollectionSurfaceMemberToken(") !=
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("resolvePublishedCollectionSurfaceExprMemberName(") !=
+        std::string::npos);
+  CHECK(callPathHelpersSource.find("bool allowsVectorStdlibCompatibilitySuffix(") ==
+        std::string::npos);
+
+  CHECK(methodResolutionHelpersSource.find("isRemovedCollectionMethodAliasPath(") !=
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("removedCollectionAliasNeedsDefinitionPath(") !=
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("bool isRemovedCollectionMethodAlias(") ==
+        std::string::npos);
+  CHECK(methodResolutionHelpersSource.find("bool removedCollectionAliasNeedsDefinition(") ==
+        std::string::npos);
+
+  CHECK(exprControlCallPathStepSource.find("normalizeMapImportAliasPath(importIt->second)") !=
+        std::string::npos);
+  CHECK(exprControlCallPathStepSource.find("std::string normalizeMapImportAliasPath(") ==
+        std::string::npos);
+}
+
 TEST_SUITE_END();

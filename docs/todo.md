@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4098
+- TODO-4099
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4099
 - TODO-4030
 - TODO-4031
 - TODO-4032
@@ -68,42 +67,42 @@ Task template:
 - TODO-4034
 - TODO-4035
 - TODO-4042
+- TODO-4043
 
 ### Priority Lanes (Current)
 
 - Stdlib surface-style alignment: TODO-4030 through TODO-4035
-- Stdlib bridge consolidation: TODO-4098, TODO-4099
+- Stdlib bridge consolidation: TODO-4099
 - Vector/map stdlib ownership cutover: TODO-4042 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4098
-2. TODO-4099
-3. TODO-4042
-4. TODO-4051
-5. TODO-4043
-6. TODO-4044
-7. TODO-4045
-8. TODO-4046
-9. TODO-4047
-10. TODO-4048
-11. TODO-4049
-12. TODO-4050
-13. TODO-4052
-14. TODO-4058
-15. TODO-4053
-16. TODO-4055
-17. TODO-4054
-18. TODO-4056
-19. TODO-4057
-20. TODO-4059
-21. TODO-4030
-22. TODO-4031
-23. TODO-4032
-24. TODO-4033
-25. TODO-4034
-26. TODO-4035
+1. TODO-4099
+2. TODO-4042
+3. TODO-4051
+4. TODO-4043
+5. TODO-4044
+6. TODO-4045
+7. TODO-4046
+8. TODO-4047
+9. TODO-4048
+10. TODO-4049
+11. TODO-4050
+12. TODO-4052
+13. TODO-4058
+14. TODO-4053
+15. TODO-4055
+16. TODO-4054
+17. TODO-4056
+18. TODO-4057
+19. TODO-4059
+20. TODO-4030
+21. TODO-4031
+22. TODO-4032
+23. TODO-4033
+24. TODO-4034
+25. TODO-4035
 
 ### PrimeStruct Coverage Snapshot
 
@@ -111,7 +110,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4030, TODO-4031, TODO-4032, TODO-4033, TODO-4034, TODO-4035 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4098, TODO-4099 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4099 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4042, TODO-4043, TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -135,7 +134,7 @@ Task template:
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
-| Emitter map-helper canonicalization parity | TODO-4098 |
+| Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | none |
@@ -359,23 +358,11 @@ Task template:
     - `docs/todo.md` reflects that boundary across the vector/map cutover tasks instead of leaving scope implicit.
   - stop_rule: Stop once the vector/map bridge boundary is explicit enough to guide implementation and validation slices; split any broader stdlib bridge scoping beyond vector/map into separate tasks.
 
-- [ ] TODO-4098: Retire emitter collection helper compatibility tables after bridge parity lands
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib Bridge Consolidation
-  - depends_on: none
-  - scope: Remove the remaining emitter-side collection helper compatibility tables and canonical-to-experimental mapping lists now that the lowerer side routes vector/map helper alias resolution through shared stdlib surface metadata.
-  - acceptance:
-    - Emitter-side collection helper compatibility tables that are superseded by the shared bridge are deleted from production code.
-    - Emitter collection helper compatibility behavior continues to resolve through shared stdlib surface metadata rather than emitter-local path tables.
-    - Any residual emitter compatibility rule that still cannot move onto the bridge is called out explicitly in source and left behind as a narrowly scoped follow-up.
-  - stop_rule: Stop once the emitter-owned compatibility tables are centralized on shared metadata; split any stubborn backend-specific edge case into a separate leaf instead of keeping the broad duplicate table set.
-
 - [ ] TODO-4099: Retire semantics collection helper compatibility tables after bridge parity lands
   - owner: ai
   - created_at: 2026-04-20
   - phase: Stdlib Bridge Consolidation
-  - depends_on: TODO-4098
+  - depends_on: none
   - scope: Remove the remaining semantics-side collection helper compatibility tables and canonical-to-experimental mapping lists once the emitter and lowerer both consume the shared stdlib bridge metadata for vector/map helper families.
   - acceptance:
     - Semantics-side collection helper compatibility tables that are superseded by the shared bridge are deleted from production code.

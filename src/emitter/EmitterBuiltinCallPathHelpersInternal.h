@@ -15,7 +15,6 @@ bool extractMapKeyValueTypesLocal(const BindingInfo &binding,
                                   std::string &keyTypeOut,
                                   std::string &valueTypeOut);
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix);
-bool allowsVectorStdlibCompatibilitySuffix(const std::string &suffix);
 bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out);
 
 } // namespace primec::emitter

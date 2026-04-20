@@ -8,55 +8,6 @@ namespace primec::emitter {
 
 using BindingInfo = Emitter::BindingInfo;
 
-namespace {
-
-bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
-  return helperName == "count" || helperName == "capacity" || helperName == "at" ||
-         helperName == "at_unsafe" || helperName == "push" || helperName == "pop" ||
-         helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
-         helperName == "remove_swap";
-}
-
-bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
-  return isCanonicalMapHelperName(helperName);
-}
-
-bool isRemovedCollectionMethodAlias(const std::string &rawMethodName) {
-  std::string candidate = rawMethodName;
-  if (!candidate.empty() && candidate.front() == '/') {
-    candidate.erase(candidate.begin());
-  }
-  if (candidate.rfind("array/", 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(
-        std::string_view(candidate).substr(std::string_view("array/").size()));
-  }
-  if (candidate.rfind("std/collections/vector/", 0) == 0) {
-    return isRemovedVectorCompatibilityHelper(
-        std::string_view(candidate).substr(std::string_view("std/collections/vector/").size()));
-  }
-  if (candidate.rfind("map/", 0) == 0) {
-    return isRemovedMapCompatibilityHelper(
-        std::string_view(candidate).substr(std::string_view("map/").size()));
-  }
-  if (candidate.rfind("std/collections/map/", 0) == 0) {
-    return isRemovedMapCompatibilityHelper(
-        std::string_view(candidate).substr(std::string_view("std/collections/map/").size()));
-  }
-  return false;
-}
-
-bool removedCollectionAliasNeedsDefinition(std::string_view rawMethodName) {
-  const std::string_view mapHelperName = mapHelperNameFromPath(rawMethodName);
-  return (!mapHelperName.empty() &&
-          isCanonicalMapCountHelperName(mapHelperName)) ||
-         rawMethodName == "/array/count" ||
-         rawMethodName == "/array/capacity" ||
-         rawMethodName == "/std/collections/vector/count" ||
-         rawMethodName == "/std/collections/vector/capacity";
-}
-
-} // namespace
-
 bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, const Definition *> &defMap,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
@@ -71,13 +22,13 @@ bool resolveMethodCallPath(const Expr &call,
   }
   MethodResolutionMetadataView metadataView{
       defMap, importAliases, structTypeMap, returnKinds, returnStructs};
-  if (isRemovedCollectionMethodAlias(call.name)) {
+  if (isRemovedCollectionMethodAliasPath(call.name)) {
     std::string explicitPath = call.name;
     if (!explicitPath.empty() && explicitPath.front() != '/') {
       explicitPath.insert(explicitPath.begin(), '/');
     }
     const bool hasSamePathHelper =
-        removedCollectionAliasNeedsDefinition(explicitPath)
+        removedCollectionAliasNeedsDefinitionPath(explicitPath)
             ? defMap.count(explicitPath) > 0
             : hasDefinitionOrMetadata(metadataView, explicitPath);
     if (!hasSamePathHelper) {

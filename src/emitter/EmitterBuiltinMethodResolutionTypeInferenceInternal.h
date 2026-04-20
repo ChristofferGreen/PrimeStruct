@@ -1,6 +1,7 @@
 #pragma once
 
 #include "EmitterHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::emitter {
 
@@ -12,6 +13,14 @@ struct MethodResolutionMetadataView {
   const std::unordered_map<std::string, std::string> &returnStructs;
 };
 
+bool resolvePublishedCollectionSurfaceMemberToken(std::string_view memberToken,
+                                                  StdlibSurfaceId surfaceId,
+                                                  std::string &memberNameOut);
+bool resolvePublishedCollectionSurfaceExprMemberName(const Expr &expr,
+                                                     StdlibSurfaceId surfaceId,
+                                                     std::string &memberNameOut);
+bool isRemovedCollectionMethodAliasPath(std::string_view rawMethodName);
+bool removedCollectionAliasNeedsDefinitionPath(std::string_view rawMethodName);
 void appendUniqueCandidate(std::vector<std::string> &candidates, const std::string &candidate);
 std::string typeNameFromResolvedCandidates(const MethodResolutionMetadataView &view,
                                            const std::vector<std::string> &resolvedCandidates);
