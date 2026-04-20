@@ -2966,7 +2966,7 @@ TEST_CASE("rejects vm stdlib wrapper vector constructor auto inference mismatch"
   expectStdlibWrapperVectorConstructorAutoInferenceMismatchReject("vm");
 }
 
-TEST_CASE("runs vm stdlib wrapper vector constructor receivers") {
+TEST_CASE("rejects vm stdlib wrapper vector constructor receivers") {
   expectStdlibWrapperVectorConstructorReceiverConformance("vm");
 }
 

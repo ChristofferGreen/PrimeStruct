@@ -251,7 +251,7 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
         makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
         "vector_wrapper_constructor_receiver_" + emitMode,
         emitMode,
-        "vm backend only supports at()");
+        "count requires array, vector, map, or string target");
     return;
   }
   if (emitMode == "native" || emitMode == "exe") {
@@ -259,7 +259,7 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
         makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
         "vector_wrapper_constructor_receiver_" + emitMode,
         emitMode,
-        "native backend only supports at()");
+        "count requires array, vector, map, or string target");
     return;
   }
   expectVectorConformanceProgramRuns(

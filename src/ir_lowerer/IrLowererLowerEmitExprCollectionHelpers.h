@@ -338,7 +338,34 @@
           if (receiverDef == nullptr) {
             return false;
           }
-          if (receiverDef->fullPath.rfind("/std/collections/vector/vector", 0) != 0) {
+          auto matchesVectorConstructorPath = [&](std::string_view basePath) {
+            return receiverDef->fullPath == basePath ||
+                   receiverDef->fullPath.rfind(std::string(basePath) + "__", 0) == 0;
+          };
+          const bool isTemporaryVectorConstructorReceiver =
+              matchesVectorConstructorPath("/std/collections/vector/vector") ||
+              matchesVectorConstructorPath("/std/collections/vectorNew") ||
+              matchesVectorConstructorPath("/std/collections/vectorSingle") ||
+              matchesVectorConstructorPath("/std/collections/vectorDouble") ||
+              matchesVectorConstructorPath("/std/collections/vectorPair") ||
+              matchesVectorConstructorPath("/std/collections/vectorTriple") ||
+              matchesVectorConstructorPath("/std/collections/vectorQuad") ||
+              matchesVectorConstructorPath("/std/collections/vectorQuint") ||
+              matchesVectorConstructorPath("/std/collections/vectorSext") ||
+              matchesVectorConstructorPath("/std/collections/vectorSept") ||
+              matchesVectorConstructorPath("/std/collections/vectorOct") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vector") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorNew") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorSingle") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorDouble") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorPair") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorTriple") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorQuad") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorQuint") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorSext") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorSept") ||
+              matchesVectorConstructorPath("/std/collections/experimental_vector/vectorOct");
+          if (!isTemporaryVectorConstructorReceiver) {
             return false;
           }
 

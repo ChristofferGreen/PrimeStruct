@@ -632,4 +632,37 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper constructors") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  const std::string source = readText(collectionHelpersPath);
+
+  CHECK(source.find("auto matchesVectorConstructorPath = [&](std::string_view basePath) {") !=
+        std::string::npos);
+  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vectorPair\")") !=
+        std::string::npos);
+  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vectorOct\")") !=
+        std::string::npos);
+  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/experimental_vector/vectorPair\")") !=
+        std::string::npos);
+  CHECK(source.find("if (!isTemporaryVectorConstructorReceiver)") !=
+        std::string::npos);
+}
+
 TEST_SUITE_END();
