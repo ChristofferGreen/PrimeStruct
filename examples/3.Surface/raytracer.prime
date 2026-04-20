@@ -320,6 +320,31 @@ shade([Scene] scene, [ColorRGB] base, [Vec3] normal, [Vec3] point) {
   return(base.mulScalar(level * ao))
 }
 
+[Vec3]
+refract_dir([Vec3] dir, [Vec3] normal, [f32] ior) {
+  [f32 mut] cosi{min(1.0, max(-1.0, dir.dot(normal)))}
+  [f32 mut] etai{1.0}
+  [f32 mut] etat{ior}
+  [Vec3 mut] nn{normal}
+  if(cosi < 0.0) {
+    cosi = -cosi
+  } else {
+    [f32] tmp{etai}
+    etai = etat
+    etat = tmp
+    nn = normal.mulScalar(-1.0)
+  }
+  [f32] eta{etai / etat}
+  [f32] k{1.0 - eta * eta * (1.0 - cosi * cosi)}
+  if(k < 0.0) {
+    return(dir.reflect(nn))
+  } else {
+    [Vec3] t1{dir.mulScalar(eta)}
+    [Vec3] t2{nn.mulScalar(eta * cosi - sqrt(k))}
+    return(Vec3(t1.x + t2.x, t1.y + t2.y, t1.z + t2.z))
+  }
+}
+
 [ColorRGB]
 sky_color([Vec3] dir) {
   [f32] t{0.5 * (dir.y + 1.0)}
@@ -327,9 +352,9 @@ sky_color([Vec3] dir) {
   [ColorRGB] scaled{base.mulScalar(1.5)}
   [ColorRGB] clamped{
     ColorRGB(
-      clamp(scaled.r, 0.0, 1.0),
-      clamp(scaled.g, 0.0, 1.0),
-      clamp(scaled.b, 0.0, 1.0)
+      min(1.0, max(0.0, scaled.r)),
+      min(1.0, max(0.0, scaled.g)),
+      min(1.0, max(0.0, scaled.b))
     )
   }
   return(clamped)
@@ -396,13 +421,13 @@ trace([Scene] scene, [Vec3] origin, [Vec3] dir, [i32] depth) {
 
     if(isGlass == 1.0) {
       [f32] ior{1.5}
-      [f32] cosTheta{clamp(abs(currentDir.dot(hitNormal)), 0.0, 1.0)}
+      [f32] cosTheta{min(1.0, max(0.0, abs(currentDir.dot(hitNormal))))}
       [f32 mut] r0{(1.0 - ior) / (1.0 + ior)}
       r0 = r0 * r0
       [f32 mut] fresnel{r0 + (1.0 - r0) * pow(1.0 - cosTheta, 5.0)}
       fresnel = min(1.0, 0.3 + fresnel * 3.0)
 
-      [f32 mut] cosi{clamp(currentDir.dot(hitNormal), -1.0, 1.0)}
+      [f32 mut] cosi{min(1.0, max(-1.0, currentDir.dot(hitNormal)))}
       [f32 mut] etai{1.0}
       [f32 mut] etat{ior}
       if(cosi > 0.0) {
@@ -435,7 +460,7 @@ trace([Scene] scene, [Vec3] origin, [Vec3] dir, [i32] depth) {
       }
       [Vec3] reflOrigin{hitPoint.add(reflectOffset)}
 
-      [Vec3] refrVec{currentDir.refract(hitNormal, ior)}
+      [Vec3] refrVec{refract_dir(currentDir, hitNormal, ior)}
       [Vec3] refrDir{refrVec.toNormalized()}
       [Vec3 mut] refractOffset{hitNormal.mulScalar(-0.001)}
       if(frontFace == 0) {
@@ -489,6 +514,6 @@ trace([Scene] scene, [Vec3] origin, [Vec3] dir, [i32] depth) {
 
 [i32]
 to_byte([f32] value) {
-  [f32] clamped{clamp(value, 0.0, 1.0)}
+  [f32] clamped{min(1.0, max(0.0, value))}
   return(i32{clamped * 255.0 + 0.5})
 }

@@ -1,15 +1,16 @@
 import /std/math/*
+import /std/collections/vector
 
 namespace demo {
-  [void]
-  summarize_scores([array<i32>] scores) {
+  [effects(heap_alloc, io_out), return<void>]
+  summarize_scores([vector<i32>] scores) {
     [i32 mut] total{0}
     [i32 mut] best{0}
     [i32] count{scores.count()}
     [f32 mut] avg{0.0}
 
     for([i32 mut] idx{0}; idx < count; ++idx) {
-      [i32] value{scores[idx]}
+      [i32] value{/std/collections/vector/at(scores, idx)}
       if(value > best) {
         best = value
       } else {
@@ -31,14 +32,14 @@ namespace demo {
     print_line(total)
   }
 
-  [void]
+  [effects(heap_alloc, io_out), return<void>]
   main() {
-    [array<i32>] scores{array<i32>{4, 8, 15, 16, 23, 42}}
+    [vector<i32>] scores{vector<i32>(4, 8, 15, 16, 23, 42)}
     summarize_scores(scores)
   }
 }
 
-[void]
+[effects(heap_alloc, io_out), return<void>]
 main() {
   /demo/main()
   return()

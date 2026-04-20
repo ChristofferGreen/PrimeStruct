@@ -1083,15 +1083,21 @@ TEST_CASE("surface examples stay source locked to lowering-compatible helper for
   const std::string featuresOverview = readFile(featuresOverviewPath.string());
   const std::string raytracer = readFile(raytracerPath.string());
 
+  CHECK(featuresOverview.find("/std/collections/vector/at(scores, idx)") != std::string::npos);
+  CHECK(featuresOverview.find("scores.at(idx)") == std::string::npos);
+  CHECK(featuresOverview.find("scores[idx]") == std::string::npos);
   CHECK(featuresOverview.find("if(value > best)") != std::string::npos);
   CHECK(featuresOverview.find("best = value") != std::string::npos);
   CHECK(featuresOverview.find("best = max(best, value)") == std::string::npos);
 
   CHECK(raytracer.find("[ColorRGB] clamped{") != std::string::npos);
-  CHECK(raytracer.find("clamp(scaled.r, 0.0, 1.0)") != std::string::npos);
-  CHECK(raytracer.find("clamp(scaled.g, 0.0, 1.0)") != std::string::npos);
-  CHECK(raytracer.find("clamp(scaled.b, 0.0, 1.0)") != std::string::npos);
+  CHECK(raytracer.find("min(1.0, max(0.0, scaled.r))") != std::string::npos);
+  CHECK(raytracer.find("min(1.0, max(0.0, scaled.g))") != std::string::npos);
+  CHECK(raytracer.find("min(1.0, max(0.0, scaled.b))") != std::string::npos);
+  CHECK(raytracer.find("[Vec3] refrVec{refract_dir(currentDir, hitNormal, ior)}") != std::string::npos);
+  CHECK(raytracer.find("clamp(scaled.r, 0.0, 1.0)") == std::string::npos);
   CHECK(raytracer.find("return(scaled.clamp(0.0, 1.0))") == std::string::npos);
+  CHECK(raytracer.find("currentDir.refract(hitNormal, ior)") == std::string::npos);
 }
 
 TEST_CASE("gfx stdlib wrapper arithmetic stays source locked to surface operators") {
