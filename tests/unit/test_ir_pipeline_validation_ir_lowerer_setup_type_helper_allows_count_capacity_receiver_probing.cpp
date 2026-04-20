@@ -823,6 +823,158 @@ TEST_CASE("ir lowerer setup type helper resolves declared receiver aliases throu
   CHECK(error == "unknown method: /std/collections/map/at/tag");
 }
 
+TEST_CASE("ir lowerer setup type helper resolves canonical map methods from slashless receiver call paths") {
+  primec::Definition makeValuesDef;
+  makeValuesDef.fullPath = "/makeValues";
+  primec::Transform returnMap;
+  returnMap.name = "return";
+  returnMap.templateArgs = {"/std/collections/map<i32, i32>"};
+  makeValuesDef.transforms.push_back(returnMap);
+
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/map/count";
+
+  primec::Definition canonicalContainsDef;
+  canonicalContainsDef.fullPath = "/std/collections/map/contains";
+  primec::Transform returnMarker;
+  returnMarker.name = "return";
+  returnMarker.templateArgs = {"Marker"};
+  canonicalContainsDef.transforms.push_back(returnMarker);
+
+  primec::Definition markerTagDef;
+  markerTagDef.fullPath = "/Marker/tag";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {makeValuesDef.fullPath, &makeValuesDef},
+      {canonicalCountDef.fullPath, &canonicalCountDef},
+      {canonicalContainsDef.fullPath, &canonicalContainsDef},
+      {markerTagDef.fullPath, &markerTagDef},
+  };
+
+  const auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind != primec::Expr::Kind::Call) {
+      return expr.name;
+    }
+    if (expr.name == "count" || expr.name == "contains" || expr.name == "tag") {
+      return std::string();
+    }
+    return expr.name;
+  };
+
+  primec::Expr makeValuesCall;
+  makeValuesCall.kind = primec::Expr::Kind::Call;
+  makeValuesCall.name = "makeValues";
+
+  primec::Expr countMethod;
+  countMethod.kind = primec::Expr::Kind::Call;
+  countMethod.name = "count";
+  countMethod.isMethodCall = true;
+  countMethod.args = {makeValuesCall};
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      countMethod,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      resolveExprPath,
+      defMap,
+      error);
+  CHECK(resolved == &canonicalCountDef);
+  CHECK(error.empty());
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.intWidth = 32;
+  keyExpr.literalValue = 1;
+
+  primec::Expr containsMethod;
+  containsMethod.kind = primec::Expr::Kind::Call;
+  containsMethod.name = "contains";
+  containsMethod.isMethodCall = true;
+  containsMethod.args = {makeValuesCall, keyExpr};
+
+  primec::Expr tagMethod;
+  tagMethod.kind = primec::Expr::Kind::Call;
+  tagMethod.name = "tag";
+  tagMethod.isMethodCall = true;
+  tagMethod.args = {containsMethod};
+
+  error.clear();
+  resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      tagMethod,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      resolveExprPath,
+      defMap,
+      error);
+  CHECK(resolved == &markerTagDef);
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves canonical map methods from generated receiver overload paths") {
+  primec::Definition makeValuesDef;
+  makeValuesDef.fullPath = "/makeValues__ov0";
+  primec::Transform returnMap;
+  returnMap.name = "return";
+  returnMap.templateArgs = {"/std/collections/map<i32, i32>"};
+  makeValuesDef.transforms.push_back(returnMap);
+
+  primec::Definition canonicalCountDef;
+  canonicalCountDef.fullPath = "/std/collections/map/count";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {makeValuesDef.fullPath, &makeValuesDef},
+      {canonicalCountDef.fullPath, &canonicalCountDef},
+  };
+
+  primec::Expr makeValuesCall;
+  makeValuesCall.kind = primec::Expr::Kind::Call;
+  makeValuesCall.name = "makeValues";
+
+  primec::Expr countMethod;
+  countMethod.kind = primec::Expr::Kind::Call;
+  countMethod.name = "count";
+  countMethod.isMethodCall = true;
+  countMethod.args = {makeValuesCall};
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      countMethod,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &expr) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "makeValues") {
+          return std::string("makeValues");
+        }
+        return std::string();
+      },
+      defMap,
+      error);
+  CHECK(resolved == &canonicalCountDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper resolves struct receiver method definitions from expressions") {
   primec::Definition structMethodDef;
   structMethodDef.fullPath = "/pkg/Ctor/length";

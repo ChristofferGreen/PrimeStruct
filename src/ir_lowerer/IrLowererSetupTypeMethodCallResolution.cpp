@@ -412,6 +412,59 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         },
         [&](const Expr &expr) { return inferStructExprPathForCall(expr, visitedDefs); });
   };
+  auto findDefinitionByReceiverPath = [&](const std::string &rawPath,
+                                          size_t argCount) -> const Definition * {
+    if (rawPath.empty()) {
+      return nullptr;
+    }
+
+    std::vector<std::string> candidates;
+    auto appendCandidate = [&](std::string candidate) {
+      if (candidate.empty()) {
+        return;
+      }
+      for (const auto &existing : candidates) {
+        if (existing == candidate) {
+          return;
+        }
+      }
+      candidates.push_back(std::move(candidate));
+    };
+
+    appendCandidate(rawPath);
+    if (rawPath.front() != '/') {
+      appendCandidate("/" + rawPath);
+    }
+
+    auto resolveCandidate = [&](const std::string &candidate) -> const Definition * {
+      auto defIt = defMap.find(candidate);
+      if (defIt != defMap.end()) {
+        return defIt->second;
+      }
+
+      const std::string overloadPrefix =
+          candidate + "__ov" + std::to_string(argCount);
+      for (const auto &[candidatePath, candidateDef] : defMap) {
+        if (candidateDef == nullptr) {
+          continue;
+        }
+        if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
+            candidatePath.rfind(candidate + "__t", 0) == 0 ||
+            candidatePath.rfind(candidate + "__ov", 0) == 0) {
+          return candidateDef;
+        }
+      }
+      return nullptr;
+    };
+
+    for (const auto &candidate : candidates) {
+      if (const Definition *resolved = resolveCandidate(candidate)) {
+        return resolved;
+      }
+    }
+
+    return nullptr;
+  };
   if (resolvedDef == nullptr && resolvedTypePath.empty() && receiver->kind == Expr::Kind::Call) {
     std::string nestedError = lookupError;
     const Definition *receiverDef = nullptr;
@@ -422,12 +475,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         receiverPath.insert(receiverPath.begin(), '/');
       }
     }
-    if (!receiverPath.empty()) {
-      auto receiverDefIt = defMap.find(receiverPath);
-      if (receiverDefIt != defMap.end()) {
-        receiverDef = receiverDefIt->second;
-      }
-    }
+    receiverDef = findDefinitionByReceiverPath(receiverPath, receiver->args.size());
     if (receiverDef == nullptr && receiver->isMethodCall) {
       receiverDef = resolveMethodCallDefinitionFromExpr(*receiver,
                                                         localsIn,
