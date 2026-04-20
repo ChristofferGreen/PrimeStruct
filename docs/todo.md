@@ -56,28 +56,26 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4051
+- TODO-4052
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4052
+- TODO-4058
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4051
-2. TODO-4052
-3. TODO-4058
-4. TODO-4053
-5. TODO-4055
-6. TODO-4054
-7. TODO-4056
-8. TODO-4057
-9. TODO-4059
+1. TODO-4052
+2. TODO-4058
+3. TODO-4053
+4. TODO-4055
+5. TODO-4054
+6. TODO-4056
+7. TODO-4057
+8. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -86,7 +84,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -106,7 +104,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4051 |
+| Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
@@ -226,15 +224,3 @@ Task template:
     - Current `stdlib/std` experimental modules are classified against that policy with enough precision to drive follow-on collection, gfx, SoA, and substrate cleanup tasks.
     - `docs/todo.md` and any touched design docs reflect that classification instead of relying on blanket “experimental” wording.
   - stop_rule: Stop once the policy and module classification are explicit enough to guide implementation; split any concrete rename/removal work into dedicated follow-up leaves.
-
-- [ ] TODO-4051: Add vector/map bridge parity coverage for imports, rewrites, and lowering
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4042
-  - scope: Add focused parity coverage that locks current vector/map import behavior, constructor/helper rewrites, compatibility diagnostics, and lowering behavior so the ownership-cutover work can centralize collection path authority without silent regressions.
-  - acceptance:
-    - Focused tests cover exact imports, wildcard imports, constructor/helper rewrite behavior, compatibility diagnostics, and representative lowering paths for `vector` and `map`.
-    - The parity coverage is specific enough to detect behavior drift while the bridge-backed collection migration is in flight.
-    - The new coverage is wired into the existing validation surfaces instead of remaining as ad hoc local-only checks.
-  - stop_rule: Stop once vector/map bridge parity is pinned well enough that the migration tasks can safely delete duplicated path tables without guessing about current behavior.

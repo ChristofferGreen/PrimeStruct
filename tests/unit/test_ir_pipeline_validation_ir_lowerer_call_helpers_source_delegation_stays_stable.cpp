@@ -708,6 +708,80 @@ main() {
   CHECK(summary->returnKind == "i32");
 }
 
+TEST_CASE("ir lowerer call helpers keep exact-import vector and map bridge parity") {
+  const std::string source = R"(
+import /std/collections/vector
+import /std/collections/map
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [auto] values{vector<i32>(1i32, 2i32)}
+  [auto] pairs{map<i32, i32>(1i32, 7i32, 2i32, 11i32)}
+  [i32] viaVector{count(values)}
+  [i32] viaMap{count(pairs)}
+  return(plus(viaVector, viaMap))
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error, {"io_out", "io_err"}));
+  CHECK(error.empty());
+
+  const auto *vectorBridgeEntry = findLowererSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
+                   "/std/collections/vector/count";
+      });
+  REQUIRE(vectorBridgeEntry != nullptr);
+
+  const auto *mapBridgeEntry = findLowererSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
+                   "/std/collections/map/count";
+      });
+  REQUIRE(mapBridgeEntry != nullptr);
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::Expr vectorBridgeExpr;
+  vectorBridgeExpr.kind = primec::Expr::Kind::Call;
+  vectorBridgeExpr.semanticNodeId = vectorBridgeEntry->semanticNodeId;
+  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
+            vectorBridgeExpr.semanticNodeId) == 1);
+  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
+            vectorBridgeExpr.semanticNodeId) == 1);
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, vectorBridgeExpr) ==
+        "/std/collections/vector/count");
+  const auto vectorBridgeSurfaceId =
+      primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter,
+                                                                              vectorBridgeExpr);
+  REQUIRE(vectorBridgeSurfaceId.has_value());
+  CHECK(*vectorBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+
+  primec::Expr mapBridgeExpr;
+  mapBridgeExpr.kind = primec::Expr::Kind::Call;
+  mapBridgeExpr.semanticNodeId = mapBridgeEntry->semanticNodeId;
+  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
+            mapBridgeExpr.semanticNodeId) == 1);
+  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
+            mapBridgeExpr.semanticNodeId) == 1);
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, mapBridgeExpr) ==
+        "/std/collections/map/count");
+  const auto mapBridgeSurfaceId =
+      primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter,
+                                                                              mapBridgeExpr);
+  REQUIRE(mapBridgeSurfaceId.has_value());
+  CHECK(*mapBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+}
+
 TEST_CASE("soa field-view backend cleanup stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);

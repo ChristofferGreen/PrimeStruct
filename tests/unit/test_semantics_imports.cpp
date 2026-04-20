@@ -686,6 +686,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("exact vector and map imports keep bridge parity together") {
+  const std::string source = R"(
+import /std/collections/vector
+import /std/collections/map
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 8i32)}
+  [map<i32, i32>] pairs{map<i32, i32>(1i32, 7i32, 2i32, 11i32)}
+  return(plus(plus(count(values), at(values, 1i32)),
+      plus(count(pairs), at(pairs, 2i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("wildcard collection imports keep bare vector and map bridge aliases") {
   const std::string source = R"(
 import /std/collections/*
@@ -694,12 +712,43 @@ import /std/collections/*
 main() {
   [vector<i32>] values{vector<i32>(4i32, 8i32)}
   [map<i32, i32>] pairs{map<i32, i32>(1i32, 7i32)}
-  return(plus(count(values), at(pairs, 1i32)))
+  return(plus(plus(count(values), at(values, 1i32)),
+      plus(count(pairs), at(pairs, 1i32))))
 }
 )";
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("exact vector import keeps map bridge aliases unavailable") {
+  const std::string source = R"(
+import /std/collections/vector
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] pairs{map<i32, i32>(1i32, 7i32)}
+  return(count(pairs))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/map") != std::string::npos);
+}
+
+TEST_CASE("exact map import keeps vector bridge aliases unavailable") {
+  const std::string source = R"(
+import /std/collections/map
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 8i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/vector") != std::string::npos);
 }
 
 TEST_CASE("exact gfx imports keep bare bridge aliases") {

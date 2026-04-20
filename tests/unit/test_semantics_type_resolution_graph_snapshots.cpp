@@ -2060,6 +2060,94 @@ main() {
   CHECK_FALSE(localAutoEntry->initializerMethodCallStdlibSurfaceId.has_value());
 }
 
+TEST_CASE("semantic product keeps exact-import vector and map bridge parity") {
+  const std::string source = R"(
+import /std/collections/vector
+import /std/collections/map
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [auto] values{vector<i32>(1i32, 2i32)}
+  [auto] pairs{map<i32, i32>(1i32, 7i32, 2i32, 11i32)}
+  [i32] viaVector{count(values)}
+  [i32] viaMap{count(pairs)}
+  return(plus(viaVector, viaMap))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(
+      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                         &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *valuesEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "values";
+      });
+  REQUIRE(valuesEntry != nullptr);
+  REQUIRE(valuesEntry->initializerStdlibSurfaceId.has_value());
+  CHECK(*valuesEntry->initializerStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+  REQUIRE(valuesEntry->initializerDirectCallStdlibSurfaceId.has_value());
+  CHECK(*valuesEntry->initializerDirectCallStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+
+  const auto *pairsEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "pairs";
+      });
+  REQUIRE(pairsEntry != nullptr);
+  REQUIRE(pairsEntry->initializerStdlibSurfaceId.has_value());
+  CHECK(*pairsEntry->initializerStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsMapConstructors);
+  REQUIRE(pairsEntry->initializerDirectCallStdlibSurfaceId.has_value());
+  CHECK(*pairsEntry->initializerDirectCallStdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsMapConstructors);
+
+  const auto *vectorBridgeEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
+                   "/std/collections/vector/count";
+      });
+  REQUIRE(vectorBridgeEntry != nullptr);
+  REQUIRE(vectorBridgeEntry->stdlibSurfaceId.has_value());
+  CHECK(*vectorBridgeEntry->stdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  const auto vectorBridgeSurfaceId =
+      primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+          semanticProgram, vectorBridgeEntry->semanticNodeId);
+  REQUIRE(vectorBridgeSurfaceId.has_value());
+  CHECK(*vectorBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+
+  const auto *mapBridgeEntry = findSemanticEntry(
+      primec::semanticProgramBridgePathChoiceView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
+                   "/std/collections/map/count";
+      });
+  REQUIRE(mapBridgeEntry != nullptr);
+  REQUIRE(mapBridgeEntry->stdlibSurfaceId.has_value());
+  CHECK(*mapBridgeEntry->stdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsMapHelpers);
+  const auto mapBridgeSurfaceId =
+      primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+          semanticProgram, mapBridgeEntry->semanticNodeId);
+  REQUIRE(mapBridgeSurfaceId.has_value());
+  CHECK(*mapBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+}
+
 TEST_CASE("semantic product keeps graph-backed local auto facts for nested borrowed array access helpers") {
   const std::string source = R"(
 [return<int>]
