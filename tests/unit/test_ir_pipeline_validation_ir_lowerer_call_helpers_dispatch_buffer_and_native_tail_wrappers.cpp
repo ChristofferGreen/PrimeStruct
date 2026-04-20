@@ -653,15 +653,18 @@ TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper con
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
 
-  CHECK(source.find("auto matchesVectorConstructorPath = [&](std::string_view basePath) {") !=
+  CHECK(source.find("resolvePublishedLateCollectionMemberName(") !=
         std::string::npos);
-  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vectorPair\")") !=
+  CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorConstructors") !=
         std::string::npos);
-  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vectorOct\")") !=
+  CHECK(source.find("ir_lowerer::resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
-  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/experimental_vector/vectorPair\")") !=
+  CHECK(source.find("constructorName") != std::string::npos);
+  CHECK(source.find("matchesVectorConstructorPath(\"/std/collections/vectorPair\")") ==
         std::string::npos);
-  CHECK(source.find("if (!isTemporaryVectorConstructorReceiver)") !=
+  CHECK(source.find("auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {") !=
+        std::string::npos);
+  CHECK(source.find("if (rejectCanonicalVectorTemporaryReceiverExpr(expr)) {") !=
         std::string::npos);
 }
 
