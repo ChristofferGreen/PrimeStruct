@@ -64,6 +64,14 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find(
             "auto rewriteExplicitMapHelperBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {") !=
         std::string::npos);
+  CHECK(source.find("auto hasPublishedSemanticMapSurface = [&](const Expr &callExpr) {") !=
+        std::string::npos);
+  CHECK(source.find("auto resolvePublishedTailDispatchMapHelperName =") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, callExpr)") !=
+        std::string::npos);
   CHECK(source.find("if ((helperName == \"count\" || helperName == \"contains\" ||") !=
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/map/\", 0) == 0") != std::string::npos);

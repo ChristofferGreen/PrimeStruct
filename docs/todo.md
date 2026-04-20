@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4063
+- TODO-4065
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -65,12 +65,12 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4050, TODO-4051, TODO-4063
+- Vector/map bridge rollout and ownership cutover: TODO-4050, TODO-4051, TODO-4065
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4063
+1. TODO-4065
 2. TODO-4050
 3. TODO-4051
 4. TODO-4052
@@ -89,7 +89,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4050, TODO-4051, TODO-4063 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4050, TODO-4051, TODO-4065 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -109,7 +109,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4050, TODO-4051, TODO-4063 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4050, TODO-4051, TODO-4065 |
 | De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
@@ -230,17 +230,17 @@ Task template:
     - `docs/todo.md` and any touched design docs reflect that classification instead of relying on blanket “experimental” wording.
   - stop_rule: Stop once the policy and module classification are explicit enough to guide implementation; split any concrete rename/removal work into dedicated follow-up leaves.
 
-- [ ] TODO-4063: Replace remaining late collection dispatch seams with semantic surface IDs
+- [ ] TODO-4065: Replace remaining late collection-expression dispatch seams with semantic surface IDs
   - owner: ai
   - created_at: 2026-04-20
   - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4062
-  - scope: Finish the lowerer surface-ID migration by routing the remaining late vector/map-sensitive expression-emission and tail-dispatch rewrite seams through semantic collection surface IDs instead of reconstructing behavior from raw `/std/collections/...` helper paths.
+  - depends_on: TODO-4064
+  - scope: Finish the lowerer surface-ID migration by routing the remaining late vector/map-sensitive collection-expression and receiver-materialization seams through semantic collection surface IDs instead of reconstructing behavior from raw `/std/collections/...` helper paths.
   - acceptance:
-    - Remaining late vector/map-sensitive emission and tail-rewrite seams consume semantic collection surface IDs where the earlier call-resolution and native-tail slices already expose them.
-    - Lowering parity coverage confirms the migrated late seams still preserve current vector/map behavior after the ID-based swap.
+    - Remaining late vector/map-sensitive collection-expression and receiver-materialization seams consume semantic collection surface IDs where the earlier call-resolution, native-tail, and tail-dispatch slices already expose them.
+    - Lowering parity coverage confirms the migrated remaining late seams still preserve current vector/map behavior after the ID-based swap.
     - Any unavoidable residual path fallback is isolated to a narrowly documented backend seam instead of remaining the general rewrite path.
-  - stop_rule: Stop once the remaining late expression-emission and tail-rewrite seams are ID-based; split any stubborn backend-specific fallback into a separate task instead of widening this leaf.
+  - stop_rule: Stop once the remaining late collection-expression and receiver-materialization seams are ID-based; split any stubborn backend-specific fallback into a separate task instead of widening this leaf.
 
 - [ ] TODO-4051: Add vector/map bridge parity coverage for imports, rewrites, and lowering
   - owner: ai
@@ -258,7 +258,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4063
+  - depends_on: TODO-4065
   - scope: Delete the remaining vector/map-specific compatibility tables, constructor-path mappings, and canonical-to-experimental translation helpers once the shared bridge and semantic/lowerer surface-ID flow fully cover the collection behavior they currently protect.
   - acceptance:
     - Vector/map-specific compatibility and canonical-to-experimental tables that are superseded by the bridge-backed flow are removed from production code.

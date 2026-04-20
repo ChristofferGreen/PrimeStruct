@@ -11,6 +11,33 @@
           }
           return candidate.name;
         };
+        auto hasPublishedSemanticMapSurface = [&](const Expr &callExpr) {
+          return findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, callExpr) ==
+                     primec::StdlibSurfaceId::CollectionsMapHelpers ||
+                 findSemanticProductBridgePathChoiceStdlibSurfaceId(semanticProgram, callExpr) ==
+                     primec::StdlibSurfaceId::CollectionsMapHelpers;
+        };
+        auto resolvePublishedTailDispatchMapHelperName =
+            [&](const Expr &callExpr, std::string &helperNameOut) {
+              helperNameOut.clear();
+              return ir_lowerer::resolvePublishedSemanticStdlibSurfaceMemberName(
+                         semanticProgram,
+                         callExpr,
+                         primec::StdlibSurfaceId::CollectionsMapHelpers,
+                         helperNameOut) ||
+                     ir_lowerer::resolvePublishedStdlibSurfaceExprMemberName(
+                         callExpr,
+                         primec::StdlibSurfaceId::CollectionsMapHelpers,
+                         helperNameOut) ||
+                     ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                         resolveExprPath(callExpr),
+                         primec::StdlibSurfaceId::CollectionsMapHelpers,
+                         helperNameOut) ||
+                     ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
+                         resolveTailDispatchDirectHelperPath(callExpr),
+                         primec::StdlibSurfaceId::CollectionsMapHelpers,
+                         helperNameOut);
+            };
         auto resolveBuiltinMapHelperName =
             [&](const Expr &callExpr, bool allowMethodCall, std::string &helperNameOut) {
               helperNameOut.clear();
@@ -32,17 +59,20 @@
               if (ir_lowerer::resolveMapHelperAliasName(callExpr, helperNameOut)) {
                 return true;
               }
-              return ir_lowerer::resolvePublishedStdlibSurfaceMemberName(
-                  resolveTailDispatchDirectHelperPath(callExpr),
-                  primec::StdlibSurfaceId::CollectionsMapHelpers,
-                  helperNameOut);
+              return resolvePublishedTailDispatchMapHelperName(callExpr, helperNameOut);
             };
         auto rewriteBuiltinMapInsertBuiltinExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.args.size() != 3) {
             return false;
           }
-          auto matchesPublishedMapInsertPath = [&](const std::string &resolvedPath) {
+          auto matchesPublishedMapInsertPath = [&](const Expr &candidate) {
             std::string helperName;
+            if (hasPublishedSemanticMapSurface(candidate) &&
+                resolvePublishedTailDispatchMapHelperName(candidate, helperName) &&
+                (helperName == "insert" || helperName == "insert_ref")) {
+              return true;
+            }
+            const std::string resolvedPath = resolveExprPath(candidate);
             return ir_lowerer::isPublishedStdlibSurfaceLoweringPath(
                        resolvedPath,
                        primec::StdlibSurfaceId::CollectionsMapHelpers) &&
@@ -52,7 +82,7 @@
                        helperName) &&
                    (helperName == "insert" || helperName == "insert_ref");
           };
-          if (matchesPublishedMapInsertPath(resolveExprPath(callExpr))) {
+          if (matchesPublishedMapInsertPath(callExpr)) {
             return false;
           }
 
@@ -309,7 +339,11 @@
           const bool isCanonicalStdMapHelperPath =
               ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                   resolveTailDispatchDirectHelperPath(callExpr),
-                  primec::StdlibSurfaceId::CollectionsMapHelpers);
+                  primec::StdlibSurfaceId::CollectionsMapHelpers) ||
+              (hasPublishedSemanticMapSurface(callExpr) &&
+               ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
+                   resolveExprPath(callExpr),
+                   primec::StdlibSurfaceId::CollectionsMapHelpers));
           if (isCanonicalStdMapHelperPath) {
             // Keep canonical stdlib helper calls intact so direct overrides on
             // /std/collections/map/* are honored.

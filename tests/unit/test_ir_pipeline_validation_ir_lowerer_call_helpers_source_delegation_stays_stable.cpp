@@ -530,6 +530,12 @@ TEST_CASE("native tail and late collection helper metadata dispatch stays source
         std::string::npos);
   CHECK(tailDispatchSource.find("resolvePublishedStdlibSurfaceMemberName(") !=
         std::string::npos);
+  CHECK(tailDispatchSource.find("resolvePublishedSemanticStdlibSurfaceMemberName(") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, callExpr)") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("hasPublishedSemanticMapSurface(callExpr)") !=
+        std::string::npos);
   CHECK(tailDispatchSource.find("isPublishedStdlibSurfaceLoweringPath(") !=
         std::string::npos);
   CHECK(tailDispatchSource.find("isCanonicalPublishedStdlibSurfaceHelperPath(") !=
