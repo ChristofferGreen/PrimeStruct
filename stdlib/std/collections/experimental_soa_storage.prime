@@ -1,5 +1,5 @@
-import /std/collections/experimental_buffer_checked/*
-import /std/collections/experimental_buffer_unchecked/*
+import /std/collections/internal_buffer_checked/*
+import /std/collections/internal_buffer_unchecked/*
 
 namespace std {
   namespace collections {
@@ -8,7 +8,7 @@ namespace std {
   SoaColumn<T>() {
     [public i32] count
     [public i32] capacity
-    [public Pointer<uninitialized<T>>] data{/std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
+    [public Pointer<uninitialized<T>>] data{/std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
     [return<i32>]
@@ -60,7 +60,7 @@ namespace std {
          then() {
            soaColumnCheckShape<T>(this)
            soaColumnDropRange<T>(this, this.count)
-           /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(this.data)
+           /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(this.data)
            assign(this.ownsData, false)
            assign(this.count, 0i32)
            assign(this.capacity, 0i32)
@@ -310,7 +310,7 @@ namespace std {
          empty[index]
        },
        else() { })
-    return(/std/collections/experimental_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+    return(/std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
   [public return<Pointer<uninitialized<Field>>>]
@@ -335,10 +335,10 @@ namespace std {
     [i32] fieldOffset{/Struct/SoaSchemaFieldOffset(fieldIndex)}
     [i32] elementOffset{plus(multiply(index, stride), fieldOffset)}
     [Pointer<i32>] baseBytes{
-        /std/collections/experimental_buffer_unchecked/bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
+        /std/collections/internal_buffer_unchecked/bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
     [Pointer<i32>] fieldBytes{
-        /std/collections/experimental_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, elementOffset)}
-    return(/std/collections/experimental_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
+        /std/collections/internal_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, elementOffset)}
+    return(/std/collections/internal_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes))
   }
 
   [public return<SoaFieldView<Field>>]
@@ -355,11 +355,11 @@ namespace std {
     [i32] stride{/Struct/SoaSchemaElementStride()}
     [i32] fieldOffset{/Struct/SoaSchemaFieldOffset(fieldIndex)}
     [Pointer<i32>] baseBytes{
-        /std/collections/experimental_buffer_unchecked/bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
+        /std/collections/internal_buffer_unchecked/bufferReinterpretBytes<uninitialized<Struct>>(values.data)}
     [Pointer<i32>] fieldBytes{
-        /std/collections/experimental_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, fieldOffset)}
+        /std/collections/internal_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, fieldOffset)}
     [Pointer<uninitialized<Field>>] fieldBase{
-        /std/collections/experimental_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes)}
+        /std/collections/internal_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes)}
     return(SoaFieldView<Field>(
         values.field_count(),
         values.field_capacity(),
@@ -399,10 +399,10 @@ namespace std {
     soaFieldViewCheckIndex<T>(values, index)
     [i32] byteOffset{multiply(index, values.stride)}
     [Pointer<i32>] baseBytes{
-        /std/collections/experimental_buffer_unchecked/bufferReinterpretBytes<uninitialized<T>>(values.data)}
+        /std/collections/internal_buffer_unchecked/bufferReinterpretBytes<uninitialized<T>>(values.data)}
     [Pointer<i32>] slotBytes{
-        /std/collections/experimental_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, byteOffset)}
-    return(/std/collections/experimental_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<T>>(slotBytes))
+        /std/collections/internal_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, byteOffset)}
+    return(/std/collections/internal_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<T>>(slotBytes))
   }
 
   [public return<T>]
@@ -477,7 +477,7 @@ namespace std {
     [i32 mut] index{0i32}
     while(less_than(index, limit), do() {
       [Pointer<uninitialized<T>> mut] nextSlot{
-          /std/collections/experimental_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
+          /std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
       init(dereference(nextSlot), soaColumnTakeSlot<T>(values, index))
       increment(index)
     })
@@ -492,7 +492,7 @@ namespace std {
     return(SoaColumn<T>(
         count,
         capacity,
-        /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
+        /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
         true))
   }
 
@@ -1591,9 +1591,9 @@ namespace std {
        then() { assign(allocCount, 1i32) },
        else() { })
     [Pointer<uninitialized<T>> mut] grown{
-        /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
+        /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
     soaColumnMovePrefixToBuffer<T>(grown, values, values.field_count())
-    /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+    /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(values.data)
     assign(values.data, grown)
     values.set_field_capacity(capacity)
   }

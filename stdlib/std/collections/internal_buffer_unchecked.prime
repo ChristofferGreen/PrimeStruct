@@ -1,6 +1,6 @@
 namespace std {
   namespace collections {
-  namespace experimental_buffer_checked {
+  namespace internal_buffer_unchecked {
   [public effects(heap_alloc), return<Pointer<T>>]
   bufferAlloc<T>([i32] count) {
     return(/std/intrinsics/memory/alloc<T>(count))
@@ -17,8 +17,8 @@ namespace std {
   }
 
   [public return<Pointer<T>>]
-  bufferOffsetChecked<T>([Pointer<T>] ptr, [i32] index, [i32] count) {
-    return(/std/intrinsics/memory/at(ptr, index, count))
+  bufferOffsetUnsafe<T>([Pointer<T>] ptr, [i32] index) {
+    return(/std/intrinsics/memory/at_unsafe(ptr, index))
   }
 
   [public return<Pointer<T>>]
@@ -32,7 +32,7 @@ namespace std {
   }
 
   [public return<Pointer<i32>>]
-  bufferOffsetBytesChecked([Pointer<i32>] ptr, [i32] byteOffset) {
+  bufferOffsetBytesUnsafe([Pointer<i32>] ptr, [i32] byteOffset) {
     return(plus(ptr, byteOffset))
   }
 
@@ -42,14 +42,14 @@ namespace std {
   }
 
   [public return<void>]
-  bufferWriteChecked<T>([Pointer<T> mut] ptr, [i32] index, [i32] count, [T] value) {
-    [Pointer<T> mut] slot{/std/intrinsics/memory/at(ptr, index, count)}
+  bufferWriteUnsafe<T>([Pointer<T> mut] ptr, [i32] index, [T] value) {
+    [Pointer<T> mut] slot{/std/intrinsics/memory/at_unsafe(ptr, index)}
     assign(dereference(slot), value)
   }
 
   [public return<T>]
-  bufferReadChecked<T>([Pointer<T>] ptr, [i32] index, [i32] count) {
-    return(dereference(/std/intrinsics/memory/at(ptr, index, count)))
+  bufferReadUnsafe<T>([Pointer<T>] ptr, [i32] index) {
+    return(dereference(/std/intrinsics/memory/at_unsafe(ptr, index)))
   }
   }
   }

@@ -2632,9 +2632,9 @@ Current `stdlib/std` experimental module classification:
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity track. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
-| `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |
-| `/std/collections/experimental_buffer_unchecked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |
-| `/std/collections/experimental_soa_storage/*` | Internal substrate/helper namespace | SoA storage/layout substrate used by wrappers and lowering bridges, not a canonical surface contract. | `TODO-4057` |
+| `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
+| `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
+| `/std/collections/experimental_soa_storage/*` | Internal substrate/helper namespace | SoA storage/layout substrate used by wrappers and lowering bridges, not a canonical surface contract. | `TODO-4103` |
 
 The policy implication is immediate: vector/map/gfx work should prefer canonical
 non-`experimental` namespaces in docs and compiler authority, SoA work must say
@@ -3879,11 +3879,11 @@ read-only path.
   `Pointer<T>`, and requires `index` to be an integer (`i32`, `i64`, or `u64`). Lowering scales the element offset by
   the pointee slot width just like checked `at(...)`, but performs no bounds check; this is the intended primitive for
   relocation/growth code paths in future stdlib-owned containers.
-- **Experimental pointer-helper shims:** `/std/collections/experimental_buffer_checked/*` and
-  `/std/collections/experimental_buffer_unchecked/*` are temporary imported `.prime` helper namespaces used for
+- **Internal pointer-helper shims:** `/std/collections/internal_buffer_checked/*` and
+  `/std/collections/internal_buffer_unchecked/*` are explicit internal `.prime` helper namespaces used for
   container-conformance work. They wrap the qualified memory intrinsics into small alloc/grow/free plus
   checked/unchecked offset, read, and write helpers so future stdlib `vector`/`map` implementations can be proven
-  through import-driven VM/native/C++ tests before the canonical container names switch over.
+  through import-driven VM/native/C++ tests without presenting those helpers as candidate public collection APIs.
   - When any `/std...` import is present, the stdlib now also provides canonical `.prime` wrappers at
     `/std/collections/vector/*` over the current stdlib `vectorNew` / `vectorCount` / `vectorPush` helper surface. That
     imported path is now the sole public namespaced vector contract; the experimental vector namespace remains a

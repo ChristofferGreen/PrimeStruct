@@ -120,7 +120,7 @@ namespace std {
          /std/collections/experimental_vector/vectorDropRange<T>(
              values,
              /std/collections/experimental_vector/vectorCount<T>(values))
-         /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+         /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(values.data)
          assign(values.ownsData, false)
          values.set_field_count(0i32)
          values.set_field_capacity(0i32)
@@ -165,7 +165,7 @@ namespace std {
   [return<void>]
   mapOverwriteSlot<T>([Vector<T> mut] values, [i32] index, [T] value) {
     [Pointer<uninitialized<T>> mut] slot{
-        /std/collections/experimental_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index)}
+        /std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index)}
     drop(dereference(slot))
     init(dereference(slot), value)
   }

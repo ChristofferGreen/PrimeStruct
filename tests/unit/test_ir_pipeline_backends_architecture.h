@@ -91,6 +91,8 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("/std/gfx/experimental/*") != std::string::npos);
   CHECK(design.find("Legacy compatibility shim over canonical `/std/gfx/*`") != std::string::npos);
   CHECK(design.find("no longer part of the public gfx contract") != std::string::npos);
+  CHECK(design.find("/std/collections/internal_buffer_checked/*") != std::string::npos);
+  CHECK(design.find("/std/collections/internal_buffer_unchecked/*") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
 }
 

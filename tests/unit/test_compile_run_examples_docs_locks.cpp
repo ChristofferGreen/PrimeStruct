@@ -153,7 +153,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |") !=
         std::string::npos);
 
   CHECK(todo.find("### Stdlib De-Experimentalization Policy Summary") != std::string::npos);
@@ -165,14 +165,16 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_vector/*` and") != std::string::npos);
   CHECK(todo.find("/std/collections/experimental_map/*` now remain implementation-owned seams") !=
         std::string::npos);
-  CHECK(todo.find("Stdlib de-experimentalization: TODO-4057 through TODO-4059") !=
+  CHECK(todo.find("Stdlib de-experimentalization: TODO-4103 and TODO-4059") !=
         std::string::npos);
-  CHECK(todo.find("TODO-4057: Rename experimental substrate helpers") != std::string::npos);
+  CHECK(todo.find("TODO-4103: Rename the remaining experimental SoA storage namespace") != std::string::npos);
   CHECK(todo.find("  - depends_on: none") != std::string::npos);
   CHECK(todo.find("Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable") !=
         std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_vector/*`, and") !=
         std::string::npos);
+  CHECK(todo.find("/std/collections/internal_buffer_checked/*`,") != std::string::npos);
+  CHECK(todo.find("/std/collections/internal_buffer_unchecked/*`, and") != std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_storage/*` are implementation-facing") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
@@ -216,7 +218,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
-  CHECK(todo.find("TODO-4057") != std::string::npos);
+  CHECK(todo.find("TODO-4103") != std::string::npos);
   CHECK(todo.find("TODO-4059") != std::string::npos);
 }
 

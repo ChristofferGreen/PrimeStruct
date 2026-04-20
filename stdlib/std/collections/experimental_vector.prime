@@ -7,7 +7,7 @@ namespace std {
   Vector<T>() {
     [public i32] count
     [public i32] capacity
-    [public Pointer<uninitialized<T>>] data{/std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
+    [public Pointer<uninitialized<T>>] data{/std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(1i32)}
     [bool mut] ownsData{true}
 
     [return<i32>]
@@ -59,7 +59,7 @@ namespace std {
          then() {
            vectorCheckShape<T>(this)
            vectorDropRange<T>(this, this.count)
-           /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(this.data)
+           /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(this.data)
            assign(this.ownsData, false)
            assign(this.count, 0i32)
            assign(this.capacity, 0i32)
@@ -78,7 +78,7 @@ namespace std {
          empty[index]
        },
        else() { })
-    return(/std/collections/experimental_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+    return(/std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
   }
 
   [return<void>]
@@ -127,7 +127,7 @@ namespace std {
     [i32 mut] index{0i32}
     while(less_than(index, limit), do() {
       [Pointer<uninitialized<T>> mut] nextSlot{
-          /std/collections/experimental_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
+          /std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(dst, index)}
       init(dereference(nextSlot), vectorTakeSlot<T>(values, index))
       increment(index)
     })
@@ -142,7 +142,7 @@ namespace std {
     return(Vector<T>(
         count,
         capacity,
-        /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
+        /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
         true))
   }
 
@@ -196,9 +196,9 @@ namespace std {
                  then() { assign(allocCount, 1i32) },
                  else() { })
               [Pointer<uninitialized<T>> mut] grown{
-                  /std/collections/experimental_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
+                  /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount)}
               vectorMovePrefixToBuffer<T>(grown, values, values.field_count())
-              /std/collections/experimental_buffer_checked/bufferFree<uninitialized<T>>(values.data)
+              /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(values.data)
               assign(values.data, grown)
               values.set_field_capacity(capacity)
             },
