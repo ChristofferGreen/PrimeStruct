@@ -391,6 +391,30 @@ TEST_CASE("ir lowerer helper keeps bare pointer builtins inside namespaced stdli
   CHECK(primec::ir_lowerer::getBuiltinPointerName(
       generatedLocationCall, builtin));
   CHECK(builtin == "location");
+
+  primec::Expr namespacedCheckedDereferenceCall;
+  namespacedCheckedDereferenceCall.kind = primec::Expr::Kind::Call;
+  namespacedCheckedDereferenceCall.name = "dereference";
+  namespacedCheckedDereferenceCall.namespacePrefix =
+      "/std/collections/internal_buffer_checked";
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(
+      namespacedCheckedDereferenceCall, builtin));
+  CHECK(builtin == "dereference");
+  CHECK(primec::emitter::getBuiltinPointerOperator(
+      namespacedCheckedDereferenceCall, pointerOp));
+  CHECK(pointerOp == '*');
+
+  primec::Expr namespacedUncheckedLocationCall;
+  namespacedUncheckedLocationCall.kind = primec::Expr::Kind::Call;
+  namespacedUncheckedLocationCall.name = "location";
+  namespacedUncheckedLocationCall.namespacePrefix =
+      "/std/collections/internal_buffer_unchecked";
+  CHECK(primec::ir_lowerer::getBuiltinPointerName(
+      namespacedUncheckedLocationCall, builtin));
+  CHECK(builtin == "location");
+  CHECK(primec::emitter::getBuiltinPointerOperator(
+      namespacedUncheckedLocationCall, pointerOp));
+  CHECK(pointerOp == '&');
 }
 
 TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced stdlib internals") {

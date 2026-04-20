@@ -20,20 +20,29 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
-  const std::string prefix = "std/collections/internal_soa_storage/";
-  if (name.rfind(prefix, 0) != 0) {
-    return name;
+  const char *const builtinPrefixes[] = {
+      "std/collections/internal_soa_storage/",
+      "std/collections/internal_buffer_checked/",
+      "std/collections/internal_buffer_unchecked/",
+      "std/collections/experimental_soa_vector/",
+  };
+  for (const char *prefix : builtinPrefixes) {
+    const std::string prefixText(prefix);
+    if (name.rfind(prefixText, 0) != 0) {
+      continue;
+    }
+    std::string alias = name.substr(prefixText.size());
+    const size_t slash = alias.find_last_of('/');
+    if (slash != std::string::npos) {
+      alias = alias.substr(slash + 1);
+    }
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    return alias;
   }
-  std::string alias = name.substr(prefix.size());
-  const size_t slash = alias.find_last_of('/');
-  if (slash != std::string::npos) {
-    alias = alias.substr(slash + 1);
-  }
-  const size_t generatedSuffix = alias.find("__");
-  if (generatedSuffix != std::string::npos) {
-    alias.erase(generatedSuffix);
-  }
-  return alias;
+  return name;
 }
 
 bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
@@ -439,9 +448,9 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
       return true;
     }
   }
-  if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    const std::string helperName =
-        normalizeInternalSoaStorageBuiltinAlias(scopedName);
+  const std::string helperName =
+      normalizeInternalSoaStorageBuiltinAlias(scopedName);
+  if (helperName != scopedName) {
     if (helperName == "dereference" || helperName == "location") {
       out = helperName;
       return true;
