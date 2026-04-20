@@ -988,8 +988,8 @@ module {
 - **Graphics contract:** the windowed graphics language surface and locked spinning-cube v1 mini-spec are defined in
   `docs/Graphics_API_Design.md` (`/std/gfx/*`, profile deduction, `VertexColored` wire layout, deterministic `GfxError`
   codes). Current implementation status: the contract and host/sample coverage exist, canonical `/std/gfx/*` is now the
-  authoritative public gfx surface, and `/std/gfx/experimental/*` remains only as a temporary compatibility shim over
-  that canonical helper layer. The experimental path still keeps an explicit `.prime` `GraphicsSubstrate` token/config
+  authoritative public gfx surface, and `/std/gfx/experimental/*` remains only as a legacy compatibility shim over
+  that canonical helper layer rather than as part of the public gfx contract. The experimental path still keeps an explicit `.prime` `GraphicsSubstrate` token/config
   boundary for its legacy wrapper types, the constructor-shaped experimental and canonical `Window(...)`, `Device()`,
   and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers, canonical `Window(...)` and `Device()`
   now also route through a private `.prime` `GraphicsSubstrate.createWindow(...)` / `createDevice(...)` /
@@ -1019,8 +1019,9 @@ module {
   bind to one shared spinning-cube simulation reference helper instead of carrying their own inline fixed-step copy, the
   browser sample launcher now also delegates to one shared browser launch helper while its bootstrap/runtime shell now
   lives in `examples/web/shared/browser_runtime_shared.js` instead of staying embedded in `main.js`, real compile-run
-  conformance now imports both `/std/gfx/experimental/*` and `/std/gfx/*` and exercises that end-to-end wrapper path
-  across exe/vm/native, canonical and experimental gfx imports now reject deterministically on wasm (`wasm-browser`,
+  conformance now imports canonical `/std/gfx/*` and exercises that end-to-end wrapper path across exe/vm/native while
+  separate compatibility-shim tests keep `/std/gfx/experimental/*` pinned for residual legacy imports, canonical and
+  experimental gfx imports now reject deterministically on wasm (`wasm-browser`,
   `wasm-wasi`) and shader-only (`glsl`, `spirv`) emits until those targets gain runtime substrate, host-side sample
   `GfxError` mapping plus locked `VertexColored` upload layout definitions now live in one shared example header instead
   of being duplicated per macOS host, bare explicit bindings of Result-returning gfx wrappers still fail
@@ -2628,7 +2629,7 @@ Current `stdlib/std` experimental module classification:
 | --- | --- | --- | --- |
 | `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
-| `/std/gfx/experimental/*` | Temporary compatibility namespace | Compatibility shim over canonical `/std/gfx/*`; legacy wrapper imports remain only to preserve existing source while behavior continues to move through the canonical helper layer. | `TODO-4056` |
+| `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
 | `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity track. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace | Container-conformance and memory-wrapper plumbing, not a stable user-facing stdlib API. | `TODO-4057` |

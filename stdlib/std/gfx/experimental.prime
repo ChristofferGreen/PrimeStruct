@@ -4,10 +4,11 @@ import /std/gfx/*
 namespace std {
   namespace gfx {
   namespace experimental {
-  // Compatibility shim over canonical /std/gfx/*.
-  // Keep the legacy experimental wrappers importable, but route behavior
-  // through the canonical helper surface whenever the old type boundary does
-  // not force a separate experimental Result contract.
+  // Legacy compatibility shim over canonical /std/gfx/*.
+  // New public gfx code should import /std/gfx/*; this namespace remains only
+  // for targeted compatibility coverage and staged migration support.
+  // Route behavior through the canonical helper surface whenever the old type
+  // boundary does not force a separate experimental Result contract.
   [public struct]
   ColorFormat() {
     [public i32] value{0i32}

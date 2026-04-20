@@ -55,7 +55,8 @@ TEST_CASE("stdlib style boundary docs stay source locked") {
   CHECK(codeExamples.find("`stdlib/std/collections/soa_vector.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/soa_vector_conversions.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/gfx/gfx.prime`") != std::string::npos);
-  CHECK(codeExamples.find("Intentionally canonical or substrate-oriented code:") != std::string::npos);
+  CHECK(codeExamples.find("Internal implementation, bridge, or substrate-oriented code:") != std::string::npos);
+  CHECK(codeExamples.find("Intentionally canonical or substrate-oriented code:") == std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/bench_non_math/*`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/collections.prime`") != std::string::npos);
   CHECK(codeExamples.find("`stdlib/std/collections/experimental_*`") != std::string::npos);
@@ -150,7 +151,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Compatibility shim over canonical `/std/gfx/*`; legacy wrapper imports remain only to preserve existing source while behavior continues to move through the canonical helper layer. | `TODO-4056` |") !=
+  CHECK(primeStructDoc.find("| `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace |") !=
         std::string::npos);
@@ -164,11 +165,11 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_vector/*` and") != std::string::npos);
   CHECK(todo.find("/std/collections/experimental_map/*` now remain implementation-owned seams") !=
         std::string::npos);
-  CHECK(todo.find("Stdlib de-experimentalization: TODO-4056 through TODO-4059") !=
+  CHECK(todo.find("Stdlib de-experimentalization: TODO-4057 through TODO-4059") !=
         std::string::npos);
   CHECK(todo.find("TODO-4057: Rename experimental substrate helpers") != std::string::npos);
   CHECK(todo.find("  - depends_on: none") != std::string::npos);
-  CHECK(todo.find("Compatibility gfx shim: `/std/gfx/experimental/*` now remains only as a") !=
+  CHECK(todo.find("Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable") !=
         std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_vector/*`, and") !=
         std::string::npos);
@@ -178,7 +179,7 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("- [ ] TODO-4053:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4054:") == std::string::npos);
   CHECK(todo.find("TODO-4055") == std::string::npos);
-  CHECK(todo.find("TODO-4056") != std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4056:") == std::string::npos);
 }
 
 TEST_CASE("soa maturity track docs stay source locked") {
@@ -215,8 +216,8 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
-  CHECK(todo.find("TODO-4056") != std::string::npos);
   CHECK(todo.find("TODO-4057") != std::string::npos);
+  CHECK(todo.find("TODO-4059") != std::string::npos);
 }
 
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {
@@ -1439,6 +1440,10 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   const std::string gfxStdlib = readFile(gfxStdlibPath.string());
   const std::string gfxExperimental = readFile(gfxExperimentalPath.string());
 
+  CHECK(gfxExperimental.find("// Legacy compatibility shim over canonical /std/gfx/*.") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("New public gfx code should import /std/gfx/*; this namespace remains only") !=
+        std::string::npos);
   CHECK(gfxStdlib.find("return(Queue([token] this.token + 1i32))") != std::string::npos);
   CHECK(gfxStdlib.find("return(this.token > 0i32)") != std::string::npos);
   CHECK(gfxStdlib.find("if(this.height < 1i32)") != std::string::npos);

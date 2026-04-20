@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("experimental gfx end-to-end conformance runs across backends" * doctest::skip(true)) {
+TEST_CASE("gfx compatibility shim end-to-end coverage runs across backends" * doctest::skip(true)) {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -350,7 +350,7 @@ main() {
   }
 }
 
-TEST_CASE("experimental gfx static fields import across backends") {
+TEST_CASE("gfx compatibility shim static fields import across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 

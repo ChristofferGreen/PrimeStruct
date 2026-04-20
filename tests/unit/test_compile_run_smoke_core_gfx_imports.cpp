@@ -4,7 +4,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.smoke");
 
-TEST_CASE("experimental gfx type surface imports across backends") {
+TEST_CASE("gfx compatibility shim type surface imports across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -204,7 +204,7 @@ main() {
   CHECK(runCommand(nativePath) == 10);
 }
 
-TEST_CASE("experimental gfx error helper imports across backends") {
+TEST_CASE("gfx compatibility shim error helper imports across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
@@ -249,7 +249,7 @@ main() {
   CHECK(runCommand(nativePath) == 4);
 }
 
-TEST_CASE("experimental gfx substrate boundary imports across backends") {
+TEST_CASE("gfx compatibility shim substrate boundary imports across backends") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 

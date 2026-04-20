@@ -57,9 +57,10 @@ semantics after canonicalization.
   Treat `/std/gfx/*` as a hybrid surface: keep the public API shape in `.prime`
   wherever practical, while device/window/present substrate stays in host/runtime
   code.
-  Current `/std/gfx/experimental/*` status: it is now a compatibility shim
-  over canonical `/std/gfx/*`, so the legacy wrapper imports remain available
-  while new public gfx authority lives under the canonical namespace. The
+  Current `/std/gfx/experimental/*` status: it is now a legacy compatibility
+  shim over canonical `/std/gfx/*`, so the legacy wrapper imports remain
+  available only for targeted compatibility coverage while new public gfx
+  authority lives under the canonical namespace. The
   constructor-shaped `Window(...)` and `Device()` entry points now rewrite through
   substrate-backed helpers there, the fallible `create_swapchain(...)`,
   `create_mesh(...)`, and `frame()` wrapper paths now route through
@@ -69,8 +70,9 @@ semantics after canonicalization.
   handles, the shared spinning-cube native-window sample path now emits and
   consumes a deterministic canonical `/std/gfx/*` stream
   (`cubeStdGfxEmitFrameStream` via `--gfx`), real compile-run conformance now
-  imports `/std/gfx/experimental/*`
-  and exercises that wrapper path across exe/vm/native, and
+  imports canonical `/std/gfx/*` and exercises that public path across
+  exe/vm/native, while separate compatibility-shim coverage keeps
+  `/std/gfx/experimental/*` pinned for residual legacy imports, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites
   through the matching pipeline helper. The canonical `/std/gfx/*` entry
   points now mirror that same helper-backed slice in `.prime`, with the
@@ -97,7 +99,8 @@ semantics after canonicalization.
   / `end()` path now routes through minimal pass-encoding substrate helpers with deterministic zero-token / no-op
   fallback on invalid handles, the shared spinning-cube native-window sample path now emits and consumes a deterministic
   canonical `/std/gfx/*` stream (`cubeStdGfxEmitFrameStream` via `--gfx`), real compile-run conformance now imports
-  `/std/gfx/experimental/*` and exercises that wrapper path across exe/vm/native, and
+  canonical `/std/gfx/*` while separate compatibility-shim coverage keeps `/std/gfx/experimental/*` pinned for residual
+  legacy imports, and
   `Device.create_pipeline([vertex_type] VertexColored, ...)` now rewrites through the matching pipeline helper.
   The canonical `/std/gfx/*` entry points now mirror that same helper-backed slice in `.prime` and also have real
   compile-run conformance across exe/vm/native.

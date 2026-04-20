@@ -210,13 +210,14 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked" * doctest::
   {
     CAPTURE("GFX-V1-CONFORMANCE-STATUS");
     CHECK(graphicsDoc.find("real compile-run") != std::string::npos);
-    CHECK(graphicsDoc.find("conformance programs that import both") != std::string::npos);
-    CHECK(graphicsDoc.find("`/std/gfx/experimental/*` and") != std::string::npos);
-    CHECK(graphicsDoc.find("`/std/gfx/*` and exercise") != std::string::npos);
+    CHECK(graphicsDoc.find("programs that import canonical `/std/gfx/*`") != std::string::npos);
+    CHECK(graphicsDoc.find("Separate compatibility-shim tests") != std::string::npos);
     CHECK(graphicsDoc.find("across exe/vm/native") != std::string::npos);
-    CHECK(primeStructDoc.find("real compile-run conformance now imports both `/std/gfx/experimental/*` and `/std/gfx/*`") !=
+    CHECK(primeStructDoc.find("real compile-run conformance now imports canonical `/std/gfx/*`") !=
           std::string::npos);
-    CHECK(guidelinesDoc.find("real compile-run conformance now imports `/std/gfx/experimental/*`") !=
+    CHECK(guidelinesDoc.find("real compile-run conformance now imports canonical `/std/gfx/*`") !=
+          std::string::npos);
+    CHECK(guidelinesDoc.find("separate compatibility-shim coverage keeps") !=
           std::string::npos);
   }
 

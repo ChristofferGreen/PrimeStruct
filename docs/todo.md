@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4056
 - TODO-4057
 
 ### Immediate Next 10 (After Ready Now)
@@ -65,13 +64,12 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Stdlib de-experimentalization: TODO-4056 through TODO-4059
+- Stdlib de-experimentalization: TODO-4057 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4056
-2. TODO-4057
-3. TODO-4059
+1. TODO-4057
+2. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -81,7 +79,7 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4056, TODO-4057, TODO-4059 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4057, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -101,7 +99,7 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | TODO-4056, TODO-4057, TODO-4059 |
+| De-experimentalization surface and namespace parity | TODO-4057, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
@@ -130,7 +128,6 @@ Task template:
 - Canonical collection contract: `/std/collections/vector/*` and
   `/std/collections/map/*` are the sole public vector/map collection surfaces.
 - Temporary compatibility namespaces:
-  `/std/gfx/experimental/*`,
   `/std/collections/experimental_soa_vector/*`, and
   `/std/collections/experimental_soa_vector_conversions/*` stay transitional
   until their explicit shim, rename, or maturity TODOs land.
@@ -140,9 +137,9 @@ Task template:
   behind canonical `/std/collections/vector/*` and `/std/collections/map/*`,
   with direct imports kept only for targeted compatibility or conformance
   coverage.
-- Compatibility gfx shim: `/std/gfx/experimental/*` now remains only as a
-  legacy compatibility shim over canonical `/std/gfx/*`, not as a peer public
-  graphics namespace.
+- Legacy gfx compatibility seam: `/std/gfx/experimental/*` remains importable
+  only for targeted compatibility coverage and staged migration support;
+  canonical `/std/gfx/*` is the only public gfx namespace.
 - Internal substrate/helper namespaces:
   `/std/collections/experimental_buffer_checked/*`,
   `/std/collections/experimental_buffer_unchecked/*`, and
@@ -175,7 +172,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4056, TODO-4057
+  - depends_on: TODO-4057
   - scope: Remove stale experimental naming from public docs, examples, and user-facing guidance once the corresponding stdlib surfaces have been reclassified or renamed so the documented public contract no longer advertises transitional namespaces that are no longer meant for direct use.
   - acceptance:
     - Public docs and guidance no longer present completed collection/gfx/substrate de-experimentalization work as still experimental.
@@ -194,15 +191,3 @@ Task template:
     - The new naming makes their internal/substrate role explicit and leaves canonical public APIs routing through wrapper surfaces instead.
     - Any import, bridge, or docs updates needed by the rename stay limited to the targeted substrate helpers and do not fold in broader public API redesign.
   - stop_rule: Stop once the targeted substrate helper namespaces are clearly internal by name and usage; split any broader storage/runtime redesign into separate tasks.
-
-- [ ] TODO-4056: Retire `/std/gfx/experimental/*` after compatibility-shim parity is proven
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib De-Experimentalization
-  - depends_on: none
-  - scope: Remove the public `/std/gfx/experimental/*` namespace once the canonical `/std/gfx/*` surface and bridge-backed lowering/method resolution paths cover the same behavior and any needed compatibility window has been exercised.
-  - acceptance:
-    - Canonical `/std/gfx/*` is the only remaining public gfx namespace for the retired experimental surface area.
-    - Any temporary compatibility shim or import alias used during the transition is removed or narrowed to a clearly documented residual seam.
-    - Gfx resolution/lowering parity coverage confirms that removing the experimental public namespace does not change supported behavior.
-  - stop_rule: Stop once `/std/gfx/experimental/*` is no longer part of the public contract; split any backend-specific residual compatibility need into a separate follow-up item.
