@@ -1220,7 +1220,7 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
 
   CHECK(source.find("[mut] records{self.records}") != std::string::npos);
   CHECK(source.find("len{text.count()}") != std::string::npos);
-  CHECK(source.find("/std/collections/vector/at(text, index)") != std::string::npos);
+  CHECK(source.find("self.append_word(at(text, index))") != std::string::npos);
   CHECK(source.find("for([i32 mut] index{0i32}, index < len, ++index)") != std::string::npos);
   CHECK(source.find("[mut] words{vector<i32>()}") != std::string::npos);
   CHECK(source.find("[mut] kinds{self.kinds}") != std::string::npos);
@@ -1241,6 +1241,7 @@ TEST_CASE("ui stdlib workflows stay source locked to inferred locals") {
   CHECK(source.find("[vector<i32> mut] records{self.records}") == std::string::npos);
   CHECK(source.find("[i32] len{text.count()}") == std::string::npos);
   CHECK(source.find("text[index]") == std::string::npos);
+  CHECK(source.find("/std/collections/vector/at(text, index)") == std::string::npos);
   CHECK(source.find("[vector<i32> mut] words{vector<i32>()}") == std::string::npos);
   CHECK(source.find("[vector<i32> mut] kinds{self.kinds}") == std::string::npos);
   CHECK(source.find("[i32] panel{self.append_panel(parentIndex, panelPaddingPx, panelGapPx, 0i32, 0i32)}") ==

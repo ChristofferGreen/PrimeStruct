@@ -116,7 +116,7 @@ namespace std {
       self.append_color(color)
       self.append_word(len)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        self.append_word(/std/collections/vector/at(text, index))
+        self.append_word(at(text, index))
       }
       self.commandCount = self.commandCount + 1i32
     }
@@ -285,7 +285,7 @@ namespace std {
       len{text.count()}
       self.append_word(len)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        self.append_word(/std/collections/vector/at(text, index))
+        self.append_word(at(text, index))
       }
     }
 
@@ -463,7 +463,7 @@ namespace std {
       len{text.count()}
       self.append_word(len)
       for([i32 mut] index{0i32}, index < len, ++index) {
-        self.append_word(/std/collections/vector/at(text, index))
+        self.append_word(at(text, index))
       }
     }
 
