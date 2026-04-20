@@ -88,8 +88,11 @@
         std::string::npos);
   CHECK(validatorCollections.find("state->resolveExperimentalMapTarget =") != std::string::npos);
   CHECK(validatorCollections.find("state->resolveExperimentalMapValueTarget =") != std::string::npos);
-  CHECK(validatorCollections.find("struct ExperimentalMapHelperDescriptor {") != std::string::npos);
-  CHECK(validatorCollections.find("constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {") !=
+  CHECK(validatorCollections.find("resolvePublishedCollectionHelperMemberToken(") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("preferredPublishedCollectionLoweringPath(") !=
+        std::string::npos);
+  CHECK(validatorCollections.find("resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(validatorCollections.find("std::string SemanticsValidator::preferredExperimentalMapHelperTarget(std::string_view helperName) const {") !=
         std::string::npos);
@@ -106,16 +109,22 @@
   CHECK(validatorCollections.find("std::string SemanticsValidator::directMapHelperCompatibilityPath(") !=
         std::string::npos);
   CHECK(validatorCollections.find("enum class RemovedCollectionHelperFamily {") != std::string::npos);
-  CHECK(validatorCollections.find("struct RemovedCollectionHelperDescriptor {") != std::string::npos);
-  CHECK(validatorCollections.find("constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {") !=
-        std::string::npos);
   CHECK(validatorCollections.find("std::string SemanticsValidator::explicitRemovedCollectionMethodPath(std::string_view rawMethodName,") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::shouldPreserveRemovedCollectionHelperPath(const std::string &path) const {") !=
         std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::isUnnamespacedMapCountBuiltinFallbackCall(") !=
         std::string::npos);
-  CHECK(validatorCollections.find("findRemovedCollectionHelperReference(") != std::string::npos);
+  CHECK(validatorCollections.find("struct ExperimentalMapHelperDescriptor {") ==
+        std::string::npos);
+  CHECK(validatorCollections.find("constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {") ==
+        std::string::npos);
+  CHECK(validatorCollections.find("struct RemovedCollectionHelperDescriptor {") ==
+        std::string::npos);
+  CHECK(validatorCollections.find("constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {") ==
+        std::string::npos);
+  CHECK(validatorCollections.find("findRemovedCollectionHelperReference(") ==
+        std::string::npos);
   CHECK(validatorCollections.find("bool SemanticsValidator::resolveRemovedMapBodyArgumentTarget(") !=
         std::string::npos);
   CHECK(validatorCollections.find("if (inferQueryExprTypeText(target, params, locals, targetTypeText))") !=
@@ -225,6 +234,8 @@
         std::string::npos);
   CHECK(validatorExprMain.find("auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {") ==
         std::string::npos);
+  CHECK(validatorExprMain.find("auto preferredCanonicalExperimentalMapReferenceHelperTarget = [&](std::string_view helperName) {") ==
+        std::string::npos);
   CHECK(validatorExprMain.find("auto canonicalExperimentalMapHelperPath = [&](const std::string &resolvedPath, std::string &canonicalPathOut, std::string &helperNameOut) {") ==
         std::string::npos);
   CHECK(validatorExprMain.find("auto canonicalizeExperimentalMapHelperResolvedPath = [&](const std::string &resolvedPath,") ==
@@ -250,6 +261,8 @@
   CHECK(validatorExprMain.find("auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {") ==
         std::string::npos);
   CHECK(validatorExpr.find("preferredCanonicalExperimentalMapHelperTarget(helperName)") != std::string::npos);
+  CHECK(validatorExpr.find("this->preferredCanonicalExperimentalMapHelperTarget(") !=
+        std::string::npos);
   CHECK(validatorExpr.find("canonicalExperimentalMapHelperPath(") != std::string::npos);
   CHECK(validatorExpr.find("canonicalizeExperimentalMapHelperResolvedPath(") != std::string::npos);
   CHECK(validatorExpr.find("shouldBuiltinValidateCurrentMapWrapperHelper(") != std::string::npos);

@@ -1661,19 +1661,37 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorResultHelpers.cpp";
   const std::filesystem::path exprMethodTargetPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
+  const std::filesystem::path collectionCompatibilityPath =
+      repoRoot / "src" / "semantics" /
+      "SemanticsValidatorInferCollectionCompatibility.cpp";
+  const std::filesystem::path collectionCompatibilityInternalPath =
+      repoRoot / "src" / "semantics" /
+      "SemanticsValidatorInferCollectionCompatibilityInternal.h";
   REQUIRE(std::filesystem::exists(helperHeaderPath));
   REQUIRE(std::filesystem::exists(helperSourcePath));
   REQUIRE(std::filesystem::exists(buildCallResolutionPath));
   REQUIRE(std::filesystem::exists(resultHelpersPath));
   REQUIRE(std::filesystem::exists(exprMethodTargetPath));
+  REQUIRE(std::filesystem::exists(collectionCompatibilityPath));
+  REQUIRE(std::filesystem::exists(collectionCompatibilityInternalPath));
 
   const std::string helperHeaderSource = readText(helperHeaderPath);
   const std::string helperSource = readText(helperSourcePath);
   const std::string buildCallResolutionSource = readText(buildCallResolutionPath);
   const std::string resultHelpersSource = readText(resultHelpersPath);
   const std::string exprMethodTargetSource = readText(exprMethodTargetPath);
+  const std::string collectionCompatibilitySource =
+      readText(collectionCompatibilityPath);
+  const std::string collectionCompatibilityInternalSource =
+      readText(collectionCompatibilityInternalPath);
 
   CHECK(helperHeaderSource.find("std::string preferredFileHelperTarget(") !=
+        std::string::npos);
+  CHECK(helperHeaderSource.find(
+            "std::string preferredCanonicalExperimentalMapHelperTarget(") !=
+        std::string::npos);
+  CHECK(helperHeaderSource.find(
+            "bool shouldBuiltinValidateCurrentMapWrapperHelper(") !=
         std::string::npos);
   CHECK(helperSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
@@ -1722,10 +1740,68 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
         std::string::npos);
   CHECK(exprMethodTargetSource.find("auto preferredFileMethodTarget =") ==
         std::string::npos);
+  CHECK(exprMethodTargetSource.find(
+            "auto preferredExperimentalMapHelperTarget =") ==
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find(
+            "auto preferredCanonicalExperimentalMapHelperTarget =") ==
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find(
+            "auto preferredCanonicalExperimentalMapReferenceHelperTarget =") ==
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find(
+            "auto shouldBuiltinValidateCurrentMapWrapperHelper =") ==
+        std::string::npos);
   CHECK(exprMethodTargetSource.find("preferredFileErrorHelperTarget(normalizedMethodName)") !=
         std::string::npos);
   CHECK(exprMethodTargetSource.find("preferredFileHelperTarget(normalizedMethodName,") !=
         std::string::npos);
+  CHECK(exprMethodTargetSource.find(
+            "this->preferredCanonicalExperimentalMapHelperTarget(helperName)") !=
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find(
+            "this->preferredCanonicalExperimentalMapHelperTarget(") !=
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find(
+            "this->shouldBuiltinValidateCurrentMapWrapperHelper(") !=
+        std::string::npos);
+
+  CHECK(collectionCompatibilityInternalSource.find(
+            "#include \"primec/StdlibSurfaceRegistry.h\"") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "resolvePublishedCollectionHelperMemberToken(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "preferredPublishedCollectionLoweringPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "constexpr ExperimentalMapHelperDescriptor kExperimentalMapHelperDescriptors[] = {") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "constexpr ExperimentalVectorHelperDescriptor kExperimentalVectorHelperDescriptors[] = {") ==
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "constexpr RemovedCollectionHelperDescriptor kRemovedCollectionHelperDescriptors[] = {") ==
+        std::string::npos);
+
+  CHECK(collectionCompatibilitySource.find(
+            "preferredPublishedCollectionLoweringPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "findExperimentalMapHelperByName(") == std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "findBorrowedExperimentalMapHelperByName(") == std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "findExperimentalMapCompatibilityHelper(") == std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "findRemovedCollectionHelperReference(") == std::string::npos);
 }
 
 TEST_CASE("semantics validator build struct-field publication stays stable") {

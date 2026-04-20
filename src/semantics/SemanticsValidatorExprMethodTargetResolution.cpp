@@ -451,51 +451,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
 
-  auto definitionPathContains = [&](std::string_view needle) {
-    return currentValidationState_.context.definitionPath.find(std::string(needle)) != std::string::npos;
-  };
-  auto preferredExperimentalMapHelperTarget = [&](std::string_view helperName) {
-    if (helperName == "count") {
-      return std::string("mapCount");
-    }
-    if (helperName == "contains") {
-      return std::string("mapContains");
-    }
-    if (helperName == "tryAt") {
-      return std::string("mapTryAt");
-    }
-    if (helperName == "at") {
-      return std::string("mapAt");
-    }
-    if (helperName == "at_unsafe") {
-      return std::string("mapAtUnsafe");
-    }
-    return std::string(helperName);
-  };
-  auto preferredCanonicalExperimentalMapHelperTarget = [&](std::string_view helperName) {
-    return "/std/collections/experimental_map/" + preferredExperimentalMapHelperTarget(helperName);
-  };
-  auto preferredCanonicalExperimentalMapReferenceHelperTarget = [&](std::string_view helperName) {
-    if (helperName == "count" || helperName == "count_ref") {
-      return std::string("/std/collections/experimental_map/mapCountRef");
-    }
-    if (helperName == "contains" || helperName == "contains_ref") {
-      return std::string("/std/collections/experimental_map/mapContainsRef");
-    }
-    if (helperName == "tryAt" || helperName == "tryAt_ref") {
-      return std::string("/std/collections/experimental_map/mapTryAtRef");
-    }
-    if (helperName == "at" || helperName == "at_ref") {
-      return std::string("/std/collections/experimental_map/mapAtRef");
-    }
-    if (helperName == "at_unsafe" || helperName == "at_unsafe_ref") {
-      return std::string("/std/collections/experimental_map/mapAtUnsafeRef");
-    }
-    if (helperName == "insert" || helperName == "insert_ref") {
-      return std::string("/std/collections/experimental_map/mapInsertRef");
-    }
-    return std::string();
-  };
   auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
   };
@@ -585,47 +540,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return std::string("/std/collections/experimental_soa_vector/soaVectorGetRef");
     }
     return std::string("/std/collections/experimental_soa_vector/soaVectorRefRef");
-  };
-  auto shouldBuiltinValidateCurrentMapWrapperHelper = [&](std::string_view helperName) {
-    if (helperName == "count" || helperName == "count_ref") {
-      if (helperName == "count_ref") {
-        return definitionPathContains("/mapCountRef");
-      }
-      return definitionPathContains("/mapCount");
-    }
-    if (helperName == "contains" || helperName == "contains_ref") {
-      if (helperName == "contains_ref") {
-        return definitionPathContains("/mapContainsRef") ||
-               definitionPathContains("/mapTryAtRef");
-      }
-      return definitionPathContains("/mapContains") ||
-             definitionPathContains("/mapTryAt");
-    }
-    if (helperName == "tryAt" || helperName == "tryAt_ref") {
-      if (helperName == "tryAt_ref") {
-        return definitionPathContains("/mapTryAtRef");
-      }
-      return definitionPathContains("/mapTryAt");
-    }
-    if (helperName == "at" || helperName == "at_ref") {
-      if (helperName == "at_ref") {
-        return definitionPathContains("/mapAtRef");
-      }
-      return definitionPathContains("/mapAt");
-    }
-    if (helperName == "at_unsafe" || helperName == "at_unsafe_ref") {
-      if (helperName == "at_unsafe_ref") {
-        return definitionPathContains("/mapAtUnsafeRef");
-      }
-      return definitionPathContains("/mapAtUnsafe");
-    }
-    if (helperName == "insert" || helperName == "insert_ref") {
-      if (helperName == "insert_ref") {
-        return definitionPathContains("/mapInsertRef");
-      }
-      return definitionPathContains("/mapInsert");
-    }
-    return false;
   };
   auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
@@ -1552,7 +1466,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
          resolvedOut == "/std/collections/map/at_unsafe" ||
          resolvedOut == "/std/collections/map/at_unsafe_ref" ||
          resolvedOut == "/std/collections/map/insert") &&
-        (shouldBuiltinValidateCurrentMapWrapperHelper(
+        (this->shouldBuiltinValidateCurrentMapWrapperHelper(
              resolvedOut.substr(std::string("/std/collections/map/").size())) ||
          hasImportedDefinitionPath(resolvedOut))) {
       isBuiltinOut = true;
@@ -1571,7 +1485,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
       }
-      return preferredCanonicalExperimentalMapHelperTarget(helperName);
+      return this->preferredCanonicalExperimentalMapHelperTarget(helperName);
     }
     if (explicitMapHelperPath.rfind("/std/collections/map/", 0) == 0) {
       return canonical;
@@ -2055,7 +1969,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
       return failMethodTargetResolutionDiagnostic(
           "unknown call target: " +
-          preferredCanonicalExperimentalMapHelperTarget(normalizedMethodName));
+          this->preferredCanonicalExperimentalMapHelperTarget(
+              normalizedMethodName));
     }
     return setPreferredMapMethodTarget(receiver, normalizedMethodName);
   }
@@ -2665,7 +2580,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string keyType;
     std::string valueType;
     if (resolveExperimentalMapTarget(receiver, keyType, valueType)) {
-      resolvedOut = preferredCanonicalExperimentalMapReferenceHelperTarget(normalizedMethodName);
+      resolvedOut =
+          this->preferredCanonicalExperimentalMapHelperTarget(
+              normalizedMethodName);
       isBuiltinOut = false;
       return true;
     }
