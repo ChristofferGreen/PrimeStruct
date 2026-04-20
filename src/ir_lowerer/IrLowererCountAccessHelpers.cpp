@@ -458,8 +458,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
+  const std::string scopedExprPath = resolveScopedCallPath(expr);
   const bool blocksBareVectorCountCall =
-      expr.kind == Expr::Kind::Call && expr.name == "count" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
+      expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
+      (scopedExprPath == "count" || scopedExprPath == "/std/collections/vector/count" ||
+       scopedExprPath == "std/collections/vector/count") &&
       (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
        !isVectorCountTarget(expr.args.front(), localsIn) &&
        !isFieldAccessTarget);
@@ -469,7 +472,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       !(isDynamicCollectionCountTargetFn &&
         isDynamicCollectionCountTargetFn(expr.args.front(), localsIn));
   const bool blocksBareVectorCapacityCall =
-      expr.kind == Expr::Kind::Call && expr.name == "capacity" && expr.namespacePrefix.empty() && expr.args.size() == 1 &&
+      expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
+      (scopedExprPath == "capacity" || scopedExprPath == "/std/collections/vector/capacity" ||
+       scopedExprPath == "std/collections/vector/capacity") &&
       (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
        !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)) &&
        !isFieldAccessTarget);
