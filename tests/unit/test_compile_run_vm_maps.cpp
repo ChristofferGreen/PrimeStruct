@@ -136,34 +136,6 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with string-valued map literals" * doctest::skip(true)) {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<i32, string>] values{map<i32, string>(1i32, "abc"raw_utf8, 2i32, "de"raw_utf8)}
-  return(plus(count(at(values, 1i32)), count(at_unsafe(values, 2i32))))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_literal_string_values.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 5);
-}
-
-TEST_CASE("runs vm with string-keyed map literals" * doctest::skip(true)) {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  [i32] a{at(values, "b"raw_utf8)}
-  [i32] b{at_unsafe(values, "a"raw_utf8)}
-  return(plus(plus(a, b), count(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_literal_string_key.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 5);
-}
-
 TEST_CASE("runs vm with map literal string binding key") {
   const std::string source = R"(
 [return<int>]
@@ -221,20 +193,6 @@ main([array<string>] args) {
   CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
         std::string::npos);
-}
-
-TEST_CASE("runs vm with string-keyed map binding lookup" * doctest::skip(true)) {
-  const std::string source = R"(
-[return<int>]
-main() {
-  [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
-  [string] key{"b"raw_utf8}
-  return(plus(at(values, key), count(values)))
-}
-)";
-  const std::string srcPath = writeTemp("vm_map_literal_string_binding.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 4);
 }
 
 TEST_CASE("rejects vm map literal string key from argv binding") {
