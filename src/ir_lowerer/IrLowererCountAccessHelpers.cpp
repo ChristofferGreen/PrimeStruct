@@ -30,6 +30,16 @@ std::string_view resolveSemanticProductText(const SemanticProgram &semanticProgr
   return fallback;
 }
 
+std::string resolveScopedCallPath(const Expr &expr) {
+  if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
+    return expr.name;
+  }
+  if (expr.namespacePrefix == "/") {
+    return "/" + expr.name;
+  }
+  return expr.namespacePrefix + "/" + expr.name;
+}
+
 bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
@@ -417,11 +427,15 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
+  const std::string targetCallPath =
+      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call
+          ? resolveScopedCallPath(expr.args.front())
+          : std::string{};
   const bool debugMapAtCountTarget =
       (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
       expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Call &&
-      expr.args.front().name == "/std/collections/map/at";
+      targetCallPath == "/std/collections/map/at";
   const bool isFieldAccessTarget =
       expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Call && expr.args.front().isFieldAccess;
@@ -486,8 +500,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
 
   if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
-    if (expr.args.front().kind == Expr::Kind::Call &&
-        expr.args.front().name == "/std/collections/map/at" && inferExprKind) {
+    if (expr.args.front().kind == Expr::Kind::Call && targetCallPath == "/std/collections/map/at" &&
+        inferExprKind) {
       error = "debug: dynamic count target /std/collections/map/at inferred kind=" +
               std::to_string(static_cast<int>(inferExprKind(expr.args.front(), localsIn)));
       return CountAccessCallEmitResult::Error;
@@ -581,7 +595,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
   if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
-      expr.args.front().kind == Expr::Kind::Call && expr.args.front().name == "/std/collections/map/at" &&
+      expr.args.front().kind == Expr::Kind::Call && targetCallPath == "/std/collections/map/at" &&
       inferExprKind) {
     error = "debug: unresolved count target kind for /std/collections/map/at (kind=" +
             std::to_string(static_cast<int>(inferExprKind(expr.args.front(), localsIn))) + ")";

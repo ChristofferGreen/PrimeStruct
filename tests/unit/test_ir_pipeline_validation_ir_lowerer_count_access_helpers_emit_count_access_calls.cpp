@@ -359,6 +359,89 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   CHECK_FALSE(classifiers.isStringCountCall(capacityCall, locals));
 }
 
+TEST_CASE("ir lowerer count access helpers normalize parser-shaped canonical map access receivers") {
+  using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using Result = primec::ir_lowerer::CountAccessCallEmitResult;
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyExpr;
+  keyExpr.kind = primec::Expr::Kind::Literal;
+  keyExpr.literalValue = 1;
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Call;
+  targetExpr.name = "at";
+  targetExpr.namespacePrefix = "/std/collections/map";
+  targetExpr.args = {valuesName, keyExpr};
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/std/collections/map/count";
+  callExpr.args = {targetExpr};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int emitExprCalls = 0;
+
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 9});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Error);
+  CHECK(error == "debug: dynamic count target /std/collections/map/at inferred kind=" +
+                     std::to_string(static_cast<int>(Kind::Int32)));
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  emitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return Kind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 11});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Error);
+  CHECK(error == "debug: unresolved count target kind for /std/collections/map/at (kind=" +
+                     std::to_string(static_cast<int>(Kind::Int32)) + ")");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer string literal helper interns string table values") {
   std::vector<std::string> stringTable;
   CHECK(primec::ir_lowerer::internLowererString("hello", stringTable) == 0);
