@@ -398,25 +398,30 @@ bool getBuiltinPointerName(const Expr &expr, std::string &out) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = resolveScopedExprName(expr);
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
+  std::string scopedName = resolveScopedExprName(expr);
+  if (!scopedName.empty() && scopedName[0] == '/') {
+    scopedName.erase(0, 1);
   }
-  if (name == "dereference" || name == "location" || name == "soa_vector/dereference" ||
-      name == "soa_vector/location") {
-    if (name == "soa_vector/dereference") {
+  std::string rawName = expr.name;
+  if (!rawName.empty() && rawName[0] == '/') {
+    rawName.erase(0, 1);
+  }
+  if (scopedName == "soa_vector/dereference" || scopedName == "soa_vector/location") {
+    if (scopedName == "soa_vector/dereference") {
       out = "dereference";
       return true;
     }
-    if (name == "soa_vector/location") {
+    if (scopedName == "soa_vector/location") {
       out = "location";
       return true;
     }
-    out = name;
-    return true;
   }
-  if (name.find('/') != std::string::npos) {
+  if (rawName.find('/') != std::string::npos) {
     return false;
+  }
+  if (rawName == "dereference" || rawName == "location") {
+    out = rawName;
+    return true;
   }
   return false;
 }
