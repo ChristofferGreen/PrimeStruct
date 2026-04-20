@@ -337,5 +337,158 @@ TEST_CASE("ir lowerer call helpers dispatch inline call with count fallbacks") {
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer call helpers preserve canonical map helper method return chains") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  auto isMapReceiver = [](const primec::Expr &expr) {
+    return expr.kind == primec::Expr::Kind::Name && expr.name == "values";
+  };
+  auto makeReturnTransform = [](const std::string &typeText) {
+    primec::Transform transform;
+    transform.name = "return";
+    transform.templateArgs = {typeText};
+    return transform;
+  };
+  auto makeMapHelper = [&](const std::string &path, const std::string &returnType) {
+    primec::Definition def;
+    def.fullPath = path;
+    const size_t slash = path.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      def.namespacePrefix = path.substr(0, slash);
+    }
+    def.transforms.push_back(makeReturnTransform(returnType));
+    return def;
+  };
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyLiteral;
+  keyLiteral.kind = primec::Expr::Kind::Literal;
+  keyLiteral.intWidth = 32;
+  keyLiteral.literalValue = 1;
+
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.name = "contains";
+  containsCall.isMethodCall = true;
+  containsCall.args = {valuesName, keyLiteral};
+
+  const primec::Definition markerContains =
+      makeMapHelper("/std/collections/map/contains", "Marker");
+  int markerContainsResolveCalls = 0;
+  int markerContainsEmitCalls = 0;
+  std::string error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            containsCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            isMapReceiver,
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++markerContainsResolveCalls;
+              return &markerContains;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
+              ++markerContainsEmitCalls;
+              CHECK(callExpr.name == "contains");
+              CHECK(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/map/contains");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error == "stale");
+  CHECK(markerContainsResolveCalls == 1);
+  CHECK(markerContainsEmitCalls == 1);
+
+  const primec::Definition builtinContains =
+      makeMapHelper("/std/collections/map/contains", "bool");
+  int builtinContainsEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            containsCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            isMapReceiver,
+            [&](const primec::Expr &) -> const primec::Definition * { return &builtinContains; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++builtinContainsEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(builtinContainsEmitCalls == 0);
+
+  primec::Expr tryAtCall;
+  tryAtCall.kind = primec::Expr::Kind::Call;
+  tryAtCall.name = "tryAt";
+  tryAtCall.isMethodCall = true;
+  tryAtCall.args = {valuesName, keyLiteral};
+
+  const primec::Definition markerTryAt =
+      makeMapHelper("/std/collections/map/tryAt", "Marker");
+  int markerTryAtResolveCalls = 0;
+  int markerTryAtEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            tryAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            isMapReceiver,
+            [&](const primec::Expr &) -> const primec::Definition * {
+              ++markerTryAtResolveCalls;
+              return &markerTryAt;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr, const primec::Definition &resolvedCallee) {
+              ++markerTryAtEmitCalls;
+              CHECK(callExpr.name == "tryAt");
+              CHECK(callExpr.isMethodCall);
+              CHECK(resolvedCallee.fullPath == "/std/collections/map/tryAt");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(error == "stale");
+  CHECK(markerTryAtResolveCalls == 1);
+  CHECK(markerTryAtEmitCalls == 1);
+
+  const primec::Definition builtinTryAt =
+      makeMapHelper("/std/collections/map/tryAt", "Result<i32, ContainerError>");
+  int builtinTryAtEmitCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallWithCountFallbacks(
+            tryAtCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            isMapReceiver,
+            [&](const primec::Expr &) -> const primec::Definition * { return &builtinTryAt; },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++builtinTryAtEmitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(error == "stale");
+  CHECK(builtinTryAtEmitCalls == 0);
+}
+
 
 TEST_SUITE_END();

@@ -91,6 +91,21 @@ bool isInlineMapBuiltinHelperName(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
+bool keepsBuiltinInlineReturnForPublishedMapHelper(std::string_view helperName,
+                                                   const Definition &callee) {
+  std::string declaredReturnType;
+  if (!inferReceiverTypeFromDeclaredReturn(callee, declaredReturnType)) {
+    return true;
+  }
+  if (helperName == "contains" || helperName == "contains_ref") {
+    return declaredReturnType == "bool";
+  }
+  if (helperName == "tryAt" || helperName == "tryAt_ref") {
+    return declaredReturnType == "Result";
+  }
+  return true;
+}
+
 bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   std::string resolvedHelperName;
   const bool hasPublishedResolvedHelper =
@@ -147,6 +162,9 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
     return false;
   }
   if (hasPublishedResolvedHelper && isInlineMapBuiltinHelperName(resolvedHelperName)) {
+    if (!keepsBuiltinInlineReturnForPublishedMapHelper(resolvedHelperName, callee)) {
+      return false;
+    }
     return true;
   }
   const size_t slash = callee.fullPath.find_last_of('/');
