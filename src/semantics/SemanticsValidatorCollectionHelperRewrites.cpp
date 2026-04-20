@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <cctype>
 #include <cstdint>
@@ -80,15 +81,13 @@ bool SemanticsValidator::bareMapHelperOperandIndices(
 }
 
 std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view helperName) const {
-  const std::string canonical = "/std/collections/map/" + std::string(helperName);
+  const std::string canonical = canonicalCollectionHelperPath(
+      StdlibSurfaceId::CollectionsMapHelpers, helperName);
   if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
-  if (helperName == "contains" || helperName == "contains_ref" ||
-      helperName == "tryAt" || helperName == "tryAt_ref" ||
-      helperName == "at" || helperName == "at_ref" ||
-      helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-      helperName == "insert" || helperName == "insert_ref") {
+  if (isPublishedMapBaseHelperName(helperName) ||
+      isPublishedBorrowedMapHelperName(helperName)) {
     return canonical;
   }
   const std::string alias = "/map/" + std::string(helperName);
@@ -203,7 +202,8 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
 }
 
 std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view helperName) const {
-  const std::string canonical = "/std/collections/vector/" + std::string(helperName);
+  const std::string canonical = canonicalCollectionHelperPath(
+      StdlibSurfaceId::CollectionsVectorHelpers, helperName);
   if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
@@ -311,17 +311,10 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
   if (!resolvesBuiltinVector && !resolvesExperimentalVector) {
     return false;
   }
-  auto preferredBareVectorDirectHelperTarget = [&](std::string_view helper) {
-    const std::string canonical = "/std/collections/vector/" + std::string(helper);
-    if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
-      return canonical;
-    }
-    return canonical;
-  };
   rewrittenOut = candidate;
   if (resolvesExperimentalVector) {
     const std::string preferredHelperPath =
-        preferredBareVectorDirectHelperTarget(helperName);
+        preferredBareVectorHelperTarget(helperName);
     if (hasImportedDefinitionPath(preferredHelperPath) ||
         hasDeclaredDefinitionPath(preferredHelperPath)) {
       rewrittenOut.name = preferredHelperPath;
@@ -343,7 +336,7 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
          experimentalHelperPath.find("__t") != std::string::npos &&
          defMap_.count(experimentalHelperPath) > 0);
     if (!hasVisibleExperimentalVectorHelperPath) {
-      rewrittenOut.name = preferredBareVectorDirectHelperTarget(helperName);
+      rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
     } else if (receiverIndex == 0 && !hasNamedArguments(candidate.argNames)) {
       rewrittenOut.isMethodCall = true;
       rewrittenOut.name = std::string(helperName);
@@ -357,7 +350,7 @@ bool SemanticsValidator::tryRewriteBareVectorHelperCall(
       }
     }
   } else {
-    rewrittenOut.name = preferredBareVectorDirectHelperTarget(helperName);
+    rewrittenOut.name = preferredBareVectorHelperTarget(helperName);
   }
   rewrittenOut.namespacePrefix.clear();
   return true;
@@ -390,18 +383,22 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalVectorHelperCall(
     if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
       normalizedMethod.erase(normalizedMethod.begin());
     }
-    if (normalizedMethod != "count" && normalizedMethod != "capacity" &&
-        normalizedMethod != "push" && normalizedMethod != "pop" &&
-        normalizedMethod != "reserve" && normalizedMethod != "clear" &&
-        normalizedMethod != "remove_at" && normalizedMethod != "remove_swap" &&
-        normalizedMethod != "at" && normalizedMethod != "at_unsafe") {
+    if (!resolvePublishedCollectionHelperMemberToken(
+            normalizedMethod,
+            StdlibSurfaceId::CollectionsVectorHelpers,
+            helperName) ||
+        helperName == "vector") {
       return false;
     }
-    helperName = normalizedMethod;
-    canonicalPath = "/std/collections/vector/" + normalizedMethod;
+    canonicalPath = canonicalCollectionHelperPath(
+        StdlibSurfaceId::CollectionsVectorHelpers, helperName);
+    if (canonicalPath.empty()) {
+      helperName.clear();
+      return false;
+    }
     const size_t lastSlash = canonicalPath.find_last_of('/');
     canonicalCandidate.isMethodCall = false;
-    canonicalCandidate.name = normalizedMethod;
+    canonicalCandidate.name = helperName;
     canonicalCandidate.namespacePrefix =
         lastSlash == std::string::npos ? std::string() : canonicalPath.substr(0, lastSlash);
   } else if (!canonicalExperimentalVectorHelperPath(resolveCalleePath(candidate),
@@ -511,7 +508,14 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
     if (!normalizedMethod.empty() && normalizedMethod.front() == '/') {
       normalizedMethod.erase(normalizedMethod.begin());
     }
-    if (normalizedMethod == "insert") {
+    if (!resolvePublishedCollectionHelperMemberToken(
+            normalizedMethod,
+            StdlibSurfaceId::CollectionsMapHelpers,
+            helperName) ||
+        !isPublishedMapBaseHelperName(helperName)) {
+      return false;
+    }
+    if (helperName == "insert") {
       std::string keyType;
       std::string valueType;
       const bool resolvesBorrowedExperimentalMap =
@@ -523,22 +527,28 @@ bool SemanticsValidator::tryRewriteCanonicalExperimentalMapHelperCall(
       rewrittenOut = candidate;
       rewrittenOut.isMethodCall = false;
       rewrittenOut.isFieldAccess = false;
-      rewrittenOut.name = "/std/collections/experimental_map/mapInsertRef";
+      rewrittenOut.name = preferredPublishedCollectionLoweringPath(
+          "insert_ref",
+          StdlibSurfaceId::CollectionsMapHelpers,
+          "/std/collections/experimental_map/");
+      if (rewrittenOut.name.empty()) {
+        rewrittenOut.name = "/std/collections/experimental_map/mapInsertRef";
+      }
       rewrittenOut.namespacePrefix.clear();
       if (rewrittenOut.templateArgs.empty()) {
         rewrittenOut.templateArgs = {keyType, valueType};
       }
       return true;
     }
-    if (normalizedMethod != "count" && normalizedMethod != "contains" && normalizedMethod != "tryAt" &&
-        normalizedMethod != "at" && normalizedMethod != "at_unsafe") {
+    canonicalPath = canonicalCollectionHelperPath(
+        StdlibSurfaceId::CollectionsMapHelpers, helperName);
+    if (canonicalPath.empty()) {
+      helperName.clear();
       return false;
     }
-    helperName = normalizedMethod;
-    canonicalPath = "/std/collections/map/" + normalizedMethod;
     const size_t lastSlash = canonicalPath.find_last_of('/');
     canonicalCandidate.isMethodCall = false;
-    canonicalCandidate.name = normalizedMethod;
+    canonicalCandidate.name = helperName;
     canonicalCandidate.namespacePrefix =
         lastSlash == std::string::npos ? std::string() : canonicalPath.substr(0, lastSlash);
   } else {

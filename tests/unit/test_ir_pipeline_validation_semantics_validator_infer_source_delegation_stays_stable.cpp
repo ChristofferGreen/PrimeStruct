@@ -679,6 +679,15 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") !=
         std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "#include \"SemanticsValidatorInferCollectionCompatibilityInternal.h\"") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "resolvePublishedCollectionHelperMemberToken(") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "preferredPublishedCollectionLoweringPath(") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::hasImportedDefinitionPath") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::inferDefinitionReturnBinding") !=

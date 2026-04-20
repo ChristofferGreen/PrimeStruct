@@ -56,33 +56,31 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4047
+- TODO-4048
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4048
 - TODO-4049
 - TODO-4050
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4047 through TODO-4051
+- Vector/map bridge rollout and ownership cutover: TODO-4048 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4047
-2. TODO-4048
-3. TODO-4049
-4. TODO-4050
-5. TODO-4052
-6. TODO-4058
-7. TODO-4053
-8. TODO-4055
-9. TODO-4054
-10. TODO-4056
-11. TODO-4057
-12. TODO-4059
+1. TODO-4048
+2. TODO-4049
+3. TODO-4050
+4. TODO-4052
+5. TODO-4058
+6. TODO-4053
+7. TODO-4055
+8. TODO-4054
+9. TODO-4056
+10. TODO-4057
+11. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -91,7 +89,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -279,15 +277,3 @@ Task template:
     - The vector/map IDs are emitted from bridge-backed semantic resolution rather than a second lowerer-specific classifier.
     - Source-lock or parity coverage documents the intended publication boundary for vector/map semantic IDs.
   - stop_rule: Stop once semantics publishes the vector/map IDs needed for lowering; split any broader semantic-product restructuring beyond that boundary into separate tasks.
-
-- [ ] TODO-4047: Move collection helper rewrites onto bridge-backed semantic queries
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4046
-  - scope: Refactor vector/map helper rewrite passes so they consume bridge-backed semantic queries instead of maintaining local path lists and canonical-to-experimental translation logic inside the rewrite code.
-  - acceptance:
-    - Vector/map helper rewrites use shared bridge-backed semantic classification instead of private string/path tables.
-    - Rewrite behavior remains covered by focused parity tests after the migration.
-    - The refactor reduces duplicated collection path knowledge instead of merely moving the same lists into another rewrite-local helper.
-  - stop_rule: Stop once vector/map rewrites are bridge-backed and parity-tested; split any rewrite family that still needs a separate migration seam into its own follow-up item.
