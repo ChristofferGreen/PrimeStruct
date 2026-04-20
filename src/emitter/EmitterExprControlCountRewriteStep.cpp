@@ -14,6 +14,9 @@ bool isBareCallName(const Expr &expr, const char *name) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty() || name == nullptr) {
     return false;
   }
+  if (!expr.namespacePrefix.empty()) {
+    return false;
+  }
   if (!expr.name.empty() && expr.name.front() == '/') {
     return false;
   }

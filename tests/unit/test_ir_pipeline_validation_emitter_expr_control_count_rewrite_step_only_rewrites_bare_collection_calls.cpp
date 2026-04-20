@@ -124,6 +124,24 @@ TEST_CASE("emitter expr control count-rewrite step only rewrites bare collection
                   [&](const primec::Expr &, std::string &) { return true; })
                   .has_value());
 
+  primec::Expr parserShapedCanonicalCountExpr = countExpr;
+  parserShapedCanonicalCountExpr.namespacePrefix = "/std/collections/map";
+  int parserShapedCanonicalCountResolveCalls = 0;
+  CHECK_FALSE(primec::emitter::runEmitterExprControlCountRewriteStep(
+                  parserShapedCanonicalCountExpr,
+                  "/std/collections/map/count",
+                  {},
+                  {},
+                  {},
+                  {},
+                  {},
+                  [&](const primec::Expr &, std::string &) {
+                    ++parserShapedCanonicalCountResolveCalls;
+                    return true;
+                  })
+                  .has_value());
+  CHECK(parserShapedCanonicalCountResolveCalls == 0);
+
   primec::Expr aliasCapacityExpr = countExpr;
   aliasCapacityExpr.name = "/vector/capacity";
   int aliasCapacityResolveCalls = 0;
