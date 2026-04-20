@@ -8,6 +8,17 @@ namespace primec::emitter {
 
 namespace {
 
+bool matchesScopedBuiltinSimpleCall(const Expr &expr, const char *nameToMatch) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  const std::string resolved = resolveExprPath(expr);
+  if (normalizeInternalSoaStorageBuiltinAlias(resolved) == nameToMatch) {
+    return true;
+  }
+  return isSimpleCallName(expr, nameToMatch);
+}
+
 bool isSoaVectorTypeNameLocal(const std::string &typeName) {
   std::string normalized = typeName;
   if (!normalized.empty() && normalized.front() == '/') {
@@ -171,7 +182,9 @@ bool isStringValue(const Expr &target, const std::unordered_map<std::string, Bin
     return it != localTypes.end() && it->second.typeName == "string";
   }
   if (target.kind == Expr::Kind::Call) {
-    if ((isSimpleCallName(target, "at") || isSimpleCallName(target, "at_unsafe")) && target.args.size() == 2) {
+    if ((matchesScopedBuiltinSimpleCall(target, "at") ||
+         matchesScopedBuiltinSimpleCall(target, "at_unsafe")) &&
+        target.args.size() == 2) {
       std::string elementType;
       if (inferCollectionElementTypeNameFromExpr(target.args.front(), localTypes, {}, elementType) &&
           normalizeBindingTypeName(elementType) == "string") {
@@ -183,7 +196,7 @@ bool isStringValue(const Expr &target, const std::unordered_map<std::string, Bin
 }
 
 bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
+  if (!matchesScopedBuiltinSimpleCall(call, "count") || call.args.size() != 1) {
     return false;
   }
   if (isExplicitArrayCountName(call) && isVectorValue(call.args.front(), localTypes)) {
@@ -193,7 +206,7 @@ bool isArrayCountCall(const Expr &call, const std::unordered_map<std::string, Bi
 }
 
 bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
+  if (!matchesScopedBuiltinSimpleCall(call, "count") || call.args.size() != 1) {
     return false;
   }
   if (isExplicitMapCountNameLocal(call)) {
@@ -203,14 +216,14 @@ bool isMapCountCall(const Expr &call, const std::unordered_map<std::string, Bind
 }
 
 bool isStringCountCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  if (!isSimpleCallName(call, "count") || call.args.size() != 1) {
+  if (!matchesScopedBuiltinSimpleCall(call, "count") || call.args.size() != 1) {
     return false;
   }
   return isStringValue(call.args.front(), localTypes);
 }
 
 bool isVectorCapacityCall(const Expr &call, const std::unordered_map<std::string, BindingInfo> &localTypes) {
-  if (!isSimpleCallName(call, "capacity") || call.args.size() != 1) {
+  if (!matchesScopedBuiltinSimpleCall(call, "capacity") || call.args.size() != 1) {
     return false;
   }
   return isVectorValue(call.args.front(), localTypes);

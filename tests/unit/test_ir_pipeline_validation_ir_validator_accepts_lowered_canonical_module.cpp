@@ -1016,6 +1016,75 @@ TEST_CASE("emitter helpers keep internal soa builtins under rooted and namespace
   CHECK(mutation == "increment");
 }
 
+TEST_CASE("emitter collection inference keeps namespaced internal soa builtins") {
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+
+  primec::emitter::BindingInfo arrayInfo;
+  arrayInfo.typeName = "array";
+  arrayInfo.typeTemplateArg = "i32";
+  localTypes.emplace("items", arrayInfo);
+
+  primec::Expr namespacedCountCall;
+  namespacedCountCall.kind = primec::Expr::Kind::Call;
+  namespacedCountCall.name = "count";
+  namespacedCountCall.namespacePrefix = "/std/collections/internal_soa_storage";
+
+  primec::Expr itemsName;
+  itemsName.kind = primec::Expr::Kind::Name;
+  itemsName.name = "items";
+  namespacedCountCall.args.push_back(itemsName);
+
+  CHECK(primec::emitter::isArrayCountCall(namespacedCountCall, localTypes));
+
+  primec::emitter::BindingInfo vectorInfo;
+  vectorInfo.typeName = "vector";
+  vectorInfo.typeTemplateArg = "i32";
+  localTypes.emplace("values", vectorInfo);
+
+  primec::Expr namespacedCapacityCall;
+  namespacedCapacityCall.kind = primec::Expr::Kind::Call;
+  namespacedCapacityCall.name = "capacity";
+  namespacedCapacityCall.namespacePrefix = "/std/collections/internal_soa_storage";
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+  namespacedCapacityCall.args.push_back(valuesName);
+
+  CHECK(primec::emitter::isVectorCapacityCall(namespacedCapacityCall, localTypes));
+
+  primec::emitter::BindingInfo stringInfo;
+  stringInfo.typeName = "string";
+  localTypes.emplace("text", stringInfo);
+
+  primec::Expr namespacedAtCall;
+  namespacedAtCall.kind = primec::Expr::Kind::Call;
+  namespacedAtCall.name = "at";
+  namespacedAtCall.namespacePrefix = "/std/collections/internal_soa_storage";
+
+  primec::Expr textName;
+  textName.kind = primec::Expr::Kind::Name;
+  textName.name = "text";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  namespacedAtCall.args.push_back(textName);
+  namespacedAtCall.args.push_back(indexLiteral);
+
+  CHECK(primec::emitter::isStringValue(namespacedAtCall, localTypes));
+
+  primec::Expr namespacedStringCountCall;
+  namespacedStringCountCall.kind = primec::Expr::Kind::Call;
+  namespacedStringCountCall.name = "count";
+  namespacedStringCountCall.namespacePrefix = "/std/collections/internal_soa_storage";
+  namespacedStringCountCall.args.push_back(textName);
+
+  CHECK(primec::emitter::isStringCountCall(namespacedStringCountCall, localTypes));
+}
+
 TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   const auto *vectorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_vector/vectorPush");
