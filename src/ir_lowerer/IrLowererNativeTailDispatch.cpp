@@ -8,6 +8,22 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isExplicitDirectMapCountContainsTryAtCall(const Expr &expr) {
+  if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  std::string normalizedName = expr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  return normalizedName == "map/count" ||
+         normalizedName == "std/collections/map/count" ||
+         normalizedName == "map/contains" ||
+         normalizedName == "std/collections/map/contains" ||
+         normalizedName == "map/tryAt" ||
+         normalizedName == "std/collections/map/tryAt";
+}
+
 } // namespace
 
 bool isMapContainsHelperName(const Expr &expr);
@@ -183,6 +199,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   if (!expr.isMethodCall && isMapContainsHelperName(expr)) {
+    if (isExplicitDirectMapCountContainsTryAtCall(expr)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     if (expr.args.size() != 2) {
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
@@ -243,6 +262,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   if (!expr.isMethodCall && isMapTryAtHelperName(expr)) {
+    if (isExplicitDirectMapCountContainsTryAtCall(expr)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     if (expr.args.size() != 2) {
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
@@ -281,6 +303,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   }
 
   std::string accessName;
+  if (isExplicitDirectMapCountContainsTryAtCall(expr) && !expr.args.empty() &&
+      resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
+    return NativeCallTailDispatchResult::NotHandled;
+  }
   if (getBuiltinArrayAccessName(expr, accessName)) {
     const auto arrayVectorTargetInfo = !expr.args.empty()
                                            ? resolveArrayVectorAccessTargetInfo(

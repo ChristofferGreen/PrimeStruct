@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission" * doctest::skip(true)) {
+TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
@@ -106,8 +106,18 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
     }
   };
 
-  expectDispatch("/map/count", {mapName}, Result::Emitted, "stale");
-  expectDispatch("/std/collections/map/count", {mapName}, Result::Emitted, "stale");
+  expectDispatch("/map/count", {mapName}, Result::NotHandled, "stale");
+  expectDispatch("/std/collections/map/count", {mapName}, Result::NotHandled, "stale");
+  expectDispatch("/map/contains", {mapName, keyName}, Result::NotHandled, "stale");
+  expectDispatch("/std/collections/map/contains",
+                 {mapName, keyName},
+                 Result::NotHandled,
+                 "stale");
+  expectDispatch("/map/tryAt", {mapName, keyName}, Result::NotHandled, "stale");
+  expectDispatch("/std/collections/map/tryAt",
+                 {mapName, keyName},
+                 Result::NotHandled,
+                 "stale");
   expectDispatch(
       "/map/at", {mapName, keyName}, Result::Error, "native backend requires map lookup key type to match map key type");
   expectDispatch("/std/collections/map/at",
