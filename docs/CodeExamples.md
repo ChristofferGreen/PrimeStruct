@@ -1,7 +1,7 @@
 # PrimeStruct Code Examples
 
 Status: Draft
-Last updated: 2026-04-19
+Last updated: 2026-04-20
 
 This document captures practical code-quality guidance for user-facing
 PrimeStruct code examples. It focuses on readable top-level source form rather
@@ -204,6 +204,39 @@ Why this is good:
 - The member function stays on the documented lowerCamelCase convention.
 - The example shows user-defined method-call syntax without extra control-flow noise.
 
+### Visibility and Static Helpers
+
+When a struct exposes behavior but keeps its storage private, show the public
+instance helper and the current direct-call form for static helpers together.
+
+```prime
+[struct]
+Counter {
+  [private int] value{0}
+
+  [public int]
+  doubled() {
+    return(this.value * 2)
+  }
+
+  [public static int]
+  default_step() {
+    return(2)
+  }
+}
+
+[int]
+use_counter() {
+  counter{Counter([value] 5)}
+  return(counter.doubled() + /Counter/default_step())
+}
+```
+
+Why this is good:
+- The private field keeps direct state access out of the call site.
+- The public instance helper shows the normal method-style surface for owned behavior.
+- The example also documents the current direct-call spelling for static helpers.
+
 ### Concise Local Binding with Labeled Construction
 
 When the initializer already makes the type obvious, prefer the concise local
@@ -389,6 +422,33 @@ Current note:
   names the type.
 - The explicit constructor form `vector<T>{...}` remains valid, but docs no
   longer need it as a fallback for the readable vector loop example.
+
+## Intentional Diagnostic Examples
+
+These examples are intentionally invalid. Use them to show language rules that
+should fail at compile time.
+
+### Use-after-move on Owning Collections
+
+When a helper consumes an owning heap-backed value, later use of the moved-from
+binding should stay visibly invalid.
+
+```prime
+import /std/collections/*
+
+[effects(heap_alloc), int]
+use_after_move() {
+  [vector<int> mut] values{1, 2}
+  moved{move(values)}
+
+  return(values.count()) // error: use-after-move: values
+}
+```
+
+Why this is good:
+- The required `heap_alloc` effect makes the ownership transfer concrete.
+- The failing line is obvious at a glance, which makes the diagnostic easy to teach.
+- The example shows move tracking on a real owning collection instead of a trivial scalar or local-only value.
 
 ## Example Hygiene
 
