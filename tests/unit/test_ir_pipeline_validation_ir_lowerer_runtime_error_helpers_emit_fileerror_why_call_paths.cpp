@@ -641,6 +641,17 @@ TEST_CASE("ir lowerer setup inference helper infers pointer target kinds") {
               return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
             }) == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 
+  primec::Expr referencePlusCall;
+  referencePlusCall.kind = primec::Expr::Kind::Call;
+  referencePlusCall.name = "plus";
+  referencePlusCall.args = {refName, one};
+  CHECK(primec::ir_lowerer::inferPointerTargetValueKind(
+            referencePlusCall,
+            locals,
+            [](const primec::Expr &expr, std::string &builtinName) {
+              return primec::ir_lowerer::getBuiltinOperatorName(expr, builtinName);
+            }) == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
+
   primec::ir_lowerer::LocalInfo argsPackReferenceInfo;
   argsPackReferenceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   argsPackReferenceInfo.isArgsPack = true;

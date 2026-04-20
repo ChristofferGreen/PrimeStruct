@@ -14,7 +14,9 @@ bool isPointerExpression(const Expr &expr,
                          const GetSetupInferenceBuiltinOperatorNameFn &getBuiltinOperatorName) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
-    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Pointer;
+    return it != localsIn.end() &&
+           (it->second.kind == LocalInfo::Kind::Pointer ||
+            it->second.kind == LocalInfo::Kind::Reference);
   }
   if (expr.kind == Expr::Kind::Call && isSimpleCallName(expr, "location")) {
     return true;

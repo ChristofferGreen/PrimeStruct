@@ -228,12 +228,29 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
   isPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
     if (candidate.kind == Expr::Kind::Name) {
       auto it = localsRef.find(candidate.name);
-      return it != localsRef.end() && it->second.kind == LocalInfo::Kind::Pointer;
+      return it != localsRef.end() &&
+             (it->second.kind == LocalInfo::Kind::Pointer ||
+              it->second.kind == LocalInfo::Kind::Reference);
     }
     if (candidate.kind == Expr::Kind::Call && isSimpleCallName(candidate, "location")) {
       return true;
     }
     if (candidate.kind == Expr::Kind::Call) {
+      std::string memoryBuiltinName;
+      if (getBuiltinMemoryName(candidate, memoryBuiltinName)) {
+        if (memoryBuiltinName == "alloc" && candidate.templateArgs.size() == 1) {
+          return true;
+        }
+        if (memoryBuiltinName == "realloc" && candidate.args.size() == 2) {
+          return isPointerOperand(candidate.args.front(), localsRef);
+        }
+        if (memoryBuiltinName == "at" && candidate.args.size() == 3) {
+          return isPointerOperand(candidate.args.front(), localsRef);
+        }
+        if (memoryBuiltinName == "at_unsafe" && candidate.args.size() == 2) {
+          return isPointerOperand(candidate.args.front(), localsRef);
+        }
+      }
       std::string opName;
       if (getBuiltinOperatorName(candidate, opName) && (opName == "plus" || opName == "minus") &&
           candidate.args.size() == 2) {
@@ -241,6 +258,18 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       }
     }
     return false;
+  };
+  auto emitPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
+    if (candidate.kind == Expr::Kind::Name) {
+      auto it = localsRef.find(candidate.name);
+      if (it != localsRef.end() &&
+          (it->second.kind == LocalInfo::Kind::Pointer ||
+           it->second.kind == LocalInfo::Kind::Reference)) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
+        return true;
+      }
+    }
+    return emitExpr(candidate, localsRef);
   };
   bool leftPointer = false;
   bool rightPointer = false;
@@ -265,7 +294,8 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       }
     }
   }
-  if (!emitExpr(expr.args[0], localsIn)) {
+  if ((leftPointer || rightPointer) ? !emitPointerOperand(expr.args[0], localsIn)
+                                    : !emitExpr(expr.args[0], localsIn)) {
     return OperatorArithmeticEmitResult::Error;
   }
   if (!emitExpr(expr.args[1], localsIn)) {
