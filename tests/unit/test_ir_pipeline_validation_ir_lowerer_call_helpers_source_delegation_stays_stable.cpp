@@ -2858,6 +2858,18 @@ TEST_CASE("ir lowerer call helpers keep experimental map helper aliases off spec
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
             explicitUnspecializedHelperCall, specializedDefMap, specializedResolveExprPath) ==
         &specializedHelperDef);
+
+  primec::Definition competingRawHelperDef;
+  competingRawHelperDef.fullPath = "/std/collections/experimental_map/mapCount";
+  const std::unordered_map<std::string, const primec::Definition *> competingDefMap = {
+      {competingRawHelperDef.fullPath, &competingRawHelperDef},
+      {specializedHelperDef.fullPath, &specializedHelperDef},
+      {specializedMapMethodDef.fullPath, &specializedMapMethodDef},
+  };
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(
+            explicitUnspecializedHelperCall, competingDefMap, resolveExprPath) ==
+        &competingRawHelperDef);
 }
 
 TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for lowered helper spellings") {

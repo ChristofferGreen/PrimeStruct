@@ -555,6 +555,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "vector.prime";
   std::filesystem::path mapStdlibPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "map.prime";
+  std::filesystem::path experimentalMapStdlibPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_map.prime";
   std::filesystem::path soaConversionsPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
   if (!std::filesystem::exists(codeExamplesPath)) {
@@ -569,6 +571,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   if (!std::filesystem::exists(mapStdlibPath)) {
     mapStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "collections" / "map.prime";
   }
+  if (!std::filesystem::exists(experimentalMapStdlibPath)) {
+    experimentalMapStdlibPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_map.prime";
+  }
   if (!std::filesystem::exists(soaConversionsPath)) {
     soaConversionsPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
@@ -577,12 +583,14 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(maybeStdlibPath));
   REQUIRE(std::filesystem::exists(vectorStdlibPath));
   REQUIRE(std::filesystem::exists(mapStdlibPath));
+  REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
   REQUIRE(std::filesystem::exists(soaConversionsPath));
 
   const std::string codeExamples = readFile(codeExamplesPath.string());
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
   const std::string vectorStdlib = readFile(vectorStdlibPath.string());
   const std::string mapStdlib = readFile(mapStdlibPath.string());
+  const std::string experimentalMapStdlib = readFile(experimentalMapStdlibPath.string());
   const std::string soaConversions = readFile(soaConversionsPath.string());
 
   CHECK(codeExamples.find("[mut] current{start}") != std::string::npos);
@@ -613,6 +621,11 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(mapStdlib.find("[i32] entryCount{count(entries)}") == std::string::npos);
   CHECK(mapStdlib.find("[Entry<K, V>] current{entries[index]}") == std::string::npos);
+
+  CHECK(experimentalMapStdlib.find("[Vector<K>] keys{this.keys}") != std::string::npos);
+  CHECK(experimentalMapStdlib.find("return(/std/collections/experimental_vector/vectorCount<K>(keys))") !=
+        std::string::npos);
+  CHECK(experimentalMapStdlib.find("return(mapCount<K, V>(this))") == std::string::npos);
 
   CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count<T>(values)}") !=
         std::string::npos);

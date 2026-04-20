@@ -66,7 +66,8 @@ namespace std {
 
     [public return<i32>]
     count() {
-      return(mapCount<K, V>(this))
+      [Vector<K>] keys{this.keys}
+      return(/std/collections/experimental_vector/vectorCount<K>(keys))
     }
 
     [public return<bool> Comparable<K>]
