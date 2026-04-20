@@ -105,6 +105,53 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
       CHECK_FALSE(instructions.empty());
     }
   };
+  auto expectNamespacedDispatch = [&](const char *namespacePrefix,
+                                      const char *helperName,
+                                      const std::vector<primec::Expr> &args,
+                                      Result expectedResult,
+                                      const std::string &expectedError) {
+    primec::Expr callExpr;
+    callExpr.kind = primec::Expr::Kind::Call;
+    callExpr.namespacePrefix = namespacePrefix;
+    callExpr.name = helperName;
+    callExpr.args = args;
+
+    instructions.clear();
+    std::string error = "stale";
+    CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+              callExpr,
+              locals,
+              [](const primec::Expr &, std::string &) { return false; },
+              [](const std::string &) { return true; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+                return false;
+              },
+              emitExpr,
+              resolveMapAccessTargetInfo,
+              resolveArrayVectorAccessTargetInfo,
+              [](const primec::Expr &, std::string &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                return LocalInfo::ValueKind::Unknown;
+              },
+              []() { return 0; },
+              []() {},
+              []() {},
+              []() {},
+              instructionCount,
+              emitInstruction,
+              patchInstructionImm,
+              error) == expectedResult);
+    CHECK(error == expectedError);
+    if (expectedResult == Result::NotHandled) {
+      CHECK(instructions.empty());
+    } else {
+      CHECK_FALSE(instructions.empty());
+    }
+  };
 
   expectDispatch("/map/count", {mapName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/count", {mapName}, Result::NotHandled, "stale");
@@ -132,6 +179,21 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                  {mapName, keyName},
                  Result::Error,
                  "native backend requires map lookup key type to match map key type");
+  expectNamespacedDispatch("/std/collections/map",
+                           "count",
+                           {mapName},
+                           Result::NotHandled,
+                           "stale");
+  expectNamespacedDispatch("/std/collections/map",
+                           "contains",
+                           {mapName, keyName},
+                           Result::NotHandled,
+                           "stale");
+  expectNamespacedDispatch("/std/collections/map",
+                           "tryAt",
+                           {mapName, keyName},
+                           Result::NotHandled,
+                           "stale");
 }
 
 TEST_CASE("ir lowerer call helpers emit local vector count capacity calls through native tail dispatch") {

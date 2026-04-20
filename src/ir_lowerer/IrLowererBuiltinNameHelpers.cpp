@@ -312,7 +312,18 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return alias;
   };
-  std::string name = expr.name;
+  std::string name;
+  if (!expr.name.empty() && expr.name[0] == '/') {
+    name = expr.name;
+  } else if (!expr.namespacePrefix.empty()) {
+    name = expr.namespacePrefix;
+    if (!name.empty() && name.front() != '/') {
+      name.insert(name.begin(), '/');
+    }
+    name += "/" + expr.name;
+  } else {
+    name = expr.name;
+  }
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }

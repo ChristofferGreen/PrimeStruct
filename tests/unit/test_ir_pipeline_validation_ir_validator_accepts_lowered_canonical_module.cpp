@@ -352,6 +352,35 @@ TEST_CASE("ir lowerer access helper rejects removed rooted vector access aliases
   CHECK(helperName.empty());
 }
 
+TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpers") {
+  primec::Expr namespacedVectorAccessCall;
+  namespacedVectorAccessCall.kind = primec::Expr::Kind::Call;
+  namespacedVectorAccessCall.namespacePrefix = "/std/collections/vector";
+  namespacedVectorAccessCall.name = "at";
+
+  std::string helperName;
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      namespacedVectorAccessCall, helperName));
+  CHECK(helperName == "at");
+
+  primec::Expr namespacedMapAccessCall;
+  namespacedMapAccessCall.kind = primec::Expr::Kind::Call;
+  namespacedMapAccessCall.namespacePrefix = "/std/collections/map";
+  namespacedMapAccessCall.name = "at_unsafe";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      namespacedMapAccessCall, helperName));
+  CHECK(helperName == "at_unsafe");
+
+  primec::Expr removedAliasCall = namespacedVectorAccessCall;
+  removedAliasCall.namespacePrefix = "/vector";
+  helperName.clear();
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinArrayAccessName(
+      removedAliasCall, helperName));
+  CHECK(helperName.empty());
+}
+
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
   const std::string source = R"(
 import /std/collections/*

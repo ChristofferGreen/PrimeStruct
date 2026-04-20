@@ -8,11 +8,25 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string resolveNativeTailCallPathWithoutFallbackProbes(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    return scoped + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 bool isExplicitDirectMapCountContainsTryAtCall(const Expr &expr) {
   if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
     return false;
   }
-  std::string normalizedName = expr.name;
+  std::string normalizedName = resolveNativeTailCallPathWithoutFallbackProbes(expr);
   if (!normalizedName.empty() && normalizedName.front() == '/') {
     normalizedName.erase(normalizedName.begin());
   }
