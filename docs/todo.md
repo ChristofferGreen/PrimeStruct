@@ -56,28 +56,26 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4053
 - TODO-4055
+- TODO-4054
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4054
 - TODO-4056
 - TODO-4057
 - TODO-4059
 
 ### Priority Lanes (Current)
 
-- Stdlib de-experimentalization: TODO-4053 through TODO-4059
+- Stdlib de-experimentalization: TODO-4054 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4053
-2. TODO-4055
-3. TODO-4054
-4. TODO-4056
-5. TODO-4057
-6. TODO-4059
+1. TODO-4055
+2. TODO-4054
+3. TODO-4056
+4. TODO-4057
+5. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -87,7 +85,7 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4059 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
@@ -107,7 +105,7 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4059 |
+| De-experimentalization surface and namespace parity | TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4059 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
@@ -133,13 +131,15 @@ Task template:
 
 - Canonical public API: non-`experimental` namespaces are the intended
   long-term user-facing contracts.
+- Canonical collection contract: `/std/collections/vector/*` and
+  `/std/collections/map/*` are the sole public vector/map collection surfaces.
 - Temporary compatibility namespaces:
   `/std/collections/experimental_vector/*`,
   `/std/collections/experimental_map/*`,
   `/std/gfx/experimental/*`,
   `/std/collections/experimental_soa_vector/*`, and
   `/std/collections/experimental_soa_vector_conversions/*` stay transitional
-  until their explicit promotion, shim, or maturity TODOs land.
+  until their explicit shim, rename, or maturity TODOs land.
 - Internal substrate/helper namespaces:
   `/std/collections/experimental_buffer_checked/*`,
   `/std/collections/experimental_buffer_unchecked/*`, and
@@ -220,22 +220,10 @@ Task template:
   - owner: ai
   - created_at: 2026-04-19
   - phase: Stdlib De-Experimentalization
-  - depends_on: TODO-4053
+  - depends_on: none
   - scope: Reclassify the current experimental vector/map implementation namespaces as internal implementation modules or internal names once the canonical vector/map public contract and bridge-backed ownership cutover are complete.
   - acceptance:
     - `experimental_vector` and `experimental_map` no longer act as public transition namespaces for ordinary stdlib consumers.
     - Canonical `vector`/`map` continue to work through the same implementation behavior without requiring users or compiler paths to target the experimental namespaces directly.
     - Any rename or visibility change leaves internal implementation seams explicit instead of silently promoting them as new public API.
   - stop_rule: Stop once the experimental vector/map namespaces are no longer public contract; split any deeper implementation refactor beyond that visibility/name boundary into separate tasks.
-
-- [ ] TODO-4053: Promote canonical `vector` and `map` as the sole public collection contracts
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Stdlib De-Experimentalization
-  - depends_on: none
-  - scope: Make `/std/collections/vector/*` and `/std/collections/map/*` the only public collection contracts for the promoted surface area so users, docs, and compiler-facing authority no longer treat the experimental collection namespaces as peer public APIs.
-  - acceptance:
-    - Canonical vector/map namespaces are the only documented public collection contracts for the promoted collection surface.
-    - Experimental collection namespaces are no longer required by user-facing docs, examples, or compiler path authority for ordinary vector/map behavior.
-    - The promotion stays aligned with the completed bridge and ownership-cutover tasks instead of introducing a second compatibility layer.
-  - stop_rule: Stop once canonical vector/map are the sole public collection contracts; split any remaining implementation visibility or rename work into separate follow-up tasks.

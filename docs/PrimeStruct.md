@@ -2000,60 +2000,64 @@ for(
     `Result.why(Result<ContainerError>)` maps container error codes to the same stable literal-backed messages.
     Builtin empty-vector `pop` runtime aborts and checked vector indexing/removal aborts now use the same `"container
     empty"` / `"container index out of bounds"` wording across VM/native/C++ flows.
-  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_vector/*`
-    (`vector<T>(...)`, `vectorNew`, `vectorSingle`, `vectorPair`, `vectorTriple`, `vectorQuad`, `vectorQuint`,
-    `vectorSext`, `vectorSept`, `vectorOct`, `vectorCount`, `vectorCapacity`, `vectorReserve`, `vectorPush`,
-    `vectorPop`, `vectorClear`, `vectorRemoveAt`, `vectorRemoveSwap`, `vectorAt`, `vectorAtUnsafe`) that now returns an
-    experimental `Vector<T>` record backed by `.prime` heap-pointer storage. The current slice includes a real variadic
-    `.prime` constructor built on `[args<T>]` parameters, with the older fixed-arity helper names retained as
-    compatibility forwarders, plus reserve/push and pop/clear/remove helpers on that pointer-backed storage. `Vector<T>`
-    now carries `.prime` `Move` and `Destroy` hooks plus `Pointer<uninitialized<T>>` slot storage, so constructor
-    materialization, growth, checked/unchecked access, removed-element destruction, survivor compaction/swap, and
-    scope-exit cleanup all run through stdlib-owned `init(...)`, `borrow(...)`, `take(...)`, and `drop(...)` flows
-    instead of reusing builtin vector ownership gates. Imported canonical `/std/collections/vector/*` plus
-    `/std/collections/vector*` helper spellings now rewrite onto that same experimental implementation whenever their
-    receiver is an experimental `Vector<T>` value, the canonical namespaced `/std/collections/vector/*` declarations
-    themselves now advertise `Vector<T>` receivers directly for explicit bindings, the wrapper-layer
-    `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` helpers now
-    forward through that same canonical vector wrapper path with inferred receivers instead of hard-coded builtin
-    `vector<T>` parameters, imported wrapper-layer `vectorNew|vectorSingle|vectorPair|vectorTriple|...` constructor
-    aliases now likewise rewrite onto `/std/collections/experimental_vector/*` whenever an explicit experimental
-    `Vector<T>` destination already pins the target type, infer that same experimental `Vector<T>` type for imported
-    `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call
-    receiver expressions built from those aliases onto the experimental constructor path before helper resolution,
-    imported positional canonical `/std/collections/vector/vector<T>(...)` calls now prefer a real variadic canonical
-    wrapper over that same experimental constructor for `auto` bindings and temporary receiver flows, and imported
-    named-argument canonical constructor calls now resolve through same-path fixed-arity
-    `/std/collections/vector/vector` overloads instead of helper-path rewrites for those same inferred and temporary
-    receiver cases. Canonical `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same experimental
-    discard path for ownership-sensitive element types on explicit experimental `Vector<T>` bindings, and canonical
-    `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the experimental indexed-removal path
-    for those same explicit experimental `Vector<T>` bindings.
-  - The stdlib ships a temporary experimental helper namespace at `/std/collections/experimental_map/*` (`Entry<K, V>`,
-    `entry(key, value)`, `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`,
-    `mapQuint`, `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`,
-    `mapAtUnsafe`, `mapInsertRef`, `mapCountRef`, `mapContainsRef`, `mapTryAtRef`, `mapAtRef`, `mapAtUnsafeRef`) that
-    now returns an experimental `Map<K, V>` struct backed by parallel experimental `.prime` `Vector<K>` / `Vector<V>`
-    storage. The current constructor surface includes a real variadic `.prime` `map(entries...)` helper over trailing
-    `[args<Entry<K, V>>]` parameters, with the older fixed-arity helper names retained as compatibility forwarders.
-    Lookup follows `Comparable<K>` instead of the canonical builtin map runtime, checked experimental `mapAt(...)`
-    reuses the canonical `map key not found` runtime contract on misses, literal-backed `Map<string, V>` helper flows
-    now work across C++/VM/native, VM/native non-literal string-key constructors/lookups preserve the canonical
-    string-key reject diagnostics, experimental map values now support `mapInsert(...)` plus `values.insert(...)`
-    updates together with `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()` method sugar on
-    ownership-sensitive element flows, explicit experimental `Map<K, V>` bindings now also support canonical
-    `/std/collections/map/insert(...)` on that same overwrite/update path, builtin canonical `map<K, V>` bindings now
-    route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)` calls through a
-    helper that performs the real in-place overwrite path when the numeric key already exists and otherwise grows
-    through one generic arbitrary-`n` grow/copy/repoint path for owning local, borrowed/pointer, and non-local
-    field/lvalue numeric map receivers without retaining the old count-by-count lowerer staircase, borrowed
-    references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit cleanup now run through
-    the same pointer-backed uninitialized-slot ownership flow as experimental vectors by explicitly `drop(...)`ing and
-    `init(...)`ing payload slots. Borrowed
-    `Reference<Map<K, V>>` values now support distinct `*Ref` free-helper calls plus
-    `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()` method-call sugar through `.prime`
-    `/Reference/*` helpers, and both value plus borrowed-reference experimental maps now participate in shared
-    `value[key]` bracket access with the same key/type diagnostics as other map helper forms.
+  - Canonical `/std/collections/vector/*` is now the sole public namespaced vector contract. The temporary
+    `/std/collections/experimental_vector/*` family remains only as the backing implementation seam while the later
+    internal-module cleanup is still pending. That backing namespace (`vector<T>(...)`, `vectorNew`, `vectorSingle`,
+    `vectorPair`, `vectorTriple`, `vectorQuad`, `vectorQuint`, `vectorSext`, `vectorSept`, `vectorOct`, `vectorCount`,
+    `vectorCapacity`, `vectorReserve`, `vectorPush`, `vectorPop`, `vectorClear`, `vectorRemoveAt`,
+    `vectorRemoveSwap`, `vectorAt`, `vectorAtUnsafe`) returns the current `.prime` `Vector<T>` record backed by
+    heap-pointer storage, but user-facing docs/examples should prefer the canonical wrappers in
+    `stdlib/std/collections/vector.prime` instead of treating that experimental namespace as a peer public API. The
+    current slice includes a real variadic `.prime` constructor built on `[args<T>]` parameters, with the older
+    fixed-arity helper names retained as backing compatibility forwarders, plus reserve/push and pop/clear/remove
+    helpers on that pointer-backed storage. `Vector<T>` now carries `.prime` `Move` and `Destroy` hooks plus
+    `Pointer<uninitialized<T>>` slot storage, so constructor materialization, growth, checked/unchecked access,
+    removed-element destruction, survivor compaction/swap, and scope-exit cleanup all run through stdlib-owned
+    `init(...)`, `borrow(...)`, `take(...)`, and `drop(...)` flows instead of reusing builtin vector ownership gates.
+    Imported canonical `/std/collections/vector/*` plus `/std/collections/vector*` helper spellings still rewrite onto
+    that same backing implementation whenever their receiver is an experimental `Vector<T>` value, and the wrapper-layer
+    `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` helpers keep
+    forwarding through the canonical vector wrapper path with inferred receivers instead of hard-coded builtin
+    `vector<T>` parameters. Imported wrapper-layer `vectorNew|vectorSingle|vectorPair|vectorTriple|...` constructor
+    aliases still rewrite onto `/std/collections/experimental_vector/*` whenever an explicit experimental `Vector<T>`
+    destination already pins the target type, infer that same experimental `Vector<T>` type for imported `[auto]`
+    locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call receiver
+    expressions built from those aliases onto the experimental constructor path before helper resolution. Imported
+    positional canonical `/std/collections/vector/vector<T>(...)` calls now prefer a real variadic canonical wrapper
+    over that same backing constructor for `auto` bindings and temporary receiver flows, and imported named-argument
+    canonical constructor calls now resolve through same-path fixed-arity `/std/collections/vector/vector` overloads
+    instead of helper-path rewrites for those same inferred and temporary receiver cases. Canonical
+    `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same backing discard path for
+    ownership-sensitive element types on explicit experimental `Vector<T>` bindings, and canonical
+    `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the backing indexed-removal path for
+    those same explicit experimental `Vector<T>` bindings.
+  - Canonical `/std/collections/map/*` is now the sole public namespaced map contract. The temporary
+    `/std/collections/experimental_map/*` family remains only as the backing implementation seam while the later
+    internal-module cleanup is still pending. That backing namespace (`Entry<K, V>`, `entry(key, value)`,
+    `map<K, V>(entries...)`, `mapNew`, `mapSingle`, `mapDouble`, `mapPair`, `mapTriple`, `mapQuad`, `mapQuint`,
+    `mapSext`, `mapSept`, `mapOct`, `mapInsert`, `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, `mapAtUnsafe`,
+    `mapInsertRef`, `mapCountRef`, `mapContainsRef`, `mapTryAtRef`, `mapAtRef`, `mapAtUnsafeRef`) returns the current
+    `.prime` `Map<K, V>` struct backed by parallel experimental `Vector<K>` / `Vector<V>` storage, but user-facing
+    docs/examples should prefer the canonical wrappers in `stdlib/std/collections/map.prime` instead of treating that
+    experimental namespace as a peer public API. The current constructor surface includes a real variadic `.prime`
+    `map(entries...)` helper over trailing `[args<Entry<K, V>>]` parameters, with the older fixed-arity helper names
+    retained as backing compatibility forwarders. Lookup follows `Comparable<K>` instead of the canonical builtin map
+    runtime, checked experimental `mapAt(...)` reuses the canonical `map key not found` runtime contract on misses,
+    literal-backed `Map<string, V>` helper flows now work across C++/VM/native, VM/native non-literal string-key
+    constructors/lookups preserve the canonical string-key reject diagnostics, and the backing map values support
+    `mapInsert(...)` plus `values.insert(...)` updates together with `.count()`/`.contains()`/`.tryAt()`/`.at()`/
+    `.at_unsafe()` method sugar on ownership-sensitive element flows. Explicit experimental `Map<K, V>` bindings now
+    also support canonical `/std/collections/map/insert(...)` on that same overwrite/update path, builtin canonical
+    `map<K, V>` bindings now route both `.insert(...)` method sugar and direct canonical `/std/collections/map/insert(...)`
+    calls through a helper that performs the real in-place overwrite path when the numeric key already exists and
+    otherwise grows through one generic arbitrary-`n` grow/copy/repoint path for owning local, borrowed/pointer, and
+    non-local field/lvalue numeric map receivers without retaining the old count-by-count lowerer staircase, borrowed
+    references also support canonical `/std/collections/map/insert_ref(...)`, and overwrite/update plus scope-exit
+    cleanup now run through the same pointer-backed uninitialized-slot ownership flow as experimental vectors by
+    explicitly `drop(...)`ing and `init(...)`ing payload slots. Borrowed `Reference<Map<K, V>>` values now support
+    distinct `*Ref` free-helper calls plus `.count()`/`.contains()`/`.tryAt()`/`.at()`/`.at_unsafe()`/`.insert()`
+    method-call sugar through `.prime` `/Reference/*` helpers, and both value plus borrowed-reference experimental maps
+    now participate in shared `value[key]` bracket access with the same key/type diagnostics as other map helper forms.
 - **Core builtins (root namespace):**
   - **`assign(target, value)`** (statement): mutates a mutable binding or dereferenced pointer.
   - **`increment(target)` / `decrement(target)`** (statement): mutation helpers used by `++`/`--` desugaring.
@@ -2616,8 +2620,8 @@ Current `stdlib/std` experimental module classification:
 
 | Namespace family | Current role | Current interpretation | Follow-up |
 | --- | --- | --- | --- |
-| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Transitional public-facing namespace while canonical `/std/collections/vector/*` finishes promotion and the old implementation path is hidden behind canonical vector contracts. | `TODO-4053`, `TODO-4054` |
-| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Transitional public-facing namespace while canonical `/std/collections/map/*` finishes promotion and the old implementation path is hidden behind canonical map contracts. | `TODO-4053`, `TODO-4054` |
+| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/vector/*` public contract; not a peer user-facing collection API. | `TODO-4054` |
+| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/map/*` public contract; not a peer user-facing collection API. | `TODO-4054` |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Transitional gfx namespace while canonical `/std/gfx/*` remains the intended public contract and the experimental path is reduced to a shim. | `TODO-4055`, `TODO-4056` |
 | `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity track. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
@@ -3875,7 +3879,8 @@ read-only path.
   through import-driven VM/native/C++ tests before the canonical container names switch over.
   - When any `/std...` import is present, the stdlib now also provides canonical `.prime` wrappers at
     `/std/collections/vector/*` over the current stdlib `vectorNew` / `vectorCount` / `vectorPush` helper surface. That
-    imported path is the active migration target for canonical namespaced vector helpers; canonical
+    imported path is now the sole public namespaced vector contract; the experimental vector namespace remains a
+    backing seam rather than a peer public API. Canonical
     `/std/collections/vector/vector(...)`, `/std/collections/vector/count(...)`,
     `/std/collections/vector/capacity(...)`, `/std/collections/vector/at(...)`,
     `/std/collections/vector/at_unsafe(...)`, `/std/collections/vector/push(...)`, `/std/collections/vector/pop(...)`,
@@ -3911,7 +3916,8 @@ read-only path.
     ordinary definition argument rules such as named-argument support.
   - When any `/std...` import is present, the stdlib also provides canonical `.prime` wrappers at
     `/std/collections/map/*` over the current stdlib `mapNew` / `mapCount` / `mapTryAt` helper surface. That imported
-    path is now the active migration target for canonical namespaced map helpers; imported
+    path is now the sole public namespaced map contract; the experimental map namespace remains a backing seam rather
+    than a peer public API. Imported
     `/std/collections/map/map(...)`, `/std/collections/map/count(...)`, `/std/collections/map/contains(...)`,
     `/std/collections/map/tryAt(...)`, `/std/collections/map/at(...)`, and `/std/collections/map/at_unsafe(...)`
     wrappers follow ordinary definition argument rules such as named-argument support. Canonical

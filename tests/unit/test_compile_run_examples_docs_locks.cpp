@@ -134,9 +134,15 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(primeStructDoc.find("Canonical public API:") != std::string::npos);
   CHECK(primeStructDoc.find("Temporary compatibility namespace:") != std::string::npos);
   CHECK(primeStructDoc.find("Internal substrate/helper namespace:") != std::string::npos);
+  CHECK(primeStructDoc.find("Canonical `/std/collections/vector/*` is now the sole public namespaced vector contract.") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Canonical `/std/collections/map/*` is now the sole public namespaced map contract.") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("no `experimental` namespace counts as canonical public API") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Temporary compatibility namespace |") !=
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_vector/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/vector/*` public contract; not a peer user-facing collection API. | `TODO-4054` |") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("| `/std/collections/experimental_map/*` | Temporary compatibility namespace | Backing compatibility namespace behind the canonical `/std/collections/map/*` public contract; not a peer user-facing collection API. | `TODO-4054` |") !=
         std::string::npos);
   CHECK(primeStructDoc.find("| `/std/collections/experimental_buffer_checked/*` | Internal substrate/helper namespace |") !=
         std::string::npos);
@@ -144,12 +150,15 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
   CHECK(todo.find("### Stdlib De-Experimentalization Policy Summary") != std::string::npos);
   CHECK(todo.find("Canonical public API: non-`experimental` namespaces are the intended") !=
         std::string::npos);
+  CHECK(todo.find("Canonical collection contract: `/std/collections/vector/*` and") !=
+        std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_vector/*`, and") !=
         std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_storage/*` are implementation-facing") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4052:") == std::string::npos);
-  CHECK(todo.find("TODO-4053") != std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4053:") == std::string::npos);
+  CHECK(todo.find("TODO-4055") != std::string::npos);
 }
 
 TEST_CASE("soa maturity track docs stay source locked") {
@@ -186,7 +195,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
-  CHECK(todo.find("TODO-4053") != std::string::npos);
+  CHECK(todo.find("TODO-4055") != std::string::npos);
 }
 
 TEST_CASE("software renderer command list docs stay source locked" * doctest::skip(true)) {

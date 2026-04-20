@@ -81,6 +81,8 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("Canonical public API:") != std::string::npos);
   CHECK(design.find("Temporary compatibility namespace:") != std::string::npos);
   CHECK(design.find("Internal substrate/helper namespace:") != std::string::npos);
+  CHECK(design.find("sole public namespaced vector contract") != std::string::npos);
+  CHECK(design.find("sole public namespaced map contract") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_vector/*") != std::string::npos);
   CHECK(design.find("/std/gfx/experimental/*") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_soa_storage/*") != std::string::npos);
