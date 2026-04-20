@@ -1606,23 +1606,38 @@ TEST_CASE("semantics validator build import publication stays stable") {
   CHECK(buildImportsSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
   CHECK(buildImportsSource.find(
+            "int stdlibSurfaceImportAliasPriority(const StdlibSurfaceMetadata &metadata)") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
             "const StdlibSurfaceMetadata *findStdlibSurfaceImportAliasMetadata(") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "const StdlibSurfaceMetadata *findStdlibSurfaceWildcardAliasMetadata(") !=
         std::string::npos);
   CHECK(buildImportsSource.find(
             "std::string resolveStdlibSurfaceImportAliasTarget(") !=
         std::string::npos);
-  CHECK(buildImportsSource.find("StdlibSurfaceId::CollectionsVectorHelpers") !=
+  CHECK(buildImportsSource.find(
+            "auto registerStdlibSurfaceWildcardAliases = [&](const std::string &prefix)") !=
         std::string::npos);
-  CHECK(buildImportsSource.find("StdlibSurfaceId::CollectionsMapConstructors") !=
+  CHECK(buildImportsSource.find(
+            "const int priority = stdlibSurfaceImportAliasPriority(metadata);") !=
         std::string::npos);
-  CHECK(buildImportsSource.find("StdlibSurfaceId::FileHelpers") !=
+  CHECK(buildImportsSource.find("StdlibSurfaceShape::ConstructorFamily") !=
         std::string::npos);
-  CHECK(buildImportsSource.find("StdlibSurfaceId::GfxBufferHelpers") !=
+  CHECK(buildImportsSource.find("StdlibSurfaceId::CollectionsVectorConstructors") !=
+        std::string::npos);
+  CHECK(buildImportsSource.find(
+            "for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry())") !=
         std::string::npos);
   CHECK(buildImportsSource.find(
             "const std::string aliasTargetPath = resolveStdlibSurfaceImportAliasTarget(importPath);") !=
         std::string::npos);
+  CHECK(buildImportsSource.find("registerStdlibSurfaceWildcardAliases(prefix);") !=
+        std::string::npos);
   CHECK(buildImportsSource.find("if (importPath == \"/std/collections/vector\"") ==
+        std::string::npos);
+  CHECK(buildImportsSource.find("static constexpr std::array SurfaceImportAliasIds =") ==
         std::string::npos);
   CHECK(buildImportsSource.find(
             "registerExperimentalSoaVectorConversionWildcardAliases(") ==

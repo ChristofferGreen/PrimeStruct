@@ -670,6 +670,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("exact vector imports keep bare bridge aliases") {
+  const std::string source = R"(
+import /std/collections/vector
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 8i32, 15i32)}
+  return(plus(/std/collections/vector/count(values),
+      /std/collections/vector/at(values, 1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("wildcard collection imports keep bare vector and map bridge aliases") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 8i32)}
+  [map<i32, i32>] pairs{map<i32, i32>(1i32, 7i32)}
+  return(plus(count(values), at(pairs, 1i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact gfx imports keep bare bridge aliases") {
   const std::string source = R"(
 import /std/gfx/Buffer

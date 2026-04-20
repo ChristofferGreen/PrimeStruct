@@ -9,6 +9,18 @@
 namespace primec::semantics {
 namespace {
 
+int stdlibSurfaceImportAliasPriority(const StdlibSurfaceMetadata &metadata) {
+  switch (metadata.shape) {
+    case StdlibSurfaceShape::ConstructorFamily:
+      return 30;
+    case StdlibSurfaceShape::ErrorFamily:
+      return 20;
+    case StdlibSurfaceShape::HelperFamily:
+      return 10;
+  }
+  return 0;
+}
+
 bool stdlibSurfaceMatchesImportAliasPath(const StdlibSurfaceMetadata &metadata,
                                          const std::string_view importPath) {
   return metadata.canonicalPath == importPath ||
@@ -17,22 +29,19 @@ bool stdlibSurfaceMatchesImportAliasPath(const StdlibSurfaceMetadata &metadata,
 }
 
 const StdlibSurfaceMetadata *findStdlibSurfaceImportAliasMetadata(const std::string_view importPath) {
-  static constexpr std::array SurfaceImportAliasIds = {
-      StdlibSurfaceId::FileHelpers,
-      StdlibSurfaceId::FileErrorHelpers,
-      StdlibSurfaceId::CollectionsVectorHelpers,
-      StdlibSurfaceId::CollectionsMapConstructors,
-      StdlibSurfaceId::CollectionsContainerErrorHelpers,
-      StdlibSurfaceId::GfxBufferHelpers,
-      StdlibSurfaceId::GfxErrorHelpers,
-  };
-  for (const StdlibSurfaceId surfaceId : SurfaceImportAliasIds) {
-    const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadata(surfaceId);
-    if (metadata != nullptr && stdlibSurfaceMatchesImportAliasPath(*metadata, importPath)) {
-      return metadata;
+  const StdlibSurfaceMetadata *bestMatch = nullptr;
+  int bestPriority = -1;
+  for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+    if (!stdlibSurfaceMatchesImportAliasPath(metadata, importPath)) {
+      continue;
+    }
+    const int priority = stdlibSurfaceImportAliasPriority(metadata);
+    if (bestMatch == nullptr || priority > bestPriority) {
+      bestMatch = &metadata;
+      bestPriority = priority;
     }
   }
-  return nullptr;
+  return bestMatch;
 }
 
 std::string resolveStdlibSurfaceImportAliasTarget(const std::string_view importPath) {
@@ -41,6 +50,28 @@ std::string resolveStdlibSurfaceImportAliasTarget(const std::string_view importP
     return std::string(importPath);
   }
   return std::string(metadata->canonicalPath);
+}
+
+const StdlibSurfaceMetadata *findStdlibSurfaceWildcardAliasMetadata(const std::string_view importRoot,
+                                                                    const std::string_view aliasName) {
+  const StdlibSurfaceMetadata *bestMatch = nullptr;
+  int bestPriority = -1;
+  for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+    if (metadata.canonicalImportRoot != importRoot) {
+      continue;
+    }
+    if (std::find(metadata.importAliasSpellings.begin(),
+                  metadata.importAliasSpellings.end(),
+                  aliasName) == metadata.importAliasSpellings.end()) {
+      continue;
+    }
+    const int priority = stdlibSurfaceImportAliasPriority(metadata);
+    if (bestMatch == nullptr || priority > bestPriority) {
+      bestMatch = &metadata;
+      bestPriority = priority;
+    }
+  }
+  return bestMatch;
 }
 
 } // namespace
@@ -120,6 +151,25 @@ bool SemanticsValidator::buildImportAliases() {
     return false;
   };
 
+  auto registerStdlibSurfaceWildcardAliases = [&](const std::string &prefix) {
+    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+      if (metadata.canonicalImportRoot != prefix) {
+        continue;
+      }
+      for (const std::string_view spelling : metadata.importAliasSpellings) {
+        if (spelling.empty() || spelling.front() == '/') {
+          continue;
+        }
+        const StdlibSurfaceMetadata *preferred =
+            findStdlibSurfaceWildcardAliasMetadata(prefix, spelling);
+        if (preferred != &metadata) {
+          continue;
+        }
+        importAliases_[std::string(spelling)] = std::string(preferred->canonicalPath);
+      }
+    }
+  };
+
   auto registerCanonicalSoaVectorWildcardAliases = [&](const std::string &prefix) {
     if (prefix != "/std/collections/soa_vector") {
       return false;
@@ -166,6 +216,7 @@ bool SemanticsValidator::buildImportAliases() {
       prefix = importPath;
     }
     if (isWildcard) {
+      registerStdlibSurfaceWildcardAliases(prefix);
       if (registerCanonicalSoaVectorWildcardAliases(prefix)) {
         continue;
       }
@@ -327,6 +378,7 @@ bool SemanticsValidator::buildImportAliases() {
         prefix = importPath;
       }
       if (isWildcard) {
+        registerStdlibSurfaceWildcardAliases(prefix);
         const std::string scopedPrefix = prefix + "/";
         std::vector<std::string> matchingPaths;
         matchingPaths.reserve(defMap_.size());

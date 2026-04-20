@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4044
+- TODO-4045
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4045
 - TODO-4046
 - TODO-4047
 - TODO-4048
@@ -69,26 +68,25 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Vector/map bridge rollout and ownership cutover: TODO-4044 through TODO-4051
+- Vector/map bridge rollout and ownership cutover: TODO-4045 through TODO-4051
 - Stdlib de-experimentalization: TODO-4052 through TODO-4059
 
 ### Execution Queue (Recommended)
 
-1. TODO-4044
-2. TODO-4045
-3. TODO-4046
-4. TODO-4047
-5. TODO-4048
-6. TODO-4049
-7. TODO-4050
-8. TODO-4052
-9. TODO-4058
-10. TODO-4053
-11. TODO-4055
-12. TODO-4054
-13. TODO-4056
-14. TODO-4057
-15. TODO-4059
+1. TODO-4045
+2. TODO-4046
+3. TODO-4047
+4. TODO-4048
+5. TODO-4049
+6. TODO-4050
+7. TODO-4052
+8. TODO-4058
+9. TODO-4053
+10. TODO-4055
+11. TODO-4054
+12. TODO-4056
+13. TODO-4057
+14. TODO-4059
 
 ### PrimeStruct Coverage Snapshot
 
@@ -97,7 +95,7 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4044, TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4045, TODO-4046, TODO-4047, TODO-4048, TODO-4049, TODO-4050, TODO-4051 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4052, TODO-4053, TODO-4054, TODO-4055, TODO-4056, TODO-4057, TODO-4058, TODO-4059 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
@@ -321,15 +319,3 @@ Task template:
     - Constructor rewrite and resolution behavior remains stable under focused parity coverage.
     - Production collection constructor handling no longer requires duplicated local canonical-to-experimental path maps for the migrated constructor families.
   - stop_rule: Stop once vector/map constructor classification is bridge-backed and parity-tested; split any constructor family that still needs a temporary isolated mapping into a separate task.
-
-- [ ] TODO-4044: Route vector/map import alias construction through collection bridge metadata
-  - owner: ai
-  - created_at: 2026-04-19
-  - phase: Vector/Map Stdlib Ownership Cutover
-  - depends_on: TODO-4043
-  - scope: Refactor vector/map import-time alias exposure so collection aliases come from the shared collection bridge metadata rather than exact-import and wildcard-import special cases scattered through semantics code.
-  - acceptance:
-    - Vector/map import alias construction is driven by shared collection bridge metadata.
-    - Existing exact-import and wildcard-import collection alias behavior remains covered by focused parity tests.
-    - The migrated collection import path no longer duplicates vector/map alias knowledge in multiple production files.
-  - stop_rule: Stop once vector/map import alias construction is bridge-backed; split any broader packaging or stdlib-root-discovery work out of this item.
