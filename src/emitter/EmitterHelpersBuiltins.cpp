@@ -35,7 +35,7 @@ bool getVectorMutatorName(const Expr &expr,
   if (nameMap.count(full) > 0) {
     return false;
   }
-  std::string name = expr.name;
+  std::string name = full;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }

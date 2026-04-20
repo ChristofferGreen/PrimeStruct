@@ -449,6 +449,17 @@ TEST_CASE("C++ emitter helper accepts canonical vector mutators without alias br
   expectAccepted("/std/collections/vector/clear", "clear");
   expectAccepted("/std/collections/vector/remove_at", "remove_at");
   expectAccepted("/std/collections/vector/remove_swap", "remove_swap");
+
+  primec::Expr namespacedPushCall;
+  namespacedPushCall.kind = primec::Expr::Kind::Call;
+  namespacedPushCall.name = "push";
+  namespacedPushCall.namespacePrefix = "/std/collections/vector";
+
+  std::unordered_map<std::string, std::string> nameMap;
+  std::string helper;
+  CHECK(primec::emitter::getVectorMutatorName(
+      namespacedPushCall, nameMap, helper));
+  CHECK(helper == "push");
 }
 
 TEST_CASE("C++ emitter helper rejects array namespaced vector constructor alias builtin") {
