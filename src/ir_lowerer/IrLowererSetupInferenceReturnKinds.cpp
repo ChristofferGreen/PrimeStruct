@@ -5,6 +5,82 @@
 
 namespace primec::ir_lowerer {
 
+namespace {
+
+bool inferDereferencePointerExprValueKind(const Expr &expr,
+                                          const LocalMap &localsIn,
+                                          LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    if (it->second.kind != LocalInfo::Kind::Pointer &&
+        it->second.kind != LocalInfo::Kind::Reference) {
+      return false;
+    }
+    if (it->second.pointerToMap || it->second.referenceToMap) {
+      kindOut = it->second.mapValueKind;
+    } else {
+      kindOut = it->second.valueKind;
+    }
+    return kindOut != LocalInfo::ValueKind::Unknown;
+  }
+
+  if (!(expr.kind == Expr::Kind::Call)) {
+    return false;
+  }
+
+  std::string pointerBuiltin;
+  if (getBuiltinPointerName(expr, pointerBuiltin) && pointerBuiltin == "location" &&
+      expr.args.size() == 1) {
+    const Expr &target = expr.args.front();
+    if (target.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(target.name);
+    if (it == localsIn.end()) {
+      return false;
+    }
+    if (it->second.referenceToMap || it->second.pointerToMap) {
+      kindOut = it->second.mapValueKind;
+    } else {
+      kindOut = it->second.valueKind;
+    }
+    return kindOut != LocalInfo::ValueKind::Unknown;
+  }
+
+  std::string memoryBuiltin;
+  if (getBuiltinMemoryName(expr, memoryBuiltin)) {
+    if (memoryBuiltin == "alloc" && expr.templateArgs.size() == 1) {
+      kindOut = valueKindFromTypeName(expr.templateArgs.front());
+      return kindOut != LocalInfo::ValueKind::Unknown;
+    }
+    if (memoryBuiltin == "realloc" && expr.args.size() == 2) {
+      return inferDereferencePointerExprValueKind(expr.args.front(), localsIn, kindOut);
+    }
+    if (memoryBuiltin == "at" && expr.args.size() == 3) {
+      return inferDereferencePointerExprValueKind(expr.args.front(), localsIn, kindOut);
+    }
+    if (memoryBuiltin == "at_unsafe" && expr.args.size() == 2) {
+      return inferDereferencePointerExprValueKind(expr.args.front(), localsIn, kindOut);
+    }
+  }
+
+  std::string builtinOperator;
+  if (getBuiltinOperatorName(expr, builtinOperator) &&
+      (builtinOperator == "plus" || builtinOperator == "minus") &&
+      expr.args.size() == 2) {
+    return inferDereferencePointerExprValueKind(expr.args.front(), localsIn, kindOut);
+  }
+
+  return false;
+}
+
+} // namespace
+
 MathBuiltinReturnKindResolution inferMathBuiltinReturnKind(
     const Expr &expr,
     const LocalMap &localsIn,
@@ -107,6 +183,9 @@ NonMathScalarCallReturnKindResolution inferNonMathScalarCallReturnKind(
       return NonMathScalarCallReturnKindResolution::Resolved;
     }
     kindOut = inferPointerTargetKind(expr.args.front(), localsIn);
+    if (kindOut == LocalInfo::ValueKind::Unknown) {
+      inferDereferencePointerExprValueKind(expr.args.front(), localsIn, kindOut);
+    }
     return NonMathScalarCallReturnKindResolution::Resolved;
   }
 

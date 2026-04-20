@@ -194,6 +194,41 @@ main() {
   CHECK(result == 9);
 }
 
+TEST_CASE("ir lowers heap realloc pointer sum through dereference offset") {
+  const std::string source = R"(
+[return<int> effects(heap_alloc)]
+main() {
+  [mut] ptr{/std/intrinsics/memory/alloc<i32>(1i32)}
+  assign(dereference(ptr), 9i32)
+  [Pointer<i32> mut] grown{/std/intrinsics/memory/realloc(ptr, 2i32)}
+  assign(dereference(plus(grown, 16i32)), 4i32)
+  [i32] sum{plus(dereference(grown), dereference(plus(grown, 16i32)))}
+  /std/intrinsics/memory/free(grown)
+  return(sum)
+}
+)";
+  std::string error;
+  primec::IrModule module;
+  REQUIRE(parseValidateAndLower(source, module, error));
+  CHECK(error.empty());
+
+  int addCount = 0;
+  for (const auto &inst : module.functions[0].instructions) {
+    if (inst.op == primec::IrOpcode::AddI64) {
+      addCount += 1;
+    }
+  }
+  CHECK(addCount >= 2);
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  bool ok = vm.execute(module, result, error);
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(result == 13);
+}
+
 TEST_CASE("ir lowers pointer minus") {
   const std::string source = R"(
 [return<int>]

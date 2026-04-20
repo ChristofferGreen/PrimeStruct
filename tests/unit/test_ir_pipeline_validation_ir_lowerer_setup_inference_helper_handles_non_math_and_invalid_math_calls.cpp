@@ -96,6 +96,10 @@ TEST_CASE("ir lowerer setup inference helper infers non-math scalar call return 
   dstInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   dstInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
   locals.emplace("dst", dstInfo);
+  primec::ir_lowerer::LocalInfo ptrInfo;
+  ptrInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
+  ptrInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Float32;
+  locals.emplace("ptr", ptrInfo);
   CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
             assignExpr,
             locals,
@@ -142,23 +146,15 @@ TEST_CASE("ir lowerer setup inference helper infers non-math scalar call return 
   dereferenceTarget.args = {pointerOffsetExpr};
   CHECK(primec::ir_lowerer::inferNonMathScalarCallReturnKind(
             dereferenceTarget,
-            {},
+            locals,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
-            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-              if (expr.kind == primec::Expr::Kind::Call && expr.name == "plus" &&
-                  expr.args.size() == 2 && expr.args.front().kind == primec::Expr::Kind::Name &&
-                  expr.args.front().name == "ptr") {
-                return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-              }
-              if (expr.kind == primec::Expr::Kind::Name && expr.name == "ptr") {
-                return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
-              }
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
               return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
             },
             kindOut) == Resolution::Resolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Float32);
 }
 
 TEST_CASE("ir lowerer setup inference helper handles invalid non-math scalar calls") {
