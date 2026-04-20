@@ -11,19 +11,7 @@ bool isBuiltinAssign(const Expr &expr, const std::unordered_map<std::string, std
   if (nameMap.count(full) > 0) {
     return false;
   }
-  std::string name = full;
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias =
-        name.substr(std::string("std/collections/internal_soa_storage/").size());
-    const size_t generatedSuffix = alias.find("__");
-    if (generatedSuffix != std::string::npos) {
-      alias.erase(generatedSuffix);
-    }
-    name = alias;
-  }
+  std::string name = normalizeInternalSoaStorageBuiltinAlias(full);
   if (name.find('/') != std::string::npos) {
     return false;
   }

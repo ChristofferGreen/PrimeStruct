@@ -440,6 +440,63 @@ TEST_CASE("emitter builtin assign keeps internal soa storage helper paths") {
   CHECK(primec::emitter::isBuiltinAssign(namespacedAssignCall, nameMap));
 }
 
+TEST_CASE("emitter helpers keep generated internal soa helper paths builtin") {
+  std::unordered_map<std::string, std::string> nameMap;
+
+  primec::Expr generatedAssignCall;
+  generatedAssignCall.kind = primec::Expr::Kind::Call;
+  generatedAssignCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/assign";
+  CHECK(primec::emitter::isBuiltinAssign(generatedAssignCall, nameMap));
+
+  primec::Expr generatedIfCall;
+  generatedIfCall.kind = primec::Expr::Kind::Call;
+  generatedIfCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/if";
+  CHECK(primec::emitter::isSimpleCallName(generatedIfCall, "if"));
+
+  primec::Expr generatedTakeCall;
+  generatedTakeCall.kind = primec::Expr::Kind::Call;
+  generatedTakeCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/take";
+  CHECK(primec::emitter::isSimpleCallName(generatedTakeCall, "take"));
+
+  primec::Expr generatedDereferenceCall;
+  generatedDereferenceCall.kind = primec::Expr::Kind::Call;
+  generatedDereferenceCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/dereference";
+  char pointerOp = '\0';
+  CHECK(primec::emitter::getBuiltinPointerOperator(
+      generatedDereferenceCall, pointerOp));
+  CHECK(pointerOp == '*');
+
+  primec::Expr generatedPlusCall;
+  generatedPlusCall.kind = primec::Expr::Kind::Call;
+  generatedPlusCall.name =
+      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/plus";
+  char op = '\0';
+  CHECK(primec::emitter::getBuiltinOperator(generatedPlusCall, op));
+  CHECK(op == '+');
+
+  primec::Expr generatedLessThanCall;
+  generatedLessThanCall.kind = primec::Expr::Kind::Call;
+  generatedLessThanCall.name =
+      "/std/collections/internal_soa_storage/SoaColumns2__tabcdef01/less_than";
+  const char *comparison = nullptr;
+  CHECK(primec::emitter::getBuiltinComparison(
+      generatedLessThanCall, comparison));
+  CHECK(std::string(comparison) == "<");
+
+  primec::Expr generatedIncrementCall;
+  generatedIncrementCall.kind = primec::Expr::Kind::Call;
+  generatedIncrementCall.name =
+      "/std/collections/internal_soa_storage/SoaColumn__tabcdef01/increment";
+  std::string mutation;
+  CHECK(primec::emitter::getBuiltinMutationName(
+      generatedIncrementCall, mutation));
+  CHECK(mutation == "increment");
+}
+
 TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map") {
   primec::Expr entryCall;
   entryCall.kind = primec::Expr::Kind::Call;

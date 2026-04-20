@@ -76,6 +76,27 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
       canonicalMemberName);
 }
 
+std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path) {
+  std::string name = path;
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  const std::string prefix = "std/collections/internal_soa_storage/";
+  if (name.rfind(prefix, 0) != 0) {
+    return name;
+  }
+  std::string alias = name.substr(prefix.size());
+  const size_t slash = alias.find_last_of('/');
+  if (slash != std::string::npos) {
+    alias = alias.substr(slash + 1);
+  }
+  const size_t generatedSuffix = alias.find("__");
+  if (generatedSuffix != std::string::npos) {
+    alias.erase(generatedSuffix);
+  }
+  return alias;
+}
+
 bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
@@ -163,19 +184,7 @@ bool getBuiltinOperator(const Expr &expr, char &out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = resolveExprPath(expr);
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias =
-        name.substr(std::string("std/collections/internal_soa_storage/").size());
-    const size_t generatedSuffix = alias.find("__");
-    if (generatedSuffix != std::string::npos) {
-      alias.erase(generatedSuffix);
-    }
-    name = alias;
-  }
+  std::string name = normalizeInternalSoaStorageBuiltinAlias(resolveExprPath(expr));
   if (name.rfind("std/gpu/", 0) == 0) {
     name.erase(0, 8);
   }
@@ -205,19 +214,7 @@ bool getBuiltinComparison(const Expr &expr, const char *&out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = resolveExprPath(expr);
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias =
-        name.substr(std::string("std/collections/internal_soa_storage/").size());
-    const size_t generatedSuffix = alias.find("__");
-    if (generatedSuffix != std::string::npos) {
-      alias.erase(generatedSuffix);
-    }
-    name = alias;
-  }
+  std::string name = normalizeInternalSoaStorageBuiltinAlias(resolveExprPath(expr));
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -264,19 +261,7 @@ bool getBuiltinMutationName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = resolveExprPath(expr);
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias =
-        name.substr(std::string("std/collections/internal_soa_storage/").size());
-    const size_t generatedSuffix = alias.find("__");
-    if (generatedSuffix != std::string::npos) {
-      alias.erase(generatedSuffix);
-    }
-    name = alias;
-  }
+  std::string name = normalizeInternalSoaStorageBuiltinAlias(resolveExprPath(expr));
   if (name.find('/') != std::string::npos) {
     return false;
   }
@@ -320,19 +305,15 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
           expr, StdlibSurfaceId::CollectionsMapConstructors, helperName)) {
     return helperName == targetName;
   }
+  const std::string internalSoaAlias =
+      normalizeInternalSoaStorageBuiltinAlias(resolvedPath);
+  if (internalSoaAlias.find('/') == std::string::npos &&
+      isInternalSoaStorageBareBuiltin(internalSoaAlias)) {
+    return internalSoaAlias == targetName;
+  }
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
-  }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias = name.substr(std::string("std/collections/internal_soa_storage/").size());
-    const size_t generatedSuffix = alias.find("__");
-    if (generatedSuffix != std::string::npos) {
-      alias.erase(generatedSuffix);
-    }
-    if (alias.find('/') == std::string::npos && isInternalSoaStorageBareBuiltin(alias)) {
-      return alias == targetName;
-    }
   }
   if (name.find('/') != std::string::npos) {
     return false;
@@ -526,30 +507,7 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out) {
   if (expr.name.empty()) {
     return false;
   }
-  std::string name = resolveExprPath(expr);
-  if (!name.empty() && name[0] == '/') {
-    name.erase(0, 1);
-  }
-  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
-    std::string alias =
-        name.substr(std::string("std/collections/internal_soa_storage/").size());
-    const size_t generatedSuffix = alias.find("__");
-    if (generatedSuffix != std::string::npos) {
-      alias.erase(generatedSuffix);
-    }
-    if (alias == "dereference") {
-      out = '*';
-      return true;
-    }
-    if (alias == "location") {
-      out = '&';
-      return true;
-    }
-    return false;
-  }
-  if (name.find('/') != std::string::npos) {
-    return false;
-  }
+  std::string name = normalizeInternalSoaStorageBuiltinAlias(resolveExprPath(expr));
   if (name == "dereference") {
     out = '*';
     return true;
@@ -557,6 +515,9 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out) {
   if (name == "location") {
     out = '&';
     return true;
+  }
+  if (name.find('/') != std::string::npos) {
+    return false;
   }
   return false;
 }

@@ -15,6 +15,7 @@ bool extractMapKeyValueTypesLocal(const BindingInfo &binding,
                                   std::string &keyTypeOut,
                                   std::string &valueTypeOut);
 bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix);
+std::string normalizeInternalSoaStorageBuiltinAlias(const std::string &path);
 bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out);
 
 } // namespace primec::emitter
