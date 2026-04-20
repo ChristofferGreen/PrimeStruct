@@ -358,6 +358,26 @@ TEST_CASE("ir lowerer helper keeps bare array access builtins inside namespaced 
   CHECK(builtin == "at_unsafe");
 }
 
+TEST_CASE("simple-call helpers keep rooted internal soa storage bare builtins") {
+  primec::Expr rootedAssignCall;
+  rootedAssignCall.kind = primec::Expr::Kind::Call;
+  rootedAssignCall.name = "/std/collections/internal_soa_storage/assign";
+  CHECK(primec::ir_lowerer::isSimpleCallName(rootedAssignCall, "assign"));
+  CHECK(primec::emitter::isSimpleCallName(rootedAssignCall, "assign"));
+
+  primec::Expr rootedIfCall;
+  rootedIfCall.kind = primec::Expr::Kind::Call;
+  rootedIfCall.name = "/std/collections/internal_soa_storage/if";
+  CHECK(primec::ir_lowerer::isSimpleCallName(rootedIfCall, "if"));
+  CHECK(primec::emitter::isSimpleCallName(rootedIfCall, "if"));
+
+  primec::Expr rootedTakeCall;
+  rootedTakeCall.kind = primec::Expr::Kind::Call;
+  rootedTakeCall.name = "/std/collections/internal_soa_storage/take";
+  CHECK(primec::ir_lowerer::isSimpleCallName(rootedTakeCall, "take"));
+  CHECK(primec::emitter::isSimpleCallName(rootedTakeCall, "take"));
+}
+
 TEST_CASE("ir lowerer helper rejects parser-shaped canonical map entry constructors as builtin map") {
   primec::Expr entryCall;
   entryCall.kind = primec::Expr::Kind::Call;

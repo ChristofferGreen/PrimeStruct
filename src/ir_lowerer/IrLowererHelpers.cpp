@@ -27,6 +27,13 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     return false;
   }
   const std::string targetName = nameToMatch == nullptr ? std::string() : std::string(nameToMatch);
+  auto isInternalSoaStorageBareBuiltin = [](const std::string &name) {
+    return name == "assign" || name == "if" || name == "while" || name == "take" ||
+           name == "borrow" || name == "init" || name == "drop" || name == "increment" ||
+           name == "decrement" || name == "return" || name == "then" || name == "else" ||
+           name == "do" || name == "block" || name == "loop" || name == "for" ||
+           name == "repeat";
+  };
   std::string name = expr.name;
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
@@ -54,6 +61,16 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     std::string alias = name.substr(std::string("std/collections/map/").size());
     if (alias.find('/') == std::string::npos &&
         (alias == "map" || alias == "count" || alias == "at" || alias == "at_unsafe")) {
+      return alias == targetName;
+    }
+  }
+  if (name.rfind("std/collections/internal_soa_storage/", 0) == 0) {
+    std::string alias = name.substr(std::string("std/collections/internal_soa_storage/").size());
+    const size_t generatedSuffix = alias.find("__");
+    if (generatedSuffix != std::string::npos) {
+      alias.erase(generatedSuffix);
+    }
+    if (alias.find('/') == std::string::npos && isInternalSoaStorageBareBuiltin(alias)) {
       return alias == targetName;
     }
   }
