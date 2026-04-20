@@ -13,6 +13,13 @@ TEST_CASE("ir lowerer runtime error helpers emit FileError.why call paths") {
   std::vector<primec::IrInstruction> instructions;
   std::string error = "stale";
   int32_t emittedWhyLocal = -1;
+  primec::Expr fileErrorType;
+  fileErrorType.kind = primec::Expr::Kind::Name;
+  fileErrorType.name = "FileError";
+  primec::Expr errValue;
+  errValue.kind = primec::Expr::Kind::Name;
+  errValue.name = "err";
+  int emitExprCalls = 0;
 
   CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
             expr,
@@ -58,15 +65,9 @@ TEST_CASE("ir lowerer runtime error helpers emit FileError.why call paths") {
   emittedWhyLocal = -1;
   expr.isMethodCall = true;
   expr.namespacePrefix.clear();
-  primec::Expr fileErrorType;
-  fileErrorType.kind = primec::Expr::Kind::Name;
-  fileErrorType.name = "FileError";
-  primec::Expr errValue;
-  errValue.kind = primec::Expr::Kind::Name;
-  errValue.name = "err";
   expr.name = "why";
   expr.args = {fileErrorType, errValue};
-  int emitExprCalls = 0;
+  emitExprCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
             expr,
             locals,

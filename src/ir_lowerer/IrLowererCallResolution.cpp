@@ -101,7 +101,8 @@ bool isMapBuiltinResolvedPath(const SemanticProgram *semanticProgram,
 
   auto matchesResolvedPath = [&](std::string_view basePath) {
     return resolvedPath == basePath ||
-           resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+           resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0 ||
+           resolvedPath.rfind(std::string(basePath) + "__ov", 0) == 0;
   };
   auto matchesExperimentalMapMethodPath = [&](std::string_view helperName) {
     const std::string prefix = "/std/collections/experimental_map/Map__";

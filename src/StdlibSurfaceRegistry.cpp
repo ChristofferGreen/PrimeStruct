@@ -552,7 +552,15 @@ bool matchesAny(std::span<const std::string_view> spellings, std::string_view sp
 
 std::string_view stripResolvedPathSpecializationSuffix(std::string_view path) {
   const std::size_t lastSlash = path.rfind('/');
-  const std::size_t marker = path.rfind("__t");
+  const std::size_t specializationMarker = path.rfind("__t");
+  const std::size_t overloadMarker = path.rfind("__ov");
+  std::size_t marker = std::string_view::npos;
+  if (specializationMarker != std::string_view::npos &&
+      (overloadMarker == std::string_view::npos || specializationMarker > overloadMarker)) {
+    marker = specializationMarker;
+  } else if (overloadMarker != std::string_view::npos) {
+    marker = overloadMarker;
+  }
   if (marker == std::string_view::npos || lastSlash == std::string_view::npos || marker <= lastSlash) {
     return path;
   }

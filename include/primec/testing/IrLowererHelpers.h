@@ -47,6 +47,7 @@ namespace primec::ir_lowerer {
 #include "primec/testing/ir_lowerer_helpers/IrLowererSetupMathHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererSetupInferenceHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceSetup.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerInferenceBaseKindHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallCleanupStep.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallContextSetupStep.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallGpuLocalsStep.h"
