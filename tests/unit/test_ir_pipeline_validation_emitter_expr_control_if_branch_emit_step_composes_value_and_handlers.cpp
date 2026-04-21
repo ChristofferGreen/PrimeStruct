@@ -1293,6 +1293,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "    }\n") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "  std::string resolvedInitializerPath =\n"
+            "      preferredCollectionHelperResolvedPath(initializer);\n"
+            "  if (resolvedInitializerPath.empty()) {\n"
+            "    resolvedInitializerPath = resolveCalleePath(initializer);\n"
+            "  }\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "      resolvedInitializerPath == \"/vector\") {\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "      resolveCalleePath(initializer) == \"/vector\") {\n") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "const auto canonicalizeSoaResolvedPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(

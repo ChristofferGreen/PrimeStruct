@@ -980,10 +980,15 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     }
     bindingOut = {};
   }
+  std::string resolvedInitializerPath =
+      preferredCollectionHelperResolvedPath(initializer);
+  if (resolvedInitializerPath.empty()) {
+    resolvedInitializerPath = resolveCalleePath(initializer);
+  }
   if (initializer.kind == Expr::Kind::Call &&
       !initializer.isMethodCall &&
       initializer.templateArgs.size() == 1 &&
-      resolveCalleePath(initializer) == "/vector") {
+      resolvedInitializerPath == "/vector") {
     if (!hasDirectExperimentalVectorImport()) {
       bindingOut.typeName = "vector";
       bindingOut.typeTemplateArg = initializer.templateArgs.front();
