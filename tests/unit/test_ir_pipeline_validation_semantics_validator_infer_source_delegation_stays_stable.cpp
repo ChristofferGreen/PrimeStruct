@@ -278,6 +278,21 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "resolvedOut = preferredSoaHelperTargetForCollectionType(") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
+            "auto isCanonicalSoaWrapperMethod = [&](std::string_view helperName) {") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "auto redirectConcreteExperimentalSoaMethodTarget = [&](const std::string &resolvedType) -> bool {") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "resolvedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "redirectConcreteExperimentalSoaMethodTarget(resolvedReceiverType)") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "redirectConcreteExperimentalSoaMethodTarget(resolvedType)") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
             "normalizedMethodPath == \"vector/at_unsafe\"") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(

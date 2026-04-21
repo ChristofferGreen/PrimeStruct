@@ -599,6 +599,24 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return std::string("/std/collections/experimental_soa_vector/soaVectorRefRef");
   };
+  auto isCanonicalSoaWrapperMethod = [&](std::string_view helperName) {
+    return helperName == "count" || helperName == "count_ref" ||
+           helperName == "get" || helperName == "get_ref" ||
+           helperName == "ref" || helperName == "ref_ref" ||
+           helperName == "to_aos" || helperName == "to_aos_ref" ||
+           helperName == "push" || helperName == "reserve";
+  };
+  auto redirectConcreteExperimentalSoaMethodTarget = [&](const std::string &resolvedType) -> bool {
+    const bool isConcreteExperimentalSoaReceiver =
+        resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+    if (!isConcreteExperimentalSoaReceiver ||
+        !isCanonicalSoaWrapperMethod(normalizedMethodName)) {
+      return false;
+    }
+    resolvedOut = preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                            "/soa_vector");
+    return true;
+  };
   auto setIndexedArgsPackMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.args.size() != 2) {
       return false;
@@ -651,6 +669,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       const std::string resolvedReceiverType =
           resolveMethodStructTypePath(normalizedReceiverType, receiver.namespacePrefix);
       if (!resolvedReceiverType.empty()) {
+        if (redirectConcreteExperimentalSoaMethodTarget(resolvedReceiverType)) {
+          return true;
+        }
         resolvedOut = joinMethodTarget(resolvedReceiverType, normalizedMethodName);
         return true;
       }
@@ -667,6 +688,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     resolvedType = inferStructReturnPath(receiver, params, locals);
     if (!resolvedType.empty()) {
+      if (redirectConcreteExperimentalSoaMethodTarget(resolvedType)) {
+        return true;
+      }
       resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
       return true;
     }
