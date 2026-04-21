@@ -296,6 +296,16 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
+            "if (((normalizedMethodName == \"count\" &&\n"
+            "            (collectionTypePath == \"/vector\" || collectionTypePath == \"/array\" ||\n"
+            "             collectionTypePath == \"/soa_vector\" || collectionTypePath == \"/string\")) ||\n"
+            "           (normalizedMethodName == \"count_ref\" &&\n"
+            "            (collectionTypePath == \"/soa_vector\" || collectionTypePath == \"/map\")))) {\n"
+            "        resolvedOut = explicitRemovedMethodPath;\n"
+            "        return true;\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
             "                                                                \"/soa_vector\");") !=
         std::string::npos);
@@ -303,6 +313,32 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "if (normalizedMethodName == \"count_ref\" &&\n"
             "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
             "      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {\n"
+            "      if (normalizedMethodName == \"count\" &&\n"
+            "          resolveArgsPackCountTarget(receiver, elemType)) {\n"
+            "        resolvedOut = preferVectorStdlibHelperPath(\"/array/count\");\n"
+            "        return true;\n"
+            "      }\n"
+            "      if (resolveVectorTarget(receiver, elemType) &&\n"
+            "          usesSamePathSoaHelperTargetForCurrentImports(normalizedMethodName)) {\n"
+            "        resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);\n"
+            "        return true;\n"
+            "      }\n"
+            "      if (resolveSoaVectorTarget(receiver, elemType)) {\n"
+            "        resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);\n"
+            "        return true;\n"
+            "      }\n"
+            "}") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
+            "        resolveMapTarget(receiver, keyType, valueType)) {\n"
+            "      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,\n"
+            "                                                    normalizedMethodName);\n"
+            "      return true;\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/get\";") ==
         std::string::npos);

@@ -287,9 +287,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
     if (!explicitRemovedMethodPath.empty() && hasDefinitionPath(explicitRemovedMethodPath)) {
-      if (normalizedMethodName == "count" &&
-          (collectionTypePath == "/vector" || collectionTypePath == "/array" ||
-           collectionTypePath == "/soa_vector" || collectionTypePath == "/string")) {
+      if (((normalizedMethodName == "count" &&
+            (collectionTypePath == "/vector" || collectionTypePath == "/array" ||
+             collectionTypePath == "/soa_vector" || collectionTypePath == "/string")) ||
+           (normalizedMethodName == "count_ref" &&
+            (collectionTypePath == "/soa_vector" || collectionTypePath == "/map")))) {
         resolvedOut = explicitRemovedMethodPath;
         return true;
       }
@@ -798,33 +800,37 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     std::string elemType;
     std::string keyType;
     std::string valueType;
-    if (normalizedMethodName == "count") {
-      if (resolveArgsPackCountTarget(receiver, elemType)) {
+    if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
+      if (normalizedMethodName == "count" &&
+          resolveArgsPackCountTarget(receiver, elemType)) {
         resolvedOut = preferVectorStdlibHelperPath("/array/count");
         return true;
       }
       if (resolveVectorTarget(receiver, elemType) &&
-          usesSamePathSoaHelperTargetForCurrentImports("count")) {
-        resolvedOut = preferredSoaHelperTargetForCurrentImports("count");
+          usesSamePathSoaHelperTargetForCurrentImports(normalizedMethodName)) {
+        resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);
         return true;
       }
-      if (resolveVectorTarget(receiver, elemType)) {
+      if (normalizedMethodName == "count" &&
+          resolveVectorTarget(receiver, elemType)) {
         resolvedOut = preferredBareVectorHelperTarget("count");
         return true;
       }
       if (resolveSoaVectorTarget(receiver, elemType)) {
-        resolvedOut = preferredSoaHelperTargetForCurrentImports("count");
+        resolvedOut = preferredSoaHelperTargetForCurrentImports(normalizedMethodName);
         return true;
       }
-      if (resolveArrayTarget(receiver, elemType)) {
+      if (normalizedMethodName == "count" &&
+          resolveArrayTarget(receiver, elemType)) {
         resolvedOut = preferVectorStdlibHelperPath("/array/count");
         return true;
       }
-      if (resolveStringTarget(receiver)) {
+      if (normalizedMethodName == "count" && resolveStringTarget(receiver)) {
         resolvedOut = "/string/count";
         return true;
       }
-      if (setIndexedArgsPackMapMethodTarget(receiver, "count")) {
+      if (normalizedMethodName == "count" &&
+          setIndexedArgsPackMapMethodTarget(receiver, "count")) {
         return true;
       }
     }
@@ -832,8 +838,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredBareVectorHelperTarget("capacity");
       return true;
     }
-    if (normalizedMethodName == "count" && resolveMapTarget(receiver, keyType, valueType)) {
-      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "count");
+    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
+        resolveMapTarget(receiver, keyType, valueType)) {
+      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,
+                                                    normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||
