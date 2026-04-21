@@ -1546,6 +1546,75 @@ main() {
   CHECK_FALSE(choseUnborrowedGet);
 }
 
+TEST_CASE("semantic product keeps helper-return borrowed soa_vector field views on canonical reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [auto] fieldMethod{pickBorrowed(location(values)).y()[1i32]}
+  [auto] fieldCall{y(pickBorrowed(location(values)))[0i32]}
+  return(plus(fieldMethod, fieldCall))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *fieldMethodEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "fieldMethod";
+      });
+  REQUIRE(fieldMethodEntry != nullptr);
+  CHECK(fieldMethodEntry->bindingTypeText == "i32");
+  CHECK(fieldMethodEntry->initializerDirectCallResolvedPath ==
+        "/std/collections/internal_soa_storage/soaFieldViewRead");
+  CHECK(fieldMethodEntry->initializerDirectCallReturnKind == "i32");
+
+  const auto *fieldCallEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "fieldCall";
+      });
+  REQUIRE(fieldCallEntry != nullptr);
+  CHECK(fieldCallEntry->bindingTypeText == "i32");
+  CHECK(fieldCallEntry->initializerDirectCallResolvedPath ==
+        "/std/collections/internal_soa_storage/soaFieldViewRead");
+  CHECK(fieldCallEntry->initializerDirectCallReturnKind == "i32");
+
+  const bool choseExplicitFieldViewBridge = std::any_of(
+      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
+      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
+        return entry->scopePath == "/main" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/std/collections/experimental_soa_vector/soaVectorFieldView";
+      });
+  CHECK_FALSE(choseExplicitFieldViewBridge);
+}
+
 TEST_CASE("semantic product keeps helper-return soa_vector direct-call targets on alias wrappers") {
   const std::string source = R"(
 [struct reflect]

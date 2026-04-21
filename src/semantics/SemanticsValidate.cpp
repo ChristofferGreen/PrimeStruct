@@ -3896,7 +3896,39 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
     }
     return false;
   };
-  if (receiver.kind == Expr::Kind::Name) {
+  if (const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
+          receiver, bindings, soaVectorReturnDefinitions, definitionNamespace, structPaths);
+      normalizedReceiver.has_value()) {
+    canonicalReceiverExpr = *normalizedReceiver;
+    getReceiverExpr = &*canonicalReceiverExpr;
+    const Expr *normalizedBindingSource = getReceiverExpr;
+    if (getReceiverExpr->kind == Expr::Kind::Call &&
+        semantics::isSimpleCallName(*getReceiverExpr, "dereference") &&
+        getReceiverExpr->args.size() == 1) {
+      receiverNeedsDereference = true;
+      normalizedBindingSource = &getReceiverExpr->args.front();
+    }
+    if (normalizedBindingSource->kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(normalizedBindingSource->name);
+      if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
+        // handled
+      } else {
+        auto allBindingIt = allBindings.find(normalizedBindingSource->name);
+        if (allBindingIt != allBindings.end()) {
+          tryReceiverBinding(allBindingIt->second);
+        }
+      }
+    } else if (normalizedBindingSource->kind == Expr::Kind::Call &&
+               !normalizedBindingSource->isBinding) {
+      for (const std::string &candidatePath : candidatePathsForCall(*normalizedBindingSource)) {
+        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+        if (returnIt != soaVectorReturnDefinitions.end() &&
+            tryReceiverBinding(returnIt->second)) {
+          break;
+        }
+      }
+    }
+  } else if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
     if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
       // handled
@@ -4272,7 +4304,39 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
     }
     return false;
   };
-  if (receiver.kind == Expr::Kind::Name) {
+  if (const auto normalizedReceiver = normalizeExperimentalSoaBorrowedHelperReceiver(
+          receiver, bindings, soaVectorReturnDefinitions, definitionNamespace, structPaths);
+      normalizedReceiver.has_value()) {
+    canonicalReceiverExpr = *normalizedReceiver;
+    getReceiverExpr = &*canonicalReceiverExpr;
+    const Expr *normalizedBindingSource = getReceiverExpr;
+    if (getReceiverExpr->kind == Expr::Kind::Call &&
+        semantics::isSimpleCallName(*getReceiverExpr, "dereference") &&
+        getReceiverExpr->args.size() == 1) {
+      receiverNeedsDereference = true;
+      normalizedBindingSource = &getReceiverExpr->args.front();
+    }
+    if (normalizedBindingSource->kind == Expr::Kind::Name) {
+      auto bindingIt = bindings.find(normalizedBindingSource->name);
+      if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
+        // handled
+      } else {
+        auto allBindingIt = allBindings.find(normalizedBindingSource->name);
+        if (allBindingIt != allBindings.end()) {
+          tryReceiverBinding(allBindingIt->second);
+        }
+      }
+    } else if (normalizedBindingSource->kind == Expr::Kind::Call &&
+               !normalizedBindingSource->isBinding) {
+      for (const std::string &candidatePath : candidatePathsForCall(*normalizedBindingSource)) {
+        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+        if (returnIt != soaVectorReturnDefinitions.end() &&
+            tryReceiverBinding(returnIt->second)) {
+          break;
+        }
+      }
+    }
+  } else if (receiver.kind == Expr::Kind::Name) {
     auto bindingIt = bindings.find(receiver.name);
     if (bindingIt != bindings.end() && tryReceiverBinding(bindingIt->second)) {
       // handled
