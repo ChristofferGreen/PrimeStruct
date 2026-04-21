@@ -56,6 +56,19 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
     }
   }
 
+  const auto &countCapacityContext =
+      inferCollectionDispatchSetup
+          .builtinCollectionCountCapacityDispatchContext;
+  if (resolvedIt == defMap_.end() &&
+      (countCapacityContext.isCountLike ||
+       countCapacityContext.isCapacityLike)) {
+    ReturnKind builtinCollectionKind = ReturnKind::Unknown;
+    if (resolveBuiltinCollectionCountCapacityReturnKind(
+            expr, countCapacityContext, builtinCollectionKind)) {
+      return finish(builtinCollectionKind);
+    }
+  }
+
   const bool isBuiltinGet = isSimpleCallName(expr, "get");
   const bool isBuiltinGetRef = isSimpleCallName(expr, "get_ref");
   const bool isBuiltinRef = isSimpleCallName(expr, "ref");

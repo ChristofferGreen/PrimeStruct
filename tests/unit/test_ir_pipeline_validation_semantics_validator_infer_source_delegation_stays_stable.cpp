@@ -646,6 +646,20 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
             "(void)failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "const auto &countCapacityContext =\n"
+            "      inferCollectionDispatchSetup\n"
+            "          .builtinCollectionCountCapacityDispatchContext;") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "if (resolvedIt == defMap_.end() &&\n"
+            "      (countCapacityContext.isCountLike ||\n"
+            "       countCapacityContext.isCapacityLike)) {") !=
+        std::string::npos);
+  CHECK(semanticsInferLateFallbackBuiltinsSource.find(
+            "if (resolveBuiltinCollectionCountCapacityReturnKind(\n"
+            "            expr, countCapacityContext, builtinCollectionKind)) {") !=
+        std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("const bool isBuiltinGet = isSimpleCallName(expr, \"get\");") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find(
