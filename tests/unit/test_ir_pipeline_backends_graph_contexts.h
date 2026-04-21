@@ -1049,7 +1049,30 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
             "        }\n"
             "        errorOut.clear();") !=
         std::string::npos);
+  CHECK(irMethodResolution.find(
+            "  const std::string explicitMethodPath = describeMethodCallExpr(callExpr);") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "  const bool isExplicitRemovedVectorMethodAlias =\n"
+            "      isExplicitRemovedVectorMethodAliasPath(explicitMethodPath);") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "  const bool isExplicitMapMethodAlias =\n"
+            "      isExplicitMapMethodAliasPath(explicitMethodPath);") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "  const bool isExplicitMapContainsOrTryAtMethod =\n"
+            "      isExplicitMapContainsOrTryAtMethodPath(explicitMethodPath);") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("std::string semanticTargetLookupError;") ==
+        std::string::npos);
+  CHECK(irCallResolution.find("std::string resolveScopedCallPathForHelperMatching(const Expr &expr)") !=
+        std::string::npos);
+  CHECK(irCallResolution.find(
+            "    const std::string scopedCallPath =\n"
+            "        resolveScopedCallPathForHelperMatching(callExpr);\n"
+            "    if (isExplicitMapContainsOrTryAtMethodPath(scopedCallPath) &&\n"
+            "        normalizeCollectionHelperPath(scopedCallPath) ==") !=
         std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodReceiverTarget(*receiver,") != std::string::npos);

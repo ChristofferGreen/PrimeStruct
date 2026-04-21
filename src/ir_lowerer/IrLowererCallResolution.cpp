@@ -12,6 +12,20 @@ namespace {
 
 std::string resolveCallPathWithoutSemanticFallbackProbes(const Expr &expr);
 
+std::string resolveScopedCallPathForHelperMatching(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    return scoped + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 bool isBridgeHelperName(std::string_view collectionFamily, std::string_view helperName) {
   if (collectionFamily == "soa_vector") {
     return helperName == "count" || helperName == "get" || helperName == "ref" ||
@@ -481,8 +495,10 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     if (isSemanticBarePublishedMapHelperCall(callExpr, semanticProgram, resolved)) {
       return resolvedDef;
     }
-    if (isExplicitMapContainsOrTryAtMethodPath(callExpr.name) &&
-        normalizeCollectionHelperPath(callExpr.name) ==
+    const std::string scopedCallPath =
+        resolveScopedCallPathForHelperMatching(callExpr);
+    if (isExplicitMapContainsOrTryAtMethodPath(scopedCallPath) &&
+        normalizeCollectionHelperPath(scopedCallPath) ==
             normalizeCollectionHelperPath(resolved)) {
       return resolvedDef;
     }

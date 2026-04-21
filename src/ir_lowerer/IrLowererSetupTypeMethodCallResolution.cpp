@@ -145,6 +145,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     return nullptr;
   }
 
+  const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
+
   if (semanticProgram != nullptr) {
     auto resolveLoweredDefinitionPath = [&](const std::string &targetPath)
         -> const Definition * {
@@ -179,7 +181,6 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       }
       return nullptr;
     };
-    const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
     const bool requestsExplicitVectorCountMethod =
         explicitMethodPath == "/vector/count" ||
         explicitMethodPath == "/std/collections/vector/count";
@@ -262,10 +263,12 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
-  const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
-  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
+  const bool isExplicitRemovedVectorMethodAlias =
+      isExplicitRemovedVectorMethodAliasPath(explicitMethodPath);
+  const bool isExplicitMapMethodAlias =
+      isExplicitMapMethodAliasPath(explicitMethodPath);
   const bool isExplicitMapContainsOrTryAtMethod =
-      isExplicitMapContainsOrTryAtMethodPath(callExpr.name);
+      isExplicitMapContainsOrTryAtMethodPath(explicitMethodPath);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
