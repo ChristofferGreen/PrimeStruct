@@ -466,9 +466,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       graphMethodCallFactAvailable && !graphPreferredMethodResolvedInitializer.empty();
   const std::string preferredResolvedInitializer = hasGraphPreferredResolvedInitializer
                                                        ? graphPreferredResolvedInitializer
-                                                       : (bindingExpr == nullptr
-                                                              ? preferredCollectionHelperResolvedPath(initializer)
-                                                              : std::string{});
+                                                       : preferredCollectionHelperResolvedPath(initializer);
   if (!preferredResolvedInitializer.empty()) {
     if (inferRawBuiltinSoaCanonicalToAosBinding(initializer)) {
       return true;

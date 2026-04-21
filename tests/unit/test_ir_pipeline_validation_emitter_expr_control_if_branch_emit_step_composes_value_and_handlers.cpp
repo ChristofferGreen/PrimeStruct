@@ -989,6 +989,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   CHECK(buildInitializerInferenceCallsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, \"count_ref\")") !=
         std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "const std::string preferredResolvedInitializer = "
+            "hasGraphPreferredResolvedInitializer") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            ": preferredCollectionHelperResolvedPath(initializer);") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "bindingExpr == nullptr\n"
+            "                                                              ? "
+            "preferredCollectionHelperResolvedPath(initializer)\n"
+            "                                                              : std::string{}") ==
+        std::string::npos);
   CHECK(buildCallResolutionSource.find("auto vectorConstructorHelperPath = [&]() -> std::string {") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find("if (resolvedPath == \"/std/collections/vector/vector\") {") ==
