@@ -259,6 +259,26 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
     }
     return false;
   };
+  auto isScalarReferenceOffsetOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsRef.find(candidate.name);
+    if (it == localsRef.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    if (info.kind != LocalInfo::Kind::Reference) {
+      return false;
+    }
+    if (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap ||
+        info.isFileHandle || info.isResult || info.isUninitializedStorage || info.targetsUninitializedStorage ||
+        info.isSoaVector || !info.structTypeName.empty()) {
+      return false;
+    }
+    return info.valueKind == LocalInfo::ValueKind::Int32 || info.valueKind == LocalInfo::ValueKind::Int64 ||
+           info.valueKind == LocalInfo::ValueKind::UInt64;
+  };
   auto emitPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
     if (candidate.kind == Expr::Kind::Name) {
       auto it = localsRef.find(candidate.name);
@@ -276,6 +296,9 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
   if (builtin == "plus" || builtin == "minus") {
     leftPointer = isPointerOperand(expr.args[0], localsIn);
     rightPointer = isPointerOperand(expr.args[1], localsIn);
+    if (rightPointer && isScalarReferenceOffsetOperand(expr.args[1], localsIn)) {
+      rightPointer = false;
+    }
     if (leftPointer && rightPointer) {
       error = "pointer arithmetic does not support pointer + pointer";
       return OperatorArithmeticEmitResult::Error;
