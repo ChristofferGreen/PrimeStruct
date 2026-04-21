@@ -801,10 +801,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       const std::string resolvedTarget = resolveCalleePath(target);
       const bool matchesSoaToAosTarget =
-          (!target.isMethodCall && isSimpleCallName(target, "to_aos")) ||
+          ((target.isMethodCall && target.name == "to_aos") ||
+           (!target.isMethodCall && isSimpleCallName(target, "to_aos"))) ||
           isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos");
       const bool matchesBorrowedSoaToAosTarget =
-          (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref")) ||
+          ((target.isMethodCall && target.name == "to_aos_ref") ||
+           (!target.isMethodCall && isSimpleCallName(target, "to_aos_ref"))) ||
           isCanonicalStdlibSoaHelperPath(resolvedTarget, "to_aos_ref");
       if ((matchesSoaToAosTarget || matchesBorrowedSoaToAosTarget) &&
           target.args.size() == 1) {
