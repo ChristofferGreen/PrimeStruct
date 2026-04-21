@@ -1047,6 +1047,34 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "                                                 ? graphPreferredResolvedInitializer") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "      std::string fallbackPreferredResolvedInitializerPath =\n"
+            "          preferredCollectionHelperResolvedPath(initializer);\n"
+            "      if (fallbackPreferredResolvedInitializerPath.empty()) {\n"
+            "        fallbackPreferredResolvedInitializerPath = resolveCalleePath(initializer);\n"
+            "      }\n"
+            "      if (!fallbackPreferredResolvedInitializerPath.empty()) {\n"
+            "        const std::string concreteFallbackPreferredResolvedInitializerPath =\n"
+            "            resolveExprConcreteCallPath(\n"
+            "                params, locals, initializer, fallbackPreferredResolvedInitializerPath);\n"
+            "        if (!concreteFallbackPreferredResolvedInitializerPath.empty()) {\n"
+            "          fallbackPreferredResolvedInitializerPath =\n"
+            "              concreteFallbackPreferredResolvedInitializerPath;\n"
+            "        }\n"
+            "      }\n"
+            "      const std::string &preferredResolvedInitializerPath =\n"
+            "          !preferredResolvedInferencePath.empty()\n"
+            "              ? preferredResolvedInferencePath\n"
+            "              : fallbackPreferredResolvedInitializerPath;") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "      const std::string &preferredResolvedInitializerPath =\n"
+            "          !preferredResolvedInferencePath.empty()\n"
+            "              ? preferredResolvedInferencePath\n"
+            "          : !fallbackPreferredResolvedInitializerPath.empty()\n"
+            "              ? fallbackPreferredResolvedInitializerPath\n"
+            "              : resolveCalleePath(initializer);") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "const std::string concretePreferredResolvedInitializer =\n"
             "        resolveExprConcreteCallPath(\n"
             "            params, locals, initializer, preferredResolvedInitializer);") !=

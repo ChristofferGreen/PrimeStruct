@@ -689,14 +689,24 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       }
     }
     if (!hasGraphPreferredResolvedInitializer) {
-      const std::string fallbackPreferredResolvedInitializerPath =
+      std::string fallbackPreferredResolvedInitializerPath =
           preferredCollectionHelperResolvedPath(initializer);
+      if (fallbackPreferredResolvedInitializerPath.empty()) {
+        fallbackPreferredResolvedInitializerPath = resolveCalleePath(initializer);
+      }
+      if (!fallbackPreferredResolvedInitializerPath.empty()) {
+        const std::string concreteFallbackPreferredResolvedInitializerPath =
+            resolveExprConcreteCallPath(
+                params, locals, initializer, fallbackPreferredResolvedInitializerPath);
+        if (!concreteFallbackPreferredResolvedInitializerPath.empty()) {
+          fallbackPreferredResolvedInitializerPath =
+              concreteFallbackPreferredResolvedInitializerPath;
+        }
+      }
       const std::string &preferredResolvedInitializerPath =
           !preferredResolvedInferencePath.empty()
               ? preferredResolvedInferencePath
-          : !fallbackPreferredResolvedInitializerPath.empty()
-              ? fallbackPreferredResolvedInitializerPath
-              : resolveCalleePath(initializer);
+              : fallbackPreferredResolvedInitializerPath;
       if (!preferredResolvedInitializerPath.empty() &&
           inferResolvedDirectCallBindingType(preferredResolvedInitializerPath, bindingOut)) {
         return true;
