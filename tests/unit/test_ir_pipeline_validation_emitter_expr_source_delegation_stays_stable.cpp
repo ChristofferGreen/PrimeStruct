@@ -2171,6 +2171,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (preferred.rfind(\"/soa_vector/\", 0) == 0 && defs.count(preferred) == 0)") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "rawMethodName.rfind(\"soa_vector/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "rawMethodName.rfind(\"std/collections/soa_vector/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "\"/std/collections/soa_vector/\" + suffix") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(

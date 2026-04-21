@@ -27,9 +27,15 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
       helperName = std::string_view(rawMethodName).substr(std::string_view("array/").size());
+    } else if (rawMethodName.rfind("soa_vector/", 0) == 0) {
+      helperName =
+          std::string_view(rawMethodName).substr(std::string_view("soa_vector/").size());
     } else if (rawMethodName.rfind("std/collections/vector/", 0) == 0) {
       helperName =
           std::string_view(rawMethodName).substr(std::string_view("std/collections/vector/").size());
+    } else if (rawMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+      helperName = std::string_view(rawMethodName)
+                       .substr(std::string_view("std/collections/soa_vector/").size());
     }
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(std::string(helperName));
   }
