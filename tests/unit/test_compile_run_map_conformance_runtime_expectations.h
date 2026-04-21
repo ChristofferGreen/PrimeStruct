@@ -427,8 +427,10 @@ inline void expectCanonicalMapNamespaceExperimentalBorrowedRefConformance(const 
   const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
                                  quoteShellArg(artifactPath) + " --entry /main > " + quoteShellArg(outPath) +
                                  " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("native backend") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(artifactPath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 27);
+  CHECK(readFile(outPath) == "container missing key\n");
 }
 
 inline void expectCanonicalMapNamespaceNamedArgsVmConformance() {
