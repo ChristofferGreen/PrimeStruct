@@ -119,26 +119,9 @@
 
           size_t receiverIndex = 0;
           if (callExpr.isMethodCall) {
-            std::string normalizedMethodName =
-                resolveTailDispatchDirectHelperPath(callExpr);
-            if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
-              normalizedMethodName.erase(normalizedMethodName.begin());
-            }
-            const size_t lastSlash = normalizedMethodName.find_last_of('/');
-            if (lastSlash != std::string::npos) {
-              normalizedMethodName = normalizedMethodName.substr(lastSlash + 1);
-            }
-            normalizedMethodName = stripGeneratedHelperSuffix(std::move(normalizedMethodName));
-            const bool isMethodInsertStem =
-                normalizedMethodName == "insert" ||
-                normalizedMethodName == "insert_ref" ||
-                normalizedMethodName == "Insert" ||
-                normalizedMethodName == "InsertRef" ||
-                normalizedMethodName == "mapInsert" ||
-                normalizedMethodName == "mapInsertRef" ||
-                normalizedMethodName == "MapInsert" ||
-                normalizedMethodName == "MapInsertRef";
-            if (!isMethodInsertStem) {
+            std::string helperName;
+            if (!resolveBuiltinMapHelperName(callExpr, true, helperName) ||
+                (helperName != "insert" && helperName != "insert_ref")) {
               return false;
             }
           } else {

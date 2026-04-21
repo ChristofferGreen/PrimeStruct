@@ -245,8 +245,8 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find(
             "std::string helperName =\n                resolveTailDispatchDirectHelperPath(candidate);") !=
         std::string::npos);
-  CHECK(source.find(
-            "std::string normalizedMethodName =\n                resolveTailDispatchDirectHelperPath(callExpr);") !=
+  CHECK(source.find("if (!resolveBuiltinMapHelperName(callExpr, true, helperName) ||\n"
+                    "                (helperName != \"insert\" && helperName != \"insert_ref\")) {") !=
         std::string::npos);
   CHECK(source.find("if ((helperName == \"count\" || helperName == \"contains\" ||") !=
         std::string::npos);
@@ -256,6 +256,8 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find("std::string helperName = candidate.name;") ==
         std::string::npos);
   CHECK(source.find("std::string normalizedMethodName = callExpr.name;") ==
+        std::string::npos);
+  CHECK(source.find("const bool isMethodInsertStem =") ==
         std::string::npos);
   CHECK(source.find("if (callExpr.name == \"count\" || callExpr.name == \"contains\" ||") ==
         std::string::npos);
