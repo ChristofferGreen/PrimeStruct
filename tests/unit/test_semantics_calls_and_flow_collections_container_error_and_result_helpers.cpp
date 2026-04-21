@@ -4453,6 +4453,58 @@ Holder() {
   return(count)
 }
 
+[return<Particle>]
+/std/collections/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(plus(index, 100i32)))
+}
+
+[return<Particle>]
+/std/collections/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(plus(index, 100i32)))
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/std/collections/soa_vector/to_aos([SoaVector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[return<int>]
+/std/collections/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(plus(value.x, 100i32))
+}
+
+[return<int>]
+/std/collections/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+  return(plus(count, 100i32))
+}
+
+[return<Particle>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/get([SoaVector<Particle>] values,
+                                                                  [i32] index) {
+  return(Particle(plus(index, 200i32)))
+}
+
+[return<Particle>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/ref([SoaVector<Particle>] values,
+                                                                  [i32] index) {
+  return(Particle(plus(index, 200i32)))
+}
+
+[effects(heap_alloc), return<vector<Particle>>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[return<void>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/push([SoaVector<Particle>] values,
+                                                                   [Particle] value) {
+}
+
+[return<void>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([SoaVector<Particle>] values,
+                                                                      [i32] count) {
+}
+
 [effects(heap_alloc), return<int>]
 main() {
   [Holder] holder{Holder()}

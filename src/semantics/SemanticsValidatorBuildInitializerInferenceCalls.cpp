@@ -497,6 +497,12 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
                             resolvedMethodInitializer,
                             methodBuiltin) &&
         !resolvedMethodInitializer.empty()) {
+      const std::string concreteResolvedMethodInitializer =
+          resolveExprConcreteCallPath(
+              params, locals, initializer, resolvedMethodInitializer);
+      if (!concreteResolvedMethodInitializer.empty()) {
+        resolvedMethodInitializer = concreteResolvedMethodInitializer;
+      }
       if (inferResolvedDirectCallBindingType(resolvedMethodInitializer, bindingOut)) {
         return true;
       }

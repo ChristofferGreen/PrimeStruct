@@ -1006,6 +1006,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "                              methodBuiltin)") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "const std::string concreteResolvedMethodInitializer =\n"
+            "          resolveExprConcreteCallPath(\n"
+            "              params, locals, initializer, resolvedMethodInitializer);") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "if (!concreteResolvedMethodInitializer.empty()) {\n"
+            "        resolvedMethodInitializer = concreteResolvedMethodInitializer;\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "    if (hasGraphPreferredMethodResolvedInitializer) {\n"
             "      if (inferResolvedDirectCallBindingType(graphPreferredMethodResolvedInitializer, bindingOut)) {\n"
             "        return true;\n"
