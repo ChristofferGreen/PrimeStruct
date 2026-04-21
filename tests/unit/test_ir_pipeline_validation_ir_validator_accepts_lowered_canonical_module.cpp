@@ -714,6 +714,22 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaToAosCall, "to_aos"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaToAosCall, "to_aos"));
 
+  primec::Expr namespacedSoaPushCall;
+  namespacedSoaPushCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaPushCall.name = "push";
+  namespacedSoaPushCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaPushCall, "push"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaPushCall, "push"));
+
+  primec::Expr namespacedSoaReserveCall;
+  namespacedSoaReserveCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaReserveCall.name = "reserve";
+  namespacedSoaReserveCall.namespacePrefix =
+      "/std/collections/experimental_soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaReserveCall, "reserve"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaReserveCall, "reserve"));
+
   primec::Expr namespacedSoaPlusCall;
   namespacedSoaPlusCall.kind = primec::Expr::Kind::Call;
   namespacedSoaPlusCall.name = "plus";
