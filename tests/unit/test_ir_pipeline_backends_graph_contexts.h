@@ -1051,6 +1051,23 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
             "              resolveLoweredDefinitionPath(preferredResolvedPath);") !=
         std::string::npos);
   CHECK(irMethodResolution.find(
+            "      if (requestsExplicitVectorCountMethod) {\n"
+            "        if (!directResolvedPath.empty() &&\n"
+            "            directResolvedPath != preferredResolvedPath) {\n"
+            "          if (const Definition *directResolvedDef =\n"
+            "                  resolveLoweredDefinitionPath(directResolvedPath);\n"
+            "              directResolvedDef != nullptr) {\n"
+            "            return directResolvedDef;\n"
+            "          }\n"
+            "        }\n"
+            "        if (const Definition *explicitMethodDef =\n"
+            "                resolveLoweredDefinitionPath(explicitMethodPath);\n"
+            "            explicitMethodDef != nullptr) {\n"
+            "          return explicitMethodDef;\n"
+            "        }\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
             "    const std::string directResolvedPath =\n"
             "        findSemanticProductDirectCallTarget(semanticProgram, callExpr);") !=
         std::string::npos);

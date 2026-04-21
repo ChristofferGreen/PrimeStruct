@@ -230,6 +230,21 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           resolvedDef != nullptr) {
         return resolvedDef;
       }
+      if (requestsExplicitVectorCountMethod) {
+        if (!directResolvedPath.empty() &&
+            directResolvedPath != preferredResolvedPath) {
+          if (const Definition *directResolvedDef =
+                  resolveLoweredDefinitionPath(directResolvedPath);
+              directResolvedDef != nullptr) {
+            return directResolvedDef;
+          }
+        }
+        if (const Definition *explicitMethodDef =
+                resolveLoweredDefinitionPath(explicitMethodPath);
+            explicitMethodDef != nullptr) {
+          return explicitMethodDef;
+        }
+      }
       if (preferredResolvedPath.rfind("/file/", 0) == 0) {
         errorOut.clear();
         return nullptr;
