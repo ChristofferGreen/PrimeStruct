@@ -295,6 +295,7 @@
     bool isCapacityLike = false;
     bool isUnnamespacedMapCountFallbackCall = false;
     bool shouldInferBuiltinBareMapCountCall = false;
+    std::string countHelperName = "count";
     std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
     std::function<std::string(const std::string &)> preferVectorStdlibHelperPath;
     std::function<bool(const std::string &)> hasDeclaredDefinitionPath;
@@ -307,6 +308,7 @@
     bool isDirectCapacityCall = false;
     bool isDirectCapacitySingleArg = false;
     bool shouldInferBuiltinBareMapCountCall = false;
+    std::string countHelperName = "count";
     std::function<bool(const std::string &, std::string &)> resolveMethodCallPath;
     std::function<std::string(const std::string &)> preferVectorStdlibHelperPath;
     std::function<bool(const std::string &)> hasDeclaredDefinitionPath;

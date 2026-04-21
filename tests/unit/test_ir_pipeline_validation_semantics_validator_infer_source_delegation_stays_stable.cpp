@@ -184,7 +184,11 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
         std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =") !=
+        std::string::npos);
   CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =") !=
+        std::string::npos);
+  CHECK(semanticsInferCombinedSource.find("setupOut.builtinCollectionDirectCountCapacityContext.countHelperName =") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("makeBuiltinCollectionDispatchResolvers(params, locals, ") != std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveIndexedArgsPackElementType =") != std::string::npos);
@@ -455,9 +459,12 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("const auto inferHelperReturnKind = [&](const std::string &helperName,") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("if (context.isDirectCountCall)") != std::string::npos);
+  CHECK(semanticsInferCollectionDirectCountCapacitySource.find(
+            "inferHelperReturnKind(context.countHelperName, expr.args.front(),") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionDirectCountCapacitySource.find("if (context.isDirectCapacitySingleArg && context.resolveVectorTarget != nullptr)") !=
         std::string::npos);
-  CHECK(semanticsInferCollectionCountCapacitySource.find("context.isCountLike && methodResolved == \"/std/collections/map/count\"") !=
+  CHECK(semanticsInferCollectionCountCapacitySource.find("context.isCountLike && methodResolved == (context.countHelperName == \"count_ref\"") !=
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSource.find("bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind") !=
         std::string::npos);
@@ -625,7 +632,11 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
         std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.isCountLike =") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionDispatchSetupSource.find("setupOut.builtinCollectionDirectCountCapacityContext.countHelperName =") !=
         std::string::npos);
   CHECK(semanticsInferLateFallbackBuiltinsSource.find("ReturnKind SemanticsValidator::inferLateFallbackReturnKind(") !=
         std::string::npos);

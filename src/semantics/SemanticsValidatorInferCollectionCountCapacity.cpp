@@ -42,15 +42,18 @@ bool SemanticsValidator::resolveBuiltinCollectionCountCapacityReturnKind(
   }
 
   std::string methodResolved;
-  if (!context.resolveMethodCallPath(context.isCountLike ? "count" : "capacity", methodResolved)) {
+  if (!context.resolveMethodCallPath(context.isCountLike ? context.countHelperName : "capacity",
+                                     methodResolved)) {
     return false;
   }
   methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
-  if (context.isCountLike && methodResolved == "/std/collections/map/count" &&
+  if (context.isCountLike && methodResolved == (context.countHelperName == "count_ref"
+                                                    ? "/std/collections/map/count_ref"
+                                                    : "/std/collections/map/count") &&
       !hasVisibleStdlibMapCountDefinition() &&
       !context.shouldInferBuiltinBareMapCountCall) {
     return failInferCountCapacityDiagnostic(
-        "unknown call target: /std/collections/map/count");
+        std::string("unknown call target: ") + methodResolved);
   }
 
   auto methodIt = defMap_.find(methodResolved);

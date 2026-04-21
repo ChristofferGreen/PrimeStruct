@@ -44,11 +44,14 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
       return ReturnKind::Unknown;
     }
     methodResolved = context.preferVectorStdlibHelperPath(methodResolved);
-    if (helperName == "count" && methodResolved == "/std/collections/map/count" &&
+    if ((helperName == "count" || helperName == "count_ref") &&
+        methodResolved == (helperName == "count_ref"
+                               ? "/std/collections/map/count_ref"
+                               : "/std/collections/map/count") &&
         !hasVisibleStdlibMapCountDefinition() &&
         !context.shouldInferBuiltinBareMapCountCall) {
       return failInferDirectCountCapacityDiagnostic(
-          "unknown call target: /std/collections/map/count");
+          std::string("unknown call target: ") + methodResolved);
     }
     if (allowBuiltinFallback && context.dispatchResolvers != nullptr &&
         defMap_.find(methodResolved) == defMap_.end()) {
@@ -78,7 +81,8 @@ ReturnKind SemanticsValidator::inferBuiltinCollectionDirectCountCapacityReturnKi
     }
 
     const ReturnKind helperReturnKind =
-        inferHelperReturnKind("count", expr.args.front(), context.isDirectCountSingleArg);
+        inferHelperReturnKind(context.countHelperName, expr.args.front(),
+                              context.isDirectCountSingleArg);
     if (helperReturnKind != ReturnKind::Unknown) {
       return helperReturnKind;
     }

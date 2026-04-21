@@ -250,6 +250,11 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
           expr, builtinCollectionDispatchResolvers) &&
       (!isStdNamespacedVectorCountCall ||
        shouldBuiltinValidateStdNamespacedVectorCountCall);
+  setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName =
+      ((resolveCalleePath(expr) == "/std/collections/map/count_ref") ||
+       (isNamespacedMapHelperCall && namespacedHelper == "count_ref"))
+          ? "count_ref"
+          : "count";
   setupOut.builtinCollectionCountCapacityDispatchContext.isCapacityLike =
       isInferBuiltinSingleArgCapacityLike;
   setupOut.builtinCollectionCountCapacityDispatchContext
@@ -316,6 +321,8 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
       inferBuiltinCapacityCallTargetsDirectReceiver;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountCall =
       isDirectBuiltinCountCapacityCountCall;
+  setupOut.builtinCollectionDirectCountCapacityContext.countHelperName =
+      setupOut.builtinCollectionCountCapacityDispatchContext.countHelperName;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCountSingleArg =
       isDirectBuiltinCountCapacityCountCall && expr.args.size() == 1;
   setupOut.builtinCollectionDirectCountCapacityContext.isDirectCapacityCall =
