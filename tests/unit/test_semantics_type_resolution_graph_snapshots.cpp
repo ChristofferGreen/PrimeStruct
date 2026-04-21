@@ -1141,6 +1141,121 @@ main() {
   CHECK_FALSE(choseConcreteExperimentalPush);
 }
 
+TEST_CASE("semantic product keeps helper-return soa_vector read targets on alias wrappers") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[return<Particle>]
+/soa_vector/get([soa_vector<Particle>] values, [i32] index) {
+  return(Particle(index))
+}
+
+[return<Particle>]
+/soa_vector/ref([soa_vector<Particle>] values, [i32] index) {
+  return(Particle(index))
+}
+
+[return<vector<Particle>>]
+/to_aos([soa_vector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[return<Particle>]
+/std/collections/soa_vector/get([soa_vector<Particle>] values, [i32] index) {
+  return(Particle(plus(index, 100i32)))
+}
+
+[return<Particle>]
+/std/collections/soa_vector/ref([soa_vector<Particle>] values, [i32] index) {
+  return(Particle(plus(index, 100i32)))
+}
+
+[return<vector<Particle>>]
+/std/collections/soa_vector/to_aos([soa_vector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[return<Particle>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/get([soa_vector<Particle>] values,
+                                                                  [i32] index) {
+  return(Particle(plus(index, 200i32)))
+}
+
+[return<Particle>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/ref([soa_vector<Particle>] values,
+                                                                  [i32] index) {
+  return(Particle(plus(index, 200i32)))
+}
+
+[return<vector<Particle>>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([soa_vector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [auto] picked{cloneValues().get(1i32)}
+  [auto] pickedRef{cloneValues().ref(1i32)}
+  [auto] unpacked{cloneValues().to_aos()}
+  return(plus(plus(picked.x, pickedRef.x), count(unpacked)))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *getTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "get" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/soa_vector/get";
+      });
+  REQUIRE(getTarget != nullptr);
+
+  const auto *refTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "ref" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/soa_vector/ref";
+      });
+  REQUIRE(refTarget != nullptr);
+
+  const auto *toAosTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "to_aos" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/to_aos";
+      });
+  REQUIRE(toAosTarget != nullptr);
+
+  const bool choseConcreteExperimentalGet = std::any_of(
+      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
+      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
+        return entry->scopePath == "/main" && entry->methodName == "get" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/std/collections/experimental_soa_vector/SoaVector__Particle/get";
+      });
+  CHECK_FALSE(choseConcreteExperimentalGet);
+}
+
 TEST_CASE("semantic product direct-call targets carry interned path ids") {
   const std::string source =
       "[return<i32>]\n"

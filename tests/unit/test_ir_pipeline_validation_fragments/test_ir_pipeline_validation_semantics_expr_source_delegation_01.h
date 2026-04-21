@@ -5907,16 +5907,29 @@
             "      (helperName == \"count\" || helperName == \"count_ref\" ||\n"
             "       helperName == \"capacity\" ||\n"
             "       helperName == \"at\" || helperName == \"at_unsafe\" || helperName == \"insert\" ||\n"
+            "       helperName == \"get\" || helperName == \"ref\" || helperName == \"to_aos\" ||\n"
             "       helperName == \"push\" || helperName == \"reserve\")) {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "      if (collectionTypePath == \"/soa_vector\" &&\n"
             "          (helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "           helperName == \"get\" || helperName == \"ref\" ||\n"
+            "           helperName == \"to_aos\" ||\n"
             "           helperName == \"push\" || helperName == \"reserve\")) {\n"
             "        resolvedOut =\n"
             "            preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");\n"
             "        return true;\n"
             "      }") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "  if (resolveExperimentalSoaVectorReceiver(receiver, experimentalSoaElemType) &&\n"
+            "      (helperName == \"get\" || helperName == \"ref\" ||\n"
+            "       helperName == \"to_aos\" ||\n"
+            "       helperName == \"push\" || helperName == \"reserve\")) {\n"
+            "    resolvedOut =\n"
+            "        preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");\n"
+            "    return true;\n"
+            "  }") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==

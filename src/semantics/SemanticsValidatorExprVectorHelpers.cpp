@@ -284,7 +284,9 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   }
   std::string experimentalSoaElemType;
   if (resolveExperimentalSoaVectorReceiver(receiver, experimentalSoaElemType) &&
-      (helperName == "push" || helperName == "reserve")) {
+      (helperName == "get" || helperName == "ref" ||
+       helperName == "to_aos" ||
+       helperName == "push" || helperName == "reserve")) {
     resolvedOut =
         preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
     return true;
@@ -293,6 +295,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       (helperName == "count" || helperName == "count_ref" ||
        helperName == "capacity" ||
        helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
+       helperName == "get" || helperName == "ref" || helperName == "to_aos" ||
        helperName == "push" || helperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
@@ -310,6 +313,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       }
       if (collectionTypePath == "/soa_vector" &&
           (helperName == "count" || helperName == "count_ref" ||
+           helperName == "get" || helperName == "ref" ||
+           helperName == "to_aos" ||
            helperName == "push" || helperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
