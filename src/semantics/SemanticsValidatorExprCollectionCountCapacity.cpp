@@ -100,7 +100,12 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       };
   const auto isCountOrCapacityHelperName =
       [](const std::string &helperName) {
-        return helperName == "count" || helperName == "capacity";
+        return helperName == "count" || helperName == "count_ref" ||
+               helperName == "capacity";
+      };
+  const auto isCountLikeHelperName =
+      [](const std::string &helperName) {
+        return helperName == "count" || helperName == "count_ref";
       };
   const auto isResolvedCountOrCapacityHelperInstantiation =
       [&]() {
@@ -173,6 +178,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   const auto tryRewriteBareVectorCountOrCapacityHelperCall =
       [&]() {
         return tryRewriteBareNamedVectorHelperCall("count") ||
+               tryRewriteBareNamedVectorHelperCall("count_ref") ||
                tryRewriteBareNamedVectorHelperCall("capacity");
       };
   const auto applyBareVectorCountOrCapacityHelperRewrite =
@@ -231,13 +237,34 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       routesThroughNamespacedMapCountSurface ||
       routesThroughUnnamespacedMapCountFallbackSurface ||
       routesThroughResolvedMapCountSurface;
+  const std::string countHelperName =
+      [&]() -> std::string {
+        const std::string resolvedPath = resolveCalleePath(expr);
+        if (routesThroughStdNamespacedMapCountSurface ||
+            routesThroughNamespacedMapCountSurface ||
+            routesThroughResolvedMapCountSurface) {
+          if (resolvedPath == "/std/collections/map/count_ref" ||
+              resolved == "/std/collections/map/count_ref" ||
+              resolved == "/map/count_ref") {
+            return "count_ref";
+          }
+        }
+        if (context.isNamespacedVectorHelperCall &&
+            isCountLikeHelperName(context.namespacedHelper)) {
+          return context.namespacedHelper;
+        }
+        if (isLegacyOrCanonicalSoaHelperPath(resolvedPath, "count_ref")) {
+          return "count_ref";
+        }
+        return "count";
+      }();
   const bool isSingleArgCountCall = expr.args.size() == 1;
   const bool isMultiArgCountCall = !isSingleArgCountCall;
   const bool routesThroughVectorBuiltinCountSurface =
-      isVectorBuiltinName(expr, "count");
+      isVectorBuiltinName(expr, "count") || countHelperName == "count_ref";
   const bool routesThroughNamespacedVectorCountHelperSurface =
       context.isNamespacedVectorHelperCall &&
-      context.namespacedHelper == "count";
+      isCountLikeHelperName(context.namespacedHelper);
   const bool isArrayNamespacedVectorCountCompatibilityActive =
       context.isArrayNamespacedVectorCountCompatibilityCall != nullptr &&
       context.isArrayNamespacedVectorCountCompatibilityCall(expr);
@@ -248,7 +275,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
       !isArrayNamespacedVectorCountCompatibilityActive;
   const bool routesThroughNamespacedVectorCountFallback =
       !isStdNamespacedVectorCompatibilityDirectCall(
-          expr.isMethodCall, resolveCalleePath(expr), "count") &&
+          expr.isMethodCall, resolveCalleePath(expr), countHelperName) &&
       matchesNamespacedVectorCountFallbackRouteShape;
   const bool hasResolvedCountDefinitionTarget =
       defMap_.find(resolved) != defMap_.end();
@@ -281,8 +308,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           isUnimportedStdNamespacedVectorCompatibilityDirectCall(
               expr.isMethodCall,
               resolveCalleePath(expr),
-              "count",
-              hasImportedDefinitionPath("/std/collections/vector/count"));
+              countHelperName,
+              hasImportedDefinitionPath(
+                  countHelperName == "count_ref"
+                      ? "/std/collections/soa_vector/count_ref"
+                      : "/std/collections/vector/count"));
   const bool countMethodSurfaceHasNoArguments = expr.args.empty();
   const bool violatesCountMethodSurfacePreconditions =
       countMethodSurfaceHasNamedArguments ||
@@ -308,10 +338,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool resolvesMapCountReceiver =
         context.resolveMapTarget != nullptr &&
         context.resolveMapTarget(receiver);
-    const std::string bareCountTargetPath = "/count";
-    const std::string bareMapCountTargetPath = "/map/count";
+    const std::string bareCountTargetPath = "/" + countHelperName;
+    const std::string bareMapCountTargetPath =
+        "/map/" + countHelperName;
     const std::string stdlibMapCountTargetPath =
-        "/std/collections/map/count";
+        "/std/collections/map/" + countHelperName;
     const bool lacksVisibleBareCountDefinition =
         !hasImportedDefinitionPath(bareCountTargetPath) &&
         !hasDeclaredDefinitionPath(bareCountTargetPath);
@@ -337,14 +368,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 } else {
                   const bool hasVisibleCountHelperMethodTarget =
                       resolveVisiblePreferredVectorHelperMethodTarget(
-                          receiver, "count", methodResolved);
+                          receiver, countHelperName.c_str(), methodResolved);
                   const bool needsDirectCountMethodTargetResolution =
                       !hasVisibleCountHelperMethodTarget;
                   const bool resolvedCountMethodTargetDirectly =
                       needsDirectCountMethodTargetResolution &&
                       resolveMethodTarget(
                           params, locals, expr.namespacePrefix, receiver,
-                          "count", methodResolved, isBuiltinMethod);
+                          countHelperName.c_str(), methodResolved,
+                          isBuiltinMethod);
                   const bool failsCountMethodTargetResolution =
                       needsDirectCountMethodTargetResolution &&
                       !resolvedCountMethodTargetDirectly;
@@ -405,7 +437,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                         return false;
                       }
                       countResolveMissTargetPath =
-                          "/" + typeName + "/count";
+                          "/" + typeName + "/" + countHelperName;
                     }
                     methodResolved = countResolveMissTargetPath;
                     error_.clear();

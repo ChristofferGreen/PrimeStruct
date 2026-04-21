@@ -2029,7 +2029,14 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const auto isCountOrCapacityHelperName =\n"
             "      [](const std::string &helperName) {\n"
-            "        return helperName == \"count\" || helperName == \"capacity\";\n"
+            "        return helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "               helperName == \"capacity\";\n"
+            "      };\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const auto isCountLikeHelperName =\n"
+            "      [](const std::string &helperName) {\n"
+            "        return helperName == \"count\" || helperName == \"count_ref\";\n"
             "      };\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2097,6 +2104,7 @@
             "const auto tryRewriteBareVectorCountOrCapacityHelperCall =\n"
             "      [&]() {\n"
             "        return tryRewriteBareNamedVectorHelperCall(\"count\") ||\n"
+            "               tryRewriteBareNamedVectorHelperCall(\"count_ref\") ||\n"
             "               tryRewriteBareNamedVectorHelperCall(\"capacity\");\n"
             "      };\n") !=
         std::string::npos);
@@ -2180,6 +2188,8 @@
             "        return context.tryRewriteBareVectorHelperCall != nullptr &&\n"
             "               (context.tryRewriteBareVectorHelperCall(\"count\",\n"
             "                                                      rewrittenVectorHelperCall) ||\n"
+            "                context.tryRewriteBareVectorHelperCall(\"count_ref\",\n"
+            "                                                      rewrittenVectorHelperCall) ||\n"
             "                context.tryRewriteBareVectorHelperCall(\"capacity\",\n"
             "                                                      rewrittenVectorHelperCall));\n"
             "      };\n") ==
@@ -2187,6 +2197,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "  if (context.tryRewriteBareVectorHelperCall != nullptr &&\n"
             "      (context.tryRewriteBareVectorHelperCall(\"count\", rewrittenVectorHelperCall) ||\n"
+            "       context.tryRewriteBareVectorHelperCall(\"count_ref\", rewrittenVectorHelperCall) ||\n"
             "       context.tryRewriteBareVectorHelperCall(\"capacity\", rewrittenVectorHelperCall))) {\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -2200,14 +2211,15 @@
             "} else {\n"
             "      const bool hasVisibleCountHelperMethodTarget =\n"
             "          resolveVisiblePreferredVectorHelperMethodTarget(\n"
-            "              receiver, \"count\", methodResolved);\n"
+            "              receiver, countHelperName.c_str(), methodResolved);\n"
             "      const bool needsDirectCountMethodTargetResolution =\n"
             "          !hasVisibleCountHelperMethodTarget;\n"
             "      const bool resolvedCountMethodTargetDirectly =\n"
             "          needsDirectCountMethodTargetResolution &&\n"
             "          resolveMethodTarget(\n"
-            "              params, locals, expr.namespacePrefix, receiver, \"count\",\n"
-            "              methodResolved, isBuiltinMethod);\n"
+            "              params, locals, expr.namespacePrefix, receiver,\n"
+            "              countHelperName.c_str(), methodResolved,\n"
+            "              isBuiltinMethod);\n"
             "      const bool failsCountMethodTargetResolution =\n"
             "          needsDirectCountMethodTargetResolution &&\n"
             "          !resolvedCountMethodTargetDirectly;\n"
@@ -2222,7 +2234,7 @@
             "              context.resolveMapTarget(receiver);\n"
             "          std::string countResolveMissTargetPath;\n"
             "          if (usesCountResolveMissMapFallback) {\n"
-            "            countResolveMissTargetPath = \"/std/collections/map/count\";\n"
+            "            countResolveMissTargetPath = stdlibMapCountTargetPath;\n"
             "          } else {\n"
             "            std::string typeName;\n"
             "            const BindingInfo *countResolveMissReceiverBinding =\n"
@@ -2270,7 +2282,8 @@
             "              (void)validateExpr(params, locals, receiver);\n"
             "              return false;\n"
             "            }\n"
-            "            countResolveMissTargetPath = \"/\" + typeName + \"/count\";\n"
+            "            countResolveMissTargetPath =\n"
+            "                \"/\" + typeName + \"/\" + countHelperName;\n"
             "          }\n"
             "          methodResolved = countResolveMissTargetPath;\n"
             "          error_.clear();\n"
@@ -2995,17 +3008,40 @@
             "      routesThroughResolvedMapCountSurface;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "const std::string countHelperName =\n"
+            "      [&]() -> std::string {\n"
+            "        const std::string resolvedPath = resolveCalleePath(expr);\n"
+            "        if (routesThroughStdNamespacedMapCountSurface ||\n"
+            "            routesThroughNamespacedMapCountSurface ||\n"
+            "            routesThroughResolvedMapCountSurface) {\n"
+            "          if (resolvedPath == \"/std/collections/map/count_ref\" ||\n"
+            "              resolved == \"/std/collections/map/count_ref\" ||\n"
+            "              resolved == \"/map/count_ref\") {\n"
+            "            return \"count_ref\";\n"
+            "          }\n"
+            "        }\n"
+            "        if (context.isNamespacedVectorHelperCall &&\n"
+            "            isCountLikeHelperName(context.namespacedHelper)) {\n"
+            "          return context.namespacedHelper;\n"
+            "        }\n"
+            "        if (isLegacyOrCanonicalSoaHelperPath(resolvedPath, \"count_ref\")) {\n"
+            "          return \"count_ref\";\n"
+            "        }\n"
+            "        return \"count\";\n"
+            "      }();") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isSingleArgCountCall = expr.args.size() == 1;\n"
             "  const bool isMultiArgCountCall = !isSingleArgCountCall;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughVectorBuiltinCountSurface =\n"
-            "      isVectorBuiltinName(expr, \"count\");") !=
+            "      isVectorBuiltinName(expr, \"count\") || countHelperName == \"count_ref\";") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughNamespacedVectorCountHelperSurface =\n"
             "      context.isNamespacedVectorHelperCall &&\n"
-            "      context.namespacedHelper == \"count\";") !=
+            "      isCountLikeHelperName(context.namespacedHelper);") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool isArrayNamespacedVectorCountCompatibilityActive =\n"
@@ -3022,7 +3058,7 @@
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool routesThroughNamespacedVectorCountFallback =\n"
             "      !isStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall, resolveCalleePath(expr), \"count\") &&\n"
+            "          expr.isMethodCall, resolveCalleePath(expr), countHelperName) &&\n"
             "      matchesNamespacedVectorCountFallbackRouteShape;") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
@@ -3649,13 +3685,14 @@
             "      context.resolveMapTarget(receiver);\n"
             "  const bool isSingleArgCountCall = expr.args.size() == 1;\n"
             "  const bool isMultiArgCountCall = !isSingleArgCountCall;\n"
-            "  const std::string bareCountTargetPath = \"/count\";\n"
+            "  const std::string bareCountTargetPath = \"/\" + countHelperName;\n"
             "  const bool lacksVisibleBareCountDefinition =\n"
             "      !hasImportedDefinitionPath(bareCountTargetPath) &&\n"
             "      !hasDeclaredDefinitionPath(bareCountTargetPath);\n"
-            "  const std::string bareMapCountTargetPath = \"/map/count\";\n"
+            "  const std::string bareMapCountTargetPath =\n"
+            "      \"/map/\" + countHelperName;\n"
             "  const std::string stdlibMapCountTargetPath =\n"
-            "      \"/std/collections/map/count\";\n"
+            "      \"/std/collections/map/\" + countHelperName;\n"
             "  const bool lacksVisibleStdlibMapCountDefinition =\n"
             "      !hasDeclaredDefinitionPath(stdlibMapCountTargetPath) &&\n"
             "      !hasImportedDefinitionPath(stdlibMapCountTargetPath);\n"
