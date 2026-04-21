@@ -182,6 +182,56 @@
             resultInfoOut.valueStructType = std::move(valueStructType);
             return true;
           };
+          auto applyBuiltinCombinatorValueKindFallback = [&](const Expr &operandExpr,
+                                                             ResultExprInfo &resultInfoOut) {
+            if (operandExpr.kind != Expr::Kind::Call ||
+                resultInfoOut.valueCollectionKind != LocalInfo::Kind::Value ||
+                resultInfoOut.valueKind != LocalInfo::ValueKind::Unknown ||
+                resultInfoOut.valueMapKeyKind != LocalInfo::ValueKind::Unknown ||
+                !resultInfoOut.valueStructType.empty() ||
+                resultInfoOut.valueIsFileHandle) {
+              return false;
+            }
+            const Expr *candidateValueExpr = nullptr;
+            if ((operandExpr.name == "map" && operandExpr.args.size() == 3) ||
+                (operandExpr.name == "and_then" && operandExpr.args.size() == 3)) {
+              if (!resolveLambdaReturnedValueExpr(operandExpr.args[2], candidateValueExpr)) {
+                return false;
+              }
+            } else if (operandExpr.name == "map2" && operandExpr.args.size() == 4) {
+              if (!resolveLambdaReturnedValueExpr(operandExpr.args[3], candidateValueExpr)) {
+                return false;
+              }
+            } else {
+              return false;
+            }
+            const auto isResultOkCall = [&](const Expr &candidateExpr) {
+              return candidateExpr.kind == Expr::Kind::Call &&
+                     candidateExpr.name == "ok" &&
+                     candidateExpr.args.size() == 2 &&
+                     candidateExpr.args.front().kind == Expr::Kind::Name &&
+                     candidateExpr.args.front().name == "Result";
+            };
+            if (operandExpr.name == "and_then" && candidateValueExpr != nullptr &&
+                isResultOkCall(*candidateValueExpr)) {
+              candidateValueExpr = &candidateValueExpr->args[1];
+            }
+            if (candidateValueExpr == nullptr) {
+              return false;
+            }
+            std::string builtinComparisonName;
+            if (!ir_lowerer::getBuiltinComparisonName(*candidateValueExpr, builtinComparisonName)) {
+              return false;
+            }
+            resultInfoOut.isResult = true;
+            resultInfoOut.hasValue = true;
+            resultInfoOut.valueCollectionKind = LocalInfo::Kind::Value;
+            resultInfoOut.valueKind = LocalInfo::ValueKind::Bool;
+            resultInfoOut.valueMapKeyKind = LocalInfo::ValueKind::Unknown;
+            resultInfoOut.valueIsFileHandle = false;
+            resultInfoOut.valueStructType.clear();
+            return true;
+          };
           if (callResolutionAdapters.semanticProductTargets.hasSemanticProduct && expr.semanticNodeId != 0) {
             const auto *tryFact =
                 findSemanticProductTryFactBySemanticId(
@@ -286,6 +336,7 @@
             if (resultInfo.valueStructType.empty()) {
               (void)applyBuiltinCombinatorStructFallback(expr.args.front(), resultInfo);
             }
+            (void)applyBuiltinCombinatorValueKindFallback(expr.args.front(), resultInfo);
           }
           auto normalizeSpecializedMapResultInfo = [&](ResultExprInfo &valueResultInfo) {
             if (valueResultInfo.valueCollectionKind != LocalInfo::Kind::Value ||

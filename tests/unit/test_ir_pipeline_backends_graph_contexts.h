@@ -1747,6 +1747,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
             "findSemanticProductQueryFactBySemanticId(\n"
             "                    callResolutionAdapters.semanticProductTargets.semanticIndex,\n"
             "                    operandExpr)") != std::string::npos);
+  CHECK(lowerEmitExprTryHelpers.find(
+            "ir_lowerer::getBuiltinComparisonName(*candidateValueExpr, builtinComparisonName)") !=
+        std::string::npos);
+  CHECK(lowerEmitExprTryHelpers.find("resultInfoOut.valueKind = LocalInfo::ValueKind::Bool;") !=
+        std::string::npos);
 
   const auto runtimeErrorHelpersHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererRuntimeErrorHelpers.h");
