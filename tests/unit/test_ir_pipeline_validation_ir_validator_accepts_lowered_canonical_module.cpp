@@ -1391,6 +1391,29 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
       namespacedExperimentalVectorOrCall, comparison));
   CHECK(std::string(comparison) == "||");
 
+  primec::Expr namespacedFileErrorEqualCall;
+  namespacedFileErrorEqualCall.kind = primec::Expr::Kind::Call;
+  namespacedFileErrorEqualCall.name = "equal";
+  namespacedFileErrorEqualCall.namespacePrefix = "/std/file/FileError";
+
+  CHECK(primec::ir_lowerer::getBuiltinComparisonName(
+      namespacedFileErrorEqualCall, builtinName));
+  CHECK(builtinName == "equal");
+  CHECK(primec::emitter::getBuiltinComparison(
+      namespacedFileErrorEqualCall, comparison));
+  CHECK(std::string(comparison) == "==");
+
+  primec::Expr rootedFileErrorEqualCall;
+  rootedFileErrorEqualCall.kind = primec::Expr::Kind::Call;
+  rootedFileErrorEqualCall.name = "/std/file/FileError/equal";
+
+  CHECK(primec::ir_lowerer::getBuiltinComparisonName(
+      rootedFileErrorEqualCall, builtinName));
+  CHECK(builtinName == "equal");
+  CHECK(primec::emitter::getBuiltinComparison(
+      rootedFileErrorEqualCall, comparison));
+  CHECK(std::string(comparison) == "==");
+
   primec::Expr namespacedImageTryCall;
   namespacedImageTryCall.kind = primec::Expr::Kind::Call;
   namespacedImageTryCall.name = "try";

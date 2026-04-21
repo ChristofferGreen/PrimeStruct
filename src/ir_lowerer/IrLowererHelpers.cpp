@@ -34,6 +34,7 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/soa_vector_conversions/",
       "std/collections/experimental_vector/",
       "std/collections/ContainerError/",
+      "std/file/",
       "std/image/",
       "std/ui/",
   };

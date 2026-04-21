@@ -594,10 +594,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     return true;
   };
   auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
-    if (helperName == "get_ref") {
-      return std::string("/std/collections/experimental_soa_vector/soaVectorGetRef");
-    }
-    return std::string("/std/collections/experimental_soa_vector/soaVectorRefRef");
+    return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   };
   auto isCanonicalSoaWrapperMethod = [&](std::string_view helperName) {
     return helperName == "count" || helperName == "count_ref" ||

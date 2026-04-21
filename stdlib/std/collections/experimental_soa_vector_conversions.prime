@@ -19,12 +19,12 @@ namespace std {
 
   [public effects(heap_alloc), return<vector<T>>]
   soaVectorToAosRef<T>([Reference</std/collections/experimental_soa_vector/SoaVector<T>>] values) {
-    [i32] valueCount{/std/collections/experimental_soa_vector/soaVectorCountRef<T>(values)}
+    [i32] valueCount{/std/collections/soa_vector/count_ref<T>(values)}
     [vector<T> mut] out{vector<T>()}
     [i32 mut] index{0i32}
     while(less_than(index, valueCount), do() {
       /std/collections/vector/push<T>(
-          out, /std/collections/experimental_soa_vector/soaVectorGetRef<T>(values, index))
+          out, /std/collections/soa_vector/get_ref<T>(values, index))
       increment(index)
     })
     return(out)

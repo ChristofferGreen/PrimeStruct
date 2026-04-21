@@ -238,6 +238,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExpressionRewrite.h";
   const std::filesystem::path templateMonomorphCollectionCompatibilityPathsPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionCompatibilityPaths.h";
+  const std::filesystem::path collectionTypeHelpersPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCollectionTypeHelpers.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
   REQUIRE(std::filesystem::exists(templateMonomorphFallbackPath));
   REQUIRE(std::filesystem::exists(templateMonomorphBindingCallPath));
@@ -263,6 +265,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphImplicitTemplateInferencePath));
   REQUIRE(std::filesystem::exists(templateMonomorphExpressionRewritePath));
   REQUIRE(std::filesystem::exists(templateMonomorphCollectionCompatibilityPathsPath));
+  REQUIRE(std::filesystem::exists(collectionTypeHelpersPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
   const std::string templateMonomorphBindingCallSource = readText(templateMonomorphBindingCallPath);
@@ -307,6 +310,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExpressionRewritePath);
   const std::string templateMonomorphCollectionCompatibilityPathsSource =
       readText(templateMonomorphCollectionCompatibilityPathsPath);
+  const std::string collectionTypeHelpersSource =
+      readText(collectionTypeHelpersPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
         std::string::npos);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphBindingCallInference.h\"") !=
@@ -2078,6 +2083,24 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "resolvedPath.rfind(\"/std/collections/experimental_soa_vector_conversions/\", 0)") ==
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const bool shouldRewriteCanonicalSoaHelperToExperimental =") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "hasVisibleStdCollectionsImportForPath(ctx, resolvedPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "resolvesConcreteExperimentalSoaVectorReceiver(") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const bool shouldRewriteCanonicalSoaMethodToExperimental =") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "hasVisibleStdCollectionsImportForPath(ctx, methodPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {") ==
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
             "normalizedPath.rfind(\"/soa_vector/\", 0) == 0") !=

@@ -459,9 +459,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref" ||
           normalizedMethodName == "push" || normalizedMethodName == "reserve";
       if (isConcreteExperimentalSoaReceiver && isCanonicalSoaWrapperMethod) {
-        return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType(normalizedMethodName,
-                                                      "/soa_vector"));
+        resolvedOut = preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                                "/soa_vector");
+        isBuiltinOut = defMap_.count(resolvedOut) == 0 &&
+                       !hasImportedDefinitionPath(resolvedOut);
+        return true;
       }
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
@@ -553,10 +555,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   };
   auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
-    if (helperName == "get_ref") {
-      return std::string("/std/collections/experimental_soa_vector/soaVectorGetRef");
-    }
-    return std::string("/std/collections/experimental_soa_vector/soaVectorRefRef");
+    return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   };
   auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {

@@ -310,6 +310,51 @@ bool rewriteExpr(Expr &expr,
     std::vector<std::string> receiverTemplateArgs;
     return resolveExperimentalSoaVectorReceiverTemplateArgs(receiverExpr, receiverTemplateArgs);
   };
+  auto resolvesConcreteExperimentalSoaVectorReceiver = [&](const Expr *receiverExpr) {
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    auto inferFromTypeText = [&](std::string receiverTypeText) {
+      if (receiverTypeText.empty()) {
+        return false;
+      }
+      receiverTypeText = normalizeBindingTypeName(receiverTypeText);
+      while (true) {
+        std::string base;
+        std::string argText;
+        if (!splitTemplateTypeName(receiverTypeText, base, argText) || base.empty()) {
+          break;
+        }
+        const std::string normalizedBase = normalizeBindingTypeName(base);
+        if (normalizedBase == "Reference" || normalizedBase == "Pointer") {
+          std::vector<std::string> wrappedArgs;
+          if (!splitTopLevelTemplateArgs(argText, wrappedArgs) || wrappedArgs.size() != 1) {
+            return false;
+          }
+          receiverTypeText = normalizeBindingTypeName(wrappedArgs.front());
+          continue;
+        }
+        return isExperimentalSoaVectorSpecializedTypePath(normalizedBase);
+      }
+      if (!receiverTypeText.empty() && receiverTypeText.front() != '/') {
+        receiverTypeText.insert(receiverTypeText.begin(), '/');
+      }
+      return isExperimentalSoaVectorSpecializedTypePath(
+          normalizeBindingTypeName(receiverTypeText));
+    };
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr,
+                                     params,
+                                     locals,
+                                     allowMathBare,
+                                     ctx,
+                                     receiverInfo) &&
+        inferFromTypeText(bindingTypeToString(receiverInfo))) {
+      return true;
+    }
+    return inferFromTypeText(inferExprTypeTextForTemplatedVectorFallback(
+        *receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
+  };
   auto inferCollectionReceiverFamily = [&](const Expr *receiverExpr) -> std::string {
     auto inferFromTypeText = [&](std::string receiverTypeText) -> std::string {
       if (receiverTypeText.empty()) {
@@ -718,9 +763,15 @@ bool rewriteExpr(Expr &expr,
       }
     }
     const std::string experimentalSoaVectorPath = experimentalSoaVectorHelperPathForCanonicalHelper(resolvedPath);
-    if (!experimentalSoaVectorPath.empty() &&
-        ctx.sourceDefs.count(experimentalSoaVectorPath) > 0 &&
-        resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+    const bool shouldRewriteCanonicalSoaHelperToExperimental =
+        ctx.sourceDefs.count(resolvedPath) == 0 &&
+        ctx.helperOverloads.count(resolvedPath) == 0 &&
+        hasVisibleStdCollectionsImportForPath(ctx, resolvedPath) &&
+        resolvesConcreteExperimentalSoaVectorReceiver(
+            mapHelperReceiverExpr(expr));
+    if (shouldRewriteCanonicalSoaHelperToExperimental &&
+        !experimentalSoaVectorPath.empty() &&
+        ctx.sourceDefs.count(experimentalSoaVectorPath) > 0) {
       resolvedPath = experimentalSoaVectorPath;
       expr.name = experimentalSoaVectorPath;
       expr.namespacePrefix.clear();
@@ -990,8 +1041,14 @@ bool rewriteExpr(Expr &expr,
           methodPath =
             preferVectorStdlibImplicitTemplatePath(expr, methodPath, locals, params, allowMathBare, ctx, namespacePrefix);
       }
-      if (!experimentalSoaVectorMethodPath.empty() &&
-          resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
+      const bool shouldRewriteCanonicalSoaMethodToExperimental =
+          ctx.sourceDefs.count(methodPath) == 0 &&
+          ctx.helperOverloads.count(methodPath) == 0 &&
+          hasVisibleStdCollectionsImportForPath(ctx, methodPath) &&
+          resolvesConcreteExperimentalSoaVectorReceiver(
+              mapHelperReceiverExpr(expr));
+      if (shouldRewriteCanonicalSoaMethodToExperimental &&
+          !experimentalSoaVectorMethodPath.empty()) {
         methodPath = experimentalSoaVectorMethodPath;
         if (expr.templateArgs.empty()) {
           std::vector<std::string> receiverTemplateArgs;
