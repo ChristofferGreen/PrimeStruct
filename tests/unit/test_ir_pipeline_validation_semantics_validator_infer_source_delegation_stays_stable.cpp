@@ -1463,6 +1463,10 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorStatementReturns.cpp";
   REQUIRE(std::filesystem::exists(semanticsStatementReturnsPath));
   const std::string semanticsStatementReturnsSource = readText(semanticsStatementReturnsPath);
+  const std::filesystem::path semanticsInferGraphPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
+  REQUIRE(std::filesystem::exists(semanticsInferGraphPath));
+  const std::string semanticsInferGraphSource = readText(semanticsInferGraphPath);
   CHECK(semanticsStatementBindingsSource.find("bool SemanticsValidator::validateBindingStatement(") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("auto failBindingDiagnostic = [&](std::string message) -> bool {") !=
