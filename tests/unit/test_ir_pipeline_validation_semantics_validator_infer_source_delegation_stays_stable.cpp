@@ -1943,6 +1943,13 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "normalized == \"std/collections/soa_vector/count\"") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "normalized == \"count\" || normalized == \"count_ref\"") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "normalized == \"soa_vector/count_ref\" ||\n"
+            "         normalized == \"std/collections/soa_vector/count_ref\"") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "if (normalized.rfind(\"std/collections/soa_vector/\", 0) == 0) {\n"
             "    normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());\n"
             "  } else if (normalized.rfind(\"soa_vector/\", 0) == 0) {") !=
@@ -1977,6 +1984,15 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "if (localImportPathCoversTarget(importPath, rootPath) ||\n"
             "        localImportPathCoversTarget(importPath, samePath) ||\n"
             "        localImportPathCoversTarget(importPath, canonicalPath)) {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "const bool preserveCountRefHelper = hasVisibleRootSoaHelper(program, \"count_ref\");") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "(helperName == \"count_ref\" && preserveCountRefHelper)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "expr.name = \"/std/collections/soa_vector/\" + helperName;") !=
         std::string::npos);
 }
 

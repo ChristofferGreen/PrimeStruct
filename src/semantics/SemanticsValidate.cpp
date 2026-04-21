@@ -1310,7 +1310,7 @@ std::string builtinSoaCountHelperName(std::string_view rawName) {
   } else if (normalized.rfind("soa_vector/", 0) == 0) {
     normalized = normalized.substr(std::string("soa_vector/").size());
   }
-  if (normalized == "count") {
+  if (normalized == "count" || normalized == "count_ref") {
     return normalized;
   }
   return {};
@@ -1322,7 +1322,9 @@ bool isOldExplicitSoaCountHelperName(std::string_view rawName) {
     normalized.erase(normalized.begin());
   }
   return normalized == "soa_vector/count" ||
-         normalized == "std/collections/soa_vector/count";
+         normalized == "std/collections/soa_vector/count" ||
+         normalized == "soa_vector/count_ref" ||
+         normalized == "std/collections/soa_vector/count_ref";
 }
 
 std::string builtinSoaMutatorHelperName(std::string_view rawName) {
@@ -2082,7 +2084,8 @@ void rewriteBuiltinSoaCountExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
-    bool preserveCountHelper);
+    bool preserveCountHelper,
+    bool preserveCountRefHelper);
 
 void rewriteBuiltinSoaCountStatements(
     std::vector<Expr> &statements,
@@ -2090,7 +2093,8 @@ void rewriteBuiltinSoaCountStatements(
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
-    bool preserveCountHelper) {
+    bool preserveCountHelper,
+    bool preserveCountRefHelper) {
   for (Expr &stmt : statements) {
     rewriteBuiltinSoaCountExpr(
         stmt,
@@ -2098,7 +2102,8 @@ void rewriteBuiltinSoaCountStatements(
         vectorReturnDefinitions,
         soaVectorReturnDefinitions,
         definitionNamespace,
-        preserveCountHelper);
+        preserveCountHelper,
+        preserveCountRefHelper);
     if (!stmt.bodyArguments.empty()) {
       auto bodyBindings = bindings;
       rewriteBuiltinSoaCountStatements(
@@ -2107,7 +2112,8 @@ void rewriteBuiltinSoaCountStatements(
           vectorReturnDefinitions,
           soaVectorReturnDefinitions,
           definitionNamespace,
-          preserveCountHelper);
+          preserveCountHelper,
+          preserveCountRefHelper);
     }
     if (stmt.isBinding) {
       if (auto vectorBinding = extractBuiltinVectorBinding(stmt); vectorBinding.has_value()) {
@@ -2125,7 +2131,8 @@ void rewriteBuiltinSoaCountExpr(
     const std::unordered_map<std::string, semantics::BindingInfo> &vectorReturnDefinitions,
     const std::unordered_map<std::string, semantics::BindingInfo> &soaVectorReturnDefinitions,
     const std::string &definitionNamespace,
-    bool preserveCountHelper) {
+    bool preserveCountHelper,
+    bool preserveCountRefHelper) {
   auto findBuiltinVectorValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(candidate.name);
@@ -2244,7 +2251,9 @@ void rewriteBuiltinSoaCountExpr(
     return;
   }
   const std::string helperName = builtinSoaCountHelperName(expr.name);
-  if (helperName.empty() || preserveCountHelper) {
+  if (helperName.empty() ||
+      (helperName == "count" && preserveCountHelper) ||
+      (helperName == "count_ref" && preserveCountRefHelper)) {
     return;
   }
 
@@ -2260,7 +2269,7 @@ void rewriteBuiltinSoaCountExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/count";
+  expr.name = "/std/collections/soa_vector/" + helperName;
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
   if (receiverBinding.has_value() && !receiverBinding->typeTemplateArg.empty()) {
@@ -2291,6 +2300,7 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
     }
   }
   const bool preserveCountHelper = hasVisibleRootSoaHelper(program, "count");
+  const bool preserveCountRefHelper = hasVisibleRootSoaHelper(program, "count_ref");
   for (Definition &def : program.definitions) {
     std::unordered_map<std::string, semantics::BindingInfo> bindings;
     for (const Expr &param : def.parameters) {
@@ -2311,7 +2321,8 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
         vectorReturnDefinitions,
         soaVectorReturnDefinitions,
         definitionNamespace,
-        preserveCountHelper);
+        preserveCountHelper,
+        preserveCountRefHelper);
     if (def.returnExpr.has_value()) {
       rewriteBuiltinSoaCountExpr(
           *def.returnExpr,
@@ -2319,7 +2330,8 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
           vectorReturnDefinitions,
           soaVectorReturnDefinitions,
           definitionNamespace,
-          preserveCountHelper);
+          preserveCountHelper,
+          preserveCountRefHelper);
     }
   }
   return true;
