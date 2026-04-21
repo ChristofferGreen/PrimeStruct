@@ -289,6 +289,53 @@ TEST_CASE("ir lowerer flow helpers declare for-condition bindings") {
   CHECK(error == "binding requires exactly one argument");
 }
 
+TEST_CASE("ir lowerer flow helpers recover bool for comparison-backed for-condition bindings") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  using Kind = primec::ir_lowerer::LocalInfo::Kind;
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.intWidth = 32;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "less_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  primec::Expr bindingExpr;
+  bindingExpr.kind = primec::Expr::Kind::Name;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "cond_bool";
+  bindingExpr.args = {comparisonExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  int32_t nextLocal = 9;
+  std::string error;
+  CHECK(primec::ir_lowerer::declareForConditionBinding(
+      bindingExpr,
+      locals,
+      nextLocal,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, Kind) { return ValueKind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Unknown; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      error));
+  CHECK(error.empty());
+  auto it = locals.find("cond_bool");
+  REQUIRE(it != locals.end());
+  CHECK(it->second.kind == Kind::Value);
+  CHECK(it->second.valueKind == ValueKind::Bool);
+  CHECK(nextLocal == 10);
+}
+
 TEST_CASE("ir lowerer flow helpers init for-condition bindings") {
   primec::Expr initExpr;
   initExpr.kind = primec::Expr::Kind::Literal;

@@ -400,6 +400,12 @@ bool declareForConditionBinding(
   } else if (info.kind == LocalInfo::Kind::Value) {
     info.valueKind = inferExprKind(binding.args.front(), locals);
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(binding.args.front(), builtinComparison)) {
+        info.valueKind = LocalInfo::ValueKind::Bool;
+      }
+    }
+    if (info.valueKind == LocalInfo::ValueKind::Unknown) {
       std::string inferredStruct = inferStructExprPath(binding.args.front(), locals);
       if (!inferredStruct.empty()) {
         info.structTypeName = inferredStruct;

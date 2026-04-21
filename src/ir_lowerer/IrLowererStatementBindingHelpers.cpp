@@ -620,6 +620,12 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                          : ((inferredInitValueKind != LocalInfo::ValueKind::Unknown)
                                 ? inferredInitValueKind
                                 : inferExprKind(init, localsIn));
+    if (info.valueKind == LocalInfo::ValueKind::Unknown) {
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(init, builtinComparison)) {
+        info.valueKind = LocalInfo::ValueKind::Bool;
+      }
+    }
     return info;
   }
 
@@ -716,7 +722,12 @@ bool inferCallParameterLocalInfo(const Expr &param,
   } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value) {
     infoOut.valueKind = inferExprKind(param.args.front(), localsForKindInference);
     if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {
-      infoOut.valueKind = LocalInfo::ValueKind::Int32;
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(param.args.front(), builtinComparison)) {
+        infoOut.valueKind = LocalInfo::ValueKind::Bool;
+      } else {
+        infoOut.valueKind = LocalInfo::ValueKind::Int32;
+      }
     }
     ResultExprInfo inferredResultInfo;
     if (inferCallParameterDefaultResultInfo(
