@@ -2445,9 +2445,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                       "/soa_vector"));
       }
-      if ((normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
+      if ((((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
+            usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) ||
+           normalizedMethodName == "capacity" ||
            normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
           extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
+        if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
+            usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
+          return setCollectionMethodTarget(
+              preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                        "/vector"));
+        }
         if (normalizedMethodName == "count") {
           return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
         }

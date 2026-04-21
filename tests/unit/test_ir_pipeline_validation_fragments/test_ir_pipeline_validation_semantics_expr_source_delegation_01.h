@@ -708,8 +708,18 @@
             "            preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
             "                                                      \"/soa_vector\"));\n"
             "      }\n"
-            "      if ((normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\" ||\n"
+            "      if ((((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
+            "            usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")) ||\n"
+            "           normalizedMethodName == \"capacity\" ||\n"
             "           normalizedMethodName == \"at\" || normalizedMethodName == \"at_unsafe\") &&") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "        if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
+            "            usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")) {\n"
+            "          return setCollectionMethodTarget(\n"
+            "              preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                        \"/vector\"));\n"
+            "        }\n") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "      if (normalizedMethodName == \"count_ref\") {\n"
