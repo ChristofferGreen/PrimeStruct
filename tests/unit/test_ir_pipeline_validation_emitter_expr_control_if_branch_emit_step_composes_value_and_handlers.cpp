@@ -1819,6 +1819,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "normalizedName == \"std/collections/soa_vector/ref_ref\"") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "auto explicitStdSoaHelperName = [&]() -> std::string {") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedPrefix == \"soa_vector\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "helperName == \"to_aos_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "preferredSoaHelperTargetForCollectionType(helperName, "
+            "\"/soa_vector\")") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "resolvedCanonical == \"/std/collections/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(

@@ -157,6 +157,36 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
     }
     return {};
   };
+  auto explicitStdSoaHelperName = [&]() -> std::string {
+    auto isSupportedSoaHelper = [](std::string_view helperName) {
+      return helperName == "count" || helperName == "count_ref" ||
+             helperName == "get" || helperName == "get_ref" ||
+             helperName == "ref" || helperName == "ref_ref" ||
+             helperName == "to_aos" || helperName == "to_aos_ref" ||
+             helperName == "push" || helperName == "reserve";
+    };
+    if ((normalizedPrefix == "soa_vector" ||
+         normalizedPrefix == "std/collections/soa_vector") &&
+        isSupportedSoaHelper(normalizedName)) {
+      return normalizedName;
+    }
+    if (normalizedName.rfind("soa_vector/", 0) == 0) {
+      const std::string helperName =
+          normalizedName.substr(std::string("soa_vector/").size());
+      if (isSupportedSoaHelper(helperName)) {
+        return helperName;
+      }
+    }
+    if (normalizedName.rfind("std/collections/soa_vector/", 0) == 0) {
+      const std::string helperName =
+          normalizedName.substr(
+              std::string("std/collections/soa_vector/").size());
+      if (isSupportedSoaHelper(helperName)) {
+        return helperName;
+      }
+    }
+    return {};
+  };
 
   if (const std::string helperName = explicitStdMapHelperName();
       !helperName.empty()) {
@@ -184,6 +214,11 @@ std::string SemanticsValidator::preferredCollectionHelperResolvedPath(
       return canonical;
     }
     return {};
+  }
+
+  if (const std::string helperName = explicitStdSoaHelperName();
+      !helperName.empty()) {
+    return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   }
 
   return {};
