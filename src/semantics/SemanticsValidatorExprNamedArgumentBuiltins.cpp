@@ -154,6 +154,9 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
   auto isLegacyCountBuiltinCall = [&]() {
     return isLegacyCountLikeBuiltinCall("count");
   };
+  auto isLegacyCountRefBuiltinCall = [&]() {
+    return isLegacyCountLikeBuiltinCall("count_ref");
+  };
   auto isLegacyCapacityBuiltinCall = [&]() {
     return isLegacyCountLikeBuiltinCall("capacity");
   };
@@ -293,7 +296,8 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
       isAssignCall(expr) || isIfCall(expr) || isMatchCall(expr) ||
       isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
       isRepeatCall(expr) || isLegacyCountBuiltinCall() || expr.name == "File" ||
-      expr.name == "try" || isLegacyCapacityBuiltinCall() ||
+      expr.name == "try" || isLegacyCountRefBuiltinCall() ||
+      isLegacyCapacityBuiltinCall() ||
       isLegacySoaAccessBuiltinCall() || isLegacyVectorHelperBuiltin ||
       isSimpleCallName(expr, "to_soa") || isSimpleCallName(expr, "to_aos") ||
       isSimpleCallName(expr, "to_aos_ref") ||

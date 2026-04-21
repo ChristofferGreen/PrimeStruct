@@ -688,6 +688,15 @@
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
             "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "auto isLegacyCountRefBuiltinCall = [&]() {\n"
+            "    return isLegacyCountLikeBuiltinCall(\"count_ref\");\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprNamedArgumentBuiltinsSource.find(
+            "expr.name == \"try\" || isLegacyCountRefBuiltinCall() ||\n"
+            "      isLegacyCapacityBuiltinCall()") !=
+        std::string::npos);
   CHECK(semanticsExprNamedArgumentBuiltinsSource.find("getBuiltinGpuName(expr, builtinName)") !=
         std::string::npos);
   CHECK(semanticsExprTrySource.find("bool SemanticsValidator::validateExprTryBuiltin") !=
