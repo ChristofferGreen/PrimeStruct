@@ -160,6 +160,15 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprSource.find("ps_heap_at(") != std::string::npos);
   CHECK(emitterExprSource.find("ps_heap_at_unsafe(") != std::string::npos);
   CHECK(emitterExprSource.find("ps_heap_reinterpret<") != std::string::npos);
+
+  const std::filesystem::path emitterExprPackedArgsPath =
+      repoRoot / "src" / "emitter" / "EmitterExprPackedArgs.h";
+  REQUIRE(std::filesystem::exists(emitterExprPackedArgsPath));
+  const std::string emitterExprPackedArgsSource = readText(emitterExprPackedArgsPath);
+  CHECK(emitterExprPackedArgsSource.find("std::string normalizedName = resolveExprPath(accessExpr);") !=
+        std::string::npos);
+  CHECK(emitterExprPackedArgsSource.find("std::string normalizedName = accessExpr.name;") ==
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable" * doctest::skip(true)) {

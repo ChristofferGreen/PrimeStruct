@@ -101,7 +101,7 @@
               return false;
             }
 
-            std::string normalizedName = accessExpr.name;
+            std::string normalizedName = resolveExprPath(accessExpr);
             if (!normalizedName.empty() && normalizedName.front() == '/') {
               normalizedName.erase(normalizedName.begin());
             }
