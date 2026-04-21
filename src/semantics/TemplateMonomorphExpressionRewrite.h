@@ -264,10 +264,7 @@ bool rewriteExpr(Expr &expr,
               receiverTypeText = normalizeBindingTypeName(wrappedArgs.front());
               continue;
             }
-            if ((normalizedBase == "SoaVector" ||
-                 normalizedBase == "soa_vector" ||
-                 normalizedBase == "std/collections/soa_vector" ||
-                 normalizedBase == "std/collections/experimental_soa_vector/SoaVector" ||
+            if ((normalizeCollectionReceiverTypeName(normalizedBase) == "soa_vector" ||
                  isExperimentalSoaVectorSpecializedTypePath(normalizedBase)) &&
                 !argText.empty()) {
               return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;
@@ -291,11 +288,8 @@ bool rewriteExpr(Expr &expr,
             if (!splitTemplateTypeName(cacheKey, base, argText) || base.empty()) {
               continue;
             }
-            const std::string normalizedBase = normalizeBindingTypeName(base);
-            if (normalizedBase != "SoaVector" &&
-                normalizedBase != "soa_vector" &&
-                normalizedBase != "std/collections/soa_vector" &&
-                normalizedBase != "std/collections/experimental_soa_vector/SoaVector") {
+            const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+            if (normalizedBase != "soa_vector") {
               continue;
             }
             return splitTopLevelTemplateArgs(argText, templateArgsOut) && templateArgsOut.size() == 1;

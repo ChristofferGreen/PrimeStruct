@@ -2046,16 +2046,14 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count\")") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "normalizedBase == \"SoaVector\" ||\n"
-            "                 normalizedBase == \"soa_vector\" ||\n"
-            "                 normalizedBase == \"std/collections/soa_vector\" ||\n"
-            "                 normalizedBase == \"std/collections/experimental_soa_vector/SoaVector\"") !=
+            "normalizeCollectionReceiverTypeName(normalizedBase) == \"soa_vector\" ||\n"
+            "                 isExperimentalSoaVectorSpecializedTypePath(normalizedBase)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "normalizedBase != \"SoaVector\" &&\n"
-            "                normalizedBase != \"soa_vector\" &&\n"
-            "                normalizedBase != \"std/collections/soa_vector\" &&\n"
-            "                normalizedBase != \"std/collections/experimental_soa_vector/SoaVector\"") !=
+            "const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (normalizedBase != \"soa_vector\") {") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count_ref\")") !=
