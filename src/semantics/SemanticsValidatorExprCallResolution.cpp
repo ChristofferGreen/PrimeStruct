@@ -286,6 +286,18 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
   auto canonicalSamePathSoaHelperBase = [&](std::string_view path) -> std::string {
     const std::string strippedPath =
         stripSamePathSoaSpecializationSuffix(std::string(path));
+    if (strippedPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+      const size_t lastSlash = strippedPath.find_last_of('/');
+      const std::string helperName =
+          lastSlash == std::string::npos ? std::string{} : strippedPath.substr(lastSlash + 1);
+      if (helperName == "count" || helperName == "count_ref" ||
+          helperName == "get" || helperName == "get_ref" ||
+          helperName == "ref" || helperName == "ref_ref" ||
+          helperName == "to_aos" || helperName == "to_aos_ref" ||
+          helperName == "push" || helperName == "reserve") {
+        return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+      }
+    }
     const std::string canonicalToAosPath =
         canonicalizeLegacySoaToAosHelperPath(strippedPath);
     if (canonicalToAosPath == "/std/collections/soa_vector/to_aos" ||

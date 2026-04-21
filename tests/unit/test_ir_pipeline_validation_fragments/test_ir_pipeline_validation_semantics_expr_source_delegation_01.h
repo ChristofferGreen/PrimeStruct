@@ -6013,6 +6013,19 @@
             "        stripSamePathSoaSpecializationSuffix(std::string(path));\n") !=
         std::string::npos);
   CHECK(semanticsExprCallResolutionSource.find(
+            "    if (strippedPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0) {\n"
+            "      const size_t lastSlash = strippedPath.find_last_of('/');\n"
+            "      const std::string helperName =\n"
+            "          lastSlash == std::string::npos ? std::string{} : strippedPath.substr(lastSlash + 1);\n"
+            "      if (helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "          helperName == \"get\" || helperName == \"get_ref\" ||\n"
+            "          helperName == \"ref\" || helperName == \"ref_ref\" ||\n"
+            "          helperName == \"to_aos\" || helperName == \"to_aos_ref\" ||\n"
+            "          helperName == \"push\" || helperName == \"reserve\") {\n"
+            "        return preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");\n"
+            "      }\n"
+            "    }\n") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
             "    if (!expr.templateArgs.empty()) {\n"
             "      if (const std::string preferredTemplateBearingSamePathCandidate =\n"
             "              canonicalSamePathSoaHelperBase(candidatePath);\n"

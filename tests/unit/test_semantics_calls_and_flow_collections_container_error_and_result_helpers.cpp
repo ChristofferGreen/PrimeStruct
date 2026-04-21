@@ -1220,6 +1220,113 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector direct helper shadows validate on wrapper state") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<SoaVector<Particle>>]
+cloneValues() {
+  return(SoaVector<Particle>())
+}
+
+[return<Particle>]
+/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(index))
+}
+
+[return<Particle>]
+/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(index))
+}
+
+[return<vector<Particle>>]
+/to_aos([SoaVector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[return<i32>]
+/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(value.x)
+}
+
+[return<i32>]
+/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+  return(count)
+}
+
+[return<Particle>]
+/std/collections/soa_vector/get([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(plus(index, 100i32)))
+}
+
+[return<Particle>]
+/std/collections/soa_vector/ref([SoaVector<Particle>] values, [i32] index) {
+  return(Particle(plus(index, 100i32)))
+}
+
+[return<vector<Particle>>]
+/std/collections/soa_vector/to_aos([SoaVector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[return<i32>]
+/std/collections/soa_vector/push([SoaVector<Particle>] values, [Particle] value) {
+  return(plus(value.x, 100i32))
+}
+
+[return<i32>]
+/std/collections/soa_vector/reserve([SoaVector<Particle>] values, [i32] count) {
+  return(plus(count, 100i32))
+}
+
+[return<Particle>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/get([SoaVector<Particle>] values,
+                                                                  [i32] index) {
+  return(Particle(plus(index, 200i32)))
+}
+
+[return<Particle>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/ref([SoaVector<Particle>] values,
+                                                                  [i32] index) {
+  return(Particle(plus(index, 200i32)))
+}
+
+[return<vector<Particle>>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/to_aos([SoaVector<Particle>] values) {
+  return(vector<Particle>())
+}
+
+[return<void>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/push([SoaVector<Particle>] values,
+                                                                   [Particle] value) {
+}
+
+[return<void>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([SoaVector<Particle>] values,
+                                                                      [i32] count) {
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Particle] picked{/soa_vector/get(cloneValues(), 1i32)}
+  [Particle] pickedRef{/soa_vector/ref(cloneValues(), 1i32)}
+  [vector<Particle>] unpacked{/to_aos(cloneValues())}
+  [i32] pushed{/soa_vector/push(cloneValues(), Particle(7i32))}
+  [i32] reserved{/soa_vector/reserve(cloneValues(), 4i32)}
+  return(plus(plus(picked.x, pickedRef.x), plus(pushed, reserved)))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector inline location method-like borrowed helper-return helper surfaces validate on wrapper state") {
   const std::string source = R"(
 import /std/collections/*
