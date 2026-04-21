@@ -2054,6 +2054,28 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "        fieldName == \"ref\" || fieldName == \"ref_ref\" ||") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "  if (normalizedMethodName != \"count\" &&\n"
+            "      normalizedMethodName != \"count_ref\" &&\n"
+            "      normalizedMethodName != \"get\" &&\n"
+            "      normalizedMethodName != \"get_ref\" &&\n"
+            "      normalizedMethodName != \"ref\" &&\n"
+            "      normalizedMethodName != \"ref_ref\" &&\n"
+            "      normalizedMethodName != \"to_aos\" &&\n"
+            "      normalizedMethodName != \"to_aos_ref\") {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "    if (normalizedMethodName == \"count\" ||\n"
+            "        normalizedMethodName == \"count_ref\") {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "    if (normalizedMethodName == \"get\" ||\n"
+            "        normalizedMethodName == \"get_ref\") {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "    if (normalizedMethodName == \"ref\" ||\n"
+            "        normalizedMethodName == \"ref_ref\") {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "expr.name = \"/std/collections/soa_vector/\" + helperName;") !=
         std::string::npos);
 }

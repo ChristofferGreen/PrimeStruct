@@ -3551,9 +3551,13 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     return name;
   }();
   if (normalizedMethodName != "count" &&
+      normalizedMethodName != "count_ref" &&
       normalizedMethodName != "get" &&
+      normalizedMethodName != "get_ref" &&
       normalizedMethodName != "ref" &&
-      normalizedMethodName != "to_aos") {
+      normalizedMethodName != "ref_ref" &&
+      normalizedMethodName != "to_aos" &&
+      normalizedMethodName != "to_aos_ref") {
     return false;
   }
   if (auto borrowedReceiver = normalizedBorrowedReceiver(expr.args.front());
@@ -3567,15 +3571,18 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       expr.templateArgs.clear();
       expr.templateArgs.push_back(*borrowedElemType);
     }
-    if (normalizedMethodName == "count") {
+    if (normalizedMethodName == "count" ||
+        normalizedMethodName == "count_ref") {
       expr.name = "/std/collections/soa_vector/count_ref";
       return true;
     }
-    if (normalizedMethodName == "get") {
+    if (normalizedMethodName == "get" ||
+        normalizedMethodName == "get_ref") {
       expr.name = "/std/collections/soa_vector/get_ref";
       return true;
     }
-    if (normalizedMethodName == "ref") {
+    if (normalizedMethodName == "ref" ||
+        normalizedMethodName == "ref_ref") {
       expr.name = "/std/collections/soa_vector/ref_ref";
       return true;
     }
