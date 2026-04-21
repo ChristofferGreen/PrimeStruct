@@ -276,8 +276,12 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
         info.isSoaVector || !info.structTypeName.empty()) {
       return false;
     }
-    return info.valueKind == LocalInfo::ValueKind::Int32 || info.valueKind == LocalInfo::ValueKind::Int64 ||
-           info.valueKind == LocalInfo::ValueKind::UInt64;
+    LocalInfo::ValueKind offsetKind = info.valueKind;
+    if (offsetKind == LocalInfo::ValueKind::Unknown) {
+      offsetKind = inferExprKind(candidate, localsRef);
+    }
+    return offsetKind == LocalInfo::ValueKind::Int32 || offsetKind == LocalInfo::ValueKind::Int64 ||
+           offsetKind == LocalInfo::ValueKind::UInt64;
   };
   auto emitPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
     if (candidate.kind == Expr::Kind::Name) {
