@@ -348,7 +348,13 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  const LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
+  LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
+  if (argKind == LocalInfo::ValueKind::Unknown) {
+    std::string builtinComparison;
+    if (getBuiltinComparisonName(expr.args[1], builtinComparison)) {
+      argKind = LocalInfo::ValueKind::Bool;
+    }
+  }
   if (isFileHandleExpr && argKind == LocalInfo::ValueKind::Int64 &&
       isFileHandleExpr(expr.args[1], localsIn)) {
     if (!emitExpr(expr.args[1], localsIn)) {

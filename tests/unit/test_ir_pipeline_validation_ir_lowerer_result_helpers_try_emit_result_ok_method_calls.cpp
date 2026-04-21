@@ -932,6 +932,67 @@ TEST_CASE("ir lowerer result helpers resolve direct Result.ok comparison payload
   CHECK(out.valueStructType.empty());
 }
 
+TEST_CASE("ir lowerer result helpers emit direct Result.ok comparison payloads") {
+  using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, comparisonExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  bool emitCalled = false;
+  std::string error;
+  const auto inferNoStruct = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return std::string{};
+  };
+  const auto resolveNoDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto resolveNoStructLayout = [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+    return false;
+  };
+
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            okExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return ValueKind::Unknown;
+            },
+            inferNoStruct,
+            resolveNoDefinitionCall,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              return true;
+            },
+            []() { return 17; },
+            resolveNoStructLayout,
+            [&](primec::IrOpcode, uint64_t) {},
+            error) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitCalled);
+}
+
 TEST_CASE("ir lowerer result helpers resolve Result.map struct payload metadata") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localResult;
