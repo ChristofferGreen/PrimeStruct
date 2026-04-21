@@ -6,7 +6,11 @@ bool SemanticsValidator::isBuiltinBlockCall(const Expr &expr) const {
   if (!isBlockCall(expr)) {
     return false;
   }
-  return defMap_.count(resolveCalleePath(expr)) == 0;
+  std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
+  if (resolvedPath.empty()) {
+    resolvedPath = resolveCalleePath(expr);
+  }
+  return defMap_.count(resolvedPath) == 0;
 }
 
 bool SemanticsValidator::isEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const {

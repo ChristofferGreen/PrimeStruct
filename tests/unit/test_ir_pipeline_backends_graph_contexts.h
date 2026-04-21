@@ -249,6 +249,15 @@ TEST_CASE("graph local auto facts use compact structured keys") {
         std::string::npos);
   CHECK(buildUtility.find("graphLocalAutoBindingKey(scopePath, sourceLine, sourceColumn)") !=
         std::string::npos);
+  CHECK(buildUtility.find(
+            "  std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "  if (resolvedPath.empty()) {\n"
+            "    resolvedPath = resolveCalleePath(expr);\n"
+            "  }\n"
+            "  return defMap_.count(resolvedPath) == 0;\n") !=
+        std::string::npos);
+  CHECK(buildUtility.find("  return defMap_.count(resolveCalleePath(expr)) == 0;\n") ==
+        std::string::npos);
   CHECK(inferGraph.find("graphLocalAutoScopePathInterner_.clear();") != std::string::npos);
   CHECK(inferGraph.find("if (benchmarkGraphLocalAutoLegacyShadowState_ != nullptr) {") !=
         std::string::npos);
