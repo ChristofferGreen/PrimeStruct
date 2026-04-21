@@ -1939,6 +1939,14 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   CHECK(semanticsValidateSource.find(
             "normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());") !=
         std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "normalized == \"std/collections/soa_vector/count\"") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "if (normalized.rfind(\"std/collections/soa_vector/\", 0) == 0) {\n"
+            "    normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());\n"
+            "  } else if (normalized.rfind(\"soa_vector/\", 0) == 0) {") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator build struct-field publication stays stable") {

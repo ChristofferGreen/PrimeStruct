@@ -1308,7 +1308,8 @@ bool isOldExplicitSoaCountHelperName(std::string_view rawName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  return normalized == "soa_vector/count";
+  return normalized == "soa_vector/count" ||
+         normalized == "std/collections/soa_vector/count";
 }
 
 std::string builtinSoaMutatorHelperName(std::string_view rawName) {
@@ -1332,10 +1333,13 @@ std::string oldExplicitSoaMutatorHelperName(std::string_view rawName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized.rfind("soa_vector/", 0) != 0) {
+  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
+  } else if (normalized.rfind("soa_vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("soa_vector/").size());
+  } else {
     return {};
   }
-  normalized = normalized.substr(std::string("soa_vector/").size());
   if (normalized == "push" || normalized == "reserve") {
     return normalized;
   }
