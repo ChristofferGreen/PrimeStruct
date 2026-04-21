@@ -1139,6 +1139,9 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   if (resolvedType.empty()) {
     resolvedType = resolveTypePath(typeName, expr.namespacePrefix);
   }
+  if (redirectConcreteExperimentalSoaMethodTarget(resolvedType)) {
+    return returnWithMethodTargetMemo(true);
+  }
   resolvedOut = joinMethodTarget(resolvedType, normalizedMethodName);
   return returnWithMethodTargetMemo(true);
 }

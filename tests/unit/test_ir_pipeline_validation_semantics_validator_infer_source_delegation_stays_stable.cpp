@@ -293,6 +293,11 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "redirectConcreteExperimentalSoaMethodTarget(resolvedType)") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
+            "if (redirectConcreteExperimentalSoaMethodTarget(resolvedType)) {\n"
+            "    return returnWithMethodTargetMemo(true);\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
             "normalizedMethodPath == \"vector/at_unsafe\"") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
