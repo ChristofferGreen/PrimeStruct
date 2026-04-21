@@ -597,9 +597,6 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     const bool isBuiltinCollectionCall =
         getBuiltinCollectionName(*initializerExprForInference, builtinCollectionName);
     std::string resolvedInferencePath = preferredResolvedInferencePath;
-    if (resolvedInferencePath.empty()) {
-      resolvedInferencePath = resolveCalleePath(*initializerExprForInference);
-    }
     const size_t suffix = resolvedInferencePath.find("__t");
     if (suffix != std::string::npos) {
       resolvedInferencePath.erase(suffix);
@@ -641,9 +638,6 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       inferQueryExprTypeText(*initializerExprForInference, params, locals, inferredTypeText) &&
       assignBindingTypeFromText(inferredTypeText)) {
     std::string resolvedInferencePath = preferredResolvedInferencePath;
-    if (resolvedInferencePath.empty()) {
-      resolvedInferencePath = resolveCalleePath(*initializerExprForInference);
-    }
     if (isResolvedMapConstructorPath(resolvedInferencePath)) {
       BindingInfo resolvedCallBinding;
       if (inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCallBinding)) {

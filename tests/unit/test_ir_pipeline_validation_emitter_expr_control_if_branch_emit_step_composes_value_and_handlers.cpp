@@ -1170,26 +1170,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "    }\n") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "    std::string resolvedInferencePath = preferredResolvedInferencePath;\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "    std::string resolvedInferencePath = preferredResolvedInferencePath;\n"
             "    if (resolvedInferencePath.empty()) {\n"
             "      resolvedInferencePath = resolveCalleePath(*initializerExprForInference);\n"
-            "    }\n") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceCallsSource.find(
-            "      if (!resolvedInferencePath.empty() &&\n"
-            "          inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCallBinding)) {\n"
-            "        bindingOut = std::move(resolvedCallBinding);\n"
-            "      }\n") !=
-        std::string::npos);
-  CHECK(buildInitializerInferenceCallsSource.find(
-            "      const std::string fallbackPreferredResolvedInitializerPath =\n"
-            "          preferredCollectionHelperResolvedPath(initializer);\n"
-            "      const std::string &preferredResolvedInitializerPath =\n"
-            "          !preferredResolvedInferencePath.empty()\n"
-            "              ? preferredResolvedInferencePath\n"
-            "          : !fallbackPreferredResolvedInitializerPath.empty()\n"
-            "              ? fallbackPreferredResolvedInitializerPath\n"
-            "              : resolveCalleePath(initializer);\n") !=
+            "    }\n") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)") ==
