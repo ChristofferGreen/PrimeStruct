@@ -103,6 +103,8 @@ TEST_CASE("ir lowerer flow helpers recover bool while conditions from builtin co
   CHECK(source.find("if (getBuiltinComparisonName(cond, builtinComparison))") != std::string::npos);
   CHECK(source.find("condKind = LocalInfo::ValueKind::Bool;") != std::string::npos);
   CHECK(source.find("if (condKind != LocalInfo::ValueKind::Bool)") != std::string::npos);
+  CHECK(source.find("error = \"while condition requires bool\"") != std::string::npos);
+  CHECK(source.find("error = \"for condition requires bool\"") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer flow helpers emit body statements") {
