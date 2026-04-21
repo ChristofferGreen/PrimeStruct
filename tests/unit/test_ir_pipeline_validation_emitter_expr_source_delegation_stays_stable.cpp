@@ -1612,7 +1612,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (receiverFamily == \"soa_vector\" && !resolvesVectorFamilyPath)") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "helperName == \"count\" || helperName == \"push\" || helperName == \"reserve\"") !=
+            "helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "        helperName == \"push\" || helperName == \"reserve\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "const std::string samePathSoaNonRefHelper = \"/soa_vector/\" + helperName;") !=

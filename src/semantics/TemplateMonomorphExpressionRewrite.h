@@ -512,7 +512,8 @@ bool rewriteExpr(Expr &expr,
       return path;
     }
     const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);
-    if (helperName == "count" || helperName == "push" || helperName == "reserve") {
+    if (helperName == "count" || helperName == "count_ref" ||
+        helperName == "push" || helperName == "reserve") {
       const std::string samePathSoaNonRefHelper = "/soa_vector/" + helperName;
       const bool receiverEligibleForSamePathSoaHelper =
           receiverFamily == "soa_vector" ||
