@@ -1349,6 +1349,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                resolveArrayTarget(receiver, ignoredElemType) ||
                resolveStringTarget(receiver);
       }
+      if (normalizedMethodName == "count_ref") {
+        if (isExplicitArrayCompatibilityPath || isCanonicalStdVectorPath) {
+          return false;
+        }
+        return resolveSoaVectorTarget(receiver, ignoredElemType) ||
+               resolveMapTarget(receiver);
+      }
       if (normalizedMethodName == "capacity") {
         if (isExplicitArrayCompatibilityPath) {
           return false;
@@ -1669,29 +1676,30 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return false;
   };
   auto resolveCollectionMethodFromTypePath = [&](const std::string &collectionTypePath) -> bool {
-    if (normalizedMethodName == "count") {
-      if (collectionTypePath == "/array") {
+    if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
+      if (normalizedMethodName == "count" && collectionTypePath == "/array") {
         return setCollectionMethodTarget("/array/count");
       }
       if (collectionTypePath == "/vector" &&
-          usesSamePathSoaHelperTargetForCollectionType("count", "/vector")) {
+          usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
         return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType("count", "/vector"));
+            preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
       }
-      if (collectionTypePath == "/vector") {
+      if (normalizedMethodName == "count" && collectionTypePath == "/vector") {
         return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
       }
       if (collectionTypePath == "/soa_vector") {
         return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType("count", "/soa_vector"));
+            preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                      "/soa_vector"));
       }
-      if (collectionTypePath == "/string") {
+      if (normalizedMethodName == "count" && collectionTypePath == "/string") {
         return setCollectionMethodTarget("/string/count");
       }
       if (collectionTypePath == "/map") {
-        return setPreferredMapMethodTarget(receiver, "count");
+        return setPreferredMapMethodTarget(receiver, normalizedMethodName);
       }
-      if (collectionTypePath == "/Buffer") {
+      if (normalizedMethodName == "count" && collectionTypePath == "/Buffer") {
         return setCollectionMethodTarget(preferredBufferMethodTarget("count"));
       }
     }
@@ -1991,48 +1999,56 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     isBuiltinOut = false;
     return true;
   }
-  if (normalizedMethodName == "count") {
-    if (resolveArgsPackCountTarget(receiver, elemType)) {
+  if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
+    if (normalizedMethodName == "count" &&
+        resolveArgsPackCountTarget(receiver, elemType)) {
       return setCollectionMethodTarget("/array/count");
     }
     if (resolveVectorTarget(receiver, elemType) &&
-        usesSamePathSoaHelperTargetForCollectionType("count", "/vector")) {
+        usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
       return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType("count", "/vector"));
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                    "/vector"));
     }
-    if (resolveVectorTarget(receiver, elemType)) {
+    if (normalizedMethodName == "count" &&
+        resolveVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
     }
-    if (resolveExperimentalVectorValueTarget(receiver, elemType)) {
+    if (normalizedMethodName == "count" &&
+        resolveExperimentalVectorValueTarget(receiver, elemType)) {
       return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
     }
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(
-          preferredSoaHelperTargetForCollectionType("count", "/soa_vector"));
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                    "/soa_vector"));
     }
-    if (resolveArrayTarget(receiver, elemType)) {
+    if (normalizedMethodName == "count" && resolveArrayTarget(receiver, elemType)) {
       if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
           explicitTarget.has_value()) {
         return *explicitTarget;
       }
       return setCollectionMethodTarget("/array/count");
     }
-    if (resolveStringTarget(receiver)) {
+    if (normalizedMethodName == "count" && resolveStringTarget(receiver)) {
       if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
           explicitTarget.has_value()) {
         return *explicitTarget;
       }
       return setCollectionMethodTarget("/string/count");
     }
-    if (setIndexedArgsPackMapMethodTarget(receiver, "count")) {
+    if (normalizedMethodName == "count" &&
+        setIndexedArgsPackMapMethodTarget(receiver, "count")) {
       return true;
     }
     if (resolveMapTarget(receiver)) {
-      if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
-          explicitTarget.has_value()) {
-        return *explicitTarget;
+      if (normalizedMethodName == "count") {
+        if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
+            explicitTarget.has_value()) {
+          return *explicitTarget;
+        }
       }
-      return setPreferredMapMethodTarget(receiver, "count");
+      return setPreferredMapMethodTarget(receiver, normalizedMethodName);
     }
   }
   if (normalizedMethodName == "contains" || normalizedMethodName == "tryAt" ||

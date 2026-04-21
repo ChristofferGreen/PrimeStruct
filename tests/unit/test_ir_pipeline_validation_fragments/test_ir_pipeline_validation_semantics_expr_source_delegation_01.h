@@ -711,6 +711,72 @@
             "      if ((normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\" ||\n"
             "           normalizedMethodName == \"at\" || normalizedMethodName == \"at_unsafe\") &&") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "      if (normalizedMethodName == \"count_ref\") {\n"
+            "        if (isExplicitArrayCompatibilityPath || isCanonicalStdVectorPath) {\n"
+            "          return false;\n"
+            "        }\n"
+            "        return resolveSoaVectorTarget(receiver, ignoredElemType) ||\n"
+            "               resolveMapTarget(receiver);\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "    if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {\n"
+            "      if (normalizedMethodName == \"count\" && collectionTypePath == \"/array\") {\n"
+            "        return setCollectionMethodTarget(\"/array/count\");\n"
+            "      }\n"
+            "      if (collectionTypePath == \"/vector\" &&\n"
+            "          usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")) {\n"
+            "        return setCollectionMethodTarget(\n"
+            "            preferredSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\"));\n"
+            "      }\n"
+            "      if (normalizedMethodName == \"count\" && collectionTypePath == \"/vector\") {\n"
+            "        return setCollectionMethodTarget(preferredBareVectorHelperTarget(\"count\"));\n"
+            "      }\n"
+            "      if (collectionTypePath == \"/soa_vector\") {\n"
+            "        return setCollectionMethodTarget(\n"
+            "            preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                      \"/soa_vector\"));\n"
+            "      }\n"
+            "      if (normalizedMethodName == \"count\" && collectionTypePath == \"/string\") {\n"
+            "        return setCollectionMethodTarget(\"/string/count\");\n"
+            "      }\n"
+            "      if (collectionTypePath == \"/map\") {\n"
+            "        return setPreferredMapMethodTarget(receiver, normalizedMethodName);\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "  if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {\n"
+            "    if (normalizedMethodName == \"count\" &&\n"
+            "        resolveArgsPackCountTarget(receiver, elemType)) {\n"
+            "      return setCollectionMethodTarget(\"/array/count\");\n"
+            "    }\n"
+            "    if (resolveVectorTarget(receiver, elemType) &&\n"
+            "        usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")) {\n"
+            "      return setCollectionMethodTarget(\n"
+            "          preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                    \"/vector\"));\n"
+            "    }\n"
+            "    if (normalizedMethodName == \"count\" &&\n"
+            "        resolveVectorTarget(receiver, elemType)) {\n"
+            "      return setCollectionMethodTarget(preferredBareVectorHelperTarget(\"count\"));\n"
+            "    }\n"
+            "    if (resolveSoaVectorTarget(receiver, elemType)) {\n"
+            "      return setCollectionMethodTarget(\n"
+            "          preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                    \"/soa_vector\"));\n"
+            "    }\n"
+            "    if (resolveMapTarget(receiver)) {\n"
+            "      if (normalizedMethodName == \"count\") {\n"
+            "        if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);\n"
+            "            explicitTarget.has_value()) {\n"
+            "          return *explicitTarget;\n"
+            "        }\n"
+            "      }\n"
+            "      return setPreferredMapMethodTarget(receiver, normalizedMethodName);\n"
+            "    }\n"
+            "  }") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
