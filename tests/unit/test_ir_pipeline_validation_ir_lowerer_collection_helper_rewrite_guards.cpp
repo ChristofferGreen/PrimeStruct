@@ -215,11 +215,21 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
         std::string::npos);
   CHECK(source.find("findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, callExpr)") !=
         std::string::npos);
+  CHECK(source.find(
+            "std::string helperName =\n                resolveTailDispatchDirectHelperPath(candidate);") !=
+        std::string::npos);
+  CHECK(source.find(
+            "std::string normalizedMethodName =\n                resolveTailDispatchDirectHelperPath(callExpr);") !=
+        std::string::npos);
   CHECK(source.find("if ((helperName == \"count\" || helperName == \"contains\" ||") !=
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/map/\", 0) == 0") != std::string::npos);
   CHECK(source.find("resolveDefinitionCall(callExpr) != nullptr") != std::string::npos);
   CHECK(source.find("rewrittenExpr.name = helperName;") != std::string::npos);
+  CHECK(source.find("std::string helperName = candidate.name;") ==
+        std::string::npos);
+  CHECK(source.find("std::string normalizedMethodName = callExpr.name;") ==
+        std::string::npos);
 }
 
 TEST_CASE("ir lowerer direct expr and inference rewrites guard explicit map defs") {

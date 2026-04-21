@@ -97,7 +97,8 @@
             if (candidate.isMethodCall || candidate.name.empty()) {
               return false;
             }
-            std::string helperName = candidate.name;
+            std::string helperName =
+                resolveTailDispatchDirectHelperPath(candidate);
             if (!helperName.empty() && helperName.front() == '/') {
               helperName.erase(helperName.begin());
             }
@@ -113,7 +114,8 @@
 
           size_t receiverIndex = 0;
           if (callExpr.isMethodCall) {
-            std::string normalizedMethodName = callExpr.name;
+            std::string normalizedMethodName =
+                resolveTailDispatchDirectHelperPath(callExpr);
             if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
               normalizedMethodName.erase(normalizedMethodName.begin());
             }
