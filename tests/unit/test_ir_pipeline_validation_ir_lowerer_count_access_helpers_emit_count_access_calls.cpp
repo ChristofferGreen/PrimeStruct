@@ -327,6 +327,21 @@ TEST_CASE("ir lowerer count access helpers build count classifier adapters") {
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
   CHECK_FALSE(isArrayCountCall(countEntry, locals));
+  primec::Expr namedArgVectorTemporary;
+  namedArgVectorTemporary.kind = primec::Expr::Kind::Call;
+  namedArgVectorTemporary.name = "/std/collections/vector/vector";
+  namedArgVectorTemporary.templateArgs = {"i32"};
+  primec::Expr secondLiteral;
+  secondLiteral.kind = primec::Expr::Kind::Literal;
+  secondLiteral.literalValue = 4;
+  primec::Expr firstLiteral;
+  firstLiteral.kind = primec::Expr::Kind::Literal;
+  firstLiteral.literalValue = 5;
+  namedArgVectorTemporary.args = {secondLiteral, firstLiteral};
+  namedArgVectorTemporary.argNames = {std::string("second"), std::string("first")};
+  countEntry.name = "/std/collections/vector/count";
+  countEntry.args = {namedArgVectorTemporary};
+  CHECK_FALSE(isArrayCountCall(countEntry, locals));
 
   primec::ir_lowerer::LocalInfo vecInfo;
   vecInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
@@ -396,6 +411,21 @@ TEST_CASE("ir lowerer count access helpers build bundled classifiers") {
   countEntry.name = "/vector/count";
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
   countEntry.name = "/soa_vector/count";
+  CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
+  primec::Expr namedArgVectorTemporary;
+  namedArgVectorTemporary.kind = primec::Expr::Kind::Call;
+  namedArgVectorTemporary.name = "/std/collections/vector/vector";
+  namedArgVectorTemporary.templateArgs = {"i32"};
+  primec::Expr secondLiteral;
+  secondLiteral.kind = primec::Expr::Kind::Literal;
+  secondLiteral.literalValue = 4;
+  primec::Expr firstLiteral;
+  firstLiteral.kind = primec::Expr::Kind::Literal;
+  firstLiteral.literalValue = 5;
+  namedArgVectorTemporary.args = {secondLiteral, firstLiteral};
+  namedArgVectorTemporary.argNames = {std::string("second"), std::string("first")};
+  countEntry.name = "/std/collections/vector/count";
+  countEntry.args = {namedArgVectorTemporary};
   CHECK_FALSE(classifiers.isArrayCountCall(countEntry, locals));
 
   primec::ir_lowerer::LocalInfo vecInfo;

@@ -530,6 +530,9 @@ bool isExperimentalSoaVectorOrBorrowedTypeText(std::string typeText) {
   }
 }
 
+bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics::BindingInfo &binding,
+                                                                std::string &elemTypeOut);
+
 bool isBuiltinVectorBinding(const semantics::BindingInfo &binding) {
   const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
   if (normalizedType == "Reference" || normalizedType == "Pointer") {
@@ -544,6 +547,14 @@ bool isBuiltinSoaVectorBinding(const semantics::BindingInfo &binding) {
     return false;
   }
   return isBuiltinSoaVectorTypeText(bindingTypeText(binding));
+}
+
+bool isBuiltinSoaVectorOrBorrowedBinding(const semantics::BindingInfo &binding) {
+  if (isBuiltinSoaVectorBinding(binding)) {
+    return true;
+  }
+  std::string elemType;
+  return extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, elemType);
 }
 
 std::optional<semantics::BindingInfo> extractBuiltinVectorBinding(const Expr &expr) {
@@ -612,7 +623,9 @@ std::optional<semantics::BindingInfo> extractBuiltinVectorReturnBinding(const De
   return std::nullopt;
 }
 
-std::optional<semantics::BindingInfo> extractBuiltinSoaVectorReturnBinding(const Definition &def) {
+std::optional<semantics::BindingInfo> extractBuiltinSoaVectorReturnBindingImpl(
+    const Definition &def,
+    bool allowBorrowed) {
   for (const auto &transform : def.transforms) {
     if (transform.name != "return" || transform.templateArgs.size() != 1) {
       continue;
@@ -623,20 +636,31 @@ std::optional<semantics::BindingInfo> extractBuiltinSoaVectorReturnBinding(const
     const std::string normalizedReturnType =
         semantics::normalizeBindingTypeName(transform.templateArgs.front());
     if (semantics::splitTemplateTypeName(normalizedReturnType, base, argText)) {
-      if (semantics::normalizeBindingTypeName(base) == "Reference" ||
-          semantics::normalizeBindingTypeName(base) == "Pointer") {
+      const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
+      if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+          !allowBorrowed) {
         continue;
       }
-      binding.typeName = semantics::normalizeBindingTypeName(base);
+      binding.typeName = normalizedBase;
       binding.typeTemplateArg = argText;
     } else {
       binding.typeName = normalizedReturnType;
     }
-    if (isBuiltinSoaVectorBinding(binding)) {
+    if ((allowBorrowed && isBuiltinSoaVectorOrBorrowedBinding(binding)) ||
+        (!allowBorrowed && isBuiltinSoaVectorBinding(binding))) {
       return binding;
     }
   }
   return std::nullopt;
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinSoaVectorReturnBinding(const Definition &def) {
+  return extractBuiltinSoaVectorReturnBindingImpl(def, false);
+}
+
+std::optional<semantics::BindingInfo> extractBuiltinSoaVectorOrBorrowedReturnBinding(
+    const Definition &def) {
+  return extractBuiltinSoaVectorReturnBindingImpl(def, true);
 }
 
 std::optional<semantics::BindingInfo> extractExperimentalSoaVectorReturnBindingImpl(
@@ -1065,11 +1089,15 @@ bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName
   const std::string samePath = "/soa_vector/" + std::string(helperName);
   const std::string canonicalPath =
       "/std/collections/soa_vector/" + std::string(helperName);
+  auto matchesSoaReceiverType = [&](const Expr &parameter) {
+    return extractBuiltinSoaVectorBinding(parameter).has_value() ||
+           extractExperimentalSoaVectorBinding(parameter).has_value();
+  };
   for (const Definition &def : program.definitions) {
     if ((def.fullPath == rootPath || def.fullPath == samePath ||
          def.fullPath == canonicalPath) &&
         !def.parameters.empty() &&
-        extractBuiltinSoaVectorBinding(def.parameters.front()).has_value()) {
+        matchesSoaReceiverType(def.parameters.front())) {
       return true;
     }
   }
@@ -1093,7 +1121,8 @@ bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
       "/std/collections/soa_vector/" + std::string(helperName);
   auto matchesReceiverType = [&](const Expr &parameter) {
     if (receiverTypeName == "soa_vector") {
-      return extractBuiltinSoaVectorBinding(parameter).has_value();
+      return extractBuiltinSoaVectorBinding(parameter).has_value() ||
+             extractExperimentalSoaVectorBinding(parameter).has_value();
     }
     if (receiverTypeName == "vector") {
       return extractBuiltinVectorBinding(parameter).has_value();
@@ -1153,6 +1182,12 @@ std::vector<std::string> candidateDefinitionPaths(const Expr &expr, const std::s
   std::vector<std::string> candidatePaths;
   if (!expr.name.empty() && expr.name.front() == '/') {
     candidatePaths.push_back(expr.name);
+    return candidatePaths;
+  }
+  if (expr.isMethodCall) {
+    if (!expr.namespacePrefix.empty()) {
+      candidatePaths.push_back(expr.namespacePrefix + "/" + expr.name);
+    }
     return candidatePaths;
   }
   if (!expr.namespacePrefix.empty()) {
@@ -1231,8 +1266,19 @@ std::optional<semantics::BindingInfo> extractBuiltinCollectionBindingFromTypeTex
   const std::string normalizedType = semantics::normalizeBindingTypeName(typeText);
   std::string base;
   std::string argText;
-  if (!semantics::splitTemplateTypeName(normalizedType, base, argText) ||
-      semantics::normalizeBindingTypeName(base) != expectedBase) {
+  if (!semantics::splitTemplateTypeName(normalizedType, base, argText)) {
+    return std::nullopt;
+  }
+  const std::string normalizedBase = semantics::normalizeBindingTypeName(base);
+  const bool matchesSoaExpectedBase =
+      expectedBase == "soa_vector" &&
+      (normalizedBase == "SoaVector" ||
+       normalizedBase == "std/collections/soa_vector" ||
+       normalizedBase == "std/collections/experimental_soa_vector/SoaVector");
+  const bool matchesExpectedBase =
+      normalizedBase == expectedBase ||
+      matchesSoaExpectedBase;
+  if (!matchesExpectedBase) {
     return std::nullopt;
   }
   semantics::BindingInfo binding;
@@ -1258,6 +1304,33 @@ std::optional<semantics::BindingInfo> extractBuiltinCollectionBindingFromWrapped
     return std::nullopt;
   }
   return extractBuiltinCollectionBindingFromTypeText(argText, expectedBase);
+}
+
+struct BuiltinSoaReceiverBindingInfo {
+  semantics::BindingInfo binding;
+  bool borrowed = false;
+};
+
+std::optional<BuiltinSoaReceiverBindingInfo> extractBuiltinSoaReceiverBinding(
+    const semantics::BindingInfo &binding) {
+  if (isBuiltinSoaVectorBinding(binding)) {
+    return BuiltinSoaReceiverBindingInfo{binding, false};
+  }
+  if (auto wrapped = extractBuiltinCollectionBindingFromWrappedTypeText(
+          bindingTypeText(binding), "soa_vector");
+      wrapped.has_value()) {
+    return BuiltinSoaReceiverBindingInfo{*wrapped, true};
+  }
+  std::string elemType;
+  if (extractExperimentalSoaVectorElementTypeForFieldViewRewrite(binding, elemType)) {
+    semantics::BindingInfo canonicalBinding;
+    canonicalBinding.typeName = "soa_vector";
+    canonicalBinding.typeTemplateArg = elemType;
+    const std::string normalizedType = semantics::normalizeBindingTypeName(binding.typeName);
+    const bool borrowed = normalizedType == "Reference" || normalizedType == "Pointer";
+    return BuiltinSoaReceiverBindingInfo{canonicalBinding, borrowed};
+  }
+  return std::nullopt;
 }
 
 std::string builtinSoaConversionMethodName(std::string_view methodName) {
@@ -1300,6 +1373,16 @@ std::string builtinSoaAccessHelperName(std::string_view rawName) {
   return {};
 }
 
+std::string borrowedBuiltinSoaAccessHelperName(std::string_view helperName) {
+  if (helperName == "get" || helperName == "get_ref") {
+    return "get_ref";
+  }
+  if (helperName == "ref" || helperName == "ref_ref") {
+    return "ref_ref";
+  }
+  return {};
+}
+
 std::string builtinSoaCountHelperName(std::string_view rawName) {
   std::string normalized(rawName);
   if (!normalized.empty() && normalized.front() == '/') {
@@ -1312,6 +1395,13 @@ std::string builtinSoaCountHelperName(std::string_view rawName) {
   }
   if (normalized == "count" || normalized == "count_ref") {
     return normalized;
+  }
+  return {};
+}
+
+std::string borrowedBuiltinSoaCountHelperName(std::string_view helperName) {
+  if (helperName == "count" || helperName == "count_ref") {
+    return "count_ref";
   }
   return {};
 }
@@ -1610,11 +1700,12 @@ void rewriteBuiltinSoaToAosCallExpr(
     }
     return std::nullopt;
   };
-  auto findBuiltinSoaValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
+  auto findBuiltinSoaValueBinding = [&](const Expr &candidate)
+      -> std::optional<BuiltinSoaReceiverBindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(candidate.name);
-      if (bindingIt != bindings.end() && isBuiltinSoaVectorBinding(bindingIt->second)) {
-        return bindingIt->second;
+      if (bindingIt != bindings.end()) {
+        return extractBuiltinSoaReceiverBinding(bindingIt->second);
       }
       return std::nullopt;
     }
@@ -1628,12 +1719,12 @@ void rewriteBuiltinSoaToAosCallExpr(
       semantics::BindingInfo binding;
       binding.typeName = "soa_vector";
       binding.typeTemplateArg = candidate.templateArgs.front();
-      return binding;
+      return BuiltinSoaReceiverBindingInfo{binding, false};
     }
     for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
       auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() && isBuiltinSoaVectorBinding(returnIt->second)) {
-        return returnIt->second;
+      if (returnIt != soaVectorReturnDefinitions.end()) {
+        return extractBuiltinSoaReceiverBinding(returnIt->second);
       }
     }
     if (!candidate.isMethodCall &&
@@ -1646,7 +1737,7 @@ void rewriteBuiltinSoaToAosCallExpr(
       semantics::BindingInfo binding;
       binding.typeName = "soa_vector";
       binding.typeTemplateArg = vectorBinding->typeTemplateArg;
-      return binding;
+      return BuiltinSoaReceiverBindingInfo{binding, false};
     }
     if (!candidate.isMethodCall &&
         semantics::isSimpleCallName(candidate, "dereference") &&
@@ -1655,8 +1746,11 @@ void rewriteBuiltinSoaToAosCallExpr(
       if (derefTarget.kind == Expr::Kind::Name) {
         auto bindingIt = bindings.find(derefTarget.name);
         if (bindingIt != bindings.end()) {
-          return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+          if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
+                  bindingTypeText(bindingIt->second), "soa_vector");
+              binding.has_value()) {
+            return BuiltinSoaReceiverBindingInfo{*binding, false};
+          }
         }
       }
       std::string accessName;
@@ -1665,8 +1759,11 @@ void rewriteBuiltinSoaToAosCallExpr(
           derefTarget.args.front().kind == Expr::Kind::Name) {
         auto bindingIt = bindings.find(derefTarget.args.front().name);
         if (bindingIt != bindings.end()) {
-          return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+          if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
+                  bindingTypeText(bindingIt->second), "soa_vector");
+              binding.has_value()) {
+            return BuiltinSoaReceiverBindingInfo{*binding, false};
+          }
         }
       }
     }
@@ -1909,11 +2006,12 @@ void rewriteBuiltinSoaAccessExpr(
     }
     return std::nullopt;
   };
-  auto findBuiltinSoaValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
+  auto findBuiltinSoaValueBinding = [&](const Expr &candidate)
+      -> std::optional<BuiltinSoaReceiverBindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(candidate.name);
-      if (bindingIt != bindings.end() && isBuiltinSoaVectorBinding(bindingIt->second)) {
-        return bindingIt->second;
+      if (bindingIt != bindings.end()) {
+        return extractBuiltinSoaReceiverBinding(bindingIt->second);
       }
       return std::nullopt;
     }
@@ -1927,12 +2025,12 @@ void rewriteBuiltinSoaAccessExpr(
       semantics::BindingInfo binding;
       binding.typeName = "soa_vector";
       binding.typeTemplateArg = candidate.templateArgs.front();
-      return binding;
+      return BuiltinSoaReceiverBindingInfo{binding, false};
     }
     for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
       auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() && isBuiltinSoaVectorBinding(returnIt->second)) {
-        return returnIt->second;
+      if (returnIt != soaVectorReturnDefinitions.end()) {
+        return extractBuiltinSoaReceiverBinding(returnIt->second);
       }
     }
     if (!candidate.isMethodCall &&
@@ -1942,8 +2040,11 @@ void rewriteBuiltinSoaAccessExpr(
       if (derefTarget.kind == Expr::Kind::Name) {
         auto bindingIt = bindings.find(derefTarget.name);
         if (bindingIt != bindings.end()) {
-          return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+          if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
+                  bindingTypeText(bindingIt->second), "soa_vector");
+              binding.has_value()) {
+            return BuiltinSoaReceiverBindingInfo{*binding, false};
+          }
         }
       }
       std::string accessName;
@@ -1952,8 +2053,11 @@ void rewriteBuiltinSoaAccessExpr(
           derefTarget.args.front().kind == Expr::Kind::Name) {
         auto bindingIt = bindings.find(derefTarget.args.front().name);
         if (bindingIt != bindings.end()) {
-          return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+          if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
+                  bindingTypeText(bindingIt->second), "soa_vector");
+              binding.has_value()) {
+            return BuiltinSoaReceiverBindingInfo{*binding, false};
+          }
         }
       }
     }
@@ -1983,32 +2087,40 @@ void rewriteBuiltinSoaAccessExpr(
   if (helperName.empty()) {
     return;
   }
-  if ((helperName == "get" && preserveGetHelper) ||
-      (helperName == "get_ref" && preserveGetRefHelper) ||
-      (helperName == "ref" && preserveRefHelper) ||
-      (helperName == "ref_ref" && preserveRefRefHelper)) {
+  const auto receiverBinding = findBuiltinSoaValueBinding(expr.args.front());
+  const std::string resolvedHelperName =
+      receiverBinding.has_value() && receiverBinding->borrowed
+          ? borrowedBuiltinSoaAccessHelperName(helperName)
+          : helperName;
+  if (resolvedHelperName.empty()) {
     return;
   }
-  const bool hasBuiltinSoaReceiver =
-      findBuiltinSoaValueBinding(expr.args.front()).has_value();
+  if (helperName == resolvedHelperName &&
+      ((resolvedHelperName == "get" && preserveGetHelper) ||
+       (resolvedHelperName == "get_ref" && preserveGetRefHelper) ||
+       (resolvedHelperName == "ref" && preserveRefHelper) ||
+       (resolvedHelperName == "ref_ref" && preserveRefRefHelper))) {
+    return;
+  }
+  const bool hasBuiltinSoaReceiver = receiverBinding.has_value();
   const bool hasBuiltinVectorReceiver =
+      !receiverBinding.has_value() &&
       findBuiltinVectorValueBinding(expr.args.front()).has_value();
   if (!hasBuiltinSoaReceiver && !hasBuiltinVectorReceiver) {
     return;
   }
 
-  const auto receiverBinding = findBuiltinSoaValueBinding(expr.args.front());
   const auto fallbackVectorBinding = receiverBinding.has_value()
                                          ? std::optional<semantics::BindingInfo>{}
                                          : findBuiltinVectorValueBinding(expr.args.front());
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/" + helperName;
+  expr.name = "/std/collections/soa_vector/" + resolvedHelperName;
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
-  if (receiverBinding.has_value() && !receiverBinding->typeTemplateArg.empty()) {
-    expr.templateArgs.push_back(receiverBinding->typeTemplateArg);
+  if (receiverBinding.has_value() && !receiverBinding->binding.typeTemplateArg.empty()) {
+    expr.templateArgs.push_back(receiverBinding->binding.typeTemplateArg);
   } else if (fallbackVectorBinding.has_value() && !fallbackVectorBinding->typeTemplateArg.empty()) {
     expr.templateArgs.push_back(fallbackVectorBinding->typeTemplateArg);
   }
@@ -2026,7 +2138,7 @@ bool rewriteBuiltinSoaAccessCalls(Program &program, std::string &error) {
         vectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
-    if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
+    if (auto binding = extractBuiltinSoaVectorOrBorrowedReturnBinding(def); binding.has_value()) {
       soaVectorReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
@@ -2183,11 +2295,12 @@ void rewriteBuiltinSoaCountExpr(
     }
     return std::nullopt;
   };
-  auto findBuiltinSoaValueBinding = [&](const Expr &candidate) -> std::optional<semantics::BindingInfo> {
+  auto findBuiltinSoaValueBinding = [&](const Expr &candidate)
+      -> std::optional<BuiltinSoaReceiverBindingInfo> {
     if (candidate.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(candidate.name);
-      if (bindingIt != bindings.end() && isBuiltinSoaVectorBinding(bindingIt->second)) {
-        return bindingIt->second;
+      if (bindingIt != bindings.end()) {
+        return extractBuiltinSoaReceiverBinding(bindingIt->second);
       }
       return std::nullopt;
     }
@@ -2201,12 +2314,12 @@ void rewriteBuiltinSoaCountExpr(
       semantics::BindingInfo binding;
       binding.typeName = "soa_vector";
       binding.typeTemplateArg = candidate.templateArgs.front();
-      return binding;
+      return BuiltinSoaReceiverBindingInfo{binding, false};
     }
     for (const std::string &candidatePath : candidateDefinitionPaths(candidate, definitionNamespace)) {
       auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
-      if (returnIt != soaVectorReturnDefinitions.end() && isBuiltinSoaVectorBinding(returnIt->second)) {
-        return returnIt->second;
+      if (returnIt != soaVectorReturnDefinitions.end()) {
+        return extractBuiltinSoaReceiverBinding(returnIt->second);
       }
     }
     if (!candidate.isMethodCall &&
@@ -2216,8 +2329,11 @@ void rewriteBuiltinSoaCountExpr(
       if (derefTarget.kind == Expr::Kind::Name) {
         auto bindingIt = bindings.find(derefTarget.name);
         if (bindingIt != bindings.end()) {
-          return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+          if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
+                  bindingTypeText(bindingIt->second), "soa_vector");
+              binding.has_value()) {
+            return BuiltinSoaReceiverBindingInfo{*binding, false};
+          }
         }
       }
       std::string accessName;
@@ -2226,8 +2342,11 @@ void rewriteBuiltinSoaCountExpr(
           derefTarget.args.front().kind == Expr::Kind::Name) {
         auto bindingIt = bindings.find(derefTarget.args.front().name);
         if (bindingIt != bindings.end()) {
-          return extractBuiltinCollectionBindingFromWrappedTypeText(
-              bindingTypeText(bindingIt->second), "soa_vector");
+          if (auto binding = extractBuiltinCollectionBindingFromWrappedTypeText(
+                  bindingTypeText(bindingIt->second), "soa_vector");
+              binding.has_value()) {
+            return BuiltinSoaReceiverBindingInfo{*binding, false};
+          }
         }
       }
     }
@@ -2252,13 +2371,22 @@ void rewriteBuiltinSoaCountExpr(
     return;
   }
   const std::string helperName = builtinSoaCountHelperName(expr.name);
-  if (helperName.empty() ||
-      (helperName == "count" && preserveCountHelper) ||
-      (helperName == "count_ref" && preserveCountRefHelper)) {
+  if (helperName.empty()) {
     return;
   }
-
   const auto receiverBinding = findBuiltinSoaValueBinding(expr.args.front());
+  const std::string resolvedHelperName =
+      receiverBinding.has_value() && receiverBinding->borrowed
+          ? borrowedBuiltinSoaCountHelperName(helperName)
+          : helperName;
+  if (resolvedHelperName.empty()) {
+    return;
+  }
+  if (helperName == resolvedHelperName &&
+      ((resolvedHelperName == "count" && preserveCountHelper) ||
+       (resolvedHelperName == "count_ref" && preserveCountRefHelper))) {
+    return;
+  }
   const bool explicitOldSoaCount = isOldExplicitSoaCountHelperName(expr.name);
   const auto fallbackVectorBinding =
       receiverBinding.has_value() || !explicitOldSoaCount
@@ -2270,11 +2398,11 @@ void rewriteBuiltinSoaCountExpr(
 
   expr.isMethodCall = false;
   expr.isFieldAccess = false;
-  expr.name = "/std/collections/soa_vector/" + helperName;
+  expr.name = "/std/collections/soa_vector/" + resolvedHelperName;
   expr.namespacePrefix.clear();
   expr.templateArgs.clear();
-  if (receiverBinding.has_value() && !receiverBinding->typeTemplateArg.empty()) {
-    expr.templateArgs.push_back(receiverBinding->typeTemplateArg);
+  if (receiverBinding.has_value() && !receiverBinding->binding.typeTemplateArg.empty()) {
+    expr.templateArgs.push_back(receiverBinding->binding.typeTemplateArg);
   } else if (fallbackVectorBinding.has_value() && !fallbackVectorBinding->typeTemplateArg.empty()) {
     expr.templateArgs.push_back(fallbackVectorBinding->typeTemplateArg);
   }
@@ -2292,7 +2420,7 @@ bool rewriteBuiltinSoaCountCalls(Program &program, std::string &error) {
         vectorReturnDefinitions[def.fullPath.substr(slash + 1)] = *binding;
       }
     }
-    if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
+    if (auto binding = extractBuiltinSoaVectorOrBorrowedReturnBinding(def); binding.has_value()) {
       soaVectorReturnDefinitions[def.fullPath] = *binding;
       const size_t slash = def.fullPath.find_last_of('/');
       if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
@@ -3110,16 +3238,22 @@ std::vector<std::string> candidatePathsForExprCall(
   }
   if (!callExpr.name.empty() && callExpr.name.front() == '/') {
     candidatePaths.push_back(callExpr.name);
-  } else {
+    return candidatePaths;
+  }
+  if (callExpr.isMethodCall) {
     if (!callExpr.namespacePrefix.empty()) {
       candidatePaths.push_back(callExpr.namespacePrefix + "/" + callExpr.name);
     }
-    if (!definitionNamespace.empty()) {
-      candidatePaths.push_back(definitionNamespace + "/" + callExpr.name);
-    }
-    candidatePaths.push_back("/" + callExpr.name);
-    candidatePaths.push_back(callExpr.name);
+    return candidatePaths;
   }
+  if (!callExpr.namespacePrefix.empty()) {
+    candidatePaths.push_back(callExpr.namespacePrefix + "/" + callExpr.name);
+  }
+  if (!definitionNamespace.empty()) {
+    candidatePaths.push_back(definitionNamespace + "/" + callExpr.name);
+  }
+  candidatePaths.push_back("/" + callExpr.name);
+  candidatePaths.push_back(callExpr.name);
   return candidatePaths;
 }
 
@@ -3791,9 +3925,10 @@ void rewriteExperimentalSoaFieldViewIndexStatements(
           definitionNamespace);
     }
     if (stmt.isBinding) {
-      if (auto soaBinding = extractExperimentalSoaVectorFieldViewReceiverBinding(stmt);
-          soaBinding.has_value()) {
-        bindings[stmt.name] = *soaBinding;
+      if (auto binding =
+              extractParsedOrExperimentalSoaBindingInfo(stmt, &structPaths);
+          binding.has_value()) {
+        bindings[stmt.name] = *binding;
       }
     }
   }
@@ -4796,8 +4931,38 @@ void rewriteExperimentalSoaFieldViewAssignTargetsExpr(Expr &expr) {
       "/std/collections/internal_soa_storage/soaFieldViewRead";
   static constexpr std::string_view fieldRefPrefix =
       "/std/collections/internal_soa_storage/soaFieldViewRef";
+  auto rewriteSamePathSoaGetCarrierToRef = [](std::string &path) -> bool {
+    const size_t specializationSuffix = path.find("__t");
+    const std::string specializationText =
+        specializationSuffix == std::string::npos
+            ? std::string{}
+            : path.substr(specializationSuffix);
+    std::string basePath =
+        specializationSuffix == std::string::npos
+            ? path
+            : path.substr(0, specializationSuffix);
+    const std::string canonicalGetPath =
+        semantics::canonicalizeLegacySoaGetHelperPath(basePath);
+    if (canonicalGetPath == "/std/collections/soa_vector/get") {
+      path = (basePath.rfind("/soa_vector/", 0) == 0 ? "/soa_vector/ref"
+                                                     : "/std/collections/soa_vector/ref") +
+             specializationText;
+      return true;
+    }
+    if (canonicalGetPath == "/std/collections/soa_vector/get_ref") {
+      path =
+          (basePath.rfind("/soa_vector/", 0) == 0 ? "/soa_vector/ref_ref"
+                                                  : "/std/collections/soa_vector/ref_ref") +
+          specializationText;
+      return true;
+    }
+    return false;
+  };
   if (!semantics::isExperimentalSoaGetLikeHelperPath(receiver.name)) {
     if (!semantics::isExperimentalSoaFieldViewReadHelperPath(receiver.name)) {
+      if (!rewriteSamePathSoaGetCarrierToRef(receiver.name)) {
+        return;
+      }
       return;
     }
     receiver.name.replace(0, fieldReadPrefix.size(), fieldRefPrefix);
@@ -4879,7 +5044,7 @@ void rewriteBorrowedExperimentalMapMethodExpr(
     if (bindingIt != bindings.end() && isBorrowedExperimentalMapBinding(bindingIt->second)) {
       receiverBinding = bindingIt->second;
     }
-  } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+  } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
     std::vector<std::string> candidatePaths;
     if (!receiver.name.empty() && receiver.name.front() == '/') {
       candidatePaths.push_back(receiver.name);
@@ -5005,7 +5170,7 @@ void rewriteExperimentalMapValueMethodExpr(
     if (bindingIt != bindings.end() && isExperimentalMapValueBinding(bindingIt->second)) {
       receiverBinding = bindingIt->second;
     }
-  } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+  } else if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
     std::vector<std::string> candidatePaths;
     if (!receiver.name.empty() && receiver.name.front() == '/') {
       candidatePaths.push_back(receiver.name);

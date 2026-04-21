@@ -375,6 +375,29 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
                  "stale",
                  false);
 
+  primec::Expr namedSecondValue;
+  namedSecondValue.kind = primec::Expr::Kind::Name;
+  namedSecondValue.name = "secondValue";
+
+  primec::Expr namedFirstValue;
+  namedFirstValue.kind = primec::Expr::Kind::Name;
+  namedFirstValue.name = "firstValue";
+
+  primec::Expr namedVectorTemporary;
+  namedVectorTemporary.kind = primec::Expr::Kind::Call;
+  namedVectorTemporary.name = "vector";
+  namedVectorTemporary.namespacePrefix = "/std/collections/vector";
+  namedVectorTemporary.templateArgs = {"i32"};
+  namedVectorTemporary.args = {namedSecondValue, namedFirstValue};
+  namedVectorTemporary.argNames = {std::optional<std::string>{"second"},
+                                   std::optional<std::string>{"first"}};
+
+  expectDispatch("/std/collections/vector/count",
+                 {namedVectorTemporary},
+                 Result::NotHandled,
+                 "stale",
+                 false);
+
   primec::Expr bareCountCall;
   bareCountCall.kind = primec::Expr::Kind::Call;
   bareCountCall.name = "count";

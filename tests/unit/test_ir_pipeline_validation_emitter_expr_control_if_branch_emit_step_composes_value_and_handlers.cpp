@@ -1110,6 +1110,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   CHECK(buildInitializerInferenceSource.find("splitSoaFieldViewHelperPath(resolved, fieldNameOut)") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "auto withPreservedError = [&](const std::function<bool()> &fn)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "withPreservedError([&]() {\n          return const_cast<SemanticsValidator *>(this)->inferBindingTypeFromInitializer(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "return withPreservedError([&]() {\n             return const_cast<SemanticsValidator *>(this)->inferQueryExprTypeText(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "soaDirectFieldViewPendingDiagnostic(fieldName)") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -1165,6 +1174,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         std::string::npos);
   CHECK(exprArgumentValidationCollectionsSource.find(
             "normalizedResolvedPath.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "auto withPreservedError = [&](const std::function<bool()> &fn)") !=
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "return withPreservedError([&]() {\n             return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText);") !=
+        std::string::npos);
+  CHECK(exprArgumentValidationCollectionsSource.find(
+            "return withPreservedError([&]() {\n           return inferQueryExprTypeText(target, params, locals, inferredTypeText);") !=
         std::string::npos);
   CHECK(semanticsHelpersSource.find("std::string soaFieldViewPendingDiagnostic(") ==
         std::string::npos);
@@ -1569,6 +1587,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "if (collectionTypePath == \"/soa_vector\") {\n"
+            "    return samePath;\n"
+            "  }") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);

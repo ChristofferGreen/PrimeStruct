@@ -784,7 +784,8 @@
             "      return setCollectionMethodTarget(preferredBareVectorHelperTarget(\"count\"));\n"
             "    }\n"
             "    if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
-            "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "        this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "            receiver, params, locals, resolveDirectReceiver, elemType)) {\n"
             "      return setCollectionMethodTarget(\n"
             "          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
             "    }\n"
@@ -806,14 +807,16 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "if ((normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\") &&\n"
-            "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "        this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "            receiver, params, locals, resolveDirectReceiver, elemType)) {\n"
             "      return setCollectionMethodTarget(\n"
             "          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
             "    }\n"
             "    if (resolveSoaVectorTarget(receiver, elemType)) {") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "if (resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(\n"
+            "            receiver, params, locals, resolveDirectReceiver, elemType)) {\n"
             "      return setCollectionMethodTarget(\n"
             "          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
             "    }\n"
@@ -833,6 +836,32 @@
             "            isBorrowedSoaWrapperMethod) {\n"
             "          return setCollectionMethodTarget(\n"
             "              preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
+            "        }\n"
+            "        const std::string normalizedPointeeType =\n"
+            "            normalizeBindingTypeName(normalizedReturnArgText);\n"
+            "        if (!normalizedPointeeType.empty() &&\n"
+            "            normalizeCollectionTypePath(normalizedPointeeType).empty()) {\n"
+            "          std::string normalizedPointeeBaseType = normalizedPointeeType;\n"
+            "          if (!normalizedPointeeBaseType.empty() &&\n"
+            "              normalizedPointeeBaseType.front() == '/') {\n"
+            "            normalizedPointeeBaseType.erase(normalizedPointeeBaseType.begin());\n"
+            "          }\n"
+            "          if (isPrimitiveBindingTypeName(normalizedPointeeBaseType)) {\n"
+            "            resolvedOut = \"/\" + normalizedPointeeBaseType + \"/\" + normalizedMethodName;\n"
+            "            return true;\n"
+            "          }\n"
+            "          std::string resolvedPointeeType =\n"
+            "              resolveStructTypePath(normalizedPointeeType,\n"
+            "                                    defIt->second->namespacePrefix);\n"
+            "          if (resolvedPointeeType.empty()) {\n"
+            "            resolvedPointeeType =\n"
+            "                resolveTypePath(normalizedPointeeType,\n"
+            "                                defIt->second->namespacePrefix);\n"
+            "          }\n"
+            "          if (!resolvedPointeeType.empty()) {\n"
+            "            resolvedOut = resolvedPointeeType + \"/\" + normalizedMethodName;\n"
+            "            return true;\n"
+            "          }\n"
             "        }\n"
             "        resolvedOut = \"/\" + normalizedReturnBaseType + \"/\" + normalizedMethodName;\n"
             "        return true;\n"
@@ -5956,6 +5985,99 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
         std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "    const auto preferredMethodLikeSamePathSoaHelperCandidate = [&]() -> std::string {\n"
+            "      if (!expr.isMethodCall) {\n"
+            "        return {};\n"
+            "      }\n"
+            "      const std::string canonicalCountPath =\n"
+            "          canonicalSoaPendingHelperPath(candidatePath);") !=
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "      if (canonicalGetPath == \"/std/collections/soa_vector/get\" &&\n"
+            "          pathExists(\"/soa_vector/get\")) {\n"
+            "        return \"/soa_vector/get\";\n"
+            "      }") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "      if (canonicalToAosPath == \"/std/collections/soa_vector/to_aos\" &&\n"
+            "          pathExists(\"/to_aos\")) {\n"
+            "        return \"/to_aos\";\n"
+            "      }") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "    if (!preferredMethodLikeSamePathSoaHelperCandidate.empty()) {\n"
+            "      return preferredMethodLikeSamePathSoaHelperCandidate;\n"
+            "    }") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "  auto canonicalSamePathSoaHelperBase = [&](std::string_view path) -> std::string {\n"
+            "    const std::string strippedPath =\n"
+            "        stripSamePathSoaSpecializationSuffix(std::string(path));\n") !=
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "    if (!expr.templateArgs.empty()) {\n"
+            "      if (const std::string preferredTemplateBearingSamePathCandidate =\n"
+            "              canonicalSamePathSoaHelperBase(candidatePath);\n"
+            "          !preferredTemplateBearingSamePathCandidate.empty() &&\n"
+            "          pathExists(preferredTemplateBearingSamePathCandidate)) {\n"
+            "        return preferredTemplateBearingSamePathCandidate;\n"
+            "      }\n"
+            "    }") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "    const std::string samePathSoaCandidateBase =\n"
+            "        canonicalSamePathSoaHelperBase(candidatePath);\n"
+            "    if (!samePathSoaCandidateBase.empty() && pathExists(samePathSoaCandidateBase)) {\n"
+            "      return samePathSoaCandidateBase;\n"
+            "    }") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "      const std::string samePathSoaHelperBase =\n"
+            "          canonicalSamePathSoaHelperBase(basePath);\n"
+            "      if (!samePathSoaHelperBase.empty() && pathExists(samePathSoaHelperBase)) {\n"
+            "        return samePathSoaHelperBase;\n"
+            "      }") != std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "    const bool preserveSamePathSoaCandidatePath =\n"
+            "        candidatePath == \"/to_aos\" || candidatePath == \"/to_aos_ref\" ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"to_aos\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"to_aos_ref\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"count\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"count_ref\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"get\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"get_ref\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"ref\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"ref_ref\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"push\") ||\n"
+            "        isLegacyOrCanonicalSoaHelperPath(candidatePath, \"reserve\");") ==
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "    if (preserveSamePathSoaCandidatePath &&\n"
+            "        (candidatePath.rfind(\"/soa_vector/\", 0) == 0 ||\n"
+            "         candidatePath.rfind(\"/std/collections/soa_vector/\", 0) == 0 ||\n"
+            "         candidatePath == \"/to_aos\" || candidatePath == \"/to_aos_ref\") &&\n"
+            "        pathExists(candidatePath)) {\n"
+            "      return candidatePath;\n"
+            "    }") == std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "      const bool preserveSamePathSoaHelperBase =\n"
+            "          basePath == \"/to_aos\" || basePath == \"/to_aos_ref\" ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"to_aos\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"to_aos_ref\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"count\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"count_ref\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"get\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"get_ref\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"ref\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"ref_ref\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"push\") ||\n"
+            "          isLegacyOrCanonicalSoaHelperPath(basePath, \"reserve\");") ==
+        std::string::npos);
+  CHECK(semanticsExprCallResolutionSource.find(
+            "      if (preserveSamePathSoaHelperBase &&\n"
+            "          (basePath.rfind(\"/soa_vector/\", 0) == 0 ||\n"
+            "           basePath.rfind(\"/std/collections/soa_vector/\", 0) == 0 ||\n"
+            "           basePath == \"/to_aos\" ||\n"
+            "           basePath == \"/to_aos_ref\") &&\n"
+            "          pathExists(basePath)) {\n"
+            "        return basePath;\n"
+            "      }") == std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
         std::string::npos);

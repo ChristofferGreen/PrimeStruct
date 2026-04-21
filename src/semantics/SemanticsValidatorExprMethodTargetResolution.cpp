@@ -477,13 +477,6 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return isValueSurfaceAccessMethodName(helperName) ||
            helperName == "at_ref" || helperName == "at_unsafe_ref";
   };
-  auto resolveBorrowedSoaVectorReceiver = [&](const Expr &candidate,
-                                              std::string &elemTypeOut) {
-    std::string inferredTypeText;
-    return inferQueryExprTypeText(candidate, params, locals, inferredTypeText) &&
-           !inferredTypeText.empty() &&
-           resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
-  };
   std::function<bool(const Expr &, std::string &)> resolveBorrowedVectorReceiver =
       [&](const Expr &candidate, std::string &elemTypeOut) {
     auto extractBorrowedVectorType = [&](const BindingInfo &binding) {
@@ -1568,6 +1561,14 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return {};
   };
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
   auto classifyExplicitVectorHelperParam = [&](const BindingInfo &binding) -> std::string {
     std::string elemType;
     std::string keyType;
@@ -1675,6 +1676,32 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             isBorrowedSoaWrapperMethod) {
           return setCollectionMethodTarget(
               preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
+        }
+        const std::string normalizedPointeeType =
+            normalizeBindingTypeName(normalizedReturnArgText);
+        if (!normalizedPointeeType.empty() &&
+            normalizeCollectionTypePath(normalizedPointeeType).empty()) {
+          std::string normalizedPointeeBaseType = normalizedPointeeType;
+          if (!normalizedPointeeBaseType.empty() &&
+              normalizedPointeeBaseType.front() == '/') {
+            normalizedPointeeBaseType.erase(normalizedPointeeBaseType.begin());
+          }
+          if (isPrimitiveBindingTypeName(normalizedPointeeBaseType)) {
+            resolvedOut = "/" + normalizedPointeeBaseType + "/" + normalizedMethodName;
+            return true;
+          }
+          std::string resolvedPointeeType =
+              resolveStructTypePath(normalizedPointeeType,
+                                    defIt->second->namespacePrefix);
+          if (resolvedPointeeType.empty()) {
+            resolvedPointeeType =
+                resolveTypePath(normalizedPointeeType,
+                                defIt->second->namespacePrefix);
+          }
+          if (!resolvedPointeeType.empty()) {
+            resolvedOut = resolvedPointeeType + "/" + normalizedMethodName;
+            return true;
+          }
         }
         resolvedOut = "/" + normalizedReturnBaseType + "/" + normalizedMethodName;
         return true;
@@ -2042,7 +2069,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
-        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       return setCollectionMethodTarget(
           preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
     }
@@ -2143,7 +2171,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                                     "/vector"));
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
-        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       return setCollectionMethodTarget(
           preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
     }
@@ -2159,7 +2188,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
     }
-    if (resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+    if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       return setCollectionMethodTarget(
           preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
     }
@@ -2173,7 +2203,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
     }
-    if (resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+    if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       return setCollectionMethodTarget(
           preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
     }
@@ -2546,6 +2577,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (typeName.empty()) {
     if (receiver.kind == Expr::Kind::Call) {
+      BindingInfo inferredReceiverBinding;
+      if (withPreservedError([&]() {
+            return inferBindingTypeFromInitializer(
+                receiver, params, locals, inferredReceiverBinding);
+          }) &&
+          !inferredReceiverBinding.typeName.empty()) {
+        typeName = normalizeBindingTypeName(inferredReceiverBinding.typeName);
+        typeTemplateArg = inferredReceiverBinding.typeTemplateArg;
+      }
+    }
+  }
+  if (typeName.empty()) {
+    if (receiver.kind == Expr::Kind::Call) {
       auto defIt = defMap_.find(resolveCalleePath(receiver));
       if (defIt != defMap_.end() && defIt->second != nullptr) {
         BindingInfo inferredReturn;
@@ -2681,6 +2725,41 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
   }
   if (typeName == "Pointer" || typeName == "Reference") {
+    const std::string normalizedPointeeType =
+        normalizeBindingTypeName(typeTemplateArg);
+    if (!normalizedPointeeType.empty() &&
+        normalizeCollectionTypePath(normalizedPointeeType).empty()) {
+      std::string currentNamespace;
+      if (!currentValidationState_.context.definitionPath.empty()) {
+        const size_t slash =
+            currentValidationState_.context.definitionPath.find_last_of('/');
+        if (slash != std::string::npos && slash > 0) {
+          currentNamespace =
+              currentValidationState_.context.definitionPath.substr(0, slash);
+        }
+      }
+      const std::string lookupNamespace =
+          !receiver.namespacePrefix.empty() ? receiver.namespacePrefix : currentNamespace;
+      std::string normalizedPointeeBaseType = normalizedPointeeType;
+      if (!normalizedPointeeBaseType.empty() &&
+          normalizedPointeeBaseType.front() == '/') {
+        normalizedPointeeBaseType.erase(normalizedPointeeBaseType.begin());
+      }
+      if (isPrimitiveBindingTypeName(normalizedPointeeBaseType)) {
+        resolvedOut = "/" + normalizedPointeeBaseType + "/" + normalizedMethodName;
+        return true;
+      }
+      std::string resolvedPointeeType =
+          resolveStructTypePath(normalizedPointeeType, lookupNamespace);
+      if (resolvedPointeeType.empty()) {
+        resolvedPointeeType =
+            resolveTypePath(normalizedPointeeType, lookupNamespace);
+      }
+      if (!resolvedPointeeType.empty()) {
+        resolvedOut = resolvedPointeeType + "/" + normalizedMethodName;
+        return true;
+      }
+    }
     stampFileErrorResultFailure("pointer-like-type", typeName);
     return failMethodTargetResolutionDiagnostic("unknown method target for " + normalizedMethodName);
   }

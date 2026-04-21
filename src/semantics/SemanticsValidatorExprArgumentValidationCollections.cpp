@@ -448,6 +448,14 @@ bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
     const std::unordered_map<std::string, BindingInfo> &locals,
     const std::function<bool(const Expr &, std::string &)> &resolveDirectReceiver,
     std::string &elemTypeOut) {
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = error_;
+    error_.clear();
+    const bool ok = fn();
+    error_.clear();
+    error_ = previousError;
+    return ok;
+  };
   if (resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
           target, params, locals, resolveDirectReceiver, elemTypeOut)) {
     return true;
@@ -465,7 +473,9 @@ bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
       return false;
     }
     std::string inferredTypeText;
-    return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText) &&
+    return withPreservedError([&]() {
+             return inferQueryExprTypeText(valueExpr, params, locals, inferredTypeText);
+           }) &&
            !inferredTypeText.empty() &&
            resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
   };
@@ -484,7 +494,9 @@ bool SemanticsValidator::resolveSoaVectorOrExperimentalBorrowedReceiver(
   }
 
   std::string inferredTypeText;
-  return inferQueryExprTypeText(target, params, locals, inferredTypeText) &&
+  return withPreservedError([&]() {
+           return inferQueryExprTypeText(target, params, locals, inferredTypeText);
+         }) &&
          !inferredTypeText.empty() &&
          resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
 }

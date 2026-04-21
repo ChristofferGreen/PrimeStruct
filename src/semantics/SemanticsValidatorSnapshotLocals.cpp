@@ -104,6 +104,22 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
   };
 
   out.resolvedPath = resolveCalleePath(expr);
+  if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty()) {
+    std::string resolvedMethodPath;
+    bool isBuiltinMethod = false;
+    if (withPreservedError([&]() {
+          return resolveMethodTarget(defParams,
+                                     activeLocals,
+                                     expr.namespacePrefix,
+                                     expr.args.front(),
+                                     expr.name,
+                                     resolvedMethodPath,
+                                     isBuiltinMethod);
+        }) &&
+        !resolvedMethodPath.empty()) {
+      out.resolvedPath = std::move(resolvedMethodPath);
+    }
+  }
   if (!out.resolvedPath.empty()) {
     BindingInfo resolvedBinding;
     if (inferResolvedDirectCallBindingType(out.resolvedPath, resolvedBinding) &&

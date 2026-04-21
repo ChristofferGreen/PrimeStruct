@@ -40,6 +40,29 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
+bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
+                                         std::string_view helperName) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  const std::string scopedPath = resolveScopedCallPath(expr);
+  return scopedPath == std::string("/vector/") + std::string(helperName) ||
+         scopedPath == std::string("vector/") + std::string(helperName) ||
+         scopedPath == std::string("/array/") + std::string(helperName) ||
+         scopedPath == std::string("array/") + std::string(helperName) ||
+         scopedPath == std::string("/soa_vector/") + std::string(helperName) ||
+         scopedPath == std::string("soa_vector/") + std::string(helperName);
+}
+
+bool isNamedArgumentCollectionTemporary(const Expr &expr,
+                                        std::string_view collectionName) {
+  if (expr.kind != Expr::Kind::Call || !hasNamedArguments(expr.argNames)) {
+    return false;
+  }
+  std::string collection;
+  return getBuiltinCollectionName(expr, collection) && collection == collectionName;
+}
+
 bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
@@ -200,7 +223,13 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
   if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
+  if (isExplicitRemovedCountLikeAliasCall(expr, "count")) {
+    return false;
+  }
   const Expr &target = expr.args.front();
+  if (isNamedArgumentCollectionTemporary(target, "vector")) {
+    return false;
+  }
   const std::string scopedExprPath = resolveScopedCallPath(expr);
   const bool isBareOrCanonicalVectorCountCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
@@ -304,7 +333,13 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
   if (!isVectorBuiltinName(expr, "capacity") || expr.args.size() != 1) {
     return false;
   }
+  if (isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
+    return false;
+  }
   const Expr &target = expr.args.front();
+  if (isNamedArgumentCollectionTemporary(target, "vector")) {
+    return false;
+  }
   const std::string scopedExprPath = resolveScopedCallPath(expr);
   const bool isBareOrCanonicalVectorCapacityCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
@@ -367,6 +402,9 @@ bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
   if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
+  if (isExplicitRemovedCountLikeAliasCall(expr, "count")) {
+    return false;
+  }
   const Expr &target = expr.args.front();
   if (target.kind == Expr::Kind::StringLiteral) {
     return true;
@@ -422,6 +460,10 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
+  if (isExplicitRemovedCountLikeAliasCall(expr, "count") ||
+      isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
+    return CountAccessCallEmitResult::NotHandled;
+  }
   const std::string targetCallPath =
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call
           ? resolveScopedCallPath(expr.args.front())

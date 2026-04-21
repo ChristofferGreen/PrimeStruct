@@ -329,6 +329,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
         std::string::npos);
+  CHECK(inlineDispatchSource.find("return !hasNamedArguments(expr.argNames);") !=
+        std::string::npos);
   CHECK(inlineDispatchSource.find("bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isCanonicalSoaToAosHelperCall(const Expr &expr)") ==

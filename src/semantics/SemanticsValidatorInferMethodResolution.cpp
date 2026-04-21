@@ -523,13 +523,6 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return std::string();
   };
-  auto resolveBorrowedSoaVectorReceiver = [&](const Expr &candidate,
-                                              std::string &elemTypeOut) {
-    std::string inferredTypeText;
-    return inferQueryExprTypeText(candidate, params, locals, inferredTypeText) &&
-           !inferredTypeText.empty() &&
-           resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
-  };
   std::function<bool(const Expr &, std::string &)> resolveBorrowedVectorReceiver =
       [&](const Expr &candidate, std::string &elemTypeOut) {
     auto extractBorrowedVectorType = [&](const BindingInfo &binding) {
@@ -807,6 +800,12 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
   }
+  auto resolveDirectReceiver = [&](const Expr &directCandidate,
+                                   std::string &directElemTypeOut) -> bool {
+    return this->resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
+        directCandidate, params, locals, resolveSoaVectorTarget,
+        directElemTypeOut);
+  };
   {
     std::string elemType;
     std::string keyType;
@@ -905,7 +904,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
-        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
@@ -936,7 +936,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
-        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
@@ -948,7 +949,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
-        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
@@ -965,7 +967,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
-        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }

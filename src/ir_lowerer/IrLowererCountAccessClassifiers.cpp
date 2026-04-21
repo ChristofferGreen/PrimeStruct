@@ -18,6 +18,23 @@ bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
 
+bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
+                                         std::string_view helperName) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  std::string scopedPath = expr.name;
+  if (scopedPath.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
+    scopedPath = expr.namespacePrefix + "/" + scopedPath;
+  }
+  return scopedPath == std::string("/vector/") + std::string(helperName) ||
+         scopedPath == std::string("vector/") + std::string(helperName) ||
+         scopedPath == std::string("/array/") + std::string(helperName) ||
+         scopedPath == std::string("array/") + std::string(helperName) ||
+         scopedPath == std::string("/soa_vector/") + std::string(helperName) ||
+         scopedPath == std::string("soa_vector/") + std::string(helperName);
+}
+
 bool isSoaVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
   if (target.kind == Expr::Kind::Name) {
     auto it = localsIn.find(target.name);
@@ -128,6 +145,10 @@ bool resolveMapHelperAliasName(const Expr &expr, std::string &helperNameOut) {
 bool isVectorBuiltinName(const Expr &expr, const char *name) {
   if (isSimpleCallName(expr, name)) {
     return true;
+  }
+  if ((std::string_view{name} == "count" || std::string_view{name} == "capacity") &&
+      isExplicitRemovedCountLikeAliasCall(expr, name)) {
+    return false;
   }
   std::string aliasName;
   if (resolveVectorHelperAliasName(expr, aliasName) && aliasName == name) {

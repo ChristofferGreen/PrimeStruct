@@ -99,10 +99,26 @@ CountMethodFallbackResult tryEmitNonMethodCountFallback(
     }
     return expr.name;
   };
+  auto isExplicitRemovedCountLikeAliasCall = [&](std::string_view helperName) {
+    if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+      return false;
+    }
+    const std::string directHelperPath = resolveDirectHelperPath();
+    return directHelperPath == std::string("/vector/") + std::string(helperName) ||
+           directHelperPath == std::string("vector/") + std::string(helperName) ||
+           directHelperPath == std::string("/array/") + std::string(helperName) ||
+           directHelperPath == std::string("array/") + std::string(helperName) ||
+           directHelperPath == std::string("/soa_vector/") + std::string(helperName) ||
+           directHelperPath == std::string("soa_vector/") + std::string(helperName);
+  };
   if (!expr.isMethodCall) {
     const std::string directHelperPath = resolveDirectHelperPath();
     if (directHelperPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
         directHelperPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+      return CountMethodFallbackResult::NotHandled;
+    }
+    if (isExplicitRemovedCountLikeAliasCall("count") ||
+        isExplicitRemovedCountLikeAliasCall("capacity")) {
       return CountMethodFallbackResult::NotHandled;
     }
   }

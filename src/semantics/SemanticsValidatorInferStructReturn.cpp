@@ -64,6 +64,28 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
     }
     return 0;
   };
+  auto resolveStructReturnCallTarget = [&](const Expr &callExpr) -> std::string {
+    std::string resolvedPath = resolveCalleePath(callExpr);
+    if (callExpr.kind != Expr::Kind::Call) {
+      return resolvedPath;
+    }
+    if (callExpr.isMethodCall) {
+      if (callExpr.args.empty()) {
+        return resolvedPath;
+      }
+      bool isBuiltin = false;
+      if (!resolveMethodTarget(params,
+                               locals,
+                               callExpr.namespacePrefix,
+                               callExpr.args.front(),
+                               callExpr.name,
+                               resolvedPath,
+                               isBuiltin)) {
+        return resolvedPath;
+      }
+    }
+    return resolveExprConcreteCallPath(params, locals, callExpr, resolvedPath);
+  };
   if (expr.kind == Expr::Kind::Call) {
     if (!expr.isMethodCall &&
         (isSimpleCallName(expr, "take") || isSimpleCallName(expr, "borrow")) &&
@@ -363,7 +385,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       return inferStructReturnPath(*valueExpr, params, locals);
     }
 
-    const std::string resolvedDirectPath = resolveCalleePath(expr);
+    const std::string resolvedDirectPath = resolveStructReturnCallTarget(expr);
     auto directDefIt = defMap_.find(resolvedDirectPath);
     if (directDefIt != defMap_.end() && directDefIt->second != nullptr) {
       for (const auto &transform : directDefIt->second->transforms) {
@@ -445,7 +467,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       std::string collectionTypePath;
       if (resolveCallCollectionTypePath(expr, params, locals, collectionTypePath) &&
           collectionTypePath == "/map") {
-        const std::string resolvedCollectionPath = resolveCalleePath(expr);
+        const std::string resolvedCollectionPath = resolveStructReturnCallTarget(expr);
         std::string normalizedCollectionPath = normalizeBindingTypeName(resolvedCollectionPath);
         if (!normalizedCollectionPath.empty() && normalizedCollectionPath.front() != '/') {
           normalizedCollectionPath.insert(normalizedCollectionPath.begin(), '/');
@@ -476,7 +498,7 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
       }
     }
 
-    const std::string resolvedCallee = resolveCalleePath(expr);
+    const std::string resolvedCallee = resolveStructReturnCallTarget(expr);
     const bool isExplicitMapAccessCompatibilityCall =
         isExplicitMapAccessStructReturnCompatibilityCall(expr, builtinCollectionDispatchResolvers);
     const std::string structReturnProbePath = isExplicitMapAccessCompatibilityCall ? expr.name : resolvedCallee;

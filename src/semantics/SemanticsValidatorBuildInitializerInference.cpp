@@ -388,6 +388,14 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     bindingOut.typeTemplateArg.clear();
     return true;
   };
+  auto withPreservedError = [&](const std::function<bool()> &fn) {
+    const std::string previousError = const_cast<SemanticsValidator *>(this)->error_;
+    const_cast<SemanticsValidator *>(this)->error_.clear();
+    const bool ok = fn();
+    const_cast<SemanticsValidator *>(this)->error_.clear();
+    const_cast<SemanticsValidator *>(this)->error_ = previousError;
+    return ok;
+  };
   auto inferSoaReceiverBinding = [&](const Expr &receiver, BindingInfo &bindingOut) -> bool {
     if (receiver.kind == Expr::Kind::Name) {
       if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
@@ -400,13 +408,17 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
         return true;
       }
     }
-    if (const_cast<SemanticsValidator *>(this)->inferBindingTypeFromInitializer(
-            receiver, params, locals, bindingOut)) {
+    if (withPreservedError([&]() {
+          return const_cast<SemanticsValidator *>(this)->inferBindingTypeFromInitializer(
+              receiver, params, locals, bindingOut);
+        })) {
       return true;
     }
     std::string inferredTypeText;
-    return const_cast<SemanticsValidator *>(this)->inferQueryExprTypeText(
-               receiver, params, locals, inferredTypeText) &&
+    return withPreservedError([&]() {
+             return const_cast<SemanticsValidator *>(this)->inferQueryExprTypeText(
+                 receiver, params, locals, inferredTypeText);
+           }) &&
            assignBindingTypeFromText(inferredTypeText, bindingOut);
   };
   auto resolveDirectSoaReceiver = [&](const Expr &receiver,
@@ -644,6 +656,9 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
       preferredSoaHelperTargetForCurrentImports(helperName);
   if (preferredTarget != samePath) {
     return preferredTarget;
+  }
+  if (collectionTypePath == "/soa_vector") {
+    return samePath;
   }
   auto paramsIt = paramsByDef_.find(samePath);
   if (paramsIt == paramsByDef_.end() || paramsIt->second.empty()) {

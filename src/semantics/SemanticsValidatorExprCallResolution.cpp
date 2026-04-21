@@ -273,6 +273,47 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     return pathExists(specializationIt->second) ? specializationIt->second : std::string{};
   };
+  auto stripSamePathSoaSpecializationSuffix = [](std::string path) {
+    const size_t lastSlash = path.find_last_of('/');
+    const size_t specializationSuffix = path.find("__t");
+    if (specializationSuffix != std::string::npos &&
+        lastSlash != std::string::npos &&
+        specializationSuffix > lastSlash) {
+      path.erase(specializationSuffix);
+    }
+    return path;
+  };
+  auto canonicalSamePathSoaHelperBase = [&](std::string_view path) -> std::string {
+    const std::string strippedPath =
+        stripSamePathSoaSpecializationSuffix(std::string(path));
+    const std::string canonicalToAosPath =
+        canonicalizeLegacySoaToAosHelperPath(strippedPath);
+    if (canonicalToAosPath == "/std/collections/soa_vector/to_aos" ||
+        canonicalToAosPath == "/std/collections/soa_vector/to_aos_ref") {
+      return canonicalToAosPath;
+    }
+    const std::string canonicalGetPath =
+        canonicalizeLegacySoaGetHelperPath(strippedPath);
+    if (canonicalGetPath == "/std/collections/soa_vector/count" ||
+        canonicalGetPath == "/std/collections/soa_vector/count_ref" ||
+        canonicalGetPath == "/std/collections/soa_vector/get" ||
+        canonicalGetPath == "/std/collections/soa_vector/get_ref") {
+      return canonicalGetPath;
+    }
+    const std::string canonicalRefPath =
+        canonicalizeLegacySoaRefHelperPath(strippedPath);
+    if (canonicalRefPath == "/std/collections/soa_vector/ref" ||
+        canonicalRefPath == "/std/collections/soa_vector/ref_ref") {
+      return canonicalRefPath;
+    }
+    if (strippedPath == "/soa_vector/push" ||
+        strippedPath == "/std/collections/soa_vector/push" ||
+        strippedPath == "/soa_vector/reserve" ||
+        strippedPath == "/std/collections/soa_vector/reserve") {
+      return strippedPath;
+    }
+    return {};
+  };
 
   const bool hasTemplateOverloads = hasOverloadFamily(candidatePath);
   const bool isTypeNamespaceCall = isTypeNamespaceMethodCall(params, locals, expr, candidatePath);
@@ -318,7 +359,90 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     appendIfMissing(baseCandidates, candidatePath);
   };
   auto resolveFromBaseCandidates = [&](const auto &baseCandidates) {
+    if (!expr.templateArgs.empty()) {
+      if (const std::string preferredTemplateBearingSamePathCandidate =
+              canonicalSamePathSoaHelperBase(candidatePath);
+          !preferredTemplateBearingSamePathCandidate.empty() &&
+          pathExists(preferredTemplateBearingSamePathCandidate)) {
+        return preferredTemplateBearingSamePathCandidate;
+      }
+    }
+    const auto preferredMethodLikeSamePathSoaHelperCandidate = [&]() -> std::string {
+      if (!expr.isMethodCall) {
+        return {};
+      }
+      std::string canonicalCountPath(candidatePath);
+      const size_t countTemplateSuffix = canonicalCountPath.find("__t");
+      if (countTemplateSuffix != std::string::npos) {
+        canonicalCountPath.erase(countTemplateSuffix);
+      }
+      if (canonicalCountPath == "/soa_vector/count") {
+        canonicalCountPath = "/std/collections/soa_vector/count";
+      } else if (canonicalCountPath == "/soa_vector/count_ref") {
+        canonicalCountPath = "/std/collections/soa_vector/count_ref";
+      }
+      if (canonicalCountPath == "/std/collections/soa_vector/count" &&
+          pathExists("/soa_vector/count")) {
+        return "/soa_vector/count";
+      }
+      if (canonicalCountPath == "/std/collections/soa_vector/count_ref" &&
+          pathExists("/soa_vector/count_ref")) {
+        return "/soa_vector/count_ref";
+      }
+      const std::string canonicalGetPath =
+          canonicalizeLegacySoaGetHelperPath(candidatePath);
+      if (canonicalGetPath == "/std/collections/soa_vector/get" &&
+          pathExists("/soa_vector/get")) {
+        return "/soa_vector/get";
+      }
+      if (canonicalGetPath == "/std/collections/soa_vector/get_ref" &&
+          pathExists("/soa_vector/get_ref")) {
+        return "/soa_vector/get_ref";
+      }
+      const std::string canonicalRefPath =
+          canonicalizeLegacySoaRefHelperPath(candidatePath);
+      if (canonicalRefPath == "/std/collections/soa_vector/ref" &&
+          pathExists("/soa_vector/ref")) {
+        return "/soa_vector/ref";
+      }
+      if (canonicalRefPath == "/std/collections/soa_vector/ref_ref" &&
+          pathExists("/soa_vector/ref_ref")) {
+        return "/soa_vector/ref_ref";
+      }
+      const std::string canonicalToAosPath =
+          canonicalizeLegacySoaToAosHelperPath(candidatePath);
+      if (canonicalToAosPath == "/std/collections/soa_vector/to_aos" &&
+          pathExists("/to_aos")) {
+        return "/to_aos";
+      }
+      if (canonicalToAosPath == "/std/collections/soa_vector/to_aos_ref" &&
+          pathExists("/to_aos_ref")) {
+        return "/to_aos_ref";
+      }
+      if (candidatePath == "/std/collections/soa_vector/push" &&
+          pathExists("/soa_vector/push")) {
+        return "/soa_vector/push";
+      }
+      if (candidatePath == "/std/collections/soa_vector/reserve" &&
+          pathExists("/soa_vector/reserve")) {
+        return "/soa_vector/reserve";
+      }
+      return {};
+    }();
+    if (!preferredMethodLikeSamePathSoaHelperCandidate.empty()) {
+      return preferredMethodLikeSamePathSoaHelperCandidate;
+    }
+    const std::string samePathSoaCandidateBase =
+        canonicalSamePathSoaHelperBase(candidatePath);
+    if (!samePathSoaCandidateBase.empty() && pathExists(samePathSoaCandidateBase)) {
+      return samePathSoaCandidateBase;
+    }
     for (const auto &basePath : baseCandidates) {
+      const std::string samePathSoaHelperBase =
+          canonicalSamePathSoaHelperBase(basePath);
+      if (!samePathSoaHelperBase.empty() && pathExists(samePathSoaHelperBase)) {
+        return samePathSoaHelperBase;
+      }
       if (const std::string specializedPath = specializedPathForBase(basePath);
           !specializedPath.empty()) {
         return specializedPath;

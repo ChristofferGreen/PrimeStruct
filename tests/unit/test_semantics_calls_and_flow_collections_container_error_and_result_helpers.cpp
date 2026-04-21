@@ -1100,6 +1100,37 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("experimental soa_vector alias-only borrowed helper-return helpers validate on wrapper state") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+import /std/collections/soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Particle] first{get(pickBorrowed(location(values)), 1i32)}
+  [Reference<Particle>] second{ref(pickBorrowed(location(values)), 0i32)}
+  [i32] countBare{count(pickBorrowed(location(values)))}
+  return(plus(plus(first.x, second.x), countBare))
+}
+  )";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental soa_vector method-like borrowed helper-return helper surfaces validate on wrapper state") {
   const std::string source = R"(
 import /std/collections/*

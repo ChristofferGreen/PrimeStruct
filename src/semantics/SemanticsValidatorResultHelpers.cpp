@@ -478,6 +478,29 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return resolvedPath;
     }
     const Expr &receiver = expr.args.front();
+    auto resolveReceiverCallPath = [&](const Expr &receiverExpr) -> std::string {
+      std::string resolvedReceiverPath = resolveCalleePath(receiverExpr);
+      if (receiverExpr.kind != Expr::Kind::Call) {
+        return resolvedReceiverPath;
+      }
+      if (receiverExpr.isMethodCall) {
+        if (receiverExpr.args.empty()) {
+          return resolvedReceiverPath;
+        }
+        bool isBuiltin = false;
+        if (!resolveMethodTarget(params,
+                                 locals,
+                                 receiverExpr.namespacePrefix,
+                                 receiverExpr.args.front(),
+                                 receiverExpr.name,
+                                 resolvedReceiverPath,
+                                 isBuiltin)) {
+          return resolvedReceiverPath;
+        }
+      }
+      return resolveExprConcreteCallPath(
+          params, locals, receiverExpr, resolvedReceiverPath);
+    };
     const std::string receiverTypeName = [&]() -> std::string {
       if (receiver.kind == Expr::Kind::Name) {
         if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
@@ -514,11 +537,9 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
             !collectionTypePath.empty()) {
           return collectionTypePath;
         }
-        if (!receiver.isMethodCall) {
-          const std::string resolvedReceiverPath = resolveCalleePath(receiver);
-          if (!resolvedReceiverPath.empty()) {
-            return resolvedReceiverPath;
-          }
+        const std::string resolvedReceiverPath = resolveReceiverCallPath(receiver);
+        if (!resolvedReceiverPath.empty()) {
+          return resolvedReceiverPath;
         }
       }
       return std::string();

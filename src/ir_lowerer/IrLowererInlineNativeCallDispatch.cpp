@@ -432,7 +432,7 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
     if (getBuiltinCollectionName(expr, collection) && collection == "vector") {
-      return true;
+      return !hasNamedArguments(expr.argNames);
     }
     if (isCanonicalCollectionHelperCall(expr, "std/collections/soa_vector", "to_aos", 1)) {
       return isSoaVectorTarget(expr.args.front(), localsIn);

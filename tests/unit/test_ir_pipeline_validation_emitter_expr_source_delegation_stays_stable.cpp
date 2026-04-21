@@ -1598,10 +1598,75 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string receiverFamily = inferCollectionReceiverFamily(receiverExpr);") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "auto resolvesBorrowedExperimentalSoaVectorReceiver = [&](const Expr *receiverExpr)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (receiverExpr->kind == Expr::Kind::Call && !receiverExpr->isBinding) {\n"
+            "      std::string resolvedReceiverPath;") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "inferDefinitionReturnBindingForTemplatedFallback(\n"
+            "                defIt->second, allowMathBare, ctx, inferredReturn)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const bool receiverResolvesBorrowedExperimentalSoaVector =\n"
+            "        resolvesBorrowedExperimentalSoaVectorReceiver(receiverExpr);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (receiverResolvesBorrowedExperimentalSoaVector) {\n"
+            "      if (helperName == \"count\") {\n"
+            "        helperName = \"count_ref\";\n"
+            "      } else if (helperName == \"get\") {\n"
+            "        helperName = \"get_ref\";\n"
+            "      } else if (helperName == \"ref\") {\n"
+            "        helperName = \"ref_ref\";\n"
+            "      } else if (helperName == \"to_aos\") {\n"
+            "        helperName = \"to_aos_ref\";\n"
+            "      }\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "auto preferredBorrowedSoaWrapperPath = [&](const std::string &path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return std::string(\"/std/collections/soa_vector/count_ref\");") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return std::string(\"/std/collections/soa_vector/get_ref\");") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return std::string(\"/std/collections/soa_vector/ref_ref\");") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "return std::string(\"/std/collections/soa_vector/to_aos_ref\");") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const std::string preferredBorrowedSoaPath =\n"
+            "        preferredBorrowedSoaWrapperPath(resolvedPath);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const std::string latePreferredBorrowedSoaPath =\n"
+            "        preferredBorrowedSoaWrapperPath(resolvedPath);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (!preferredBorrowedSoaPath.empty() &&\n"
+            "        resolvesBorrowedExperimentalSoaVectorReceiver(") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (expr.templateArgs.empty() &&\n"
+            "        !latePreferredBorrowedSoaPath.empty() &&\n"
+            "        resolvesBorrowedExperimentalSoaVectorReceiver(resolvedReceiverExpr) &&") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&\n"
+            "        resolvesBorrowedExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "const std::string samePathGetHelper = \"/soa_vector/\" + helperName;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "if (receiverFamily == \"soa_vector\") {\n"
+            "if (receiverFamily == \"soa_vector\" ||\n"
+            "        receiverResolvesBorrowedExperimentalSoaVector) {\n"
             "      const std::string preferred = \"/std/collections/soa_vector/\" + helperName;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
@@ -1624,6 +1689,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "const bool receiverEligibleForSamePathSoaHelper =\n"
             "          receiverFamily == \"soa_vector\" ||\n"
+            "          receiverResolvesBorrowedExperimentalSoaVector ||\n"
             "          ((helperName == \"count\" || helperName == \"count_ref\") &&\n"
             "           receiverFamily == \"vector\");") !=
         std::string::npos);
@@ -1660,7 +1726,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "if (hasDefinitionFamilyPath(samePathGetHelper) &&\n"
-            "          (receiverFamily == \"soa_vector\" || receiverFamily == \"vector\")) {") !=
+            "          (receiverFamily == \"soa_vector\" ||\n"
+            "           receiverResolvesBorrowedExperimentalSoaVector ||\n"
+            "           receiverFamily == \"vector\")) {") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "isLegacyOrCanonicalSoaHelperPath(canonicalGetHelper, helperName)") ==
@@ -1679,7 +1747,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "if (hasDefinitionFamilyPath(samePathRefHelper) &&\n"
-            "          (receiverFamily == \"soa_vector\" || receiverFamily == \"vector\")) {") !=
+            "          (receiverFamily == \"soa_vector\" ||\n"
+            "           receiverResolvesBorrowedExperimentalSoaVector ||\n"
+            "           receiverFamily == \"vector\")) {") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "inferCollectionReceiverFamily(receiverExpr) == \"soa_vector\"") ==
@@ -2200,6 +2270,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "hasVisibleStdCollectionsImportForPath(ctx, resolvedPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const bool canRewriteNamedExperimentalVectorTemporary =") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "!hasNamedArguments(experimentalVectorReceiverExpr->argNames)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "resolvesConcreteExperimentalSoaVectorReceiver(") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
@@ -2209,7 +2285,42 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "hasVisibleStdCollectionsImportForPath(ctx, methodPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {") ==
+            "auto preferredConcreteSamePathSoaHelperPath = [&](const std::string &path) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (!resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "preferredConcreteSamePathSoaHelperPath(resolvedPath);") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (expr.templateArgs.empty() &&\n"
+            "        isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&\n"
+            "        resolvesBorrowedExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {\n"
+            "        expr.templateArgs = std::move(receiverTemplateArgs);\n"
+            "        allConcrete = true;\n"
+            "      }\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (expr.templateArgs.empty() &&\n"
+            "          isCanonicalSoaBorrowedWrapperHelper(methodPath) &&\n"
+            "          resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&\n"
+            "        resolvedPath.find(\"__t\") != std::string::npos) {\n"
+            "      expr.templateArgs.clear();\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "if (isCanonicalSoaBorrowedWrapperHelper(methodPath) &&\n"
+            "          methodPath.find(\"__t\") != std::string::npos) {\n"
+            "        expr.templateArgs.clear();\n"
+            "      }") !=
         std::string::npos);
   CHECK(collectionTypeHelpersSource.find(
             "normalizedPath.rfind(\"/soa_vector/\", 0) == 0") !=

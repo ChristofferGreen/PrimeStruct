@@ -1484,6 +1484,171 @@ main() {
   CHECK_FALSE(choseReferenceGet);
 }
 
+TEST_CASE("semantic product keeps method-like borrowed soa_vector read targets on canonical wrappers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32))
+  values.push(Particle(9i32))
+  [Holder] holder{Holder()}
+  [auto] picked{holder.pickBorrowed(location(values)).get(1i32)}
+  [auto] pickedRef{holder.pickBorrowed(location(values)).ref(0i32)}
+  [auto] unpacked{holder.pickBorrowed(location(values)).to_aos()}
+  [i32] borrowedCount{holder.pickBorrowed(location(values)).count()}
+  return(plus(plus(picked.x, pickedRef.x),
+              plus(count(unpacked), borrowedCount)))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *getTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "get" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/soa_vector/get_ref";
+      });
+  REQUIRE(getTarget != nullptr);
+
+  const auto *refTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "ref" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/soa_vector/ref_ref";
+      });
+  REQUIRE(refTarget != nullptr);
+
+  const auto *toAosTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "to_aos" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/soa_vector/to_aos_ref";
+      });
+  REQUIRE(toAosTarget != nullptr);
+
+  const auto *countTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "count" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/soa_vector/count_ref";
+      });
+  REQUIRE(countTarget != nullptr);
+
+  const bool choseReferenceGet = std::any_of(
+      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
+      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
+        return entry->scopePath == "/main" && entry->methodName == "get" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/Reference/get";
+      });
+  CHECK_FALSE(choseReferenceGet);
+}
+
+TEST_CASE("semantic product validates direct return method-like borrowed helper-return experimental soa_vector reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  return(
+    plus(count(holder.pickBorrowed(location(values))),
+         plus(count(holder.pickBorrowed(location(values)).to_aos()),
+              plus(holder.pickBorrowed(location(values)).get(0i32).x,
+                   plus(ref(holder.pickBorrowed(location(values)), 1i32).y,
+                        plus(get(holder.pickBorrowed(location(values)), 1i32).y,
+                             plus(holder.pickBorrowed(location(values)).y()[1i32],
+                                  y(holder.pickBorrowed(location(values)))[0i32]))))))
+  )
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *countTarget = findSemanticEntry(
+      primec::semanticProgramDirectCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "count" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/soa_vector/count_ref";
+      });
+  REQUIRE(countTarget != nullptr);
+
+  const auto *getTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "get" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/soa_vector/get_ref";
+      });
+  REQUIRE(getTarget != nullptr);
+
+  const auto *fieldViewRead = findSemanticEntry(
+      primec::semanticProgramDirectCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/std/collections/internal_soa_storage/soaFieldViewRead";
+      });
+  REQUIRE(fieldViewRead != nullptr);
+}
+
 TEST_CASE("semantic product keeps helper-return borrowed soa_vector direct-call targets on canonical wrappers") {
   const std::string source = R"(
 import /std/collections/*
@@ -1532,7 +1697,7 @@ main() {
   const auto *getTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "get" &&
+        return entry.scopePath == "/main" && entry.callName == "get" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/get_ref";
       });
@@ -1541,7 +1706,7 @@ main() {
   const auto *getRefTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "get_ref" &&
+        return entry.scopePath == "/main" && entry.callName == "get_ref" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/get_ref";
       });
@@ -1550,7 +1715,7 @@ main() {
   const auto *refTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "ref" &&
+        return entry.scopePath == "/main" && entry.callName == "ref" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/ref_ref";
       });
@@ -1559,7 +1724,7 @@ main() {
   const auto *refRefTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "ref_ref" &&
+        return entry.scopePath == "/main" && entry.callName == "ref_ref" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/ref_ref";
       });
@@ -1568,7 +1733,7 @@ main() {
   const auto *toAosTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "to_aos" &&
+        return entry.scopePath == "/main" && entry.callName == "to_aos" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/to_aos_ref";
       });
@@ -1577,7 +1742,7 @@ main() {
   const auto *toAosRefTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "to_aos_ref" &&
+        return entry.scopePath == "/main" && entry.callName == "to_aos_ref" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/to_aos_ref";
       });
@@ -1586,7 +1751,7 @@ main() {
   const auto *countTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "count" &&
+        return entry.scopePath == "/main" && entry.callName == "count" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/count_ref";
       });
@@ -1595,7 +1760,7 @@ main() {
   const auto *countRefTarget = findSemanticEntry(
       primec::semanticProgramDirectCallTargetView(semanticProgram),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
-        return entry.scopePath == "/main" && entry.name == "count_ref" &&
+        return entry.scopePath == "/main" && entry.callName == "count_ref" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, entry) ==
                    "/std/collections/soa_vector/count_ref";
       });
@@ -1605,7 +1770,7 @@ main() {
       primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
       primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
       [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
-        return entry->scopePath == "/main" && entry->name == "get" &&
+        return entry->scopePath == "/main" && entry->callName == "get" &&
                primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
                    "/soa_vector/get";
       });
@@ -1635,6 +1800,144 @@ main() {
   values.push(Particle(9i32, 12i32))
   [auto] fieldMethod{pickBorrowed(location(values)).y()[1i32]}
   [auto] fieldCall{y(pickBorrowed(location(values)))[0i32]}
+  return(plus(fieldMethod, fieldCall))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *fieldMethodEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "fieldMethod";
+      });
+  REQUIRE(fieldMethodEntry != nullptr);
+  CHECK(fieldMethodEntry->bindingTypeText == "i32");
+  CHECK(fieldMethodEntry->initializerDirectCallResolvedPath ==
+        "/std/collections/internal_soa_storage/soaFieldViewRead");
+  CHECK(fieldMethodEntry->initializerDirectCallReturnKind == "i32");
+
+  const auto *fieldCallEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "fieldCall";
+      });
+  REQUIRE(fieldCallEntry != nullptr);
+  CHECK(fieldCallEntry->bindingTypeText == "i32");
+  CHECK(fieldCallEntry->initializerDirectCallResolvedPath ==
+        "/std/collections/internal_soa_storage/soaFieldViewRead");
+  CHECK(fieldCallEntry->initializerDirectCallReturnKind == "i32");
+
+  const bool choseExplicitFieldViewBridge = std::any_of(
+      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
+      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
+        return entry->scopePath == "/main" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/std/collections/experimental_soa_vector/soaVectorFieldView";
+      });
+  CHECK_FALSE(choseExplicitFieldViewBridge);
+}
+
+TEST_CASE("semantic product keeps borrowed local soa_vector field views on canonical reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Reference<SoaVector<Particle>>] borrowed{location(values)}
+  [auto] fieldMethod{borrowed.y()[1i32]}
+  [auto] fieldCall{y(borrowed)[0i32]}
+  return(plus(fieldMethod, fieldCall))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *fieldMethodEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "fieldMethod";
+      });
+  REQUIRE(fieldMethodEntry != nullptr);
+  CHECK(fieldMethodEntry->bindingTypeText == "i32");
+  CHECK(fieldMethodEntry->initializerDirectCallResolvedPath ==
+        "/std/collections/internal_soa_storage/soaFieldViewRead");
+  CHECK(fieldMethodEntry->initializerDirectCallReturnKind == "i32");
+
+  const auto *fieldCallEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "fieldCall";
+      });
+  REQUIRE(fieldCallEntry != nullptr);
+  CHECK(fieldCallEntry->bindingTypeText == "i32");
+  CHECK(fieldCallEntry->initializerDirectCallResolvedPath ==
+        "/std/collections/internal_soa_storage/soaFieldViewRead");
+  CHECK(fieldCallEntry->initializerDirectCallReturnKind == "i32");
+
+  const bool choseExplicitFieldViewBridge = std::any_of(
+      primec::semanticProgramDirectCallTargetView(semanticProgram).begin(),
+      primec::semanticProgramDirectCallTargetView(semanticProgram).end(),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget *entry) {
+        return entry->scopePath == "/main" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/std/collections/experimental_soa_vector/soaVectorFieldView";
+      });
+  CHECK_FALSE(choseExplicitFieldViewBridge);
+}
+
+TEST_CASE("semantic product keeps method-like borrowed soa_vector field views on canonical reads") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[struct]
+Holder() {}
+
+[return<Reference<SoaVector<Particle>>>]
+/Holder/pickBorrowed([Holder] self, [Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  [Holder] holder{Holder()}
+  [auto] fieldMethod{holder.pickBorrowed(location(values)).y()[1i32]}
+  [auto] fieldCall{y(holder.pickBorrowed(location(values)))[0i32]}
   return(plus(fieldMethod, fieldCall))
 }
 )";
