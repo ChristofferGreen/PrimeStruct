@@ -48,9 +48,11 @@
                 if (resolvePublishedTailDispatchMapHelperName(callExpr, helperNameOut)) {
                   return true;
                 }
-                if (callExpr.name == "count" || callExpr.name == "contains" ||
+                if (callExpr.namespacePrefix.empty() &&
+                    callExpr.name.find('/') == std::string::npos &&
+                    (callExpr.name == "count" || callExpr.name == "contains" ||
                     callExpr.name == "tryAt" || callExpr.name == "at" ||
-                    callExpr.name == "at_unsafe") {
+                     callExpr.name == "at_unsafe")) {
                   helperNameOut = callExpr.name;
                   return true;
                 }
