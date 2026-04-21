@@ -1919,6 +1919,20 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "             base == \"std/collections/soa_vector\" ||\n"
             "             base == \"std/collections/experimental_soa_vector/SoaVector\"") !=
         std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "auto elementTypeForBorrowedSource = [&](const Expr &borrowedSource)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "normalizeExperimentalSoaBorrowedHelperReceiver(\n"
+            "                receiver,\n"
+            "                bindings,\n"
+            "                soaVectorReturnDefinitions,\n"
+            "                definitionNamespace,\n"
+            "                structPaths)") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "elementTypeForBorrowedSource(normalizedBorrowed->args.front())") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator build struct-field publication stays stable") {

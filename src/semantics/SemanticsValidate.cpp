@@ -3340,6 +3340,47 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       }
       return std::nullopt;
     };
+    auto elementTypeForBorrowedSource = [&](const Expr &borrowedSource)
+        -> std::optional<std::string> {
+      if (borrowedSource.kind == Expr::Kind::Name) {
+        auto bindingIt = bindings.find(borrowedSource.name);
+        return bindingIt != bindings.end() ? bindingElementType(bindingIt->second)
+                                           : std::nullopt;
+      }
+      if (borrowedSource.kind != Expr::Kind::Call || borrowedSource.isBinding) {
+        return std::nullopt;
+      }
+      for (const std::string &candidatePath :
+           candidatePathsForExprCall(borrowedSource,
+                                     definitionNamespace,
+                                     &bindings,
+                                     &structPaths)) {
+        auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+        if (returnIt != soaVectorReturnDefinitions.end()) {
+          if (auto elemType = bindingElementType(returnIt->second);
+              elemType.has_value()) {
+            return elemType;
+          }
+        }
+      }
+      return std::nullopt;
+    };
+    if (auto normalizedBorrowed =
+            normalizeExperimentalSoaBorrowedHelperReceiver(
+                receiver,
+                bindings,
+                soaVectorReturnDefinitions,
+                definitionNamespace,
+                structPaths);
+        normalizedBorrowed.has_value() &&
+        normalizedBorrowed->kind == Expr::Kind::Call &&
+        semantics::isSimpleCallName(*normalizedBorrowed, "dereference") &&
+        normalizedBorrowed->args.size() == 1) {
+      if (auto elemType = elementTypeForBorrowedSource(normalizedBorrowed->args.front());
+          elemType.has_value()) {
+        return elemType;
+      }
+    }
     if (receiver.kind == Expr::Kind::Name) {
       auto bindingIt = bindings.find(receiver.name);
       return bindingIt != bindings.end() ? bindingElementType(bindingIt->second)
@@ -3409,10 +3450,9 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
     if (semantics::isSimpleCallName(receiver, "dereference") &&
         receiver.args.size() == 1) {
       const Expr &borrowedSource = receiver.args.front();
-      if (borrowedSource.kind == Expr::Kind::Name) {
-        auto bindingIt = bindings.find(borrowedSource.name);
-        return bindingIt != bindings.end() ? bindingElementType(bindingIt->second)
-                                           : std::nullopt;
+      if (auto elemType = elementTypeForBorrowedSource(borrowedSource);
+          elemType.has_value()) {
+        return elemType;
       }
       if (borrowedSource.kind == Expr::Kind::Call && !borrowedSource.isBinding &&
           semantics::isSimpleCallName(borrowedSource, "location") &&
