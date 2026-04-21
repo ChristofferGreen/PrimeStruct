@@ -588,6 +588,11 @@ ReturnKind SemanticsValidator::inferPreDispatchCallReturnKind(
           if (inferResolvedPathReturnKind(methodResolved, helperReturnKind)) {
             return helperReturnKind;
           }
+          if (hasDefinitionPath(methodResolved) ||
+              hasImportedDefinitionPath(methodResolved)) {
+            context.resolved = methodResolved;
+            hasResolvedPath = true;
+          }
           return std::nullopt;
         };
         const bool hasNamedArgs = hasNamedArguments(expr.argNames);

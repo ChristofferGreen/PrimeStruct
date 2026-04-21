@@ -817,6 +817,13 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   CHECK(semanticsInferPreDispatchCallsSource.find(
             "auto tryResolveReceiverIndex = [&](size_t index) -> std::optional<ReturnKind> {") !=
         std::string::npos);
+  CHECK(semanticsInferPreDispatchCallsSource.find(
+            "if (hasDefinitionPath(methodResolved) ||\n"
+            "              hasImportedDefinitionPath(methodResolved)) {\n"
+            "            context.resolved = methodResolved;\n"
+            "            hasResolvedPath = true;\n"
+            "          }") !=
+        std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find("std::vector<size_t> receiverIndices;") ==
         std::string::npos);
   CHECK(semanticsInferPreDispatchCallsSource.find(
