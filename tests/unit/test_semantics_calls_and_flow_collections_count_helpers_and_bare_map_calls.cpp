@@ -601,6 +601,7 @@ main() {
   [i32 mut] total{mapCount<string, i32>(values)}
   assign(total, plus(total, mapAt<string, i32>(values, "left"raw_utf8)))
   assign(total, plus(total, mapAtUnsafe<string, i32>(values, "right"raw_utf8)))
+  assign(total, plus(total, try(mapTryAt<string, i32>(values, "left"raw_utf8))))
   if(mapContains<string, i32>(values, "left"raw_utf8),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
@@ -610,6 +611,54 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("public stdlib map wrappers route through canonical slash helpers") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("stdlib"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionsStdlibPath =
+      repoRoot / "stdlib" / "std" / "collections" / "collections.prime";
+
+  REQUIRE(std::filesystem::exists(collectionsStdlibPath));
+  const std::string source = readText(collectionsStdlibPath);
+
+  CHECK(source.find(
+            "  mapCount<K, V>([map<K, V>] values) {\n"
+            "    return(/std/collections/map/count<K, V>(values))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapContains<K, V>([map<K, V>] values, [K] key) {\n"
+            "    return(/std/collections/map/contains<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapTryAt<K, V>([map<K, V>] values, [K] key) {\n"
+            "    return(/std/collections/map/tryAt<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapAt<K, V>([map<K, V>] values, [K] key) {\n"
+            "    return(/std/collections/map/at<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapAtUnsafe<K, V>([map<K, V>] values, [K] key) {\n"
+            "    return(/std/collections/map/at_unsafe<K, V>(values, key))") !=
+        std::string::npos);
+
+  CHECK(source.find("return(Result.ok(mapAtUnsafe<K, V>(values, key)))") ==
+        std::string::npos);
+  CHECK(source.find("return(containerErrorResult<V>(containerMissingKey()))") ==
+        std::string::npos);
 }
 
 TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {

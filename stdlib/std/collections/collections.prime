@@ -107,9 +107,7 @@ namespace std {
 
   [public return<Result<V, ContainerError>>]
   mapTryAt<K, V>([map<K, V>] values, [K] key) {
-    if(/std/collections/map/contains<K, V>(values, key),
-       then() { return(Result.ok(mapAtUnsafe<K, V>(values, key))) },
-       else() { return(containerErrorResult<V>(containerMissingKey())) })
+    return(/std/collections/map/tryAt<K, V>(values, key))
   }
 
   [public return<V>]
