@@ -583,6 +583,16 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
             directCallResolvedPath = preferredCollectionPath;
           }
           if (!directCallResolvedPath.empty()) {
+            const std::string concreteDirectCallResolvedPath = resolveExprConcreteCallPath(
+                defParams,
+                activeLocals.bindings,
+                *initializerAnalysisExpr,
+                directCallResolvedPath);
+            if (!concreteDirectCallResolvedPath.empty()) {
+              directCallResolvedPath = concreteDirectCallResolvedPath;
+            }
+          }
+          if (!directCallResolvedPath.empty()) {
             fact.directCallResolvedPath = directCallResolvedPath;
             const auto directCallReturnKindIt = returnKinds_.find(directCallResolvedPath);
             if (directCallReturnKindIt != returnKinds_.end()) {
