@@ -1471,6 +1471,16 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("duplicate binding name: ") != std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("binding initializer requires a value") != std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "    std::string resolvedCallPath =\n"
+            "        preferredCollectionHelperResolvedPath(initializer);\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "        resolveExprConcreteCallPath(params, locals, initializer, resolvedCallPath));") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(initializer))") ==
+        std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("entry argument strings require string bindings") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("std::function<bool(const Expr &, std::string &)> resolveStorageRootExpr;") !=

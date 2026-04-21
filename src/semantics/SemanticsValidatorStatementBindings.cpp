@@ -182,8 +182,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (!normalizedCallPrefix.empty() && normalizedCallPrefix.front() == '/') {
       normalizedCallPrefix.erase(normalizedCallPrefix.begin());
     }
-    const std::string resolvedCallPath =
-        canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(initializer));
+    std::string resolvedCallPath =
+        preferredCollectionHelperResolvedPath(initializer);
+    if (resolvedCallPath.empty()) {
+      resolvedCallPath = resolveCalleePath(initializer);
+    }
+    resolvedCallPath = canonicalizeLegacySoaToAosHelperPath(
+        resolveExprConcreteCallPath(params, locals, initializer, resolvedCallPath));
     const bool isRootToAosHelper =
         normalizedCallName == "to_aos" || normalizedCallName == "to_aos_ref" ||
         normalizedCallName == "soa_vector/to_aos" ||
