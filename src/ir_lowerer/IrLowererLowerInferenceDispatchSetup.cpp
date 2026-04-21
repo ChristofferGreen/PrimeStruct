@@ -377,6 +377,14 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         if (stateInOut.inferCallExprBaseKind(expr, localsIn, callBaseKind)) {
           return callBaseKind;
         }
+        std::string builtinOperatorName;
+        if ((getBuiltinComparisonName(expr, builtinOperatorName) ||
+             getBuiltinOperatorName(expr, builtinOperatorName))) {
+          LocalInfo::ValueKind operatorFallbackKind = LocalInfo::ValueKind::Unknown;
+          if (stateInOut.inferCallExprOperatorFallbackKind(expr, localsIn, operatorFallbackKind)) {
+            return operatorFallbackKind;
+          }
+        }
         LocalInfo::ValueKind callReturnKind = LocalInfo::ValueKind::Unknown;
         const auto callReturnResolution = stateInOut.inferCallExprDirectReturnKind(expr, localsIn, callReturnKind);
         if (callReturnResolution == CallExpressionReturnKindResolution::Resolved) {

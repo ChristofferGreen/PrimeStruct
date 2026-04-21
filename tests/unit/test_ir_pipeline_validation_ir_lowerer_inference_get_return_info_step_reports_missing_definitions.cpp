@@ -744,6 +744,93 @@ TEST_CASE("ir lowerer inference expr-kind dispatch setup wires callback") {
   CHECK(state.inferExprKind(tryCallExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer inference expr-kind dispatch prefers builtin comparison fallback over unknown direct return") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.inferLiteralOrNameExprKind = [](const primec::Expr &expr,
+                                        const primec::ir_lowerer::LocalMap &,
+                                        primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    if (expr.kind == primec::Expr::Kind::Literal) {
+      kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      return true;
+    }
+    return false;
+  };
+  state.inferCallExprBaseKind = [](const primec::Expr &,
+                                   const primec::ir_lowerer::LocalMap &,
+                                   primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprDirectReturnKind = [](const primec::Expr &expr,
+                                           const primec::ir_lowerer::LocalMap &,
+                                           primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    if (expr.name == "greater_than") {
+      return primec::ir_lowerer::CallExpressionReturnKindResolution::Resolved;
+    }
+    return primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved;
+  };
+  state.inferCallExprCountAccessGpuFallbackKind = [](const primec::Expr &,
+                                                     const primec::ir_lowerer::LocalMap &,
+                                                     primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprOperatorFallbackKind = [](const primec::Expr &expr,
+                                               const primec::ir_lowerer::LocalMap &,
+                                               primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    if (expr.name == "greater_than") {
+      kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+      return true;
+    }
+    return false;
+  };
+  state.inferCallExprControlFlowFallbackKind = [](const primec::Expr &,
+                                                  const primec::ir_lowerer::LocalMap &,
+                                                  std::string &,
+                                                  primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprPointerFallbackKind = [](const primec::Expr &,
+                                              const primec::ir_lowerer::LocalMap &,
+                                              primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::string inferenceError;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
+          .error = &inferenceError,
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferExprKind));
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.intValue = 0;
+  lhs.intWidth = 32;
+
+  primec::Expr rhs = lhs;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  CHECK(state.inferExprKind(comparisonExpr, primec::ir_lowerer::LocalMap{}) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed pointer Result args packs") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   state.inferLiteralOrNameExprKind = [](const primec::Expr &expr,
