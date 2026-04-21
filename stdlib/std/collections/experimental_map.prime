@@ -365,11 +365,6 @@ namespace std {
     return(mapCountRef<K, V>(self))
   }
 
-  [public return<i32>]
-  /std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values) {
-    return(mapCountRef<K, V>(values))
-  }
-
   [public effects(heap_alloc), return<void> Comparable<K>]
   /Map/insert<K, V>([Map<K, V> mut] self, [K] key, [V] value) {
     mapInsert<K, V>(self, key, value)
@@ -378,11 +373,6 @@ namespace std {
   [public effects(heap_alloc), return<void> Comparable<K>]
   /Reference/insert<K, V>([Reference<Map<K, V>> mut] self, [K] key, [V] value) {
     mapInsertRef<K, V>(self, key, value)
-  }
-
-  [public effects(heap_alloc), return<void> Comparable<K>]
-  /std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value) {
-    mapInsertRef<K, V>(values, key, value)
   }
 
   [public return<bool> Comparable<K>]
@@ -407,11 +397,6 @@ namespace std {
   [public return<bool> Comparable<K>]
   /Reference/contains<K, V>([Reference<Map<K, V>>] self, [K] key) {
     return(mapContainsRef<K, V>(self, key))
-  }
-
-  [public return<bool> Comparable<K>]
-  /std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
-    return(mapContainsRef<K, V>(values, key))
   }
 
   [public return<Result<V, ContainerError>> Comparable<K>]
@@ -442,11 +427,6 @@ namespace std {
   [public return<Result<V, ContainerError>> Comparable<K>]
   /Reference/tryAt<K, V>([Reference<Map<K, V>>] self, [K] key) {
     return(mapTryAtRef<K, V>(self, key))
-  }
-
-  [public return<Result<V, ContainerError>> Comparable<K>]
-  /std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
-    return(mapTryAtRef<K, V>(values, key))
   }
 
   [public return<V> Comparable<K>]
@@ -484,11 +464,6 @@ namespace std {
   }
 
   [public return<V> Comparable<K>]
-  /std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
-    return(mapAtRef<K, V>(values, key))
-  }
-
-  [public return<V> Comparable<K>]
   mapAtUnsafe<K, V>([Map<K, V>] entries, [K] key) {
     [Vector<V>] payloads{entries.payloads}
     return(/std/collections/experimental_vector/vectorAtUnsafe<V>(payloads, mapFindIndex<K, V>(entries, key)))
@@ -508,11 +483,6 @@ namespace std {
   [public return<V> Comparable<K>]
   /Reference/at_unsafe<K, V>([Reference<Map<K, V>>] self, [K] key) {
     return(mapAtUnsafeRef<K, V>(self, key))
-  }
-
-  [public return<V> Comparable<K>]
-  /std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
-    return(mapAtUnsafeRef<K, V>(values, key))
   }
   }
   }

@@ -687,31 +687,65 @@ TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {
             "  return(/std/collections/experimental_map/mapCount<K, V>(values))") !=
         std::string::npos);
   CHECK(source.find(
+            "/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values) {\n"
+            "  return(/std/collections/experimental_map/mapCountRef<K, V>(values))") !=
+        std::string::npos);
+  CHECK(source.find(
             "/std/collections/map/contains<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapContains<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapContainsRef<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
             "/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapTryAt<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
+            "/std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapTryAtRef<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
             "/std/collections/map/at<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapAt<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapAtRef<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
             "/std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapAtUnsafe<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapAtUnsafeRef<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value) {\n"
+            "  /std/collections/experimental_map/mapInsertRef<K, V>(values, key, value)") !=
+        std::string::npos);
 
   CHECK(source.find("return(/std/collections/mapCount<K, V>(values))") ==
         std::string::npos);
+  CHECK(source.find("return(/std/collections/mapCountRef<K, V>(values))") ==
+        std::string::npos);
   CHECK(source.find("return(/std/collections/mapContains<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("return(/std/collections/mapContainsRef<K, V>(values, key))") ==
         std::string::npos);
   CHECK(source.find("return(/std/collections/mapTryAt<K, V>(values, key))") ==
         std::string::npos);
+  CHECK(source.find("return(/std/collections/mapTryAtRef<K, V>(values, key))") ==
+        std::string::npos);
   CHECK(source.find("return(/std/collections/mapAt<K, V>(values, key))") ==
         std::string::npos);
+  CHECK(source.find("return(/std/collections/mapAtRef<K, V>(values, key))") ==
+        std::string::npos);
   CHECK(source.find("return(/std/collections/mapAtUnsafe<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("return(/std/collections/mapAtUnsafeRef<K, V>(values, key))") ==
         std::string::npos);
 }
 
@@ -761,21 +795,31 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapCount<K, V>(values))") ==
         std::string::npos);
+  CHECK(source.find("/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values)") ==
+        std::string::npos);
   CHECK(source.find("mapContainsRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapContains<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("/std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
         std::string::npos);
   CHECK(source.find("mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapTryAt<K, V>(values, key))") ==
         std::string::npos);
+  CHECK(source.find("/std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
+        std::string::npos);
   CHECK(source.find("mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapAt<K, V>(values, key))") ==
         std::string::npos);
+  CHECK(source.find("/std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
+        std::string::npos);
   CHECK(source.find("mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapAtUnsafe<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
         std::string::npos);
 }
 
