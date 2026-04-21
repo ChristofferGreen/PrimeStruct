@@ -347,6 +347,33 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return false;
   }
+  const bool isConcreteExperimentalSoaReceiver =
+      normalizedTypeName == "soa_vector" &&
+      resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaGetMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "push" || normalizedMethodName == "reserve")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaRefMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaToAosMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
   pathOut = preferVectorStdlibHelperPath(resolvedType + "/" + normalizedMethodName, ctx.sourceDefs);
   pathOut = selectHelperOverloadPath(expr, pathOut, ctx);
   return true;

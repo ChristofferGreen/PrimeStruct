@@ -1873,6 +1873,19 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "      (normalizedMethodName == \"ref\" || normalizedMethodName == \"ref_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "const bool isConcreteExperimentalSoaReceiver =\n"
+            "      normalizedTypeName == \"soa_vector\" &&\n"
+            "      resolvedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (isConcreteExperimentalSoaReceiver &&\n"
+            "      (normalizedMethodName == \"push\" || normalizedMethodName == \"reserve\")) {\n"
+            "    pathOut = selectHelperOverloadPath(\n"
+            "        expr, preferredSamePathSoaPushReserveMethodTarget(normalizedMethodName), ctx);\n"
+            "    return true;\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "if (normalizedTypeName == \"soa_vector\") {\n"
             "    std::string_view samePathPrefix;") ==
         std::string::npos);
