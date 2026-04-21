@@ -2194,6 +2194,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "rawMethodName.rfind(\"std/collections/soa_vector/\", 0) == 0") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "receiverTypeName == \"soa_vector\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "isRemovedBorrowedSoaCompatibilityHelper(helperName)") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "\"/std/collections/soa_vector/\" + suffix") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(

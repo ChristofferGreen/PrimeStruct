@@ -884,11 +884,16 @@ TEST_CASE("shared simple-call helpers reject removed array count alias") {
 
 TEST_CASE("semantics removed-alias helpers reject rooted vector spellings") {
   CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/array/push"));
+  CHECK(primec::semantics::isExplicitRemovedCollectionCallAlias("/soa_vector/count_ref"));
   CHECK_FALSE(primec::semantics::isExplicitRemovedCollectionCallAlias("/vector/push"));
 
   CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias("/array", "/array/push"));
   CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias(
       "/vector", "/std/collections/vector/push"));
+  CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias(
+      "/soa_vector", "/soa_vector/count_ref"));
+  CHECK(primec::semantics::isExplicitRemovedCollectionMethodAlias(
+      "/std/collections/soa_vector", "/std/collections/soa_vector/get_ref"));
   CHECK_FALSE(primec::semantics::isExplicitRemovedCollectionMethodAlias("/vector", "/vector/push"));
 }
 

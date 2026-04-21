@@ -13,6 +13,11 @@ bool isRemovedVectorCompatibilityHelper(std::string_view helperName) {
          helperName == "remove_at" || helperName == "remove_swap";
 }
 
+bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count_ref" || helperName == "get_ref" ||
+         helperName == "ref_ref" || helperName == "to_aos_ref";
+}
+
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -259,6 +264,19 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverPath, std
   }
 
   std::string_view helperName;
+  const bool isSoaVectorReceiver =
+      receiverPath == "/soa_vector" ||
+      receiverPath == "/std/collections/soa_vector";
+  if (isSoaVectorReceiver) {
+    if (rawMethodName.rfind("soa_vector/", 0) == 0) {
+      helperName = std::string_view(rawMethodName).substr(std::string_view("soa_vector/").size());
+    } else if (rawMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+      helperName =
+          std::string_view(rawMethodName).substr(std::string_view("std/collections/soa_vector/").size());
+    }
+    return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
+  }
+
   const bool isVectorFamilyReceiver = receiverPath == "/array" || receiverPath == "/vector";
   if (isVectorFamilyReceiver) {
     if (rawMethodName.rfind("array/", 0) == 0) {
@@ -286,6 +304,10 @@ bool isExplicitRemovedCollectionCallAlias(std::string rawPath) {
   }
 
   std::string_view helperName;
+  if (rawPath.rfind("soa_vector/", 0) == 0) {
+    helperName = std::string_view(rawPath).substr(std::string_view("soa_vector/").size());
+    return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
+  }
   if (rawPath.rfind("array/", 0) == 0) {
     helperName = std::string_view(rawPath).substr(std::string_view("array/").size());
     return !helperName.empty() && isRemovedVectorCompatibilityHelper(helperName);

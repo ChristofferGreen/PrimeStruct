@@ -6,6 +6,11 @@ bool isRemovedVectorCompatibilityHelper(const std::string &helperName) {
          helperName == "remove_at" || helperName == "remove_swap";
 }
 
+bool isRemovedBorrowedSoaCompatibilityHelper(std::string_view helperName) {
+  return helperName == "count_ref" || helperName == "get_ref" ||
+         helperName == "ref_ref" || helperName == "to_aos_ref";
+}
+
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
          helperName == "contains" || helperName == "contains_ref" ||
@@ -22,6 +27,17 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
   }
 
   std::string_view helperName;
+  if (receiverTypeName == "soa_vector") {
+    if (rawMethodName.rfind("soa_vector/", 0) == 0) {
+      helperName =
+          std::string_view(rawMethodName).substr(std::string_view("soa_vector/").size());
+    } else if (rawMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+      helperName = std::string_view(rawMethodName)
+                       .substr(std::string_view("std/collections/soa_vector/").size());
+    }
+    return !helperName.empty() && isRemovedBorrowedSoaCompatibilityHelper(helperName);
+  }
+
   bool isVectorFamilyReceiver =
       receiverTypeName == "array" || receiverTypeName == "vector" || receiverTypeName == "soa_vector";
   if (isVectorFamilyReceiver) {
