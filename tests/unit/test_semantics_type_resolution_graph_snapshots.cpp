@@ -1248,6 +1248,30 @@ main() {
       });
   REQUIRE(toAosTarget != nullptr);
 
+  const auto *pickedEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "picked";
+      });
+  REQUIRE(pickedEntry != nullptr);
+  CHECK(pickedEntry->initializerMethodCallResolvedPath == "/soa_vector/get");
+
+  const auto *pickedRefEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "pickedRef";
+      });
+  REQUIRE(pickedRefEntry != nullptr);
+  CHECK(pickedRefEntry->initializerMethodCallResolvedPath == "/soa_vector/ref");
+
+  const auto *unpackedEntry = findSemanticEntry(
+      primec::semanticProgramLocalAutoFactView(semanticProgram),
+      [](const primec::SemanticProgramLocalAutoFact &entry) {
+        return entry.scopePath == "/main" && entry.bindingName == "unpacked";
+      });
+  REQUIRE(unpackedEntry != nullptr);
+  CHECK(unpackedEntry->initializerMethodCallResolvedPath == "/to_aos");
+
   const bool choseConcreteExperimentalGet = std::any_of(
       primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
       primec::semanticProgramMethodCallTargetView(semanticProgram).end(),

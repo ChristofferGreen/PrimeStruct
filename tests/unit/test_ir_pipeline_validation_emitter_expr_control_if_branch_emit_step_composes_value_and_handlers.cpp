@@ -997,6 +997,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             ": preferredCollectionHelperResolvedPath(initializer);") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "resolveMethodTarget(params,\n"
+            "                              locals,\n"
+            "                              initializer.namespacePrefix,\n"
+            "                              initializer.args.front(),\n"
+            "                              initializer.name,\n"
+            "                              resolvedMethodInitializer,\n"
+            "                              methodBuiltin)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "bindingExpr == nullptr\n"
             "                                                              ? "
             "preferredCollectionHelperResolvedPath(initializer)\n"
