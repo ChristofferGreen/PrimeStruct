@@ -591,6 +591,20 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     if (inferOldSurfaceSoaToAosTypeText()) {
       return true;
     }
+    if (candidate.args.size() == 1) {
+      ReturnKind builtinMethodKind = ReturnKind::Unknown;
+      if (resolveBuiltinCollectionMethodReturnKind(
+              resolvedCandidate,
+              candidate.args.front(),
+              builtinCollectionDispatchResolvers,
+              builtinMethodKind) &&
+          builtinMethodKind != ReturnKind::Unknown &&
+          builtinMethodKind != ReturnKind::Void &&
+          builtinMethodKind != ReturnKind::Array) {
+        currentTypeTextOut = typeNameForReturnKind(builtinMethodKind);
+        return !currentTypeTextOut.empty();
+      }
+    }
     std::string resolvedSoaCanonical =
         canonicalizeLegacySoaGetHelperPath(resolvedCandidate);
     const auto soaAccessHelper =
