@@ -595,8 +595,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       return "";
     }
     if (resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 &&
-        isCanonicalSoaWrapperMethodName(expr.name)) {
-      return preferredSoaHelperTargetForCollectionType(expr.name, "/soa_vector");
+        isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
+      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
     }
     return resolvedType + "/" + expr.name;
   };
