@@ -487,23 +487,21 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         return true;
       }
     }
-    if (!hasGraphPreferredMethodResolvedInitializer) {
-      std::string resolvedMethodInitializer;
-      bool methodBuiltin = false;
-      if (resolveMethodTarget(params,
-                              locals,
-                              initializer.namespacePrefix,
-                              initializer.args.front(),
-                              initializer.name,
-                              resolvedMethodInitializer,
-                              methodBuiltin) &&
-          !resolvedMethodInitializer.empty()) {
-        if (inferResolvedDirectCallBindingType(resolvedMethodInitializer, bindingOut)) {
-          return true;
-        }
-        if (inferDeclaredDirectCallBinding(resolvedMethodInitializer)) {
-          return true;
-        }
+    std::string resolvedMethodInitializer;
+    bool methodBuiltin = false;
+    if (resolveMethodTarget(params,
+                            locals,
+                            initializer.namespacePrefix,
+                            initializer.args.front(),
+                            initializer.name,
+                            resolvedMethodInitializer,
+                            methodBuiltin) &&
+        !resolvedMethodInitializer.empty()) {
+      if (inferResolvedDirectCallBindingType(resolvedMethodInitializer, bindingOut)) {
+        return true;
+      }
+      if (inferDeclaredDirectCallBinding(resolvedMethodInitializer)) {
+        return true;
       }
     }
     if (graphMethodCallFactAvailable &&

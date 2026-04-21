@@ -1006,6 +1006,26 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "                              methodBuiltin)") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "    if (hasGraphPreferredMethodResolvedInitializer) {\n"
+            "      if (inferResolvedDirectCallBindingType(graphPreferredMethodResolvedInitializer, bindingOut)) {\n"
+            "        return true;\n"
+            "      }\n"
+            "      if (inferDeclaredDirectCallBinding(graphPreferredMethodResolvedInitializer)) {\n"
+            "        return true;\n"
+            "      }\n"
+            "    }\n"
+            "    std::string resolvedMethodInitializer;\n"
+            "    bool methodBuiltin = false;\n"
+            "    if (resolveMethodTarget(params,\n"
+            "                            locals,\n"
+            "                            initializer.namespacePrefix,\n"
+            "                            initializer.args.front(),\n"
+            "                            initializer.name,\n"
+            "                            resolvedMethodInitializer,\n"
+            "                            methodBuiltin) &&\n"
+            "        !resolvedMethodInitializer.empty()) {\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "bindingExpr == nullptr\n"
             "                                                              ? "
             "preferredCollectionHelperResolvedPath(initializer)\n"
