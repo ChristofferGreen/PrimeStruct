@@ -386,7 +386,7 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
     resolvedOut = resolvedType + "/" + helperName;
     return true;
   }
-  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
     std::string resolvedType = resolveCalleePath(receiver);
     if (resolvedType.empty() || structNames_.count(resolvedType) == 0) {
       resolvedType = inferStructReturnPath(receiver, params, locals);
