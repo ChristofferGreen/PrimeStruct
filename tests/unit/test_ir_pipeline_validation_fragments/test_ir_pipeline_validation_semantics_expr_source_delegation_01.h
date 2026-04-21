@@ -5953,6 +5953,12 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("std::vector<size_t> receiverIndices;") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("appendUniqueIndex(") ==

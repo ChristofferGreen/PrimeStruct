@@ -2456,7 +2456,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(vectorMethodTarget);
     }
   }
-  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
     const std::string resolvedType = resolveCalleePath(receiver);
     if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
       std::string experimentalElemType;
