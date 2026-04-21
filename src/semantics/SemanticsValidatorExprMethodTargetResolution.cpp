@@ -2505,7 +2505,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
   }
-  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall &&
+  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding &&
       (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
     std::string receiverCollectionTypePath;

@@ -5959,6 +5959,16 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding &&\n"
+            "      (normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\" ||\n"
+            "       normalizedMethodName == \"at\" || normalizedMethodName == \"at_unsafe\")) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall &&\n"
+            "      (normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\" ||\n"
+            "       normalizedMethodName == \"at\" || normalizedMethodName == \"at_unsafe\")) {") ==
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("std::vector<size_t> receiverIndices;") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("appendUniqueIndex(") ==
