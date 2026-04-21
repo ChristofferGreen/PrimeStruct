@@ -2177,11 +2177,18 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
   const std::string collectBody = semanticsSnapshots.substr(collectStart, takeSurfaceStart - collectStart);
   CHECK(collectBody.find("forEachResolvedNonMethodCallSnapshot(") != std::string::npos);
   CHECK(collectBody.find(
+            "      std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "      if (resolvedPath.empty()) {\n"
+            "        resolvedPath = resolveCalleePath(expr);\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(collectBody.find(
+            "      std::string resolvedPath = resolveCalleePath(expr);\n"
             "      if (const std::string preferredCollectionPath =\n"
             "              preferredCollectionHelperResolvedPath(expr);\n"
             "          !preferredCollectionPath.empty()) {\n"
             "        resolvedPath = preferredCollectionPath;\n"
-            "      }") !=
+            "      }") ==
         std::string::npos);
   CHECK(collectBody.find(
             "          const bool hasDirectCallInitializer =\n"
