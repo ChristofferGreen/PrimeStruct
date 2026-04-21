@@ -366,7 +366,10 @@ bool getBuiltinGpuName(const Expr &expr, std::string &out) {
 }
 
 bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
-  if (!parseMemoryName(expr.name, out)) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  if (!parseMemoryName(resolveTypePath(expr.name, expr.namespacePrefix), out)) {
     return false;
   }
   return out == "alloc" || out == "free" || out == "realloc" || out == "at" || out == "at_unsafe" ||

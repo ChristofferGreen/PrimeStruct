@@ -1765,6 +1765,25 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "  };") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto isBorrowedSoaReceiverType = [&](std::string typeText) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto borrowedSoaWrapperMethodName = [](std::string_view helperName) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (helperName == \"count\") {\n"
+            "      return std::string(\"count_ref\");\n"
+            "    }\n"
+            "    if (helperName == \"get\") {\n"
+            "      return std::string(\"get_ref\");\n"
+            "    }\n"
+            "    if (helperName == \"ref\") {\n"
+            "      return std::string(\"ref_ref\");\n"
+            "    }\n"
+            "    if (helperName == \"to_aos\") {\n"
+            "      return std::string(\"to_aos_ref\");") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
             "const std::string canonicalPath =\n"
             "        \"/std/collections/soa_vector/\" + std::string(helperName);") ==
         std::string::npos);
@@ -1875,6 +1894,23 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "preferredSamePathSoaRefMethodTarget(normalizedMethodName), ctx);") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string helperName =\n"
+            "        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)\n"
+            "                              : normalizedMethodName;") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "preferredSamePathSoaGetMethodTarget(helperName), ctx);") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "preferredSamePathSoaCountMethodTarget(helperName), ctx);") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "preferredSamePathSoaRefMethodTarget(helperName), ctx);") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "preferredSamePathSoaToAosMethodTarget(helperName), ctx);") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "std::string_view samePathPrefix;") ==

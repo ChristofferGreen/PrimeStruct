@@ -601,6 +601,15 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     return true;
   };
   auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
+    if (helperName == "count") {
+      helperName = "count_ref";
+    } else if (helperName == "get") {
+      helperName = "get_ref";
+    } else if (helperName == "ref") {
+      helperName = "ref_ref";
+    } else if (helperName == "to_aos") {
+      helperName = "to_aos_ref";
+    }
     return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   };
   auto isCanonicalSoaWrapperMethod = [&](std::string_view helperName) {
@@ -895,7 +904,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
       return true;
     }
-    if (normalizedMethodName == "count_ref" &&
+    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
         resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
@@ -913,7 +922,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
       return true;
     }
-    if (normalizedMethodName == "get_ref" &&
+    if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
         resolveBorrowedVectorReceiver(receiver, elemType) &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
       resolvedOut =
@@ -926,7 +935,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
-    if (normalizedMethodName == "get_ref" &&
+    if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
         resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
       resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
@@ -953,6 +962,11 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolveVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
+      return true;
+    }
+    if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
+        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&

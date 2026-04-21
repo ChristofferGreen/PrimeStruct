@@ -372,6 +372,12 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         }
         const std::string normalizedReturnType =
             normalizeBindingTypeName(transform.templateArgs.front());
+        if (std::string structPath =
+                resolveInferStructTypePath(normalizedReturnType,
+                                           directDefIt->second->namespacePrefix);
+            !structPath.empty()) {
+          return structPath;
+        }
         if (std::string collectionPath = normalizeCollectionTypePath(normalizedReturnType);
             !collectionPath.empty()) {
           return collectionPath;
@@ -379,27 +385,16 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
         const std::string unwrappedReturnType =
             unwrapReferencePointerTypeText(normalizedReturnType);
         if (unwrappedReturnType != normalizedReturnType) {
-          if (std::string collectionPath = normalizeCollectionTypePath(unwrappedReturnType);
-              !collectionPath.empty()) {
-            return collectionPath;
-          }
           if (std::string structPath =
                   resolveInferStructTypePath(unwrappedReturnType,
                                              directDefIt->second->namespacePrefix);
               !structPath.empty()) {
             return structPath;
           }
-        }
-        std::string base;
-        std::string argText;
-        if (splitTemplateTypeName(normalizedReturnType, base, argText)) {
-          break;
-        }
-        if (std::string structPath =
-                resolveInferStructTypePath(normalizedReturnType,
-                                           directDefIt->second->namespacePrefix);
-            !structPath.empty()) {
-          return structPath;
+          if (std::string collectionPath = normalizeCollectionTypePath(unwrappedReturnType);
+              !collectionPath.empty()) {
+            return collectionPath;
+          }
         }
         break;
       }

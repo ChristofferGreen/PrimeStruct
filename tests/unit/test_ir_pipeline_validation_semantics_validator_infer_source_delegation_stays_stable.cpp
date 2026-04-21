@@ -163,6 +163,7 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
       readText(semanticsInferCollectionCompatibilityPath);
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
+  const std::string semanticsInferStructReturnSource = readText(semanticsInferStructReturnPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
   const std::string semanticsValidateSource = readText(semanticsValidatePath);
   CHECK(semanticsInferCombinedSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
@@ -207,6 +208,20 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   CHECK(semanticsInferCombinedSource.find("const auto &resolveArrayTarget = builtinCollectionDispatchResolvers.resolveArrayTarget;") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveVectorTarget = builtinCollectionDispatchResolvers.resolveVectorTarget;") !=
+        std::string::npos);
+  CHECK(semanticsInferStructReturnSource.find(
+            "if (std::string structPath =\n"
+            "                resolveInferStructTypePath(normalizedReturnType,\n"
+            "                                           directDefIt->second->namespacePrefix);") !=
+        std::string::npos);
+  CHECK(semanticsInferStructReturnSource.find(
+            "if (std::string collectionPath = normalizeCollectionTypePath(normalizedReturnType);") !=
+        std::string::npos);
+  CHECK(semanticsBuiltinPathHelpersSource.find(
+            "if (expr.kind != Expr::Kind::Call || expr.name.empty()) {") !=
+        std::string::npos);
+  CHECK(semanticsBuiltinPathHelpersSource.find(
+            "parseMemoryName(resolveTypePath(expr.name, expr.namespacePrefix), out)") !=
         std::string::npos);
   CHECK(semanticsInferCombinedSource.find("const auto &resolveSoaVectorTarget = builtinCollectionDispatchResolvers.resolveSoaVectorTarget;") !=
         std::string::npos);
@@ -318,7 +333,29 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "                                                                \"/soa_vector\");") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "if (normalizedMethodName == \"count_ref\" &&\n"
+            "if (helperName == \"count\") {\n"
+            "      helperName = \"count_ref\";\n"
+            "    } else if (helperName == \"get\") {\n"
+            "      helperName = \"get_ref\";\n"
+            "    } else if (helperName == \"ref\") {\n"
+            "      helperName = \"ref_ref\";\n"
+            "    } else if (helperName == \"to_aos\") {\n"
+            "      helperName = \"to_aos_ref\";\n"
+            "    }\n"
+            "    return preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
+            "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if ((normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\") &&\n"
+            "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if ((normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\") &&\n"
             "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
             "      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);") !=
         std::string::npos);
@@ -1857,6 +1894,12 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   const std::filesystem::path collectionCompatibilityInternalPath =
       repoRoot / "src" / "semantics" /
       "SemanticsValidatorInferCollectionCompatibilityInternal.h";
+  const std::filesystem::path semanticsValidatePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
+  const std::filesystem::path soaVectorStdlibPath =
+      repoRoot / "stdlib" / "std" / "collections" / "soa_vector.prime";
+  const std::filesystem::path experimentalSoaVectorStdlibPath =
+      repoRoot / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
   REQUIRE(std::filesystem::exists(helperHeaderPath));
   REQUIRE(std::filesystem::exists(helperSourcePath));
   REQUIRE(std::filesystem::exists(buildCallResolutionPath));
@@ -1864,6 +1907,9 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   REQUIRE(std::filesystem::exists(exprMethodTargetPath));
   REQUIRE(std::filesystem::exists(collectionCompatibilityPath));
   REQUIRE(std::filesystem::exists(collectionCompatibilityInternalPath));
+  REQUIRE(std::filesystem::exists(semanticsValidatePath));
+  REQUIRE(std::filesystem::exists(soaVectorStdlibPath));
+  REQUIRE(std::filesystem::exists(experimentalSoaVectorStdlibPath));
 
   const std::string helperHeaderSource = readText(helperHeaderPath);
   const std::string helperSource = readText(helperSourcePath);
@@ -1874,6 +1920,9 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
       readText(collectionCompatibilityPath);
   const std::string collectionCompatibilityInternalSource =
       readText(collectionCompatibilityInternalPath);
+  const std::string semanticsValidateSource = readText(semanticsValidatePath);
+  const std::string soaVectorStdlibSource = readText(soaVectorStdlibPath);
+  const std::string experimentalSoaVectorStdlibSource = readText(experimentalSoaVectorStdlibPath);
 
   CHECK(helperHeaderSource.find("std::string preferredFileHelperTarget(") !=
         std::string::npos);
@@ -2141,6 +2190,21 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "      normalizedMethodName != \"to_aos_ref\") {") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "  const bool isCanonicalBorrowedSoaWrapperBodyCall =\n"
+            "      definitionNamespace == \"/std/collections/soa_vector\" &&\n"
+            "      (normalizedMethodName == \"count\" || normalizedMethodName == \"get\" ||\n"
+            "       normalizedMethodName == \"ref\" || normalizedMethodName == \"to_aos\") &&\n"
+            "      expr.args.front().kind == Expr::Kind::Call &&\n"
+            "      semantics::isSimpleCallName(expr.args.front(), \"dereference\") &&\n"
+            "      expr.args.front().args.size() == 1 &&\n"
+            "      expr.args.front().args.front().kind == Expr::Kind::Name;") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "  if (isCanonicalBorrowedSoaWrapperBodyCall) {\n"
+            "    return false;\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "    if (normalizedMethodName == \"count\" ||\n"
             "        normalizedMethodName == \"count_ref\") {") !=
         std::string::npos);
@@ -2154,6 +2218,47 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "expr.name = \"/std/collections/soa_vector/\" + helperName;") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "  const bool useBorrowedGetHelper = receiverNeedsDereference;\n"
+            "  getCall.name =\n"
+            "      useBorrowedGetHelper ? \"/std/collections/soa_vector/get_ref\"\n"
+            "                           : \"/std/collections/soa_vector/get\";") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "    if (!useBorrowedGetHelper) {\n"
+            "      callExpr.args.push_back(*getReceiverExpr);\n"
+            "      return;\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "    if (getReceiverExpr->kind == Expr::Kind::Call &&\n"
+            "        semantics::isSimpleCallName(*getReceiverExpr, \"dereference\") &&\n"
+            "        getReceiverExpr->args.size() == 1) {\n"
+            "      callExpr.args.push_back(getReceiverExpr->args.front());\n"
+            "      return;\n"
+            "    }") !=
+        std::string::npos);
+  CHECK(soaVectorStdlibSource.find(
+            "return(/std/collections/experimental_soa_vector/soaVectorCountRef<T>(values))") !=
+        std::string::npos);
+  CHECK(soaVectorStdlibSource.find(
+            "return(/std/collections/experimental_soa_vector/soaVectorGetRef<T>(values, index))") !=
+        std::string::npos);
+  CHECK(soaVectorStdlibSource.find(
+            "return(/std/collections/experimental_soa_vector/soaVectorRefRef<T>(values, index))") !=
+        std::string::npos);
+  CHECK(experimentalSoaVectorStdlibSource.find(
+            "[SoaColumn<T>] storage{values.storage}\n"
+            "    return(/std/collections/internal_soa_storage/soaColumnCount<T>(storage))") !=
+        std::string::npos);
+  CHECK(experimentalSoaVectorStdlibSource.find(
+            "[SoaColumn<T>] storage{values.storage}\n"
+            "    return(/std/collections/internal_soa_storage/soaColumnRead<T>(storage, index))") !=
+        std::string::npos);
+  CHECK(experimentalSoaVectorStdlibSource.find(
+            "[SoaColumn<T>] storage{values.storage}\n"
+            "    return(/std/collections/internal_soa_storage/soaColumnRef<T>(storage, index))") !=
         std::string::npos);
 }
 

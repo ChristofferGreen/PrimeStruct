@@ -17,17 +17,17 @@ import /std/collections/experimental_soa_vector/*
 
 [public return<i32>]
 /std/collections/soa_vector/count_ref<T>([Reference<SoaVector<T>>] values) {
-  return(/std/collections/soa_vector/count<T>(dereference(values)))
+  return(/std/collections/experimental_soa_vector/soaVectorCountRef<T>(values))
 }
 
 [public return<T>]
 /std/collections/soa_vector/get_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
-  return(/std/collections/soa_vector/get<T>(dereference(values), index))
+  return(/std/collections/experimental_soa_vector/soaVectorGetRef<T>(values, index))
 }
 
 [public return<Reference<T>>]
 /std/collections/soa_vector/ref_ref<T>([Reference<SoaVector<T>>] values, [i32] index) {
-  return(/std/collections/soa_vector/ref<T>(dereference(values), index))
+  return(/std/collections/experimental_soa_vector/soaVectorRefRef<T>(values, index))
 }
 
 [public effects(heap_alloc), return<void>]

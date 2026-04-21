@@ -2241,7 +2241,8 @@ void rewriteBuiltinSoaCountExpr(
         vectorReturnDefinitions,
         soaVectorReturnDefinitions,
         definitionNamespace,
-        preserveCountHelper);
+        preserveCountHelper,
+        preserveCountRefHelper);
   }
   if (expr.kind != Expr::Kind::Call || expr.args.size() != 1 ||
       !expr.templateArgs.empty() ||
@@ -3560,6 +3561,17 @@ bool normalizeExperimentalSoaBorrowedHelperMethodCall(
       normalizedMethodName != "to_aos_ref") {
     return false;
   }
+  const bool isCanonicalBorrowedSoaWrapperBodyCall =
+      definitionNamespace == "/std/collections/soa_vector" &&
+      (normalizedMethodName == "count" || normalizedMethodName == "get" ||
+       normalizedMethodName == "ref" || normalizedMethodName == "to_aos") &&
+      expr.args.front().kind == Expr::Kind::Call &&
+      semantics::isSimpleCallName(expr.args.front(), "dereference") &&
+      expr.args.front().args.size() == 1 &&
+      expr.args.front().args.front().kind == Expr::Kind::Name;
+  if (isCanonicalBorrowedSoaWrapperBodyCall) {
+    return false;
+  }
   if (auto borrowedReceiver = normalizedBorrowedReceiver(expr.args.front());
       borrowedReceiver.has_value()) {
     const auto borrowedElemType = borrowedReceiverElementType(expr.args.front());
@@ -3958,27 +3970,23 @@ void rewriteExperimentalSoaFieldViewIndexExpr(
 
   Expr getCall;
   getCall.kind = Expr::Kind::Call;
-  getCall.name = "/std/collections/experimental_soa_vector/soaVectorGet";
+  const bool useBorrowedGetHelper = receiverNeedsDereference;
+  getCall.name =
+      useBorrowedGetHelper ? "/std/collections/soa_vector/get_ref"
+                           : "/std/collections/soa_vector/get";
   getCall.templateArgs = {receiverElemType};
   auto appendReceiverValueExpr = [&](Expr &callExpr) {
-    if (!receiverNeedsDereference) {
+    if (!useBorrowedGetHelper) {
       callExpr.args.push_back(*getReceiverExpr);
       return;
     }
     if (getReceiverExpr->kind == Expr::Kind::Call &&
         semantics::isSimpleCallName(*getReceiverExpr, "dereference") &&
         getReceiverExpr->args.size() == 1) {
-      callExpr.args.push_back(*getReceiverExpr);
+      callExpr.args.push_back(getReceiverExpr->args.front());
       return;
     }
-    Expr dereferenceCall;
-    dereferenceCall.kind = Expr::Kind::Call;
-    dereferenceCall.name = "dereference";
-    dereferenceCall.args.push_back(*getReceiverExpr);
-    dereferenceCall.argNames.resize(dereferenceCall.args.size());
-    dereferenceCall.sourceLine = getReceiverExpr->sourceLine;
-    dereferenceCall.sourceColumn = getReceiverExpr->sourceColumn;
-    callExpr.args.push_back(std::move(dereferenceCall));
+    callExpr.args.push_back(*getReceiverExpr);
   };
   appendReceiverValueExpr(getCall);
   getCall.args.push_back(expr.args[1]);

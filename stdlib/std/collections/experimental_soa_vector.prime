@@ -88,7 +88,8 @@ namespace std {
   [public return<i32>]
   soaVectorCountRef<T>([Reference<SoaVector<T>>] values) {
     soaVectorValidateType<T>()
-    return(soaVectorCount<T>(dereference(values)))
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/internal_soa_storage/soaColumnCount<T>(storage))
   }
 
   [public return<T>]
@@ -101,7 +102,8 @@ namespace std {
   [public return<T>]
   soaVectorGetRef<T>([Reference<SoaVector<T>>] values, [i32] index) {
     soaVectorValidateType<T>()
-    return(soaVectorGet<T>(dereference(values), index))
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/internal_soa_storage/soaColumnRead<T>(storage, index))
   }
 
   [public return<Reference<T>>]
@@ -114,7 +116,8 @@ namespace std {
   [public return<Reference<T>>]
   soaVectorRefRef<T>([Reference<SoaVector<T>>] values, [i32] index) {
     soaVectorValidateType<T>()
-    return(soaVectorRef<T>(dereference(values), index))
+    [SoaColumn<T>] storage{values.storage}
+    return(/std/collections/internal_soa_storage/soaColumnRef<T>(storage, index))
   }
 
   [public return<SoaFieldView<Field>>]

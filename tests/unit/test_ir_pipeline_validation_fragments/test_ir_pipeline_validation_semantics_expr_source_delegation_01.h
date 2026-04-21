@@ -756,6 +756,18 @@
             "      }") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (helperName == \"count\") {\n"
+            "      helperName = \"count_ref\";\n"
+            "    } else if (helperName == \"get\") {\n"
+            "      helperName = \"get_ref\";\n"
+            "    } else if (helperName == \"ref\") {\n"
+            "      helperName = \"ref_ref\";\n"
+            "    } else if (helperName == \"to_aos\") {\n"
+            "      helperName = \"to_aos_ref\";\n"
+            "    }\n"
+            "    return preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
             "  if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {\n"
             "    if (normalizedMethodName == \"count\" &&\n"
             "        resolveArgsPackCountTarget(receiver, elemType)) {\n"
@@ -770,6 +782,11 @@
             "    if (normalizedMethodName == \"count\" &&\n"
             "        resolveVectorTarget(receiver, elemType)) {\n"
             "      return setCollectionMethodTarget(preferredBareVectorHelperTarget(\"count\"));\n"
+            "    }\n"
+            "    if ((normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") &&\n"
+            "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "      return setCollectionMethodTarget(\n"
+            "          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
             "    }\n"
             "    if (resolveSoaVectorTarget(receiver, elemType)) {\n"
             "      return setCollectionMethodTarget(\n"
@@ -786,6 +803,21 @@
             "      return setPreferredMapMethodTarget(receiver, normalizedMethodName);\n"
             "    }\n"
             "  }") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if ((normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\") &&\n"
+            "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "      return setCollectionMethodTarget(\n"
+            "          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
+            "    }\n"
+            "    if (resolveSoaVectorTarget(receiver, elemType)) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "if (resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "      return setCollectionMethodTarget(\n"
+            "          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
+            "    }\n"
+            "    if (resolveSoaVectorTarget(receiver, elemType)) {") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==

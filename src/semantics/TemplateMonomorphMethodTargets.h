@@ -83,12 +83,30 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     }
     return typeText;
   };
-  auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
+  auto bindingTypeText = [](const BindingInfo &binding) {
     std::string typeText = binding.typeName;
     if (!binding.typeTemplateArg.empty()) {
       typeText += "<" + binding.typeTemplateArg + ">";
     }
-    return unwrapCollectionReceiverEnvelope(qualifyImportedCollectionTypeText(typeText));
+    return typeText;
+  };
+  auto isBorrowedSoaReceiverType = [&](std::string typeText) {
+    typeText = normalizeBindingTypeName(qualifyImportedCollectionTypeText(typeText));
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText) || argText.empty()) {
+      return false;
+    }
+    const std::string normalizedBase = normalizeCollectionReceiverTypeName(base);
+    if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+      return false;
+    }
+    return normalizeCollectionReceiverTypeName(
+               unwrapCollectionReceiverEnvelope(argText)) == "soa_vector";
+  };
+  auto unwrapImportedCollectionReceiverType = [&](const BindingInfo &binding) {
+    return unwrapCollectionReceiverEnvelope(
+        qualifyImportedCollectionTypeText(bindingTypeText(binding)));
   };
   auto selectStaticHelperOverloadPath = [&](const std::string &resolvedPath) -> std::string {
     auto familyIt = ctx.helperOverloads.find(resolvedPath);
@@ -148,7 +166,23 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   auto preferredSamePathSoaRefMethodTarget = [&](std::string_view helperName) {
     return preferredSamePathSoaMethodTarget(helperName, "/soa_vector/");
   };
+  auto borrowedSoaWrapperMethodName = [](std::string_view helperName) {
+    if (helperName == "count") {
+      return std::string("count_ref");
+    }
+    if (helperName == "get") {
+      return std::string("get_ref");
+    }
+    if (helperName == "ref") {
+      return std::string("ref_ref");
+    }
+    if (helperName == "to_aos") {
+      return std::string("to_aos_ref");
+    }
+    return std::string(helperName);
+  };
   const Expr &receiver = expr.args.front();
+  bool isBorrowedSoaReceiver = false;
   if (receiver.kind == Expr::Kind::Name && normalizeBindingTypeName(receiver.name) == "FileError") {
     if (methodName == "result") {
       pathOut = selectStaticHelperOverloadPath("/std/file/FileError/result");
@@ -175,6 +209,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   if (receiver.kind == Expr::Kind::Name) {
     auto it = locals.find(receiver.name);
     if (it != locals.end()) {
+      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(it->second));
       typeName = unwrapImportedCollectionReceiverType(it->second);
     }
   } else if (receiver.kind == Expr::Kind::Literal) {
@@ -188,11 +223,15 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   } else if (receiver.kind == Expr::Kind::Call) {
     BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(receiver, {}, locals, hasMathImport(ctx), const_cast<Context &>(ctx), receiverInfo)) {
+      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(bindingTypeText(receiverInfo));
       typeName = unwrapImportedCollectionReceiverType(receiverInfo);
     }
     if (typeName.empty()) {
-      typeName = unwrapCollectionReceiverEnvelope(qualifyImportedCollectionTypeText(
-          inferExprTypeTextForTemplatedVectorFallback(receiver, locals, receiver.namespacePrefix, ctx, hasMathImport(ctx))));
+      const std::string inferredTypeText = qualifyImportedCollectionTypeText(
+          inferExprTypeTextForTemplatedVectorFallback(
+              receiver, locals, receiver.namespacePrefix, ctx, hasMathImport(ctx)));
+      isBorrowedSoaReceiver = isBorrowedSoaReceiverType(inferredTypeText);
+      typeName = unwrapCollectionReceiverEnvelope(inferredTypeText);
     }
     if (!receiver.isBinding) {
       std::string resolved;
@@ -217,6 +256,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
           if (returnType == "auto") {
             continue;
           }
+          isBorrowedSoaReceiver = isBorrowedSoaReceiverType(returnType);
           typeName = unwrapCollectionReceiverEnvelope(
               qualifyImportedCollectionTypeText(returnType));
           break;
@@ -225,6 +265,8 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
           BindingInfo inferredReturn;
           if (inferDefinitionReturnBindingForTemplatedFallback(
                   defIt->second, hasMathImport(ctx), const_cast<Context &>(ctx), inferredReturn)) {
+            isBorrowedSoaReceiver =
+                isBorrowedSoaReceiverType(bindingTypeText(inferredReturn));
             typeName = unwrapImportedCollectionReceiverType(inferredReturn);
           }
         }
@@ -306,20 +348,29 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
     pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaCountMethodTarget(normalizedMethodName), ctx);
+        expr, preferredSamePathSoaCountMethodTarget(helperName), ctx);
     return true;
   }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref")) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
     pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaToAosMethodTarget(normalizedMethodName), ctx);
+        expr, preferredSamePathSoaToAosMethodTarget(helperName), ctx);
     return true;
   }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
     pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaGetMethodTarget(normalizedMethodName), ctx);
+        expr, preferredSamePathSoaGetMethodTarget(helperName), ctx);
     return true;
   }
   if (normalizedTypeName == "soa_vector" &&
@@ -330,8 +381,11 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
+    const std::string helperName =
+        isBorrowedSoaReceiver ? borrowedSoaWrapperMethodName(normalizedMethodName)
+                              : normalizedMethodName;
     pathOut = selectHelperOverloadPath(
-        expr, preferredSamePathSoaRefMethodTarget(normalizedMethodName), ctx);
+        expr, preferredSamePathSoaRefMethodTarget(helperName), ctx);
     return true;
   }
   std::string resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
