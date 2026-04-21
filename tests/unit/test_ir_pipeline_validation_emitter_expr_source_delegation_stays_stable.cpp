@@ -1510,6 +1510,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isCanonicalSoaHelperPath(canonicalSoaCountPath, \"count\")") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(candidate, \"count_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "isCanonicalSoaHelperPath(canonicalSoaCountPath, \"count_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(

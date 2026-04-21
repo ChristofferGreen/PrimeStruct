@@ -131,6 +131,7 @@ bool rewriteExpr(Expr &expr,
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [&](const std::string &path) {
     auto isSyntheticSamePathSoaCarryNonRefHelperPath = [](const std::string &candidate) {
       if (isLegacyOrCanonicalSoaHelperPath(candidate, "count") ||
+          isLegacyOrCanonicalSoaHelperPath(candidate, "count_ref") ||
           isLegacyOrCanonicalSoaHelperPath(candidate, "push") ||
           isLegacyOrCanonicalSoaHelperPath(candidate, "reserve")) {
         return true;
