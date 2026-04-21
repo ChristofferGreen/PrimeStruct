@@ -260,6 +260,14 @@ std::string normalizeCollectionReceiverType(const std::string &typePath) {
   if (typePath == "/vector" || typePath == "vector") {
     return "vector";
   }
+  if (typePath == "/soa_vector" || typePath == "soa_vector" ||
+      typePath == "/std/collections/soa_vector" ||
+      typePath == "std/collections/soa_vector" ||
+      typePath == "/std/collections/experimental_soa_vector/SoaVector" ||
+      typePath == "std/collections/experimental_soa_vector/SoaVector" ||
+      typePath == "SoaVector") {
+    return "soa_vector";
+  }
   if (isMapCollectionTypeNameLocal(typePath) || typePath == "/map") {
     return "map";
   }

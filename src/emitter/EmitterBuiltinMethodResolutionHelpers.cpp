@@ -8,6 +8,67 @@ namespace primec::emitter {
 
 using BindingInfo = Emitter::BindingInfo;
 
+namespace {
+
+std::string inferSoaReceiverTypeFromBinding(const BindingInfo &binding) {
+  auto classifyTypeText = [&](const std::string &typeText) -> std::string {
+    std::string normalized = normalizeBindingTypeName(typeText);
+    bool borrowed = false;
+    while (true) {
+      if (!normalized.empty() && normalized.front() == '/') {
+        normalized.erase(normalized.begin());
+      }
+      if (normalized == "soa_vector" || normalized == "SoaVector" ||
+          normalized == "std/collections/soa_vector" ||
+          normalized == "std/collections/experimental_soa_vector/SoaVector" ||
+          normalized.rfind("soa_vector<", 0) == 0 ||
+          normalized.rfind("SoaVector<", 0) == 0 ||
+          normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0) {
+        return borrowed ? "soa_vector_ref" : "soa_vector";
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(normalized, base, arg)) {
+        return "";
+      }
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(arg, args) || args.empty()) {
+        return "";
+      }
+      if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+        borrowed = true;
+        normalized = normalizeBindingTypeName(args.front());
+        continue;
+      }
+      return "";
+    }
+  };
+
+  std::string typeText = binding.typeName;
+  if (!binding.typeTemplateArg.empty()) {
+    typeText += "<" + binding.typeTemplateArg + ">";
+  }
+  return classifyTypeText(typeText);
+}
+
+std::string borrowedSoaMethodName(std::string_view methodName) {
+  if (methodName == "count") {
+    return "count_ref";
+  }
+  if (methodName == "get") {
+    return "get_ref";
+  }
+  if (methodName == "ref") {
+    return "ref_ref";
+  }
+  if (methodName == "to_aos") {
+    return "to_aos_ref";
+  }
+  return std::string(methodName);
+}
+
+} // namespace
+
 bool resolveMethodCallPath(const Expr &call,
                            const std::unordered_map<std::string, const Definition *> &defMap,
                            const std::unordered_map<std::string, BindingInfo> &localTypes,
@@ -45,11 +106,20 @@ bool resolveMethodCallPath(const Expr &call,
   const bool isExplicitMapAliasMethod = normalizedMethodName.rfind("map/", 0) == 0;
   const bool isExplicitStdlibMapMethod =
       normalizedMethodName.rfind("std/collections/map/", 0) == 0;
+  const bool isExplicitSoaAliasMethod = normalizedMethodName.rfind("soa_vector/", 0) == 0;
+  const bool isExplicitStdlibSoaMethod =
+      normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0;
   if (normalizedMethodName.rfind("array/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("array/").size());
   } else if (normalizedMethodName.rfind("std/collections/vector/", 0) == 0) {
     normalizedMethodName =
         normalizedMethodName.substr(std::string("std/collections/vector/").size());
+  } else if (normalizedMethodName.rfind("soa_vector/", 0) == 0) {
+    normalizedMethodName =
+        normalizedMethodName.substr(std::string("soa_vector/").size());
+  } else if (normalizedMethodName.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalizedMethodName =
+        normalizedMethodName.substr(std::string("std/collections/soa_vector/").size());
   } else if (normalizedMethodName.rfind("map/", 0) == 0) {
     normalizedMethodName = normalizedMethodName.substr(std::string("map/").size());
   } else if (normalizedMethodName.rfind("std/collections/map/", 0) == 0) {
@@ -225,10 +295,17 @@ bool resolveMethodCallPath(const Expr &call,
   };
 
   std::string typeName;
+  bool borrowedSoaReceiver = false;
   if (receiver.kind == Expr::Kind::Name) {
     auto it = localTypes.find(receiver.name);
     if (it != localTypes.end()) {
-      typeName = it->second.typeName;
+      const std::string inferredSoaType = inferSoaReceiverTypeFromBinding(it->second);
+      if (!inferredSoaType.empty()) {
+        borrowedSoaReceiver = inferredSoaType == "soa_vector_ref";
+        typeName = "soa_vector";
+      } else {
+        typeName = it->second.typeName;
+      }
     } else {
       if (receiver.name == "FileError" &&
           (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
@@ -305,8 +382,16 @@ bool resolveMethodCallPath(const Expr &call,
       return true;
     }
     typeName = inferMethodResolutionPrimitiveTypeName(receiver, metadataView, localTypes);
+    if (typeName == "soa_vector_ref") {
+      borrowedSoaReceiver = true;
+      typeName = "soa_vector";
+    }
   } else {
     typeName = inferMethodResolutionPrimitiveTypeName(receiver, metadataView, localTypes);
+    if (typeName == "soa_vector_ref") {
+      borrowedSoaReceiver = true;
+      typeName = "soa_vector";
+    }
   }
 
   if (typeName.empty()) {
@@ -377,6 +462,39 @@ bool resolveMethodCallPath(const Expr &call,
         return false;
       }
       resolvedOut = canonicalPath;
+      return true;
+    }
+  }
+  if (resolvedType == "/soa_vector" || resolvedType == "soa_vector") {
+    const std::string helperName =
+        borrowedSoaReceiver ? borrowedSoaMethodName(normalizedMethodName)
+                            : normalizedMethodName;
+    const std::string canonicalPath = "/std/collections/soa_vector/" + helperName;
+    const std::string aliasPath = "/soa_vector/" + helperName;
+    if (isExplicitStdlibSoaMethod) {
+      if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
+        return false;
+      }
+      resolvedOut = canonicalPath;
+      return true;
+    }
+    if (isExplicitSoaAliasMethod) {
+      if (hasDefinitionOrMetadata(metadataView, aliasPath)) {
+        resolvedOut = aliasPath;
+        return true;
+      }
+      if (!hasDefinitionOrMetadata(metadataView, canonicalPath)) {
+        return false;
+      }
+      resolvedOut = canonicalPath;
+      return true;
+    }
+    if (hasDefinitionOrMetadata(metadataView, canonicalPath)) {
+      resolvedOut = canonicalPath;
+      return true;
+    }
+    if (hasDefinitionOrMetadata(metadataView, aliasPath)) {
+      resolvedOut = aliasPath;
       return true;
     }
   }

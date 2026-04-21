@@ -551,6 +551,144 @@ TEST_CASE("C++ emitter helper handles parser-shaped canonical vector count capac
   expectResolved("capacity");
 }
 
+TEST_CASE("C++ emitter helper resolves borrowed soa_vector receiver methods to canonical ref helpers") {
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "borrowed";
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "Reference";
+  receiverInfo.typeTemplateArg = "SoaVector<Particle>";
+  localTypes.emplace("borrowed", receiverInfo);
+
+  primec::Definition countRefDef;
+  countRefDef.fullPath = "/std/collections/soa_vector/count_ref";
+  primec::Definition getRefDef;
+  getRefDef.fullPath = "/std/collections/soa_vector/get_ref";
+  primec::Definition refRefDef;
+  refRefDef.fullPath = "/std/collections/soa_vector/ref_ref";
+  primec::Definition toAosRefDef;
+  toAosRefDef.fullPath = "/std/collections/soa_vector/to_aos_ref";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {countRefDef.fullPath, &countRefDef},
+      {getRefDef.fullPath, &getRefDef},
+      {refRefDef.fullPath, &refRefDef},
+      {toAosRefDef.fullPath, &toAosRefDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  auto expectResolved = [&](const char *methodName, const char *expectedSuffix) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.args = {receiver};
+    if (std::string(methodName) == "get" || std::string(methodName) == "ref") {
+      call.args.push_back(indexLiteral);
+    }
+    call.argNames.assign(call.args.size(), std::nullopt);
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == std::string("/std/collections/soa_vector/") + expectedSuffix);
+  };
+
+  expectResolved("count", "count_ref");
+  expectResolved("get", "get_ref");
+  expectResolved("ref", "ref_ref");
+  expectResolved("to_aos", "to_aos_ref");
+}
+
+TEST_CASE("C++ emitter helper resolves helper-return soa_vector borrow methods to canonical ref helpers") {
+  primec::Expr values;
+  values.kind = primec::Expr::Kind::Name;
+  values.name = "values";
+
+  primec::Expr locationCall;
+  locationCall.kind = primec::Expr::Kind::Call;
+  locationCall.name = "location";
+  locationCall.args = {values};
+  locationCall.argNames = {std::nullopt};
+
+  primec::Expr borrowCall;
+  borrowCall.kind = primec::Expr::Kind::Call;
+  borrowCall.name = "pickBorrowed";
+  borrowCall.args = {locationCall};
+  borrowCall.argNames = {std::nullopt};
+
+  primec::Expr indexLiteral;
+  indexLiteral.kind = primec::Expr::Kind::Literal;
+  indexLiteral.intWidth = 32;
+  indexLiteral.literalValue = 0;
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo valuesInfo;
+  valuesInfo.typeName = "SoaVector";
+  valuesInfo.typeTemplateArg = "Particle";
+  localTypes.emplace("values", valuesInfo);
+
+  primec::Definition borrowDef;
+  borrowDef.fullPath = "/pickBorrowed";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"Reference<SoaVector<Particle>>"};
+  borrowDef.transforms.push_back(returnTransform);
+
+  primec::Definition countRefDef;
+  countRefDef.fullPath = "/std/collections/soa_vector/count_ref";
+  primec::Definition getRefDef;
+  getRefDef.fullPath = "/std/collections/soa_vector/get_ref";
+  primec::Definition refRefDef;
+  refRefDef.fullPath = "/std/collections/soa_vector/ref_ref";
+  primec::Definition toAosRefDef;
+  toAosRefDef.fullPath = "/std/collections/soa_vector/to_aos_ref";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {borrowDef.fullPath, &borrowDef},
+      {countRefDef.fullPath, &countRefDef},
+      {getRefDef.fullPath, &getRefDef},
+      {refRefDef.fullPath, &refRefDef},
+      {toAosRefDef.fullPath, &toAosRefDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  auto expectResolved = [&](const char *methodName, const char *expectedSuffix) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.args = {borrowCall};
+    if (std::string(methodName) == "get" || std::string(methodName) == "ref") {
+      call.args.push_back(indexLiteral);
+    }
+    call.argNames.assign(call.args.size(), std::nullopt);
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == std::string("/std/collections/soa_vector/") + expectedSuffix);
+  };
+
+  expectResolved("count", "count_ref");
+  expectResolved("get", "get_ref");
+  expectResolved("ref", "ref_ref");
+  expectResolved("to_aos", "to_aos_ref");
+}
+
 TEST_CASE("C++ emitter helper handles cross-path vector slash count capacity fallback") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;

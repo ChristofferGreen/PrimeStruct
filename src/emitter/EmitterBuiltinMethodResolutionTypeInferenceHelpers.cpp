@@ -15,6 +15,56 @@ std::string resolvedCollectionHelperName(const Expr &candidate) {
   return normalized;
 }
 
+bool isSoaVectorReceiverTypeNameLocal(const std::string &typeName) {
+  std::string normalized = normalizeBindingTypeName(typeName);
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  if (normalized == "soa_vector" || normalized == "SoaVector" ||
+      normalized == "std/collections/soa_vector" ||
+      normalized == "std/collections/experimental_soa_vector/SoaVector" ||
+      normalized.rfind("soa_vector<", 0) == 0 ||
+      normalized.rfind("SoaVector<", 0) == 0 ||
+      normalized.rfind("std/collections/experimental_soa_vector/SoaVector<", 0) == 0) {
+    return true;
+  }
+  std::string base;
+  std::string arg;
+  return splitTemplateTypeName(normalized, base, arg) &&
+         isSoaVectorReceiverTypeNameLocal(base);
+}
+
+std::string inferCollectionReceiverTypeFromTypeText(const std::string &typeText) {
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  bool borrowed = false;
+  while (true) {
+    if (isSoaVectorReceiverTypeNameLocal(normalizedType)) {
+      return borrowed ? "soa_vector_ref" : "soa_vector";
+    }
+    std::string base;
+    std::string arg;
+    if (!splitTemplateTypeName(normalizedType, base, arg)) {
+      return "";
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(arg, args) || args.empty()) {
+      return "";
+    }
+    if ((base == "Reference" || base == "Pointer") && args.size() == 1) {
+      borrowed = true;
+      normalizedType = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    if ((base == "array" || base == "vector") && args.size() == 1) {
+      return borrowed ? "" : base;
+    }
+    if (isMapCollectionTypeNameLocal(base) && args.size() == 2) {
+      return borrowed ? "" : "map";
+    }
+    return "";
+  }
+}
+
 } // namespace
 
 std::string inferMethodResolutionPrimitiveTypeName(
@@ -49,6 +99,41 @@ std::string inferMethodResolutionPrimitiveTypeName(
           continue;
         }
         return extractCollectionElementTypeFromReturnType(transform.templateArgs.front(), typeOut);
+      }
+    }
+    return false;
+  };
+  auto resolveCollectionReceiverTypeFromCall = [&](const Expr &candidate,
+                                                   std::string &typeOut) -> bool {
+    typeOut.clear();
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall) {
+      return false;
+    }
+
+    const std::string resolvedExprPath = resolveExprPath(candidate);
+    std::vector<std::string> resolvedCandidates =
+        collectionHelperPathCandidates(resolvedExprPath);
+    pruneMapAccessStructReturnCompatibilityCandidates(resolvedExprPath, resolvedCandidates);
+    auto importIt = view.importAliases.find(candidate.name);
+    if (importIt != view.importAliases.end()) {
+      for (const auto &aliasCandidate : collectionHelperPathCandidates(importIt->second)) {
+        appendUniqueCandidate(resolvedCandidates, aliasCandidate);
+      }
+    }
+
+    for (const auto &path : resolvedCandidates) {
+      auto defIt = view.defMap.find(path);
+      if (defIt == view.defMap.end() || defIt->second == nullptr) {
+        continue;
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        typeOut = inferCollectionReceiverTypeFromTypeText(transform.templateArgs.front());
+        if (!typeOut.empty()) {
+          return true;
+        }
       }
     }
     return false;
@@ -330,9 +415,28 @@ std::string inferMethodResolutionPrimitiveTypeName(
         if (it != localTypes.end() && isPrimitiveBindingTypeName(it->second.typeName)) {
           return normalizeBindingTypeName(it->second.typeName);
         }
+        if (it != localTypes.end()) {
+          const std::string collectionReceiverType =
+              inferCollectionReceiverTypeFromTypeText(
+                  it->second.typeName +
+                  (it->second.typeTemplateArg.empty()
+                       ? ""
+                       : "<" + it->second.typeTemplateArg + ">"));
+          if (!collectionReceiverType.empty()) {
+            return collectionReceiverType;
+          }
+        }
         return "";
       }
       case Expr::Kind::Call: {
+        char pointerOp = '\0';
+        if (getBuiltinPointerOperator(candidateExpr, pointerOp) &&
+            candidateExpr.args.size() == 1) {
+          const std::string pointeeType = inferPrimitiveTypeName(candidateExpr.args.front());
+          if (pointeeType == "soa_vector" || pointeeType == "soa_vector_ref") {
+            return pointerOp == '&' ? "soa_vector_ref" : "soa_vector";
+          }
+        }
         if (candidateExpr.isMethodCall) {
           if (const std::string explicitMapAccessType =
                   inferExplicitMapAccessResolvedTypeName(candidateExpr);
@@ -392,6 +496,10 @@ std::string inferMethodResolutionPrimitiveTypeName(
           }
           if (isRemovedMapDirectCallResultCompatibility(candidateExpr)) {
             return "";
+          }
+          std::string collectionReceiverType;
+          if (resolveCollectionReceiverTypeFromCall(candidateExpr, collectionReceiverType)) {
+            return collectionReceiverType;
           }
           const std::string resolvedExprPath = resolveExprPath(candidateExpr);
           std::vector<std::string> resolvedCandidates =
