@@ -984,10 +984,30 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "namespacedCollection == \"vector\"") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, \"count\")") !=
+            "  std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "  if (resolvedCallPath.empty()) {\n"
+            "    resolvedCallPath = resolveCalleePath(expr);\n"
+            "  }\n"
+            "  if (!resolvedCallPath.empty()) {\n"
+            "    const std::string concreteResolvedCallPath =\n"
+            "        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);\n"
+            "    if (!concreteResolvedCallPath.empty()) {\n"
+            "      resolvedCallPath = concreteResolvedCallPath;\n"
+            "    }\n"
+            "  }\n"
+            "  const bool isCountLike =\n"
+            "      expr.args.size() == 1 &&\n"
+            "      (isSimpleCallName(expr, \"count\") ||\n"
+            "       isSimpleCallName(expr, \"count_ref\") ||\n"
+            "       isSimpleCallName(expr, \"capacity\") ||\n"
+            "       isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, \"count\")") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, \"count_ref\")") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "  const std::string resolvedCallPath = resolveCalleePath(expr);\n"
+            "  const bool isCountLike =\n") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "std::string preferredResolvedInitializer = "

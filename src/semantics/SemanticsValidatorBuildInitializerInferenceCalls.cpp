@@ -158,7 +158,17 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
     }
     return false;
   }
-  const std::string resolvedCallPath = resolveCalleePath(expr);
+  std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);
+  if (resolvedCallPath.empty()) {
+    resolvedCallPath = resolveCalleePath(expr);
+  }
+  if (!resolvedCallPath.empty()) {
+    const std::string concreteResolvedCallPath =
+        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);
+    if (!concreteResolvedCallPath.empty()) {
+      resolvedCallPath = concreteResolvedCallPath;
+    }
+  }
   const bool isCountLike =
       expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") ||
