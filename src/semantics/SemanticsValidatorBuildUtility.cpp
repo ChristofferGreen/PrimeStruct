@@ -180,10 +180,20 @@ bool SemanticsValidator::lookupGraphLocalAutoMethodCallFact(const std::string &s
   if (!fact.methodCallResolvedPath.empty()) {
     resolvedPathOut = fact.methodCallResolvedPath;
     found = true;
+  } else if (!fact.initializerResolvedPath.empty()) {
+    resolvedPathOut = fact.initializerResolvedPath;
+    found = true;
   }
   if (fact.hasMethodCallReturnKind) {
     returnKindOut = fact.methodCallReturnKind;
     found = true;
+  } else if (fact.hasInitializerBinding) {
+    const ReturnKind initializerKind =
+        returnKindForTypeName(normalizeBindingTypeName(fact.initializerBinding.typeName));
+    if (initializerKind != ReturnKind::Unknown) {
+      returnKindOut = initializerKind;
+      found = true;
+    }
   }
   return found;
 }

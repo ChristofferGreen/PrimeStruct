@@ -72,6 +72,8 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferTargetResolution.cpp";
   const std::filesystem::path semanticsInferUtilityPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
+  const std::filesystem::path semanticsBuildUtilityPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorBuildUtility.cpp";
   const std::filesystem::path semanticsCollectionHelperRewritesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
   const std::filesystem::path semanticsValidatePath =
@@ -101,6 +103,7 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   REQUIRE(std::filesystem::exists(semanticsInferStructReturnPath));
   REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferUtilityPath));
+  REQUIRE(std::filesystem::exists(semanticsBuildUtilityPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
@@ -1058,6 +1061,25 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "            if (!concreteResolvedMethodTarget.empty()) {\n"
             "              resolvedMethodTarget = concreteResolvedMethodTarget;\n"
             "            }") !=
+        std::string::npos);
+  const std::string semanticsBuildUtilitySource = readText(semanticsBuildUtilityPath);
+  CHECK(semanticsBuildUtilitySource.find(
+            "  if (!fact.methodCallResolvedPath.empty()) {\n"
+            "    resolvedPathOut = fact.methodCallResolvedPath;\n"
+            "    found = true;\n"
+            "  } else if (!fact.initializerResolvedPath.empty()) {\n"
+            "    resolvedPathOut = fact.initializerResolvedPath;\n"
+            "    found = true;\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsBuildUtilitySource.find(
+            "  if (fact.hasMethodCallReturnKind) {\n"
+            "    returnKindOut = fact.methodCallReturnKind;\n"
+            "    found = true;\n"
+            "  } else if (fact.hasInitializerBinding) {") !=
+        std::string::npos);
+  CHECK(semanticsBuildUtilitySource.find(
+            "returnKindForTypeName(normalizeBindingTypeName(fact.initializerBinding.typeName))") !=
         std::string::npos);
 }
 
