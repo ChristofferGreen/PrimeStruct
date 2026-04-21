@@ -329,6 +329,12 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
     bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
   } else if (bindingExpr.args.size() == 1 && bindingInfo.kind == LocalInfo::Kind::Value) {
     bindingInfo.valueKind = inferExprKindFromLocals(bindingExpr.args.front(), activeLocals);
+    if (bindingInfo.valueKind == LocalInfo::ValueKind::Unknown) {
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(bindingExpr.args.front(), builtinComparison)) {
+        bindingInfo.valueKind = LocalInfo::ValueKind::Bool;
+      }
+    }
   } else if (isParameter) {
     bindingInfo.valueKind = bindingValueKind(bindingExpr, bindingInfo.kind);
   } else {

@@ -555,6 +555,52 @@ TEST_CASE("ir lowerer return inference helpers infer parameter locals") {
   CHECK(locals.at("param").valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer return inference helpers recover bool comparison bindings") {
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Name;
+  lhs.name = "lhs";
+
+  primec::Expr rhs;
+  rhs.kind = primec::Expr::Kind::Name;
+  rhs.name = "rhs";
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  primec::Expr bindingExpr;
+  bindingExpr.name = "flag";
+  bindingExpr.args = {comparisonExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferReturnInferenceBindingIntoLocals(
+      bindingExpr,
+      false,
+      "/pkg/fn",
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &) { return false; },
+      error));
+  CHECK(error.empty());
+  REQUIRE(locals.count("flag") == 1u);
+  CHECK(locals.at("flag").valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer return inference helpers report untyped bindings") {
   primec::Expr bindingExpr;
   bindingExpr.name = "tmp";
