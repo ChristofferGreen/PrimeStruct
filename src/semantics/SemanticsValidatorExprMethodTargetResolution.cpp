@@ -450,6 +450,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     const std::string resolvedType = resolveStructTypePath(receiver.name, receiver.namespacePrefix);
     if (!resolvedType.empty()) {
+      const bool isConcreteExperimentalSoaReceiver =
+          resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+      const bool isCanonicalSoaWrapperMethod =
+          normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+          normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+          normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
+          normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref" ||
+          normalizedMethodName == "push" || normalizedMethodName == "reserve";
+      if (isConcreteExperimentalSoaReceiver && isCanonicalSoaWrapperMethod) {
+        return setCollectionMethodTarget(
+            preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                      "/soa_vector"));
+      }
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     }
@@ -1910,6 +1923,19 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (resolvedType.empty()) {
       return false;
+    }
+    const bool isConcreteExperimentalSoaReceiver =
+        resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+    const bool isCanonicalSoaWrapperMethod =
+        normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+        normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+        normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
+        normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref" ||
+        normalizedMethodName == "push" || normalizedMethodName == "reserve";
+    if (isConcreteExperimentalSoaReceiver && isCanonicalSoaWrapperMethod) {
+      return setCollectionMethodTarget(
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                    "/soa_vector"));
     }
     resolvedOut = resolvedType + "/" + normalizedMethodName;
     return true;
