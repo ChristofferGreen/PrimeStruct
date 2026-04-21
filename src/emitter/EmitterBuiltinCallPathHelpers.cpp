@@ -575,6 +575,29 @@ bool getBuiltinPointerOperator(const Expr &expr, char &out) {
   return false;
 }
 
+bool getBuiltinMemoryName(const Expr &expr, std::string &out) {
+  if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
+    return false;
+  }
+  std::string name = resolveExprPath(expr);
+  if (!name.empty() && name[0] == '/') {
+    name.erase(0, 1);
+  }
+  if (name.rfind("std/intrinsics/memory/", 0) != 0) {
+    return false;
+  }
+  name = name.substr(std::string("std/intrinsics/memory/").size());
+  if (name.find('/') != std::string::npos) {
+    return false;
+  }
+  if (name == "alloc" || name == "free" || name == "realloc" ||
+      name == "at" || name == "at_unsafe" || name == "reinterpret") {
+    out = name;
+    return true;
+  }
+  return false;
+}
+
 bool getBuiltinConvertName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;

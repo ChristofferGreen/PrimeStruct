@@ -270,6 +270,68 @@
       }
       return out.str();
     }
+    std::string memoryName;
+    if (getBuiltinMemoryName(expr, memoryName)) {
+      std::ostringstream out;
+      if (memoryName == "alloc" && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
+        const std::string targetType =
+            bindingTypeToCpp(expr.templateArgs[0], expr.namespacePrefix, importAliases, structTypeMap);
+        out << "ps_heap_alloc<" << targetType << ">("
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ")";
+        return out.str();
+      }
+      if (memoryName == "free" && expr.args.size() == 1) {
+        out << "ps_heap_free("
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ")";
+        return out.str();
+      }
+      if (memoryName == "realloc" && expr.args.size() == 2) {
+        out << "ps_heap_realloc("
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ")";
+        return out.str();
+      }
+      if (memoryName == "at" && expr.args.size() == 3) {
+        out << "ps_heap_at("
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ", "
+            << emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ")";
+        return out.str();
+      }
+      if (memoryName == "at_unsafe" && expr.args.size() == 2) {
+        out << "ps_heap_at_unsafe("
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ", "
+            << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ")";
+        return out.str();
+      }
+      if (memoryName == "reinterpret" && expr.templateArgs.size() == 1 && expr.args.size() == 1) {
+        const std::string targetType =
+            bindingTypeToCpp(expr.templateArgs[0], expr.namespacePrefix, importAliases, structTypeMap);
+        out << "ps_heap_reinterpret<" << targetType << ">("
+            << emitExpr(expr.args[0], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes,
+                        returnKinds, resultInfos, returnStructs, allowMathBare)
+            << ")";
+        return out.str();
+      }
+    }
     char pointerOp = '\0';
     if (getBuiltinPointerOperator(expr, pointerOp) && expr.args.size() == 1) {
       std::ostringstream out;

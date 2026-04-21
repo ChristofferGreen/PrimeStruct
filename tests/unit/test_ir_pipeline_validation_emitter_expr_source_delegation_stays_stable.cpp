@@ -154,6 +154,12 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at\")") == std::string::npos);
   CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at_unsafe\")") ==
         std::string::npos);
+  CHECK(emitterExprSource.find("getBuiltinMemoryName(expr, memoryName)") != std::string::npos);
+  CHECK(emitterExprSource.find("ps_heap_alloc<") != std::string::npos);
+  CHECK(emitterExprSource.find("ps_heap_realloc(") != std::string::npos);
+  CHECK(emitterExprSource.find("ps_heap_at(") != std::string::npos);
+  CHECK(emitterExprSource.find("ps_heap_at_unsafe(") != std::string::npos);
+  CHECK(emitterExprSource.find("ps_heap_reinterpret<") != std::string::npos);
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable" * doctest::skip(true)) {

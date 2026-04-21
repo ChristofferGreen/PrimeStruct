@@ -1067,6 +1067,16 @@ TEST_CASE("ir lowerer helper keeps parser-shaped intrinsic memory builtins") {
 
   CHECK(primec::ir_lowerer::getBuiltinMemoryName(reinterpretCall, builtin));
   CHECK(builtin == "reinterpret");
+  CHECK(primec::emitter::getBuiltinMemoryName(allocCall, builtin));
+  CHECK(builtin == "alloc");
+  CHECK(primec::emitter::getBuiltinMemoryName(reinterpretCall, builtin));
+  CHECK(builtin == "reinterpret");
+
+  primec::Expr invalidCall;
+  invalidCall.kind = primec::Expr::Kind::Call;
+  invalidCall.name = "not_builtin";
+  invalidCall.namespacePrefix = "/std/intrinsics/memory";
+  CHECK_FALSE(primec::emitter::getBuiltinMemoryName(invalidCall, builtin));
 }
 
 TEST_CASE("ir lowerer helper keeps parser-shaped gpu builtins") {
