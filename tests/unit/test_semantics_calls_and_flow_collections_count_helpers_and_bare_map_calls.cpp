@@ -715,6 +715,70 @@ TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {
         std::string::npos);
 }
 
+TEST_CASE("experimental map Ref helpers route through borrowed implementations") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("stdlib"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path experimentalMapStdlibPath =
+      repoRoot / "stdlib" / "std" / "collections" / "experimental_map.prime";
+
+  REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
+  const std::string source = readText(experimentalMapStdlibPath);
+
+  CHECK(source.find(
+            "  mapCountRef<K, V>([Reference<Map<K, V>>] entries) {\n"
+            "    return(mapBorrowedCount<K, V>(entries))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapContainsRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+            "    return(mapBorrowedContains<K, V>(entries, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+            "    return(mapBorrowedTryAt<K, V>(entries, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+            "    return(mapBorrowedAt<K, V>(entries, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+            "    return(mapBorrowedAtUnsafe<K, V>(entries, key))") !=
+        std::string::npos);
+
+  CHECK(source.find("mapCountRef<K, V>([Reference<Map<K, V>>] entries) {\n"
+                    "    [Map<K, V>] values{dereference(entries)}\n"
+                    "    return(mapCount<K, V>(values))") ==
+        std::string::npos);
+  CHECK(source.find("mapContainsRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+                    "    [Map<K, V>] values{dereference(entries)}\n"
+                    "    return(mapContains<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+                    "    [Map<K, V>] values{dereference(entries)}\n"
+                    "    return(mapTryAt<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+                    "    [Map<K, V>] values{dereference(entries)}\n"
+                    "    return(mapAt<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
+                    "    [Map<K, V>] values{dereference(entries)}\n"
+                    "    return(mapAtUnsafe<K, V>(values, key))") ==
+        std::string::npos);
+}
+
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
   const std::string source = R"(
 import /std/collections/experimental_map/*

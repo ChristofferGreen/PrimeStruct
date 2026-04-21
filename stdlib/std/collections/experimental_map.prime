@@ -357,8 +357,7 @@ namespace std {
 
   [public return<i32>]
   mapCountRef<K, V>([Reference<Map<K, V>>] entries) {
-    [Map<K, V>] values{dereference(entries)}
-    return(mapCount<K, V>(values))
+    return(mapBorrowedCount<K, V>(entries))
   }
 
   [public return<i32>]
@@ -402,8 +401,7 @@ namespace std {
 
   [public return<bool> Comparable<K>]
   mapContainsRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [Map<K, V>] values{dereference(entries)}
-    return(mapContains<K, V>(values, key))
+    return(mapBorrowedContains<K, V>(entries, key))
   }
 
   [public return<bool> Comparable<K>]
@@ -438,8 +436,7 @@ namespace std {
 
   [public return<Result<V, ContainerError>> Comparable<K>]
   mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [Map<K, V>] values{dereference(entries)}
-    return(mapTryAt<K, V>(values, key))
+    return(mapBorrowedTryAt<K, V>(entries, key))
   }
 
   [public return<Result<V, ContainerError>> Comparable<K>]
@@ -478,8 +475,7 @@ namespace std {
 
   [public return<V> Comparable<K>]
   mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [Map<K, V>] values{dereference(entries)}
-    return(mapAt<K, V>(values, key))
+    return(mapBorrowedAt<K, V>(entries, key))
   }
 
   [public return<V> Comparable<K>]
@@ -506,8 +502,7 @@ namespace std {
 
   [public return<V> Comparable<K>]
   mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {
-    [Map<K, V>] values{dereference(entries)}
-    return(mapAtUnsafe<K, V>(values, key))
+    return(mapBorrowedAtUnsafe<K, V>(entries, key))
   }
 
   [public return<V> Comparable<K>]
