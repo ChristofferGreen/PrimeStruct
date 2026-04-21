@@ -884,8 +884,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
               return false;
             }
           }
-          resolvedCallPath =
-              resolveExprConcreteCallPath(params, locals, callExpr, resolvedCallPath);
+          if (const std::string concreteResolvedCallPath =
+                  resolveExprConcreteCallPath(
+                      params, locals, callExpr, resolvedCallPath);
+              !concreteResolvedCallPath.empty()) {
+            resolvedCallPath = concreteResolvedCallPath;
+          }
           auto defIt = defMap_.find(resolvedCallPath);
           if (defIt == defMap_.end() || defIt->second == nullptr) {
             return false;
@@ -949,8 +953,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           return false;
         }
       }
-      resolvedPathOut =
-          resolveExprConcreteCallPath(params, locals, callExpr, resolvedPathOut);
+      if (const std::string concreteResolvedPathOut =
+              resolveExprConcreteCallPath(
+                  params, locals, callExpr, resolvedPathOut);
+          !concreteResolvedPathOut.empty()) {
+        resolvedPathOut = concreteResolvedPathOut;
+      }
       return !resolvedPathOut.empty();
     };
     std::function<bool(const Expr &, const ExprSubstitutions &, std::string &)>
@@ -1383,8 +1391,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
               return false;
             }
           }
-          resolvedCallPath =
-              resolveExprConcreteCallPath(params, locals, callExpr, resolvedCallPath);
+          if (const std::string concreteResolvedCallPath =
+                  resolveExprConcreteCallPath(
+                      params, locals, callExpr, resolvedCallPath);
+              !concreteResolvedCallPath.empty()) {
+            resolvedCallPath = concreteResolvedCallPath;
+          }
           auto defIt = defMap_.find(resolvedCallPath);
           if (defIt == defMap_.end() || defIt->second == nullptr) {
             return false;

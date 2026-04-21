@@ -1489,11 +1489,35 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "              preferredCollectionHelperResolvedPath(callExpr);\n") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find(
+            "          if (const std::string concreteResolvedCallPath =\n"
+            "                  resolveExprConcreteCallPath(\n"
+            "                      params, locals, callExpr, resolvedCallPath);\n"
+            "              !concreteResolvedCallPath.empty()) {\n"
+            "            resolvedCallPath = concreteResolvedCallPath;\n"
+            "          }\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
             "      resolvedPathOut = preferredCollectionHelperResolvedPath(callExpr);\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "      if (const std::string concreteResolvedPathOut =\n"
+            "              resolveExprConcreteCallPath(\n"
+            "                  params, locals, callExpr, resolvedPathOut);\n"
+            "          !concreteResolvedPathOut.empty()) {\n"
+            "        resolvedPathOut = concreteResolvedPathOut;\n"
+            "      }\n") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find(
             "            std::string resolvedPath =\n"
             "                preferredCollectionHelperResolvedPath(expr);\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "          resolvedCallPath =\n"
+            "              resolveExprConcreteCallPath(params, locals, callExpr, resolvedCallPath);\n") ==
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "      resolvedPathOut =\n"
+            "          resolveExprConcreteCallPath(params, locals, callExpr, resolvedPathOut);\n") ==
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find(
             "      std::string resolvedPath = resolveCalleePath(expr);\n") ==
