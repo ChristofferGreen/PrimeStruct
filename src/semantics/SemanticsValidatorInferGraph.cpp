@@ -619,6 +619,11 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
                                            isBuiltinMethod);
               }) &&
               !resolvedMethodTarget.empty()) {
+            resolvedMethodTarget = resolveExprConcreteCallPath(
+                defParams,
+                activeLocals.bindings,
+                *initializerAnalysisExpr,
+                resolvedMethodTarget);
             fact.methodCallResolvedPath = resolvedMethodTarget;
             const auto methodCallReturnKindIt = returnKinds_.find(resolvedMethodTarget);
             if (methodCallReturnKindIt != returnKinds_.end()) {
