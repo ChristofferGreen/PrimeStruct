@@ -2391,6 +2391,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         }
         return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
       }
+      if (extractExperimentalSoaVectorElementType(receiverBinding, experimentalElemType) &&
+          resolveCollectionMethodFromTypePath("/soa_vector")) {
+        return true;
+      }
       resolvedOut = resolvedType + "/" + normalizedMethodName;
       return true;
     }

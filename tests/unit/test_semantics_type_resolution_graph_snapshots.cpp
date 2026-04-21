@@ -962,6 +962,94 @@ TEST_CASE("semantic product method-call targets stay separated by receiver type"
   CHECK(hasBIdTarget);
 }
 
+TEST_CASE("semantic product keeps helper-return soa_vector mutator targets on alias wrappers") {
+  const std::string source = R"(
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[return<i32>]
+/soa_vector/push([soa_vector<Particle>] values, [Particle] value) {
+  return(value.x)
+}
+
+[return<i32>]
+/soa_vector/reserve([soa_vector<Particle>] values, [i32] count) {
+  return(count)
+}
+
+[return<i32>]
+/std/collections/soa_vector/push([soa_vector<Particle>] values, [Particle] value) {
+  return(plus(value.x, 100i32))
+}
+
+[return<i32>]
+/std/collections/soa_vector/reserve([soa_vector<Particle>] values, [i32] count) {
+  return(plus(count, 100i32))
+}
+
+[return<void>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/push([soa_vector<Particle>] values,
+                                                                   [Particle] value) {
+}
+
+[return<void>]
+/std/collections/experimental_soa_vector/SoaVector__Particle/reserve([soa_vector<Particle>] values,
+                                                                      [i32] count) {
+}
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [auto] pushed{cloneValues().push(Particle(7i32))}
+  [auto] reserved{cloneValues().reserve(4i32)}
+  return(plus(pushed, reserved))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *pushTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "push" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/soa_vector/push";
+      });
+  REQUIRE(pushTarget != nullptr);
+
+  const auto *reserveTarget = findSemanticEntry(
+      primec::semanticProgramMethodCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "reserve" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, entry) ==
+                   "/soa_vector/reserve";
+      });
+  REQUIRE(reserveTarget != nullptr);
+
+  const bool choseConcreteExperimentalPush = std::any_of(
+      primec::semanticProgramMethodCallTargetView(semanticProgram).begin(),
+      primec::semanticProgramMethodCallTargetView(semanticProgram).end(),
+      [&semanticProgram](const primec::SemanticProgramMethodCallTarget *entry) {
+        return entry->scopePath == "/main" && entry->methodName == "push" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(semanticProgram, *entry) ==
+                   "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+      });
+  CHECK_FALSE(choseConcreteExperimentalPush);
+}
+
 TEST_CASE("semantic product direct-call targets carry interned path ids") {
   const std::string source =
       "[return<i32>]\n"
