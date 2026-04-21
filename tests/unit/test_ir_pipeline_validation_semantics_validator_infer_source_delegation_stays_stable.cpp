@@ -1074,6 +1074,21 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
         std::string::npos);
   const std::string semanticsBuildUtilitySource = readText(semanticsBuildUtilityPath);
   CHECK(semanticsBuildUtilitySource.find(
+            "  if (!fact.directCallResolvedPath.empty()) {\n"
+            "    resolvedPathOut = fact.directCallResolvedPath;\n"
+            "    found = true;\n"
+            "  } else if (!fact.initializerResolvedPath.empty()) {\n"
+            "    resolvedPathOut = fact.initializerResolvedPath;\n"
+            "    found = true;\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(semanticsBuildUtilitySource.find(
+            "  if (fact.hasDirectCallReturnKind) {\n"
+            "    returnKindOut = fact.directCallReturnKind;\n"
+            "    found = true;\n"
+            "  } else if (fact.hasInitializerBinding) {") !=
+        std::string::npos);
+  CHECK(semanticsBuildUtilitySource.find(
             "  if (!fact.methodCallResolvedPath.empty()) {\n"
             "    resolvedPathOut = fact.methodCallResolvedPath;\n"
             "    found = true;\n"

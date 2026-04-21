@@ -145,10 +145,20 @@ bool SemanticsValidator::lookupGraphLocalAutoDirectCallFact(const std::string &s
   if (!fact.directCallResolvedPath.empty()) {
     resolvedPathOut = fact.directCallResolvedPath;
     found = true;
+  } else if (!fact.initializerResolvedPath.empty()) {
+    resolvedPathOut = fact.initializerResolvedPath;
+    found = true;
   }
   if (fact.hasDirectCallReturnKind) {
     returnKindOut = fact.directCallReturnKind;
     found = true;
+  } else if (fact.hasInitializerBinding) {
+    const ReturnKind initializerKind =
+        returnKindForTypeName(normalizeBindingTypeName(fact.initializerBinding.typeName));
+    if (initializerKind != ReturnKind::Unknown) {
+      returnKindOut = initializerKind;
+      found = true;
+    }
   }
   return found;
 }
