@@ -278,7 +278,17 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     return std::nullopt;
   }
 
-  const std::string resolved = resolveCalleePath(candidate);
+  std::string resolved = preferredCollectionHelperResolvedPath(candidate);
+  if (resolved.empty()) {
+    resolved = resolveCalleePath(candidate);
+  }
+  if (!resolved.empty()) {
+    const std::string concreteResolved =
+        resolveExprConcreteCallPath(params, locals, candidate, resolved);
+    if (!concreteResolved.empty()) {
+      resolved = concreteResolved;
+    }
+  }
   const std::string resolvedCanonical =
       canonicalizeLegacySoaGetHelperPath(resolved);
 

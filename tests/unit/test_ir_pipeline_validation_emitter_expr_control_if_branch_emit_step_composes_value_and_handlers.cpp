@@ -1144,6 +1144,24 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "const std::string resolvedCandidate = canonicalizeResolvedPath(resolveCalleePath(candidate));") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "  std::string resolved = preferredCollectionHelperResolvedPath(candidate);\n"
+            "  if (resolved.empty()) {\n"
+            "    resolved = resolveCalleePath(candidate);\n"
+            "  }\n"
+            "  if (!resolved.empty()) {\n"
+            "    const std::string concreteResolved =\n"
+            "        resolveExprConcreteCallPath(params, locals, candidate, resolved);\n"
+            "    if (!concreteResolved.empty()) {\n"
+            "      resolved = concreteResolved;\n"
+            "    }\n"
+            "  }\n"
+            "  const std::string resolvedCanonical =\n"
+            "      canonicalizeLegacySoaGetHelperPath(resolved);\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "const std::string resolved = resolveCalleePath(candidate);") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "const auto canonicalizeSoaResolvedPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
