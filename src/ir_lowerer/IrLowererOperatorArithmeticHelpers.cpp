@@ -224,7 +224,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
     return emitExpr(rewrittenExpr, localsIn) ? OperatorArithmeticEmitResult::Handled
                                              : OperatorArithmeticEmitResult::Error;
   }
-  auto isScalarReferenceOffsetOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
+  auto isScalarReferenceValueOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
     if (candidate.kind != Expr::Kind::Name) {
       return false;
     }
@@ -258,8 +258,12 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       if (it->second.kind == LocalInfo::Kind::Pointer) {
         return true;
       }
+      if (it->second.kind == LocalInfo::Kind::Reference && it->second.isMutable &&
+          isScalarReferenceValueOperand(candidate, localsRef)) {
+        return false;
+      }
       return it->second.kind == LocalInfo::Kind::Reference &&
-             !isScalarReferenceOffsetOperand(candidate, localsRef);
+             !isScalarReferenceValueOperand(candidate, localsRef);
     }
     if (candidate.kind == Expr::Kind::Call && isSimpleCallName(candidate, "location")) {
       return true;
@@ -305,7 +309,7 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
   if (builtin == "plus" || builtin == "minus") {
     leftPointer = isPointerOperand(expr.args[0], localsIn);
     rightPointer = isPointerOperand(expr.args[1], localsIn);
-    if (rightPointer && isScalarReferenceOffsetOperand(expr.args[1], localsIn)) {
+    if (rightPointer && isScalarReferenceValueOperand(expr.args[1], localsIn)) {
       rightPointer = false;
     }
     if (leftPointer && rightPointer) {
