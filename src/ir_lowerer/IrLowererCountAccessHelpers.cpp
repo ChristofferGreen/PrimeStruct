@@ -464,6 +464,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;
   }
+  const bool namedArgVectorTemporaryCountTarget =
+      (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
+      expr.args.size() == 1 &&
+      isNamedArgumentCollectionTemporary(expr.args.front(), "vector");
+  if (namedArgVectorTemporaryCountTarget) {
+    error = "count requires array, vector, map, or string target";
+    return CountAccessCallEmitResult::Error;
+  }
   const std::string targetCallPath =
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call
           ? resolveScopedCallPath(expr.args.front())

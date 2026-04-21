@@ -195,8 +195,54 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
+  error = "stale";
+  primec::Expr namedArgVectorTemporary;
+  namedArgVectorTemporary.kind = primec::Expr::Kind::Call;
+  namedArgVectorTemporary.name = "/std/collections/vector/vector";
+  namedArgVectorTemporary.templateArgs = {"i32"};
+  primec::Expr namedArgSecondLiteral;
+  namedArgSecondLiteral.kind = primec::Expr::Kind::Literal;
+  namedArgSecondLiteral.literalValue = 4;
+  primec::Expr namedArgFirstLiteral;
+  namedArgFirstLiteral.kind = primec::Expr::Kind::Literal;
+  namedArgFirstLiteral.literalValue = 5;
+  namedArgVectorTemporary.args = {namedArgSecondLiteral, namedArgFirstLiteral};
+  namedArgVectorTemporary.argNames = {std::string("second"), std::string("first")};
+  callExpr.name = "/std/collections/vector/count";
+  callExpr.namespacePrefix.clear();
+  callExpr.args = {namedArgVectorTemporary};
+  int namedArgDynamicCountEmitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++namedArgDynamicCountEmitExprCalls;
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Error);
+  CHECK(namedArgDynamicCountEmitExprCalls == 0);
+  CHECK(instructions.empty());
+  CHECK(error == "count requires array, vector, map, or string target");
+
+  instructions.clear();
   error.clear();
   callExpr.name = "count";
+  callExpr.args = {targetName};
+  callExpr.argNames.clear();
   callExpr.namespacePrefix = "/std/collections/vector";
   dynamicCountEmitExprCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
