@@ -486,8 +486,13 @@ bool resolveMethodCallPath(const Expr &call,
       resolved = normalizedResolved;
     }
     if (hasStructPath(resolved)) {
-      resolvedOut = normalizeResolvedPath(resolved) + "/" + normalizedMethodName;
-      return true;
+      if (isConcreteExperimentalSoaVectorStructPath(resolved) &&
+          isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
+        typeName = "soa_vector";
+      } else {
+        resolvedOut = normalizeResolvedPath(resolved) + "/" + normalizedMethodName;
+        return true;
+      }
     }
     resolvedOut = resolveConcreteSoaStructMethodPathFromReceiver(
         receiver, metadataView, localTypes, normalizedMethodName);
