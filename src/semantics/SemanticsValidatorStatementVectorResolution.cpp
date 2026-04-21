@@ -336,6 +336,16 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
     }
     return resolvedType;
   };
+  auto tryResolveConcreteExperimentalSoaWrapperHelper =
+      [&](const std::string &resolvedType) -> bool {
+    if (!isExperimentalSoaVectorSpecializedTypePath(resolvedType) ||
+        !hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
+      return false;
+    }
+    resolvedOut =
+        preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+    return true;
+  };
 
   if (receiver.kind == Expr::Kind::Name) {
     std::string typeName;
@@ -354,6 +364,9 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
     if (resolvedType.empty()) {
       return false;
     }
+    if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {
+      return true;
+    }
     resolvedOut = resolvedType + "/" + helperName;
     return true;
   }
@@ -364,6 +377,9 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
     }
     if (resolvedType.empty()) {
       return false;
+    }
+    if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {
+      return true;
     }
     resolvedOut = resolvedType + "/" + helperName;
     return true;

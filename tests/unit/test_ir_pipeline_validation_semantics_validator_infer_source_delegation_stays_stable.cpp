@@ -1442,6 +1442,15 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "auto failVectorReceiverDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
+            "auto tryResolveConcreteExperimentalSoaWrapperHelper =") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
             "matchesVectorCtorPath(\"/std/collections/vector/vector\")") ==
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
