@@ -689,6 +689,58 @@ TEST_CASE("C++ emitter helper resolves helper-return soa_vector borrow methods t
   expectResolved("to_aos", "to_aos_ref");
 }
 
+TEST_CASE("C++ emitter helper resolves helper-return concrete soa_vector field methods through return-struct metadata") {
+  primec::Expr values;
+  values.kind = primec::Expr::Kind::Name;
+  values.name = "values";
+
+  primec::Expr locationCall;
+  locationCall.kind = primec::Expr::Kind::Call;
+  locationCall.name = "location";
+  locationCall.args = {values};
+  locationCall.argNames = {std::nullopt};
+
+  primec::Expr borrowCall;
+  borrowCall.kind = primec::Expr::Kind::Call;
+  borrowCall.name = "pickBorrowed";
+  borrowCall.args = {locationCall};
+  borrowCall.argNames = {std::nullopt};
+
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "y";
+  call.args = {borrowCall};
+  call.argNames = {std::nullopt};
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo valuesInfo;
+  valuesInfo.typeName = "SoaVector";
+  valuesInfo.typeTemplateArg = "Particle";
+  localTypes.emplace("values", valuesInfo);
+
+  primec::Definition borrowDef;
+  borrowDef.fullPath = "/pickBorrowed";
+  primec::Definition concreteYDef;
+  concreteYDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__Particle/y";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {borrowDef.fullPath, &borrowDef},
+      {concreteYDef.fullPath, &concreteYDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/pickBorrowed", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+  };
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == concreteYDef.fullPath);
+}
+
 TEST_CASE("C++ emitter helper handles cross-path vector slash count capacity fallback") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;

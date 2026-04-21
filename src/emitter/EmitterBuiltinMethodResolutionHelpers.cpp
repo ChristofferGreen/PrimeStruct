@@ -67,6 +67,24 @@ std::string borrowedSoaMethodName(std::string_view methodName) {
   return std::string(methodName);
 }
 
+bool isConcreteExperimentalSoaVectorStructPath(std::string_view path) {
+  return path.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
+std::string resolveConcreteSoaStructMethodPath(const MethodResolutionMetadataView &view,
+                                               std::string_view structPath,
+                                               std::string_view methodName) {
+  if (!isConcreteExperimentalSoaVectorStructPath(structPath)) {
+    return "";
+  }
+  const std::string concretePath =
+      std::string(structPath) + "/" + std::string(methodName);
+  if (hasDefinitionOrMetadata(view, concretePath)) {
+    return concretePath;
+  }
+  return "";
+}
+
 } // namespace
 
 bool resolveMethodCallPath(const Expr &call,
@@ -380,6 +398,15 @@ bool resolveMethodCallPath(const Expr &call,
     if (hasStructPath(resolved)) {
       resolvedOut = normalizeResolvedPath(resolved) + "/" + normalizedMethodName;
       return true;
+    }
+    if (const std::string *returnedStructPath =
+            findReturnStructMetadata(metadataView, normalizeResolvedPath(resolved));
+        returnedStructPath != nullptr) {
+      resolvedOut = resolveConcreteSoaStructMethodPath(
+          metadataView, *returnedStructPath, normalizedMethodName);
+      if (!resolvedOut.empty()) {
+        return true;
+      }
     }
     typeName = inferMethodResolutionPrimitiveTypeName(receiver, metadataView, localTypes);
     if (typeName == "soa_vector_ref") {
