@@ -586,6 +586,11 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
         return;
       }
     }
+    const std::string concreteResolvedPath =
+        resolveExprConcreteCallPath(defParams, activeLocals, expr, resolvedPath);
+    if (!concreteResolvedPath.empty()) {
+      resolvedPath = concreteResolvedPath;
+    }
 
     BindingInfo receiverBinding;
     if (!(withPreservedError([&]() {

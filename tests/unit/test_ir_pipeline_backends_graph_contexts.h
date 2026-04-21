@@ -2747,6 +2747,24 @@ TEST_CASE("semantic snapshot locals concrete-call canonicalization stays stable"
         std::string::npos);
 }
 
+TEST_CASE("semantic snapshot method targets concrete-call canonicalization stays stable") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp")
+          ? cwd
+          : cwd.parent_path();
+  const std::string semanticsSnapshots =
+      readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
+
+  CHECK(semanticsSnapshots.find(
+            "    const std::string concreteResolvedPath =\n"
+            "        resolveExprConcreteCallPath(defParams, activeLocals, expr, resolvedPath);\n"
+            "    if (!concreteResolvedPath.empty()) {\n"
+            "      resolvedPath = concreteResolvedPath;\n"
+            "    }") !=
+        std::string::npos);
+}
+
 TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_error ordering keys") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
