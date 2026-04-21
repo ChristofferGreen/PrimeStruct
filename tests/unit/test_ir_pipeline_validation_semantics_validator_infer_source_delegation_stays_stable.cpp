@@ -1643,15 +1643,17 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "      (helperName == \"count\" || helperName == \"count_ref\" ||\n"
             "       helperName == \"capacity\" ||\n"
             "       helperName == \"at\" || helperName == \"at_unsafe\" ||\n"
-            "       helperName == \"get\" || helperName == \"ref\" ||\n"
-            "       helperName == \"to_aos\" ||\n"
+            "       helperName == \"get\" || helperName == \"get_ref\" ||\n"
+            "       helperName == \"ref\" || helperName == \"ref_ref\" ||\n"
+            "       helperName == \"to_aos\" || helperName == \"to_aos_ref\" ||\n"
             "       helperName == \"push\" || helperName == \"reserve\")) {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
             "      if (collectionTypePath == \"/soa_vector\" &&\n"
             "          (helperName == \"count\" || helperName == \"count_ref\" ||\n"
-            "           helperName == \"get\" || helperName == \"ref\" ||\n"
-            "           helperName == \"to_aos\" ||\n"
+            "           helperName == \"get\" || helperName == \"get_ref\" ||\n"
+            "           helperName == \"ref\" || helperName == \"ref_ref\" ||\n"
+            "           helperName == \"to_aos\" || helperName == \"to_aos_ref\" ||\n"
             "           helperName == \"push\" || helperName == \"reserve\")) {\n"
             "        resolvedOut =\n"
             "            preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");") !=

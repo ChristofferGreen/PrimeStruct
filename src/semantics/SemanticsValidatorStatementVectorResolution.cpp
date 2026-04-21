@@ -301,16 +301,18 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
       (helperName == "count" || helperName == "count_ref" ||
        helperName == "capacity" ||
        helperName == "at" || helperName == "at_unsafe" ||
-       helperName == "get" || helperName == "ref" ||
-       helperName == "to_aos" ||
+       helperName == "get" || helperName == "get_ref" ||
+       helperName == "ref" || helperName == "ref_ref" ||
+       helperName == "to_aos" || helperName == "to_aos_ref" ||
        helperName == "push" || helperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
         (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector")) {
       if (collectionTypePath == "/soa_vector" &&
           (helperName == "count" || helperName == "count_ref" ||
-           helperName == "get" || helperName == "ref" ||
-           helperName == "to_aos" ||
+           helperName == "get" || helperName == "get_ref" ||
+           helperName == "ref" || helperName == "ref_ref" ||
+           helperName == "to_aos" || helperName == "to_aos_ref" ||
            helperName == "push" || helperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
