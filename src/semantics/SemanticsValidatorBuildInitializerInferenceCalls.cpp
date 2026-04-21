@@ -531,6 +531,22 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
   }
 
+  std::string preferredResolvedInferencePath;
+  if (initializerExprForInference != nullptr) {
+    preferredResolvedInferencePath =
+        preferredCollectionHelperResolvedPath(*initializerExprForInference);
+    if (preferredResolvedInferencePath.empty()) {
+      preferredResolvedInferencePath = resolveCalleePath(*initializerExprForInference);
+    }
+    if (!preferredResolvedInferencePath.empty()) {
+      const std::string concreteResolvedInferencePath =
+          resolveExprConcreteCallPath(
+              params, locals, *initializerExprForInference, preferredResolvedInferencePath);
+      if (!concreteResolvedInferencePath.empty()) {
+        preferredResolvedInferencePath = concreteResolvedInferencePath;
+      }
+    }
+  }
   if (initializerExprForInference != nullptr &&
       !isUnresolvedActiveInferenceCall(*initializerExprForInference)) {
     if (inferRawBuiltinSoaCanonicalToAosBinding(*initializerExprForInference)) {
@@ -539,7 +555,10 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     std::string builtinCollectionName;
     const bool isBuiltinCollectionCall =
         getBuiltinCollectionName(*initializerExprForInference, builtinCollectionName);
-    std::string resolvedInferencePath = resolveCalleePath(*initializerExprForInference);
+    std::string resolvedInferencePath = preferredResolvedInferencePath;
+    if (resolvedInferencePath.empty()) {
+      resolvedInferencePath = resolveCalleePath(*initializerExprForInference);
+    }
     const size_t suffix = resolvedInferencePath.find("__t");
     if (suffix != std::string::npos) {
       resolvedInferencePath.erase(suffix);
@@ -580,7 +599,10 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       !isUnresolvedActiveInferenceCall(*initializerExprForInference) &&
       inferQueryExprTypeText(*initializerExprForInference, params, locals, inferredTypeText) &&
       assignBindingTypeFromText(inferredTypeText)) {
-    const std::string resolvedInferencePath = resolveCalleePath(*initializerExprForInference);
+    std::string resolvedInferencePath = preferredResolvedInferencePath;
+    if (resolvedInferencePath.empty()) {
+      resolvedInferencePath = resolveCalleePath(*initializerExprForInference);
+    }
     if (isResolvedMapConstructorPath(resolvedInferencePath)) {
       BindingInfo resolvedCallBinding;
       if (inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCallBinding)) {
@@ -604,27 +626,12 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
           returnKindForTypeName(normalizedBindingType) == ReturnKind::Unknown));
     if (shouldPreferResolvedDirectCallBinding) {
       BindingInfo resolvedCallBinding;
-      if (inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), resolvedCallBinding)) {
+      if (!resolvedInferencePath.empty() &&
+          inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCallBinding)) {
         bindingOut = std::move(resolvedCallBinding);
       }
     }
     return true;
-  }
-  std::string preferredResolvedInferencePath;
-  if (initializerExprForInference != nullptr) {
-    preferredResolvedInferencePath =
-        preferredCollectionHelperResolvedPath(*initializerExprForInference);
-    if (preferredResolvedInferencePath.empty()) {
-      preferredResolvedInferencePath = resolveCalleePath(*initializerExprForInference);
-    }
-    if (!preferredResolvedInferencePath.empty()) {
-      const std::string concreteResolvedInferencePath =
-          resolveExprConcreteCallPath(
-              params, locals, *initializerExprForInference, preferredResolvedInferencePath);
-      if (!concreteResolvedInferencePath.empty()) {
-        preferredResolvedInferencePath = concreteResolvedInferencePath;
-      }
-    }
   }
   ReturnKind resolvedKind = inferExprReturnKind(*initializerExprForInference, params, locals);
   if (resolvedKind != ReturnKind::Unknown && resolvedKind != ReturnKind::Void) {

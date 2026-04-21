@@ -1083,7 +1083,22 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "  }\n") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "    std::string resolvedInferencePath = preferredResolvedInferencePath;\n"
+            "    if (resolvedInferencePath.empty()) {\n"
+            "      resolvedInferencePath = resolveCalleePath(*initializerExprForInference);\n"
+            "    }\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "      if (!resolvedInferencePath.empty() &&\n"
+            "          inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCallBinding)) {\n"
+            "        bindingOut = std::move(resolvedCallBinding);\n"
+            "      }\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), resolvedCallBinding)") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))") ==
