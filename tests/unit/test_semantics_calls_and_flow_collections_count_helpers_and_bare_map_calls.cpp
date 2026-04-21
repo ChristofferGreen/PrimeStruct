@@ -821,6 +821,8 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
         std::string::npos);
   CHECK(source.find("/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
         std::string::npos);
+  CHECK(source.find("/std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value)") ==
+        std::string::npos);
 }
 
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
