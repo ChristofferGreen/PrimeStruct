@@ -2183,6 +2183,27 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
             "        resolvedPath = preferredCollectionPath;\n"
             "      }") !=
         std::string::npos);
+  CHECK(collectBody.find(
+            "          const bool hasDirectCallInitializer =\n"
+            "              expr.args.size() == 1 &&\n"
+            "              expr.args.front().kind == Expr::Kind::Call &&\n"
+            "              !expr.args.front().isMethodCall;") !=
+        std::string::npos);
+  CHECK(collectBody.find(
+            "          if (!fact.directCallResolvedPath.empty()) {\n"
+            "            initializerDirectCallResolvedPath = fact.directCallResolvedPath;\n"
+            "          } else if (hasDirectCallInitializer && !fact.initializerResolvedPath.empty()) {\n"
+            "            initializerDirectCallResolvedPath = fact.initializerResolvedPath;\n"
+            "          }") !=
+        std::string::npos);
+  CHECK(collectBody.find(
+            "          if (fact.hasDirectCallReturnKind) {\n"
+            "            initializerDirectCallReturnKind = fact.directCallReturnKind;\n"
+            "          } else if (hasDirectCallInitializer && fact.hasInitializerBinding) {\n"
+            "            initializerDirectCallReturnKind = returnKindForTypeName(\n"
+            "                normalizeBindingTypeName(fact.initializerBinding.typeName));\n"
+            "          }") !=
+        std::string::npos);
   CHECK(collectBody.find("collectedDirectCallTargets_.push_back(") != std::string::npos);
   CHECK(collectBody.find("collectedBridgePathChoices_.push_back(") != std::string::npos);
   CHECK(collectBody.find("std::stable_sort(collectedDirectCallTargets_.begin(),") != std::string::npos);

@@ -341,12 +341,21 @@ SemanticsValidator::localAutoBindingSnapshotForTesting() const {
             initializerResolvedPath = fact.initializerResolvedPath;
           }
           std::string initializerDirectCallResolvedPath;
+          const bool hasDirectCallInitializer =
+              expr.args.size() == 1 &&
+              expr.args.front().kind == Expr::Kind::Call &&
+              !expr.args.front().isMethodCall;
           if (!fact.directCallResolvedPath.empty()) {
             initializerDirectCallResolvedPath = fact.directCallResolvedPath;
+          } else if (hasDirectCallInitializer && !fact.initializerResolvedPath.empty()) {
+            initializerDirectCallResolvedPath = fact.initializerResolvedPath;
           }
           ReturnKind initializerDirectCallReturnKind = ReturnKind::Unknown;
           if (fact.hasDirectCallReturnKind) {
             initializerDirectCallReturnKind = fact.directCallReturnKind;
+          } else if (hasDirectCallInitializer && fact.hasInitializerBinding) {
+            initializerDirectCallReturnKind = returnKindForTypeName(
+                normalizeBindingTypeName(fact.initializerBinding.typeName));
           }
           std::string initializerMethodCallResolvedPath;
           const bool hasMethodCallInitializer =
