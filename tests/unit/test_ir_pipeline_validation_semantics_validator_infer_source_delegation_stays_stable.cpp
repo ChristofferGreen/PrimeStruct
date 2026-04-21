@@ -1630,13 +1630,23 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "if (receiver.kind == Expr::Kind::Call &&\n"
             "      (helperName == \"count\" || helperName == \"count_ref\" ||\n"
             "       helperName == \"capacity\" ||\n"
-            "       helperName == \"at\" || helperName == \"at_unsafe\")) {") !=
+            "       helperName == \"at\" || helperName == \"at_unsafe\" ||\n"
+            "       helperName == \"get\" || helperName == \"ref\" ||\n"
+            "       helperName == \"to_aos\" ||\n"
+            "       helperName == \"push\" || helperName == \"reserve\")) {") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
-            "        (collectionTypePath == \"/vector\" || collectionTypePath == \"/soa_vector\")) {\n"
-            "      resolvedOut = collectionTypePath == \"/soa_vector\"\n"
-            "                        ? preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")\n"
-            "                        : preferredBareVectorHelperTarget(helperName);") !=
+            "      if (collectionTypePath == \"/soa_vector\" &&\n"
+            "          (helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "           helperName == \"get\" || helperName == \"ref\" ||\n"
+            "           helperName == \"to_aos\" ||\n"
+            "           helperName == \"push\" || helperName == \"reserve\")) {\n"
+            "        resolvedOut =\n"
+            "            preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "      if (collectionTypePath == \"/vector\") {\n"
+            "        resolvedOut = preferredBareVectorHelperTarget(helperName);") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
             "matchesVectorCtorPath(\"/std/collections/vector/vector\")") ==

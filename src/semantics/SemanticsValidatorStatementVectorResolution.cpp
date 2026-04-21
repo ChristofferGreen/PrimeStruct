@@ -300,14 +300,26 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
   if (receiver.kind == Expr::Kind::Call &&
       (helperName == "count" || helperName == "count_ref" ||
        helperName == "capacity" ||
-       helperName == "at" || helperName == "at_unsafe")) {
+       helperName == "at" || helperName == "at_unsafe" ||
+       helperName == "get" || helperName == "ref" ||
+       helperName == "to_aos" ||
+       helperName == "push" || helperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
         (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector")) {
-      resolvedOut = collectionTypePath == "/soa_vector"
-                        ? preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector")
-                        : preferredBareVectorHelperTarget(helperName);
-      return true;
+      if (collectionTypePath == "/soa_vector" &&
+          (helperName == "count" || helperName == "count_ref" ||
+           helperName == "get" || helperName == "ref" ||
+           helperName == "to_aos" ||
+           helperName == "push" || helperName == "reserve")) {
+        resolvedOut =
+            preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+        return true;
+      }
+      if (collectionTypePath == "/vector") {
+        resolvedOut = preferredBareVectorHelperTarget(helperName);
+        return true;
+      }
     }
   }
 
