@@ -116,6 +116,17 @@ bool emitConversionsAndCallsControlExprTail(
       return false;
     }
 
+    auto inferRecoveredExprKind =
+        [&](const Expr &candidateExpr, const LocalMap &candidateLocals) -> LocalInfo::ValueKind {
+      LocalInfo::ValueKind kind = inferExprKind(candidateExpr, candidateLocals);
+      if (kind == LocalInfo::ValueKind::Unknown) {
+        std::string builtinComparison;
+        if (getBuiltinComparisonName(candidateExpr, builtinComparison)) {
+          kind = LocalInfo::ValueKind::Bool;
+        }
+      }
+      return kind;
+    };
     auto inferBranchValueKind =
         [&](const Expr &candidate, const LocalMap &localsBase) -> LocalInfo::ValueKind {
       LocalMap branchLocals = localsBase;
@@ -134,7 +145,7 @@ bool emitConversionsAndCallsControlExprTail(
           if (hasExplicitBindingTypeTransform(bodyExpr)) {
             valueKind = bindingValueKind(bodyExpr, info.kind);
           } else if (bodyExpr.args.size() == 1 && info.kind == LocalInfo::Kind::Value) {
-            valueKind = inferExprKind(bodyExpr.args.front(), branchLocals);
+            valueKind = inferRecoveredExprKind(bodyExpr.args.front(), branchLocals);
             if (valueKind == LocalInfo::ValueKind::Unknown) {
               std::string inferredStruct =
                   inferStructExprPath(bodyExpr.args.front(), branchLocals);
@@ -166,10 +177,10 @@ bool emitConversionsAndCallsControlExprTail(
           if (bodyExpr.args.size() != 1) {
             return LocalInfo::ValueKind::Unknown;
           }
-          return inferExprKind(bodyExpr.args.front(), branchLocals);
+          return inferRecoveredExprKind(bodyExpr.args.front(), branchLocals);
         }
         sawValue = true;
-        lastKind = inferExprKind(bodyExpr, branchLocals);
+        lastKind = inferRecoveredExprKind(bodyExpr, branchLocals);
       }
       return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
     };
