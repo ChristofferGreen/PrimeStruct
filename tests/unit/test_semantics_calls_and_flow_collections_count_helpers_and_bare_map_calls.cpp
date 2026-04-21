@@ -1,3 +1,7 @@
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+
 #include "test_semantics_helpers.h"
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
@@ -606,6 +610,60 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("stdlib"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path mapStdlibPath =
+      repoRoot / "stdlib" / "std" / "collections" / "map.prime";
+
+  REQUIRE(std::filesystem::exists(mapStdlibPath));
+  const std::string source = readText(mapStdlibPath);
+
+  CHECK(source.find(
+            "/std/collections/map/count<K, V>([map<K, V>] values) {\n"
+            "  return(/std/collections/experimental_map/mapCount<K, V>(values))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/contains<K, V>([map<K, V>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapContains<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapTryAt<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/at<K, V>([map<K, V>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapAt<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "/std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {\n"
+            "  return(/std/collections/experimental_map/mapAtUnsafe<K, V>(values, key))") !=
+        std::string::npos);
+
+  CHECK(source.find("return(/std/collections/mapCount<K, V>(values))") ==
+        std::string::npos);
+  CHECK(source.find("return(/std/collections/mapContains<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("return(/std/collections/mapTryAt<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("return(/std/collections/mapAt<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("return(/std/collections/mapAtUnsafe<K, V>(values, key))") ==
+        std::string::npos);
 }
 
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
