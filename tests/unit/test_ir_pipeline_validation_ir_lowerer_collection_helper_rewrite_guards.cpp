@@ -238,6 +238,10 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
                     "                    callExpr.name.find('/') == std::string::npos &&\n"
                     "                    (callExpr.name == \"count\" || callExpr.name == \"contains\" ||") !=
         std::string::npos);
+  CHECK(source.find("if (candidate.isMethodCall) {\n"
+                    "              std::string helperName;\n"
+                    "              return resolveBuiltinMapHelperName(candidate, true, helperName) &&") !=
+        std::string::npos);
   CHECK(source.find(
             "std::string helperName =\n                resolveTailDispatchDirectHelperPath(candidate);") !=
         std::string::npos);
@@ -254,6 +258,9 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find("std::string normalizedMethodName = callExpr.name;") ==
         std::string::npos);
   CHECK(source.find("if (callExpr.name == \"count\" || callExpr.name == \"contains\" ||") ==
+        std::string::npos);
+  CHECK(source.find("if (candidate.isMethodCall) {\n"
+                    "              return candidate.name == \"count\" || candidate.name == \"contains\" ||") ==
         std::string::npos);
 }
 

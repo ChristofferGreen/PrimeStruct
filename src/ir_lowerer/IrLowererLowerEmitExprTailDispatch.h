@@ -480,9 +480,11 @@
 
           auto shouldRewriteReceiver = [&](const Expr &candidate) {
             if (candidate.isMethodCall) {
-              return candidate.name == "count" || candidate.name == "contains" ||
-                     candidate.name == "tryAt" || candidate.name == "at" ||
-                     candidate.name == "at_unsafe";
+              std::string helperName;
+              return resolveBuiltinMapHelperName(candidate, true, helperName) &&
+                     (helperName == "count" || helperName == "contains" ||
+                      helperName == "tryAt" || helperName == "at" ||
+                      helperName == "at_unsafe");
             }
             if (!candidate.args.empty() &&
                 (candidate.name == "count" || candidate.name == "contains" ||
