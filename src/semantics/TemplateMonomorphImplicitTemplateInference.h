@@ -650,8 +650,19 @@ bool inferImplicitTemplateArgs(const Definition &def,
             argTemplateArgText = innerArgs;
           }
         }
+        std::string paramBaseType = paramInfo.typeName;
+        if ((normalizeBindingTypeName(paramBaseType) == "Reference" ||
+             normalizeBindingTypeName(paramBaseType) == "Pointer") &&
+            !paramInfo.typeTemplateArg.empty()) {
+          std::string innerBase;
+          std::string innerArgs;
+          if (splitTemplateTypeName(paramInfo.typeTemplateArg, innerBase, innerArgs) &&
+              !innerBase.empty()) {
+            paramBaseType = innerBase;
+          }
+        }
         if (normalizeCollectionReceiverTypeName(argBaseType) !=
-            normalizeCollectionReceiverTypeName(paramInfo.typeName)) {
+            normalizeCollectionReceiverTypeName(paramBaseType)) {
           if (isStdlibCollectionHelper) {
             return false;
           }

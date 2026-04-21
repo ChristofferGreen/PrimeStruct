@@ -1347,6 +1347,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find("if (handledCallInference) {") !=
         std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "std::string paramBaseType = paramInfo.typeName;") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "splitTemplateTypeName(paramInfo.typeTemplateArg, innerBase, innerArgs)") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizeCollectionReceiverTypeName(paramBaseType)") !=
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
+            "normalizeCollectionReceiverTypeName(paramInfo.typeName))") ==
+        std::string::npos);
+  CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "return inferBlockBodyBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut);") !=
         std::string::npos);
   CHECK(templateMonomorphFallbackSource.find("bool isSoftwareNumericParamCompatible(ReturnKind expectedKind, ReturnKind actualKind)") !=
