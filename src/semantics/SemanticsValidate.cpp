@@ -1110,8 +1110,11 @@ bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
 bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
                                              std::string_view helperName) {
   const std::string samePath = "/soa_vector/" + std::string(helperName);
+  const std::string canonicalPath =
+      "/std/collections/soa_vector/" + std::string(helperName);
   for (const Definition &def : program.definitions) {
-    if (def.fullPath != samePath || def.parameters.empty()) {
+    if ((def.fullPath != samePath && def.fullPath != canonicalPath) ||
+        def.parameters.empty()) {
       continue;
     }
     if (extractExperimentalSoaVectorBinding(def.parameters.front()).has_value()) {
@@ -1120,7 +1123,8 @@ bool hasVisibleExperimentalSoaSamePathHelper(const Program &program,
   }
   const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
   for (const auto &importPath : importPaths) {
-    if (localImportPathCoversTarget(importPath, samePath)) {
+    if (localImportPathCoversTarget(importPath, samePath) ||
+        localImportPathCoversTarget(importPath, canonicalPath)) {
       return true;
     }
   }

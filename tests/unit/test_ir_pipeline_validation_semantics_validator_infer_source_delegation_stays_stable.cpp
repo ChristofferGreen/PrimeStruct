@@ -1960,6 +1960,14 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "if ((def.fullPath == rootPath || def.fullPath == samePath ||\n"
             "         def.fullPath == canonicalPath) &&") !=
         std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "if ((def.fullPath != samePath && def.fullPath != canonicalPath) ||\n"
+            "        def.parameters.empty()) {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "if (localImportPathCoversTarget(importPath, samePath) ||\n"
+            "        localImportPathCoversTarget(importPath, canonicalPath)) {") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator build struct-field publication stays stable") {
