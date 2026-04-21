@@ -254,6 +254,14 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
+            "((target.isMethodCall && target.name == \"to_aos\") ||\n"
+            "           (!target.isMethodCall && isSimpleCallName(target, \"to_aos\")))") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "((target.isMethodCall && target.name == \"to_aos_ref\") ||\n"
+            "           (!target.isMethodCall && isSimpleCallName(target, \"to_aos_ref\")))") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
             "if (candidate.args.size() == 1) {\n"
             "      ReturnKind builtinMethodKind = ReturnKind::Unknown;\n"
             "      if (resolveBuiltinCollectionMethodReturnKind(\n"
