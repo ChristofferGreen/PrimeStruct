@@ -2205,6 +2205,22 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
             "      }") !=
         std::string::npos);
   CHECK(collectBody.find(
+            "        std::string canonicalResolvedPath = resolvedPath;\n"
+            "        if (const size_t suffix = canonicalResolvedPath.find(\"__t\");\n"
+            "            suffix != std::string::npos) {\n"
+            "          canonicalResolvedPath.erase(suffix);\n"
+            "        }\n"
+            "        canonicalResolvedPath =\n"
+            "            canonicalizeLegacySoaGetHelperPath(canonicalResolvedPath);\n"
+            "        canonicalResolvedPath =\n"
+            "            canonicalizeLegacySoaRefHelperPath(canonicalResolvedPath);\n"
+            "        canonicalResolvedPath =\n"
+            "            canonicalizeLegacySoaToAosHelperPath(canonicalResolvedPath);\n"
+            "        if (!canonicalResolvedPath.empty()) {\n"
+            "          resolvedPath = std::move(canonicalResolvedPath);\n"
+            "        }\n") !=
+        std::string::npos);
+  CHECK(collectBody.find(
             "      std::string resolvedPath = resolveCalleePath(expr);\n"
             "      if (const std::string preferredCollectionPath =\n"
             "              preferredCollectionHelperResolvedPath(expr);\n"

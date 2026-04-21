@@ -524,6 +524,20 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
         resolvedPath = resolveCalleePath(expr);
       }
       if (!resolvedPath.empty()) {
+        std::string canonicalResolvedPath = resolvedPath;
+        if (const size_t suffix = canonicalResolvedPath.find("__t");
+            suffix != std::string::npos) {
+          canonicalResolvedPath.erase(suffix);
+        }
+        canonicalResolvedPath =
+            canonicalizeLegacySoaGetHelperPath(canonicalResolvedPath);
+        canonicalResolvedPath =
+            canonicalizeLegacySoaRefHelperPath(canonicalResolvedPath);
+        canonicalResolvedPath =
+            canonicalizeLegacySoaToAosHelperPath(canonicalResolvedPath);
+        if (!canonicalResolvedPath.empty()) {
+          resolvedPath = std::move(canonicalResolvedPath);
+        }
         if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
             bridgeChoice.has_value()) {
           collectedBridgePathChoices_.push_back(CollectedBridgePathChoiceEntry{
