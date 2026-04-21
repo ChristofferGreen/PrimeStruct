@@ -11,9 +11,24 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string resolveScopedCallPath(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    return scoped + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 bool prefersExactDirectMapCountLikeReturnPath(const Expr &callExpr) {
+  const std::string scopedCallPath = resolveScopedCallPath(callExpr);
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
-      callExpr.name.empty() || callExpr.name.front() != '/') {
+      scopedCallPath.empty() || scopedCallPath.front() != '/') {
     return false;
   }
   std::string helperName;
@@ -314,17 +329,13 @@ bool resolveDefinitionCallReturnKind(const Expr &callExpr,
       appendCandidate(candidate);
     }
   };
+  const std::string scopedCallPath = resolveScopedCallPath(callExpr);
   if (prefersExactDirectMapCountLikeReturnPath(callExpr)) {
-    appendCandidates(collectionHelperPathCandidates(callExpr.name));
+    appendCandidates(collectionHelperPathCandidates(scopedCallPath));
     appendCandidates(collectionHelperPathCandidates(resolveExprPath(callExpr)));
   } else {
     appendCandidates(collectionHelperPathCandidates(resolveExprPath(callExpr)));
-    appendCandidates(collectionHelperPathCandidates(callExpr.name));
-  }
-  if (!callExpr.name.empty() && callExpr.name.front() != '/' &&
-      !callExpr.namespacePrefix.empty()) {
-    appendCandidates(collectionHelperPathCandidates(callExpr.namespacePrefix + "/" +
-                                                   callExpr.name));
+    appendCandidates(collectionHelperPathCandidates(scopedCallPath));
   }
   auto resolveCandidatePath = [&](const std::string &candidate,
                                   std::string &resolvedPathOut) {
@@ -382,7 +393,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  if (isExplicitRemovedVectorMethodAliasPath(callExpr.name)) {
+  const std::string scopedCallPath = resolveScopedCallPath(callExpr);
+  if (isExplicitRemovedVectorMethodAliasPath(scopedCallPath)) {
     return false;
   }
   if (isExplicitMapHelperFallbackPath(callExpr)) {
@@ -566,7 +578,7 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   const bool preferDeclaredAccessReturnKind =
       isAccessCall && isExplicitMapHelperFallbackPath(callExpr);
   if (preferDeclaredAccessReturnKind) {
-    for (const auto &candidatePath : collectionHelperPathCandidates(callExpr.name)) {
+    for (const auto &candidatePath : collectionHelperPathCandidates(scopedCallPath)) {
       if (resolveReturnInfoKindForPath(candidatePath, getReturnInfo, requireArrayReturn, kindOut)) {
         if (methodResolvedOut != nullptr) {
           *methodResolvedOut = true;
@@ -614,8 +626,8 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
       continue;
     }
     const Definition *callee = resolveMethodCallDefinition(methodExpr, localsIn);
-    if (callee == nullptr || !isAllowedResolvedVectorDirectCallPath(callExpr.name, callee->fullPath) ||
-        !isAllowedResolvedMapDirectCallPath(callExpr.name, callee->fullPath)) {
+    if (callee == nullptr || !isAllowedResolvedVectorDirectCallPath(scopedCallPath, callee->fullPath) ||
+        !isAllowedResolvedMapDirectCallPath(scopedCallPath, callee->fullPath)) {
       continue;
     }
     if (resolveReturnInfoKindForPath(callee->fullPath, getReturnInfo, requireArrayReturn, kindOut)) {
@@ -677,7 +689,8 @@ bool resolveCapacityMethodCallReturnKind(const Expr &callExpr,
   if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
     return false;
   }
-  if (isExplicitRemovedVectorMethodAliasPath(callExpr.name)) {
+  const std::string scopedCallPath = resolveScopedCallPath(callExpr);
+  if (isExplicitRemovedVectorMethodAliasPath(scopedCallPath)) {
     return false;
   }
   if (!isVectorBuiltinName(callExpr, "capacity") || callExpr.args.size() != 1) {

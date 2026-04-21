@@ -657,6 +657,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   std::filesystem::path irCallResolutionPath = cwd / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
   std::filesystem::path irMethodResolutionPath =
       cwd / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodCallResolution.cpp";
+  std::filesystem::path irSetupTypeReturnKindHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererSetupTypeReturnKindHelpers.cpp";
   std::filesystem::path irInferenceSetupPath =
       cwd / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
   std::filesystem::path irLowerEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
@@ -730,6 +732,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
     irCallResolutionPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
     irMethodResolutionPath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodCallResolution.cpp";
+    irSetupTypeReturnKindHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeReturnKindHelpers.cpp";
     irInferenceSetupPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
     irLowerEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
     irReturnInferencePath =
@@ -801,6 +805,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(irCallHelpersPath));
   REQUIRE(std::filesystem::exists(irCallResolutionPath));
   REQUIRE(std::filesystem::exists(irMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(irSetupTypeReturnKindHelpersPath));
   REQUIRE(std::filesystem::exists(irInferenceSetupPath));
   REQUIRE(std::filesystem::exists(irLowerEffectsPath));
   REQUIRE(std::filesystem::exists(irReturnInferencePath));
@@ -846,6 +851,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irCallHelpers = readTextFile(irCallHelpersPath);
   const std::string irCallResolution = readTextFile(irCallResolutionPath);
   const std::string irMethodResolution = readTextFile(irMethodResolutionPath);
+  const std::string irSetupTypeReturnKindHelpers = readTextFile(irSetupTypeReturnKindHelpersPath);
   const std::string irInferenceSetup = readTextFile(irInferenceSetupPath);
   const std::string irLowerEffects = readTextFile(irLowerEffectsPath);
   const std::string irReturnInference = readTextFile(irReturnInferencePath);
@@ -1076,7 +1082,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodReceiverTarget(*receiver,") != std::string::npos);
+  CHECK(irMethodResolution.find("explicitMethodPath,\n"
+                                "                                   semanticAwareImportAliases,") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("semanticAwareImportAliases,") != std::string::npos);
+  CHECK(irMethodResolution.find("resolveMethodDefinitionFromReceiverTarget(\n"
+                                "      explicitMethodPath, typeName, resolvedTypePath, defMap, lookupError);") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find("resolveMethodDefinitionFromReceiverTarget(\n"
+                                "          explicitMethodPath, \"\", receiverTypeName, defMap, errorOutRef);") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodCallDefinitionFromExpr(*receiver,") != std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodCallDefinitionFromExpr(*receiver,\n"
                                 "                                                        localsIn,\n"
@@ -1088,6 +1103,24 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irMethodResolution.find("errorOut =\n        \"semantic-product method-call target missing lowered definition: \" +") !=
         std::string::npos);
   CHECK(irMethodResolution.find("resolvedPath;\n    return nullptr;") !=
+        std::string::npos);
+  CHECK(irSetupTypeReturnKindHelpers.find("std::string resolveScopedCallPath(const Expr &expr)") !=
+        std::string::npos);
+  CHECK(irSetupTypeReturnKindHelpers.find(
+            "const std::string scopedCallPath = resolveScopedCallPath(callExpr);") !=
+        std::string::npos);
+  CHECK(irSetupTypeReturnKindHelpers.find(
+            "appendCandidates(collectionHelperPathCandidates(scopedCallPath));") !=
+        std::string::npos);
+  CHECK(irSetupTypeReturnKindHelpers.find(
+            "if (isExplicitRemovedVectorMethodAliasPath(scopedCallPath)) {") !=
+        std::string::npos);
+  CHECK(irSetupTypeReturnKindHelpers.find(
+            "for (const auto &candidatePath : collectionHelperPathCandidates(scopedCallPath)) {") !=
+        std::string::npos);
+  CHECK(irSetupTypeReturnKindHelpers.find(
+            "!isAllowedResolvedVectorDirectCallPath(scopedCallPath, callee->fullPath) ||\n"
+            "        !isAllowedResolvedMapDirectCallPath(scopedCallPath, callee->fullPath)) {") !=
         std::string::npos);
   CHECK(irInferenceSetup.find(".semanticProgram = callResolutionAdapters.semanticProgram,") !=
         std::string::npos);

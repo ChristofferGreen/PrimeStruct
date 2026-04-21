@@ -301,7 +301,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   }
 
   if (receiver->kind == Expr::Kind::Name && localsIn.find(receiver->name) == localsIn.end()) {
-    std::string normalizedMethodName = callExpr.name;
+    std::string normalizedMethodName = explicitMethodPath;
     if (!normalizedMethodName.empty() && normalizedMethodName.front() == '/') {
       normalizedMethodName.erase(normalizedMethodName.begin());
     }
@@ -347,7 +347,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   std::string resolvedTypePath;
   if (!resolveMethodReceiverTarget(*receiver,
                                    localsIn,
-                                   callExpr.name,
+                                   explicitMethodPath,
                                    semanticAwareImportAliases,
                                    structNames,
                                    inferExprKind,
@@ -362,23 +362,24 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   }
   std::string lookupError;
   const Definition *resolvedDef = resolveMethodDefinitionFromReceiverTarget(
-      callExpr.name, typeName, resolvedTypePath, defMap, lookupError);
+      explicitMethodPath, typeName, resolvedTypePath, defMap, lookupError);
   auto resolveMethodDefinitionFromTypeNameWithAliasFallback = [&](const std::string &receiverTypeName,
                                                                   std::string &errorOutRef) -> const Definition * {
     if (receiverTypeName.empty()) {
       return nullptr;
     }
     if (receiverTypeName.front() == '/') {
-      return resolveMethodDefinitionFromReceiverTarget(callExpr.name, "", receiverTypeName, defMap, errorOutRef);
+      return resolveMethodDefinitionFromReceiverTarget(
+          explicitMethodPath, "", receiverTypeName, defMap, errorOutRef);
     }
     const Definition *resolved = resolveMethodDefinitionFromReceiverTarget(
-        callExpr.name, receiverTypeName, "", defMap, errorOutRef);
+        explicitMethodPath, receiverTypeName, "", defMap, errorOutRef);
     if (resolved != nullptr) {
       return resolved;
     }
     if (receiverTypeName == "vector") {
       resolved = resolveMethodDefinitionFromReceiverTarget(
-          callExpr.name, "", "/std/collections/vector", defMap, errorOutRef);
+          explicitMethodPath, "", "/std/collections/vector", defMap, errorOutRef);
       if (resolved != nullptr) {
         return resolved;
       }
@@ -391,7 +392,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (aliasTypeName.empty()) {
       return nullptr;
     }
-    return resolveMethodDefinitionFromReceiverTarget(callExpr.name, aliasTypeName, "", defMap, errorOutRef);
+    return resolveMethodDefinitionFromReceiverTarget(
+        explicitMethodPath, aliasTypeName, "", defMap, errorOutRef);
   };
   auto resolveStructTypePathFromScope = [&](const std::string &receiverTypeName,
                                             const std::string &namespacePrefix) -> std::string {
@@ -559,7 +561,8 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       if (!resolvedTypePath.empty()) {
         lookupError.clear();
         resolvedDef =
-            resolveMethodDefinitionFromReceiverTarget(callExpr.name, "", resolvedTypePath, defMap, lookupError);
+            resolveMethodDefinitionFromReceiverTarget(
+                explicitMethodPath, "", resolvedTypePath, defMap, lookupError);
       }
     }
     if (resolvedDef == nullptr && receiverDef != nullptr && inferReceiverTypeFromDeclaredReturn(*receiverDef, typeName)) {
