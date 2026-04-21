@@ -997,6 +997,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             ": preferredCollectionHelperResolvedPath(initializer);") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "  std::string preferredResolvedInitializer = hasGraphPreferredMethodResolvedInitializer\n"
+            "                                                 ? graphPreferredMethodResolvedInitializer\n"
+            "                                                 : preferredCollectionHelperResolvedPath(initializer);") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "hasGraphPreferredMethodResolvedInitializer\n"
+            "                                                 ? graphPreferredResolvedInitializer") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "const std::string concretePreferredResolvedInitializer =\n"
             "        resolveExprConcreteCallPath(\n"
             "            params, locals, initializer, preferredResolvedInitializer);") !=
