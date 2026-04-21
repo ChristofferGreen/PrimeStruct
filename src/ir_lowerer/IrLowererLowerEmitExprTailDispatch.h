@@ -45,6 +45,9 @@
                 return false;
               }
               if (allowMethodCall && callExpr.isMethodCall) {
+                if (resolvePublishedTailDispatchMapHelperName(callExpr, helperNameOut)) {
+                  return true;
+                }
                 if (callExpr.name == "count" || callExpr.name == "contains" ||
                     callExpr.name == "tryAt" || callExpr.name == "at" ||
                     callExpr.name == "at_unsafe") {
