@@ -271,6 +271,25 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     return false;
   };
+  auto resolveBorrowedSoaVectorReceiver = [&](const Expr &candidate,
+                                              std::string &elemTypeOut) {
+    std::string inferredTypeText;
+    return inferQueryExprTypeText(candidate, params, locals, inferredTypeText) &&
+           !inferredTypeText.empty() &&
+           resolveExperimentalBorrowedSoaTypeText(inferredTypeText, elemTypeOut);
+  };
+  auto preferredBorrowedSoaAccessHelperTarget = [&](std::string_view helperName) {
+    if (helperName == "count") {
+      helperName = "count_ref";
+    } else if (helperName == "get") {
+      helperName = "get_ref";
+    } else if (helperName == "ref") {
+      helperName = "ref_ref";
+    } else if (helperName == "to_aos") {
+      helperName = "to_aos_ref";
+    }
+    return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+  };
   std::string experimentalElemType;
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
     if ((helperName == "at" || helperName == "at_unsafe") &&
@@ -283,6 +302,14 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return true;
   }
   std::string experimentalSoaElemType;
+  if (resolveBorrowedSoaVectorReceiver(receiver, experimentalSoaElemType) &&
+      (helperName == "count" || helperName == "count_ref" ||
+       helperName == "get" || helperName == "get_ref" ||
+       helperName == "ref" || helperName == "ref_ref" ||
+       helperName == "to_aos" || helperName == "to_aos_ref")) {
+    resolvedOut = preferredBorrowedSoaAccessHelperTarget(helperName);
+    return true;
+  }
   if (resolveExperimentalSoaVectorReceiver(receiver, experimentalSoaElemType) &&
       (helperName == "get" || helperName == "ref" ||
        helperName == "to_aos" ||
