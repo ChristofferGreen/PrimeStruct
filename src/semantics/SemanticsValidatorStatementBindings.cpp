@@ -753,7 +753,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (resolveImplicitSoaRefTargetType(targetOut)) {
         return true;
       }
-      std::string resolvedPath = resolveCalleePath(expr);
+      std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
+      if (resolvedPath.empty()) {
+        resolvedPath = resolveCalleePath(expr);
+      }
       if (expr.isMethodCall) {
         if (expr.args.empty()) {
           return false;
@@ -849,7 +852,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             ExprSubstitutions &extendedSubstitutions,
             const Expr *&returnedValueExprOut) -> bool {
           returnedValueExprOut = nullptr;
-          std::string resolvedCallPath = resolveCalleePath(callExpr);
+          std::string resolvedCallPath =
+              preferredCollectionHelperResolvedPath(callExpr);
+          if (resolvedCallPath.empty()) {
+            resolvedCallPath = resolveCalleePath(callExpr);
+          }
           if (callExpr.isMethodCall) {
             if (callExpr.args.empty()) {
               return false;
@@ -908,7 +915,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         };
     auto resolveConcreteCallPath = [&](const Expr &callExpr,
                                        std::string &resolvedPathOut) -> bool {
-      resolvedPathOut = resolveCalleePath(callExpr);
+      resolvedPathOut = preferredCollectionHelperResolvedPath(callExpr);
+      if (resolvedPathOut.empty()) {
+        resolvedPathOut = resolveCalleePath(callExpr);
+      }
       if (callExpr.kind != Expr::Kind::Call) {
         return !resolvedPathOut.empty();
       }
