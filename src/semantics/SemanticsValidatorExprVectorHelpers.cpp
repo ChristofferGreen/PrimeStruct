@@ -421,6 +421,16 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
             preferredSoaHelperTargetForCollectionType(helperName, "/vector");
         return true;
       }
+      if (resolvedType == "/soa_vector" &&
+          (helperName == "count" || helperName == "count_ref" ||
+           helperName == "get" || helperName == "get_ref" ||
+           helperName == "ref" || helperName == "ref_ref" ||
+           helperName == "to_aos" || helperName == "to_aos_ref" ||
+           helperName == "push" || helperName == "reserve")) {
+        resolvedOut =
+            preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+        return true;
+      }
       if (isVectorCompatibilityHelperName(helperName)) {
         BindingInfo receiverBinding;
         receiverBinding.typeName = resolvedType;
