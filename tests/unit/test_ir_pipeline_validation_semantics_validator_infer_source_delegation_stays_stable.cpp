@@ -868,6 +868,15 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   CHECK(semanticsInferResolvedCallsSource.find(
             "auto isTypeNamespaceMethodCall = [&](const Expr &callExpr,") !=
         std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find(
+            "std::string resolvedPath =\n"
+            "      resolveExprConcreteCallPath(params, locals, expr, context.resolved);") !=
+        std::string::npos);
+  CHECK(semanticsInferResolvedCallsSource.find(
+            "if (resolvedPath.empty()) {\n"
+            "    resolvedPath = context.resolved;\n"
+            "  }") !=
+        std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find("validateNamedArgumentsAgainstParams(") !=
         std::string::npos);
   CHECK(semanticsInferResolvedCallsSource.find("if (!ensureDefinitionReturnKindReady(*defIt->second)) {") !=

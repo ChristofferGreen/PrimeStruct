@@ -16,7 +16,12 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
 
   const auto &inferCollectionDispatchSetup = *context.collectionDispatchSetup;
   const auto &builtinCollectionDispatchResolvers = *context.dispatchResolvers;
-  const auto defIt = defMap_.find(context.resolved);
+  std::string resolvedPath =
+      resolveExprConcreteCallPath(params, locals, expr, context.resolved);
+  if (resolvedPath.empty()) {
+    resolvedPath = context.resolved;
+  }
+  const auto defIt = defMap_.find(resolvedPath);
   if (defIt == defMap_.end() ||
       inferCollectionDispatchSetup
           .shouldDeferResolvedNamespacedCollectionHelperReturn) {
@@ -60,12 +65,12 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
   };
 
   if (expr.isMethodCall) {
-    const auto &calleeParams = paramsByDef_[context.resolved];
+    const auto &calleeParams = paramsByDef_[resolvedPath];
     Expr trimmedTypeNamespaceCallExpr;
     const std::vector<Expr> *orderedCallArgs = &expr.args;
     const std::vector<std::optional<std::string>> *orderedCallArgNames =
         &expr.argNames;
-    if (isTypeNamespaceMethodCall(expr, context.resolved)) {
+    if (isTypeNamespaceMethodCall(expr, resolvedPath)) {
       trimmedTypeNamespaceCallExpr = expr;
       trimmedTypeNamespaceCallExpr.args.erase(
           trimmedTypeNamespaceCallExpr.args.begin());
@@ -128,7 +133,7 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
       }
       if (actualKind != expectedKind) {
         return failInferResolvedCallDiagnostic(
-            "argument type mismatch for " + context.resolved +
+            "argument type mismatch for " + resolvedPath +
             " parameter " + param.name);
       }
     }
@@ -151,7 +156,7 @@ ReturnKind SemanticsValidator::inferResolvedCallReturnKind(
     return ReturnKind::Unknown;
   }
 
-  auto kindIt = returnKinds_.find(context.resolved);
+  auto kindIt = returnKinds_.find(resolvedPath);
   if (kindIt != returnKinds_.end() && kindIt->second != ReturnKind::Unknown) {
     return kindIt->second;
   }
