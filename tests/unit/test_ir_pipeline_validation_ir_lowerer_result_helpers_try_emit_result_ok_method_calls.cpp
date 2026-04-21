@@ -891,6 +891,47 @@ TEST_CASE("ir lowerer result helpers resolve direct Result.ok struct payload met
   CHECK(out.valueStructType == "/pkg/Label");
 }
 
+TEST_CASE("ir lowerer result helpers resolve direct Result.ok comparison payload metadata") {
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultName, comparisonExpr};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * { return nullptr; };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      okExpr, {}, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(out.valueStructType.empty());
+}
+
 TEST_CASE("ir lowerer result helpers resolve Result.map struct payload metadata") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localResult;

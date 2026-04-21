@@ -910,6 +910,12 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
   }
   if (inferExprKind) {
     out.valueKind = inferExprKind(valueExpr, localsIn);
+    if (out.valueKind == LocalInfo::ValueKind::Unknown) {
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(valueExpr, builtinComparison)) {
+        out.valueKind = LocalInfo::ValueKind::Bool;
+      }
+    }
   }
 }
 
