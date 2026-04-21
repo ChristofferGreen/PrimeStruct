@@ -318,6 +318,36 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("public stdlib map Ref wrappers validate through canonical borrowed helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+
+[return<int> effects(heap_alloc)]
+main() {
+  [Map<string, i32> mut] values{mapSingle<string, i32>("left"raw_utf8, 4i32)}
+  mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
+  [Reference<Map<string, i32>> mut] ref{location(values)}
+  mapInsertRef<string, i32>(ref, "third"raw_utf8, 11i32)
+  [i32] found{try(mapTryAtRef<string, i32>(ref, "left"raw_utf8))}
+  [Result<i32, ContainerError>] missing{mapTryAtRef<string, i32>(ref, "missing"raw_utf8)}
+  [i32 mut] total{plus(mapCountRef<string, i32>(ref), found)}
+  assign(total, plus(total, mapAtRef<string, i32>(ref, "right"raw_utf8)))
+  assign(total, plus(total, mapAtUnsafeRef<string, i32>(ref, "third"raw_utf8)))
+  if(mapContainsRef<string, i32>(ref, "left"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  if(not(mapContainsRef<string, i32>(ref, "missing"raw_utf8)),
+     then() { assign(total, plus(total, 2i32)) },
+     else() { })
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map borrowed method-call sugar validates") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
@@ -639,20 +669,48 @@ TEST_CASE("public stdlib map wrappers route through canonical slash helpers") {
             "    return(/std/collections/map/count<K, V>(values))") !=
         std::string::npos);
   CHECK(source.find(
+            "  mapCountRef<K, V>([Reference<Map<K, V>>] values) {\n"
+            "    return(/std/collections/map/count_ref<K, V>(values))") !=
+        std::string::npos);
+  CHECK(source.find(
             "  mapContains<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/contains<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapContainsRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "    return(/std/collections/map/contains_ref<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
             "  mapTryAt<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/tryAt<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
+            "  mapTryAtRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "    return(/std/collections/map/tryAt_ref<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
             "  mapAt<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/at<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
+            "  mapAtRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "    return(/std/collections/map/at_ref<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
             "  mapAtUnsafe<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/at_unsafe<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
+            "    return(/std/collections/map/at_unsafe_ref<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapInsert<K, V>([Map<K, V> mut] values, [K] key, [V] value) {\n"
+            "    /std/collections/map/insert<K, V>(values, key, value)") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  mapInsertRef<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value) {\n"
+            "    /std/collections/map/insert_ref<K, V>(values, key, value)") !=
         std::string::npos);
 
   CHECK(source.find("return(Result.ok(mapAtUnsafe<K, V>(values, key)))") ==

@@ -100,14 +100,29 @@ namespace std {
     return(/std/collections/map/count<K, V>(values))
   }
 
+  [public return<i32>]
+  mapCountRef<K, V>([Reference<Map<K, V>>] values) {
+    return(/std/collections/map/count_ref<K, V>(values))
+  }
+
   [public return<bool>]
   mapContains<K, V>([map<K, V>] values, [K] key) {
     return(/std/collections/map/contains<K, V>(values, key))
   }
 
+  [public return<bool>]
+  mapContainsRef<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(/std/collections/map/contains_ref<K, V>(values, key))
+  }
+
   [public return<Result<V, ContainerError>>]
   mapTryAt<K, V>([map<K, V>] values, [K] key) {
     return(/std/collections/map/tryAt<K, V>(values, key))
+  }
+
+  [public return<Result<V, ContainerError>>]
+  mapTryAtRef<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(/std/collections/map/tryAt_ref<K, V>(values, key))
   }
 
   [public return<V>]
@@ -116,8 +131,28 @@ namespace std {
   }
 
   [public return<V>]
+  mapAtRef<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(/std/collections/map/at_ref<K, V>(values, key))
+  }
+
+  [public return<V>]
   mapAtUnsafe<K, V>([map<K, V>] values, [K] key) {
     return(/std/collections/map/at_unsafe<K, V>(values, key))
+  }
+
+  [public return<V>]
+  mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] values, [K] key) {
+    return(/std/collections/map/at_unsafe_ref<K, V>(values, key))
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  mapInsert<K, V>([Map<K, V> mut] values, [K] key, [V] value) {
+    /std/collections/map/insert<K, V>(values, key, value)
+  }
+
+  [public effects(heap_alloc), return<void> Comparable<K>]
+  mapInsertRef<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value) {
+    /std/collections/map/insert_ref<K, V>(values, key, value)
   }
   }
 }
