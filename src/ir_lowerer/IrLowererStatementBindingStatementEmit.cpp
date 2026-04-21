@@ -622,7 +622,13 @@ StatementMatchIfEmitResult tryEmitMatchIfStatement(const Expr &stmt,
   if (!emitExpr(stmt.args[0], localsIn)) {
     return StatementMatchIfEmitResult::Error;
   }
-  const LocalInfo::ValueKind condKind = inferExprKind(stmt.args[0], localsIn);
+  LocalInfo::ValueKind condKind = inferExprKind(stmt.args[0], localsIn);
+  if (condKind == LocalInfo::ValueKind::Unknown) {
+    std::string builtinComparison;
+    if (getBuiltinComparisonName(stmt.args[0], builtinComparison)) {
+      condKind = LocalInfo::ValueKind::Bool;
+    }
+  }
   const bool isIntegralCondition =
       condKind == LocalInfo::ValueKind::Int32 || condKind == LocalInfo::ValueKind::Int64 ||
       condKind == LocalInfo::ValueKind::UInt64;

@@ -317,6 +317,83 @@ TEST_CASE("ir lowerer statement binding helper emits if statements") {
   CHECK(instructions[4].imm == 222);
 }
 
+TEST_CASE("ir lowerer statement binding helper treats builtin comparisons as bool conditions") {
+  using EmitResult = primec::ir_lowerer::StatementMatchIfEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.intWidth = 32;
+  lhs.literalValue = 2;
+
+  primec::Expr rhs;
+  rhs.kind = primec::Expr::Kind::Literal;
+  rhs.intWidth = 32;
+  rhs.literalValue = 1;
+
+  primec::Expr condExpr;
+  condExpr.kind = primec::Expr::Kind::Call;
+  condExpr.name = "greater_than";
+  condExpr.args = {lhs, rhs};
+
+  primec::Expr thenValue;
+  thenValue.kind = primec::Expr::Kind::Literal;
+  thenValue.intWidth = 32;
+  thenValue.literalValue = 1;
+  primec::Expr elseValue;
+  elseValue.kind = primec::Expr::Kind::Literal;
+  elseValue.intWidth = 32;
+  elseValue.literalValue = 2;
+
+  primec::Expr thenBlock;
+  thenBlock.kind = primec::Expr::Kind::Call;
+  thenBlock.name = "then";
+  thenBlock.hasBodyArguments = true;
+  thenBlock.bodyArguments = {thenValue};
+  primec::Expr elseBlock;
+  elseBlock.kind = primec::Expr::Kind::Call;
+  elseBlock.name = "else";
+  elseBlock.hasBodyArguments = true;
+  elseBlock.bodyArguments = {elseValue};
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.name = "if";
+  stmt.args = {condExpr, thenBlock, elseBlock};
+
+  primec::ir_lowerer::LocalMap locals;
+  std::vector<primec::IrInstruction> instructions;
+  int emitBlockCalls = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitMatchIfStatement(
+            stmt,
+            locals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI32, 1});
+              return true;
+            },
+            [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+              if (expr.kind == primec::Expr::Kind::Call && expr.name == "greater_than") {
+                return ValueKind::Unknown;
+              }
+              return ValueKind::Int32;
+            },
+            [&](const primec::Expr &branchExpr, primec::ir_lowerer::LocalMap &) {
+              ++emitBlockCalls;
+              const uint64_t marker = branchExpr.bodyArguments.front().literalValue == 1 ? 111 : 222;
+              instructions.push_back({primec::IrOpcode::PushI32, marker});
+              return true;
+            },
+            [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+            instructions,
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitBlockCalls == 2);
+  REQUIRE(instructions.size() == 5);
+  CHECK(instructions[1].op == primec::IrOpcode::JumpIfZero);
+  CHECK(instructions[1].imm == 4);
+}
+
 TEST_CASE("ir lowerer statement binding helper lowers match via statement callback") {
   using EmitResult = primec::ir_lowerer::StatementMatchIfEmitResult;
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
