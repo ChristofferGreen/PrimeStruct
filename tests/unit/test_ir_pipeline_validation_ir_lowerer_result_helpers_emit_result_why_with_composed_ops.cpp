@@ -941,6 +941,51 @@ TEST_CASE("ir lowerer flow helpers emit compare-to-zero sequences") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer comparison helpers treat builtin comparisons as bool conditions") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.intValue = 1;
+  lhs.intWidth = 32;
+
+  primec::Expr rhs = lhs;
+
+  primec::Expr equalExpr;
+  equalExpr.kind = primec::Expr::Kind::Call;
+  equalExpr.name = "equal";
+  equalExpr.args = {lhs, rhs};
+
+  primec::Expr notExpr;
+  notExpr.kind = primec::Expr::Kind::Call;
+  notExpr.name = "not";
+  notExpr.args = {equalExpr};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  const auto result = primec::ir_lowerer::emitComparisonOperatorExpr(
+      notExpr,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return ValueKind::Unknown;
+      },
+      [](ValueKind left, ValueKind right) {
+        return primec::ir_lowerer::comparisonKind(left, right);
+      },
+      [&](ValueKind kind, bool equals) {
+        return primec::ir_lowerer::emitCompareToZero(instructions, kind, equals, error);
+      },
+      instructions,
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorComparisonEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 2u);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI32);
+  CHECK(instructions[0].imm == 0u);
+  CHECK(instructions[1].op == primec::IrOpcode::CmpEqI32);
+}
+
 TEST_CASE("ir lowerer flow helpers emit float literal sequences") {
   std::vector<primec::IrInstruction> instructions;
   std::string error;

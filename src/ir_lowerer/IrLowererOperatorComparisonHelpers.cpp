@@ -12,6 +12,18 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
                                                         const EmitComparisonToZeroFn &emitCompareToZero,
                                                         std::vector<IrInstruction> &instructions,
                                                         std::string &error) {
+  auto inferConditionKind = [&](const Expr &candidate) {
+    LocalInfo::ValueKind kind = inferExprKind(candidate, localsIn);
+    if (kind != LocalInfo::ValueKind::Unknown) {
+      return kind;
+    }
+    std::string comparisonBuiltin;
+    if (getBuiltinComparisonName(candidate, comparisonBuiltin)) {
+      return LocalInfo::ValueKind::Bool;
+    }
+    return kind;
+  };
+
   std::string builtin;
   if (!getBuiltinComparisonName(expr, builtin)) {
     return OperatorComparisonEmitResult::NotHandled;
@@ -25,7 +37,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
     if (!emitExpr(expr.args.front(), localsIn)) {
       return OperatorComparisonEmitResult::Error;
     }
-    LocalInfo::ValueKind kind = inferExprKind(expr.args.front(), localsIn);
+    LocalInfo::ValueKind kind = inferConditionKind(expr.args.front());
     if (!emitCompareToZero(kind, true)) {
       return OperatorComparisonEmitResult::Error;
     }
@@ -40,7 +52,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
     if (!emitExpr(expr.args[0], localsIn)) {
       return OperatorComparisonEmitResult::Error;
     }
-    LocalInfo::ValueKind leftKind = inferExprKind(expr.args[0], localsIn);
+    LocalInfo::ValueKind leftKind = inferConditionKind(expr.args[0]);
     if (!emitCompareToZero(leftKind, false)) {
       return OperatorComparisonEmitResult::Error;
     }
@@ -49,7 +61,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
     if (!emitExpr(expr.args[1], localsIn)) {
       return OperatorComparisonEmitResult::Error;
     }
-    LocalInfo::ValueKind rightKind = inferExprKind(expr.args[1], localsIn);
+    LocalInfo::ValueKind rightKind = inferConditionKind(expr.args[1]);
     if (!emitCompareToZero(rightKind, false)) {
       return OperatorComparisonEmitResult::Error;
     }
@@ -71,7 +83,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
     if (!emitExpr(expr.args[0], localsIn)) {
       return OperatorComparisonEmitResult::Error;
     }
-    LocalInfo::ValueKind leftKind = inferExprKind(expr.args[0], localsIn);
+    LocalInfo::ValueKind leftKind = inferConditionKind(expr.args[0]);
     if (!emitCompareToZero(leftKind, false)) {
       return OperatorComparisonEmitResult::Error;
     }
@@ -85,7 +97,7 @@ OperatorComparisonEmitResult emitComparisonOperatorExpr(const Expr &expr,
     if (!emitExpr(expr.args[1], localsIn)) {
       return OperatorComparisonEmitResult::Error;
     }
-    LocalInfo::ValueKind rightKind = inferExprKind(expr.args[1], localsIn);
+    LocalInfo::ValueKind rightKind = inferConditionKind(expr.args[1]);
     if (!emitCompareToZero(rightKind, false)) {
       return OperatorComparisonEmitResult::Error;
     }
