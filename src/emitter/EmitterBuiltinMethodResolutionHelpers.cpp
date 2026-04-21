@@ -607,12 +607,14 @@ bool resolveMethodCallPath(const Expr &call,
       resolvedOut = canonicalPath;
       return true;
     }
-    if (hasDefinitionOrMetadata(metadataView, canonicalPath)) {
-      resolvedOut = canonicalPath;
-      return true;
-    }
+    // Unqualified method calls should respect user-visible /soa_vector shadows
+    // before falling back to the canonical wrapper implementation.
     if (hasDefinitionOrMetadata(metadataView, aliasPath)) {
       resolvedOut = aliasPath;
+      return true;
+    }
+    if (hasDefinitionOrMetadata(metadataView, canonicalPath)) {
+      resolvedOut = canonicalPath;
       return true;
     }
   }

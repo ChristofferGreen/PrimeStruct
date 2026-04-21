@@ -861,6 +861,10 @@ TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on 
   aliasPushDef.fullPath = "/soa_vector/push";
   primec::Definition aliasReserveDef;
   aliasReserveDef.fullPath = "/soa_vector/reserve";
+  primec::Definition canonicalPushDef;
+  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  primec::Definition canonicalReserveDef;
+  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
   primec::Definition concretePushDef;
   concretePushDef.fullPath =
       "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
@@ -869,6 +873,8 @@ TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on 
       {borrowDef.fullPath, &borrowDef},
       {aliasPushDef.fullPath, &aliasPushDef},
       {aliasReserveDef.fullPath, &aliasReserveDef},
+      {canonicalPushDef.fullPath, &canonicalPushDef},
+      {canonicalReserveDef.fullPath, &canonicalReserveDef},
       {concretePushDef.fullPath, &concretePushDef},
   };
   std::unordered_map<std::string, std::string> importAliases;
