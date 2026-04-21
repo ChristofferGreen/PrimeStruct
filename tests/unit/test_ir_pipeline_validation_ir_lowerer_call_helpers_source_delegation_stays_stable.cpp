@@ -315,6 +315,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
         std::string::npos);
   CHECK(inlineDispatchSource.find("isInlineMapBuiltinHelperName(resolvedHelperName)") !=
         std::string::npos);
+  CHECK(inlineDispatchSource.find(
+            "    const std::string scopedExprPath = resolveInlineCallPathWithoutFallbackProbes(expr);") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find(
+            "    if (isExplicitMapContainsOrTryAtMethodPath(scopedExprPath) &&\n"
+            "        normalizeCollectionHelperPath(scopedExprPath) ==") !=
+        std::string::npos);
+  CHECK(inlineDispatchSource.find("    std::string normalizedName = scopedExprPath;") !=
+        std::string::npos);
   CHECK(inlineDispatchSource.find("bool isMapContainsHelperName(const Expr &expr)") !=
         std::string::npos);
   CHECK(inlineDispatchSource.find("bool isMapTryAtHelperName(const Expr &expr)") !=

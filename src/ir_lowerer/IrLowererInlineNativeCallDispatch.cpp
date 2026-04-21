@@ -294,16 +294,17 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
   const bool hasPublishedResolvedHelper =
       resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
   if (!expr.isMethodCall) {
+    const std::string scopedExprPath = resolveInlineCallPathWithoutFallbackProbes(expr);
     if (prefersPublishedMapHelperDefinition(expr, resolvedHelperName, callee)) {
       return false;
     }
-    if (isExplicitMapContainsOrTryAtMethodPath(expr.name) &&
-        normalizeCollectionHelperPath(expr.name) ==
+    if (isExplicitMapContainsOrTryAtMethodPath(scopedExprPath) &&
+        normalizeCollectionHelperPath(scopedExprPath) ==
             normalizeCollectionHelperPath(callee.fullPath)) {
       return false;
     }
     std::string aliasName;
-    std::string normalizedName = expr.name;
+    std::string normalizedName = scopedExprPath;
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
     }
