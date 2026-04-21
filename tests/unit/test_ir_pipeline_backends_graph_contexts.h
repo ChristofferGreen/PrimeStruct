@@ -1143,6 +1143,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irReceiverTargetHelpers.find(
             "errorOut = \"unknown method target for \" + scopedMethodPath;") !=
         std::string::npos);
+  CHECK(irReceiverTargetHelpers.find(
+            "const std::string scopedReceiverMethodPath = resolveScopedMethodPath(receiverCallExpr);") !=
+        std::string::npos);
+  CHECK(irReceiverTargetHelpers.find(
+            "(isExplicitMapMethodAliasPath(scopedReceiverMethodPath) ||\n"
+            "        isExplicitMapContainsOrTryAtMethodPath(scopedReceiverMethodPath))) ||") !=
+        std::string::npos);
+  CHECK(irReceiverTargetHelpers.find(
+            "(isExplicitMapMethodAliasPath(receiverCallExpr.name) ||\n"
+            "        isExplicitMapContainsOrTryAtMethodPath(receiverCallExpr.name))) ||") ==
+        std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodCallDefinitionFromExpr(*receiver,") != std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodCallDefinitionFromExpr(*receiver,\n"
                                 "                                                        localsIn,\n"

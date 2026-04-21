@@ -322,9 +322,10 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
                                           const std::unordered_map<std::string, const Definition *> &defMap,
                                           LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
+  const std::string scopedReceiverMethodPath = resolveScopedMethodPath(receiverCallExpr);
   if ((receiverCallExpr.isMethodCall &&
-       (isExplicitMapMethodAliasPath(receiverCallExpr.name) ||
-        isExplicitMapContainsOrTryAtMethodPath(receiverCallExpr.name))) ||
+       (isExplicitMapMethodAliasPath(scopedReceiverMethodPath) ||
+        isExplicitMapContainsOrTryAtMethodPath(scopedReceiverMethodPath))) ||
       isExplicitMapHelperFallbackPath(receiverCallExpr) ||
       isExplicitVectorReceiverProbeHelperExpr(receiverCallExpr)) {
     return false;
