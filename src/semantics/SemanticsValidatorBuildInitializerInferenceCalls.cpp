@@ -71,7 +71,18 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       return true;
     }
   }
-  auto defIt = defMap_.find(resolveCalleePath(expr));
+  std::string resolvedCollectionPath = preferredCollectionHelperResolvedPath(expr);
+  if (resolvedCollectionPath.empty()) {
+    resolvedCollectionPath = resolveCalleePath(expr);
+  }
+  if (!resolvedCollectionPath.empty()) {
+    const std::string concreteResolvedCollectionPath =
+        resolveExprConcreteCallPath(params, locals, expr, resolvedCollectionPath);
+    if (!concreteResolvedCollectionPath.empty()) {
+      resolvedCollectionPath = concreteResolvedCollectionPath;
+    }
+  }
+  auto defIt = defMap_.find(resolvedCollectionPath);
   if (defIt == defMap_.end() || defIt->second == nullptr) {
     return false;
   }

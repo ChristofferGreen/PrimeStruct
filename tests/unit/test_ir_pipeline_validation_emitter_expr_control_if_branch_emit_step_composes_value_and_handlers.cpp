@@ -984,6 +984,23 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "namespacedCollection == \"vector\"") ==
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "  std::string resolvedCollectionPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "  if (resolvedCollectionPath.empty()) {\n"
+            "    resolvedCollectionPath = resolveCalleePath(expr);\n"
+            "  }\n"
+            "  if (!resolvedCollectionPath.empty()) {\n"
+            "    const std::string concreteResolvedCollectionPath =\n"
+            "        resolveExprConcreteCallPath(params, locals, expr, resolvedCollectionPath);\n"
+            "    if (!concreteResolvedCollectionPath.empty()) {\n"
+            "      resolvedCollectionPath = concreteResolvedCollectionPath;\n"
+            "    }\n"
+            "  }\n"
+            "  auto defIt = defMap_.find(resolvedCollectionPath);") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "  auto defIt = defMap_.find(resolveCalleePath(expr));") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "  std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);\n"
             "  if (resolvedCallPath.empty()) {\n"
             "    resolvedCallPath = resolveCalleePath(expr);\n"
