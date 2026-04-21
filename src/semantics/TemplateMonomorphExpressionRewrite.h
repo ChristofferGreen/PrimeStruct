@@ -518,7 +518,8 @@ bool rewriteExpr(Expr &expr,
       const std::string samePathSoaNonRefHelper = "/soa_vector/" + helperName;
       const bool receiverEligibleForSamePathSoaHelper =
           receiverFamily == "soa_vector" ||
-          (helperName == "count" && receiverFamily == "vector");
+          ((helperName == "count" || helperName == "count_ref") &&
+           receiverFamily == "vector");
       if (receiverEligibleForSamePathSoaHelper &&
           hasDefinitionFamilyPath(samePathSoaNonRefHelper)) {
         return samePathSoaNonRefHelper;
