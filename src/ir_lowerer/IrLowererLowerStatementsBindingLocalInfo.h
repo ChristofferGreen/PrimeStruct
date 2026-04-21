@@ -273,7 +273,12 @@
         if (!inferredStruct.empty()) {
           info.structTypeName = inferredStruct;
         } else if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-          info.valueKind = LocalInfo::ValueKind::Int32;
+          std::string builtinComparison;
+          if (getBuiltinComparisonName(init, builtinComparison)) {
+            info.valueKind = LocalInfo::ValueKind::Bool;
+          } else {
+            info.valueKind = LocalInfo::ValueKind::Int32;
+          }
         }
       }
       if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {

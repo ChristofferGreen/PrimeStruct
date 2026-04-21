@@ -107,6 +107,15 @@ TEST_CASE("ir lowerer flow helpers recover bool while conditions from builtin co
   CHECK(source.find("error = \"for condition requires bool\"") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer binding local info recovers bool comparison initializers") {
+  const std::string source = readTextFile(
+      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindingLocalInfo.h");
+  CHECK(source.find("if (info.valueKind == LocalInfo::ValueKind::Unknown)") != std::string::npos);
+  CHECK(source.find("if (getBuiltinComparisonName(init, builtinComparison))") != std::string::npos);
+  CHECK(source.find("info.valueKind = LocalInfo::ValueKind::Bool;") != std::string::npos);
+  CHECK(source.find("info.valueKind = LocalInfo::ValueKind::Int32;") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer flow helpers emit body statements") {
   primec::Expr firstStmt;
   firstStmt.kind = primec::Expr::Kind::Name;
