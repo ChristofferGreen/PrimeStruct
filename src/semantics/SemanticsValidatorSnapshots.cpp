@@ -511,6 +511,11 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   collectDirectCallExpr = [&](const std::string &scopePath, const Expr &expr) {
     if (expr.kind == Expr::Kind::Call && !expr.isMethodCall) {
       std::string resolvedPath = resolveCalleePath(expr);
+      if (const std::string preferredCollectionPath =
+              preferredCollectionHelperResolvedPath(expr);
+          !preferredCollectionPath.empty()) {
+        resolvedPath = preferredCollectionPath;
+      }
       if (!resolvedPath.empty()) {
         if (const auto bridgeChoice = collectionBridgeChoiceFromResolvedPath(resolvedPath);
             bridgeChoice.has_value()) {
