@@ -446,8 +446,10 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
         normalizedPrefix == "std/collections/soa_vector") &&
        (normalizedName == "to_soa" || normalizedName == "to_aos" ||
         normalizedName == "to_aos_ref"));
-  if (normalizedName.empty() || normalizedName == "count" || normalizedName == "get" ||
-      normalizedName == "ref" || isSoaConversionSurfaceSpelling) {
+  if (normalizedName.empty() || normalizedName == "count" ||
+      normalizedName == "count_ref" || normalizedName == "get" ||
+      normalizedName == "get_ref" || normalizedName == "ref" ||
+      normalizedName == "ref_ref" || isSoaConversionSurfaceSpelling) {
       return false;
   }
   if (candidate.isMethodCall) {

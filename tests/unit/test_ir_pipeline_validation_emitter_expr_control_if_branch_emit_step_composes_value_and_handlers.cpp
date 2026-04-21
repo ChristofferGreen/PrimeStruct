@@ -1819,6 +1819,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "normalizedName == \"std/collections/soa_vector/ref_ref\"") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"count_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"get_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"ref_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "auto explicitStdSoaHelperName = [&]() -> std::string {") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
