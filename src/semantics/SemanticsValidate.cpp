@@ -1085,6 +1085,8 @@ bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
                                             std::string_view receiverTypeName) {
   const std::string rootPath = "/" + std::string(helperName);
   const std::string samePath = "/soa_vector/" + std::string(helperName);
+  const std::string canonicalPath =
+      "/std/collections/soa_vector/" + std::string(helperName);
   auto matchesReceiverType = [&](const Expr &parameter) {
     if (receiverTypeName == "soa_vector") {
       return extractBuiltinSoaVectorBinding(parameter).has_value();
@@ -1095,7 +1097,8 @@ bool hasVisibleRootSoaHelperForReceiverType(const Program &program,
     return false;
   };
   for (const Definition &def : program.definitions) {
-    if ((def.fullPath == rootPath || def.fullPath == samePath) &&
+    if ((def.fullPath == rootPath || def.fullPath == samePath ||
+         def.fullPath == canonicalPath) &&
         !def.parameters.empty() &&
         matchesReceiverType(def.parameters.front())) {
       return true;

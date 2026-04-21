@@ -1952,6 +1952,14 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "    normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());\n"
             "  } else if (normalized.rfind(\"soa_vector/\", 0) == 0) {") !=
         std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "const std::string canonicalPath =\n"
+            "      \"/std/collections/soa_vector/\" + std::string(helperName);") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "if ((def.fullPath == rootPath || def.fullPath == samePath ||\n"
+            "         def.fullPath == canonicalPath) &&") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator build struct-field publication stays stable") {
