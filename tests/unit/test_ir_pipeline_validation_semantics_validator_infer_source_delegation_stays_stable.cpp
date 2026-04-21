@@ -1958,6 +1958,11 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "if ((def.fullPath == rootPath || def.fullPath == samePath ||\n"
+            "         def.fullPath == canonicalPath) &&\n"
+            "        !def.parameters.empty() &&") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "if ((def.fullPath == rootPath || def.fullPath == samePath ||\n"
             "         def.fullPath == canonicalPath) &&") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
@@ -1966,6 +1971,11 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
         std::string::npos);
   CHECK(semanticsValidateSource.find(
             "if (localImportPathCoversTarget(importPath, samePath) ||\n"
+            "        localImportPathCoversTarget(importPath, canonicalPath)) {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "if (localImportPathCoversTarget(importPath, rootPath) ||\n"
+            "        localImportPathCoversTarget(importPath, samePath) ||\n"
             "        localImportPathCoversTarget(importPath, canonicalPath)) {") !=
         std::string::npos);
 }

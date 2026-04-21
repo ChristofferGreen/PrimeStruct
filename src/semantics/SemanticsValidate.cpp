@@ -1063,8 +1063,11 @@ bool localImportPathCoversTarget(const std::string &importPath, const std::strin
 bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName) {
   const std::string rootPath = "/" + std::string(helperName);
   const std::string samePath = "/soa_vector/" + std::string(helperName);
+  const std::string canonicalPath =
+      "/std/collections/soa_vector/" + std::string(helperName);
   for (const Definition &def : program.definitions) {
-    if ((def.fullPath == rootPath || def.fullPath == samePath) &&
+    if ((def.fullPath == rootPath || def.fullPath == samePath ||
+         def.fullPath == canonicalPath) &&
         !def.parameters.empty() &&
         extractBuiltinSoaVectorBinding(def.parameters.front()).has_value()) {
       return true;
@@ -1073,7 +1076,8 @@ bool hasVisibleRootSoaHelper(const Program &program, std::string_view helperName
   const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
   for (const auto &importPath : importPaths) {
     if (localImportPathCoversTarget(importPath, rootPath) ||
-        localImportPathCoversTarget(importPath, samePath)) {
+        localImportPathCoversTarget(importPath, samePath) ||
+        localImportPathCoversTarget(importPath, canonicalPath)) {
       return true;
     }
   }
