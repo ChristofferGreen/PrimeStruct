@@ -164,6 +164,8 @@ bool SemanticsValidator::inferBuiltinCollectionValueBinding(const Expr &expr,
       (isSimpleCallName(expr, "count") ||
        isSimpleCallName(expr, "count_ref") ||
        isSimpleCallName(expr, "capacity") ||
+       isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "count") ||
+       isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, "count_ref") ||
        (resolvedCallPath == "/std/collections/map/count" &&
         defMap_.find("/std/collections/map/count") != defMap_.end()) ||
        (resolvedCallPath == "/std/collections/map/count_ref" &&

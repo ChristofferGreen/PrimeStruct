@@ -983,6 +983,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   CHECK(buildInitializerInferenceCallsSource.find(
             "namespacedCollection == \"vector\"") ==
         std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, \"count\")") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(resolvedCallPath, \"count_ref\")") !=
+        std::string::npos);
   CHECK(buildCallResolutionSource.find("auto vectorConstructorHelperPath = [&]() -> std::string {") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find("if (resolvedPath == \"/std/collections/vector/vector\") {") ==
