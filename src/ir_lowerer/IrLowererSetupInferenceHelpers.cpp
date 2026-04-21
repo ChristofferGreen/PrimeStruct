@@ -509,7 +509,12 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
       info.mapValueKind = typeInfo.mapValueKind;
       info.structTypeName = typeInfo.structTypeName;
       if (info.valueKind == LocalInfo::ValueKind::Unknown && info.kind == LocalInfo::Kind::Value) {
-        info.valueKind = LocalInfo::ValueKind::Int32;
+        std::string builtinComparison;
+        if (getBuiltinComparisonName(bodyExpr.args.front(), builtinComparison)) {
+          info.valueKind = LocalInfo::ValueKind::Bool;
+        } else {
+          info.valueKind = LocalInfo::ValueKind::Int32;
+        }
       }
       applyStructArrayInfo(bodyExpr, info);
       applyStructValueInfo(bodyExpr, info);

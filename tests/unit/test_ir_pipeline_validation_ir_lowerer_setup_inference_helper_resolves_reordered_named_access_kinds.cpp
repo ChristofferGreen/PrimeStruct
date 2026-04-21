@@ -594,6 +594,53 @@ TEST_CASE("ir lowerer setup inference helper recovers bool body comparison tails
   CHECK(returnKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 
+TEST_CASE("ir lowerer setup inference helper recovers bool body-local comparison bindings") {
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "flag";
+  bindingExpr.args = {comparisonExpr};
+
+  primec::Expr readExpr;
+  readExpr.kind = primec::Expr::Kind::Name;
+  readExpr.name = "flag";
+
+  const primec::ir_lowerer::LocalInfo::ValueKind kind =
+      primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+          {bindingExpr, readExpr},
+          {},
+          [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &locals) {
+            if (expr.kind == primec::Expr::Kind::Name) {
+              auto it = locals.find(expr.name);
+              if (it != locals.end()) {
+                return it->second.valueKind;
+              }
+            }
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); });
+  CHECK(kind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer setup inference helper prefers semantic binding facts for body locals scaffolding") {
   primec::Expr bindingExpr;
   bindingExpr.isBinding = true;
