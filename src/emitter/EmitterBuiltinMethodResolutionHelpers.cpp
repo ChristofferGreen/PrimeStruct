@@ -67,6 +67,14 @@ std::string borrowedSoaMethodName(std::string_view methodName) {
   return std::string(methodName);
 }
 
+bool isCanonicalSoaWrapperMethodName(std::string_view methodName) {
+  return methodName == "count" || methodName == "count_ref" ||
+         methodName == "get" || methodName == "get_ref" ||
+         methodName == "ref" || methodName == "ref_ref" ||
+         methodName == "to_aos" || methodName == "to_aos_ref" ||
+         methodName == "push" || methodName == "reserve";
+}
+
 std::string inferConcreteExperimentalSoaStructPathFromTypeText(std::string typeText) {
   std::string normalized = normalizeBindingTypeName(typeText);
   while (true) {
@@ -108,6 +116,9 @@ std::string resolveConcreteSoaStructMethodPath(const MethodResolutionMetadataVie
                                                std::string_view structPath,
                                                std::string_view methodName) {
   if (!isConcreteExperimentalSoaVectorStructPath(structPath)) {
+    return "";
+  }
+  if (isCanonicalSoaWrapperMethodName(methodName)) {
     return "";
   }
   const std::string concretePath =

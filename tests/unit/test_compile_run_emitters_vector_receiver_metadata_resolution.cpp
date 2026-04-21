@@ -828,6 +828,84 @@ TEST_CASE("C++ emitter helper resolves helper-return concrete soa_vector field m
   CHECK(resolved == concreteYDef.fullPath);
 }
 
+TEST_CASE("C++ emitter helper keeps helper-return soa_vector mutator shadows on wrapper paths") {
+  primec::Expr values;
+  values.kind = primec::Expr::Kind::Name;
+  values.name = "values";
+
+  primec::Expr locationCall;
+  locationCall.kind = primec::Expr::Kind::Call;
+  locationCall.name = "location";
+  locationCall.args = {values};
+  locationCall.argNames = {std::nullopt};
+
+  primec::Expr borrowCall;
+  borrowCall.kind = primec::Expr::Kind::Call;
+  borrowCall.name = "pickBorrowed";
+  borrowCall.args = {locationCall};
+  borrowCall.argNames = {std::nullopt};
+
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Name;
+  valueArg.name = "item";
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo valuesInfo;
+  valuesInfo.typeName = "SoaVector";
+  valuesInfo.typeTemplateArg = "Particle";
+  localTypes.emplace("values", valuesInfo);
+
+  primec::Definition borrowDef;
+  borrowDef.fullPath = "/pickBorrowed";
+  primec::Definition aliasPushDef;
+  aliasPushDef.fullPath = "/soa_vector/push";
+  primec::Definition aliasReserveDef;
+  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  primec::Definition concretePushDef;
+  concretePushDef.fullPath =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {borrowDef.fullPath, &borrowDef},
+      {aliasPushDef.fullPath, &aliasPushDef},
+      {aliasReserveDef.fullPath, &aliasReserveDef},
+      {concretePushDef.fullPath, &concretePushDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/pickBorrowed", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+  };
+
+  auto expectResolved = [&](const char *methodName, const char *expectedPath) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.args = {borrowCall};
+    if (std::string(methodName) == "push") {
+      call.args.push_back(valueArg);
+    }
+    if (std::string(methodName) == "reserve") {
+      primec::Expr countLiteral;
+      countLiteral.kind = primec::Expr::Kind::Literal;
+      countLiteral.intWidth = 32;
+      countLiteral.literalValue = 4;
+      call.args.push_back(countLiteral);
+    }
+    call.argNames.assign(call.args.size(), std::nullopt);
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == expectedPath);
+  };
+
+  expectResolved("push", "/soa_vector/push");
+  expectResolved("reserve", "/soa_vector/reserve");
+}
+
 TEST_CASE("C++ emitter helper handles cross-path vector slash count capacity fallback") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
