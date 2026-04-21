@@ -248,9 +248,12 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
       canonicalizeLegacySoaGetHelperPath(resolved);
 
   const bool isExplicitSoaRefCall =
-      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+      (!candidate.isMethodCall &&
+       (normalizedPrefix == "soa_vector" ||
+        normalizedPrefix == "std/collections/soa_vector") &&
        normalizedName == "ref") ||
-      normalizedName == "soa_vector/ref";
+      normalizedName == "soa_vector/ref" ||
+      normalizedName == "std/collections/soa_vector/ref";
   const bool isBuiltinSoaRefMethod =
       candidate.isMethodCall && normalizedName == "ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
@@ -269,9 +272,12 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     return std::string("ref");
   }
   const bool isExplicitSoaRefRefCall =
-      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+      (!candidate.isMethodCall &&
+       (normalizedPrefix == "soa_vector" ||
+        normalizedPrefix == "std/collections/soa_vector") &&
        normalizedName == "ref_ref") ||
-      normalizedName == "soa_vector/ref_ref";
+      normalizedName == "soa_vector/ref_ref" ||
+      normalizedName == "std/collections/soa_vector/ref_ref";
   const bool isBuiltinSoaRefRefMethod =
       candidate.isMethodCall && normalizedName == "ref_ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
@@ -283,9 +289,12 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
   }
 
   const bool isExplicitSoaGetCall =
-      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+      (!candidate.isMethodCall &&
+       (normalizedPrefix == "soa_vector" ||
+        normalizedPrefix == "std/collections/soa_vector") &&
        normalizedName == "get") ||
-      normalizedName == "soa_vector/get";
+      normalizedName == "soa_vector/get" ||
+      normalizedName == "std/collections/soa_vector/get";
   const bool isBuiltinSoaGetMethod =
       candidate.isMethodCall && normalizedName == "get" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());
@@ -298,9 +307,12 @@ std::optional<std::string> SemanticsValidator::builtinSoaAccessHelperName(
     return std::string("get");
   }
   const bool isExplicitSoaGetRefCall =
-      (!candidate.isMethodCall && normalizedPrefix == "soa_vector" &&
+      (!candidate.isMethodCall &&
+       (normalizedPrefix == "soa_vector" ||
+        normalizedPrefix == "std/collections/soa_vector") &&
        normalizedName == "get_ref") ||
-      normalizedName == "soa_vector/get_ref";
+      normalizedName == "soa_vector/get_ref" ||
+      normalizedName == "std/collections/soa_vector/get_ref";
   const bool isBuiltinSoaGetRefMethod =
       candidate.isMethodCall && normalizedName == "get_ref" &&
       !candidate.args.empty() && isDirectSoaVectorTarget(candidate.args.front());

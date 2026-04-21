@@ -1768,6 +1768,21 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   CHECK(buildInitializerInferenceSource.find("normalizedName == \"get_ref\"") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "normalizedPrefix == \"std/collections/soa_vector\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/get\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/get_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/ref_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "resolvedCanonical == \"/std/collections/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
