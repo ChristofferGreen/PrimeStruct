@@ -105,6 +105,10 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
   if (normalizedType == "/soa_vector" || normalizedType == "soa_vector") {
     return "/soa_vector";
   }
+  if (normalizedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+      normalizedType.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+    return "/soa_vector";
+  }
   if (normalizedType == "Map" || isMapCollectionTypeName(normalizedType) || normalizedType == "/map" ||
       normalizedType == "/std/collections/map") {
     return "/map";

@@ -1846,6 +1846,12 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
+            "normalizedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "normalizedType.rfind(\"std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") !=
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
             "findExperimentalMapHelperByName(") == std::string::npos);
   CHECK(collectionCompatibilitySource.find(
             "findBorrowedExperimentalMapHelperByName(") == std::string::npos);
