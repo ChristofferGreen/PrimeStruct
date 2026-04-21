@@ -279,7 +279,10 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
   std::string normalizedPath = path;
   if (!normalizedPath.empty() && normalizedPath.front() != '/') {
     if (normalizedPath.rfind("array/", 0) == 0 || normalizedPath.rfind("vector/", 0) == 0 ||
-        normalizedPath.rfind("std/collections/vector/", 0) == 0 || normalizedPath.rfind("map/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/vector/", 0) == 0 ||
+        normalizedPath.rfind("soa_vector/", 0) == 0 ||
+        normalizedPath.rfind("std/collections/soa_vector/", 0) == 0 ||
+        normalizedPath.rfind("map/", 0) == 0 ||
         normalizedPath.rfind("std/collections/map/", 0) == 0) {
       normalizedPath.insert(normalizedPath.begin(), '/');
     }
@@ -292,6 +295,16 @@ std::vector<std::string> collectionHelperPathCandidates(const std::string &path)
     if (allowsArrayVectorCompatibilitySuffix(suffix)) {
       appendUniqueCandidate(candidates, "/std/collections/vector/" + suffix);
     }
+  } else if (normalizedPath.rfind("/soa_vector/", 0) == 0) {
+    appendUniqueCandidate(
+        candidates,
+        "/std/collections/soa_vector/" +
+            normalizedPath.substr(std::string("/soa_vector/").size()));
+  } else if (normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0) {
+    appendUniqueCandidate(
+        candidates,
+        "/soa_vector/" +
+            normalizedPath.substr(std::string("/std/collections/soa_vector/").size()));
   } else if (normalizedPath.rfind("/map/", 0) == 0) {
     const std::string suffix = normalizedPath.substr(std::string("/map/").size());
     if (!isCanonicalMapHelperName(suffix)) {
