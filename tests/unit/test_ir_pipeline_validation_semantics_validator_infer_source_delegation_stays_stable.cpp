@@ -1510,6 +1510,15 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("std::function<bool(const Expr &, std::string &)> resolvePointerRoot;") !=
         std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "    std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "    const std::string resolvedCallPath = resolveCalleePath(expr);\n") ==
+        std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("isExperimentalSoaColumnSlotHelperPath(resolvedCallPath)") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("resolvedCallPath.rfind(\"/std/collections/internal_soa_storage/soaColumnSlotUnsafe\", 0) == 0") ==

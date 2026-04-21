@@ -569,7 +569,12 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       }
       return resolvePointerRoot(expr.args[0], rootOut);
     }
-    const std::string resolvedCallPath = resolveCalleePath(expr);
+    std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);
+    if (resolvedCallPath.empty()) {
+      resolvedCallPath = resolveCalleePath(expr);
+    }
+    resolvedCallPath =
+        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);
     const bool isSoaColumnSlotUnsafe =
         isExperimentalSoaColumnSlotHelperPath(resolvedCallPath);
     const bool isVectorSlotUnsafe =
