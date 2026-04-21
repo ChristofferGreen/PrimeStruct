@@ -5758,6 +5758,22 @@
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
+            "  if (receiver.kind == Expr::Kind::Call &&\n"
+            "      (helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "       helperName == \"capacity\" ||\n"
+            "       helperName == \"at\" || helperName == \"at_unsafe\" || helperName == \"insert\" ||\n"
+            "       helperName == \"push\" || helperName == \"reserve\")) {") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "      if (collectionTypePath == \"/soa_vector\" &&\n"
+            "          (helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "           helperName == \"push\" || helperName == \"reserve\")) {\n"
+            "        resolvedOut =\n"
+            "            preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");\n"
+            "        return true;\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("std::vector<size_t> receiverIndices;") ==

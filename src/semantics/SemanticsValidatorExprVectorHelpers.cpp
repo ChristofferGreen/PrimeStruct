@@ -290,7 +290,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     return true;
   }
   if (receiver.kind == Expr::Kind::Call &&
-      (helperName == "count" || helperName == "capacity" ||
+      (helperName == "count" || helperName == "count_ref" ||
+       helperName == "capacity" ||
        helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
        helperName == "push" || helperName == "reserve")) {
     std::string collectionTypePath;
@@ -308,7 +309,8 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
         return true;
       }
       if (collectionTypePath == "/soa_vector" &&
-          (helperName == "push" || helperName == "reserve")) {
+          (helperName == "count" || helperName == "count_ref" ||
+           helperName == "push" || helperName == "reserve")) {
         resolvedOut =
             preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
         return true;
