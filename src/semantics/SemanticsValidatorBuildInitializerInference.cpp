@@ -771,7 +771,21 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
     return true;
   };
   auto inferDirectMapConstructorBinding = [&](const Expr &candidate) -> bool {
-    if (candidate.kind != Expr::Kind::Call || !isResolvedMapConstructorPath(resolveCalleePath(candidate))) {
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    std::string resolvedCandidate = preferredCollectionHelperResolvedPath(candidate);
+    if (resolvedCandidate.empty()) {
+      resolvedCandidate = resolveCalleePath(candidate);
+    }
+    if (!resolvedCandidate.empty()) {
+      const std::string concreteResolvedCandidate =
+          resolveExprConcreteCallPath(params, locals, candidate, resolvedCandidate);
+      if (!concreteResolvedCandidate.empty()) {
+        resolvedCandidate = concreteResolvedCandidate;
+      }
+    }
+    if (!isResolvedMapConstructorPath(resolvedCandidate)) {
       return false;
     }
     if (candidate.templateArgs.size() == 2) {
