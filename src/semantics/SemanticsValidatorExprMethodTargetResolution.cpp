@@ -1586,17 +1586,39 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return {};
   };
+  auto explicitHelperFamilyHasCompatibleReceiver =
+      [&](std::string_view path, std::string_view receiverFamily) -> bool {
+    const std::string pathText(path);
+    auto paramsMatchReceiver = [&](const std::vector<ParameterInfo> &helperParams) {
+      return !helperParams.empty() &&
+             classifyExplicitVectorHelperParam(helperParams.front().binding) == receiverFamily;
+    };
+    if (auto paramsIt = paramsByDef_.find(pathText);
+        paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
+      return true;
+    }
+    const std::string overloadPrefix = pathText + "__ov";
+    const std::string specializationPrefix = pathText + "__t";
+    for (const auto &def : program_.definitions) {
+      if (def.fullPath != pathText &&
+          def.fullPath.rfind(overloadPrefix, 0) != 0 &&
+          def.fullPath.rfind(specializationPrefix, 0) != 0) {
+        continue;
+      }
+      if (auto paramsIt = paramsByDef_.find(def.fullPath);
+          paramsIt != paramsByDef_.end() && paramsMatchReceiver(paramsIt->second)) {
+        return true;
+      }
+    }
+    return false;
+  };
   auto hasReceiverCompatibleExplicitVectorHelperPath = [&](const std::string &path,
                                                            const Expr &receiverExpr) {
-    auto paramsIt = paramsByDef_.find(path);
-    if (paramsIt == paramsByDef_.end() || paramsIt->second.empty()) {
-      return false;
-    }
     const std::string receiverFamily = classifyExplicitVectorHelperReceiver(receiverExpr);
     if (receiverFamily.empty()) {
       return false;
     }
-    return classifyExplicitVectorHelperParam(paramsIt->second.front().binding) == receiverFamily;
+    return explicitHelperFamilyHasCompatibleReceiver(path, receiverFamily);
   };
   auto tryResolveExplicitCanonicalVectorCountMethodTarget = [&](const Expr &receiverExpr)
       -> std::optional<bool> {
@@ -1619,6 +1641,27 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return failMethodTargetResolutionDiagnostic("unknown method: " +
                                                 explicitVectorHelperPath);
   };
+  auto tryResolveExplicitMapReceiverVectorCountMethodTarget =
+      [&](std::string_view receiverFamily) -> std::optional<bool> {
+    if (normalizedMethodName != "count" || receiverFamily != "map") {
+      return std::nullopt;
+    }
+    if (explicitVectorHelperPath != "/vector/count" &&
+        explicitVectorHelperPath != "/std/collections/vector/count") {
+      return std::nullopt;
+    }
+    if (explicitHelperFamilyHasCompatibleReceiver(explicitVectorHelperPath,
+                                                  receiverFamily)) {
+      resolvedOut = explicitVectorHelperPath;
+      isBuiltinOut = false;
+      return true;
+    }
+    if (explicitVectorHelperPath == "/vector/count") {
+      return failMethodTargetResolutionDiagnostic("unknown method: " +
+                                                  explicitVectorHelperPath);
+    }
+    return std::nullopt;
+  };
   auto tryRedirectConcreteExperimentalSoaMethodTarget =
       [&](const std::string &resolvedType) -> bool {
     const bool isConcreteExperimentalSoaReceiver =
@@ -1636,6 +1679,21 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                   "/soa_vector"));
   };
+  if (normalizedMethodName == "count" &&
+      (explicitVectorHelperPath == "/vector/count" ||
+       explicitVectorHelperPath == "/std/collections/vector/count")) {
+    const std::string explicitVectorReceiverFamily =
+        classifyExplicitVectorHelperReceiver(receiver);
+    if (explicitVectorReceiverFamily == "map") {
+      if (auto explicitTarget =
+              tryResolveExplicitMapReceiverVectorCountMethodTarget("map");
+          explicitTarget.has_value()) {
+        return *explicitTarget;
+      }
+      return failMethodTargetResolutionDiagnostic("unknown method: " +
+                                                  explicitVectorHelperPath);
+    }
+  }
   auto resolveExplicitDirectCallReturnMethodTarget = [&](const Expr &receiverExpr) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return false;
@@ -1747,6 +1805,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget("/string/count");
       }
       if (collectionTypePath == "/map") {
+        if (normalizedMethodName == "count") {
+          if (auto explicitTarget =
+                  tryResolveExplicitMapReceiverVectorCountMethodTarget("map");
+              explicitTarget.has_value()) {
+            return *explicitTarget;
+          }
+          if (auto explicitTarget =
+                  tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
+              explicitTarget.has_value()) {
+            return *explicitTarget;
+          }
+        }
         return setPreferredMapMethodTarget(receiver, normalizedMethodName);
       }
       if (normalizedMethodName == "count" && collectionTypePath == "/Buffer") {
@@ -2098,6 +2168,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return true;
     }
     if (resolveMapTarget(receiver)) {
+      if (auto explicitTarget =
+              tryResolveExplicitMapReceiverVectorCountMethodTarget("map");
+          explicitTarget.has_value()) {
+        return *explicitTarget;
+      }
       if (normalizedMethodName == "count") {
         if (auto explicitTarget = tryResolveExplicitCanonicalVectorCountMethodTarget(receiver);
             explicitTarget.has_value()) {
@@ -2555,9 +2630,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (receiver.kind == Expr::Kind::Call) {
     std::string receiverCollectionTypePath;
-    if (resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
-        resolveCollectionMethodFromTypePath(receiverCollectionTypePath)) {
-      return true;
+    if (resolveCallCollectionTypePath(receiver, params, locals,
+                                      receiverCollectionTypePath)) {
+      if (receiverCollectionTypePath == "/map") {
+        if (auto explicitTarget =
+                tryResolveExplicitMapReceiverVectorCountMethodTarget("map");
+            explicitTarget.has_value()) {
+          return *explicitTarget;
+        }
+      }
+      if (resolveCollectionMethodFromTypePath(receiverCollectionTypePath)) {
+        return true;
+      }
     }
   }
 

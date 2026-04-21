@@ -349,8 +349,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       }
       if (collectionTypePath == "/map" &&
           !isLocalRootMapAliasCall(receiver) &&
-          (helperName == "count" || helperName == "count_ref" ||
-           helperName == "contains" || helperName == "contains_ref" ||
+          (helperName == "contains" || helperName == "contains_ref" ||
            helperName == "tryAt" || helperName == "tryAt_ref" ||
            helperName == "at" || helperName == "at_ref" ||
            helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||

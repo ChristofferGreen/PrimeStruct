@@ -11,6 +11,28 @@ bool isVectorStructPath(const std::string &structPath) {
          structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
+std::string stripGeneratedStructSuffix(std::string structPath) {
+  const size_t leafStart = structPath.find_last_of('/');
+  const size_t suffixStart =
+      structPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (suffixStart != std::string::npos) {
+    structPath.erase(suffixStart);
+  }
+  return structPath;
+}
+
+bool isCompatibleInlineStructFieldPath(const std::string &expectedStructPath,
+                                       const std::string &actualStructPath) {
+  if (expectedStructPath == actualStructPath) {
+    return true;
+  }
+  if (isVectorStructPath(expectedStructPath) && isVectorStructPath(actualStructPath)) {
+    return true;
+  }
+  return stripGeneratedStructSuffix(expectedStructPath) ==
+         stripGeneratedStructSuffix(actualStructPath);
+}
+
 void materializeInlineStructFieldLocal(const StructSlotFieldInfo &field,
                                        int32_t baseLocal,
                                        int32_t &nextLocal,
@@ -108,8 +130,10 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
 
     std::string argStruct = inferStructExprPath(*arg, argLocals);
     if (argStruct.empty() ||
-        (argStruct != field.structPath && !(isVectorStructPath(argStruct) && isVectorStructPath(field.structPath)))) {
-      error = "struct field type mismatch";
+        !isCompatibleInlineStructFieldPath(field.structPath, argStruct)) {
+      error = "struct field type mismatch: expected " + field.structPath + ", got " +
+              (argStruct.empty() ? std::string("<unknown>") : argStruct) +
+              " in " + calleePath + "::" + field.name;
       return false;
     }
     const bool isUninitializedStructStorage =

@@ -419,10 +419,15 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       }
       if (!exprIn.isMethodCall) {
         const std::string resolvedPath = resolveExprPath(exprIn);
+        const std::string rawCallPath = resolveScopedCallPath(exprIn);
         auto defIt = defMap.find(resolvedPath);
+        if (defIt == defMap.end() && rawCallPath != resolvedPath) {
+          defIt = defMap.find(rawCallPath);
+        }
         if (defIt != defMap.end() && defIt->second != nullptr) {
+          const std::string definitionPath = defIt->second->fullPath;
           if (isStructDefinition(*defIt->second)) {
-            return resolvedPath;
+            return definitionPath;
           }
           auto inferExplicitStructReturnPath = [&](const Definition &def) -> std::string {
             for (const auto &transform : def.transforms) {
@@ -472,13 +477,13 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           if (!indexedStruct.empty()) {
             return indexedStruct;
           }
-          if (visitedDefs.insert(resolvedPath).second) {
+          if (visitedDefs.insert(definitionPath).second) {
             const Definition &nestedDef = *defIt->second;
             std::string returnedStruct = inferStructReturnPathFromDefinition(
                 nestedDef,
                 resolveStructTypeName,
                 [&](const Expr &nestedExpr) { return inferStructExprPath(nestedExpr, localsInExpr); });
-            visitedDefs.erase(resolvedPath);
+            visitedDefs.erase(definitionPath);
             if (!returnedStruct.empty()) {
               return returnedStruct;
             }

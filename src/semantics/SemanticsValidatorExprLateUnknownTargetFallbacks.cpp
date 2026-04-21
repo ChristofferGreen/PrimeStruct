@@ -91,7 +91,13 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
       normalizedMethodNamespace.front() == '/') {
     normalizedMethodNamespace.erase(normalizedMethodNamespace.begin());
   }
+  const bool requestsExplicitVectorCompatibilityMethod =
+      isExplicitVectorCompatibilityMethodNamespace(
+          normalizedMethodNamespace) ||
+      expr.name.rfind("/vector/", 0) == 0 ||
+      expr.name.rfind("/std/collections/vector/", 0) == 0;
   if (context.resolveMapTarget != nullptr && expr.isMethodCall &&
+      !requestsExplicitVectorCompatibilityMethod &&
       isCanonicalMapMethodHelper(normalizedMethodName) && !expr.args.empty() &&
       context.resolveMapTarget(expr.args.front())) {
     Expr rewrittenMapMethodCall = expr;
@@ -107,8 +113,7 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     return validateExpr(params, locals, rewrittenMapMethodCall);
   }
   if (expr.isMethodCall &&
-      !isExplicitVectorCompatibilityMethodNamespace(
-          normalizedMethodNamespace) &&
+      !requestsExplicitVectorCompatibilityMethod &&
       isCanonicalVectorAccessMethodHelper(normalizedMethodName) &&
       !expr.args.empty()) {
     const Expr &receiverExpr = expr.args.front();

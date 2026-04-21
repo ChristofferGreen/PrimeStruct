@@ -119,6 +119,9 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
     return false;
   }
   std::string normalized = normalizeQualifiedHelperName(expr);
+  if (normalized.rfind("vector/", 0) == 0) {
+    return false;
+  }
   const std::string stdVectorPrefix = "std/collections/vector/";
   const std::string soaVectorPrefix = "soa_vector/";
   const std::string stdSoaVectorPrefix = "std/collections/soa_vector/";

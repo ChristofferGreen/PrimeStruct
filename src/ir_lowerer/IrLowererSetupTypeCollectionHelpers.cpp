@@ -290,15 +290,18 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (expr.name.empty()) {
     return false;
   }
+  std::string normalized = expr.name;
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(0, 1);
+  }
+  if (normalized.rfind("vector/", 0) == 0) {
+    return false;
+  }
   if (resolvePublishedStdlibSurfaceExprMemberName(
           expr,
           StdlibSurfaceId::CollectionsVectorHelpers,
           helperNameOut)) {
     return true;
-  }
-  std::string normalized = expr.name;
-  if (!normalized.empty() && normalized.front() == '/') {
-    normalized.erase(0, 1);
   }
   const std::string arrayPrefix = "array/";
   const std::string stdVectorPrefix = "std/collections/vector/";

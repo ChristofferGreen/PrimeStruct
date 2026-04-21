@@ -168,6 +168,15 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
     auto resolveInferredMapMethodFallback = [&]() -> bool {
       const std::string helperName = expr.name;
+      const bool requestsExplicitVectorHelperNamespace =
+          expr.namespacePrefix == "vector" || expr.namespacePrefix == "/vector" ||
+          expr.namespacePrefix == "std/collections/vector" ||
+          expr.namespacePrefix == "/std/collections/vector" ||
+          helperName.rfind("/vector/", 0) == 0 ||
+          helperName.rfind("/std/collections/vector/", 0) == 0;
+      if (requestsExplicitVectorHelperNamespace) {
+        return false;
+      }
       if (!(helperName == "count" || helperName == "count_ref" ||
             helperName == "contains" || helperName == "contains_ref" ||
             helperName == "tryAt" || helperName == "tryAt_ref" ||

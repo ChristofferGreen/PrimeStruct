@@ -162,6 +162,10 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
       return alias == targetName;
     }
   }
+  auto isRemovedScopedCollectionAlias = [](const std::string &candidate) {
+    return candidate.rfind("vector/", 0) == 0 || candidate.rfind("array/", 0) == 0 ||
+           candidate.rfind("map/", 0) == 0;
+  };
   const std::string internalSoaAlias =
       normalizeInternalSoaStorageBuiltinAlias(name);
   if (internalSoaAlias.find('/') == std::string::npos &&
@@ -169,6 +173,9 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
     return internalSoaAlias == targetName;
   }
   if (name.find('/') != std::string::npos && matchScopedBuiltinTail(name)) {
+    if (isRemovedScopedCollectionAlias(name)) {
+      return false;
+    }
     return true;
   }
   if (name.find('/') != std::string::npos) {
@@ -413,7 +420,11 @@ bool getBuiltinOperatorName(const Expr &expr, std::string &out) {
   std::string name =
       normalizeInternalSoaStorageBuiltinAlias(resolveScopedExprName(expr));
   if (name.find('/') != std::string::npos) {
-    return false;
+    const size_t slash = name.find_last_of('/');
+    if (slash == std::string::npos || slash + 1 >= name.size()) {
+      return false;
+    }
+    name = name.substr(slash + 1);
   }
   if (name == "plus" || name == "minus" || name == "multiply" || name == "divide" || name == "negate") {
     out = name;
@@ -429,7 +440,11 @@ bool getBuiltinComparisonName(const Expr &expr, std::string &out) {
   std::string name =
       normalizeInternalSoaStorageBuiltinAlias(resolveScopedExprName(expr));
   if (name.find('/') != std::string::npos) {
-    return false;
+    const size_t slash = name.find_last_of('/');
+    if (slash == std::string::npos || slash + 1 >= name.size()) {
+      return false;
+    }
+    name = name.substr(slash + 1);
   }
   if (name == "greater_than" || name == "less_than" || name == "equal" || name == "not_equal" ||
       name == "greater_equal" || name == "less_equal" || name == "and" || name == "or" || name == "not") {

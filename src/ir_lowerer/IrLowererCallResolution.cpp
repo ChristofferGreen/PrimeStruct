@@ -454,6 +454,7 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     return nullptr;
   }
   const std::string resolved = resolveExprPath(callExpr);
+  const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(callExpr);
   if (const Definition *rawAliasDef =
           preferExplicitRootedMapAliasDefinition(callExpr, defMap);
       rawAliasDef != nullptr &&
@@ -486,6 +487,13 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
       return resolvedDef;
     }
     return nullptr;
+  }
+  if (!isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved) &&
+      rawPath != resolved) {
+    if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);
+        rawDef != nullptr) {
+      return rawDef;
+    }
   }
   if (isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved)) {
     return nullptr;

@@ -66,7 +66,14 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
     return true;
   }
   if (normalized.find('/') != std::string::npos) {
-    return false;
+    if (!hasLeadingSlash) {
+      return false;
+    }
+    const size_t slash = normalized.find_last_of('/');
+    if (slash == std::string::npos || slash + 1 >= normalized.size()) {
+      return false;
+    }
+    normalized = normalized.substr(slash + 1);
   }
   if (hasLeadingSlash) {
     out = normalized;
