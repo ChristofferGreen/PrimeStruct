@@ -74,6 +74,8 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferUtility.cpp";
   const std::filesystem::path semanticsCollectionHelperRewritesPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorCollectionHelperRewrites.cpp";
+  const std::filesystem::path semanticsValidatePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   REQUIRE(std::filesystem::exists(semanticsInferPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionCountCapacityPath));
   REQUIRE(std::filesystem::exists(semanticsInferCollectionDirectCountCapacityPath));
@@ -100,6 +102,7 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferUtilityPath));
   REQUIRE(std::filesystem::exists(semanticsCollectionHelperRewritesPath));
+  REQUIRE(std::filesystem::exists(semanticsValidatePath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
   const std::string semanticsDiagnosticsSource = readText(semanticsDiagnosticsPath);
   const std::string semanticsInferCombinedSource = readTexts({
@@ -161,6 +164,7 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   const std::string semanticsInferControlFlowSource = readText(semanticsInferControlFlowPath);
   const std::string semanticsInferDefinitionSource = readText(semanticsInferDefinitionPath);
   const std::string semanticsCollectionHelperRewritesSource = readText(semanticsCollectionHelperRewritesPath);
+  const std::string semanticsValidateSource = readText(semanticsValidatePath);
   CHECK(semanticsInferCombinedSource.find("ReturnKind SemanticsValidator::inferExprReturnKind") != std::string::npos);
   CHECK(semanticsInferCombinedSource.find("inferControlFlowExprReturnKind(expr, params, locals, handledControlFlow);") !=
         std::string::npos);
@@ -1897,6 +1901,12 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "findExperimentalMapCompatibilityHelper(") == std::string::npos);
   CHECK(collectionCompatibilitySource.find(
             "findRemovedCollectionHelperReference(") == std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "base == \"SoaVector\" ||\n"
+            "             base == \"soa_vector\" ||\n"
+            "             base == \"std/collections/soa_vector\" ||\n"
+            "             base == \"std/collections/experimental_soa_vector/SoaVector\"") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator build struct-field publication stays stable") {

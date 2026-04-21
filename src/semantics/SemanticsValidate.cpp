@@ -695,7 +695,10 @@ bool extractExperimentalSoaVectorElementTypeForFieldViewRewrite(const semantics:
         if (!base.empty() && base.front() == '/') {
           base.erase(base.begin());
         }
-        if ((base == "SoaVector" || base == "std/collections/experimental_soa_vector/SoaVector") &&
+        if ((base == "SoaVector" ||
+             base == "soa_vector" ||
+             base == "std/collections/soa_vector" ||
+             base == "std/collections/experimental_soa_vector/SoaVector") &&
             !argText.empty()) {
           std::vector<std::string> args;
           if (!semantics::splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
