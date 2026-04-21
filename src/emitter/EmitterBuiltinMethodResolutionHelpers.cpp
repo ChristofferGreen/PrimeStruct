@@ -572,6 +572,10 @@ bool resolveMethodCallPath(const Expr &call,
       resolvedType = normalizeMapImportAliasPath(importIt->second);
     }
   }
+  if (isConcreteExperimentalSoaVectorStructPath(resolvedType) &&
+      isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
+    resolvedType = "/soa_vector";
+  }
   if (resolvedType == "/vector" || resolvedType == "vector") {
     const bool isCountLikeMethod = normalizedMethodName == "count";
     const bool isCapacityLikeMethod = normalizedMethodName == "capacity";

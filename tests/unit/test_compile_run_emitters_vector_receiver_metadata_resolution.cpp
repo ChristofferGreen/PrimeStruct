@@ -987,6 +987,91 @@ TEST_CASE("C++ emitter helper keeps direct helper-return soa_vector mutator shad
   expectResolved("reserve", "/soa_vector/reserve");
 }
 
+TEST_CASE("C++ emitter helper keeps nested helper-return soa_vector mutator shadows on wrapper paths") {
+  primec::Expr holderName;
+  holderName.kind = primec::Expr::Kind::Name;
+  holderName.name = "holder";
+
+  primec::Expr cloneCall;
+  cloneCall.kind = primec::Expr::Kind::Call;
+  cloneCall.isMethodCall = true;
+  cloneCall.name = "cloneValues";
+  cloneCall.args = {holderName};
+  cloneCall.argNames = {std::nullopt};
+
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Name;
+  valueArg.name = "item";
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo holderInfo;
+  holderInfo.typeName = "Holder";
+  localTypes.emplace("holder", holderInfo);
+
+  primec::Definition holderCloneDef;
+  holderCloneDef.fullPath = "/Holder/cloneValues";
+  primec::Definition aliasPushDef;
+  aliasPushDef.fullPath = "/soa_vector/push";
+  primec::Definition aliasReserveDef;
+  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  primec::Definition canonicalPushDef;
+  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  primec::Definition canonicalReserveDef;
+  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  primec::Definition concretePushDef;
+  concretePushDef.fullPath =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+  primec::Definition concreteReserveDef;
+  concreteReserveDef.fullPath =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle/reserve";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {holderCloneDef.fullPath, &holderCloneDef},
+      {aliasPushDef.fullPath, &aliasPushDef},
+      {aliasReserveDef.fullPath, &aliasReserveDef},
+      {canonicalPushDef.fullPath, &canonicalPushDef},
+      {canonicalReserveDef.fullPath, &canonicalReserveDef},
+      {concretePushDef.fullPath, &concretePushDef},
+      {concreteReserveDef.fullPath, &concreteReserveDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap = {
+      {"/std/collections/experimental_soa_vector/SoaVector__Particle",
+       "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+  };
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs = {
+      {"/Holder/cloneValues", "/std/collections/experimental_soa_vector/SoaVector__Particle"},
+  };
+
+  auto expectResolved = [&](const char *methodName, const char *expectedPath) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = methodName;
+    call.args = {cloneCall};
+    if (std::string(methodName) == "push") {
+      call.args.push_back(valueArg);
+    }
+    if (std::string(methodName) == "reserve") {
+      primec::Expr countLiteral;
+      countLiteral.kind = primec::Expr::Kind::Literal;
+      countLiteral.intWidth = 32;
+      countLiteral.literalValue = 4;
+      call.args.push_back(countLiteral);
+    }
+    call.argNames.assign(call.args.size(), std::nullopt);
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == expectedPath);
+  };
+
+  expectResolved("push", "/soa_vector/push");
+  expectResolved("reserve", "/soa_vector/reserve");
+}
+
 TEST_CASE("C++ emitter helper handles cross-path vector slash count capacity fallback") {
   primec::Expr receiver;
   receiver.kind = primec::Expr::Kind::Name;
