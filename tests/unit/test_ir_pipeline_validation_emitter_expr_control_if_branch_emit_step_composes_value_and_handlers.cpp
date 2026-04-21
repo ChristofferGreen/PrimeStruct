@@ -1083,6 +1083,28 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "  }\n") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
+            "    std::string resolvedPath = preferredCollectionHelperResolvedPath(candidate);\n"
+            "    if (resolvedPath.empty()) {\n"
+            "      resolvedPath = resolveCalleePath(candidate);\n"
+            "    }\n"
+            "    if (!resolvedPath.empty()) {\n"
+            "      const std::string concreteResolvedPath =\n"
+            "          resolveExprConcreteCallPath(params, locals, candidate, resolvedPath);\n"
+            "      if (!concreteResolvedPath.empty()) {\n"
+            "        resolvedPath = concreteResolvedPath;\n"
+            "      }\n"
+            "    }\n"
+            "    if (resolvedPath.empty()) {\n"
+            "      return false;\n"
+            "    }\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "    const std::string resolvedPath = resolveCalleePath(candidate);\n"
+            "    if (resolvedPath.empty()) {\n"
+            "      return false;\n"
+            "    }\n") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
             "    std::string resolvedInferencePath = preferredResolvedInferencePath;\n"
             "    if (resolvedInferencePath.empty()) {\n"
             "      resolvedInferencePath = resolveCalleePath(*initializerExprForInference);\n"
