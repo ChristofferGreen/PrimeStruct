@@ -1018,11 +1018,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find(
             "const bool\n"
-            "          missesExplicitVectorCountMethodThroughMapMethodTarget =\n"
+            "          routesExplicitVectorCountMethodThroughMapMethodTarget =\n"
             "              requestsExplicitVectorCountMethod &&\n"
             "              (normalizeCollectionHelperPath(resolvedPath) == \"/map/count\" ||\n"
             "               normalizeCollectionHelperPath(resolvedPath) ==\n"
-            "                   \"/std/collections/map/count\");") !=
+                    "                   \"/std/collections/map/count\");") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "      const std::string preferredResolvedPath =\n"
+            "          !explicitVectorCountBridgePath.empty()\n"
+            "              ? explicitVectorCountBridgePath\n"
+            "              : resolvedPath;\n"
+            "      if (const Definition *resolvedDef =\n"
+            "              resolveLoweredDefinitionPath(preferredResolvedPath);") !=
         std::string::npos);
   CHECK(irMethodResolution.find("std::string semanticTargetLookupError;") ==
         std::string::npos);

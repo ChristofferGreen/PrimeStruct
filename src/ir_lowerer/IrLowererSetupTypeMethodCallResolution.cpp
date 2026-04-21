@@ -199,35 +199,32 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return nullptr;
       }
     } else {
-      if (const Definition *resolvedDef =
-              resolveLoweredDefinitionPath(resolvedPath);
-          resolvedDef != nullptr) {
-        return resolvedDef;
-      }
       const bool
-          missesExplicitVectorCountMethodThroughMapMethodTarget =
+          routesExplicitVectorCountMethodThroughMapMethodTarget =
               requestsExplicitVectorCountMethod &&
               (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
                normalizeCollectionHelperPath(resolvedPath) ==
                    "/std/collections/map/count");
-      if (missesExplicitVectorCountMethodThroughMapMethodTarget) {
-        if (const std::string bridgePath =
-                findSemanticProductBridgePathChoice(semanticProgram, callExpr);
-            !bridgePath.empty()) {
-          if (const Definition *bridgeDef =
-                  resolveLoweredDefinitionPath(bridgePath);
-              bridgeDef != nullptr) {
-            return bridgeDef;
-          }
-        }
+      const std::string explicitVectorCountBridgePath =
+          routesExplicitVectorCountMethodThroughMapMethodTarget
+              ? findSemanticProductBridgePathChoice(semanticProgram, callExpr)
+              : std::string{};
+      const std::string preferredResolvedPath =
+          !explicitVectorCountBridgePath.empty()
+              ? explicitVectorCountBridgePath
+              : resolvedPath;
+      if (const Definition *resolvedDef =
+              resolveLoweredDefinitionPath(preferredResolvedPath);
+          resolvedDef != nullptr) {
+        return resolvedDef;
       }
-      if (resolvedPath.rfind("/file/", 0) == 0) {
+      if (preferredResolvedPath.rfind("/file/", 0) == 0) {
         errorOut.clear();
         return nullptr;
       }
       errorOut =
           "semantic-product method-call target missing lowered definition: " +
-          resolvedPath;
+          preferredResolvedPath;
       return nullptr;
     }
   }
