@@ -706,6 +706,14 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaGetRefCall, "get_ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaGetRefCall, "get_ref"));
 
+  primec::Expr namespacedSoaCountRefCall;
+  namespacedSoaCountRefCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaCountRefCall.name = "count_ref";
+  namespacedSoaCountRefCall.namespacePrefix =
+      "/std/collections/soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaCountRefCall, "count_ref"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaCountRefCall, "count_ref"));
+
   primec::Expr namespacedSoaCountCall;
   namespacedSoaCountCall.kind = primec::Expr::Kind::Call;
   namespacedSoaCountCall.name = "count";
@@ -729,6 +737,14 @@ TEST_CASE("shared return helpers keep scoped stdlib and custom paths builtin") {
       "/std/collections/soa_vector_conversions";
   CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaToAosRefCall, "to_aos_ref"));
   CHECK(primec::emitter::isSimpleCallName(namespacedSoaToAosRefCall, "to_aos_ref"));
+
+  primec::Expr namespacedSoaRefRefCall;
+  namespacedSoaRefRefCall.kind = primec::Expr::Kind::Call;
+  namespacedSoaRefRefCall.name = "ref_ref";
+  namespacedSoaRefRefCall.namespacePrefix =
+      "/std/collections/soa_vector";
+  CHECK(primec::ir_lowerer::isSimpleCallName(namespacedSoaRefRefCall, "ref_ref"));
+  CHECK(primec::emitter::isSimpleCallName(namespacedSoaRefRefCall, "ref_ref"));
 
   primec::Expr namespacedSoaPushCall;
   namespacedSoaPushCall.kind = primec::Expr::Kind::Call;
