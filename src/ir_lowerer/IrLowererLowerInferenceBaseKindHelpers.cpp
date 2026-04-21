@@ -158,7 +158,14 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
         return resultInfo.valueKind;
       }
       if (fallbackInferExprKind != nullptr && *fallbackInferExprKind && !isBaseSetupResultOrTryCall(expr)) {
-        return (*fallbackInferExprKind)(expr, localsIn);
+        kindOut = (*fallbackInferExprKind)(expr, localsIn);
+        if (kindOut != LocalInfo::ValueKind::Unknown) {
+          return kindOut;
+        }
+      }
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(expr, builtinComparison)) {
+        return LocalInfo::ValueKind::Bool;
       }
       return LocalInfo::ValueKind::Unknown;
     }

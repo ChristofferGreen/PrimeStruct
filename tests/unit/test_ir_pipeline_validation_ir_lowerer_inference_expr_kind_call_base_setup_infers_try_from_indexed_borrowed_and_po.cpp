@@ -145,6 +145,50 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-base setup recovers builtin comparison bool without semantic facts") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  state.inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.intWidth = 32;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(comparisonExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;
