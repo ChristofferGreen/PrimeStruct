@@ -2036,6 +2036,24 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "(helperName == \"count_ref\" && preserveCountRefHelper)") !=
         std::string::npos);
   CHECK(semanticsValidateSource.find(
+            "if (helperName != \"count\" && helperName != \"count_ref\" &&\n"
+            "      helperName != \"get\" && helperName != \"get_ref\" &&\n"
+            "      helperName != \"ref\" && helperName != \"ref_ref\" &&\n"
+            "      helperName != \"push\" && helperName != \"reserve\") {") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "           std::string_view(\"count_ref\"),\n"
+            "           std::string_view(\"get\"),\n"
+            "           std::string_view(\"get_ref\"),\n"
+            "           std::string_view(\"ref\"),\n"
+            "           std::string_view(\"ref_ref\"),") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "        fieldName == \"count\" || fieldName == \"count_ref\" ||\n"
+            "        fieldName == \"get\" || fieldName == \"get_ref\" ||\n"
+            "        fieldName == \"ref\" || fieldName == \"ref_ref\" ||") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
             "expr.name = \"/std/collections/soa_vector/\" + helperName;") !=
         std::string::npos);
 }

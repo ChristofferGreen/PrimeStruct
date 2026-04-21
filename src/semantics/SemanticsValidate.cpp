@@ -2728,9 +2728,10 @@ void rewriteExperimentalSoaSamePathHelperMethodExpr(
   } else if (helperName.rfind("soa_vector/", 0) == 0) {
     helperName = helperName.substr(std::string("soa_vector/").size());
   }
-  if (helperName != "count" && helperName != "get" &&
-      helperName != "ref" && helperName != "push" &&
-      helperName != "reserve") {
+  if (helperName != "count" && helperName != "count_ref" &&
+      helperName != "get" && helperName != "get_ref" &&
+      helperName != "ref" && helperName != "ref_ref" &&
+      helperName != "push" && helperName != "reserve") {
     return;
   }
   const std::string helperPath = "/soa_vector/" + helperName;
@@ -2791,8 +2792,11 @@ bool rewriteExperimentalSoaSamePathHelperMethods(Program &program, std::string &
   }
   for (std::string_view helperName : {
            std::string_view("count"),
+           std::string_view("count_ref"),
            std::string_view("get"),
+           std::string_view("get_ref"),
            std::string_view("ref"),
+           std::string_view("ref_ref"),
            std::string_view("push"),
            std::string_view("reserve")}) {
     if (hasVisibleExperimentalSoaSamePathHelper(program, helperName)) {
@@ -4191,7 +4195,9 @@ void rewriteExperimentalSoaFieldViewHelperExpr(
       fieldName.erase(fieldName.begin());
     }
     if (fieldName.empty() || fieldName.find('/') != std::string::npos ||
-        fieldName == "count" || fieldName == "get" || fieldName == "ref" ||
+        fieldName == "count" || fieldName == "count_ref" ||
+        fieldName == "get" || fieldName == "get_ref" ||
+        fieldName == "ref" || fieldName == "ref_ref" ||
         fieldName == "to_soa" || fieldName == "to_aos" ||
         fieldName == "to_aos_ref") {
       return;
