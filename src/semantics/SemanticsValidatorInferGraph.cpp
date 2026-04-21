@@ -619,11 +619,14 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
                                            isBuiltinMethod);
               }) &&
               !resolvedMethodTarget.empty()) {
-            resolvedMethodTarget = resolveExprConcreteCallPath(
+            const std::string concreteResolvedMethodTarget = resolveExprConcreteCallPath(
                 defParams,
                 activeLocals.bindings,
                 *initializerAnalysisExpr,
                 resolvedMethodTarget);
+            if (!concreteResolvedMethodTarget.empty()) {
+              resolvedMethodTarget = concreteResolvedMethodTarget;
+            }
             fact.methodCallResolvedPath = resolvedMethodTarget;
             const auto methodCallReturnKindIt = returnKinds_.find(resolvedMethodTarget);
             if (methodCallReturnKindIt != returnKinds_.end()) {

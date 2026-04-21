@@ -1013,11 +1013,14 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "return failUncontextualizedDiagnostic(std::move(message));") !=
         std::string::npos);
   CHECK(semanticsInferGraphSource.find(
-            "            resolvedMethodTarget = resolveExprConcreteCallPath(\n"
+            "            const std::string concreteResolvedMethodTarget = resolveExprConcreteCallPath(\n"
             "                defParams,\n"
             "                activeLocals.bindings,\n"
             "                *initializerAnalysisExpr,\n"
-            "                resolvedMethodTarget);") !=
+            "                resolvedMethodTarget);\n"
+            "            if (!concreteResolvedMethodTarget.empty()) {\n"
+            "              resolvedMethodTarget = concreteResolvedMethodTarget;\n"
+            "            }") !=
         std::string::npos);
 }
 
