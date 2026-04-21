@@ -587,6 +587,27 @@ main() {
             "are implemented: Owned") != std::string::npos);
 }
 
+TEST_CASE("canonical stdlib map wrappers resolve through explicit namespaced helpers") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<string, i32>] values{map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [i32 mut] total{mapCount<string, i32>(values)}
+  assign(total, plus(total, mapAt<string, i32>(values, "left"raw_utf8)))
+  assign(total, plus(total, mapAtUnsafe<string, i32>(values, "right"raw_utf8)))
+  if(mapContains<string, i32>(values, "left"raw_utf8),
+     then() { assign(total, plus(total, 1i32)) },
+     else() { })
+  return(total)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map bracket access stays unsupported on value and borrowed call receivers") {
   const std::string source = R"(
 import /std/collections/experimental_map/*

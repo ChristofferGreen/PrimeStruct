@@ -97,29 +97,29 @@ namespace std {
 
   [public return<i32>]
   mapCount<K, V>([map<K, V>] values) {
-    return(count(values))
+    return(/std/collections/map/count<K, V>(values))
   }
 
   [public return<bool>]
   mapContains<K, V>([map<K, V>] values, [K] key) {
-    return(contains(values, key))
+    return(/std/collections/map/contains<K, V>(values, key))
   }
 
   [public return<Result<V, ContainerError>>]
   mapTryAt<K, V>([map<K, V>] values, [K] key) {
-    if(contains(values, key),
+    if(/std/collections/map/contains<K, V>(values, key),
        then() { return(Result.ok(mapAtUnsafe<K, V>(values, key))) },
        else() { return(containerErrorResult<V>(containerMissingKey())) })
   }
 
   [public return<V>]
   mapAt<K, V>([map<K, V>] values, [K] key) {
-    return(at(values, key))
+    return(/std/collections/map/at<K, V>(values, key))
   }
 
   [public return<V>]
   mapAtUnsafe<K, V>([map<K, V>] values, [K] key) {
-    return(at_unsafe(values, key))
+    return(/std/collections/map/at_unsafe<K, V>(values, key))
   }
   }
 }
