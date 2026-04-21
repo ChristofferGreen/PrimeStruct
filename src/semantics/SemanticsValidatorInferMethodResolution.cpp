@@ -305,35 +305,38 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
     }
-    if (normalizedMethodName == "count") {
+    if (normalizedMethodName == "count" || normalizedMethodName == "count_ref") {
       if (collectionTypePath == "/array") {
+        if (normalizedMethodName == "count_ref") {
+          return false;
+        }
         resolvedOut = preferVectorStdlibHelperPath("/array/count");
         return true;
       }
       if (collectionTypePath == "/vector" &&
-          usesSamePathSoaHelperTargetForCollectionType("count", "/vector")) {
+          usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
         resolvedOut =
-            preferredSoaHelperTargetForCollectionType("count", "/vector");
+            preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
         return true;
       }
-      if (collectionTypePath == "/vector") {
+      if (collectionTypePath == "/vector" && normalizedMethodName == "count") {
         resolvedOut = preferredBareVectorHelperTarget("count");
         return true;
       }
       if (collectionTypePath == "/soa_vector") {
-        resolvedOut = preferredSoaHelperTargetForCollectionType("count",
+        resolvedOut = preferredSoaHelperTargetForCollectionType(normalizedMethodName,
                                                                 "/soa_vector");
         return true;
       }
-      if (collectionTypePath == "/string") {
+      if (collectionTypePath == "/string" && normalizedMethodName == "count") {
         resolvedOut = "/string/count";
         return true;
       }
-      if (collectionTypePath == "/map") {
+      if (collectionTypePath == "/map" && normalizedMethodName == "count") {
         resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "count");
         return true;
       }
-      if (collectionTypePath == "/Buffer") {
+      if (collectionTypePath == "/Buffer" && normalizedMethodName == "count") {
         resolvedOut = preferredBufferMethodTargetForCall(params, locals, receiver, "count");
         return !resolvedOut.empty();
       }
@@ -873,6 +876,24 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if (isCanonicalMapAccessMethodName(normalizedMethodName) &&
         resolveMapTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, normalizedMethodName);
+      return true;
+    }
+    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
+        resolveVectorTarget(receiver, elemType) &&
+        usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector")) {
+      resolvedOut =
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector");
+      return true;
+    }
+    if (normalizedMethodName == "count_ref" &&
+        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {
+      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
+      return true;
+    }
+    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
+        resolveSoaVectorTarget(receiver, elemType)) {
+      resolvedOut =
+          preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
       return true;
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&

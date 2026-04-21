@@ -276,6 +276,18 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "resolvedOut =\n"
             "            preferredSoaHelperTargetForCollectionType(\"count\", \"/vector\");") !=
         std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\") {") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                                \"/soa_vector\");") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if (normalizedMethodName == \"count_ref\" &&\n"
+            "        resolveBorrowedSoaVectorReceiver(receiver, elemType)) {\n"
+            "      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);") !=
+        std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find("resolvedOut = \"/soa_vector/get\";") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
