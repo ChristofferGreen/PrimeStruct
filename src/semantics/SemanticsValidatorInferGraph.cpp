@@ -547,7 +547,11 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
             initializerAnalysisExpr->templateArgs.empty() &&
             !initializerAnalysisExpr->hasBodyArguments &&
             initializerAnalysisExpr->bodyArguments.empty()) {
-          const std::string initializerWrapperPath = resolveCalleePath(*initializerAnalysisExpr);
+          std::string initializerWrapperPath =
+              preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);
+          if (initializerWrapperPath.empty()) {
+            initializerWrapperPath = resolveCalleePath(*initializerAnalysisExpr);
+          }
           if (isSimpleCallName(*initializerAnalysisExpr, "try") ||
               initializerWrapperPath == "/Result/ok") {
             initializerAnalysisExpr = &initializerAnalysisExpr->args.front();

@@ -1505,6 +1505,16 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "            std::string resolvedPath = resolveCalleePath(expr);\n") ==
         std::string::npos);
   CHECK(semanticsInferGraphSource.find(
+            "          std::string initializerWrapperPath =\n"
+            "              preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);\n"
+            "          if (initializerWrapperPath.empty()) {\n"
+            "            initializerWrapperPath = resolveCalleePath(*initializerAnalysisExpr);\n"
+            "          }\n") !=
+        std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "          const std::string initializerWrapperPath = resolveCalleePath(*initializerAnalysisExpr);\n") ==
+        std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
             "          std::string directCallResolvedPath =\n"
             "              preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);\n"
             "          if (directCallResolvedPath.empty()) {\n"
