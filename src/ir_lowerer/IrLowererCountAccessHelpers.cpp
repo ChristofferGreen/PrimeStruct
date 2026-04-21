@@ -40,6 +40,17 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
+bool isExplicitVectorCountMethodCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || !expr.isMethodCall) {
+    return false;
+  }
+  const std::string scopedPath = resolveScopedCallPath(expr);
+  return scopedPath == "/vector/count" ||
+         scopedPath == "vector/count" ||
+         scopedPath == "/std/collections/vector/count" ||
+         scopedPath == "std/collections/vector/count";
+}
+
 bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
                                          std::string_view helperName) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
@@ -223,6 +234,9 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
   if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
+  if (isExplicitVectorCountMethodCall(expr)) {
+    return false;
+  }
   if (isExplicitRemovedCountLikeAliasCall(expr, "count")) {
     return false;
   }
@@ -402,6 +416,9 @@ bool isStringCountCall(const Expr &expr, const LocalMap &localsIn) {
   if (!(isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) || expr.args.size() != 1) {
     return false;
   }
+  if (isExplicitVectorCountMethodCall(expr)) {
+    return false;
+  }
   if (isExplicitRemovedCountLikeAliasCall(expr, "count")) {
     return false;
   }
@@ -460,6 +477,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
+  if (isExplicitVectorCountMethodCall(expr)) {
+    return CountAccessCallEmitResult::NotHandled;
+  }
   if (isExplicitRemovedCountLikeAliasCall(expr, "count") ||
       isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;

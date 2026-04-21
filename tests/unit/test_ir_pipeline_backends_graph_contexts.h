@@ -1670,6 +1670,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(countAccessHelpersSource.find("resolveEntryArgsParameter(const Definition &entryDef,\n"
                                       "                               const SemanticProgram *semanticProgram,") !=
         std::string::npos);
+  CHECK(countAccessHelpersSource.find("bool isExplicitVectorCountMethodCall(const Expr &expr)") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("if (isExplicitVectorCountMethodCall(expr)) {\n"
+                                      "    return false;\n"
+                                      "  }") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("if (isExplicitVectorCountMethodCall(expr)) {\n"
+                                      "    return CountAccessCallEmitResult::NotHandled;\n"
+                                      "  }") !=
+        std::string::npos);
   CHECK(countAccessHelpersSource.find("entry.scopePath != entryDef.fullPath || entry.siteKind != \"parameter\"") !=
         std::string::npos);
   CHECK(countAccessHelpersSource.find("entryParamFact->bindingTypeText != \"array<string>\"") !=
