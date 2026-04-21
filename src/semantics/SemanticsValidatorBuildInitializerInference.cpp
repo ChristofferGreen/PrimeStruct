@@ -725,7 +725,18 @@ bool SemanticsValidator::canonicalizeInferredCollectionBinding(
     if (getBuiltinCollectionName(candidate, builtinCollectionName)) {
       return false;
     }
-    const std::string resolvedCandidate = canonicalizeResolvedPath(resolveCalleePath(candidate));
+    std::string resolvedCandidate = preferredCollectionHelperResolvedPath(candidate);
+    if (resolvedCandidate.empty()) {
+      resolvedCandidate = resolveCalleePath(candidate);
+    }
+    resolvedCandidate = canonicalizeResolvedPath(std::move(resolvedCandidate));
+    if (!resolvedCandidate.empty()) {
+      const std::string concreteResolvedCandidate =
+          resolveExprConcreteCallPath(params, locals, candidate, resolvedCandidate);
+      if (!concreteResolvedCandidate.empty()) {
+        resolvedCandidate = canonicalizeResolvedPath(concreteResolvedCandidate);
+      }
+    }
     if (resolvedCandidate.empty()) {
       return false;
     }
