@@ -1662,6 +1662,18 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
       if (normalizedReturnBaseType == "Reference" ||
           normalizedReturnBaseType == "Pointer") {
+        const std::string normalizedReturnCollectionType =
+            normalizeCollectionTypePath(normalizedReturnArgText);
+        const bool isBorrowedSoaWrapperMethod =
+            normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+            normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+            normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
+            normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref";
+        if (normalizedReturnCollectionType == "/soa_vector" &&
+            isBorrowedSoaWrapperMethod) {
+          return setCollectionMethodTarget(
+              preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
+        }
         resolvedOut = "/" + normalizedReturnBaseType + "/" + normalizedMethodName;
         return true;
       }

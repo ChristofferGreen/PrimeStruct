@@ -819,6 +819,25 @@
             "    }\n"
             "    if (resolveSoaVectorTarget(receiver, elemType)) {") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "      if (normalizedReturnBaseType == \"Reference\" ||\n"
+            "          normalizedReturnBaseType == \"Pointer\") {\n"
+            "        const std::string normalizedReturnCollectionType =\n"
+            "            normalizeCollectionTypePath(normalizedReturnArgText);\n"
+            "        const bool isBorrowedSoaWrapperMethod =\n"
+            "            normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\" ||\n"
+            "            normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\" ||\n"
+            "            normalizedMethodName == \"ref\" || normalizedMethodName == \"ref_ref\" ||\n"
+            "            normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\";\n"
+            "        if (normalizedReturnCollectionType == \"/soa_vector\" &&\n"
+            "            isBorrowedSoaWrapperMethod) {\n"
+            "          return setCollectionMethodTarget(\n"
+            "              preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));\n"
+            "        }\n"
+            "        resolvedOut = \"/\" + normalizedReturnBaseType + \"/\" + normalizedMethodName;\n"
+            "        return true;\n"
+            "      }") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
