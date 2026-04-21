@@ -649,6 +649,23 @@
             "                                                    \"/soa_vector\"));\n"
             "    }") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "      const bool isCanonicalSoaWrapperMethod =\n"
+            "          normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\" ||\n"
+            "          normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\" ||\n"
+            "          normalizedMethodName == \"ref\" || normalizedMethodName == \"ref_ref\" ||\n"
+            "          normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\" ||\n"
+            "          normalizedMethodName == \"push\" || normalizedMethodName == \"reserve\";\n"
+            "      if ((base == \"soa_vector\" ||\n"
+            "           (base == \"vector\" &&\n"
+            "            usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\"))) &&\n"
+            "          isCanonicalSoaWrapperMethod) {\n"
+            "        return setCollectionMethodTarget(\n"
+            "            preferredSoaHelperTargetForCollectionType(\n"
+            "                normalizedMethodName,\n"
+            "                base == \"soa_vector\" ? \"/soa_vector\" : \"/vector\"));\n"
+            "      }") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);

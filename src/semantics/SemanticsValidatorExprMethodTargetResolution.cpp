@@ -1871,28 +1871,16 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
            normalizedMethodName == "at_unsafe")) {
         return setCollectionMethodTarget("/array/" + normalizedMethodName);
       }
-      if ((base == "soa_vector" ||
-           (base == "vector" &&
-            usesSamePathSoaHelperTargetForCollectionType("count", "/vector"))) &&
-          normalizedMethodName == "count") {
-        return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType(
-                "count",
-                base == "soa_vector" ? "/soa_vector" : "/vector"));
-      }
+      const bool isCanonicalSoaWrapperMethod =
+          normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+          normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+          normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
+          normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref" ||
+          normalizedMethodName == "push" || normalizedMethodName == "reserve";
       if ((base == "soa_vector" ||
            (base == "vector" &&
             usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"))) &&
-          (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
-        return setCollectionMethodTarget(
-            preferredSoaHelperTargetForCollectionType(
-                normalizedMethodName,
-                base == "soa_vector" ? "/soa_vector" : "/vector"));
-      }
-      if ((base == "soa_vector" ||
-           (base == "vector" &&
-            usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"))) &&
-          (normalizedMethodName == "ref" || normalizedMethodName == "ref_ref")) {
+          isCanonicalSoaWrapperMethod) {
         return setCollectionMethodTarget(
             preferredSoaHelperTargetForCollectionType(
                 normalizedMethodName,
