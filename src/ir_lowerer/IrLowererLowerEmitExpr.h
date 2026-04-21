@@ -405,7 +405,13 @@
             packedKindOut = collectionValueKind;
             return true;
           }
-          const LocalInfo::ValueKind inferredValueKind = inferExprKind(valueExpr, valueLocals);
+          LocalInfo::ValueKind inferredValueKind = inferExprKind(valueExpr, valueLocals);
+          if (inferredValueKind == LocalInfo::ValueKind::Unknown) {
+            std::string builtinComparison;
+            if (getBuiltinComparisonName(valueExpr, builtinComparison)) {
+              inferredValueKind = LocalInfo::ValueKind::Bool;
+            }
+          }
           if (isFileHandleExpr(valueExpr, valueLocals) && inferredValueKind == LocalInfo::ValueKind::Int64) {
             packedKindOut = inferredValueKind;
             return true;

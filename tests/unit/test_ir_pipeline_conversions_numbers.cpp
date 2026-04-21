@@ -158,6 +158,50 @@ main() {
   CHECK(result == 8);
 }
 
+TEST_CASE("ir lowerer supports bool payloads for Result.map family") {
+  const std::string source = R"(
+import /std/file/*
+
+swallow_file_error([FileError] err) {}
+
+[return<int> effects(io_err) on_error<FileError, /swallow_file_error>]
+main() {
+  [Result<bool, FileError>] mapped{
+    Result.map(Result.ok(2i32), []([i32] value) { return(greater_than(value, 1i32)) })
+  }
+  [Result<bool, FileError>] chained{
+    Result.and_then(Result.ok(2i32), []([i32] value) { return(Result.ok(equal(value, 2i32))) })
+  }
+  [Result<bool, FileError>] summed{
+    Result.map2(Result.ok(2i32), Result.ok(3i32), []([i32] left, [i32] right) {
+      return(less_than(left, right))
+    })
+  }
+  [i32 mut] score{0i32}
+  if(try(mapped), then() { assign(score, plus(score, 1i32)) }, else() { })
+  if(try(chained), then() { assign(score, plus(score, 2i32)) }, else() { })
+  if(try(summed), then() { assign(score, plus(score, 4i32)) }, else() { })
+  return(score)
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 7);
+}
+
 TEST_CASE("ir lowerer rejects Result.map wide payloads") {
   const std::string source = R"(
 [return<int>]
