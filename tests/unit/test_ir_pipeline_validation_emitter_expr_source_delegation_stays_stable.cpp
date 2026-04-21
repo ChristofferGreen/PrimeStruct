@@ -2024,6 +2024,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count\")") !=
         std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "normalizedBase == \"SoaVector\" ||\n"
+            "                 normalizedBase == \"soa_vector\" ||\n"
+            "                 normalizedBase == \"std/collections/soa_vector\" ||\n"
+            "                 normalizedBase == \"std/collections/experimental_soa_vector/SoaVector\"") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "normalizedBase != \"SoaVector\" &&\n"
+            "                normalizedBase != \"soa_vector\" &&\n"
+            "                normalizedBase != \"std/collections/soa_vector\" &&\n"
+            "                normalizedBase != \"std/collections/experimental_soa_vector/SoaVector\"") !=
+        std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count_ref\")") !=
         std::string::npos);

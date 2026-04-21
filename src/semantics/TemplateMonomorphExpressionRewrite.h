@@ -265,6 +265,8 @@ bool rewriteExpr(Expr &expr,
               continue;
             }
             if ((normalizedBase == "SoaVector" ||
+                 normalizedBase == "soa_vector" ||
+                 normalizedBase == "std/collections/soa_vector" ||
                  normalizedBase == "std/collections/experimental_soa_vector/SoaVector" ||
                  isExperimentalSoaVectorSpecializedTypePath(normalizedBase)) &&
                 !argText.empty()) {
@@ -291,6 +293,8 @@ bool rewriteExpr(Expr &expr,
             }
             const std::string normalizedBase = normalizeBindingTypeName(base);
             if (normalizedBase != "SoaVector" &&
+                normalizedBase != "soa_vector" &&
+                normalizedBase != "std/collections/soa_vector" &&
                 normalizedBase != "std/collections/experimental_soa_vector/SoaVector") {
               continue;
             }
