@@ -446,10 +446,29 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
         normalizedPrefix == "std/collections/soa_vector") &&
        (normalizedName == "to_soa" || normalizedName == "to_aos" ||
         normalizedName == "to_aos_ref"));
-  if (normalizedName.empty() || normalizedName == "count" ||
-      normalizedName == "count_ref" || normalizedName == "get" ||
-      normalizedName == "get_ref" || normalizedName == "ref" ||
-      normalizedName == "ref_ref" || isSoaConversionSurfaceSpelling) {
+  const bool isSoaCountOrAccessSurfaceSpelling =
+      normalizedName == "count" || normalizedName == "count_ref" ||
+      normalizedName == "get" || normalizedName == "get_ref" ||
+      normalizedName == "ref" || normalizedName == "ref_ref" ||
+      normalizedName == "soa_vector/count" ||
+      normalizedName == "soa_vector/count_ref" ||
+      normalizedName == "soa_vector/get" ||
+      normalizedName == "soa_vector/get_ref" ||
+      normalizedName == "soa_vector/ref" ||
+      normalizedName == "soa_vector/ref_ref" ||
+      normalizedName == "std/collections/soa_vector/count" ||
+      normalizedName == "std/collections/soa_vector/count_ref" ||
+      normalizedName == "std/collections/soa_vector/get" ||
+      normalizedName == "std/collections/soa_vector/get_ref" ||
+      normalizedName == "std/collections/soa_vector/ref" ||
+      normalizedName == "std/collections/soa_vector/ref_ref" ||
+      ((normalizedPrefix == "soa_vector" ||
+        normalizedPrefix == "std/collections/soa_vector") &&
+       (normalizedName == "count" || normalizedName == "count_ref" ||
+        normalizedName == "get" || normalizedName == "get_ref" ||
+        normalizedName == "ref" || normalizedName == "ref_ref"));
+  if (normalizedName.empty() || isSoaCountOrAccessSurfaceSpelling ||
+      isSoaConversionSurfaceSpelling) {
       return false;
   }
   if (candidate.isMethodCall) {

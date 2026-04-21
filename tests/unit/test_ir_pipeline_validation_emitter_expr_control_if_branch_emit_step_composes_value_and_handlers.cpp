@@ -1822,10 +1822,31 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "normalizedName == \"count_ref\"") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"soa_vector/count_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/count_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "normalizedName == \"get_ref\"") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"soa_vector/get_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/get_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
             "normalizedName == \"ref_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"soa_vector/ref_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "normalizedName == \"std/collections/soa_vector/ref_ref\"") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "const bool isSoaCountOrAccessSurfaceSpelling =") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "auto explicitStdSoaHelperName = [&]() -> std::string {") !=
