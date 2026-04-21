@@ -470,6 +470,8 @@
                       helperName == "at_unsafe");
             }
             if (!candidate.args.empty() &&
+                candidate.namespacePrefix.empty() &&
+                candidate.name.find('/') == std::string::npos &&
                 (candidate.name == "count" || candidate.name == "contains" ||
                  candidate.name == "tryAt" || candidate.name == "at" ||
                  candidate.name == "at_unsafe")) {
