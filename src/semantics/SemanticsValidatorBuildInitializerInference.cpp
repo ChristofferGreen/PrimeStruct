@@ -505,7 +505,17 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     }
   }
 
-  const std::string resolved = resolveCalleePath(candidate);
+  std::string resolved = preferredCollectionHelperResolvedPath(candidate);
+  if (resolved.empty()) {
+    resolved = resolveCalleePath(candidate);
+  }
+  if (!resolved.empty()) {
+    const std::string concreteResolved =
+        resolveExprConcreteCallPath(params, locals, candidate, resolved);
+    if (!concreteResolved.empty()) {
+      resolved = concreteResolved;
+    }
+  }
   if (splitSoaFieldViewHelperPath(resolved, fieldNameOut)) {
     return true;
   }
