@@ -408,7 +408,17 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 1) {
       return false;
     }
-    const std::string resolvedPath = resolveCalleePath(candidate);
+    std::string resolvedPath = preferredCollectionHelperResolvedPath(candidate);
+    if (resolvedPath.empty()) {
+      resolvedPath = resolveCalleePath(candidate);
+    }
+    if (!resolvedPath.empty()) {
+      const std::string concreteResolvedPath =
+          resolveExprConcreteCallPath(params, locals, candidate, resolvedPath);
+      if (!concreteResolvedPath.empty()) {
+        resolvedPath = concreteResolvedPath;
+      }
+    }
     if (resolvedPath == "/to_aos" || resolvedPath == "/to_aos_ref") {
       return false;
     }
