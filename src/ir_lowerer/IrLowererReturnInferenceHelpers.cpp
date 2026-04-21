@@ -516,6 +516,12 @@ bool inferDefinitionReturnType(const Definition &def,
 
     LocalInfo::ValueKind kind = inferExprKindFromLocals(valueExpr, activeLocals);
     if (kind == LocalInfo::ValueKind::Unknown) {
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(valueExpr, builtinComparison)) {
+        kind = LocalInfo::ValueKind::Bool;
+      }
+    }
+    if (kind == LocalInfo::ValueKind::Unknown) {
       const std::string inferredStruct = inferStructExprPathFromLocals(valueExpr, activeLocals);
       if (!inferredStruct.empty()) {
         kind = LocalInfo::ValueKind::Int64;

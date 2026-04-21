@@ -764,6 +764,56 @@ TEST_CASE("ir lowerer return inference helpers infer typed value returns") {
   CHECK(out.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
+TEST_CASE("ir lowerer return inference helpers recover bool comparison returns") {
+  primec::Definition def;
+  def.fullPath = "/cmp";
+  def.hasReturnStatement = true;
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  primec::Expr returnStmt;
+  returnStmt.kind = primec::Expr::Kind::Call;
+  returnStmt.name = "return";
+  returnStmt.args = {comparisonExpr};
+
+  def.statements = {returnStmt};
+
+  primec::ir_lowerer::ReturnInferenceOptions options;
+  options.missingReturnBehavior = primec::ir_lowerer::MissingReturnBehavior::Error;
+  options.includeDefinitionReturnExpr = false;
+
+  primec::ir_lowerer::ReturnInfo out;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferDefinitionReturnType(
+      def,
+      {},
+      [](const primec::Expr &, bool, primec::ir_lowerer::LocalMap &, std::string &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+      options,
+      out,
+      error));
+  CHECK(error.empty());
+  CHECK_FALSE(out.returnsVoid);
+  CHECK_FALSE(out.returnsArray);
+  CHECK(out.kind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer return inference helpers report missing return in error mode") {
   primec::Definition def;
   def.fullPath = "/missing";
