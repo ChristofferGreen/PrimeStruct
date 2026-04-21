@@ -93,6 +93,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
            name == "repeat" || name == "location" || name == "dereference" ||
+           name == "count" || name == "capacity" || name == "to_aos" ||
            name == "move" || name == "negate" ||
            name == "plus" || name == "minus" || name == "multiply" ||
            name == "divide" || name == "greater_than" ||
