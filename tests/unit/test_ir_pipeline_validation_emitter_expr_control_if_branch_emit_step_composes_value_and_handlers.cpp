@@ -2497,6 +2497,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "preferredCollectionHelperResolvedPath(candidate)") !=
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find(
+            "const std::string concretePreferredCollectionHelper =\n"
+            "            resolveExprConcreteCallPath(\n"
+            "                params, locals, candidate, preferredCollectionHelper);\n"
+            "        if (!concretePreferredCollectionHelper.empty()) {\n"
+            "          return concretePreferredCollectionHelper;\n"
+            "        }\n"
+            "        return preferredCollectionHelper;") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
             "auto explicitLegacyOrCanonicalSoaHelperName = [&]() -> "
             "std::string {") !=
         std::string::npos);

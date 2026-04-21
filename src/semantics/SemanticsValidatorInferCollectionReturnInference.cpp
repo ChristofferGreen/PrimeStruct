@@ -759,6 +759,12 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       if (const std::string preferredCollectionHelper =
               preferredCollectionHelperResolvedPath(candidate);
           !preferredCollectionHelper.empty()) {
+        const std::string concretePreferredCollectionHelper =
+            resolveExprConcreteCallPath(
+                params, locals, candidate, preferredCollectionHelper);
+        if (!concretePreferredCollectionHelper.empty()) {
+          return concretePreferredCollectionHelper;
+        }
         return preferredCollectionHelper;
       }
       std::string normalizedName = candidate.name;
