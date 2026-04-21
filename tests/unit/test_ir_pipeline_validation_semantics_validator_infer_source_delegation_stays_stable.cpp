@@ -1421,6 +1421,12 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementBodyArgumentsSource.find(
             "if (isMapReceiverExpr(candidate.args[i])) {") !=
         std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementBodyArgumentsSource.find(
+            "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
+        std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find("bool SemanticsValidator::validateControlFlowStatement(") !=
         std::string::npos);
   CHECK(semanticsStatementControlFlowSource.find(

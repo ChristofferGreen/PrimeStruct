@@ -226,7 +226,7 @@ bool SemanticsValidator::validateStatementBodyArguments(const std::vector<Parame
       methodName = namespacedHelper;
     }
 
-    if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+    if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
       const std::string resolvedType = resolveCalleePath(receiver);
       if (!resolvedType.empty() && structNames_.count(resolvedType) > 0) {
         resolvedOut = normalizeBodyArgumentTarget(resolvedType + "/" + methodName);
