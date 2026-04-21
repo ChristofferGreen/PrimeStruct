@@ -83,6 +83,12 @@
         return false;
       }
       LocalInfo::ValueKind condKind = inferExprKind(cond, localsIn);
+      if (condKind == LocalInfo::ValueKind::Unknown) {
+        std::string builtinComparison;
+        if (getBuiltinComparisonName(cond, builtinComparison)) {
+          condKind = LocalInfo::ValueKind::Bool;
+        }
+      }
       if (condKind != LocalInfo::ValueKind::Bool) {
         error = "while condition requires bool";
         return false;

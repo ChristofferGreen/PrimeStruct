@@ -1,5 +1,17 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
+#include <fstream>
+
+namespace {
+
+std::string readTextFile(const std::string &path) {
+  std::ifstream file(path);
+  REQUIRE(file.is_open());
+  return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+}
+
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("ir lowerer flow helpers emit counted loop scaffolding") {
@@ -82,6 +94,15 @@ TEST_CASE("ir lowerer flow helpers emit counted loop scaffolding") {
   CHECK(instructions[2].op == primec::IrOpcode::PushI64);
   CHECK(instructions[3].op == primec::IrOpcode::CmpNeI64);
   CHECK(instructions[4].op == primec::IrOpcode::JumpIfZero);
+}
+
+TEST_CASE("ir lowerer flow helpers recover bool while conditions from builtin comparisons") {
+  const std::string source = readTextFile(
+      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsLoops.h");
+  CHECK(source.find("if (condKind == LocalInfo::ValueKind::Unknown)") != std::string::npos);
+  CHECK(source.find("if (getBuiltinComparisonName(cond, builtinComparison))") != std::string::npos);
+  CHECK(source.find("condKind = LocalInfo::ValueKind::Bool;") != std::string::npos);
+  CHECK(source.find("if (condKind != LocalInfo::ValueKind::Bool)") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer flow helpers emit body statements") {
