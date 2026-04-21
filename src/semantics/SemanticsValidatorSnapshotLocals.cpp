@@ -103,7 +103,10 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     return ok;
   };
 
-  out.resolvedPath = resolveCalleePath(expr);
+  out.resolvedPath = preferredCollectionHelperResolvedPath(expr);
+  if (out.resolvedPath.empty()) {
+    out.resolvedPath = resolveCalleePath(expr);
+  }
   if (expr.kind == Expr::Kind::Call && expr.isMethodCall && !expr.args.empty()) {
     std::string resolvedMethodPath;
     bool isBuiltinMethod = false;
