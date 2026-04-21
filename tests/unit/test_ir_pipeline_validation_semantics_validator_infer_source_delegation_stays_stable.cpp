@@ -1504,6 +1504,21 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementBindingsSource.find(
             "            std::string resolvedPath = resolveCalleePath(expr);\n") ==
         std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "          std::string directCallResolvedPath =\n"
+            "              preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);\n"
+            "          if (directCallResolvedPath.empty()) {\n"
+            "            directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);\n"
+            "          }\n") !=
+        std::string::npos);
+  CHECK(semanticsInferGraphSource.find(
+            "          std::string directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);\n"
+            "          if (const std::string preferredCollectionPath =\n"
+            "                  preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);\n"
+            "              !preferredCollectionPath.empty()) {\n"
+            "            directCallResolvedPath = preferredCollectionPath;\n"
+            "          }\n") ==
+        std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("entry argument strings require string bindings") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("std::function<bool(const Expr &, std::string &)> resolveStorageRootExpr;") !=

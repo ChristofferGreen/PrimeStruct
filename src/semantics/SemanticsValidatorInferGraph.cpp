@@ -576,11 +576,10 @@ void SemanticsValidator::collectGraphLocalAutoBindings(const TypeResolutionGraph
         if (initializerAnalysisExpr != nullptr &&
             initializerAnalysisExpr->kind == Expr::Kind::Call &&
             !initializerAnalysisExpr->isMethodCall) {
-          std::string directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);
-          if (const std::string preferredCollectionPath =
-                  preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);
-              !preferredCollectionPath.empty()) {
-            directCallResolvedPath = preferredCollectionPath;
+          std::string directCallResolvedPath =
+              preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);
+          if (directCallResolvedPath.empty()) {
+            directCallResolvedPath = resolveCalleePath(*initializerAnalysisExpr);
           }
           if (!directCallResolvedPath.empty()) {
             const std::string concreteDirectCallResolvedPath = resolveExprConcreteCallPath(
