@@ -44,7 +44,8 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   };
   auto isCanonicalSoaCountHelperPath = [](const std::string &candidate) {
     return candidate.rfind("/std/collections/soa_vector/", 0) == 0 &&
-           isLegacyOrCanonicalSoaHelperPath(candidate, "count");
+           (isLegacyOrCanonicalSoaHelperPath(candidate, "count") ||
+            isLegacyOrCanonicalSoaHelperPath(candidate, "count_ref"));
   };
   const std::string resolvedSoaCountCanonical =
       canonicalizeSoaCountHelperPath(resolved);
@@ -177,11 +178,17 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
   }
   if (isDirectStdNamespacedSoaCountBuiltinCall) {
     handledOut = true;
+    const std::string soaCountHelperName =
+        isLegacyOrCanonicalSoaHelperPath(resolvedSoaCountCanonical, "count_ref")
+            ? "count_ref"
+            : "count";
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failCountCapacityMapBuiltin("count does not accept block arguments");
+      return failCountCapacityMapBuiltin(soaCountHelperName +
+                                         " does not accept block arguments");
     }
     if (expr.args.size() != 1) {
-      return failCountCapacityMapBuiltin("argument count mismatch for builtin count");
+      return failCountCapacityMapBuiltin("argument count mismatch for builtin " +
+                                         soaCountHelperName);
     }
     std::string elemType;
     if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
@@ -189,9 +196,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       if (!validateExpr(params, locals, expr.args.front())) {
         return false;
       }
-      return failCountCapacityMapBuiltin("count requires soa_vector target");
+      return failCountCapacityMapBuiltin(soaCountHelperName +
+                                         " requires soa_vector target");
     }
-    if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, "count")) {
+    if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType,
+                                            soaCountHelperName.c_str())) {
       return false;
     }
     return validateExpr(params, locals, expr.args.front());
@@ -218,12 +227,15 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       if (normalizedName == "/soa_vector/count") {
         return true;
       }
+      if (normalizedName == "/soa_vector/count_ref") {
+        return true;
+      }
       return (normalizedNamespacePrefix == "/soa_vector" ||
               normalizedNamespacePrefix == "soa_vector") &&
-             expr.name == "count";
+             (expr.name == "count" || expr.name == "count_ref");
     }
     return normalizedNamespacePrefix == "/soa_vector" &&
-           expr.name == "count";
+           (expr.name == "count" || expr.name == "count_ref");
   };
   const auto validateVectorCountBuiltinCall = [&]() -> bool {
     handledOut = true;
@@ -299,6 +311,9 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
                          isLegacyOrCanonicalSoaHelperPath(
                              logicalSoaCountCanonical,
                              "count") ||
+                         isLegacyOrCanonicalSoaHelperPath(
+                             logicalSoaCountCanonical,
+                             "count_ref") ||
                          logicalResolvedMethod == "/string/count" ||
                          logicalResolvedMethod == "/map/count" ||
                          logicalResolvedMethod == "/std/collections/map/count" ||
@@ -331,32 +346,43 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       }
     } else if (isLegacyOrCanonicalSoaHelperPath(
                    logicalSoaCountCanonical,
-                   "count")) {
+                   "count") ||
+               isLegacyOrCanonicalSoaHelperPath(
+                   logicalSoaCountCanonical,
+                   "count_ref")) {
+      const std::string soaCountHelperName =
+          isLegacyOrCanonicalSoaHelperPath(logicalSoaCountCanonical, "count_ref")
+              ? "count_ref"
+              : "count";
       if (isExplicitOldSurfaceSoaCountCall() &&
-          !hasVisibleDefinitionPathForCurrentImports("/soa_vector/count")) {
+          !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+                                                    soaCountHelperName)) {
         return failCountCapacityMapBuiltin(
-            soaUnavailableMethodDiagnostic("/soa_vector/count"));
+            soaUnavailableMethodDiagnostic("/soa_vector/" +
+                                           soaCountHelperName));
       }
       std::string elemType;
       if (!(*dispatchResolvers).resolveSoaVectorTarget(expr.args.front(),
                                                        elemType)) {
         const bool oldSurfaceCallShape =
-            isSimpleCallName(expr, "count") ||
-            (expr.isMethodCall && expr.name == "count") ||
+            isSimpleCallName(expr, soaCountHelperName.c_str()) ||
+            (expr.isMethodCall && expr.name == soaCountHelperName) ||
             isLegacyOrCanonicalSoaHelperPath(
                 logicalSoaCountCanonical,
-                "count");
+                soaCountHelperName);
         if (oldSurfaceCallShape &&
-            hasVisibleSoaHelperTargetForCurrentImports("count")) {
+            hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)) {
           handledOut = false;
           return true;
         }
         if (!validateExpr(params, locals, expr.args.front())) {
           return false;
         }
-        return failCountCapacityMapBuiltin("count requires soa_vector target");
+        return failCountCapacityMapBuiltin(soaCountHelperName +
+                                           " requires soa_vector target");
       }
-      if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, "count")) {
+      if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType,
+                                              soaCountHelperName.c_str())) {
         return false;
       }
     } else if (!expr.templateArgs.empty()) {

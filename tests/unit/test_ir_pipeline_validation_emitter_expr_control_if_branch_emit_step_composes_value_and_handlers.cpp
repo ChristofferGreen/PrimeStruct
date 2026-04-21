@@ -1452,10 +1452,23 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
              "                             \"count\")") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(\n"
+             "                             logicalSoaCountCanonical,\n"
+             "                             \"count_ref\")") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
             "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/count\")") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" +\n"
+            "                                                    soaCountHelperName)") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
             "soaUnavailableMethodDiagnostic(\"/soa_vector/count\")") !=
+        std::string::npos);
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "soaUnavailableMethodDiagnostic(\"/soa_vector/\" +\n"
+            "                                           soaCountHelperName)") !=
         std::string::npos);
   CHECK((exprCountCapacityMapBuiltinsSource.find(
             "preferredSoaHelperTargetForCurrentImports(\"count\") ==\n"
@@ -1464,6 +1477,9 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
         exprCountCapacityMapBuiltinsSource.find(
             "hasVisibleSoaHelperTargetForCurrentImports(\"count\")") !=
             std::string::npos));
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)") !=
+        std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find("auto hasVisibleSamePathSoaCountHelper =") ==
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
