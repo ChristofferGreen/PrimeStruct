@@ -2121,6 +2121,24 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   CHECK(inferCollectionReturnInferenceSource.find(
             "builtinSoaAccessHelperName(candidate, params, locals)") !=
         std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "preferredCollectionHelperResolvedPath(candidate)") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "auto explicitLegacyOrCanonicalSoaHelperName = [&]() -> "
+            "std::string {") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "normalizedPrefix == \"soa_vector\"") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "normalizedPrefix == \"std/collections/soa_vector\"") !=
+        std::string::npos);
+  CHECK(inferCollectionReturnInferenceSource.find(
+            "preferredSoaHelperTargetForCollectionType(helperName,\n"
+            "                                                         "
+            "\"/soa_vector\")") !=
+        std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("const bool isBuiltinSoaGetOrRef =") ==
         std::string::npos);
   CHECK(inferCollectionReturnInferenceSource.find("auto hasVisibleSamePathSoaHelper =") ==
