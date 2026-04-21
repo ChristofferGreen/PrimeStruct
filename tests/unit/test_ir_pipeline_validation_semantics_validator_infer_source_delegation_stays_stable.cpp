@@ -869,6 +869,20 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::getVectorStatementHelperName") !=
         std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "bool isSoaSamePathHelperName(std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "         helperName == \"get\" || helperName == \"get_ref\" ||\n"
+            "         helperName == \"ref\" || helperName == \"ref_ref\" ||\n"
+            "         helperName == \"to_aos\" || helperName == \"to_aos_ref\" ||\n"
+            "         helperName == \"push\" || helperName == \"reserve\";") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "normalizedPrefix == \"soa_vector\" &&\n"
+            "      isSoaSamePathHelperName(normalizedName)") !=
+        std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("std::string SemanticsValidator::getDirectVectorHelperCompatibilityPath") ==
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTypePath") !=

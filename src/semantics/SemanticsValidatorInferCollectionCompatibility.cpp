@@ -16,17 +16,22 @@
 namespace primec::semantics {
 namespace {
 
-bool isSoaMutatorName(std::string_view helperName) {
-  return helperName == "push" || helperName == "reserve";
+bool isSoaSamePathHelperName(std::string_view helperName) {
+  return helperName == "count" || helperName == "count_ref" ||
+         helperName == "get" || helperName == "get_ref" ||
+         helperName == "ref" || helperName == "ref_ref" ||
+         helperName == "to_aos" || helperName == "to_aos_ref" ||
+         helperName == "push" || helperName == "reserve";
 }
 
-std::string explicitOldSoaMutatorPath(const Expr &candidate) {
+std::string explicitOldSoaHelperPath(const Expr &candidate) {
   if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
     return "";
   }
   std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
   std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
-  if (normalizedPrefix == "soa_vector" && isSoaMutatorName(normalizedName)) {
+  if (normalizedPrefix == "soa_vector" &&
+      isSoaSamePathHelperName(normalizedName)) {
     return "/soa_vector/" + normalizedName;
   }
   constexpr std::string_view kOldExplicitPrefix = "soa_vector/";
@@ -34,7 +39,7 @@ std::string explicitOldSoaMutatorPath(const Expr &candidate) {
     return "";
   }
   const std::string_view helperName = std::string_view(normalizedName).substr(kOldExplicitPrefix.size());
-  if (!isSoaMutatorName(helperName)) {
+  if (!isSoaSamePathHelperName(helperName)) {
     return "";
   }
   return "/soa_vector/" + std::string(helperName);
@@ -612,7 +617,7 @@ bool SemanticsValidator::getVectorStatementHelperName(const Expr &candidate,
     helperNameOut = normalizedName;
     return true;
   }
-  const std::string oldExplicitSoaPath = explicitOldSoaMutatorPath(candidate);
+  const std::string oldExplicitSoaPath = explicitOldSoaHelperPath(candidate);
   if (!oldExplicitSoaPath.empty()) {
     helperNameOut = oldExplicitSoaPath.substr(oldExplicitSoaPath.find_last_of('/') + 1);
     return true;
