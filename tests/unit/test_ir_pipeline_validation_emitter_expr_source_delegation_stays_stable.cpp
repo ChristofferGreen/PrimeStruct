@@ -1524,6 +1524,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, \"to_aos_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "auto isCanonicalSoaBorrowedWrapperHelper = [&](const std::string &path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "!isCanonicalSoaBorrowedWrapperHelper(resolvedPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "!isCanonicalSoaBorrowedWrapperHelper(methodPath)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosHelper, \"to_aos\")") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(

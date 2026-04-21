@@ -394,6 +394,26 @@ bool rewriteExpr(Expr &expr,
     return inferFromTypeText(
         inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
   };
+  auto isCanonicalSoaBorrowedWrapperHelper = [&](const std::string &path) {
+    auto canonicalizeSoaHelperPath = [](std::string canonicalPath) {
+      const size_t specializationSuffix = canonicalPath.find("__");
+      if (specializationSuffix != std::string::npos) {
+        canonicalPath.erase(specializationSuffix);
+      }
+      return canonicalPath;
+    };
+    const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);
+    const std::string canonicalSoaGetPath =
+        canonicalizeSoaHelperPath(canonicalizeLegacySoaGetHelperPath(path));
+    const std::string canonicalSoaRefPath =
+        canonicalizeSoaHelperPath(canonicalizeLegacySoaRefHelperPath(path));
+    const std::string canonicalSoaToAosPath =
+        canonicalizeLegacySoaToAosHelperPath(path);
+    return isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count_ref") ||
+           isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref") ||
+           isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref") ||
+           isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
+  };
   auto preferCanonicalStdlibVectorFamilyHelperPath = [&](const std::string &path) {
     const Expr *receiverExpr = mapHelperReceiverExpr(expr);
     if (receiverExpr == nullptr) {
@@ -770,6 +790,7 @@ bool rewriteExpr(Expr &expr,
     const bool shouldRewriteCanonicalSoaHelperToExperimental =
         ctx.sourceDefs.count(resolvedPath) == 0 &&
         ctx.helperOverloads.count(resolvedPath) == 0 &&
+        !isCanonicalSoaBorrowedWrapperHelper(resolvedPath) &&
         hasVisibleStdCollectionsImportForPath(ctx, resolvedPath) &&
         resolvesConcreteExperimentalSoaVectorReceiver(
             mapHelperReceiverExpr(expr));
@@ -1048,6 +1069,7 @@ bool rewriteExpr(Expr &expr,
       const bool shouldRewriteCanonicalSoaMethodToExperimental =
           ctx.sourceDefs.count(methodPath) == 0 &&
           ctx.helperOverloads.count(methodPath) == 0 &&
+          !isCanonicalSoaBorrowedWrapperHelper(methodPath) &&
           hasVisibleStdCollectionsImportForPath(ctx, methodPath) &&
           resolvesConcreteExperimentalSoaVectorReceiver(
               mapHelperReceiverExpr(expr));
