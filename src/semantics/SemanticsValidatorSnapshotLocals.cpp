@@ -129,6 +129,20 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     if (!concreteResolvedPath.empty()) {
       out.resolvedPath = concreteResolvedPath;
     }
+    std::string canonicalResolvedPath = out.resolvedPath;
+    if (const size_t suffix = canonicalResolvedPath.find("__t");
+        suffix != std::string::npos) {
+      canonicalResolvedPath.erase(suffix);
+    }
+    canonicalResolvedPath =
+        canonicalizeLegacySoaGetHelperPath(canonicalResolvedPath);
+    canonicalResolvedPath =
+        canonicalizeLegacySoaRefHelperPath(canonicalResolvedPath);
+    canonicalResolvedPath =
+        canonicalizeLegacySoaToAosHelperPath(canonicalResolvedPath);
+    if (!canonicalResolvedPath.empty()) {
+      out.resolvedPath = std::move(canonicalResolvedPath);
+    }
   }
   if (!out.resolvedPath.empty()) {
     BindingInfo resolvedBinding;
