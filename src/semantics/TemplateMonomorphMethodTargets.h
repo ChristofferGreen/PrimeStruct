@@ -136,6 +136,9 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   auto preferredSamePathSoaToAosMethodTarget = [&](std::string_view helperName) {
     return preferredSamePathSoaMethodTarget(helperName, "/");
   };
+  auto preferredSamePathSoaCountMethodTarget = [&](std::string_view helperName) {
+    return preferredSamePathSoaMethodTarget(helperName, "/soa_vector/");
+  };
   auto preferredSamePathSoaPushReserveMethodTarget = [&](std::string_view helperName) {
     return preferredSamePathSoaMethodTarget(helperName, "/soa_vector/");
   };
@@ -302,6 +305,12 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return true;
   }
   if (normalizedTypeName == "soa_vector" &&
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaCountMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
+  if (normalizedTypeName == "soa_vector" &&
       (normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref")) {
     pathOut = selectHelperOverloadPath(
         expr, preferredSamePathSoaToAosMethodTarget(normalizedMethodName), ctx);
@@ -350,6 +359,12 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   const bool isConcreteExperimentalSoaReceiver =
       normalizedTypeName == "soa_vector" &&
       resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+  if (isConcreteExperimentalSoaReceiver &&
+      (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
+    pathOut = selectHelperOverloadPath(
+        expr, preferredSamePathSoaCountMethodTarget(normalizedMethodName), ctx);
+    return true;
+  }
   if (isConcreteExperimentalSoaReceiver &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref")) {
     pathOut = selectHelperOverloadPath(

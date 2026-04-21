@@ -1860,6 +1860,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "normalizedTypeName == \"soa_vector\" &&\n"
+            "      (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "normalizedTypeName == \"soa_vector\" &&\n"
             "      (normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
@@ -1881,6 +1885,14 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool isConcreteExperimentalSoaReceiver =\n"
             "      normalizedTypeName == \"soa_vector\" &&\n"
             "      resolvedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (isConcreteExperimentalSoaReceiver &&\n"
+            "      (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\")) {\n"
+            "    pathOut = selectHelperOverloadPath(\n"
+            "        expr, preferredSamePathSoaCountMethodTarget(normalizedMethodName), ctx);\n"
+            "    return true;\n"
+            "  }") !=
         std::string::npos);
   CHECK(templateMonomorphMethodTargetsSource.find(
             "if (isConcreteExperimentalSoaReceiver &&\n"
