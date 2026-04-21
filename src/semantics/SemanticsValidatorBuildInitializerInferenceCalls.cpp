@@ -464,8 +464,10 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
           *bindingExpr, graphPreferredMethodResolvedInitializer, graphPreferredMethodCallReturnKind);
   const bool hasGraphPreferredMethodResolvedInitializer =
       graphMethodCallFactAvailable && !graphPreferredMethodResolvedInitializer.empty();
-  std::string preferredResolvedInitializer = hasGraphPreferredResolvedInitializer
+  std::string preferredResolvedInitializer = hasGraphPreferredMethodResolvedInitializer
                                                  ? graphPreferredMethodResolvedInitializer
+                                             : hasGraphPreferredResolvedInitializer
+                                                 ? graphPreferredResolvedInitializer
                                                  : preferredCollectionHelperResolvedPath(initializer);
   if (!preferredResolvedInitializer.empty()) {
     const std::string concretePreferredResolvedInitializer =
