@@ -694,6 +694,23 @@
             "        return true;\n"
             "      }") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "      const bool isConcreteExperimentalSoaReceiver =\n"
+            "          resolvedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0;\n"
+            "      const bool isCanonicalSoaWrapperMethod =\n"
+            "          normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\" ||\n"
+            "          normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\" ||\n"
+            "          normalizedMethodName == \"ref\" || normalizedMethodName == \"ref_ref\" ||\n"
+            "          normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\" ||\n"
+            "          normalizedMethodName == \"push\" || normalizedMethodName == \"reserve\";\n"
+            "      if (isConcreteExperimentalSoaReceiver && isCanonicalSoaWrapperMethod) {\n"
+            "        return setCollectionMethodTarget(\n"
+            "            preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                      \"/soa_vector\"));\n"
+            "      }\n"
+            "      if ((normalizedMethodName == \"count\" || normalizedMethodName == \"capacity\" ||\n"
+            "           normalizedMethodName == \"at\" || normalizedMethodName == \"at_unsafe\") &&") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
