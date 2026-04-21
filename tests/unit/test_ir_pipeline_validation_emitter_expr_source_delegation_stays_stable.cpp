@@ -2066,6 +2066,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string canonicalSoaCountPath = canonicalizeSoaHelperPath(path);") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count_ref\") ||\n"
+            "      isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, \"get_ref\") ||\n"
+            "      isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, \"ref_ref\")) {\n"
+            "    return {};\n"
+            "  }") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count\")") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
@@ -2082,10 +2089,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count_ref\")") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "return \"/std/collections/experimental_soa_vector/soaVectorCountRef\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "matchesPath(\"/std/collections/soa_vector/get\")") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "matchesPath(\"/std/collections/soa_vector/get_ref\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "return \"/std/collections/experimental_soa_vector/soaVectorGetRef\"") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "matchesPath(\"/std/collections/soa_vector/ref\")") ==
