@@ -306,6 +306,14 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "      }") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
+            "if (collectionTypePath == \"/map\" &&\n"
+            "          (normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\")) {\n"
+            "        resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,\n"
+            "                                                      normalizedMethodName);\n"
+            "        return true;\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
             "                                                                \"/soa_vector\");") !=
         std::string::npos);

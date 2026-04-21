@@ -334,8 +334,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         resolvedOut = "/string/count";
         return true;
       }
-      if (collectionTypePath == "/map" && normalizedMethodName == "count") {
-        resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "count");
+      if (collectionTypePath == "/map" &&
+          (normalizedMethodName == "count" || normalizedMethodName == "count_ref")) {
+        resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,
+                                                      normalizedMethodName);
         return true;
       }
       if (collectionTypePath == "/Buffer" && normalizedMethodName == "count") {
