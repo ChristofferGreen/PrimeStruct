@@ -1992,6 +1992,25 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsSnapshots.find("takeCollectedBridgePathChoicesForSemanticProduct()") !=
         std::string::npos);
+  CHECK(semanticsSnapshots.find(
+            "          const bool hasMethodCallInitializer =\n"
+            "              expr.args.size() == 1 && expr.args.front().isMethodCall;") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find(
+            "          if (!fact.methodCallResolvedPath.empty()) {\n"
+            "            initializerMethodCallResolvedPath = fact.methodCallResolvedPath;\n"
+            "          } else if (hasMethodCallInitializer && !fact.initializerResolvedPath.empty()) {\n"
+            "            initializerMethodCallResolvedPath = fact.initializerResolvedPath;\n"
+            "          }") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find(
+            "          if (fact.hasMethodCallReturnKind) {\n"
+            "            initializerMethodCallReturnKind = fact.methodCallReturnKind;\n"
+            "          } else if (hasMethodCallInitializer && fact.hasInitializerBinding) {\n"
+            "            initializerMethodCallReturnKind = returnKindForTypeName(\n"
+            "                normalizeBindingTypeName(fact.initializerBinding.typeName));\n"
+            "          }") !=
+        std::string::npos);
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") <
         semanticsSnapshots.find("collectPilotRoutingSemanticProductFacts()"));
   CHECK(semanticsSnapshots.find("forEachResolvedNonMethodCallSnapshot(") <
