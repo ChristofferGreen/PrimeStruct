@@ -2045,6 +2045,19 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   CHECK(statementBindingsSource.find(
             "builtinSoaDirectPendingHelperPath(initializer, params, locals)") !=
         std::string::npos);
+  CHECK(statementBindingsSource.find("BindingInfo recoveredInitializerBinding;") !=
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "inferBindingTypeFromInitializer(initializer,\n"
+            "                                        params,\n"
+            "                                        locals,\n"
+            "                                        recoveredInitializerBinding,\n"
+            "                                        &stmt)") !=
+        std::string::npos);
+  CHECK(statementBindingsSource.find(
+            "initKind = returnKindForTypeName(\n"
+            "        normalizeBindingTypeName(recoveredInitializerBinding.typeName));") !=
+        std::string::npos);
   CHECK(statementBindingsSource.find(
             "const auto canonicalizeSoaRefResolvedPath = [](std::string_view path) -> std::string {") ==
         std::string::npos);

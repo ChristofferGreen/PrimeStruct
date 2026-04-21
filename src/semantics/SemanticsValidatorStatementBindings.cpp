@@ -286,7 +286,21 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {
-    return failBindingDiagnostic("binding initializer requires a value");
+    BindingInfo recoveredInitializerBinding;
+    const bool recoveredInitializerValueBinding =
+        inferBindingTypeFromInitializer(initializer,
+                                        params,
+                                        locals,
+                                        recoveredInitializerBinding,
+                                        &stmt) &&
+        !(recoveredInitializerBinding.typeName.empty() ||
+          (recoveredInitializerBinding.typeName == "array" &&
+           recoveredInitializerBinding.typeTemplateArg.empty()));
+    if (!recoveredInitializerValueBinding) {
+      return failBindingDiagnostic("binding initializer requires a value");
+    }
+    initKind = returnKindForTypeName(
+        normalizeBindingTypeName(recoveredInitializerBinding.typeName));
   }
 
   auto isSoftwareNumericBindingCompatible = [](ReturnKind expectedKind, ReturnKind actualKind) -> bool {
