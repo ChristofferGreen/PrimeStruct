@@ -10,7 +10,20 @@ bool SemanticsValidator::isBuiltinBlockCall(const Expr &expr) const {
   if (resolvedPath.empty()) {
     resolvedPath = resolveCalleePath(expr);
   }
-  return defMap_.count(resolvedPath) == 0;
+  std::string canonicalResolvedPath = resolvedPath;
+  if (const size_t suffix = canonicalResolvedPath.find("__t");
+      suffix != std::string::npos) {
+    canonicalResolvedPath.erase(suffix);
+  }
+  canonicalResolvedPath =
+      canonicalizeLegacySoaGetHelperPath(canonicalResolvedPath);
+  canonicalResolvedPath =
+      canonicalizeLegacySoaRefHelperPath(canonicalResolvedPath);
+  canonicalResolvedPath =
+      canonicalizeLegacySoaToAosHelperPath(canonicalResolvedPath);
+  const std::string &resolvedLookupPath =
+      !canonicalResolvedPath.empty() ? canonicalResolvedPath : resolvedPath;
+  return defMap_.count(resolvedLookupPath) == 0;
 }
 
 bool SemanticsValidator::isEnvelopeValueExpr(const Expr &expr, bool allowAnyName) const {

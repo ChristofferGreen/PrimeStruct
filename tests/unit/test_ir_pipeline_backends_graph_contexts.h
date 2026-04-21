@@ -254,7 +254,20 @@ TEST_CASE("graph local auto facts use compact structured keys") {
             "  if (resolvedPath.empty()) {\n"
             "    resolvedPath = resolveCalleePath(expr);\n"
             "  }\n"
-            "  return defMap_.count(resolvedPath) == 0;\n") !=
+            "  std::string canonicalResolvedPath = resolvedPath;\n"
+            "  if (const size_t suffix = canonicalResolvedPath.find(\"__t\");\n"
+            "      suffix != std::string::npos) {\n"
+            "    canonicalResolvedPath.erase(suffix);\n"
+            "  }\n"
+            "  canonicalResolvedPath =\n"
+            "      canonicalizeLegacySoaGetHelperPath(canonicalResolvedPath);\n"
+            "  canonicalResolvedPath =\n"
+            "      canonicalizeLegacySoaRefHelperPath(canonicalResolvedPath);\n"
+            "  canonicalResolvedPath =\n"
+            "      canonicalizeLegacySoaToAosHelperPath(canonicalResolvedPath);\n"
+            "  const std::string &resolvedLookupPath =\n"
+            "      !canonicalResolvedPath.empty() ? canonicalResolvedPath : resolvedPath;\n"
+            "  return defMap_.count(resolvedLookupPath) == 0;\n") !=
         std::string::npos);
   CHECK(buildUtility.find("  return defMap_.count(resolveCalleePath(expr)) == 0;\n") ==
         std::string::npos);
