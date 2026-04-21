@@ -49,6 +49,20 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
 std::string preferVectorStdlibHelperPath(const std::string &path,
                                          const std::unordered_map<std::string, Definition> &defs) {
   std::string preferred = path;
+  if (preferred.rfind("/soa_vector/", 0) == 0 && defs.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/soa_vector/").size());
+    const std::string stdlibAlias = "/std/collections/soa_vector/" + suffix;
+    if (defs.count(stdlibAlias) > 0) {
+      preferred = stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/std/collections/soa_vector/", 0) == 0 && defs.count(preferred) == 0) {
+    const std::string suffix = preferred.substr(std::string("/std/collections/soa_vector/").size());
+    const std::string samePathAlias = "/soa_vector/" + suffix;
+    if (defs.count(samePathAlias) > 0) {
+      preferred = samePathAlias;
+    }
+  }
   if (preferred.rfind("/array/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/array/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {
@@ -80,6 +94,22 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
 }
 
 std::string preferVectorStdlibTemplatePath(const std::string &path, const Context &ctx) {
+  if (path.rfind("/soa_vector/", 0) == 0) {
+    const std::string suffix = path.substr(std::string("/soa_vector/").size());
+    const std::string stdlibPath = "/std/collections/soa_vector/" + suffix;
+    if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
+      return stdlibPath;
+    }
+    return path;
+  }
+  if (path.rfind("/std/collections/soa_vector/", 0) == 0) {
+    const std::string suffix = path.substr(std::string("/std/collections/soa_vector/").size());
+    const std::string aliasPath = "/soa_vector/" + suffix;
+    if (ctx.sourceDefs.count(aliasPath) > 0 && ctx.templateDefs.count(aliasPath) > 0) {
+      return aliasPath;
+    }
+    return path;
+  }
   if (path.rfind("/array/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/array/").size());
     if (!isRemovedVectorCompatibilityHelper(suffix)) {

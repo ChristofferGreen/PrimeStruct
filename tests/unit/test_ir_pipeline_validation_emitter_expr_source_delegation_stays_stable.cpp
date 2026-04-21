@@ -2168,6 +2168,21 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isExperimentalSoaVectorTypePath(value)") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "if (preferred.rfind(\"/soa_vector/\", 0) == 0 && defs.count(preferred) == 0)") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "\"/std/collections/soa_vector/\" + suffix") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "if (path.rfind(\"/soa_vector/\", 0) == 0)") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "if (path.rfind(\"/std/collections/soa_vector/\", 0) == 0)") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "\"/soa_vector/\" + suffix") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "value == \"std/collections/experimental_soa_vector/SoaVector\" || value == \"SoaVector\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
