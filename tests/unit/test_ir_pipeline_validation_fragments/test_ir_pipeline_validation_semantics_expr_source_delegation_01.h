@@ -666,6 +666,34 @@
             "                base == \"soa_vector\" ? \"/soa_vector\" : \"/vector\"));\n"
             "      }") !=
         std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "  auto tryRedirectConcreteExperimentalSoaMethodTarget =\n"
+            "      [&](const std::string &resolvedType) -> bool {\n"
+            "    const bool isConcreteExperimentalSoaReceiver =\n"
+            "        resolvedType.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0;\n"
+            "    const bool isCanonicalSoaWrapperMethod =\n"
+            "        normalizedMethodName == \"count\" || normalizedMethodName == \"count_ref\" ||\n"
+            "        normalizedMethodName == \"get\" || normalizedMethodName == \"get_ref\" ||\n"
+            "        normalizedMethodName == \"ref\" || normalizedMethodName == \"ref_ref\" ||\n"
+            "        normalizedMethodName == \"to_aos\" || normalizedMethodName == \"to_aos_ref\" ||\n"
+            "        normalizedMethodName == \"push\" || normalizedMethodName == \"reserve\";\n"
+            "    if (!isConcreteExperimentalSoaReceiver || !isCanonicalSoaWrapperMethod) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    return setCollectionMethodTarget(\n"
+            "        preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                  \"/soa_vector\"));\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "      if (!resolvedReturnType.empty()) {\n"
+            "        if (tryRedirectConcreteExperimentalSoaMethodTarget(resolvedReturnType)) {\n"
+            "          return true;\n"
+            "        }\n"
+            "        resolvedOut = resolvedReturnType + \"/\" + normalizedMethodName;\n"
+            "        return true;\n"
+            "      }") !=
+        std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);

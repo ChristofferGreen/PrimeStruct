@@ -1601,6 +1601,23 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return failMethodTargetResolutionDiagnostic("unknown method: " +
                                                 explicitVectorHelperPath);
   };
+  auto tryRedirectConcreteExperimentalSoaMethodTarget =
+      [&](const std::string &resolvedType) -> bool {
+    const bool isConcreteExperimentalSoaReceiver =
+        resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+    const bool isCanonicalSoaWrapperMethod =
+        normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+        normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+        normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
+        normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref" ||
+        normalizedMethodName == "push" || normalizedMethodName == "reserve";
+    if (!isConcreteExperimentalSoaReceiver || !isCanonicalSoaWrapperMethod) {
+      return false;
+    }
+    return setCollectionMethodTarget(
+        preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                  "/soa_vector"));
+  };
   auto resolveExplicitDirectCallReturnMethodTarget = [&](const Expr &receiverExpr) -> bool {
     if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding || receiverExpr.isMethodCall) {
       return false;
@@ -1642,6 +1659,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         resolvedReturnType = resolveTypePath(normalizedReturnType, defIt->second->namespacePrefix);
       }
       if (!resolvedReturnType.empty()) {
+        if (tryRedirectConcreteExperimentalSoaMethodTarget(resolvedReturnType)) {
+          return true;
+        }
         resolvedOut = resolvedReturnType + "/" + normalizedMethodName;
         return true;
       }
@@ -2315,6 +2335,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                     defIt->second->namespacePrefix);
               }
               if (!resolvedReturnType.empty()) {
+                if (tryRedirectConcreteExperimentalSoaMethodTarget(resolvedReturnType)) {
+                  return true;
+                }
                 resolvedOut = resolvedReturnType + "/" + normalizedMethodName;
                 return true;
               }
