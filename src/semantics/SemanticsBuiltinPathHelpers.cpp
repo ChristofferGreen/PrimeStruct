@@ -518,7 +518,8 @@ bool isExperimentalSoaBorrowedHelperPath(std::string_view path) {
   if (specializationSuffix != std::string::npos) {
     canonicalPath.erase(specializationSuffix);
   }
-  return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
+  return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorCountRef" ||
+         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorGetRef" ||
          canonicalPath == "/std/collections/experimental_soa_vector/soaVectorRefRef";
 }
 

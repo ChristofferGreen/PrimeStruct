@@ -820,7 +820,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "bool isExperimentalSoaVectorSpecializedTypePath(std::string_view path)") !=
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
+            "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorCountRef\"") !=
+        std::string::npos);
+  CHECK(builtinPathHelpersSource.find(
             "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorGet\"") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "resolvedNoTemplate == "
+            "\"/std/collections/experimental_soa_vector/soaVectorCountRef\"") ==
         std::string::npos);
   CHECK(builtinPathHelpersSource.find(
             "canonicalPath == \"/std/collections/experimental_soa_vector/soaVectorGetRef\"") !=
