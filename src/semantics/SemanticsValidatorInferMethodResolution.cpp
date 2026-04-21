@@ -1007,7 +1007,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
   }
   if (typeName.empty()) {
-    if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+    if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
       typeName = inferPointerLikeCallReturnType(receiver, params, locals);
     }
   }
@@ -1026,7 +1026,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       typeName = inferred;
     }
   }
-  if (typeName.empty() && receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {
+  if (typeName.empty() && receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
     BindingInfo callBinding;
     const std::string resolvedReceiverPath = resolveCalleePath(receiver);
     auto resolveReceiverCandidates = [&](auto &resolvedCandidates) {
