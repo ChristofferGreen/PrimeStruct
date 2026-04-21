@@ -573,8 +573,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (resolvedCallPath.empty()) {
       resolvedCallPath = resolveCalleePath(expr);
     }
-    resolvedCallPath =
-        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);
+    if (const std::string concreteResolvedCallPath =
+            resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);
+        !concreteResolvedCallPath.empty()) {
+      resolvedCallPath = concreteResolvedCallPath;
+    }
     const bool isSoaColumnSlotUnsafe =
         isExperimentalSoaColumnSlotHelperPath(resolvedCallPath);
     const bool isVectorSlotUnsafe =
@@ -777,7 +780,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           return false;
         }
       }
-      resolvedPath = resolveExprConcreteCallPath(params, locals, expr, resolvedPath);
+      if (const std::string concreteResolvedPath =
+              resolveExprConcreteCallPath(params, locals, expr, resolvedPath);
+          !concreteResolvedPath.empty()) {
+        resolvedPath = concreteResolvedPath;
+      }
       auto defIt = defMap_.find(resolvedPath);
       if (defIt == defMap_.end() || defIt->second == nullptr) {
         return false;

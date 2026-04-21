@@ -1504,6 +1504,16 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
   CHECK(semanticsStatementBindingsSource.find(
             "            std::string resolvedPath = resolveCalleePath(expr);\n") ==
         std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "      if (const std::string concreteResolvedPath =\n"
+            "              resolveExprConcreteCallPath(params, locals, expr, resolvedPath);\n"
+            "          !concreteResolvedPath.empty()) {\n"
+            "        resolvedPath = concreteResolvedPath;\n"
+            "      }\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "      resolvedPath = resolveExprConcreteCallPath(params, locals, expr, resolvedPath);\n") ==
+        std::string::npos);
   CHECK(semanticsInferGraphSource.find(
             "          std::string initializerWrapperPath =\n"
             "              preferredCollectionHelperResolvedPath(*initializerAnalysisExpr);\n"
@@ -1548,7 +1558,15 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "    std::string resolvedCallPath = preferredCollectionHelperResolvedPath(expr);\n") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find(
-            "        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);\n") !=
+            "    if (const std::string concreteResolvedCallPath =\n"
+            "            resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);\n"
+            "        !concreteResolvedCallPath.empty()) {\n"
+            "      resolvedCallPath = concreteResolvedCallPath;\n"
+            "    }\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "    resolvedCallPath =\n"
+            "        resolveExprConcreteCallPath(params, locals, expr, resolvedCallPath);\n") ==
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find(
             "    const std::string resolvedCallPath = resolveCalleePath(expr);\n") ==
