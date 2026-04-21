@@ -411,6 +411,12 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
             "  }") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
+            "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
+            "if (receiver.kind == Expr::Kind::Call && !receiver.isBinding && !receiver.isMethodCall) {") ==
+        std::string::npos);
+  CHECK(semanticsInferMethodResolutionSource.find(
             "normalizedMethodPath == \"vector/at_unsafe\"") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
