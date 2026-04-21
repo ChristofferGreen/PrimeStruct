@@ -194,6 +194,106 @@ TEST_CASE("ir lowerer conversions control-tail helper lowers if blocks") {
                     [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::JumpIfZero; }));
 }
 
+TEST_CASE("ir lowerer conversions control-tail helper treats builtin comparisons as bool conditions") {
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.literalValue = 2;
+
+  primec::Expr rhs;
+  rhs.kind = primec::Expr::Kind::Literal;
+  rhs.literalValue = 1;
+
+  primec::Expr cond;
+  cond.kind = primec::Expr::Kind::Call;
+  cond.name = "greater_than";
+  cond.args = {lhs, rhs};
+
+  primec::Expr thenValue;
+  thenValue.kind = primec::Expr::Kind::Literal;
+  thenValue.literalValue = 7;
+  primec::Expr thenBlock;
+  thenBlock.kind = primec::Expr::Kind::Call;
+  thenBlock.name = "then_block";
+  thenBlock.hasBodyArguments = true;
+  thenBlock.bodyArguments = {thenValue};
+
+  primec::Expr elseValue;
+  elseValue.kind = primec::Expr::Kind::Literal;
+  elseValue.literalValue = 3;
+  primec::Expr elseBlock;
+  elseBlock.kind = primec::Expr::Kind::Call;
+  elseBlock.name = "else_block";
+  elseBlock.hasBodyArguments = true;
+  elseBlock.bodyArguments = {elseValue};
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "if";
+  expr.args = {cond, thenBlock, elseBlock};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsControlExprTail(
+      expr,
+      {},
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        if (valueExpr.kind == primec::Expr::Kind::Literal) {
+          instructions.push_back({primec::IrOpcode::PushI32, static_cast<uint64_t>(valueExpr.literalValue)});
+          return true;
+        }
+        if (valueExpr.kind == primec::Expr::Kind::Call && valueExpr.name == "greater_than") {
+          instructions.push_back({primec::IrOpcode::PushI32, 1u});
+          return true;
+        }
+        return false;
+      },
+      [](const primec::Expr &, primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        if (valueExpr.kind == primec::Expr::Kind::Literal) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        }
+        if (valueExpr.kind == primec::Expr::Kind::Call && valueExpr.name == "greater_than") {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::vector<std::optional<std::string>> &argNames) {
+        return std::any_of(argNames.begin(), argNames.end(), [](const auto &name) { return name.has_value(); });
+      },
+      [](const primec::Expr &) { return static_cast<const primec::Definition *>(nullptr); },
+      [](const primec::Expr &callExpr) { return std::string("/") + callExpr.name; },
+      [](const primec::Expr &, primec::Expr &, std::string &) { return false; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      []() {},
+      []() {},
+      [](const primec::Expr &callExpr) { return callExpr.kind == primec::Expr::Kind::Call && callExpr.name == "return"; },
+      [](const primec::Expr &callExpr) { return callExpr.kind == primec::Expr::Kind::Call && callExpr.name == "block"; },
+      [](const primec::Expr &callExpr) { return callExpr.kind == primec::Expr::Kind::Call && callExpr.name == "match"; },
+      [](const primec::Expr &callExpr) { return callExpr.kind == primec::Expr::Kind::Call && callExpr.name == "if"; },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  CHECK(std::any_of(instructions.begin(),
+                    instructions.end(),
+                    [](const primec::IrInstruction &inst) { return inst.op == primec::IrOpcode::JumpIfZero; }));
+}
+
 TEST_CASE("ir lowerer conversions control-tail helper rejects incompatible if branch values") {
   primec::Expr cond;
   cond.kind = primec::Expr::Kind::BoolLiteral;

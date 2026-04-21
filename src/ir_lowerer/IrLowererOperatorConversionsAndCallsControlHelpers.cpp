@@ -289,6 +289,12 @@ bool emitConversionsAndCallsControlExprTail(
       return false;
     }
     LocalInfo::ValueKind condKind = inferExprKind(cond, localsIn);
+    if (condKind == LocalInfo::ValueKind::Unknown) {
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(cond, builtinComparison)) {
+        condKind = LocalInfo::ValueKind::Bool;
+      }
+    }
     const bool isIntegralCondition =
         condKind == LocalInfo::ValueKind::Int32 || condKind == LocalInfo::ValueKind::Int64 ||
         condKind == LocalInfo::ValueKind::UInt64;
