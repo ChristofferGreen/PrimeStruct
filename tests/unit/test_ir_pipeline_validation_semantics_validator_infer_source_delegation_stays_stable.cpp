@@ -1933,6 +1933,12 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   CHECK(semanticsValidateSource.find(
             "elementTypeForBorrowedSource(normalizedBorrowed->args.front())") !=
         std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "normalized.rfind(\"std/collections/soa_vector/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(semanticsValidateSource.find(
+            "normalized = normalized.substr(std::string(\"std/collections/soa_vector/\").size());") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantics validator build struct-field publication stays stable") {

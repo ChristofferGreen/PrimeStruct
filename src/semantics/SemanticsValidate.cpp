@@ -1275,7 +1275,9 @@ std::string builtinSoaAccessHelperName(std::string_view rawName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized.rfind("soa_vector/", 0) == 0) {
+  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
+  } else if (normalized.rfind("soa_vector/", 0) == 0) {
     normalized = normalized.substr(std::string("soa_vector/").size());
   }
   if (normalized == "get" || normalized == "get_ref" ||
@@ -1290,7 +1292,9 @@ std::string builtinSoaCountHelperName(std::string_view rawName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized.rfind("soa_vector/", 0) == 0) {
+  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
+  } else if (normalized.rfind("soa_vector/", 0) == 0) {
     normalized = normalized.substr(std::string("soa_vector/").size());
   }
   if (normalized == "count") {
@@ -1312,7 +1316,9 @@ std::string builtinSoaMutatorHelperName(std::string_view rawName) {
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
-  if (normalized.rfind("soa_vector/", 0) == 0) {
+  if (normalized.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalized = normalized.substr(std::string("std/collections/soa_vector/").size());
+  } else if (normalized.rfind("soa_vector/", 0) == 0) {
     normalized = normalized.substr(std::string("soa_vector/").size());
   }
   if (normalized == "push" || normalized == "reserve") {
