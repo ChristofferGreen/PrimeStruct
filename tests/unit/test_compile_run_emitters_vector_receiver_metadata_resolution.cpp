@@ -610,6 +610,93 @@ TEST_CASE("C++ emitter helper resolves borrowed soa_vector receiver methods to c
   expectResolved("to_aos", "to_aos_ref");
 }
 
+TEST_CASE("C++ emitter helper resolves borrowed local soa_vector field methods through concrete specialization metadata") {
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "borrowed";
+
+  primec::Expr call;
+  call.kind = primec::Expr::Kind::Call;
+  call.isMethodCall = true;
+  call.name = "y";
+  call.args = {receiver};
+  call.argNames = {std::nullopt};
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo receiverInfo;
+  receiverInfo.typeName = "Reference";
+  receiverInfo.typeTemplateArg = "SoaVector<Particle>";
+  localTypes.emplace("borrowed", receiverInfo);
+
+  primec::Definition concreteYDef;
+  concreteYDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__Particle/y";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {concreteYDef.fullPath, &concreteYDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  std::string resolved;
+  CHECK(primec::emitter::resolveMethodCallPath(
+      call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+  CHECK(resolved == concreteYDef.fullPath);
+}
+
+TEST_CASE("C++ emitter helper resolves location and dereference soa_vector field methods through concrete specialization metadata") {
+  primec::Expr values;
+  values.kind = primec::Expr::Kind::Name;
+  values.name = "values";
+
+  primec::Expr locationCall;
+  locationCall.kind = primec::Expr::Kind::Call;
+  locationCall.name = "location";
+  locationCall.args = {values};
+  locationCall.argNames = {std::nullopt};
+
+  primec::Expr dereferenceCall;
+  dereferenceCall.kind = primec::Expr::Kind::Call;
+  dereferenceCall.name = "dereference";
+  dereferenceCall.args = {locationCall};
+  dereferenceCall.argNames = {std::nullopt};
+
+  std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
+  primec::emitter::BindingInfo valuesInfo;
+  valuesInfo.typeName = "SoaVector";
+  valuesInfo.typeTemplateArg = "Particle";
+  localTypes.emplace("values", valuesInfo);
+
+  primec::Definition concreteYDef;
+  concreteYDef.fullPath = "/std/collections/experimental_soa_vector/SoaVector__Particle/y";
+
+  std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {concreteYDef.fullPath, &concreteYDef},
+  };
+  std::unordered_map<std::string, std::string> importAliases;
+  std::unordered_map<std::string, std::string> structTypeMap;
+  std::unordered_map<std::string, primec::emitter::ReturnKind> returnKinds;
+  std::unordered_map<std::string, std::string> returnStructs;
+
+  auto expectResolved = [&](const primec::Expr &receiverExpr) {
+    primec::Expr call;
+    call.kind = primec::Expr::Kind::Call;
+    call.isMethodCall = true;
+    call.name = "y";
+    call.args = {receiverExpr};
+    call.argNames = {std::nullopt};
+
+    std::string resolved;
+    CHECK(primec::emitter::resolveMethodCallPath(
+        call, defMap, localTypes, importAliases, structTypeMap, returnKinds, returnStructs, resolved));
+    CHECK(resolved == concreteYDef.fullPath);
+  };
+
+  expectResolved(locationCall);
+  expectResolved(dereferenceCall);
+}
+
 TEST_CASE("C++ emitter helper resolves helper-return soa_vector borrow methods to canonical ref helpers") {
   primec::Expr values;
   values.kind = primec::Expr::Kind::Name;
