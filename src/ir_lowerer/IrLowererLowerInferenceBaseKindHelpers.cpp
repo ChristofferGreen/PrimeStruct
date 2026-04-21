@@ -2,6 +2,7 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererResultHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 
 namespace primec::ir_lowerer {
 
@@ -33,13 +34,42 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const ResolveMethodCallWithLocalsFn *resolveMethodCall,
                                                   const ResolveCallDefinitionFn *resolveDefinitionCall,
                                                   const LookupReturnInfoFn *lookupReturnInfo,
+                                                  const SemanticProgram *semanticProgram,
+                                                  const SemanticProductIndex *semanticIndex,
                                                   const InferExprKindWithLocalsFn *fallbackInferExprKind);
+
+bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
+                                              const SemanticProgram *semanticProgram,
+                                              const SemanticProductIndex *semanticIndex,
+                                              LocalInfo::ValueKind &kindOut) {
+  kindOut = LocalInfo::ValueKind::Unknown;
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
+    return false;
+  }
+  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+  if (queryFact == nullptr) {
+    return false;
+  }
+  const LocalInfo::ValueKind queryKind = valueKindFromTypeName(trimTemplateTypeText(queryFact->queryTypeText));
+  if (queryKind != LocalInfo::ValueKind::Unknown) {
+    kindOut = queryKind;
+    return true;
+  }
+  const LocalInfo::ValueKind bindingKind = valueKindFromTypeName(trimTemplateTypeText(queryFact->bindingTypeText));
+  if (bindingKind != LocalInfo::ValueKind::Unknown) {
+    kindOut = bindingKind;
+    return true;
+  }
+  return false;
+}
 
 bool resolveBaseSetupResultExprInfo(const Expr &expr,
                                     const LocalMap &localsIn,
                                     const ResolveMethodCallWithLocalsFn *resolveMethodCall,
                                     const ResolveCallDefinitionFn *resolveDefinitionCall,
                                     const LookupReturnInfoFn *lookupReturnInfo,
+                                    const SemanticProgram *semanticProgram,
+                                    const SemanticProductIndex *semanticIndex,
                                     const InferExprKindWithLocalsFn *fallbackInferExprKind,
                                     ResultExprInfo &out) {
   const ResolveMethodCallWithLocalsFn noopResolveMethodCall =
@@ -58,10 +88,17 @@ bool resolveBaseSetupResultExprInfo(const Expr &expr,
       resolveMethodCallFn,
       resolveDefinitionCallFn,
       lookupReturnInfoFn,
-      [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind](
+      [resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, semanticProgram, semanticIndex, fallbackInferExprKind](
           const Expr &candidate, const LocalMap &candidateLocals) {
         return inferBaseSetupSimpleExprKind(
-            candidate, candidateLocals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind);
+            candidate,
+            candidateLocals,
+            resolveMethodCall,
+            resolveDefinitionCall,
+            lookupReturnInfo,
+            semanticProgram,
+            semanticIndex,
+            fallbackInferExprKind);
       },
       out);
 }
@@ -71,6 +108,8 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
                                                   const ResolveMethodCallWithLocalsFn *resolveMethodCall,
                                                   const ResolveCallDefinitionFn *resolveDefinitionCall,
                                                   const LookupReturnInfoFn *lookupReturnInfo,
+                                                  const SemanticProgram *semanticProgram,
+                                                  const SemanticProductIndex *semanticIndex,
                                                   const InferExprKindWithLocalsFn *fallbackInferExprKind) {
   switch (expr.kind) {
     case Expr::Kind::Literal:
@@ -99,9 +138,20 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
       return LocalInfo::ValueKind::Unknown;
     }
     case Expr::Kind::Call: {
+      if (inferBaseSetupSemanticQueryFactValueKind(expr, semanticProgram, semanticIndex, kindOut)) {
+        return kindOut;
+      }
       ResultExprInfo resultInfo;
       if (resolveBaseSetupResultExprInfo(
-              expr, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind, resultInfo) &&
+              expr,
+              localsIn,
+              resolveMethodCall,
+              resolveDefinitionCall,
+              lookupReturnInfo,
+              semanticProgram,
+              semanticIndex,
+              fallbackInferExprKind,
+              resultInfo) &&
           resultInfo.isResult &&
           resultInfo.hasValue) {
         return resultInfo.valueKind;
@@ -266,8 +316,10 @@ bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBase
   const auto inferStructExprPath = input.inferStructExprPath;
   const auto resolveStructFieldSlot = input.resolveStructFieldSlot;
   const auto resolveUninitializedStorage = input.resolveUninitializedStorage;
+  const auto *semanticProgram = stateInOut.semanticProgram;
+  const auto *semanticIndex = stateInOut.semanticIndex;
   stateInOut.inferCallExprBaseKind =
-      [inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage, &stateInOut](
+      [inferStructExprPath, resolveStructFieldSlot, resolveUninitializedStorage, semanticProgram, semanticIndex, &stateInOut](
           const Expr &expr, const LocalMap &localsIn, LocalInfo::ValueKind &kindOut) {
         const ResolveMethodCallWithLocalsFn resolveMethodCall =
             [&stateInOut](const Expr &candidate, const LocalMap &candidateLocals) -> const Definition * {
@@ -290,6 +342,8 @@ bool runLowerInferenceExprKindCallBaseSetup(const LowerInferenceExprKindCallBase
             &resolveMethodCall,
             &resolveDefinitionCall,
             &lookupReturnInfo,
+            semanticProgram,
+            semanticIndex,
             &stateInOut.inferExprKind,
             kindOut);
       };
@@ -358,6 +412,8 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
                                const ResolveMethodCallWithLocalsFn *resolveMethodCall,
                                const ResolveCallDefinitionFn *resolveDefinitionCall,
                                const LookupReturnInfoFn *lookupReturnInfo,
+                               const SemanticProgram *semanticProgram,
+                               const SemanticProductIndex *semanticIndex,
                                const InferExprKindWithLocalsFn *fallbackInferExprKind,
                                LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
@@ -394,6 +450,9 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
         access.typeInfo.valueKind != LocalInfo::ValueKind::Unknown) {
       kindOut = access.typeInfo.valueKind;
     }
+    return true;
+  }
+  if (inferBaseSetupSemanticQueryFactValueKind(expr, semanticProgram, semanticIndex, kindOut)) {
     return true;
   }
   if (expr.isMethodCall) {
@@ -526,7 +585,15 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
       ResultExprInfo resultInfo;
       if (resolveBaseSetupResultExprInfo(
-              arg, localsIn, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, fallbackInferExprKind, resultInfo) &&
+              arg,
+              localsIn,
+              resolveMethodCall,
+              resolveDefinitionCall,
+              lookupReturnInfo,
+              semanticProgram,
+              semanticIndex,
+              fallbackInferExprKind,
+              resultInfo) &&
           resultInfo.isResult) {
         kindOut = resultInfo.hasValue ? resultInfo.valueKind : LocalInfo::ValueKind::Int32;
         return true;

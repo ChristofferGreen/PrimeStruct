@@ -79,6 +79,72 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup infers try from indexe
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query facts for scalar call kinds") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/Holder/check",
+      .callName = "greater_than",
+      .queryTypeText = "bool",
+      .bindingTypeText = "bool",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 501,
+      .provenanceHandle = 0,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/Holder/check"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "greater_than"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/Holder"),
+      .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "bool"),
+  });
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.intWidth = 32;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+  comparisonExpr.semanticNodeId = 501;
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(comparisonExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;

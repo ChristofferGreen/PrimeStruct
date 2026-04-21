@@ -34,6 +34,8 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
                                const ResolveMethodCallWithLocalsFn *resolveMethodCall,
                                const ResolveCallDefinitionFn *resolveDefinitionCall,
                                const LookupReturnInfoFn *lookupReturnInfo,
+                               const SemanticProgram *semanticProgram,
+                               const SemanticProductIndex *semanticIndex,
                                const InferExprKindWithLocalsFn *fallbackInferExprKind,
                                LocalInfo::ValueKind &kindOut);
 
