@@ -648,9 +648,13 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       }
     }
     if (!hasGraphPreferredResolvedInitializer) {
+      const std::string fallbackPreferredResolvedInitializerPath =
+          preferredCollectionHelperResolvedPath(initializer);
       const std::string &preferredResolvedInitializerPath =
           !preferredResolvedInferencePath.empty()
               ? preferredResolvedInferencePath
+          : !fallbackPreferredResolvedInitializerPath.empty()
+              ? fallbackPreferredResolvedInitializerPath
               : resolveCalleePath(initializer);
       if (!preferredResolvedInitializerPath.empty() &&
           inferResolvedDirectCallBindingType(preferredResolvedInitializerPath, bindingOut)) {
