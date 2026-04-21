@@ -512,6 +512,16 @@ bool isCanonicalSoaRefLikeHelperPath(std::string_view path) {
          path == "/std/collections/soa_vector/ref_ref";
 }
 
+bool isExperimentalSoaCountLikeHelperPath(std::string_view path) {
+  std::string canonicalPath(path);
+  const size_t specializationSuffix = canonicalPath.find("__");
+  if (specializationSuffix != std::string::npos) {
+    canonicalPath.erase(specializationSuffix);
+  }
+  return canonicalPath == "/std/collections/experimental_soa_vector/soaVectorCount" ||
+         canonicalPath == "/std/collections/experimental_soa_vector/soaVectorCountRef";
+}
+
 bool isExperimentalSoaBorrowedHelperPath(std::string_view path) {
   std::string canonicalPath(path);
   const size_t specializationSuffix = canonicalPath.find("__");

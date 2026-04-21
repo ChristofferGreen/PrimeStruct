@@ -9,10 +9,16 @@ bool SemanticsValidator::resolveBuiltinCollectionMethodReturnKind(
     ReturnKind &kindOut) const {
   std::string resolvedSoaCanonical =
       canonicalizeLegacySoaGetHelperPath(resolvedPath);
+  const bool resolvedSoaCanonicalIsCount =
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "count");
+  const bool resolvedSoaCanonicalIsCountRef =
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "count_ref");
   if (resolvedPath == "/array/count" ||
       resolvedPath == "/std/collections/vector/count" || resolvedPath == "/string/count" ||
       resolvedPath == "/map/count" || resolvedPath == "/std/collections/map/count" ||
       resolvedPath == "/std/collections/map/count_ref" ||
+      resolvedSoaCanonicalIsCount || resolvedSoaCanonicalIsCountRef ||
+      isExperimentalSoaCountLikeHelperPath(resolvedSoaCanonical) ||
       resolvedPath == "/std/collections/vector/capacity") {
     kindOut = ReturnKind::Int;
     return true;
