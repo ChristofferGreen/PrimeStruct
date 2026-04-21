@@ -121,6 +121,13 @@ bool SemanticsValidator::inferCallSnapshotData(const std::vector<ParameterInfo> 
     }
   }
   if (!out.resolvedPath.empty()) {
+    const std::string concreteResolvedPath =
+        resolveExprConcreteCallPath(defParams, activeLocals, expr, out.resolvedPath);
+    if (!concreteResolvedPath.empty()) {
+      out.resolvedPath = concreteResolvedPath;
+    }
+  }
+  if (!out.resolvedPath.empty()) {
     BindingInfo resolvedBinding;
     if (inferResolvedDirectCallBindingType(out.resolvedPath, resolvedBinding) &&
         !resolvedBinding.typeName.empty()) {
