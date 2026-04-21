@@ -5668,6 +5668,30 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=
         std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "auto tryResolveConcreteExperimentalSoaWrapperHelper =\n"
+            "      [&](const std::string &resolvedType) -> bool {\n"
+            "    if (!isExperimentalSoaVectorSpecializedTypePath(resolvedType) ||\n"
+            "        !hasVisibleSoaHelperTargetForCurrentImports(helperName)) {\n"
+            "      return false;\n"
+            "    }\n"
+            "    resolvedOut =\n"
+            "        preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\");\n"
+            "    return true;\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "    if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {\n"
+            "      return true;\n"
+            "    }\n"
+            "    resolvedOut = resolvedType + \"/\" + helperName;") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "      if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {\n"
+            "        return true;\n"
+            "      }\n"
+            "      resolvedOut = resolvedType + \"/\" + helperName;") !=
+        std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("std::vector<size_t> receiverIndices;") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("appendUniqueIndex(") ==
