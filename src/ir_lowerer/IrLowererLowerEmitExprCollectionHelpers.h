@@ -318,7 +318,14 @@
                     callExpr,
                     primec::StdlibSurfaceId::CollectionsVectorHelpers,
                     helperName)) {
-              helperName = callExpr.name;
+              helperName = resolveCollectionExprDirectPath(callExpr);
+              if (!helperName.empty() && helperName.front() == '/') {
+                helperName.erase(helperName.begin());
+              }
+              const size_t lastSlash = helperName.find_last_of('/');
+              if (lastSlash != std::string::npos) {
+                helperName = helperName.substr(lastSlash + 1);
+              }
             }
             receiverExpr = &callExpr.args.front();
           } else if (callExpr.args.size() == 2 && getBuiltinArrayAccessName(callExpr, helperName)) {
@@ -426,7 +433,14 @@
           };
           if (callExpr.isMethodCall) {
             if (!resolveMaterializedCollectionHelperName(callExpr, helperName)) {
-              helperName = callExpr.name;
+              helperName = resolveCollectionExprDirectPath(callExpr);
+              if (!helperName.empty() && helperName.front() == '/') {
+                helperName.erase(helperName.begin());
+              }
+              const size_t lastSlash = helperName.find_last_of('/');
+              if (lastSlash != std::string::npos) {
+                helperName = helperName.substr(lastSlash + 1);
+              }
             }
             receiverExpr = &callExpr.args.front();
           } else if (getBuiltinArrayAccessName(callExpr, helperName) && callExpr.args.size() == 2) {
