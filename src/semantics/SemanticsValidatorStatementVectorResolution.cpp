@@ -290,19 +290,23 @@ bool SemanticsValidator::resolveVectorStatementHelperTargetPath(
 
   std::string experimentalElemType;
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
-    resolvedOut = (helperName == "count" || helperName == "capacity" ||
+    resolvedOut = (helperName == "count" || helperName == "count_ref" ||
+                   helperName == "capacity" ||
                    helperName == "at" || helperName == "at_unsafe")
                       ? preferredBareVectorHelperTarget(helperName)
                       : specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
     return true;
   }
   if (receiver.kind == Expr::Kind::Call &&
-      (helperName == "count" || helperName == "capacity" ||
+      (helperName == "count" || helperName == "count_ref" ||
+       helperName == "capacity" ||
        helperName == "at" || helperName == "at_unsafe")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
-        collectionTypePath == "/vector") {
-      resolvedOut = preferredBareVectorHelperTarget(helperName);
+        (collectionTypePath == "/vector" || collectionTypePath == "/soa_vector")) {
+      resolvedOut = collectionTypePath == "/soa_vector"
+                        ? preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector")
+                        : preferredBareVectorHelperTarget(helperName);
       return true;
     }
   }

@@ -1527,6 +1527,23 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")") !=
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
+            "resolvedOut = (helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "                   helperName == \"capacity\" ||\n"
+            "                   helperName == \"at\" || helperName == \"at_unsafe\")") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "if (receiver.kind == Expr::Kind::Call &&\n"
+            "      (helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "       helperName == \"capacity\" ||\n"
+            "       helperName == \"at\" || helperName == \"at_unsafe\")) {") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
+            "        (collectionTypePath == \"/vector\" || collectionTypePath == \"/soa_vector\")) {\n"
+            "      resolvedOut = collectionTypePath == \"/soa_vector\"\n"
+            "                        ? preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")\n"
+            "                        : preferredBareVectorHelperTarget(helperName);") !=
+        std::string::npos);
+  CHECK(semanticsStatementVectorResolutionSource.find(
             "matchesVectorCtorPath(\"/std/collections/vector/vector\")") ==
         std::string::npos);
   CHECK(semanticsStatementVectorResolutionSource.find(
