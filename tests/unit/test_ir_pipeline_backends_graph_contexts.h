@@ -1010,9 +1010,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("findSemanticProductMethodCallTarget(semanticProgram, callExpr)") !=
         std::string::npos);
+  CHECK(irMethodResolution.find("findSemanticProductBridgePathChoice(semanticProgram, callExpr)") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("missing semantic-product method-call target: ") !=
         std::string::npos);
   CHECK(irMethodResolution.find("semantic-product method-call target missing lowered definition: ") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "const bool\n"
+            "          missesExplicitVectorCountMethodThroughMapMethodTarget =\n"
+            "              requestsExplicitVectorCountMethod &&\n"
+            "              (normalizeCollectionHelperPath(resolvedPath) == \"/map/count\" ||\n"
+            "               normalizeCollectionHelperPath(resolvedPath) ==\n"
+            "                   \"/std/collections/map/count\");") !=
         std::string::npos);
   CHECK(irMethodResolution.find("std::string semanticTargetLookupError;") ==
         std::string::npos);

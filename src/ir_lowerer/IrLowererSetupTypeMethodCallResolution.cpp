@@ -146,6 +146,43 @@ const Definition *resolveMethodCallDefinitionFromExpr(
   }
 
   if (semanticProgram != nullptr) {
+    auto resolveLoweredDefinitionPath = [&](const std::string &targetPath)
+        -> const Definition * {
+      auto tryResolvedPath = [&](const std::string &path) -> const Definition * {
+        auto defIt = defMap.find(path);
+        if (defIt != defMap.end() && defIt->second != nullptr) {
+          return defIt->second;
+        }
+        const std::string overloadPrefix =
+            path + "__ov" + std::to_string(callExpr.args.size());
+        for (const auto &[candidatePath, candidateDef] : defMap) {
+          if (candidateDef == nullptr) {
+            continue;
+          }
+          if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
+              candidatePath.rfind(path + "__t", 0) == 0 ||
+              candidatePath.rfind(path + "__ov", 0) == 0) {
+            return candidateDef;
+          }
+        }
+        return nullptr;
+      };
+
+      if (const Definition *resolvedDef = tryResolvedPath(targetPath);
+          resolvedDef != nullptr) {
+        return resolvedDef;
+      }
+      const std::string normalizedTargetPath =
+          normalizeCollectionHelperPath(targetPath);
+      if (normalizedTargetPath != targetPath) {
+        return tryResolvedPath(normalizedTargetPath);
+      }
+      return nullptr;
+    };
+    const std::string explicitMethodPath = describeMethodCallExpr(callExpr);
+    const bool requestsExplicitVectorCountMethod =
+        explicitMethodPath == "/vector/count" ||
+        explicitMethodPath == "/std/collections/vector/count";
     if (callExpr.semanticNodeId == 0) {
       errorOut = "missing semantic-product method-call semantic id: " +
                  describeMethodCallExpr(callExpr);
@@ -162,20 +199,26 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         return nullptr;
       }
     } else {
-      auto defIt = defMap.find(resolvedPath);
-      if (defIt != defMap.end() && defIt->second != nullptr) {
-        return defIt->second;
+      if (const Definition *resolvedDef =
+              resolveLoweredDefinitionPath(resolvedPath);
+          resolvedDef != nullptr) {
+        return resolvedDef;
       }
-      const std::string overloadPrefix =
-          resolvedPath + "__ov" + std::to_string(callExpr.args.size());
-      for (const auto &[candidatePath, candidateDef] : defMap) {
-        if (candidateDef == nullptr) {
-          continue;
-        }
-        if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
-            candidatePath.rfind(resolvedPath + "__t", 0) == 0 ||
-            candidatePath.rfind(resolvedPath + "__ov", 0) == 0) {
-          return candidateDef;
+      const bool
+          missesExplicitVectorCountMethodThroughMapMethodTarget =
+              requestsExplicitVectorCountMethod &&
+              (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
+               normalizeCollectionHelperPath(resolvedPath) ==
+                   "/std/collections/map/count");
+      if (missesExplicitVectorCountMethodThroughMapMethodTarget) {
+        if (const std::string bridgePath =
+                findSemanticProductBridgePathChoice(semanticProgram, callExpr);
+            !bridgePath.empty()) {
+          if (const Definition *bridgeDef =
+                  resolveLoweredDefinitionPath(bridgePath);
+              bridgeDef != nullptr) {
+            return bridgeDef;
+          }
         }
       }
       if (resolvedPath.rfind("/file/", 0) == 0) {
