@@ -290,7 +290,7 @@ bool resolveVectorHelperAliasName(const Expr &expr, std::string &helperNameOut) 
   if (expr.name.empty()) {
     return false;
   }
-  std::string normalized = expr.name;
+  std::string normalized = rebuildScopedCollectionHelperPath(expr);
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(0, 1);
   }

@@ -657,6 +657,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   std::filesystem::path irCallResolutionPath = cwd / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
   std::filesystem::path irMethodResolutionPath =
       cwd / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodCallResolution.cpp";
+  std::filesystem::path irSetupTypeCollectionHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.cpp";
   std::filesystem::path irReceiverTargetHelpersPath =
       cwd / "src" / "ir_lowerer" / "IrLowererSetupTypeReceiverTargetHelpers.cpp";
   std::filesystem::path irSetupTypeReturnKindHelpersPath =
@@ -734,6 +736,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
     irCallResolutionPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
     irMethodResolutionPath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodCallResolution.cpp";
+    irSetupTypeCollectionHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeCollectionHelpers.cpp";
     irReceiverTargetHelpersPath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeReceiverTargetHelpers.cpp";
     irSetupTypeReturnKindHelpersPath =
@@ -809,6 +813,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(irCallHelpersPath));
   REQUIRE(std::filesystem::exists(irCallResolutionPath));
   REQUIRE(std::filesystem::exists(irMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(irSetupTypeCollectionHelpersPath));
   REQUIRE(std::filesystem::exists(irReceiverTargetHelpersPath));
   REQUIRE(std::filesystem::exists(irSetupTypeReturnKindHelpersPath));
   REQUIRE(std::filesystem::exists(irInferenceSetupPath));
@@ -856,6 +861,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irCallHelpers = readTextFile(irCallHelpersPath);
   const std::string irCallResolution = readTextFile(irCallResolutionPath);
   const std::string irMethodResolution = readTextFile(irMethodResolutionPath);
+  const std::string irSetupTypeCollectionHelpers = readTextFile(irSetupTypeCollectionHelpersPath);
   const std::string irReceiverTargetHelpers = readTextFile(irReceiverTargetHelpersPath);
   const std::string irSetupTypeReturnKindHelpers = readTextFile(irSetupTypeReturnKindHelpersPath);
   const std::string irInferenceSetup = readTextFile(irInferenceSetupPath);
@@ -1097,6 +1103,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("resolveMethodDefinitionFromReceiverTarget(\n"
                                 "          explicitMethodPath, \"\", receiverTypeName, defMap, errorOutRef);") !=
+        std::string::npos);
+  CHECK(irSetupTypeCollectionHelpers.find(
+            "std::string normalized = rebuildScopedCollectionHelperPath(expr);") !=
+        std::string::npos);
+  CHECK(irSetupTypeCollectionHelpers.find("std::string normalized = expr.name;") ==
         std::string::npos);
   CHECK(irReceiverTargetHelpers.find("std::string resolveScopedMethodPath(const Expr &expr)") !=
         std::string::npos);
