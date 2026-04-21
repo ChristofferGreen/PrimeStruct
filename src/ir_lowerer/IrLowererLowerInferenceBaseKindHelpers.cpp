@@ -138,6 +138,7 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
       return LocalInfo::ValueKind::Unknown;
     }
     case Expr::Kind::Call: {
+      LocalInfo::ValueKind kindOut = LocalInfo::ValueKind::Unknown;
       if (inferBaseSetupSemanticQueryFactValueKind(expr, semanticProgram, semanticIndex, kindOut)) {
         return kindOut;
       }
