@@ -75,7 +75,15 @@ TEST_CASE("ir lowerer materialized collection receivers use published helper que
         std::string::npos);
   CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorHelpers") !=
         std::string::npos);
+  CHECK(source.find("if (!resolvePublishedLateCollectionMemberName(") !=
+        std::string::npos);
+  CHECK(source.find("if (!resolveMaterializedCollectionHelperName(callExpr, helperName)) {") !=
+        std::string::npos);
+  CHECK(source.find("helperName = resolveCollectionExprDirectPath(callExpr);") !=
+        std::string::npos);
   CHECK(source.find("resolveMaterializedCollectionHelperName(callExpr, helperName)") !=
+        std::string::npos);
+  CHECK(source.find("helperName = callExpr.name;") !=
         std::string::npos);
 }
 
