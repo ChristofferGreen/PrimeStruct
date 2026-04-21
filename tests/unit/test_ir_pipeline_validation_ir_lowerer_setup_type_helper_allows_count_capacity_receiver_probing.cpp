@@ -1045,6 +1045,90 @@ TEST_CASE("ir lowerer setup type helper resolves canonical map methods from gene
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper keeps direct helper-return soa_vector mutator shadows on wrapper paths") {
+  primec::Definition cloneDef;
+  cloneDef.fullPath = "/cloneValues";
+  primec::Transform returnSoaVector;
+  returnSoaVector.name = "return";
+  returnSoaVector.templateArgs = {
+      "/std/collections/experimental_soa_vector/SoaVector__Particle"};
+  cloneDef.transforms.push_back(returnSoaVector);
+
+  primec::Definition aliasPushDef;
+  aliasPushDef.fullPath = "/soa_vector/push";
+  primec::Definition aliasReserveDef;
+  aliasReserveDef.fullPath = "/soa_vector/reserve";
+  primec::Definition canonicalPushDef;
+  canonicalPushDef.fullPath = "/std/collections/soa_vector/push";
+  primec::Definition canonicalReserveDef;
+  canonicalReserveDef.fullPath = "/std/collections/soa_vector/reserve";
+  primec::Definition concretePushDef;
+  concretePushDef.fullPath =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle/push";
+  primec::Definition concreteReserveDef;
+  concreteReserveDef.fullPath =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle/reserve";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {cloneDef.fullPath, &cloneDef},
+      {aliasPushDef.fullPath, &aliasPushDef},
+      {aliasReserveDef.fullPath, &aliasReserveDef},
+      {canonicalPushDef.fullPath, &canonicalPushDef},
+      {canonicalReserveDef.fullPath, &canonicalReserveDef},
+      {concretePushDef.fullPath, &concretePushDef},
+      {concreteReserveDef.fullPath, &concreteReserveDef},
+  };
+
+  primec::Expr cloneCall;
+  cloneCall.kind = primec::Expr::Kind::Call;
+  cloneCall.name = "cloneValues";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Name;
+  valueExpr.name = "value";
+
+  primec::Expr capacityExpr;
+  capacityExpr.kind = primec::Expr::Kind::Literal;
+  capacityExpr.intWidth = 32;
+  capacityExpr.literalValue = 4;
+
+  auto expectResolvedMethod = [&](const char *methodName,
+                                  const std::vector<primec::Expr> &args,
+                                  const primec::Definition *expectedDef) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = args;
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {"/std/collections/experimental_soa_vector/SoaVector__Particle"},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &expr) {
+          if (expr.kind == primec::Expr::Kind::Call && expr.name == "cloneValues") {
+            return std::string("/cloneValues");
+          }
+          return std::string();
+        },
+        defMap,
+        error);
+    CHECK(resolved == expectedDef);
+    CHECK(error.empty());
+  };
+
+  expectResolvedMethod("push", {cloneCall, valueExpr}, &aliasPushDef);
+  expectResolvedMethod("reserve", {cloneCall, capacityExpr}, &aliasReserveDef);
+}
+
 TEST_CASE("ir lowerer setup type helper resolves struct receiver method definitions from expressions") {
   primec::Definition structMethodDef;
   structMethodDef.fullPath = "/pkg/Ctor/length";
