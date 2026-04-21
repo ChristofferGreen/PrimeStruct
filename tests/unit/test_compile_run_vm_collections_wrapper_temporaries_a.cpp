@@ -2825,6 +2825,10 @@ TEST_CASE("runs vm borrowed experimental map helpers") {
   expectExperimentalMapReferenceHelperConformance("vm");
 }
 
+TEST_CASE("runs vm public borrowed map wrappers") {
+  expectPublicMapReferenceWrapperConformance("vm");
+}
+
 TEST_CASE("runs vm borrowed experimental map methods") {
   expectExperimentalMapReferenceMethodConformance("vm");
 }

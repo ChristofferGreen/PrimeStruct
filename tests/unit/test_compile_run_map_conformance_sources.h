@@ -297,6 +297,39 @@ inline std::string makeExperimentalMapReferenceHelperConformanceSource() {
   return source;
 }
 
+inline std::string makePublicMapReferenceWrapperConformanceSource() {
+  std::string source;
+  source += "import /std/collections/*\n";
+  source += "import /std/collections/experimental_map/*\n\n";
+  source += "[effects(io_err)]\n";
+  source += "unexpectedPublicMapReferenceWrapperError([ContainerError] err) {\n";
+  source += "  [Result<ContainerError>] status{err.code}\n";
+  source += "  print_line_error(Result.why(status))\n";
+  source += "}\n\n";
+  source +=
+      "[return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedPublicMapReferenceWrapperError>]\n";
+  source += "main() {\n";
+  source += "  [Map<string, i32> mut] values{mapPair<string, i32>(\"left\"raw_utf8, 4i32, \"right\"raw_utf8, 7i32)}\n";
+  source += "  [Reference<Map<string, i32>> mut] ref{location(values)}\n";
+  source += "  mapInsertRef<string, i32>(ref, \"third\"raw_utf8, 11i32)\n";
+  source += "  mapInsertRef<string, i32>(ref, \"right\"raw_utf8, 13i32)\n";
+  source += "  [i32] found{try(mapTryAtRef<string, i32>(ref, \"left\"raw_utf8))}\n";
+  source += "  [Result<i32, ContainerError>] missing{mapTryAtRef<string, i32>(ref, \"missing\"raw_utf8)}\n";
+  source += "  [i32 mut] total{plus(mapCountRef<string, i32>(ref), found)}\n";
+  source += "  assign(total, plus(total, mapAtRef<string, i32>(ref, \"left\"raw_utf8)))\n";
+  source += "  assign(total, plus(total, mapAtUnsafeRef<string, i32>(ref, \"right\"raw_utf8)))\n";
+  source += "  if(mapContainsRef<string, i32>(ref, \"left\"raw_utf8),\n";
+  source += "     then() { assign(total, plus(total, 1i32)) },\n";
+  source += "     else() { })\n";
+  source += "  if(not(mapContainsRef<string, i32>(ref, \"missing\"raw_utf8)),\n";
+  source += "     then() { assign(total, plus(total, 2i32)) },\n";
+  source += "     else() { })\n";
+  source += "  print_line(Result.why(missing))\n";
+  source += "  return(Result.ok(total))\n";
+  source += "}\n";
+  return source;
+}
+
 inline std::string makeExperimentalMapReferenceMethodConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";

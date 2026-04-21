@@ -224,6 +224,34 @@ inline void expectExperimentalMapReferenceHelperConformance(const std::string &e
   CHECK(readFile(outPath) == "container missing key\n");
 }
 
+inline void expectPublicMapReferenceWrapperConformance(const std::string &emitMode) {
+  const std::string source = makePublicMapReferenceWrapperConformanceSource();
+  const std::string srcPath = writeTemp("public_map_reference_wrappers_" + emitMode + ".prime", source);
+  const std::string outPath =
+      (testScratchPath("") /
+       ("primec_public_map_reference_wrappers_" + emitMode + "_out.txt"))
+          .string();
+
+  if (emitMode == "vm") {
+    const std::string runCmd =
+        "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main > " + quoteShellArg(outPath);
+    CHECK(runCommand(runCmd) == 27);
+    CHECK(readFile(outPath) == "\n");
+    return;
+  }
+
+  const std::string exePath =
+      (testScratchPath("") /
+       ("primec_public_map_reference_wrappers_" + emitMode + "_exe"))
+          .string();
+  const std::string compileCmd = "./primec --emit=" + emitMode + " " + quoteShellArg(srcPath) + " -o " +
+                                 quoteShellArg(exePath) + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string runCmd = quoteShellArg(exePath) + " > " + quoteShellArg(outPath);
+  CHECK(runCommand(runCmd) == 27);
+  CHECK(readFile(outPath) == "container missing key\n");
+}
+
 inline void expectExperimentalMapReferenceMethodConformance(const std::string &emitMode) {
   if (emitMode == "vm") {
     expectMapConformanceProgramRunsWithOutput(makeExperimentalMapReferenceMethodConformanceSource(),

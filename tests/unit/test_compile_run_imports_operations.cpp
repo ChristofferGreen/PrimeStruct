@@ -3351,6 +3351,10 @@ TEST_CASE("compiles and runs borrowed experimental map helpers in C++ emitter") 
   expectExperimentalMapReferenceHelperConformance("exe");
 }
 
+TEST_CASE("compiles and runs public borrowed map wrappers in C++ emitter") {
+  expectPublicMapReferenceWrapperConformance("exe");
+}
+
 TEST_CASE("compiles and runs borrowed experimental map methods in C++ emitter") {
   expectExperimentalMapReferenceMethodConformance("exe");
 }
