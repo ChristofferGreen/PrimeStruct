@@ -534,6 +534,13 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
       return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
     };
+    auto isCanonicalSoaWrapperMethodName = [](std::string_view methodName) {
+      return methodName == "count" || methodName == "count_ref" ||
+             methodName == "get" || methodName == "get_ref" ||
+             methodName == "ref" || methodName == "ref_ref" ||
+             methodName == "to_aos" || methodName == "to_aos_ref" ||
+             methodName == "push" || methodName == "reserve";
+    };
     const std::string normalizedMethodName =
         std::string(normalizeFileResultMethodName(expr.name));
     const std::string normalizedFileErrorMethodName =
@@ -586,6 +593,10 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
     }
     if (resolvedType.empty()) {
       return "";
+    }
+    if (resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 &&
+        isCanonicalSoaWrapperMethodName(expr.name)) {
+      return preferredSoaHelperTargetForCollectionType(expr.name, "/soa_vector");
     }
     return resolvedType + "/" + expr.name;
   };
