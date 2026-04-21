@@ -224,13 +224,42 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
     return emitExpr(rewrittenExpr, localsIn) ? OperatorArithmeticEmitResult::Handled
                                              : OperatorArithmeticEmitResult::Error;
   }
+  auto isScalarReferenceOffsetOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsRef.find(candidate.name);
+    if (it == localsRef.end()) {
+      return false;
+    }
+    const LocalInfo &info = it->second;
+    if (info.kind != LocalInfo::Kind::Reference) {
+      return false;
+    }
+    if (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap ||
+        info.isFileHandle || info.isResult || info.isUninitializedStorage || info.targetsUninitializedStorage ||
+        info.isSoaVector || !info.structTypeName.empty()) {
+      return false;
+    }
+    LocalInfo::ValueKind offsetKind = info.valueKind;
+    if (offsetKind == LocalInfo::ValueKind::Unknown) {
+      offsetKind = inferExprKind(candidate, localsRef);
+    }
+    return offsetKind == LocalInfo::ValueKind::Int32 || offsetKind == LocalInfo::ValueKind::Int64 ||
+           offsetKind == LocalInfo::ValueKind::UInt64;
+  };
   std::function<bool(const Expr &, const LocalMap &)> isPointerOperand;
   isPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
     if (candidate.kind == Expr::Kind::Name) {
       auto it = localsRef.find(candidate.name);
-      return it != localsRef.end() &&
-             (it->second.kind == LocalInfo::Kind::Pointer ||
-              it->second.kind == LocalInfo::Kind::Reference);
+      if (it == localsRef.end()) {
+        return false;
+      }
+      if (it->second.kind == LocalInfo::Kind::Pointer) {
+        return true;
+      }
+      return it->second.kind == LocalInfo::Kind::Reference &&
+             !isScalarReferenceOffsetOperand(candidate, localsRef);
     }
     if (candidate.kind == Expr::Kind::Call && isSimpleCallName(candidate, "location")) {
       return true;
@@ -258,30 +287,6 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       }
     }
     return false;
-  };
-  auto isScalarReferenceOffsetOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
-    if (candidate.kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto it = localsRef.find(candidate.name);
-    if (it == localsRef.end()) {
-      return false;
-    }
-    const LocalInfo &info = it->second;
-    if (info.kind != LocalInfo::Kind::Reference) {
-      return false;
-    }
-    if (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap ||
-        info.isFileHandle || info.isResult || info.isUninitializedStorage || info.targetsUninitializedStorage ||
-        info.isSoaVector || !info.structTypeName.empty()) {
-      return false;
-    }
-    LocalInfo::ValueKind offsetKind = info.valueKind;
-    if (offsetKind == LocalInfo::ValueKind::Unknown) {
-      offsetKind = inferExprKind(candidate, localsRef);
-    }
-    return offsetKind == LocalInfo::ValueKind::Int32 || offsetKind == LocalInfo::ValueKind::Int64 ||
-           offsetKind == LocalInfo::ValueKind::UInt64;
   };
   auto emitPointerOperand = [&](const Expr &candidate, const LocalMap &localsRef) -> bool {
     if (candidate.kind == Expr::Kind::Name) {

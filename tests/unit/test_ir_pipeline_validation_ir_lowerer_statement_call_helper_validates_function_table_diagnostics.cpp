@@ -422,6 +422,71 @@ TEST_CASE("ir lowerer arithmetic helper infers scalar reference offsets on the r
   CHECK(instructions[2].op == primec::IrOpcode::AddI64);
 }
 
+TEST_CASE("ir lowerer arithmetic helper keeps mutable scalar locals numeric") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo widthInfo;
+  widthInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  widthInfo.index = 4;
+  widthInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("width", widthInfo);
+  primec::ir_lowerer::LocalInfo heightInfo;
+  heightInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  heightInfo.index = 6;
+  heightInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("height", heightInfo);
+
+  primec::Expr left;
+  left.kind = primec::Expr::Kind::Name;
+  left.name = "width";
+  primec::Expr right;
+  right.kind = primec::Expr::Kind::Name;
+  right.name = "height";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "plus";
+  expr.args = {left, right};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  auto result = primec::ir_lowerer::emitArithmeticOperatorExpr(
+      expr,
+      locals,
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        if (arg.kind == primec::Expr::Kind::Name && arg.name == "width") {
+          instructions.push_back({primec::IrOpcode::LoadLocal, 4});
+          return true;
+        }
+        if (arg.kind == primec::Expr::Kind::Name && arg.name == "height") {
+          instructions.push_back({primec::IrOpcode::LoadLocal, 6});
+          return true;
+        }
+        return false;
+      },
+      [](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &localMap) {
+        if (arg.kind == primec::Expr::Kind::Name) {
+          auto it = localMap.find(arg.name);
+          return (it == localMap.end()) ? primec::ir_lowerer::LocalInfo::ValueKind::Unknown
+                                        : it->second.valueKind;
+        }
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string{}; },
+      [](primec::ir_lowerer::LocalInfo::ValueKind leftKind, primec::ir_lowerer::LocalInfo::ValueKind rightKind) {
+        return (leftKind == rightKind) ? leftKind : primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      error);
+
+  CHECK(result == primec::ir_lowerer::OperatorArithmeticEmitResult::Handled);
+  CHECK(error.empty());
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[1].imm == 6);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI32);
+}
+
 TEST_CASE("ir lowerer arithmetic helper allows scoped buffer byte offsets on the right") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo pointerInfo;
