@@ -27,6 +27,10 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/experimental_soa_vector/",
       "std/collections/experimental_soa_vector_conversions/",
       "std/collections/soa_vector_conversions/",
+      "std/collections/experimental_vector/",
+      "std/collections/ContainerError/",
+      "std/image/",
+      "std/ui/",
   };
   for (const char *prefix : builtinPrefixes) {
     const std::string prefixText(prefix);
@@ -52,6 +56,7 @@ bool parseMathName(const std::string &name, std::string &out, bool allowBare) {
     return false;
   }
   std::string normalized = name;
+  normalized = normalizeInternalSoaStorageBuiltinAlias(normalized);
   const bool hasLeadingSlash = !normalized.empty() && normalized[0] == '/';
   if (hasLeadingSlash) {
     normalized.erase(0, 1);
@@ -281,7 +286,8 @@ bool getBuiltinConvertName(const Expr &expr) {
   if (expr.kind != Expr::Kind::Call || expr.name.empty()) {
     return false;
   }
-  std::string name = resolveScopedExprName(expr);
+  std::string name =
+      normalizeInternalSoaStorageBuiltinAlias(resolveScopedExprName(expr));
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }

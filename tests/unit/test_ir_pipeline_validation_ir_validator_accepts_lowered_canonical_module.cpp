@@ -1352,6 +1352,65 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   CHECK(primec::emitter::getBuiltinMutationName(
       namespacedCanonicalSoaConversionsIncrementCall, mutation));
   CHECK(mutation == "increment");
+
+  primec::Expr namespacedUiMultiplyCall;
+  namespacedUiMultiplyCall.kind = primec::Expr::Kind::Call;
+  namespacedUiMultiplyCall.name = "multiply";
+  namespacedUiMultiplyCall.namespacePrefix = "/std/ui";
+
+  CHECK(primec::ir_lowerer::getBuiltinOperatorName(
+      namespacedUiMultiplyCall, builtinName));
+  CHECK(builtinName == "multiply");
+  CHECK(primec::emitter::getBuiltinOperator(
+      namespacedUiMultiplyCall, op));
+  CHECK(op == '*');
+
+  primec::Expr namespacedContainerErrorMultiplyCall;
+  namespacedContainerErrorMultiplyCall.kind = primec::Expr::Kind::Call;
+  namespacedContainerErrorMultiplyCall.name = "multiply";
+  namespacedContainerErrorMultiplyCall.namespacePrefix =
+      "/std/collections/ContainerError";
+
+  CHECK(primec::ir_lowerer::getBuiltinOperatorName(
+      namespacedContainerErrorMultiplyCall, builtinName));
+  CHECK(builtinName == "multiply");
+  CHECK(primec::emitter::getBuiltinOperator(
+      namespacedContainerErrorMultiplyCall, op));
+  CHECK(op == '*');
+
+  primec::Expr namespacedExperimentalVectorOrCall;
+  namespacedExperimentalVectorOrCall.kind = primec::Expr::Kind::Call;
+  namespacedExperimentalVectorOrCall.name = "or";
+  namespacedExperimentalVectorOrCall.namespacePrefix =
+      "/std/collections/experimental_vector";
+
+  CHECK(primec::ir_lowerer::getBuiltinComparisonName(
+      namespacedExperimentalVectorOrCall, builtinName));
+  CHECK(builtinName == "or");
+  CHECK(primec::emitter::getBuiltinComparison(
+      namespacedExperimentalVectorOrCall, comparison));
+  CHECK(std::string(comparison) == "||");
+
+  primec::Expr namespacedImageTryCall;
+  namespacedImageTryCall.kind = primec::Expr::Kind::Call;
+  namespacedImageTryCall.name = "try";
+  namespacedImageTryCall.namespacePrefix = "/std/image/png";
+
+  CHECK(primec::ir_lowerer::isSimpleCallName(
+      namespacedImageTryCall, "try"));
+  CHECK(primec::emitter::isSimpleCallName(
+      namespacedImageTryCall, "try"));
+
+  primec::Expr namespacedImageConvertCall;
+  namespacedImageConvertCall.kind = primec::Expr::Kind::Call;
+  namespacedImageConvertCall.name = "convert";
+  namespacedImageConvertCall.namespacePrefix = "/std/image";
+
+  CHECK(primec::ir_lowerer::getBuiltinConvertName(
+      namespacedImageConvertCall));
+  CHECK(primec::emitter::getBuiltinConvertName(
+      namespacedImageConvertCall, builtinName));
+  CHECK(builtinName == "convert");
 }
 
 TEST_CASE("emitter collection inference keeps namespaced internal soa builtins") {

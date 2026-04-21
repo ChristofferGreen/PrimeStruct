@@ -121,6 +121,7 @@ bool getBuiltinSaturateName(const Expr &expr, std::string &out, bool allowBare);
 bool getBuiltinMathName(const Expr &expr, std::string &out, bool allowBare);
 bool isBuiltinMathConstantName(const std::string &name, bool allowBare);
 bool getBuiltinPointerOperator(const Expr &expr, char &out);
+bool getBuiltinMemoryName(const Expr &expr, std::string &out);
 bool getBuiltinConvertName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
 bool inferCollectionElementTypeNameFromExpr(

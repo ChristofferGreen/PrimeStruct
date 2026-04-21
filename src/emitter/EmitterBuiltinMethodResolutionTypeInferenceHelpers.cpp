@@ -1,5 +1,6 @@
 #include "EmitterBuiltinMethodResolutionTypeInferenceInternal.h"
 
+#include "EmitterBuiltinCallPathHelpersInternal.h"
 #include "EmitterBuiltinCollectionInferenceInternal.h"
 
 #include <functional>

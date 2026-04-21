@@ -32,6 +32,10 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
       "std/collections/experimental_soa_vector/",
       "std/collections/experimental_soa_vector_conversions/",
       "std/collections/soa_vector_conversions/",
+      "std/collections/experimental_vector/",
+      "std/collections/ContainerError/",
+      "std/image/",
+      "std/ui/",
   };
   for (const char *prefix : builtinPrefixes) {
     const std::string prefixText(prefix);
@@ -92,7 +96,7 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
            name == "borrow" || name == "init" || name == "drop" || name == "increment" ||
            name == "decrement" || name == "return" || name == "then" || name == "else" ||
            name == "do" || name == "block" || name == "loop" || name == "for" ||
-           name == "repeat" || name == "location" || name == "dereference" ||
+           name == "repeat" || name == "try" || name == "location" || name == "dereference" ||
            name == "count" || name == "count_ref" ||
            name == "capacity" || name == "to_aos" ||
            name == "to_aos_ref" ||
