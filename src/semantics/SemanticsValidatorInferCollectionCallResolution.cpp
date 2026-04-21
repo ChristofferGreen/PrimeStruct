@@ -81,6 +81,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
   if (target.kind != Expr::Kind::Call) {
     return false;
   }
+  const bool hasNamedTargetArgs = hasNamedArguments(target.argNames);
 
   const BuiltinCollectionDispatchResolverAdapters builtinCollectionDispatchResolverAdapters;
   const BuiltinCollectionDispatchResolvers builtinCollectionDispatchResolvers =
@@ -107,6 +108,7 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
   const std::string resolvedTarget = resolvedCallPath(target);
   const std::string explicitTarget = explicitCallPath(target);
   const bool matchesVectorCtorFamily =
+      !hasNamedTargetArgs &&
       !inferredNonCollectionTargetType &&
       (isResolvedVectorConstructorHelperPath(resolvedTarget) ||
        isResolvedVectorConstructorHelperPath(explicitTarget));
@@ -229,6 +231,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   if (target.kind != Expr::Kind::Call) {
     return false;
   }
+  const bool hasNamedTargetArgs = hasNamedArguments(target.argNames);
 
   auto extractCollectionArgsFromBinding = [&](const BindingInfo &binding) {
     if (expectedBase == "vector") {
@@ -286,6 +289,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
   }
 
   if (expectedBase == "vector" &&
+      !hasNamedTargetArgs &&
       !inferredNonCollectionTargetType &&
       (isResolvedVectorConstructorHelperPath(resolvedTarget) ||
        isResolvedVectorConstructorHelperPath(explicitTarget)) &&

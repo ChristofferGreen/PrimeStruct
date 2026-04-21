@@ -907,6 +907,24 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   CHECK(semanticsInferCollectionsSource.find("bool SemanticsValidator::resolveCallCollectionTemplateArgs") !=
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
+            "const bool hasNamedTargetArgs = hasNamedArguments(target.argNames);") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "const bool matchesVectorCtorFamily =\n"
+            "      !hasNamedTargetArgs &&\n"
+            "      !inferredNonCollectionTargetType &&\n"
+            "      (isResolvedVectorConstructorHelperPath(resolvedTarget) ||\n"
+            "       isResolvedVectorConstructorHelperPath(explicitTarget));") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
+            "if (expectedBase == \"vector\" &&\n"
+            "      !hasNamedTargetArgs &&\n"
+            "      !inferredNonCollectionTargetType &&\n"
+            "      (isResolvedVectorConstructorHelperPath(resolvedTarget) ||\n"
+            "       isResolvedVectorConstructorHelperPath(explicitTarget)) &&\n"
+            "      target.templateArgs.size() == 1) {") !=
+        std::string::npos);
+  CHECK(semanticsInferCollectionsSource.find(
             "matchesCollectionCtorPath(\"/std/collections/vector/vector\")") ==
         std::string::npos);
   CHECK(semanticsInferCollectionsSource.find(
