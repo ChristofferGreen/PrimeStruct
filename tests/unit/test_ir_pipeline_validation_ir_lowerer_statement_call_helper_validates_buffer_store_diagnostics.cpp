@@ -5832,6 +5832,14 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
         std::string::npos);
   CHECK(source.find("resolvePublishedStdlibSurfaceExprMemberName(") !=
         std::string::npos);
+  CHECK(source.find("std::string helperName =\n        resolveStatementCallPathWithoutFallbackProbes(callExpr);") !=
+        std::string::npos);
+  CHECK(source.find("std::string normalizedName =\n        resolveStatementCallPathWithoutFallbackProbes(stmt);") !=
+        std::string::npos);
+  CHECK(source.find("std::string directName = resolveStatementCallPathWithoutFallbackProbes(expr);") !=
+        std::string::npos);
+  CHECK(source.find("std::string methodName = resolveStatementCallPathWithoutFallbackProbes(expr);") !=
+        std::string::npos);
   CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(resolvedPath)") !=
         std::string::npos);
   CHECK(source.find("metadata->id != StdlibSurfaceId::CollectionsVectorHelpers") !=
@@ -5841,6 +5849,14 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
   CHECK(source.find("matchesRegistrySpellingSet(metadata->loweringSpellings, resolvedPath)") !=
         std::string::npos);
   CHECK(source.find("return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);") ==
+        std::string::npos);
+  CHECK(source.find("std::string helperName = callExpr.name;") ==
+        std::string::npos);
+  CHECK(source.find("std::string normalizedName = stmt.name;") ==
+        std::string::npos);
+  CHECK(source.find("std::string directName = expr.name;") ==
+        std::string::npos);
+  CHECK(source.find("std::string methodName = expr.name;") ==
         std::string::npos);
   CHECK(source.find("const std::string experimentalVectorPrefix = \"std/collections/experimental_vector/\"") ==
         std::string::npos);

@@ -282,7 +282,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     if (callExpr.isMethodCall || callExpr.name.empty()) {
       return false;
     }
-    std::string helperName = callExpr.name;
+    std::string helperName =
+        resolveStatementCallPathWithoutFallbackProbes(callExpr);
     if (!helperName.empty() && helperName.front() == '/') {
       helperName.erase(helperName.begin());
     }
@@ -298,7 +299,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
 
   size_t receiverIndex = 0;
   if (stmt.isMethodCall) {
-    std::string normalizedName = stmt.name;
+    std::string normalizedName =
+        resolveStatementCallPathWithoutFallbackProbes(stmt);
     if (!normalizedName.empty() && normalizedName.front() == '/') {
       normalizedName.erase(normalizedName.begin());
     }
@@ -483,7 +485,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         if (stem == nullptr || expr.isMethodCall || expr.name.empty()) {
           return false;
         }
-        std::string directName = expr.name;
+        std::string directName = resolveStatementCallPathWithoutFallbackProbes(expr);
         if (!directName.empty() && directName.front() == '/') {
           directName.erase(directName.begin());
         }
@@ -499,7 +501,7 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
         if (!expr.isMethodCall || expr.name.empty()) {
           return false;
         }
-        std::string methodName = expr.name;
+        std::string methodName = resolveStatementCallPathWithoutFallbackProbes(expr);
         if (!methodName.empty() && methodName.front() == '/') {
           methodName.erase(methodName.begin());
         }
