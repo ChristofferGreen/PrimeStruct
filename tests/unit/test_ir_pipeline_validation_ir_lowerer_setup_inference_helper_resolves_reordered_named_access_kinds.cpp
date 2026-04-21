@@ -539,6 +539,61 @@ TEST_CASE("ir lowerer setup inference helper infers body value kinds with locals
   CHECK(applyValueInfoCalls == 1);
 }
 
+TEST_CASE("ir lowerer setup inference helper recovers bool body comparison tails") {
+  primec::Expr lhs;
+  lhs.kind = primec::Expr::Kind::Literal;
+  lhs.literalValue = 1;
+
+  primec::Expr rhs = lhs;
+  rhs.literalValue = 0;
+
+  primec::Expr comparisonExpr;
+  comparisonExpr.kind = primec::Expr::Kind::Call;
+  comparisonExpr.name = "greater_than";
+  comparisonExpr.args = {lhs, rhs};
+
+  const primec::ir_lowerer::LocalInfo::ValueKind tailKind =
+      primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+          {comparisonExpr},
+          {},
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); });
+  CHECK(tailKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "return";
+  returnExpr.args = {comparisonExpr};
+
+  const primec::ir_lowerer::LocalInfo::ValueKind returnKind =
+      primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+          {returnExpr},
+          {},
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); });
+  CHECK(returnKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+}
+
 TEST_CASE("ir lowerer setup inference helper prefers semantic binding facts for body locals scaffolding") {
   primec::Expr bindingExpr;
   bindingExpr.isBinding = true;

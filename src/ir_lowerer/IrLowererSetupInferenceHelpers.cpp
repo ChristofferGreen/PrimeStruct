@@ -529,10 +529,23 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
       if (bodyExpr.args.size() != 1) {
         return LocalInfo::ValueKind::Unknown;
       }
-      return inferExprKind(bodyExpr.args.front(), bodyLocals);
+      LocalInfo::ValueKind returnKind = inferExprKind(bodyExpr.args.front(), bodyLocals);
+      if (returnKind == LocalInfo::ValueKind::Unknown) {
+        std::string builtinComparison;
+        if (getBuiltinComparisonName(bodyExpr.args.front(), builtinComparison)) {
+          returnKind = LocalInfo::ValueKind::Bool;
+        }
+      }
+      return returnKind;
     }
     sawValue = true;
     lastKind = inferExprKind(bodyExpr, bodyLocals);
+    if (lastKind == LocalInfo::ValueKind::Unknown) {
+      std::string builtinComparison;
+      if (getBuiltinComparisonName(bodyExpr, builtinComparison)) {
+        lastKind = LocalInfo::ValueKind::Bool;
+      }
+    }
   }
   return sawValue ? lastKind : LocalInfo::ValueKind::Unknown;
 }
