@@ -248,6 +248,7 @@ TEST_CASE("ir lowerer arithmetic helper treats reference handles as pointer oper
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo referenceInfo;
   referenceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  referenceInfo.isMutable = false;
   referenceInfo.index = 7;
   referenceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
   locals.emplace("ref", referenceInfo);

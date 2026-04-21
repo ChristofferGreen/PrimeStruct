@@ -258,12 +258,15 @@ OperatorArithmeticEmitResult emitArithmeticOperatorExpr(const Expr &expr,
       if (it->second.kind == LocalInfo::Kind::Pointer) {
         return true;
       }
-      if (it->second.kind == LocalInfo::Kind::Reference && it->second.isMutable &&
-          isScalarReferenceValueOperand(candidate, localsRef)) {
-        return false;
+      if (it->second.kind == LocalInfo::Kind::Reference) {
+        // Mutable scalar locals lower as references but should still behave like
+        // numeric values here. Explicit reference handles remain pointer-like.
+        if (it->second.isMutable && isScalarReferenceValueOperand(candidate, localsRef)) {
+          return false;
+        }
+        return true;
       }
-      return it->second.kind == LocalInfo::Kind::Reference &&
-             !isScalarReferenceValueOperand(candidate, localsRef);
+      return false;
     }
     if (candidate.kind == Expr::Kind::Call && isSimpleCallName(candidate, "location")) {
       return true;
