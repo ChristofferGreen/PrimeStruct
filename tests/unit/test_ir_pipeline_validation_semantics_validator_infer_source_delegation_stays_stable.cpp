@@ -857,6 +857,10 @@ TEST_CASE("semantics validator infer source delegation stays stable" * doctest::
   CHECK(semanticsInferDefinitionSource.find(
             "auto failInferDefinitionDiagnostic = [&](std::string message) -> bool {") !=
         std::string::npos);
+  CHECK(semanticsInferDefinitionSource.find(
+            "if (helperName.empty() || helperName == \"count\" || helperName == \"count_ref\" ||\n"
+            "        helperName == \"get\" || helperName == \"get_ref\" || helperName == \"ref\" ||") !=
+        std::string::npos);
   CHECK(semanticsInferDefinitionSource.find("bool SemanticsValidator::inferDefinitionStatementReturns") !=
         std::string::npos);
   CHECK(semanticsInferDefinitionSource.find(
