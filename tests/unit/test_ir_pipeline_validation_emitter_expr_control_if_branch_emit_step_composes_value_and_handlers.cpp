@@ -1031,7 +1031,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
   CHECK(buildInitializerInferenceCallsSource.find(
             "const std::string concreteResolvedMethodInitializer =\n"
             "          resolveExprConcreteCallPath(\n"
-            "              params, locals, initializer, resolvedMethodInitializer);") !=
+              "              params, locals, initializer, resolvedMethodInitializer);") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "if (!concreteResolvedMethodInitializer.empty()) {\n"
@@ -1063,6 +1063,30 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers" * doc
             "                                                              ? "
             "preferredCollectionHelperResolvedPath(initializer)\n"
             "                                                              : std::string{}") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "  std::string preferredResolvedInferencePath;\n"
+            "  if (initializerExprForInference != nullptr) {\n"
+            "    preferredResolvedInferencePath =\n"
+            "        preferredCollectionHelperResolvedPath(*initializerExprForInference);\n"
+            "    if (preferredResolvedInferencePath.empty()) {\n"
+            "      preferredResolvedInferencePath = resolveCalleePath(*initializerExprForInference);\n"
+            "    }\n"
+            "    if (!preferredResolvedInferencePath.empty()) {\n"
+            "      const std::string concreteResolvedInferencePath =\n"
+            "          resolveExprConcreteCallPath(\n"
+            "              params, locals, *initializerExprForInference, preferredResolvedInferencePath);\n"
+            "      if (!concreteResolvedInferencePath.empty()) {\n"
+            "        preferredResolvedInferencePath = concreteResolvedInferencePath;\n"
+            "      }\n"
+            "    }\n"
+            "  }\n") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)") ==
+        std::string::npos);
+  CHECK(buildInitializerInferenceCallsSource.find(
+            "inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find("auto vectorConstructorHelperPath = [&]() -> std::string {") ==
         std::string::npos);

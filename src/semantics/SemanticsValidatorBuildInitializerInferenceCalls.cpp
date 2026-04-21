@@ -610,23 +610,47 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
     return true;
   }
+  std::string preferredResolvedInferencePath;
+  if (initializerExprForInference != nullptr) {
+    preferredResolvedInferencePath =
+        preferredCollectionHelperResolvedPath(*initializerExprForInference);
+    if (preferredResolvedInferencePath.empty()) {
+      preferredResolvedInferencePath = resolveCalleePath(*initializerExprForInference);
+    }
+    if (!preferredResolvedInferencePath.empty()) {
+      const std::string concreteResolvedInferencePath =
+          resolveExprConcreteCallPath(
+              params, locals, *initializerExprForInference, preferredResolvedInferencePath);
+      if (!concreteResolvedInferencePath.empty()) {
+        preferredResolvedInferencePath = concreteResolvedInferencePath;
+      }
+    }
+  }
   ReturnKind resolvedKind = inferExprReturnKind(*initializerExprForInference, params, locals);
   if (resolvedKind != ReturnKind::Unknown && resolvedKind != ReturnKind::Void) {
     if (resolvedKind == ReturnKind::Array) {
       if (!hasGraphPreferredResolvedInitializer) {
-        if (inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)) {
+        if (!preferredResolvedInferencePath.empty() &&
+            inferResolvedDirectCallBindingType(preferredResolvedInferencePath, bindingOut)) {
           return true;
         }
-        if (inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))) {
+        if (!preferredResolvedInferencePath.empty() &&
+            inferDeclaredDirectCallBinding(preferredResolvedInferencePath)) {
           return true;
         }
       }
     }
     if (!hasGraphPreferredResolvedInitializer) {
-      if (inferResolvedDirectCallBindingType(resolveCalleePath(initializer), bindingOut)) {
+      const std::string &preferredResolvedInitializerPath =
+          !preferredResolvedInferencePath.empty()
+              ? preferredResolvedInferencePath
+              : resolveCalleePath(initializer);
+      if (!preferredResolvedInitializerPath.empty() &&
+          inferResolvedDirectCallBindingType(preferredResolvedInitializerPath, bindingOut)) {
         return true;
       }
-      if (inferDeclaredDirectCallBinding(resolveCalleePath(initializer))) {
+      if (!preferredResolvedInitializerPath.empty() &&
+          inferDeclaredDirectCallBinding(preferredResolvedInitializerPath)) {
         return true;
       }
     }
@@ -695,7 +719,8 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     return true;
   }
   if (!hasGraphPreferredResolvedInitializer &&
-      inferResolvedDirectCallBindingType(resolveCalleePath(*initializerExprForInference), bindingOut)) {
+      !preferredResolvedInferencePath.empty() &&
+      inferResolvedDirectCallBindingType(preferredResolvedInferencePath, bindingOut)) {
     return true;
   }
   if (graphDirectCallFactAvailable &&
@@ -710,7 +735,8 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
   }
   if (!hasGraphPreferredResolvedInitializer &&
-      inferDeclaredDirectCallBinding(resolveCalleePath(*initializerExprForInference))) {
+      !preferredResolvedInferencePath.empty() &&
+      inferDeclaredDirectCallBinding(preferredResolvedInferencePath)) {
     return true;
   }
   return false;
