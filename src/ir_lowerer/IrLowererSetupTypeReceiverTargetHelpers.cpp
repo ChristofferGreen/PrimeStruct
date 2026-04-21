@@ -10,6 +10,20 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+std::string resolveScopedMethodPath(const Expr &expr) {
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return expr.name;
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scoped = expr.namespacePrefix;
+    if (!scoped.empty() && scoped.front() != '/') {
+      scoped.insert(scoped.begin(), '/');
+    }
+    return scoped + "/" + expr.name;
+  }
+  return expr.name;
+}
+
 std::string resolveStructTypePathFromName(const std::string &typeName,
                                           const std::string &namespacePrefix,
                                           const std::unordered_map<std::string, std::string> &importAliases,
@@ -152,10 +166,11 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
       isVectorBuiltinName(callExpr, "push") || isVectorBuiltinName(callExpr, "pop") ||
       isVectorBuiltinName(callExpr, "reserve") || isVectorBuiltinName(callExpr, "clear") ||
       isVectorBuiltinName(callExpr, "remove_at") || isVectorBuiltinName(callExpr, "remove_swap");
-  const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(callExpr.name);
-  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(callExpr.name);
+  const std::string scopedMethodPath = resolveScopedMethodPath(callExpr);
+  const bool isExplicitRemovedVectorMethodAlias = isExplicitRemovedVectorMethodAliasPath(scopedMethodPath);
+  const bool isExplicitMapMethodAlias = isExplicitMapMethodAliasPath(scopedMethodPath);
   const bool isExplicitMapContainsOrTryAtMethod =
-      isExplicitMapContainsOrTryAtMethodPath(callExpr.name);
+      isExplicitMapContainsOrTryAtMethodPath(scopedMethodPath);
   const bool isBuiltinMapContainsOrTryAtCall =
       isSimpleCallName(callExpr, "contains") || isSimpleCallName(callExpr, "tryAt") ||
       isSimpleCallName(callExpr, "insert");
@@ -172,7 +187,7 @@ bool resolveMethodCallReceiverExpr(const Expr &callExpr,
     if (allowBuiltinFallback) {
       return false;
     }
-    errorOut = "unknown method target for " + callExpr.name;
+    errorOut = "unknown method target for " + scopedMethodPath;
     return false;
   }
 
