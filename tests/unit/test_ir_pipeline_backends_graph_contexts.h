@@ -1032,6 +1032,23 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
             "      if (const Definition *resolvedDef =\n"
             "              resolveLoweredDefinitionPath(preferredResolvedPath);") !=
         std::string::npos);
+  CHECK(irMethodResolution.find(
+            "    const std::string directResolvedPath =\n"
+            "        findSemanticProductDirectCallTarget(semanticProgram, callExpr);") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "      const std::string bridgeResolvedPath =\n"
+            "          findSemanticProductBridgePathChoice(semanticProgram, callExpr);\n"
+            "      const std::string preferredFallbackResolvedPath =\n"
+            "          !bridgeResolvedPath.empty() ? bridgeResolvedPath : directResolvedPath;\n"
+            "      if (!preferredFallbackResolvedPath.empty()) {\n"
+            "        if (const Definition *resolvedDef =\n"
+            "                resolveLoweredDefinitionPath(preferredFallbackResolvedPath);\n"
+            "            resolvedDef != nullptr) {\n"
+            "          return resolvedDef;\n"
+            "        }\n"
+            "        errorOut.clear();") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("std::string semanticTargetLookupError;") ==
         std::string::npos);
   CHECK(irMethodResolution.find("const auto &semanticAwareImportAliases =") != std::string::npos);

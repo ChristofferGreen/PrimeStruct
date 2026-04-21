@@ -190,8 +190,19 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     const std::string resolvedPath =
         findSemanticProductMethodCallTarget(semanticProgram, callExpr);
+    const std::string directResolvedPath =
+        findSemanticProductDirectCallTarget(semanticProgram, callExpr);
     if (resolvedPath.empty()) {
-      if (!findSemanticProductDirectCallTarget(semanticProgram, callExpr).empty()) {
+      const std::string bridgeResolvedPath =
+          findSemanticProductBridgePathChoice(semanticProgram, callExpr);
+      const std::string preferredFallbackResolvedPath =
+          !bridgeResolvedPath.empty() ? bridgeResolvedPath : directResolvedPath;
+      if (!preferredFallbackResolvedPath.empty()) {
+        if (const Definition *resolvedDef =
+                resolveLoweredDefinitionPath(preferredFallbackResolvedPath);
+            resolvedDef != nullptr) {
+          return resolvedDef;
+        }
         errorOut.clear();
       } else {
         errorOut = "missing semantic-product method-call target: " +
