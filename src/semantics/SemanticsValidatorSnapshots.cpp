@@ -595,7 +595,10 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
                              resolvedPath,
                              builtin) ||
         resolvedPath.empty()) {
-      resolvedPath = resolveCalleePath(expr);
+      resolvedPath = preferredCollectionHelperResolvedPath(expr);
+      if (resolvedPath.empty()) {
+        resolvedPath = resolveCalleePath(expr);
+      }
       if (resolvedPath.empty()) {
         return;
       }

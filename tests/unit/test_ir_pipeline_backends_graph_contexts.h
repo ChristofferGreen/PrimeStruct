@@ -2794,11 +2794,23 @@ TEST_CASE("semantic snapshot method targets concrete-call canonicalization stays
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
 
   CHECK(semanticsSnapshots.find(
+            "      resolvedPath = preferredCollectionHelperResolvedPath(expr);\n"
+            "      if (resolvedPath.empty()) {\n"
+            "        resolvedPath = resolveCalleePath(expr);\n"
+            "      }\n") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find(
             "    const std::string concreteResolvedPath =\n"
             "        resolveExprConcreteCallPath(defParams, activeLocals, expr, resolvedPath);\n"
             "    if (!concreteResolvedPath.empty()) {\n"
             "      resolvedPath = concreteResolvedPath;\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find(
+            "      resolvedPath = resolveCalleePath(expr);\n"
+            "      if (resolvedPath.empty()) {\n"
+            "        return;\n"
+            "      }\n") ==
         std::string::npos);
 }
 
