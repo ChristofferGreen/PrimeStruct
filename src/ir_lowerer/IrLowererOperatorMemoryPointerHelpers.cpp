@@ -442,11 +442,6 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
             candidate.args.size() == 2 &&
             (accessName == "at" || accessName == "at_unsafe")) {
           receiver = &candidate.args.front();
-        } else if (candidate.kind == Expr::Kind::Call &&
-                   candidate.isMethodCall &&
-                   candidate.args.size() == 2 &&
-                   (candidate.name == "at" || candidate.name == "at_unsafe")) {
-          receiver = &candidate.args.front();
         }
         if (receiver == nullptr || receiver->kind != Expr::Kind::Name) {
           return false;
@@ -483,11 +478,6 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
           if (getBuiltinArrayAccessName(candidate, accessName) &&
               candidate.args.size() == 2 &&
               (accessName == "at" || accessName == "at_unsafe")) {
-            accessReceiver = &candidate.args.front();
-          } else if (candidate.kind == Expr::Kind::Call &&
-                     candidate.isMethodCall &&
-                     candidate.args.size() == 2 &&
-                     (candidate.name == "at" || candidate.name == "at_unsafe")) {
             accessReceiver = &candidate.args.front();
           }
           if (accessReceiver == nullptr || accessReceiver->kind != Expr::Kind::Name) {

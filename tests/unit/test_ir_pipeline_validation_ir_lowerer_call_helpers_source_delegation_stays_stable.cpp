@@ -39,6 +39,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   const std::filesystem::path operatorCollectionMutationHelpersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorCollectionMutationHelpers.cpp";
+  const std::filesystem::path operatorMemoryPointerHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererOperatorMemoryPointerHelpers.cpp";
   const std::filesystem::path astCallPathHelpersPath =
       repoRoot / "include" / "primec" / "AstCallPathHelpers.h";
   REQUIRE(std::filesystem::exists(callHelpersPath));
@@ -53,6 +55,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
+  REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
   REQUIRE(std::filesystem::exists(astCallPathHelpersPath));
   const std::string callHelpersSource = readText(callHelpersPath);
   const std::string accessTargetResolutionSource = readText(accessTargetResolutionPath);
@@ -69,6 +72,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
   const std::string operatorCollectionMutationHelpersSource =
       readText(operatorCollectionMutationHelpersPath);
+  const std::string operatorMemoryPointerHelpersSource =
+      readText(operatorMemoryPointerHelpersPath);
   const std::string astCallPathHelpersSource = readText(astCallPathHelpersPath);
 
   CHECK(callHelpersSource.find("const Definition *resolveDefinitionCall(const Expr &callExpr,") ==
@@ -448,6 +453,10 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
   CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("if (!emitBuiltinArrayAccess(accessName,") !=
+        std::string::npos);
+  CHECK(operatorMemoryPointerHelpersSource.find("getBuiltinArrayAccessName(candidate, accessName)") !=
+        std::string::npos);
+  CHECK(operatorMemoryPointerHelpersSource.find("candidate.name == \"at\" || candidate.name == \"at_unsafe\"") ==
         std::string::npos);
 }
 
