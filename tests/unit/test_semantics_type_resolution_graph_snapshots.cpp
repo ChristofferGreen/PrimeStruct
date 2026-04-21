@@ -1735,7 +1735,8 @@ main() {
         return entry.scopePath == "/main" && entry.bindingName == "pushed";
       });
   REQUIRE(pushedEntry != nullptr);
-  CHECK(pushedEntry->initializerResolvedPath == "/soa_vector/push");
+  CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(semanticProgram, *pushedEntry) ==
+        "/soa_vector/push");
   CHECK(pushedEntry->initializerMethodCallResolvedPath == "/soa_vector/push");
   CHECK(pushedEntry->initializerMethodCallReturnKind == "i32");
 
@@ -1745,7 +1746,8 @@ main() {
         return entry.scopePath == "/main" && entry.bindingName == "reserved";
       });
   REQUIRE(reservedEntry != nullptr);
-  CHECK(reservedEntry->initializerResolvedPath == "/soa_vector/reserve");
+  CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(semanticProgram, *reservedEntry) ==
+        "/soa_vector/reserve");
   CHECK(reservedEntry->initializerMethodCallResolvedPath == "/soa_vector/reserve");
   CHECK(reservedEntry->initializerMethodCallReturnKind == "i32");
 
