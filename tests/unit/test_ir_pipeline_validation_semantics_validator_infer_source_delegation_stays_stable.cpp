@@ -1492,10 +1492,17 @@ TEST_CASE("semantics validator statement source delegation stays stable") {
             "      resolvedPathOut = preferredCollectionHelperResolvedPath(callExpr);\n") !=
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find(
+            "            std::string resolvedPath =\n"
+            "                preferredCollectionHelperResolvedPath(expr);\n") !=
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
             "      std::string resolvedPath = resolveCalleePath(expr);\n") ==
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find(
             "          std::string resolvedCallPath = resolveCalleePath(callExpr);\n") ==
+        std::string::npos);
+  CHECK(semanticsStatementBindingsSource.find(
+            "            std::string resolvedPath = resolveCalleePath(expr);\n") ==
         std::string::npos);
   CHECK(semanticsStatementBindingsSource.find("entry argument strings require string bindings") !=
         std::string::npos);

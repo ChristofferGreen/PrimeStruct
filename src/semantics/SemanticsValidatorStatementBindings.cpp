@@ -949,7 +949,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
       if (expr.kind != Expr::Kind::Call || expr.args.size() != 2) {
         return false;
       }
-      std::string resolvedPath = resolveCalleePath(expr);
+      std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
+      if (resolvedPath.empty()) {
+        resolvedPath = resolveCalleePath(expr);
+      }
       (void)resolveConcreteCallPath(expr, resolvedPath);
       const std::string resolvedPathCanonical =
           canonicalizeLegacySoaRefHelperPath(resolvedPath);
@@ -1073,7 +1076,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             return false;
           }
           if (expr.kind == Expr::Kind::Call && expr.args.size() == 2) {
-            std::string resolvedPath = resolveCalleePath(expr);
+            std::string resolvedPath =
+                preferredCollectionHelperResolvedPath(expr);
+            if (resolvedPath.empty()) {
+              resolvedPath = resolveCalleePath(expr);
+            }
             (void)resolveConcreteCallPath(expr, resolvedPath);
             const std::string resolvedPathCanonical =
                 canonicalizeLegacySoaRefHelperPath(resolvedPath);
@@ -1344,7 +1351,11 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             ExprSubstitutions &extendedSubstitutions,
             const Expr *&returnedValueExprOut) -> bool {
           returnedValueExprOut = nullptr;
-          std::string resolvedCallPath = resolveCalleePath(callExpr);
+          std::string resolvedCallPath =
+              preferredCollectionHelperResolvedPath(callExpr);
+          if (resolvedCallPath.empty()) {
+            resolvedCallPath = resolveCalleePath(callExpr);
+          }
           if (callExpr.isMethodCall) {
             if (callExpr.args.empty()) {
               return false;
