@@ -509,6 +509,11 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
             !inferredReceiverType.empty()) {
           return inferredReceiverType;
         }
+        std::string collectionTypePath;
+        if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&
+            !collectionTypePath.empty()) {
+          return collectionTypePath;
+        }
         if (!receiver.isMethodCall) {
           const std::string resolvedReceiverPath = resolveCalleePath(receiver);
           if (!resolvedReceiverPath.empty()) {

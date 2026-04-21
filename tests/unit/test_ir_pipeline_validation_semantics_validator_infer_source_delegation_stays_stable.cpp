@@ -2034,6 +2034,13 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
             "      return preferredSoaHelperTargetForCollectionType(normalizedMethodName, \"/soa_vector\");\n"
             "    }") !=
         std::string::npos);
+  CHECK(resultHelpersSource.find(
+            "std::string collectionTypePath;\n"
+            "        if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath) &&\n"
+            "            !collectionTypePath.empty()) {\n"
+            "          return collectionTypePath;\n"
+            "        }") !=
+        std::string::npos);
 
   CHECK(exprMethodTargetSource.find("auto preferredFileErrorHelperTarget =") ==
         std::string::npos);
