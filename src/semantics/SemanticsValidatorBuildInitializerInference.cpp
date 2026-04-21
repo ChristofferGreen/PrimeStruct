@@ -985,6 +985,13 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
   if (resolvedInitializerPath.empty()) {
     resolvedInitializerPath = resolveCalleePath(initializer);
   }
+  if (!resolvedInitializerPath.empty()) {
+    const std::string concreteResolvedInitializerPath =
+        resolveExprConcreteCallPath(params, locals, initializer, resolvedInitializerPath);
+    if (!concreteResolvedInitializerPath.empty()) {
+      resolvedInitializerPath = concreteResolvedInitializerPath;
+    }
+  }
   if (initializer.kind == Expr::Kind::Call &&
       !initializer.isMethodCall &&
       initializer.templateArgs.size() == 1 &&
