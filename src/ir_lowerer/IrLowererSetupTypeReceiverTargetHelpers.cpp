@@ -218,6 +218,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "array";
     return true;
   }
+  if (localInfo.isSoaVector) {
+    typeNameOut = "soa_vector";
+    return true;
+  }
   if (localInfo.kind == LocalInfo::Kind::Vector) {
     typeNameOut = "vector";
     return true;
@@ -230,10 +234,6 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     typeNameOut = "Buffer";
     return true;
   }
-  if (localInfo.isSoaVector) {
-    typeNameOut = "soa_vector";
-    return true;
-  }
   if (localInfo.kind == LocalInfo::Kind::Reference &&
       (localInfo.referenceToArray || localInfo.referenceToVector || localInfo.referenceToMap ||
        localInfo.referenceToBuffer)) {
@@ -241,7 +241,8 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
       resolvedTypePathOut = localInfo.structTypeName;
     } else {
       typeNameOut = localInfo.referenceToMap ? "map"
-                                             : (localInfo.referenceToVector ? "vector"
+                                             : (localInfo.referenceToVector ? (localInfo.isSoaVector ? "soa_vector"
+                                                                                                     : "vector")
                                                                             : (localInfo.referenceToBuffer ? "Buffer"
                                                                                                             : "array"));
     }
@@ -252,7 +253,7 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToVector) {
-    typeNameOut = "vector";
+    typeNameOut = localInfo.isSoaVector ? "soa_vector" : "vector";
     return true;
   }
   if (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) {

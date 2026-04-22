@@ -81,6 +81,15 @@ struct StatementBindingTypeInfo {
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
   std::string structTypeName;
+  bool referenceToArray = false;
+  bool pointerToArray = false;
+  bool referenceToVector = false;
+  bool pointerToVector = false;
+  bool referenceToBuffer = false;
+  bool pointerToBuffer = false;
+  bool referenceToMap = false;
+  bool pointerToMap = false;
+  bool isSoaVector = false;
 };
 
 bool resolveSpecializedExperimentalMapTypeKindsForBindingType(

@@ -377,6 +377,15 @@
       info.mapKeyKind = mapKeyKind;
       info.mapValueKind = mapValueKind;
       info.structTypeName = structTypeName;
+      info.referenceToArray = bindingTypeInfo.referenceToArray;
+      info.pointerToArray = bindingTypeInfo.pointerToArray;
+      info.referenceToVector = bindingTypeInfo.referenceToVector;
+      info.pointerToVector = bindingTypeInfo.pointerToVector;
+      info.referenceToBuffer = bindingTypeInfo.referenceToBuffer;
+      info.pointerToBuffer = bindingTypeInfo.pointerToBuffer;
+      info.referenceToMap = bindingTypeInfo.referenceToMap;
+      info.pointerToMap = bindingTypeInfo.pointerToMap;
+      info.isSoaVector = bindingTypeInfo.isSoaVector;
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"

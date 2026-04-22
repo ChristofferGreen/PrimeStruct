@@ -140,6 +140,10 @@ TEST_CASE("ir lowerer entry setup step defers routing completeness to conformanc
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  primec::SemanticProgramCallableSummary entrySummary;
+  entrySummary.fullPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  semanticProgram.callableSummaries.push_back(entrySummary);
 
   const primec::Definition *resolvedEntry = nullptr;
   uint64_t entryEffectMask = 0;

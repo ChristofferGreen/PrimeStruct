@@ -1001,6 +1001,34 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
       namespacedExperimentalVectorAccessCall, helperName));
   CHECK(helperName == "at");
 
+  primec::Expr rootedCanonicalSoaGetCall;
+  rootedCanonicalSoaGetCall.kind = primec::Expr::Kind::Call;
+  rootedCanonicalSoaGetCall.name = "/std/collections/soa_vector/get";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedCanonicalSoaGetCall, helperName));
+  CHECK(helperName == "get");
+
+  primec::Expr namespacedCanonicalSoaGetRefCall;
+  namespacedCanonicalSoaGetRefCall.kind = primec::Expr::Kind::Call;
+  namespacedCanonicalSoaGetRefCall.namespacePrefix = "/std/collections/soa_vector";
+  namespacedCanonicalSoaGetRefCall.name = "get_ref";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      namespacedCanonicalSoaGetRefCall, helperName));
+  CHECK(helperName == "get_ref");
+
+  primec::Expr rootedLegacySoaGetCall;
+  rootedLegacySoaGetCall.kind = primec::Expr::Kind::Call;
+  rootedLegacySoaGetCall.name = "/soa_vector/get";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedLegacySoaGetCall, helperName));
+  CHECK(helperName == "get");
+
   primec::Expr specializedExperimentalVectorMethodAccessCall;
   specializedExperimentalVectorMethodAccessCall.kind = primec::Expr::Kind::Call;
   specializedExperimentalVectorMethodAccessCall.namespacePrefix =
@@ -1180,6 +1208,19 @@ TEST_CASE("ir lowerer helper keeps parser-shaped rooted convert builtin") {
   CHECK(primec::ir_lowerer::getBuiltinConvertName(convertCall));
   std::string builtin;
   CHECK(primec::emitter::getBuiltinConvertName(convertCall, builtin));
+  CHECK(builtin == "convert");
+}
+
+TEST_CASE("ir lowerer helper keeps namespaced convert builtin tails") {
+  primec::Expr namespacedConvertCall;
+  namespacedConvertCall.kind = primec::Expr::Kind::Call;
+  namespacedConvertCall.name = "convert";
+  namespacedConvertCall.namespacePrefix = "/std/gfx/GfxError";
+
+  CHECK(primec::ir_lowerer::getBuiltinConvertName(namespacedConvertCall));
+
+  std::string builtin;
+  CHECK(primec::emitter::getBuiltinConvertName(namespacedConvertCall, builtin));
   CHECK(builtin == "convert");
 }
 
@@ -1445,7 +1486,7 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   CHECK(builtinName == "convert");
 }
 
-TEST_CASE("emitter collection inference keeps namespaced internal soa builtins") {
+TEST_CASE("emitter collection inference keeps namespaced internal soa builtins out of string-value access inference") {
   std::unordered_map<std::string, primec::emitter::BindingInfo> localTypes;
 
   primec::emitter::BindingInfo arrayInfo;
@@ -1503,7 +1544,7 @@ TEST_CASE("emitter collection inference keeps namespaced internal soa builtins")
   namespacedAtCall.args.push_back(textName);
   namespacedAtCall.args.push_back(indexLiteral);
 
-  CHECK(primec::emitter::isStringValue(namespacedAtCall, localTypes));
+  CHECK_FALSE(primec::emitter::isStringValue(namespacedAtCall, localTypes));
 
   primec::Expr namespacedStringCountCall;
   namespacedStringCountCall.kind = primec::Expr::Kind::Call;
@@ -1692,18 +1733,14 @@ Particle() {
   [i32] x{1i32}
 }
 
-[struct]
-Holder() {
-  [return<SoaVector<Particle>>]
-  cloneValues() {
-    return(soaVectorNew<Particle>())
-  }
+[return<SoaVector<Particle>>]
+cloneValues() {
+  return(soaVectorNew<Particle>())
 }
 
 [return<int>]
 main() {
-  [Holder] holder{Holder()}
-  return(count(holder.cloneValues()))
+  return(count(cloneValues()))
 }
 )";
   primec::Program program;
@@ -1738,9 +1775,8 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder()}
-  [SoaVector<Particle>] values{holder.cloneValues()}
-  return(plus(plus(plus(holder.cloneValues().count(), holder.cloneValues().get(0i32).x),
+  [SoaVector<Particle>] values{Holder().cloneValues()}
+  return(plus(plus(plus(Holder().cloneValues().count(), Holder().cloneValues().get(0i32).x),
                     values.ref(0i32).x),
               count(values.to_aos())))
 }
@@ -1767,11 +1803,8 @@ Particle() {
   [i32] x{1i32}
 }
 
-[struct]
-Holder() {}
-
 [return<SoaVector<Particle>>]
-/Holder/cloneValues([Holder] self) {
+cloneValues() {
   [SoaVector<Particle>, mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
   return(values)
@@ -1779,8 +1812,7 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder()}
-  return(get(holder.cloneValues(), 0i32).x)
+  return(get(cloneValues(), 0i32).x)
 }
 )";
   primec::Program program;
@@ -1925,9 +1957,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error ==
-        "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
-        "pointer/assign/increment/decrement calls in expressions");
+  CHECK(error.find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+            "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(error.find("call=/to_soa") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts to_soa method forms before lowerer rejection") {
@@ -1952,9 +1986,11 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error ==
-        "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/"
-        "pointer/assign/increment/decrement calls in expressions");
+  CHECK(error.find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+            "convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(error.find("call=/to_soa") != std::string::npos);
 }
 
 TEST_CASE("semantics accepts to_aos before lowerer rejection") {
@@ -1997,7 +2033,7 @@ main() {
   CHECK(error.find("/std/collections/soa_vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("explicit soa_vector mutators share builtin lowerer reject path") {
+TEST_CASE("explicit soa_vector mutators lower through canonical helper routing") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -2017,8 +2053,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "reserve requires mutable vector binding");
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("root to_aos bare and direct helper forms reject during semantics") {
@@ -2119,7 +2155,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("imported builtin soa_vector bare helper forms reach canonical lowerer mismatch") {
+TEST_CASE("imported builtin soa_vector bare helper forms lower through canonical helper routing") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2147,9 +2183,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(error.find("/std/collections/experimental_soa_vector/SoaVector__") != std::string::npos);
+  CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("imported builtin soa_vector method access forms stop in semantics on borrowed-view pending diagnostic") {
@@ -2183,7 +2218,7 @@ main() {
   }
 }
 
-TEST_CASE("imported builtin soa_vector method mutators reach canonical lowerer mismatch") {
+TEST_CASE("imported builtin soa_vector method mutators lower through canonical helper routing") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -2213,10 +2248,8 @@ main() {
     CHECK(error.empty());
     primec::IrLowerer lowerer;
     primec::IrModule module;
-    CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-    CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-    CHECK((error.find("got /soa_vector") != std::string::npos ||
-           error.find("got /std/collections/soa_vector") != std::string::npos));
+    CHECK(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+    CHECK(error.empty());
   }
 }
 

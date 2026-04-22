@@ -15,6 +15,13 @@ std::string normalizeDeclaredCollectionTypeBase(const std::string &base) {
       base.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
     return "vector";
   }
+  if (base == "SoaVector" ||
+      base == "std/collections/experimental_soa_vector/SoaVector" ||
+      base == "/std/collections/experimental_soa_vector/SoaVector" ||
+      base.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+      base.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+    return "soa_vector";
+  }
   if (base == "/map" || base == "std/collections/map" || base == "/std/collections/map" ||
       base == "Map" || base == "std/collections/experimental_map/Map" ||
       base == "/std/collections/experimental_map/Map" ||

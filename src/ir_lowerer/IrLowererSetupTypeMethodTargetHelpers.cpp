@@ -232,8 +232,11 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     return nullptr;
   };
   auto findPreferredSoaWrapperDefinition = [&](const std::string &candidate) -> const Definition * {
-    if ((!isRawBuiltinSoaVectorReceiverTarget(candidate) &&
-         !isConcreteExperimentalSoaVectorReceiverTarget(candidate)) ||
+    const bool isRawBuiltinSoaReceiver =
+        isRawBuiltinSoaVectorReceiverTarget(candidate);
+    const bool isConcreteExperimentalSoaReceiver =
+        isConcreteExperimentalSoaVectorReceiverTarget(candidate);
+    if ((!isRawBuiltinSoaReceiver && !isConcreteExperimentalSoaReceiver) ||
         !isCanonicalSoaWrapperMethodName(normalizedMethodName)) {
       return nullptr;
     }
@@ -243,9 +246,17 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
     if (isExplicitCanonicalSoaMethod) {
       return findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName);
     }
-    if (const Definition *aliasResolved =
-            findMethodDefinitionByPath("/soa_vector/" + normalizedMethodName)) {
-      return aliasResolved;
+    if (isConcreteExperimentalSoaReceiver) {
+      if (normalizedMethodName == "to_aos") {
+        if (const Definition *rootedResolved =
+                findMethodDefinitionByPath("/to_aos")) {
+          return rootedResolved;
+        }
+      }
+      if (const Definition *aliasResolved =
+              findMethodDefinitionByPath("/soa_vector/" + normalizedMethodName)) {
+        return aliasResolved;
+      }
     }
     return findMethodDefinitionByPath("/std/collections/soa_vector/" + normalizedMethodName);
   };

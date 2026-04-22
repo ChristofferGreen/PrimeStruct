@@ -15,6 +15,7 @@ bool isFileHandleTypeText(const std::string &typeText);
 bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut);
 bool hasSoaVectorTypeTransform(const Expr &expr);
 bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut);
+bool extractArgsPackElementTypeTextFromTypeText(const std::string &typeText, std::string &typeTextOut);
 bool isExplicitPackedResultReturnExpr(const Expr &expr);
 bool inferCallParameterDefaultResultInfo(
     const Expr &expr,

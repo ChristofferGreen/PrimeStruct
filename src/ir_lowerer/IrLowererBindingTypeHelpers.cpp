@@ -12,6 +12,46 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
+    const std::string &typeText,
+    std::string &structPathOut) {
+  structPathOut.clear();
+
+  std::string normalized = trimTemplateTypeText(typeText);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+    structPathOut = normalized;
+    return true;
+  }
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(normalized, base, argList)) {
+    return false;
+  }
+
+  const std::string normalizedBase =
+      normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+  if (normalizedBase != "soa_vector" || argList.empty()) {
+    return false;
+  }
+
+  std::vector<std::string> templateArgs;
+  if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 1) {
+    return false;
+  }
+
+  std::string normalizedArg = trimTemplateTypeText(templateArgs.front());
+  if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+    normalizedArg.erase(normalizedArg.begin());
+  }
+
+  structPathOut =
+      "/std/collections/experimental_soa_vector/SoaVector__" + normalizedArg;
+  return true;
+}
+
 std::string describeBindingSite(const std::string &scopePath,
                                 const std::string &siteKind,
                                 const Expr &expr) {
@@ -50,7 +90,7 @@ LocalInfo::Kind bindingKindFromTypeText(const std::string &typeText) {
   if (normalizedType == "array") {
     return LocalInfo::Kind::Array;
   }
-  if (normalizedType == "vector") {
+  if (normalizedType == "vector" || normalizedType == "soa_vector") {
     return LocalInfo::Kind::Vector;
   }
   if (normalizedType == "map") {
@@ -100,7 +140,7 @@ LocalInfo::ValueKind bindingValueKindFromTypeText(const std::string &typeText, L
     if (base == "Pointer" || base == "Reference") {
       return valueKindFromTypeName(unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(arg)));
     }
-    if (base == "array" || base == "vector" || base == "Buffer") {
+    if (base == "array" || base == "vector" || base == "soa_vector" || base == "Buffer") {
       return valueKindFromTypeName(trimTemplateTypeText(arg));
     }
     if (base == "map") {
@@ -150,6 +190,22 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
     return;
   }
   const std::string targetType = unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(arg));
+  std::string normalizedTargetType = trimTemplateTypeText(targetType);
+  if (!normalizedTargetType.empty() && normalizedTargetType.front() != '/') {
+    normalizedTargetType.insert(normalizedTargetType.begin(), '/');
+  }
+  if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedTargetType)) {
+    if (info.kind == LocalInfo::Kind::Reference) {
+      info.referenceToVector = true;
+    } else {
+      info.pointerToVector = true;
+    }
+    info.isSoaVector = true;
+    if (info.structTypeName.empty()) {
+      info.structTypeName = normalizedTargetType;
+    }
+    return;
+  }
   if (!splitTemplateTypeName(targetType, base, arg)) {
     return;
   }
@@ -190,8 +246,10 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
       info.valueKind = valueKindFromTypeName(normalizedArg);
     }
-    if (info.structTypeName.empty() && valueKindFromTypeName(normalizedArg) == LocalInfo::ValueKind::Unknown) {
-      info.structTypeName = normalizedArg;
+    if (info.structTypeName.empty() &&
+        valueKindFromTypeName(normalizedArg) == LocalInfo::ValueKind::Unknown) {
+      resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
+          targetType, info.structTypeName);
     }
     return;
   }
@@ -363,7 +421,10 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
     return "map";
   }
   if (name == "/soa_vector" || name == "std/collections/soa_vector" ||
-      name == "/std/collections/soa_vector" ||
+      name == "/std/collections/soa_vector" || name == "SoaVector" ||
+      name == "/SoaVector" ||
+      name == "std/collections/experimental_soa_vector/SoaVector" ||
+      name == "/std/collections/experimental_soa_vector/SoaVector" ||
       semantics::isExperimentalSoaVectorTypePath(name)) {
     return "soa_vector";
   }
@@ -470,7 +531,7 @@ LocalInfo::Kind bindingKindFromTransforms(const Expr &expr) {
     if (normalizedName == "array") {
       return LocalInfo::Kind::Array;
     }
-    if (normalizedName == "vector") {
+    if (normalizedName == "vector" || normalizedName == "soa_vector") {
       return LocalInfo::Kind::Vector;
     }
     if (normalizedName == "map") {
@@ -531,7 +592,8 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
       }
       return LocalInfo::ValueKind::Unknown;
     }
-    if (normalizedName == "array" || normalizedName == "vector" || normalizedName == "Buffer") {
+    if (normalizedName == "array" || normalizedName == "vector" ||
+        normalizedName == "soa_vector" || normalizedName == "Buffer") {
       if (transform.templateArgs.size() == 1) {
         return valueKindFromTypeName(transform.templateArgs.front());
       }

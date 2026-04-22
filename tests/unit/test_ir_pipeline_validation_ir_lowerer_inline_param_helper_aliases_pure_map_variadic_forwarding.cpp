@@ -466,7 +466,7 @@ TEST_CASE("ir lowerer inline param helper materializes mixed struct variadic for
 }
 
 TEST_CASE(
-    "ir lowerer inline param helper rejects direct experimental conversion helper bridge for builtin soa") {
+    "ir lowerer inline param helper bridges canonical builtin soa helpers while rejecting direct experimental conversion helpers") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;
   valuesParam.isBinding = true;
@@ -560,17 +560,18 @@ TEST_CASE(
     CHECK(calleeLocals.empty());
   }
 
-  {
+  for (const char *calleePath :
+       {"/std/collections/soa_vector/to_aos", "/std/collections/soa_vector/to_aos_ref"}) {
     int32_t nextLocal = 3;
     primec::ir_lowerer::LocalMap calleeLocals;
     std::vector<primec::IrInstruction> instructions;
     std::string error;
-    CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+    REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
         {valuesParam},
         {&sourceArg},
         {},
         1,
-        "/std/collections/soa_vector/to_aos",
+        std::string(calleePath),
         callerLocals,
         nextLocal,
         calleeLocals,
@@ -599,53 +600,9 @@ TEST_CASE(
         [](int32_t) {},
         error,
         {}));
-    CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-    CHECK(instructions.empty());
-    CHECK(calleeLocals.empty());
-  }
-
-  {
-    int32_t nextLocal = 3;
-    primec::ir_lowerer::LocalMap calleeLocals;
-    std::vector<primec::IrInstruction> instructions;
-    std::string error;
-    CHECK_FALSE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
-        {valuesParam},
-        {&sourceArg},
-        {},
-        1,
-        "/std/collections/soa_vector/to_aos_ref",
-        callerLocals,
-        nextLocal,
-        calleeLocals,
-        inferCallParameterLocalInfo,
-        [](const primec::Expr &) { return false; },
-        [](const primec::Expr &,
-           const primec::ir_lowerer::LocalMap &,
-           primec::ir_lowerer::LocalInfo::StringSource &,
-           int32_t &,
-           bool &) { return true; },
-        inferStructExprPath,
-        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-        },
-        resolveStructSlotLayout,
-        [&](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
-          if (expr.kind != primec::Expr::Kind::Name || expr.name != "source") {
-            return false;
-          }
-          instructions.push_back({primec::IrOpcode::LoadLocal, 17u});
-          return true;
-        },
-        [](int32_t, int32_t, int32_t) { return true; },
-        [&]() { return nextLocal++; },
-        [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-        [](int32_t) {},
-        error,
-        {}));
-    CHECK(error.find("struct parameter type mismatch") != std::string::npos);
-    CHECK(instructions.empty());
-    CHECK(calleeLocals.empty());
+    CHECK(error.empty());
+    REQUIRE(calleeLocals.count("values") == 1u);
+    CHECK_FALSE(instructions.empty());
   }
 
   for (const char *calleePath : {"/std/collections/experimental_soa_vector_conversions/soaVectorToAos",

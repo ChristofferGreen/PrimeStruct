@@ -663,6 +663,18 @@
                   }
                 }
               }
+              const std::string inferredReceiverStruct =
+                  inferStructExprPath(targetCallExpr, localsIn);
+              if (inferredReceiverStruct.rfind(
+                      "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+                  normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
+                      "soa_vector") {
+                targetInfoOut.isArrayOrVectorTarget = true;
+                targetInfoOut.isVectorTarget = false;
+                targetInfoOut.isSoaVector = true;
+                targetInfoOut.structTypeName = inferredReceiverStruct;
+                return true;
+              }
               const Definition *callee = resolveDefinitionCall(targetCallExpr);
               if (callee == nullptr) {
                 return false;
@@ -672,12 +684,24 @@
               if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
                 return false;
               }
-              if ((collectionName != "array" && collectionName != "vector") || collectionArgs.size() != 1) {
+              if ((collectionName != "array" && collectionName != "vector" &&
+                   collectionName != "soa_vector") ||
+                  collectionArgs.size() != 1) {
                 return false;
               }
               targetInfoOut.isArrayOrVectorTarget = true;
               targetInfoOut.isVectorTarget = (collectionName == "vector");
+              targetInfoOut.isSoaVector = (collectionName == "soa_vector");
               targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+              if (targetInfoOut.isSoaVector) {
+                std::string elementTypeName = trimTemplateTypeText(collectionArgs.front());
+                if (!elementTypeName.empty() && elementTypeName.front() == '/') {
+                  elementTypeName.erase(elementTypeName.begin());
+                }
+                targetInfoOut.structTypeName =
+                    "/std/collections/experimental_soa_vector/SoaVector__" +
+                    elementTypeName;
+              }
               return true;
             },
             [&](const Expr &callExpr, std::string &builtinName) {

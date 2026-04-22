@@ -79,7 +79,7 @@
         return false;
       }
       for (const auto &transform : bindingTypeExprRef.transforms) {
-        if (transform.name == "soa_vector") {
+        if (normalizeCollectionBindingTypeName(transform.name) == "soa_vector") {
           info.isSoaVector = true;
           break;
         }

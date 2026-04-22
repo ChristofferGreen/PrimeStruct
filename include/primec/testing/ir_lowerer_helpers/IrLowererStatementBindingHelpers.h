@@ -70,7 +70,25 @@ struct StatementBindingTypeInfo {
   LocalInfo::ValueKind mapKeyKind = LocalInfo::ValueKind::Unknown;
   LocalInfo::ValueKind mapValueKind = LocalInfo::ValueKind::Unknown;
   std::string structTypeName;
+  bool referenceToArray = false;
+  bool pointerToArray = false;
+  bool referenceToVector = false;
+  bool pointerToVector = false;
+  bool referenceToBuffer = false;
+  bool pointerToBuffer = false;
+  bool referenceToMap = false;
+  bool pointerToMap = false;
+  bool isSoaVector = false;
 };
+
+bool resolveSpecializedExperimentalMapTypeKindsForBindingType(
+    const std::string &typeText,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    LocalInfo::ValueKind &keyKindOut,
+    LocalInfo::ValueKind &valueKindOut);
+bool resolveSpecializedExperimentalMapStructPathForBindingType(
+    const std::string &typeText,
+    std::string &structPathOut);
 
 StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                                                        const Expr &init,

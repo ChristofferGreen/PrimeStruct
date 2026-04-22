@@ -11,6 +11,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "../semantics/SemanticsHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -113,6 +114,58 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeText, st
   return true;
 }
 
+bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeText,
+                                                       std::string &structPathOut) {
+  structPathOut.clear();
+  std::string normalizedType = trimTemplateTypeText(typeText);
+  while (true) {
+    if (!normalizedType.empty() && normalizedType.front() != '/') {
+      normalizedType.insert(normalizedType.begin(), '/');
+    }
+    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedType)) {
+      structPathOut = normalizedType;
+      return true;
+    }
+
+    std::string base;
+    std::string argList;
+    if (!splitTemplateTypeName(normalizedType, base, argList)) {
+      return false;
+    }
+
+    const std::string normalizedBase =
+        normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    if ((normalizedBase == "Reference" || normalizedBase == "Pointer") && !argList.empty()) {
+      std::vector<std::string> wrappedArgs;
+      if (splitTemplateArgs(argList, wrappedArgs) && wrappedArgs.size() == 1) {
+        normalizedType = unwrapTopLevelUninitializedTypeText(
+            trimTemplateTypeText(wrappedArgs.front()));
+      } else {
+        normalizedType = unwrapTopLevelUninitializedTypeText(
+            trimTemplateTypeText(argList));
+      }
+      continue;
+    }
+
+    if (normalizedBase != "soa_vector" || argList.empty()) {
+      return false;
+    }
+
+    std::vector<std::string> templateArgs;
+    if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 1) {
+      return false;
+    }
+
+    std::string normalizedArg = trimTemplateTypeText(templateArgs.front());
+    if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+      normalizedArg.erase(normalizedArg.begin());
+    }
+    structPathOut =
+        "/std/collections/experimental_soa_vector/SoaVector__" + normalizedArg;
+    return true;
+  }
+}
+
 } // namespace
 
 bool applyErrorTypeMetadata(const std::string &typeText, LocalInfo &infoOut) {
@@ -171,7 +224,7 @@ bool extractResultValueTypeText(const std::string &typeText, std::string &valueT
 
 bool hasSoaVectorTypeTransform(const Expr &expr) {
   for (const auto &transform : expr.transforms) {
-    if (transform.name == "soa_vector") {
+    if (normalizeCollectionBindingTypeName(transform.name) == "soa_vector") {
       return true;
     }
   }
@@ -197,6 +250,21 @@ bool extractArgsPackElementTypeText(const Expr &expr, std::string &typeTextOut) 
     return !typeTextOut.empty();
   }
   return false;
+}
+
+bool extractArgsPackElementTypeTextFromTypeText(const std::string &typeText,
+                                                std::string &typeTextOut) {
+  typeTextOut.clear();
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg)) {
+    return false;
+  }
+  if (normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) != "array") {
+    return false;
+  }
+  typeTextOut = trimTemplateTypeText(arg);
+  return !typeTextOut.empty();
 }
 
 bool isExplicitPackedResultReturnExpr(const Expr &expr) {
@@ -296,6 +364,17 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     if (extractTopLevelUninitializedTypeText(pointerTargetType, pointerTargetType)) {
       infoOut.targetsUninitializedStorage = true;
     }
+    std::string normalizedPointerTargetType = trimTemplateTypeText(pointerTargetType);
+    if (!normalizedPointerTargetType.empty() &&
+        normalizedPointerTargetType.front() != '/') {
+      normalizedPointerTargetType.insert(normalizedPointerTargetType.begin(), '/');
+    }
+    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedPointerTargetType)) {
+      infoOut.pointerToVector = true;
+      infoOut.isSoaVector = true;
+      infoOut.structTypeName = normalizedPointerTargetType;
+      return;
+    }
     std::string pointerBase;
     std::string pointerArg;
     if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
@@ -321,6 +400,8 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.pointerToVector = true;
       infoOut.isSoaVector = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(pointerArg));
+      resolveSpecializedExperimentalSoaVectorStructPath(pointerTargetType,
+                                                       infoOut.structTypeName);
       return;
     }
     if (splitTemplateTypeName(pointerTargetType, pointerBase, pointerArg) &&
@@ -390,6 +471,18 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     if (extractTopLevelUninitializedTypeText(refTargetType, refTargetType)) {
       infoOut.targetsUninitializedStorage = true;
     }
+    std::string normalizedRefTargetType = trimTemplateTypeText(refTargetType);
+    if (!normalizedRefTargetType.empty() &&
+        normalizedRefTargetType.front() != '/') {
+      normalizedRefTargetType.insert(normalizedRefTargetType.begin(), '/');
+    }
+    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedRefTargetType)) {
+      infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
+      infoOut.referenceToVector = true;
+      infoOut.isSoaVector = true;
+      infoOut.structTypeName = normalizedRefTargetType;
+      return;
+    }
     bool refResultHasValue = false;
     LocalInfo::ValueKind refResultValueKind = LocalInfo::ValueKind::Unknown;
     std::string refResultErrorType;
@@ -444,6 +537,8 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
       infoOut.referenceToVector = true;
       infoOut.isSoaVector = true;
       infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(refArg));
+      resolveSpecializedExperimentalSoaVectorStructPath(refTargetType,
+                                                       infoOut.structTypeName);
       return;
     }
     if (refBase == "map") {
@@ -486,6 +581,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
     infoOut.argsPackElementKind = LocalInfo::Kind::Vector;
     infoOut.isSoaVector = true;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(arg));
+    resolveSpecializedExperimentalSoaVectorStructPath(typeText, infoOut.structTypeName);
     return;
   }
   if (base == "map") {
@@ -545,6 +641,13 @@ void applyArgsPackElementStructMetadata(const Expr &param,
   std::string specializedExperimentalMapStruct;
   if (resolveSpecializedExperimentalMapStructPath(elementTypeText, specializedExperimentalMapStruct)) {
     infoOut.structTypeName = specializedExperimentalMapStruct;
+    return;
+  }
+
+  std::string specializedExperimentalSoaVectorStruct;
+  if (resolveSpecializedExperimentalSoaVectorStructPath(
+          elementTypeText, specializedExperimentalSoaVectorStruct)) {
+    infoOut.structTypeName = specializedExperimentalSoaVectorStruct;
   }
 }
 
@@ -577,19 +680,27 @@ std::string inferPointerMemoryIntrinsicStructType(const Expr &expr, const LocalM
   if (expr.kind != Expr::Kind::Call || !getBuiltinMemoryName(expr, builtinName)) {
     return "";
   }
+  const auto structTypeFromTargetLocal = [&](const LocalInfo &localInfo) -> std::string {
+    if (localInfo.kind == LocalInfo::Kind::Pointer ||
+        localInfo.kind == LocalInfo::Kind::Reference) {
+      return localInfo.structTypeName;
+    }
+    if (!localInfo.isArgsPack) {
+      return "";
+    }
+    return localInfo.structTypeName;
+  };
   if (builtinName == "realloc" && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.args.front().name);
-    if (it != localsIn.end() &&
-        (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
-      return it->second.structTypeName;
+    if (it != localsIn.end()) {
+      return structTypeFromTargetLocal(it->second);
     }
   }
   if ((builtinName == "at" && expr.args.size() == 3 && expr.args.front().kind == Expr::Kind::Name) ||
       (builtinName == "at_unsafe" && expr.args.size() == 2 && expr.args.front().kind == Expr::Kind::Name)) {
     auto it = localsIn.find(expr.args.front().name);
-    if (it != localsIn.end() &&
-        (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
-      return it->second.structTypeName;
+    if (it != localsIn.end()) {
+      return structTypeFromTargetLocal(it->second);
     }
   }
   return "";

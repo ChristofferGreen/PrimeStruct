@@ -299,7 +299,11 @@ bool getBuiltinConvertName(const Expr &expr) {
     name.erase(0, 1);
   }
   if (name.find('/') != std::string::npos) {
-    return false;
+    const size_t slash = name.find_last_of('/');
+    if (slash == std::string::npos || slash + 1 >= name.size()) {
+      return false;
+    }
+    name = name.substr(slash + 1);
   }
   return name == "convert";
 }
@@ -402,6 +406,27 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     return true;
   }
   if (scopedName.rfind("std/collections/experimental_vector/", 0) == 0) {
+    return false;
+  }
+  if (matchAccessAlias(scopedName, "std/collections/soa_vector/", "SoaVector")) {
+    return true;
+  }
+  if (scopedName.rfind("std/collections/soa_vector/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("std/collections/soa_vector/").size());
+    alias = stripGeneratedSuffix(std::move(alias));
+    if (alias == "get" || alias == "get_ref") {
+      out = alias;
+      return true;
+    }
+    return false;
+  }
+  if (scopedName.rfind("soa_vector/", 0) == 0) {
+    std::string alias = scopedName.substr(std::string("soa_vector/").size());
+    alias = stripGeneratedSuffix(std::move(alias));
+    if (alias == "get" || alias == "get_ref") {
+      out = alias;
+      return true;
+    }
     return false;
   }
   if (matchAccessAlias(scopedName, "std/collections/internal_soa_storage/", "SoaColumn")) {

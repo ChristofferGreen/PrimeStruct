@@ -466,28 +466,6 @@ const Definition *preferExplicitRootedMapAliasDefinition(
   return nullptr;
 }
 
-bool resolvesToDefinitionFamilyTarget(
-    const std::string &resolvedPath,
-    const std::unordered_map<std::string, const Definition *> &defMap) {
-  if (resolvedPath.empty()) {
-    return false;
-  }
-  if (resolveDefinitionByPath(defMap, resolvedPath) != nullptr) {
-    return true;
-  }
-  const std::string templatedPrefix = resolvedPath + "<";
-  const std::string specializedPrefix = resolvedPath + "__t";
-  for (const auto &[path, def] : defMap) {
-    (void)def;
-    if (path == resolvedPath ||
-        path.rfind(templatedPrefix, 0) == 0 ||
-        path.rfind(specializedPrefix, 0) == 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 std::string resolveCallPathWithoutSemanticFallbackProbes(const Expr &expr) {
   if (!expr.name.empty() && expr.name[0] == '/') {
     return expr.name;

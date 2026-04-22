@@ -48,6 +48,17 @@ bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticPr
          (helperName == "count" || helperName == "contains" || helperName == "tryAt");
 }
 
+bool isExplicitDirectSoaAccessCall(const Expr &expr) {
+  if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  const std::string rawPath = resolveNativeTailCallPathWithoutFallbackProbes(expr);
+  return rawPath == "/soa_vector/get" ||
+         rawPath == "/std/collections/soa_vector/get" ||
+         rawPath == "/soa_vector/get_ref" ||
+         rawPath == "/std/collections/soa_vector/get_ref";
+}
+
 } // namespace
 
 bool isMapContainsHelperName(const Expr &expr);
@@ -354,6 +365,12 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
              StdlibSurfaceId::CollectionsVectorHelpers) &&
         (explicitHelperName == "at" || explicitHelperName == "at_unsafe");
     if (isExplicitVectorAccessCall && arrayVectorTargetInfo.isVectorTarget) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
+    if ((isExplicitDirectSoaAccessCall(expr) ||
+         (expr.isMethodCall &&
+          (accessName == "get" || accessName == "get_ref"))) &&
+        arrayVectorTargetInfo.isSoaVector) {
       return NativeCallTailDispatchResult::NotHandled;
     }
     const bool isExplicitMapAccessCall =

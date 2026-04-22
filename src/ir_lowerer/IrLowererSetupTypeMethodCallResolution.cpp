@@ -1,5 +1,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 
+#include "../semantics/SemanticsHelpers.h"
+
 #include <functional>
 #include <utility>
 
@@ -8,6 +10,7 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererSetupTypeReceiverTargetHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -40,6 +43,53 @@ std::string extractMethodLeafName(const std::string &methodPath) {
     return methodPath;
   }
   return methodPath.substr(slash + 1);
+}
+
+std::string resolveSpecializedExperimentalSoaVectorStructPath(
+    const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  while (true) {
+    if (!normalized.empty() && normalized.front() != '/') {
+      normalized.insert(normalized.begin(), '/');
+    }
+    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+      return normalized;
+    }
+
+    std::string base;
+    std::string argList;
+    if (!splitTemplateTypeName(normalized, base, argList)) {
+      return "";
+    }
+
+    const std::string normalizedBase =
+        normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+    if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+        !argList.empty()) {
+      std::vector<std::string> wrappedArgs;
+      if (!splitTemplateArgs(argList, wrappedArgs) || wrappedArgs.size() != 1) {
+        return "";
+      }
+      normalized = trimTemplateTypeText(wrappedArgs.front());
+      continue;
+    }
+
+    if (normalizedBase != "soa_vector" || argList.empty()) {
+      return "";
+    }
+
+    std::vector<std::string> templateArgs;
+    if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 1) {
+      return "";
+    }
+
+    std::string normalizedArg = trimTemplateTypeText(templateArgs.front());
+    if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+      normalizedArg.erase(normalizedArg.begin());
+    }
+    return "/std/collections/experimental_soa_vector/SoaVector__" +
+           normalizedArg;
+  }
 }
 
 bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
@@ -515,6 +565,11 @@ const Definition *resolveMethodCallDefinitionFromExpr(
                                             const std::string &namespacePrefix) -> std::string {
     if (receiverTypeName.empty()) {
       return "";
+    }
+    if (const std::string specializedSoaPath =
+            resolveSpecializedExperimentalSoaVectorStructPath(receiverTypeName);
+        !specializedSoaPath.empty()) {
+      return specializedSoaPath;
     }
     if (receiverTypeName.front() == '/') {
       return structNames.count(receiverTypeName) > 0 ? receiverTypeName : "";

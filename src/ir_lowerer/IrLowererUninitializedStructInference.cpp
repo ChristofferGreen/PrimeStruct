@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -51,6 +52,58 @@ std::string normalizeUninitializedVectorStructPath(const std::string &typeName) 
     return "/" + typeName;
   }
   return typeName;
+}
+
+std::string resolveSpecializedExperimentalSoaVectorStructPath(
+    const std::string &typeText) {
+  std::string normalized = trimTemplateTypeText(typeText);
+  while (true) {
+    if (!normalized.empty() && normalized.front() != '/') {
+      normalized.insert(normalized.begin(), '/');
+    }
+    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+      return normalized;
+    }
+
+    std::string base;
+    std::string argList;
+    if (!splitTemplateTypeName(normalized, base, argList)) {
+      return "";
+    }
+
+    const std::string normalizedBase =
+        normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+        !argList.empty()) {
+      std::string unwrappedType;
+      std::vector<std::string> wrappedArgs;
+      if (splitTemplateArgs(argList, wrappedArgs) && wrappedArgs.size() == 1) {
+        normalized = trimTemplateTypeText(wrappedArgs.front());
+      } else {
+        normalized = trimTemplateTypeText(argList);
+      }
+      if (extractTopLevelUninitializedTypeText(normalized, unwrappedType)) {
+        normalized = std::move(unwrappedType);
+      }
+      continue;
+    }
+
+    if (normalizedBase != "soa_vector" || argList.empty()) {
+      return "";
+    }
+
+    std::vector<std::string> templateArgs;
+    if (!splitTemplateArgs(argList, templateArgs) || templateArgs.size() != 1) {
+      return "";
+    }
+
+    std::string normalizedArg = trimTemplateTypeText(templateArgs.front());
+    if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+      normalizedArg.erase(normalizedArg.begin());
+    }
+    return "/std/collections/experimental_soa_vector/SoaVector__" +
+           normalizedArg;
+  }
 }
 
 std::string inferExperimentalSoaElementStructPathFromReceiverStruct(
@@ -138,6 +191,12 @@ std::string inferUninitializedTargetStructPath(const std::string &typeText,
   std::string normalized = trimTemplateTypeText(typeText);
   if (normalized.empty()) {
     return "";
+  }
+
+  const std::string specializedSoaStruct =
+      resolveSpecializedExperimentalSoaVectorStructPath(normalized);
+  if (!specializedSoaStruct.empty()) {
+    return specializedSoaStruct;
   }
 
   if (isSpecializedExperimentalMapStructPath(normalized)) {
@@ -367,7 +426,18 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           }
         }
       }
-      if ((isBareOrInternalSoaHelper("get") || isBareOrInternalSoaHelper("ref")) &&
+      const std::string canonicalSoaGetPath =
+          semantics::canonicalizeLegacySoaGetHelperPath(scopedCallPath);
+      const std::string canonicalSoaRefPath =
+          semantics::canonicalizeLegacySoaRefHelperPath(scopedCallPath);
+      const bool isSoaGetLikeHelper =
+          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
+          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref");
+      const bool isSoaRefLikeHelper =
+          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref") ||
+          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref");
+      if ((isBareOrInternalSoaHelper("get") || isBareOrInternalSoaHelper("ref") ||
+           isSoaGetLikeHelper || isSoaRefLikeHelper) &&
           exprIn.args.size() == 2) {
         const std::string receiverStruct = inferStructExprPath(exprIn.args.front(),
                                                                localsInExpr);
@@ -420,9 +490,15 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
       if (!exprIn.isMethodCall) {
         const std::string resolvedPath = resolveExprPath(exprIn);
         const std::string rawCallPath = resolveScopedCallPath(exprIn);
+        const std::string slashPrefixedRawCallPath =
+            (!rawCallPath.empty() && rawCallPath.front() != '/') ? "/" + rawCallPath : rawCallPath;
         auto defIt = defMap.find(resolvedPath);
         if (defIt == defMap.end() && rawCallPath != resolvedPath) {
           defIt = defMap.find(rawCallPath);
+        }
+        if (defIt == defMap.end() && slashPrefixedRawCallPath != resolvedPath &&
+            slashPrefixedRawCallPath != rawCallPath) {
+          defIt = defMap.find(slashPrefixedRawCallPath);
         }
         if (defIt != defMap.end() && defIt->second != nullptr) {
           const std::string definitionPath = defIt->second->fullPath;
@@ -449,14 +525,13 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
               if (candidateType.empty()) {
                 continue;
               }
+              std::string inferredReturnStruct = inferUninitializedTargetStructPath(
+                  candidateType, exprIn.namespacePrefix, resolveStructTypeName);
+              if (!inferredReturnStruct.empty()) {
+                return inferredReturnStruct;
+              }
               if (candidateType.front() == '/') {
                 return candidateType;
-              }
-              std::string resolvedReturnStruct;
-              if (resolveStructTypeName(candidateType,
-                                        exprIn.namespacePrefix,
-                                        resolvedReturnStruct)) {
-                return resolvedReturnStruct;
               }
             }
             return "";

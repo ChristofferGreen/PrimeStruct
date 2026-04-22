@@ -2,6 +2,30 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
+namespace {
+
+const primec::Definition *findDefinitionByPath(const primec::Program &program,
+                                               std::string_view fullPath) {
+  for (const auto &definition : program.definitions) {
+    if (definition.fullPath == fullPath) {
+      return &definition;
+    }
+  }
+  return nullptr;
+}
+
+const primec::Expr *findBindingStatementByName(const primec::Definition &definition,
+                                               std::string_view name) {
+  for (const auto &statement : definition.statements) {
+    if (statement.isBinding && statement.name == name) {
+      return &statement;
+    }
+  }
+  return nullptr;
+}
+
+} // namespace
+
 TEST_CASE("ir lowerer statement binding helper classifies variadic struct reference parameters") {
   primec::Expr param;
   param.name = "values";
@@ -289,6 +313,89 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer soa_v
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
+TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed imported SoaVector parameters") {
+  primec::Expr param;
+  param.name = "values";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs.push_back("Reference<SoaVector<Particle>>");
+  param.transforms.push_back(argsTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 13;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.isArgsPack);
+  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.referenceToVector);
+  CHECK(info.isSoaVector);
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer statement binding helper classifies variadic pointer imported SoaVector parameters") {
+  primec::Expr param;
+  param.name = "values";
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  argsTransform.templateArgs.push_back("Pointer<SoaVector<Particle>>");
+  param.transforms.push_back(argsTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 13;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.isArgsPack);
+  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
+  CHECK(info.pointerToVector);
+  CHECK(info.isSoaVector);
+  CHECK(
+      info.structTypeName ==
+      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper classifies variadic soa_vector parameters") {
   primec::Expr param;
   param.name = "values";
@@ -325,6 +432,518 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic soa_vector pa
   CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.isSoaVector);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer statement binding helper keeps specialized experimental soa_vector references as plain references without semantic surface metadata") {
+  primec::Expr param;
+  param.name = "values";
+  primec::Transform referenceTransform;
+  referenceTransform.name = "Reference";
+  referenceTransform.templateArgs.push_back(
+      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  param.transforms.push_back(referenceTransform);
+
+  auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters();
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 14;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return true; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      bindingTypeAdapters.setReferenceArrayInfo,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK_FALSE(info.referenceToVector);
+  CHECK_FALSE(info.isSoaVector);
+  CHECK(info.structTypeName.empty());
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper classifies parsed variadic borrowed "
+    "imported soa_vector parameters") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+score_refs([args<Reference<SoaVector<Particle>>>] values) {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] borrowed{location(values)}
+  return(score_refs(borrowed))
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::Definition *scoreRefs = findDefinitionByPath(program, "/score_refs");
+  REQUIRE(scoreRefs != nullptr);
+  REQUIRE(scoreRefs->parameters.size() == 1);
+
+  auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *bindingFact = primec::ir_lowerer::findSemanticProductBindingFact(
+      semanticProductTargets, scoreRefs->parameters.front());
+  REQUIRE(bindingFact != nullptr);
+  const bool hasSoaVectorText =
+      bindingFact->bindingTypeText.find("SoaVector") != std::string::npos ||
+      bindingFact->bindingTypeText.find("soa_vector") != std::string::npos;
+  CHECK(hasSoaVectorText);
+  const bool hasRawElementType = !scoreRefs->parameters.front().transforms.empty() &&
+                                 !scoreRefs->parameters.front().transforms.front().templateArgs.empty();
+  CHECK(hasRawElementType);
+  if (hasRawElementType) {
+    const std::string &rawElementTypeText =
+        scoreRefs->parameters.front().transforms.front().templateArgs.front();
+    INFO("rawElementTypeText=" << rawElementTypeText);
+    const bool rawHasSoaVectorText =
+        rawElementTypeText.find("SoaVector") != std::string::npos ||
+        rawElementTypeText.find("soa_vector") != std::string::npos;
+    CHECK(rawHasSoaVectorText);
+  }
+  CHECK_FALSE(bindingTypeAdapters.isStringBinding(scoreRefs->parameters.front()));
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 14;
+  const bool inferred = primec::ir_lowerer::inferCallParameterLocalInfo(
+      scoreRefs->parameters.front(),
+      {},
+      [](const primec::Expr &) { return false; },
+      bindingTypeAdapters.hasExplicitBindingTypeTransform,
+      bindingTypeAdapters.bindingKind,
+      bindingTypeAdapters.bindingValueKind,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      bindingTypeAdapters.isFileErrorBinding,
+      bindingTypeAdapters.setReferenceArrayInfo,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      bindingTypeAdapters.isStringBinding,
+      info,
+      error,
+      {},
+      {},
+      {},
+      &semanticProductTargets);
+  CHECK_MESSAGE(inferred, error);
+  REQUIRE(inferred);
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.isArgsPack);
+  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.referenceToVector);
+  CHECK(info.isSoaVector);
+  CHECK(
+      info.structTypeName.rfind(
+          "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+}
+
+TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed soa_vector return metadata") {
+  primec::Definition callee;
+  callee.fullPath = "/pkg/slice_ref";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("Reference<SoaVector<Particle>>");
+  callee.transforms.push_back(returnTransform);
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "borrowed";
+  stmt.namespacePrefix = "/pkg";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "slice_ref";
+  init.namespacePrefix = "/pkg";
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          {},
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::bindingKindFromTransforms(expr);
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [&](const primec::Expr &expr) -> const primec::Definition * {
+            return expr.name == "slice_ref" ? &callee : nullptr;
+          });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.referenceToVector);
+  CHECK(info.isSoaVector);
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed map return metadata") {
+  primec::Definition callee;
+  callee.fullPath = "/pkg/pick_map";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("Reference<map<i32, bool>>");
+  callee.transforms.push_back(returnTransform);
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "borrowed";
+  stmt.namespacePrefix = "/pkg";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "pick_map";
+  init.namespacePrefix = "/pkg";
+
+  std::string expectedStructPath;
+  REQUIRE(primec::ir_lowerer::resolveSpecializedExperimentalMapStructPathForBindingType(
+      "map<i32, bool>", expectedStructPath));
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          {},
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::bindingKindFromTransforms(expr);
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [&](const primec::Expr &expr) -> const primec::Definition * {
+            return expr.name == "pick_map" ? &callee : nullptr;
+          });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.referenceToMap);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK(info.structTypeName == expectedStructPath);
+}
+
+TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector locals with specialized struct paths") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "values";
+
+  primec::Transform typeTransform;
+  typeTransform.name = "SoaVector";
+  typeTransform.templateArgs.push_back("Particle");
+  stmt.transforms.push_back(typeTransform);
+
+  primec::Transform mutTransform;
+  mutTransform.name = "mut";
+  stmt.transforms.push_back(mutTransform);
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "soaVectorNew";
+  init.templateArgs.push_back("Particle");
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          {},
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &) {
+            return primec::ir_lowerer::LocalInfo::Kind::Value;
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(
+      info.structTypeName ==
+      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper preserves indexed borrowed soa_vector "
+    "args-pack dereference struct paths") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesInfo;
+  valuesInfo.kind = LocalInfo::Kind::Array;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = LocalInfo::Kind::Reference;
+  valuesInfo.referenceToVector = true;
+  valuesInfo.isSoaVector = true;
+  valuesInfo.structTypeName =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  locals.emplace("values", valuesInfo);
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "head";
+
+  primec::Transform typeTransform;
+  typeTransform.name = "SoaVector";
+  typeTransform.templateArgs.push_back("Particle");
+  stmt.transforms.push_back(typeTransform);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+
+  primec::Expr atExpr;
+  atExpr.kind = primec::Expr::Kind::Call;
+  atExpr.name = "at";
+  atExpr.args = {valuesName, indexExpr};
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "dereference";
+  init.args = {atExpr};
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          locals,
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &) {
+            return primec::ir_lowerer::LocalInfo::Kind::Value;
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(info.isSoaVector);
+  CHECK(
+      info.structTypeName ==
+      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper preserves indexed pointer soa_vector "
+    "args-pack dereference struct paths") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesInfo;
+  valuesInfo.kind = LocalInfo::Kind::Array;
+  valuesInfo.isArgsPack = true;
+  valuesInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
+  valuesInfo.pointerToVector = true;
+  valuesInfo.isSoaVector = true;
+  valuesInfo.structTypeName =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  locals.emplace("values", valuesInfo);
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "head";
+
+  primec::Transform typeTransform;
+  typeTransform.name = "SoaVector";
+  typeTransform.templateArgs.push_back("Particle");
+  stmt.transforms.push_back(typeTransform);
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+
+  primec::Expr atExpr;
+  atExpr.kind = primec::Expr::Kind::Call;
+  atExpr.name = "at";
+  atExpr.args = {valuesName, indexExpr};
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "dereference";
+  init.args = {atExpr};
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          locals,
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &) {
+            return primec::ir_lowerer::LocalInfo::Kind::Value;
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(info.isSoaVector);
+  CHECK(
+      info.structTypeName ==
+      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper classifies parsed borrowed imported "
+    "soa_vector locals") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [SoaVector<Particle>] a0{soaVectorNew<Particle>()}
+  [Reference<SoaVector<Particle>>] r0{location(a0)}
+  return(0i32)
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::Definition *mainDef = findDefinitionByPath(program, "/main");
+  REQUIRE(mainDef != nullptr);
+  const primec::Expr *binding = findBindingStatementByName(*mainDef, "r0");
+  REQUIRE(binding != nullptr);
+  REQUIRE(binding->args.size() == 1);
+
+  auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          *binding,
+          binding->args.front(),
+          {},
+          bindingTypeAdapters.hasExplicitBindingTypeTransform,
+          bindingTypeAdapters.bindingKind,
+          bindingTypeAdapters.bindingValueKind,
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          {},
+          &semanticProductTargets);
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.referenceToVector);
+  CHECK(info.isSoaVector);
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+}
+
+TEST_CASE("ir lowerer statement binding helper leaves explicit bare struct locals unresolved") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "holder";
+
+  primec::Transform typeTransform;
+  typeTransform.name = "Holder";
+  stmt.transforms.push_back(typeTransform);
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "Holder";
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          {},
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &) {
+            return primec::ir_lowerer::LocalInfo::Kind::Value;
+          },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(info.structTypeName.empty());
 }
 
 TEST_CASE("ir lowerer statement binding helper classifies variadic map parameters") {

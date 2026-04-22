@@ -1,7 +1,11 @@
 #include "IrLowererStructReturnPathHelpers.h"
 
+#include "../semantics/SemanticsHelpers.h"
+
 #include "IrLowererHelpers.h"
+#include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -16,6 +20,47 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
 bool isRemovedMapCompatibilityHelper(const std::string &suffix) {
   return suffix == "count" || suffix == "contains" || suffix == "tryAt" ||
          suffix == "at" || suffix == "at_unsafe" || suffix == "insert";
+}
+
+std::string resolveSpecializedExperimentalSoaVectorReturnPath(
+    std::string typeText) {
+  typeText = trimTemplateTypeText(typeText);
+  while (!typeText.empty()) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText)) {
+      break;
+    }
+    base = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+    std::vector<std::string> args;
+    if ((base != "Reference" && base != "Pointer") ||
+        !splitTemplateArgs(argText, args) || args.size() != 1) {
+      break;
+    }
+    typeText = trimTemplateTypeText(args.front());
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(typeText, base, argText)) {
+    return "";
+  }
+  base = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+  if (base != "soa_vector") {
+    return "";
+  }
+
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+    return "";
+  }
+
+  std::string normalizedArg = trimTemplateTypeText(args.front());
+  if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+    normalizedArg.erase(normalizedArg.begin());
+  }
+  return "/std/collections/experimental_soa_vector/SoaVector__" +
+         normalizedArg;
 }
 
 std::string resolveUniqueStructByLeafName(const std::string &typeName,
@@ -262,6 +307,11 @@ std::string inferStructReturnPathFromDefinitionInternal(
       continue;
     }
     const std::string &returnTypeName = transform.templateArgs.front();
+    const std::string specializedSoaResolved =
+        resolveSpecializedExperimentalSoaVectorReturnPath(returnTypeName);
+    if (structNames.count(specializedSoaResolved) > 0) {
+      return specializedSoaResolved;
+    }
     std::string resolved = resolveStructTypePath(returnTypeName, def.namespacePrefix);
     if (structNames.count(resolved) == 0 && !returnTypeName.empty() && returnTypeName[0] != '/') {
       const std::string rootResolved = resolveStructTypePath(returnTypeName, "");

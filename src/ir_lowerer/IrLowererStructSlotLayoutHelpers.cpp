@@ -114,6 +114,60 @@ bool resolveSpecializedExperimentalMapStructPath(const std::string &typeName,
   return true;
 }
 
+bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
+    std::string typeText,
+    std::string &structPathOut) {
+  structPathOut.clear();
+
+  typeText = trimTemplateTypeText(typeText);
+  while (!typeText.empty()) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText)) {
+      break;
+    }
+    base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+    std::vector<std::string> args;
+    if ((base != "Reference" && base != "Pointer") ||
+        !splitTemplateArgs(argText, args) || args.size() != 1) {
+      break;
+    }
+    typeText = trimTemplateTypeText(args.front());
+  }
+
+  std::string normalizedType = trimTemplateTypeText(typeText);
+  if (normalizedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+    structPathOut = std::move(normalizedType);
+    return true;
+  }
+  if (normalizedType.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+    structPathOut = "/" + normalizedType;
+    return true;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizedType, base, argText)) {
+    return false;
+  }
+  if (normalizeCollectionBindingTypeName(trimTemplateTypeText(base)) != "soa_vector") {
+    return false;
+  }
+
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+    return false;
+  }
+
+  std::string normalizedArg = trimTemplateTypeText(args.front());
+  if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+    normalizedArg.erase(normalizedArg.begin());
+  }
+  structPathOut = "/std/collections/experimental_soa_vector/SoaVector__" +
+                  normalizedArg;
+  return true;
+}
+
 } // namespace
 
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
@@ -745,6 +799,11 @@ std::string inferStructReturnPathFromDefinition(
         continue;
       }
       std::string resolved;
+      if (resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
+              buildTemplatedTypeName(transform.name, joinTemplateArgsText(transform.templateArgs)),
+              resolved)) {
+        return resolved;
+      }
       if (resolveStructTypeName(transform.name, bindingExpr.namespacePrefix, resolved)) {
         return resolved;
       }
@@ -807,6 +866,9 @@ std::string inferStructReturnPathFromDefinition(
       continue;
     }
     std::string resolved;
+    if (resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(transform.templateArgs.front(), resolved)) {
+      return resolved;
+    }
     if (resolveStructTypeName(transform.templateArgs.front(), def.namespacePrefix, resolved)) {
       return resolved;
     }
@@ -827,6 +889,11 @@ std::string inferStructReturnPathFromDefinition(
       continue;
     }
     std::string resolved;
+    if (resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
+            buildTemplatedTypeName(transform.name, joinTemplateArgsText(transform.templateArgs)),
+            resolved)) {
+      return resolved;
+    }
     if (resolveStructTypeName(transform.name, def.namespacePrefix, resolved)) {
       return resolved;
     }

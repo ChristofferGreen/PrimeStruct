@@ -329,6 +329,75 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer soa_v
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper keeps borrowed local soa_vector receivers distinct from vector") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+
+  LocalInfo borrowedLocal;
+  borrowedLocal.kind = LocalInfo::Kind::Reference;
+  borrowedLocal.referenceToVector = true;
+  borrowedLocal.isSoaVector = true;
+  borrowedLocal.valueKind = ValueKind::Unknown;
+  locals.emplace("borrowed", borrowedLocal);
+
+  LocalInfo pointerLocal;
+  pointerLocal.kind = LocalInfo::Kind::Pointer;
+  pointerLocal.pointerToVector = true;
+  pointerLocal.isSoaVector = true;
+  pointerLocal.valueKind = ValueKind::Unknown;
+  locals.emplace("pointerValues", pointerLocal);
+
+  primec::Expr borrowedName;
+  borrowedName.kind = primec::Expr::Kind::Name;
+  borrowedName.name = "borrowed";
+
+  primec::Expr pointerName;
+  pointerName.kind = primec::Expr::Kind::Name;
+  pointerName.name = "pointerValues";
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(
+      borrowedName,
+      locals,
+      "count",
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      typeName,
+      resolvedTypePath,
+      error));
+  CHECK(typeName == "soa_vector");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+
+  typeName.clear();
+  resolvedTypePath.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(
+      pointerName,
+      locals,
+      "count",
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      typeName,
+      resolvedTypePath,
+      error));
+  CHECK(typeName == "soa_vector");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper resolves indexed args-pack map receivers") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;

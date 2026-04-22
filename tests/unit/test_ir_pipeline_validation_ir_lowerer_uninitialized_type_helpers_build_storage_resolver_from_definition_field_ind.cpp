@@ -264,6 +264,14 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   vectorExpr.transforms.push_back(vectorTransform);
   CHECK(primec::ir_lowerer::bindingKindFromTransforms(vectorExpr) == primec::ir_lowerer::LocalInfo::Kind::Vector);
 
+  primec::Expr soaVectorExpr;
+  primec::Transform soaVectorTransform;
+  soaVectorTransform.name = "SoaVector";
+  soaVectorTransform.templateArgs = {"Particle"};
+  soaVectorExpr.transforms.push_back(soaVectorTransform);
+  CHECK(primec::ir_lowerer::bindingKindFromTransforms(soaVectorExpr) ==
+        primec::ir_lowerer::LocalInfo::Kind::Vector);
+
   primec::Expr canonicalMapExpr;
   primec::Transform canonicalMapTransform;
   canonicalMapTransform.name = "/std/collections/map";
@@ -288,6 +296,8 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
             "/std/collections/experimental_soa_vector/SoaVector") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector") ==
+        "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("/SoaVector") ==
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName(
             "std/collections/experimental_soa_vector/SoaVector<Particle>") ==
@@ -319,14 +329,13 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
             "semantics::isExperimentalSoaVectorTypePath(name)") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find(
-            "name == \"std/collections/experimental_soa_vector/SoaVector\"") ==
+            "name == \"std/collections/experimental_soa_vector/SoaVector\"") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find(
-            "name == \"/std/collections/experimental_soa_vector/SoaVector\"") ==
+            "name == \"/std/collections/experimental_soa_vector/SoaVector\"") !=
         std::string::npos);
-  CHECK(bindingTypeHelpersSource.find(
-            "semantics::isExperimentalSoaVectorSpecializedTypePath(name)") ==
-        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("name == \"SoaVector\"") != std::string::npos);
+  CHECK(bindingTypeHelpersSource.find("name == \"/SoaVector\"") != std::string::npos);
 
   primec::Expr stringExpr;
   primec::Transform qualifier;
@@ -387,6 +396,15 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   canonicalMapExpr.transforms.push_back(canonicalMapTransform);
   CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(canonicalMapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+
+  primec::Expr soaVectorValueExpr;
+  primec::Transform soaVectorValueTransform;
+  soaVectorValueTransform.name = "SoaVector";
+  soaVectorValueTransform.templateArgs = {"Particle"};
+  soaVectorValueExpr.transforms.push_back(soaVectorValueTransform);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(
+            soaVectorValueExpr, primec::ir_lowerer::LocalInfo::Kind::Vector) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr resultExpr;
   primec::Transform resultTransform;

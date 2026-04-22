@@ -397,6 +397,13 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   refBufferInfo.valueKind = Kind::Int32;
   locals.emplace("refBuffer", refBufferInfo);
 
+  LocalInfo soaValuesInfo{};
+  soaValuesInfo.kind = LocalInfo::Kind::Value;
+  soaValuesInfo.isSoaVector = true;
+  soaValuesInfo.structTypeName =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  locals.emplace("soaValues", soaValuesInfo);
+
   LocalInfo structArgsInfo{};
   structArgsInfo.kind = LocalInfo::Kind::Array;
   structArgsInfo.isArgsPack = true;
@@ -470,6 +477,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   arrName.kind = primec::Expr::Kind::Name;
   arrName.name = "arr";
   auto resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(arrName, locals);
+  std::string error;
   CHECK(resolved.isArrayOrVectorTarget);
   CHECK(resolved.elemKind == Kind::Int32);
   CHECK_FALSE(resolved.isVectorTarget);
@@ -506,6 +514,20 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.elemKind == Kind::Int32);
   CHECK_FALSE(resolved.isVectorTarget);
 
+  primec::Expr soaValuesName;
+  soaValuesName.kind = primec::Expr::Kind::Name;
+  soaValuesName.name = "soaValues";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(soaValuesName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Unknown);
+  CHECK_FALSE(resolved.isVectorTarget);
+  CHECK(resolved.isSoaVector);
+  CHECK(resolved.structTypeName ==
+        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  error.clear();
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
   primec::Expr vectorCtor;
   vectorCtor.kind = primec::Expr::Kind::Call;
   vectorCtor.name = "vector";
@@ -515,7 +537,21 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.elemKind == Kind::UInt64);
   CHECK(resolved.isVectorTarget);
 
-  std::string error;
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
+  primec::Expr soaVectorCtor;
+  soaVectorCtor.kind = primec::Expr::Kind::Call;
+  soaVectorCtor.name = "soa_vector";
+  soaVectorCtor.templateArgs = {"Particle"};
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(soaVectorCtor, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Unknown);
+  CHECK_FALSE(resolved.isVectorTarget);
+  CHECK(resolved.isSoaVector);
+  CHECK(resolved.structTypeName ==
+        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  error.clear();
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
 

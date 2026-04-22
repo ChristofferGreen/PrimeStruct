@@ -14,7 +14,7 @@
 #include "primec/IrLowerer.h"
 #include "primec/IrPreparation.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h"
+#include "primec/testing/IrLowererHelpers.h"
 
 #include "test_ir_pipeline_backends_helpers.h"
 #include "test_ir_pipeline_helpers.h"

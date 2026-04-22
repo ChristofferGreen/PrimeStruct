@@ -69,6 +69,15 @@
           return isInternalSoaHelperFamilyName(
               extractHelperTail(normalizeCollectionHelperPath(path)));
         };
+        auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {
+          const std::string normalizedPath = stripGeneratedHelperSuffix(path);
+          return normalizedPath.rfind("/soa_vector/", 0) == 0 ||
+                 normalizedPath == "/to_aos" ||
+                 normalizedPath == "/to_aos_ref" ||
+                 normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
+                 normalizedPath.rfind("/std/collections/experimental_soa_vector/soaVector", 0) == 0 ||
+                 normalizedPath.rfind("/std/collections/experimental_soa_vector_conversions/soaVector", 0) == 0;
+        };
         auto findDirectInternalSoaDefinition = [&](const std::string &rawPath)
             -> const Definition * {
           const std::string helperName = extractHelperTail(rawPath);
@@ -102,6 +111,56 @@
           }
           return nullptr;
         };
+        auto resolveHelperReturnedArrayVectorAccessTargetInfo =
+            [&](const Expr &targetCallExpr,
+                ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
+              targetInfoOut = {};
+              const std::string inferredReceiverStruct =
+                  inferStructExprPath(targetCallExpr, localsIn);
+              if (inferredReceiverStruct.rfind(
+                      "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+                  normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
+                      "soa_vector") {
+                targetInfoOut.isArrayOrVectorTarget = true;
+                targetInfoOut.isVectorTarget = false;
+                targetInfoOut.isSoaVector = true;
+                targetInfoOut.structTypeName = inferredReceiverStruct;
+                return true;
+              }
+              const Definition *callee = resolveDefinitionCall(targetCallExpr);
+              if (callee == nullptr) {
+                return false;
+              }
+              std::string collectionName;
+              std::vector<std::string> collectionArgs;
+              if (!ir_lowerer::inferDeclaredReturnCollection(*callee,
+                                                             collectionName,
+                                                             collectionArgs)) {
+                return false;
+              }
+              if ((collectionName != "array" && collectionName != "vector" &&
+                   collectionName != "soa_vector") ||
+                  collectionArgs.size() != 1) {
+                return false;
+              }
+              targetInfoOut.isArrayOrVectorTarget = true;
+              targetInfoOut.isVectorTarget = (collectionName == "vector");
+              targetInfoOut.isSoaVector = (collectionName == "soa_vector");
+              targetInfoOut.elemKind =
+                  ir_lowerer::valueKindFromTypeName(collectionArgs.front());
+              if (targetInfoOut.isSoaVector) {
+                std::string elementTypeName =
+                    trimTemplateTypeText(collectionArgs.front());
+                if (!elementTypeName.empty() &&
+                    elementTypeName.front() == '/') {
+                  elementTypeName.erase(elementTypeName.begin());
+                }
+                targetInfoOut.structTypeName =
+                    "/std/collections/experimental_soa_vector/SoaVector__" +
+                    elementTypeName;
+              }
+              return true;
+            };
         if (!expr.isMethodCall) {
           const std::string rawPath = resolveDirectHelperPath(expr);
           const Definition *directCallee = resolveDefinitionCall(expr);
@@ -111,6 +170,10 @@
           }
           if (directCallee == nullptr) {
             directCallee = findDirectStructDefinition(expr);
+          }
+          if (directCallee == nullptr &&
+              isSoaWrapperHelperFamilyPath(rawPath)) {
+            directCallee = findDirectHelperDefinition(rawPath);
           }
           if (directCallee == nullptr &&
               (rawPath.rfind("/map/", 0) == 0 ||
@@ -126,6 +189,13 @@
             }
             if (directCallee->fullPath.rfind("/std/collections/internal_soa_storage/", 0) == 0 &&
                 isInternalSoaHelperFamilyPath(directCallee->fullPath)) {
+              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
+            if (isSoaWrapperHelperFamilyPath(rawPath) ||
+                isSoaWrapperHelperFamilyPath(directCallee->fullPath)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
               }
@@ -170,6 +240,8 @@
                   expr.args[1],
                   localsIn,
                   resolveStringTableTarget,
+                  {},
+                  resolveHelperReturnedArrayVectorAccessTargetInfo,
                   inferExprKind,
                   isEntryArgsName,
                   allocTempLocal,
@@ -201,7 +273,10 @@
             isEntryArgsName,
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
-                  ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                      targetExpr,
+                      targetLocals,
+                      resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               const bool isExperimentalVectorTarget =
                   structPath == "/std/collections/experimental_vector/Vector" ||
@@ -216,7 +291,10 @@
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
-                  ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                      targetExpr,
+                      targetLocals,
+                      resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
                      structPath == "/std/collections/experimental_vector/Vector" ||
@@ -224,7 +302,10 @@
             },
             [&](const Expr &targetExpr, const LocalMap &targetLocals) {
               const auto targetInfo =
-                  ir_lowerer::resolveArrayVectorAccessTargetInfo(targetExpr, targetLocals);
+                  ir_lowerer::resolveArrayVectorAccessTargetInfo(
+                      targetExpr,
+                      targetLocals,
+                      resolveHelperReturnedArrayVectorAccessTargetInfo);
               const std::string structPath = inferStructExprPath(targetExpr, targetLocals);
               return (targetInfo.isArrayOrVectorTarget && targetInfo.isVectorTarget) ||
                      structPath == "/std/collections/experimental_vector/Vector" ||

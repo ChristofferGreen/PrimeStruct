@@ -366,6 +366,7 @@ TEST_CASE("ir lowerer struct return path helpers infer from definitions") {
   const std::unordered_set<std::string> structNames = {
       "/pkg/A",
       "/pkg/B",
+      "/std/collections/experimental_soa_vector/SoaVector__Particle",
   };
   const std::unordered_map<std::string, std::string> importAliases;
   const auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) {
@@ -431,6 +432,19 @@ TEST_CASE("ir lowerer struct return path helpers infer from definitions") {
             "/pkg/makeA", structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap) == "/pkg/A");
   CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(
             "/pkg/mixed", structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap).empty());
+
+  primec::Definition makeSoa;
+  makeSoa.fullPath = "/pkg/makeSoa";
+  makeSoa.namespacePrefix = "/pkg";
+  primec::Transform soaReturn;
+  soaReturn.name = "return";
+  soaReturn.templateArgs = {"Reference<SoaVector<Particle>>"};
+  makeSoa.transforms = {soaReturn};
+  defMap.emplace(makeSoa.fullPath, &makeSoa);
+
+  CHECK(primec::ir_lowerer::inferStructReturnPathFromDefinition(
+            "/pkg/makeSoa", structNames, resolveStructTypePath, resolveStructLayoutExprPath, defMap) ==
+        "/std/collections/experimental_soa_vector/SoaVector__Particle");
 }
 
 TEST_CASE("ir lowerer struct return path helpers infer from expressions") {

@@ -598,6 +598,11 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   if (localIt->second.kind == LocalInfo::Kind::Vector) {
     return localIt->second.isSoaVector ? "/soa_vector" : "/vector";
   }
+  if ((localIt->second.kind == LocalInfo::Kind::Reference ||
+       localIt->second.kind == LocalInfo::Kind::Pointer) &&
+      localIt->second.isSoaVector) {
+    return "/soa_vector";
+  }
   if (localIt->second.kind == LocalInfo::Kind::Value && localIt->second.isSoaVector) {
     return "/soa_vector";
   }

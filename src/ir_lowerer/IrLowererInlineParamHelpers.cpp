@@ -23,8 +23,18 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
   };
   return matchesPath("/std/collections/soa_vector/count") ||
          matchesPath("/std/collections/soa_vector/get") ||
+         matchesPath("/std/collections/soa_vector/get_ref") ||
+         matchesPath("/std/collections/soa_vector/ref") ||
+         matchesPath("/std/collections/soa_vector/ref_ref") ||
+         matchesPath("/std/collections/soa_vector/to_aos") ||
+         matchesPath("/std/collections/soa_vector/to_aos_ref") ||
          matchesPath("/soa_vector/count") ||
-         matchesPath("/soa_vector/get");
+         matchesPath("/soa_vector/get") ||
+         matchesPath("/soa_vector/get_ref") ||
+         matchesPath("/soa_vector/ref") ||
+         matchesPath("/soa_vector/ref_ref") ||
+         matchesPath("/soa_vector/to_aos") ||
+         matchesPath("/soa_vector/to_aos_ref");
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {

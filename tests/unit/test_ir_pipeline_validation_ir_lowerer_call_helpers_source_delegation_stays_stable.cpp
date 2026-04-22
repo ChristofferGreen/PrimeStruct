@@ -3330,10 +3330,12 @@ TEST_CASE("ir lowerer direct-call coverage uses published definition and import-
   semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
       .name = "foo",
       .fullPath = "/pkg/foo",
+      .namespacePrefix = "/pkg",
   });
   semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
       .name = "main",
       .fullPath = "/main",
+      .namespacePrefix = "",
   });
 
   const auto helperPathId =

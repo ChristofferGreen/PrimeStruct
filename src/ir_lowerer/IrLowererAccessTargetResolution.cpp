@@ -21,6 +21,23 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
+std::string inferExperimentalSoaVectorStructPathFromTypeName(
+    const std::string &typeName) {
+  const size_t first = typeName.find_first_not_of(" \t\r\n");
+  if (first == std::string::npos) {
+    return "";
+  }
+  const size_t last = typeName.find_last_not_of(" \t\r\n");
+  std::string normalizedArg = typeName.substr(first, last - first + 1);
+  if (normalizedArg.empty()) {
+    return "";
+  }
+  if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+    normalizedArg.erase(normalizedArg.begin());
+  }
+  return "/std/collections/experimental_soa_vector/SoaVector__" + normalizedArg;
+}
+
 bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind) {
   return (kind == LocalInfo::Kind::Reference || kind == LocalInfo::Kind::Pointer) &&
          localInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
@@ -451,6 +468,18 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.structTypeName = it->second.structTypeName;
       return info;
     }
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+        it->second.isSoaVector && !it->second.structTypeName.empty()) {
+      info.isArrayOrVectorTarget = true;
+      info.elemKind = it->second.valueKind;
+      info.isVectorTarget = false;
+      info.isSoaVector = true;
+      info.isArgsPackTarget = it->second.isArgsPack;
+      info.argsPackElementKind = it->second.argsPackElementKind;
+      info.elemSlotCount = elementSlotCountForLocal(it->second);
+      info.structTypeName = it->second.structTypeName;
+      return info;
+    }
     if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Reference &&
         (it->second.referenceToArray || it->second.referenceToVector || it->second.referenceToBuffer)) {
       info.isArrayOrVectorTarget = true;
@@ -634,11 +663,17 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
     }
     std::string collection;
     if (getBuiltinCollectionName(target, collection) &&
-        (collection == "array" || collection == "vector" || collection == "Buffer") &&
+        (collection == "array" || collection == "vector" || collection == "Buffer" ||
+         collection == "soa_vector") &&
         target.templateArgs.size() == 1) {
       info.isArrayOrVectorTarget = true;
       info.elemKind = valueKindFromTypeName(target.templateArgs.front());
       info.isVectorTarget = (collection == "vector");
+      info.isSoaVector = (collection == "soa_vector");
+      if (info.isSoaVector) {
+        info.structTypeName =
+            inferExperimentalSoaVectorStructPathFromTypeName(target.templateArgs.front());
+      }
       return info;
     }
     if (resolveCallArrayVectorAccessTargetInfo) {

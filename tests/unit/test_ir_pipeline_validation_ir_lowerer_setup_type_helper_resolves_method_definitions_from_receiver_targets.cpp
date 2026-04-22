@@ -377,6 +377,84 @@ TEST_CASE("ir lowerer setup type helper resolves method definitions from receive
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper normalizes helper-return SoaVector collections for shadows") {
+  primec::Definition cloneDef;
+  cloneDef.fullPath = "/cloneValues";
+  primec::Transform returnSoaVector;
+  returnSoaVector.name = "return";
+  returnSoaVector.templateArgs = {"SoaVector<Particle>"};
+  cloneDef.transforms.push_back(returnSoaVector);
+
+  primec::Definition aliasGetDef;
+  aliasGetDef.fullPath = "/soa_vector/get";
+  primec::Definition aliasRefDef;
+  aliasRefDef.fullPath = "/soa_vector/ref";
+  primec::Definition rootedToAosDef;
+  rootedToAosDef.fullPath = "/to_aos";
+  primec::Definition canonicalGetDef;
+  canonicalGetDef.fullPath = "/std/collections/soa_vector/get";
+  primec::Definition canonicalRefDef;
+  canonicalRefDef.fullPath = "/std/collections/soa_vector/ref";
+  primec::Definition canonicalToAosDef;
+  canonicalToAosDef.fullPath = "/std/collections/soa_vector/to_aos";
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {cloneDef.fullPath, &cloneDef},
+      {aliasGetDef.fullPath, &aliasGetDef},
+      {aliasRefDef.fullPath, &aliasRefDef},
+      {rootedToAosDef.fullPath, &rootedToAosDef},
+      {canonicalGetDef.fullPath, &canonicalGetDef},
+      {canonicalRefDef.fullPath, &canonicalRefDef},
+      {canonicalToAosDef.fullPath, &canonicalToAosDef},
+  };
+
+  primec::Expr cloneCall;
+  cloneCall.kind = primec::Expr::Kind::Call;
+  cloneCall.name = "cloneValues";
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intWidth = 32;
+  indexExpr.literalValue = 0;
+
+  auto expectResolvedMethod = [&](const char *methodName,
+                                  const std::vector<primec::Expr> &args,
+                                  const primec::Definition *expectedDef) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = args;
+
+    std::string error;
+    const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+        methodCall,
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+        {},
+        {},
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [](const primec::Expr &expr) {
+          if (expr.kind == primec::Expr::Kind::Call && expr.name == "cloneValues") {
+            return std::string("/cloneValues");
+          }
+          return std::string();
+        },
+        defMap,
+        error);
+    CHECK(resolved == expectedDef);
+    CHECK(error.empty());
+  };
+
+  expectResolvedMethod("get", {cloneCall, indexExpr}, &aliasGetDef);
+  expectResolvedMethod("ref", {cloneCall, indexExpr}, &aliasRefDef);
+  expectResolvedMethod("to_aos", {cloneCall}, &rootedToAosDef);
+}
+
 TEST_CASE("ir lowerer setup type helper rejects rooted vector slash methods while honoring /array/count") {
   primec::Definition arrayCountDef;
   arrayCountDef.fullPath = "/array/count";
