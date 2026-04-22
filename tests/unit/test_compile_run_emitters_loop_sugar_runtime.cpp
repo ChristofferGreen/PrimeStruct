@@ -204,7 +204,7 @@ main() {
   CHECK(runCommand(exePath) == 5);
 }
 
-TEST_CASE("compiles and runs paired map literal" * doctest::skip(true)) {
+TEST_CASE("compiles and runs paired map literal") {
   const std::string source = R"(
 [return<int>]
 main() {
