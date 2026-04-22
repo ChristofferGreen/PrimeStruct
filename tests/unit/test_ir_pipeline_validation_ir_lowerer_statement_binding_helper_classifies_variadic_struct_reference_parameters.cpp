@@ -946,6 +946,97 @@ TEST_CASE("ir lowerer statement binding helper leaves explicit bare struct local
   CHECK(info.structTypeName.empty());
 }
 
+TEST_CASE(
+    "ir lowerer statement binding helper defers parsed explicit bare struct "
+    "semantic surface names") {
+  const std::string source = R"(
+[struct]
+Holder() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [Holder mut] holder{Holder()}
+  return(0i32)
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::Definition *mainDef = findDefinitionByPath(program, "/main");
+  REQUIRE(mainDef != nullptr);
+  const primec::Expr *binding = findBindingStatementByName(*mainDef, "holder");
+  REQUIRE(binding != nullptr);
+  REQUIRE(binding->args.size() == 1);
+
+  auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          *binding,
+          binding->args.front(),
+          {},
+          bindingTypeAdapters.hasExplicitBindingTypeTransform,
+          bindingTypeAdapters.bindingKind,
+          bindingTypeAdapters.bindingValueKind,
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          {},
+          &semanticProductTargets);
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.structTypeName.empty());
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper classifies explicit file locals "
+    "without struct layout names") {
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "file";
+
+  primec::Transform typeTransform;
+  typeTransform.name = "File";
+  typeTransform.templateArgs.push_back("Read");
+  stmt.transforms.push_back(typeTransform);
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Call;
+  init.name = "File";
+  init.templateArgs.push_back("Read");
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          {},
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &) {
+            return primec::ir_lowerer::LocalInfo::Kind::Value;
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          });
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(info.structTypeName.empty());
+}
+
 TEST_CASE("ir lowerer statement binding helper classifies variadic map parameters") {
   primec::Expr param;
   param.name = "values";

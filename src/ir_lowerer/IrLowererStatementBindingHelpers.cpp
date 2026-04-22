@@ -249,6 +249,19 @@ bool isIfBlockEnvelopeForBindingTypeInfo(const Expr &candidate) {
   return candidate.hasBodyArguments || !candidate.bodyArguments.empty();
 }
 
+bool shouldDeferSurfaceStructTypeName(const StatementBindingTypeInfo &info) {
+  return info.kind == LocalInfo::Kind::Value &&
+         info.valueKind == LocalInfo::ValueKind::Unknown &&
+         !info.structTypeName.empty() &&
+         info.structTypeName.front() != '/';
+}
+
+void deferSurfaceStructTypeName(StatementBindingTypeInfo &info) {
+  if (shouldDeferSurfaceStructTypeName(info)) {
+    info.structTypeName.clear();
+  }
+}
+
 const Expr *findIfBranchValueExprForBindingTypeInfo(const Expr &candidate) {
   if (!isIfBlockEnvelopeForBindingTypeInfo(candidate)) {
     return &candidate;
@@ -430,6 +443,12 @@ bool populateBindingTypeInfoFromTypeText(
   if (normalizedBase == "Buffer") {
     infoOut.kind = LocalInfo::Kind::Buffer;
     infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(argText));
+    return true;
+  }
+  if (normalizedBase == "File") {
+    infoOut.kind = LocalInfo::Kind::Value;
+    infoOut.valueKind = LocalInfo::ValueKind::Int64;
+    infoOut.structTypeName.clear();
     return true;
   }
   if (normalizedBase == "Result") {
@@ -693,6 +712,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   StatementBindingTypeInfo semanticInfo;
   const bool hasSemanticBindingInfo = populateBindingTypeInfoFromSemanticBindingFact(
       stmt, safeResolveDefinitionCall, semanticIndex, semanticInfo);
+  deferSurfaceStructTypeName(semanticInfo);
   if (!hasExplicitType && hasSemanticBindingInfo) {
     return semanticInfo;
   }
@@ -726,6 +746,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     StatementBindingTypeInfo inferredExprInfo;
     if (inferExprBindingTypeInfo(
             init, localsIn, inferExprKind, safeResolveDefinitionCall, semanticProgram, semanticIndex, inferredExprInfo)) {
+      deferSurfaceStructTypeName(inferredExprInfo);
       if (info.kind == LocalInfo::Kind::Value) {
         info.kind = inferredExprInfo.kind;
       }
@@ -813,6 +834,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       StatementBindingTypeInfo explicitTypeInfo;
       if (populateBindingTypeInfoFromTypeText(
               explicitTypeText, safeResolveDefinitionCall, explicitTypeInfo)) {
+        deferSurfaceStructTypeName(explicitTypeInfo);
         if (info.kind == LocalInfo::Kind::Value) {
           info.kind = explicitTypeInfo.kind;
         }
@@ -826,14 +848,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
           info.mapValueKind = explicitTypeInfo.mapValueKind;
         }
         if (info.structTypeName.empty()) {
-          const bool unresolvedExplicitStructSurfaceName =
-              explicitTypeInfo.kind == LocalInfo::Kind::Value &&
-              explicitTypeInfo.valueKind == LocalInfo::ValueKind::Unknown &&
-              !explicitTypeInfo.structTypeName.empty() &&
-              explicitTypeInfo.structTypeName.front() != '/';
-          if (!unresolvedExplicitStructSurfaceName) {
-            info.structTypeName = explicitTypeInfo.structTypeName;
-          }
+          info.structTypeName = explicitTypeInfo.structTypeName;
         }
         mergeStatementBindingAuxTypeInfo(explicitTypeInfo, info);
       }
