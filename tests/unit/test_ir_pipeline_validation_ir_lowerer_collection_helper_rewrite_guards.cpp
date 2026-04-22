@@ -371,7 +371,62 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("auto findDirectHelperDefinition = [&](const std::string &rawPath) -> const Definition * {") !=
         std::string::npos);
+  CHECK(source.find("auto matchesGeneratedLeafDefinition = [&](const std::string &path,") !=
+        std::string::npos);
+  CHECK(source.find("path.compare(rawPath.size(), markerSize, marker) == 0 &&") !=
+        std::string::npos);
+  CHECK(source.find("path.find('/', rawPath.size() + markerSize) ==") !=
+        std::string::npos);
+  CHECK(source.find("auto stripGeneratedHelperSuffix = [](std::string helperPath) {") !=
+        std::string::npos);
+  CHECK(source.find("const size_t leafStart = helperPath.find_last_of('/');") !=
+        std::string::npos);
+  CHECK(source.find(
+            "helperPath.find(\"__\", leafStart == std::string::npos ? 0 : leafStart + 1);") !=
+        std::string::npos);
+  CHECK(source.find("auto extractHelperTail = [&](std::string helperPath) {") !=
+        std::string::npos);
+  CHECK(source.find("auto isInternalSoaHelperFamilyName = [&](const std::string &helperName) {") !=
+        std::string::npos);
+  CHECK(source.find("helperName.rfind(\"soaColumn\", 0) == 0 ||") !=
+        std::string::npos);
+  CHECK(source.find("helperName.rfind(\"SoaColumns\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(source.find("auto findDirectInternalSoaDefinition = [&](const std::string &rawPath)") !=
+        std::string::npos);
+  CHECK(source.find("path.rfind(\"/std/collections/internal_soa_storage/\", 0) != 0") !=
+        std::string::npos);
+  CHECK(source.find("auto findDirectStructDefinition = [&](const Expr &callExpr) -> const Definition * {") !=
+        std::string::npos);
+  CHECK(source.find("resolveStructTypeName(callExpr.name, callExpr.namespacePrefix, directStructPath)") !=
+        std::string::npos);
+  CHECK(source.find("auto isInternalSoaHelperFamilyPath = [&](const std::string &path) {") !=
+        std::string::npos);
+  CHECK(source.find("extractHelperTail(normalizeCollectionHelperPath(path))") !=
+        std::string::npos);
+  CHECK(source.find("if (directCallee == nullptr &&") !=
+        std::string::npos);
+  CHECK(source.find("isInternalSoaHelperFamilyPath(rawPath)) {") !=
+        std::string::npos);
+  CHECK(source.find("directCallee = findDirectInternalSoaDefinition(rawPath);") !=
+        std::string::npos);
+  CHECK(source.find("if (directCallee == nullptr) {") !=
+        std::string::npos);
+  CHECK(source.find("directCallee = findDirectStructDefinition(expr);") !=
+        std::string::npos);
+  CHECK(source.find("if (ir_lowerer::isStructDefinition(*directCallee)) {") !=
+        std::string::npos);
+  CHECK(source.find("directCallee->fullPath.rfind(\"/std/collections/internal_soa_storage/\", 0) == 0 &&") !=
+        std::string::npos);
+  CHECK(source.find("isInternalSoaHelperFamilyPath(directCallee->fullPath)) {") !=
+        std::string::npos);
   CHECK(source.find("(helperName == \"count\" || helperName == \"contains\" ||") !=
+        std::string::npos);
+  CHECK(source.find("const size_t generatedSuffix = helperPath.find(\"__\");") ==
+        std::string::npos);
+  CHECK(source.find("const std::string specializedPrefix = rawPath + \"__t\";") ==
+        std::string::npos);
+  CHECK(source.find("const std::string overloadPrefix = rawPath + \"__ov\";") ==
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/map/\", 0) == 0 ||") !=
         std::string::npos);

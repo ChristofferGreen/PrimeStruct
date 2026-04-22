@@ -1030,6 +1030,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("findSemanticProductBridgePathChoice(semanticProgram, callExpr)") !=
         std::string::npos);
+  CHECK(irMethodResolution.find("matchesGeneratedDefinitionFamilyPath(") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find("buildReceiverMethodTargetPath(") !=
+        std::string::npos);
   CHECK(irMethodResolution.find("missing semantic-product method-call target: ") !=
         std::string::npos);
   CHECK(irMethodResolution.find("semantic-product method-call target missing lowered definition: ") !=
@@ -1049,6 +1053,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
             "              : resolvedPath;\n"
             "      if (const Definition *resolvedDef =\n"
             "              resolveLoweredDefinitionPath(preferredResolvedPath);") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "      const std::string receiverMethodTargetPath =\n"
+            "          buildReceiverMethodTargetPath(targetPath, explicitMethodPath);") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "      const std::string normalizedReceiverMethodTargetPath =\n"
+            "            buildReceiverMethodTargetPath(normalizedTargetPath,\n"
+            "                                          explicitMethodPath);") !=
         std::string::npos);
   CHECK(irMethodResolution.find(
             "      if (requestsExplicitVectorCountMethod) {\n"
@@ -1083,6 +1096,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
             "          return resolvedDef;\n"
             "        }\n"
             "        errorOut.clear();") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "              matchesGeneratedDefinitionFamilyPath(candidatePath, path)) {") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find(
+            "            matchesGeneratedDefinitionFamilyPath(candidatePath, candidate)) {") !=
+        std::string::npos);
+  CHECK(irMethodResolution.find("candidatePath.rfind(path + \"__t\", 0) == 0") ==
+        std::string::npos);
+  CHECK(irMethodResolution.find("candidatePath.rfind(candidate + \"__t\", 0) == 0") ==
         std::string::npos);
   CHECK(irMethodResolution.find(
             "  const std::string explicitMethodPath = describeMethodCallExpr(callExpr);") !=

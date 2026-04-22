@@ -38,6 +38,7 @@ TEST_CASE("ir lowerer runtime error helpers emit FileError.why call paths") {
   emittedWhyLocal = -1;
   expr.isMethodCall = false;
   expr.namespacePrefix = "/file_error";
+  expr.name = "why";
   expr.args = {errValue};
   emitExprCalls = 0;
   CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(

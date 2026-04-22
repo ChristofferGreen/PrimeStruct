@@ -284,6 +284,24 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable" * doctest::sk
   CHECK(callResolutionSource.find(
             "const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);") !=
         std::string::npos);
+  CHECK(callResolutionSource.find("const bool hasSemanticRootedRewrite =") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("const size_t rawLeafStart = rawPath.find_last_of('/');") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("const bool hasGeneratedRootedRawPath =") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find(
+            "rawPath.find(\"__t\", rawLeafStart == std::string::npos ? 0 : rawLeafStart + 1) !=") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find(
+            "rawPath.find(\"__ov\", rawLeafStart == std::string::npos ? 0 : rawLeafStart + 1) !=") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("rawPath.front() == '/' &&") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("resolved.front() == '/' &&") !=
+        std::string::npos);
+  CHECK(callResolutionSource.find("(!hasSemanticRootedRewrite || hasGeneratedRootedRawPath)") !=
+        std::string::npos);
   CHECK(callResolutionSource.find("rawPath.rfind(\"/map/\", 0) != 0 &&") !=
         std::string::npos);
   CHECK(callResolutionSource.find("return normalizeCollectionHelperPath(rawPath) ==") !=
@@ -3227,6 +3245,31 @@ TEST_CASE("ir lowerer call helpers keep experimental map helper aliases off spec
   CHECK(primec::ir_lowerer::resolveDefinitionCall(
             explicitUnspecializedHelperCall, competingDefMap, resolveExprPath) ==
         &competingRawHelperDef);
+}
+
+TEST_CASE("ir lowerer call helpers prefer specialized rooted raw defs when semantic rooted rewrites miss") {
+  primec::Definition specializedHelperDef;
+  specializedHelperDef.fullPath =
+      "/std/collections/internal_buffer_checked/bufferAlloc__t1234";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {specializedHelperDef.fullPath, &specializedHelperDef},
+  };
+
+  const auto resolveExprPath = [&](const primec::Expr &) {
+    return std::string("/std/collections/internal_buffer_checked/bufferAlloc");
+  };
+
+  primec::Expr allocCall;
+  allocCall.kind = primec::Expr::Kind::Call;
+  allocCall.name = specializedHelperDef.fullPath;
+  allocCall.semanticNodeId = 41;
+  primec::Expr countArg;
+  countArg.kind = primec::Expr::Kind::Literal;
+  countArg.literalValue = 1;
+  allocCall.args.push_back(countArg);
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(allocCall, defMap, resolveExprPath) ==
+        &specializedHelperDef);
 }
 
 TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for lowered helper spellings") {

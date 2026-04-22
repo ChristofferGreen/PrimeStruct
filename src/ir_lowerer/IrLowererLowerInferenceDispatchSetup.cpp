@@ -268,7 +268,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         return true;
       }
       if (resultExpr.isMethodCall && !resultExpr.args.empty() && resultExpr.args.front().kind == Expr::Kind::Name) {
-        auto it = localsIn.find(resultExpr.args.front().name);
+        const Expr &receiverExpr = resultExpr.args.front();
+        auto it = localsIn.find(receiverExpr.name);
         if (it != localsIn.end() && it->second.isFileHandle) {
           if (resultExpr.name == "write" || resultExpr.name == "write_line" || resultExpr.name == "write_byte" ||
               resultExpr.name == "write_bytes" || resultExpr.name == "flush" || resultExpr.name == "close") {
@@ -276,7 +277,16 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
             return true;
           }
         }
-        if (resultExpr.args.front().name == "Result") {
+        std::string receiverPath = receiverExpr.name;
+        if (!receiverExpr.namespacePrefix.empty()) {
+          receiverPath = receiverExpr.namespacePrefix + "/" + receiverExpr.name;
+        }
+        if ((receiverExpr.name == "FileError" || receiverPath == "/std/file/FileError") &&
+            resultExpr.name == "why") {
+          kindOut = LocalInfo::ValueKind::String;
+          return true;
+        }
+        if (receiverExpr.name == "Result") {
           if (resultExpr.name == "ok") {
             kindOut = resultExpr.args.size() > 1 ? stateInOut.inferExprKind(resultExpr.args[1], localsIn)
                                                  : LocalInfo::ValueKind::Int32;
@@ -370,6 +380,30 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           }
           if (!inferenceError->empty()) {
             return LocalInfo::ValueKind::Unknown;
+          }
+        }
+
+        if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
+          const Expr &receiverExpr = expr.args.front();
+          std::string receiverPath = receiverExpr.name;
+          if (!receiverExpr.namespacePrefix.empty()) {
+            receiverPath = receiverExpr.namespacePrefix + "/" + receiverExpr.name;
+          }
+          if ((receiverExpr.name == "FileError" || receiverPath == "/std/file/FileError") &&
+              expr.name == "why") {
+            return LocalInfo::ValueKind::String;
+          }
+          if (receiverExpr.name == "Result") {
+            if (expr.name == "ok") {
+              return expr.args.size() > 1 ? stateInOut.inferExprKind(expr.args[1], localsIn)
+                                          : LocalInfo::ValueKind::Int32;
+            }
+            if (expr.name == "error") {
+              return LocalInfo::ValueKind::Bool;
+            }
+            if (expr.name == "why") {
+              return LocalInfo::ValueKind::String;
+            }
           }
         }
 

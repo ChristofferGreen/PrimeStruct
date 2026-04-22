@@ -3,6 +3,8 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
+#include "IrLowererSetupTypeHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
 

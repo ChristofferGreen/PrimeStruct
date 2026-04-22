@@ -601,7 +601,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native canonical slash vector count same-path helper on map receiver") {
+TEST_CASE("rejects native canonical slash vector count same-path helper on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -620,14 +620,16 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_slash_vector_count_map_same_path_helper.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_canonical_slash_vector_count_map_same_path_helper_exe")
+       "primec_native_canonical_slash_vector_count_map_same_path_helper.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 87);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native wrapper-returned canonical vector count slash-method on map receiver") {
@@ -652,7 +654,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
         std::string::npos);
 }
 

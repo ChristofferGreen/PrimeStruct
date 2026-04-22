@@ -395,7 +395,11 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(
   }
   if (const auto it = semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
       it != semanticIndex.onErrorFactsByDefinitionPathId.end()) {
-    return it->second;
+    if (const auto *fact = it->second;
+        fact != nullptr &&
+        fact->definitionPath == definition.fullPath) {
+      return fact;
+    }
   }
   return nullptr;
 }

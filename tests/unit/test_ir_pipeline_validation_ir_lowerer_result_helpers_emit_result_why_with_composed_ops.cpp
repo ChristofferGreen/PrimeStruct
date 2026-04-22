@@ -945,7 +945,7 @@ TEST_CASE("ir lowerer comparison helpers treat builtin comparisons as bool condi
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   primec::Expr lhs;
   lhs.kind = primec::Expr::Kind::Literal;
-  lhs.intValue = 1;
+  lhs.literalValue = 1;
   lhs.intWidth = 32;
 
   primec::Expr rhs = lhs;

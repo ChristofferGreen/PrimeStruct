@@ -23,16 +23,82 @@
           if (defIt != defMap.end()) {
             return defIt->second;
           }
-          const std::string specializedPrefix = rawPath + "__t";
-          const std::string overloadPrefix = rawPath + "__ov";
+          auto matchesGeneratedLeafDefinition = [&](const std::string &path,
+                                                    const char *marker,
+                                                    size_t markerSize) {
+            return path.rfind(rawPath, 0) == 0 &&
+                   path.compare(rawPath.size(), markerSize, marker) == 0 &&
+                   path.find('/', rawPath.size() + markerSize) ==
+                       std::string::npos;
+          };
           for (const auto &[path, def] : defMap) {
             if (def == nullptr) {
               continue;
             }
-            if (path.rfind(specializedPrefix, 0) == 0 ||
-                path.rfind(overloadPrefix, 0) == 0) {
+            if (matchesGeneratedLeafDefinition(path, "__t", 3) ||
+                matchesGeneratedLeafDefinition(path, "__ov", 4)) {
               return def;
             }
+          }
+          return nullptr;
+        };
+        auto stripGeneratedHelperSuffix = [](std::string helperPath) {
+          const size_t leafStart = helperPath.find_last_of('/');
+          const size_t generatedSuffix =
+              helperPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+          if (generatedSuffix != std::string::npos) {
+            helperPath.erase(generatedSuffix);
+          }
+          return helperPath;
+        };
+        auto extractHelperTail = [&](std::string helperPath) {
+          helperPath = stripGeneratedHelperSuffix(std::move(helperPath));
+          const size_t slash = helperPath.find_last_of('/');
+          if (slash != std::string::npos) {
+            helperPath = helperPath.substr(slash + 1);
+          }
+          return helperPath;
+        };
+        auto isInternalSoaHelperFamilyName = [&](const std::string &helperName) {
+          return helperName.rfind("soaColumn", 0) == 0 ||
+                 helperName.rfind("soaColumns", 0) == 0 ||
+                 helperName.rfind("SoaColumn", 0) == 0 ||
+                 helperName.rfind("SoaColumns", 0) == 0;
+        };
+        auto isInternalSoaHelperFamilyPath = [&](const std::string &path) {
+          return isInternalSoaHelperFamilyName(
+              extractHelperTail(normalizeCollectionHelperPath(path)));
+        };
+        auto findDirectInternalSoaDefinition = [&](const std::string &rawPath)
+            -> const Definition * {
+          const std::string helperName = extractHelperTail(rawPath);
+          if (!isInternalSoaHelperFamilyName(helperName)) {
+            return nullptr;
+          }
+          for (const auto &[path, def] : defMap) {
+            if (def == nullptr ||
+                path.rfind("/std/collections/internal_soa_storage/", 0) != 0) {
+              continue;
+            }
+            if (extractHelperTail(path) == helperName) {
+              return def;
+            }
+          }
+          return nullptr;
+        };
+        auto findDirectStructDefinition = [&](const Expr &callExpr) -> const Definition * {
+          const std::string rawPath = resolveDirectHelperPath(callExpr);
+          if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
+              rawDef != nullptr && ir_lowerer::isStructDefinition(*rawDef)) {
+            return rawDef;
+          }
+          std::string directStructPath;
+          if (!resolveStructTypeName(callExpr.name, callExpr.namespacePrefix, directStructPath)) {
+            return nullptr;
+          }
+          if (const Definition *structDef = findDirectHelperDefinition(directStructPath);
+              structDef != nullptr && ir_lowerer::isStructDefinition(*structDef)) {
+            return structDef;
           }
           return nullptr;
         };
@@ -40,11 +106,31 @@
           const std::string rawPath = resolveDirectHelperPath(expr);
           const Definition *directCallee = resolveDefinitionCall(expr);
           if (directCallee == nullptr &&
+              isInternalSoaHelperFamilyPath(rawPath)) {
+            directCallee = findDirectInternalSoaDefinition(rawPath);
+          }
+          if (directCallee == nullptr) {
+            directCallee = findDirectStructDefinition(expr);
+          }
+          if (directCallee == nullptr &&
               (rawPath.rfind("/map/", 0) == 0 ||
                rawPath.rfind("/std/collections/map/", 0) == 0)) {
             directCallee = findDirectHelperDefinition(rawPath);
           }
           if (directCallee != nullptr) {
+            if (ir_lowerer::isStructDefinition(*directCallee)) {
+              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
+            if (directCallee->fullPath.rfind("/std/collections/internal_soa_storage/", 0) == 0 &&
+                isInternalSoaHelperFamilyPath(directCallee->fullPath)) {
+              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
             std::string helperName;
             if (resolveMapHelperAliasName(expr, helperName) &&
                 (helperName == "count" || helperName == "contains" ||

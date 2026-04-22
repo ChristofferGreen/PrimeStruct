@@ -817,7 +817,7 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers builtin comparison fa
 
   primec::Expr lhs;
   lhs.kind = primec::Expr::Kind::Literal;
-  lhs.intValue = 0;
+  lhs.literalValue = 0;
   lhs.intWidth = 32;
 
   primec::Expr rhs = lhs;

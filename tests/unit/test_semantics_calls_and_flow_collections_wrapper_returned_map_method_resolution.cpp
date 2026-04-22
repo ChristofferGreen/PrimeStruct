@@ -849,13 +849,13 @@ wrapMap() {
 main() {
   return(wrapMap()./std/collections/vector/count())
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector count method keeps wrapper map same-path helper") {
+TEST_CASE("stdlib namespaced vector count method rejects wrapper map same-path helper") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -873,8 +873,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method keeps wrapper array same-path helper") {
@@ -969,8 +969,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count method on builtin vector receiver rejects rooted helper fallback") {
@@ -1026,8 +1026,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector capacity method local same-path overload set rejects duplicate definitions") {

@@ -31,6 +31,87 @@ std::string describeMethodCallExpr(const Expr &expr) {
   return "<unnamed>";
 }
 
+std::string extractMethodLeafName(const std::string &methodPath) {
+  if (methodPath.empty()) {
+    return "";
+  }
+  const size_t slash = methodPath.find_last_of('/');
+  if (slash == std::string::npos) {
+    return methodPath;
+  }
+  return methodPath.substr(slash + 1);
+}
+
+bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
+                                          const std::string &targetPath) {
+  if (candidatePath == targetPath) {
+    return true;
+  }
+
+  auto hasGeneratedTerminalSuffix = [&](size_t suffixPos) {
+    if (suffixPos >= candidatePath.size()) {
+      return false;
+    }
+    const bool isSpecialization =
+        candidatePath.compare(suffixPos, 3, "__t") == 0;
+    const bool isOverload =
+        candidatePath.compare(suffixPos, 4, "__ov") == 0;
+    return (isSpecialization || isOverload) &&
+           candidatePath.find('/', suffixPos) == std::string::npos;
+  };
+  auto hasTerminalLeafOrGeneratedSuffix = [&](size_t leafEnd) {
+    return leafEnd == candidatePath.size() ||
+           hasGeneratedTerminalSuffix(leafEnd);
+  };
+
+  if (candidatePath.rfind(targetPath, 0) == 0 &&
+      hasGeneratedTerminalSuffix(targetPath.size())) {
+    return true;
+  }
+
+  const size_t slash = targetPath.find_last_of('/');
+  if (slash == std::string::npos || slash == 0) {
+    return false;
+  }
+
+  const std::string parentPath = targetPath.substr(0, slash);
+  const std::string leafPath = targetPath.substr(slash);
+  if (candidatePath.rfind(parentPath, 0) != 0) {
+    return false;
+  }
+
+  const size_t specializationPos = parentPath.size();
+  const bool specializesParent =
+      candidatePath.compare(specializationPos, 3, "__t") == 0 ||
+      candidatePath.compare(specializationPos, 4, "__ov") == 0;
+  if (!specializesParent) {
+    return false;
+  }
+
+  const size_t leafPos = candidatePath.find(leafPath, specializationPos);
+  if (leafPos == std::string::npos ||
+      candidatePath.compare(leafPos, leafPath.size(), leafPath) != 0) {
+    return false;
+  }
+  return hasTerminalLeafOrGeneratedSuffix(leafPos + leafPath.size());
+}
+
+std::string buildReceiverMethodTargetPath(const std::string &receiverPath,
+                                          const std::string &explicitMethodPath) {
+  if (receiverPath.empty()) {
+    return "";
+  }
+  const std::string methodLeaf = extractMethodLeafName(explicitMethodPath);
+  if (methodLeaf.empty()) {
+    return "";
+  }
+  const std::string methodSuffix = "/" + methodLeaf;
+  if (receiverPath.ends_with(methodSuffix)) {
+    return receiverPath;
+  }
+  return receiverPath + methodSuffix;
+}
+
 } // namespace
 
 const Definition *resolveMethodCallDefinitionFromExpr(
@@ -162,8 +243,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
             continue;
           }
           if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
-              candidatePath.rfind(path + "__t", 0) == 0 ||
-              candidatePath.rfind(path + "__ov", 0) == 0) {
+              matchesGeneratedDefinitionFamilyPath(candidatePath, path)) {
             return candidateDef;
           }
         }
@@ -174,10 +254,31 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           resolvedDef != nullptr) {
         return resolvedDef;
       }
+      const std::string receiverMethodTargetPath =
+          buildReceiverMethodTargetPath(targetPath, explicitMethodPath);
+      if (!receiverMethodTargetPath.empty() &&
+          receiverMethodTargetPath != targetPath) {
+        if (const Definition *resolvedMethodDef =
+                tryResolvedPath(receiverMethodTargetPath);
+            resolvedMethodDef != nullptr) {
+          return resolvedMethodDef;
+        }
+      }
       const std::string normalizedTargetPath =
           normalizeCollectionHelperPath(targetPath);
       if (normalizedTargetPath != targetPath) {
-        return tryResolvedPath(normalizedTargetPath);
+        if (const Definition *normalizedResolvedDef =
+                tryResolvedPath(normalizedTargetPath);
+            normalizedResolvedDef != nullptr) {
+          return normalizedResolvedDef;
+        }
+        const std::string normalizedReceiverMethodTargetPath =
+            buildReceiverMethodTargetPath(normalizedTargetPath,
+                                          explicitMethodPath);
+        if (!normalizedReceiverMethodTargetPath.empty() &&
+            normalizedReceiverMethodTargetPath != normalizedTargetPath) {
+          return tryResolvedPath(normalizedReceiverMethodTargetPath);
+        }
       }
       return nullptr;
     };
@@ -524,8 +625,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
           continue;
         }
         if (candidatePath.rfind(overloadPrefix, 0) == 0 ||
-            candidatePath.rfind(candidate + "__t", 0) == 0 ||
-            candidatePath.rfind(candidate + "__ov", 0) == 0) {
+            matchesGeneratedDefinitionFamilyPath(candidatePath, candidate)) {
           return candidateDef;
         }
       }

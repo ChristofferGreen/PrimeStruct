@@ -144,8 +144,12 @@ TEST_CASE("emitter expr source delegation stays stable") {
 
   const std::filesystem::path emitterExprCollectionAccessAtCallsPath =
       repoRoot / "src" / "emitter" / "EmitterExprCollectionAccessAtCalls.h";
+  const std::filesystem::path emitterExprCallsPath =
+      repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
   REQUIRE(std::filesystem::exists(emitterExprCollectionAccessAtCallsPath));
+  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
   const std::string emitterExprCollectionAccessAtCallsSource = readText(emitterExprCollectionAccessAtCallsPath);
+  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
   CHECK(emitterExprCollectionAccessAtCallsSource.find("getBuiltinArrayAccessNameLocal(expr, builtinAccessName)") !=
         std::string::npos);
   CHECK(emitterExprCollectionAccessAtCallsSource.find("builtinAccessName == \"at\"") != std::string::npos);
@@ -154,12 +158,12 @@ TEST_CASE("emitter expr source delegation stays stable") {
   CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at\")") == std::string::npos);
   CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at_unsafe\")") ==
         std::string::npos);
-  CHECK(emitterExprSource.find("getBuiltinMemoryName(expr, memoryName)") != std::string::npos);
-  CHECK(emitterExprSource.find("ps_heap_alloc<") != std::string::npos);
-  CHECK(emitterExprSource.find("ps_heap_realloc(") != std::string::npos);
-  CHECK(emitterExprSource.find("ps_heap_at(") != std::string::npos);
-  CHECK(emitterExprSource.find("ps_heap_at_unsafe(") != std::string::npos);
-  CHECK(emitterExprSource.find("ps_heap_reinterpret<") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("getBuiltinMemoryName(expr, memoryName)") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("ps_heap_alloc<") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("ps_heap_realloc(") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("ps_heap_at(") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("ps_heap_at_unsafe(") != std::string::npos);
+  CHECK(emitterExprCallsSource.find("ps_heap_reinterpret<") != std::string::npos);
 
   const std::filesystem::path emitterExprPackedArgsPath =
       repoRoot / "src" / "emitter" / "EmitterExprPackedArgs.h";
@@ -238,6 +242,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       repoRoot / "src" / "semantics" / "TemplateMonomorphExpressionRewrite.h";
   const std::filesystem::path templateMonomorphCollectionCompatibilityPathsPath =
       repoRoot / "src" / "semantics" / "TemplateMonomorphCollectionCompatibilityPaths.h";
+  const std::filesystem::path mapConstructorHelpersPath =
+      repoRoot / "src" / "semantics" / "MapConstructorHelpers.h";
   const std::filesystem::path collectionTypeHelpersPath =
       repoRoot / "src" / "emitter" / "EmitterExprCollectionTypeHelpers.h";
   REQUIRE(std::filesystem::exists(templateMonomorphPath));
@@ -265,6 +271,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   REQUIRE(std::filesystem::exists(templateMonomorphImplicitTemplateInferencePath));
   REQUIRE(std::filesystem::exists(templateMonomorphExpressionRewritePath));
   REQUIRE(std::filesystem::exists(templateMonomorphCollectionCompatibilityPathsPath));
+  REQUIRE(std::filesystem::exists(mapConstructorHelpersPath));
   REQUIRE(std::filesystem::exists(collectionTypeHelpersPath));
   const std::string templateMonomorphSource = readText(templateMonomorphPath);
   const std::string templateMonomorphFallbackSource = readText(templateMonomorphFallbackPath);
@@ -310,6 +317,8 @@ TEST_CASE("template monomorph source delegation stays stable") {
       readText(templateMonomorphExpressionRewritePath);
   const std::string templateMonomorphCollectionCompatibilityPathsSource =
       readText(templateMonomorphCollectionCompatibilityPathsPath);
+  const std::string mapConstructorHelpersSource =
+      readText(mapConstructorHelpersPath);
   const std::string collectionTypeHelpersSource =
       readText(collectionTypeHelpersPath);
   CHECK(templateMonomorphSource.find("#include \"TemplateMonomorphFallbackTypeInference.h\"") !=
@@ -1601,8 +1610,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "auto resolvesBorrowedExperimentalSoaVectorReceiver = [&](const Expr *receiverExpr)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "if (receiverExpr->kind == Expr::Kind::Call && !receiverExpr->isBinding) {\n"
-            "      std::string resolvedReceiverPath;") !=
+            "if (receiverExpr->kind == Expr::Kind::Call && !receiverExpr->isBinding) {") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "std::vector<std::string> receiverCandidatePaths;") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
+            "std::string resolvedReceiverPath;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "inferDefinitionReturnBindingForTemplatedFallback(\n"
@@ -1690,6 +1704,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const bool receiverEligibleForSamePathSoaHelper =\n"
             "          receiverFamily == \"soa_vector\" ||\n"
             "          receiverResolvesBorrowedExperimentalSoaVector ||\n"
+            "          receiverResolvesExperimentalSoaVector ||\n"
             "          ((helperName == \"count\" || helperName == \"count_ref\") &&\n"
             "           receiverFamily == \"vector\");") !=
         std::string::npos);
@@ -1728,6 +1743,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (hasDefinitionFamilyPath(samePathGetHelper) &&\n"
             "          (receiverFamily == \"soa_vector\" ||\n"
             "           receiverResolvesBorrowedExperimentalSoaVector ||\n"
+            "           receiverResolvesExperimentalSoaVector ||\n"
             "           receiverFamily == \"vector\")) {") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
@@ -1749,6 +1765,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "if (hasDefinitionFamilyPath(samePathRefHelper) &&\n"
             "          (receiverFamily == \"soa_vector\" ||\n"
             "           receiverResolvesBorrowedExperimentalSoaVector ||\n"
+            "           receiverResolvesExperimentalSoaVector ||\n"
             "           receiverFamily == \"vector\")) {") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
@@ -2400,7 +2417,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "soaVectorToAosRef") ==
         std::string::npos);
-  CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(
+  CHECK(mapConstructorHelpersSource.find(
             "std::string experimentalMapConstructorHelperPath(size_t argumentCount)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionConstructorPathsSource.find(

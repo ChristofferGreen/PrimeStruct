@@ -504,8 +504,24 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
     }
     return nullptr;
   }
+  const bool hasSemanticRootedRewrite =
+      callExpr.semanticNodeId != 0 &&
+      !rawPath.empty() &&
+      !resolved.empty() &&
+      rawPath.front() == '/' &&
+      resolved.front() == '/' &&
+      rawPath != resolved;
+  const size_t rawLeafStart = rawPath.find_last_of('/');
+  const bool hasGeneratedRootedRawPath =
+      !rawPath.empty() &&
+      rawPath.front() == '/' &&
+      (rawPath.find("__t", rawLeafStart == std::string::npos ? 0 : rawLeafStart + 1) !=
+           std::string::npos ||
+       rawPath.find("__ov", rawLeafStart == std::string::npos ? 0 : rawLeafStart + 1) !=
+           std::string::npos);
   if (!isMapBuiltinResolvedPath(semanticProgram, callExpr, resolved) &&
-      rawPath != resolved) {
+      rawPath != resolved &&
+      (!hasSemanticRootedRewrite || hasGeneratedRootedRawPath)) {
     if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);
         rawDef != nullptr) {
       return rawDef;
