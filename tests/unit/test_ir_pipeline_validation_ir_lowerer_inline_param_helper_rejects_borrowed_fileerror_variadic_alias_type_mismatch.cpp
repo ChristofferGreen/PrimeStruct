@@ -132,6 +132,77 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed File handle variadic 
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer inline param helper clears stale struct paths on file-handle params") {
+  primec::Expr fileParam;
+  fileParam.kind = primec::Expr::Kind::Name;
+  fileParam.isBinding = true;
+  fileParam.name = "file";
+
+  primec::Expr fileArg;
+  fileArg.kind = primec::Expr::Kind::Name;
+  fileArg.name = "source";
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.index = 18;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  sourceInfo.isFileHandle = true;
+  callerLocals.emplace("source", sourceInfo);
+
+  int32_t nextLocal = 2;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::vector<int32_t> trackedFileLocals;
+  std::string error;
+  int layoutLookups = 0;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {fileParam},
+      {&fileArg},
+      {},
+      1,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+        infoOut.isFileHandle = true;
+        infoOut.structTypeName = "/std/file/File<Read>";
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+      },
+      [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+        ++layoutLookups;
+        return false;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [&](int32_t index) { trackedFileLocals.push_back(index); },
+      error));
+
+  CHECK(error.empty());
+  CHECK(layoutLookups == 0);
+  REQUIRE(calleeLocals.count("file") == 1u);
+  CHECK(calleeLocals.at("file").isFileHandle);
+  CHECK(calleeLocals.at("file").structTypeName.empty());
+  CHECK(calleeLocals.at("file").index == 18);
+  CHECK(instructions.empty());
+  CHECK(trackedFileLocals.empty());
+}
+
 TEST_CASE("ir lowerer inline param helper materializes pointer File handle variadic args packs") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;

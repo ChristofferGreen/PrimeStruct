@@ -445,6 +445,9 @@ bool emitInlineDefinitionCallParameters(
     if (!inferCallParameterLocalInfo(param, paramInfo, error)) {
       return false;
     }
+    if (paramInfo.isFileHandle) {
+      paramInfo.structTypeName.clear();
+    }
     const bool reserveIndexEarly =
         i == packedParamIndex ||
         paramInfo.kind != LocalInfo::Kind::Map ||
@@ -551,7 +554,8 @@ bool emitInlineDefinitionCallParameters(
 
     if ((paramInfo.kind == LocalInfo::Kind::Value ||
          paramInfo.kind == LocalInfo::Kind::Map) &&
-        paramInfo.isMutable && !paramInfo.structTypeName.empty()) {
+        paramInfo.isMutable && !paramInfo.isFileHandle &&
+        !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
         return false;
@@ -601,7 +605,7 @@ bool emitInlineDefinitionCallParameters(
 
     if ((paramInfo.kind == LocalInfo::Kind::Value ||
          paramInfo.kind == LocalInfo::Kind::Map) &&
-        !paramInfo.structTypeName.empty()) {
+        !paramInfo.isFileHandle && !paramInfo.structTypeName.empty()) {
       if (!orderedArg) {
         error = "argument count mismatch";
         return false;
