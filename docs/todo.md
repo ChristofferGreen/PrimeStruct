@@ -56,13 +56,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4106
 - TODO-4107
 - TODO-4134
+- TODO-4133
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4133
 - TODO-4132
 - TODO-4122
 - TODO-4123
@@ -84,13 +83,13 @@ Task template:
 - Test-surface contraction: TODO-4124, TODO-4125
 - Runtime execution unification: TODO-4130
 - Parallel semantic publication determinism: TODO-4131
-- Skipped doctest debt: TODO-4106, TODO-4107
+- Skipped doctest debt: TODO-4107
 
 ### Execution Queue (Recommended)
 
-1. TODO-4106
-2. TODO-4107
-3. TODO-4134
+1. TODO-4107
+2. TODO-4134
+3. TODO-4133
 4. TODO-4122
 
 ### PrimeStruct Coverage Snapshot
@@ -127,7 +126,7 @@ Task template:
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | TODO-4130 |
-| Release benchmark/example suite stability and doctest governance | TODO-4106, TODO-4107 |
+| Release benchmark/example suite stability and doctest governance | TODO-4107 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -190,11 +189,10 @@ Task template:
 
 ### Skipped Doctest Debt Summary
 
-- Retained `doctest::skip(true)` coverage is now tracked in two active
-  clusters: `TODO-4106` for collection compatibility and alias-precedence
-  coverage, and `TODO-4107` for residual IR/docs/gfx/smoke skips.
-- New skipped doctest coverage must either attach to one of those active leaves
-  or replace them with a narrower explicit follow-up before it lands.
+- Retained `doctest::skip(true)` coverage is now tracked in one active
+  cluster: `TODO-4107` for residual IR/docs/gfx/smoke skips.
+- New skipped doctest coverage must either attach to `TODO-4107` or replace it
+  with a narrower explicit follow-up before it lands.
 - The success condition for each lane is re-enable-or-delete; indefinite
   skipped coverage is not a stable end state.
 
@@ -450,29 +448,6 @@ Task template:
       dump or compile-pipeline conformance coverage.
   - stop_rule: Stop once all four fact families exist in lowerer-ready indexed
       form and representative lowering paths consume them directly.
-
-- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Skipped Doctest Debt
-  - depends_on: none
-  - scope: Audit the retained skipped collection compatibility and
-      alias-precedence suites across semantics, IR lowerer validation, VM,
-      native, and C++ emitter coverage, then re-enable or delete stale cases so
-      collection bridge parity stops depending on broad skipped clusters.
-  - acceptance:
-    - The largest skipped collection compatibility clusters in semantics,
-      VM/native compile-run, and C++ emitter files are either re-enabled or
-      broken into smaller explicit follow-up leaves.
-    - Skipped alias-precedence and helper-routing coverage no longer sits in
-      broad umbrella files without an active owning TODO.
-    - Docs/todo and adjacent source locks reflect the narrowed collection skip
-      surface.
-  - notes: The remaining collection skip after the helper-routing, paired map
-      literal, and native pointer-map lookup re-enables lives in
-      `test_compile_run_examples_docs.cpp`.
-  - stop_rule: Stop once the current collection compatibility umbrella skips
-      are reduced to actively owned narrow blockers or deleted entirely.
 
 - [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites
   - owner: ai

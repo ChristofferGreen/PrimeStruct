@@ -247,6 +247,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
   std::filesystem::path vmMathPath = std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_math.cpp";
   std::filesystem::path vmMapsPath = std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_maps.cpp";
+  std::filesystem::path examplesDocsPath =
+      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_examples_docs.cpp";
   if (!std::filesystem::exists(todoPath)) {
     todoPath = std::filesystem::current_path() / "docs" / "todo.md";
   }
@@ -259,39 +261,42 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   if (!std::filesystem::exists(vmMapsPath)) {
     vmMapsPath = std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_vm_maps.cpp";
   }
+  if (!std::filesystem::exists(examplesDocsPath)) {
+    examplesDocsPath = std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_examples_docs.cpp";
+  }
   REQUIRE(std::filesystem::exists(todoPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
   REQUIRE(std::filesystem::exists(vmMathPath));
   REQUIRE(std::filesystem::exists(vmMapsPath));
+  REQUIRE(std::filesystem::exists(examplesDocsPath));
 
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readFile(todoFinishedPath.string());
   const std::string vmMath = readFile(vmMathPath.string());
   const std::string vmMaps = readFile(vmMapsPath.string());
+  const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4119\n- TODO-4120\n- TODO-4121\n- TODO-4106\n- TODO-4107") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4107\n- TODO-4134\n- TODO-4133") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4134\n- TODO-4133\n- TODO-4132\n- TODO-4122") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4132\n- TODO-4122\n- TODO-4123\n- TODO-4124") !=
         std::string::npos);
-  CHECK(todo.find("- Skipped doctest debt: TODO-4106, TODO-4107") !=
+  CHECK(todo.find("- Skipped doctest debt: TODO-4107") !=
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4119\n2. TODO-4120\n3. TODO-4121\n4. TODO-4106\n5. TODO-4107") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4107\n2. TODO-4134\n3. TODO-4133\n4. TODO-4122") !=
         std::string::npos);
-  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4106, TODO-4107 |") !=
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4107 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
-  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in two active") !=
+  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in one active") !=
         std::string::npos);
-  CHECK(todo.find("`TODO-4106` for collection compatibility and alias-precedence") !=
+  CHECK(todo.find("cluster: `TODO-4107` for residual IR/docs/gfx/smoke skips.") !=
         std::string::npos);
-  CHECK(todo.find("coverage, and `TODO-4107` for residual IR/docs/gfx/smoke skips.") !=
-        std::string::npos);
-  CHECK(todo.find("New skipped doctest coverage must either attach to one of those active leaves") !=
+  CHECK(todo.find("New skipped doctest coverage must either attach to `TODO-4107`") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4117:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4118:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4110:") == std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites") !=
+  CHECK(todo.find("- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites") !=
         std::string::npos);
@@ -320,6 +325,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todoFinished.find("✓ TODO-4108: Prune stale skipped VM scalar math helper coverage.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4104: Restore skipped doctest debt tracking in the active queue.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4106: Re-enable or prune skipped collection compatibility suites.") !=
         std::string::npos);
 
   CHECK(vmMath.find("TEST_CASE(\"runs vm with qualified math names\")") != std::string::npos);
@@ -363,6 +370,12 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(vmMaps.find("TEST_CASE(\"vm map at rejects missing key\" * doctest::skip(true))") ==
         std::string::npos);
   CHECK(vmMaps.find("TEST_CASE(\"rejects vm map lookup with argv string key\" * doctest::skip(true))") ==
+        std::string::npos);
+
+  CHECK(examplesDocs.find("TEST_CASE(\"collection docs snippets stay c++ style and executable\")") !=
+        std::string::npos);
+  CHECK(examplesDocs.find(
+            "TEST_CASE(\"collection docs snippets stay c++ style and executable\" * doctest::skip(true))") ==
         std::string::npos);
 }
 
