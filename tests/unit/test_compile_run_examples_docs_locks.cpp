@@ -276,29 +276,29 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   const std::string vmMaps = readFile(vmMapsPath.string());
   const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4107\n- TODO-4134\n- TODO-4133") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4134\n- TODO-4133\n- TODO-4132") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4132\n- TODO-4122\n- TODO-4123\n- TODO-4124") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4122\n- TODO-4123\n- TODO-4124\n- TODO-4125") !=
         std::string::npos);
-  CHECK(todo.find("- Skipped doctest debt: TODO-4107") !=
+  CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4107\n2. TODO-4134\n3. TODO-4133\n4. TODO-4122") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4134\n2. TODO-4133\n3. TODO-4132\n4. TODO-4122") !=
         std::string::npos);
-  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4107 |") !=
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
-  CHECK(todo.find("Retained `doctest::skip(true)` coverage is now tracked in one active") !=
+  CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
         std::string::npos);
-  CHECK(todo.find("cluster: `TODO-4107` for residual IR/docs/gfx/smoke skips.") !=
+  CHECK(todo.find("queue because no skipped doctest cases remain under `tests/unit`.") !=
         std::string::npos);
-  CHECK(todo.find("New skipped doctest coverage must either attach to `TODO-4107`") !=
+  CHECK(todo.find("New skipped doctest coverage must create a new explicit TODO before it lands.") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4117:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4118:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4110:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites") ==
         std::string::npos);
-  CHECK(todo.find("- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites") !=
+  CHECK(todo.find("- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites") ==
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- none") ==
         std::string::npos);
@@ -309,6 +309,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("- [ ] TODO-4116:") == std::string::npos);
 
   CHECK(todoFinished.find("✓ TODO-4118: Re-enable or prune remaining VM non-i32 map key runtime skips.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4117: Re-enable or prune remaining VM numeric map indexing sugar skip.") !=
         std::string::npos);

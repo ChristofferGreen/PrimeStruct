@@ -56,13 +56,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4107
 - TODO-4134
 - TODO-4133
+- TODO-4132
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4132
 - TODO-4122
 - TODO-4123
 - TODO-4124
@@ -83,13 +82,12 @@ Task template:
 - Test-surface contraction: TODO-4124, TODO-4125
 - Runtime execution unification: TODO-4130
 - Parallel semantic publication determinism: TODO-4131
-- Skipped doctest debt: TODO-4107
 
 ### Execution Queue (Recommended)
 
-1. TODO-4107
-2. TODO-4134
-3. TODO-4133
+1. TODO-4134
+2. TODO-4133
+3. TODO-4132
 4. TODO-4122
 
 ### PrimeStruct Coverage Snapshot
@@ -126,7 +124,7 @@ Task template:
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug numeric opcode behavior | TODO-4130 |
-| Release benchmark/example suite stability and doctest governance | TODO-4107 |
+| Release benchmark/example suite stability and doctest governance | none |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -189,10 +187,9 @@ Task template:
 
 ### Skipped Doctest Debt Summary
 
-- Retained `doctest::skip(true)` coverage is now tracked in one active
-  cluster: `TODO-4107` for residual IR/docs/gfx/smoke skips.
-- New skipped doctest coverage must either attach to `TODO-4107` or replace it
-  with a narrower explicit follow-up before it lands.
+- Retained `doctest::skip(true)` coverage is currently absent from the active
+  queue because no skipped doctest cases remain under `tests/unit`.
+- New skipped doctest coverage must create a new explicit TODO before it lands.
 - The success condition for each lane is re-enable-or-delete; indefinite
   skipped coverage is not a stable end state.
 
@@ -448,26 +445,3 @@ Task template:
       dump or compile-pipeline conformance coverage.
   - stop_rule: Stop once all four fact families exist in lowerer-ready indexed
       form and representative lowering paths consume them directly.
-
-- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Skipped Doctest Debt
-  - depends_on: none
-  - scope: Audit the remaining skipped IR/source-lock, docs, gfx, wasm, demo,
-      and registry/pilot suites, then either re-enable them or delete stale
-      coverage so residual skipped tests no longer drift without queue
-      ownership.
-  - acceptance:
-    - Retained skipped IR/source-lock and docs/smoke suites are each either
-      re-enabled or explicitly covered by this lane rather than orphaned.
-    - Gfx/wasm/demo/pilot skipped suites are reduced to narrower blockers or
-      removed when stale.
-    - The residual skipped-test queue remains explicit and synchronized with the
-      surviving clusters.
-  - notes: Remaining residual skips after the benchmark/pilot,
-      count-forwarding smoke, native-image crc, gfx doc-contract,
-      borrow-example diagnostic, PrimeStructc policy-doc, and lifecycle
-      emitter re-enables now live only in the broader gfx smoke coverage.
-  - stop_rule: Stop once every remaining non-collection skipped suite is either
-      active and explicitly owned here or no longer skipped.
