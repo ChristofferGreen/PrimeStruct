@@ -207,4 +207,61 @@ std::string SemanticsValidator::implicitMatrixQuaternionConversionDiagnostic(
          " got " + actualTypePath;
 }
 
+bool SemanticsValidator::resolveReflectedStructEqualityHelperPath(
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const Expr &expr,
+    const std::string &builtinName,
+    std::string &helperPathOut) const {
+  helperPathOut.clear();
+  if (builtinName != "equal" || expr.kind != Expr::Kind::Call ||
+      expr.args.size() != 2) {
+    return false;
+  }
+
+  auto *mutableSelf = const_cast<SemanticsValidator *>(this);
+  const std::string leftStructPath =
+      mutableSelf->inferStructReturnPath(expr.args[0], params, locals);
+  if (leftStructPath.empty()) {
+    return false;
+  }
+  const std::string rightStructPath =
+      mutableSelf->inferStructReturnPath(expr.args[1], params, locals);
+  if (rightStructPath.empty() || rightStructPath != leftStructPath) {
+    return false;
+  }
+
+  const auto structIt = defMap_.find(leftStructPath);
+  if (structIt == defMap_.end() || structIt->second == nullptr) {
+    return false;
+  }
+
+  bool hasGeneratedEqual = false;
+  for (const Transform &transform : structIt->second->transforms) {
+    if (transform.name != "generate") {
+      continue;
+    }
+    for (const std::string &arg : transform.args) {
+      if (arg == "Equal") {
+        hasGeneratedEqual = true;
+        break;
+      }
+    }
+    if (hasGeneratedEqual) {
+      break;
+    }
+  }
+  if (!hasGeneratedEqual) {
+    return false;
+  }
+
+  const std::string helperPath = leftStructPath + "/Equal";
+  if (defMap_.count(helperPath) == 0 && paramsByDef_.count(helperPath) == 0) {
+    return false;
+  }
+
+  helperPathOut = helperPath;
+  return true;
+}
+
 } // namespace primec::semantics

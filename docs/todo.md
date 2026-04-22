@@ -56,13 +56,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4132
 - TODO-4122
 - TODO-4123
+- TODO-4124
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4124
 - TODO-4125
 - TODO-4126
 - TODO-4127
@@ -71,7 +70,6 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Reflection ergonomics and docs alignment: TODO-4132
 - Semantic-product authority and lowerer ownership: TODO-4122,
   TODO-4129
 - Validator/runtime boundary simplification: TODO-4123, TODO-4126,
@@ -82,17 +80,17 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4132
-2. TODO-4122
-3. TODO-4123
-4. TODO-4124
+1. TODO-4122
+2. TODO-4123
+3. TODO-4124
+4. TODO-4125
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
-| Stdlib surface-style alignment and public helper readability | TODO-4132 |
+| Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
@@ -111,7 +109,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4122 |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4132 |
+| CodeExamples-aligned stdlib surface syntax conformance | none |
 | Semantic-product publication parity and deterministic ordering | TODO-4122, TODO-4127, TODO-4129, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4128 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
@@ -191,28 +189,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4132: Add `==` support for reflected `Equal` helpers
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Language Surface Alignment
-  - depends_on: none
-  - scope: Teach the surface comparison operator path to route reflected
-      struct equality through generated `Equal` helpers where that contract is
-      available, and update the docs under `./docs` to show the operator form
-      instead of the current explicit helper-call workaround.
-  - acceptance:
-    - A representative `[struct reflect generate(Equal)]` type accepts
-      `left == right` and preserves the current `/Type/Equal(left, right)`
-      helper behavior.
-    - Deterministic diagnostics still reject unsupported `==` uses on struct
-      types that do not expose the reflected `Equal` contract.
-    - `docs/CodeExamples.md` and the relevant reflection/spec guidance under
-      `./docs` are updated to prefer the supported operator spelling once the
-      language surface lands.
-  - stop_rule: Stop once one reflected-struct equality slice supports `==`
-      end-to-end with focused validation coverage and the docs no longer need
-      to teach the explicit `/Type/Equal(...)` workaround for that case.
 
 - [ ] TODO-4131: Implement origin-key worker interner merges
   - owner: ai

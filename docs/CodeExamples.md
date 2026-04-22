@@ -297,6 +297,31 @@ Why this is good:
 - The metadata queries stay concrete and readable instead of feeling abstract.
 - Field visibility is visible in the output, so the example teaches more than just field count.
 
+### Reflected Equality Prefers the Operator Surface
+
+When a struct generates `Equal`, prefer `left == right` at the call site and
+keep `/Type/Equal(left, right)` as the helper contract underneath.
+
+```prime
+[struct generate(Equal)]
+Pair {
+  [int] x{0}
+  [int] y{0}
+}
+
+[bool]
+pairs_match() {
+  left{Pair([x] 1, [y] 2)}
+  right{Pair([x] 1, [y] 2)}
+  return(left == right)
+}
+```
+
+Why this is good:
+- The operator surface reads like value comparison instead of helper plumbing.
+- The example still teaches that generated reflection owns the comparison contract.
+- The type can keep using `/Pair/Equal(left, right)` when explicit helper spelling is needed.
+
 ### Concise Local Binding with Labeled Construction
 
 When the initializer already makes the type obvious, prefer the concise local

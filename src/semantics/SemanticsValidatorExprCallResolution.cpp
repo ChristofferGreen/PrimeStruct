@@ -112,6 +112,17 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
   auto pathExists = [&](const std::string &path) {
     return defMap_.count(path) > 0 || paramsByDef_.count(path) > 0;
   };
+  if (candidatePath == "/equal" || candidatePath == "equal") {
+    std::string reflectedStructEqualityHelperPath;
+    if (resolveReflectedStructEqualityHelperPath(params,
+                                                 locals,
+                                                 expr,
+                                                 "equal",
+                                                 reflectedStructEqualityHelperPath) &&
+        pathExists(reflectedStructEqualityHelperPath)) {
+      return reflectedStructEqualityHelperPath;
+    }
+  }
   auto overloadFamilyPrefix = [&](const std::string &path) {
     if (!hasScopedOwner) {
       return path + "__ov";

@@ -276,13 +276,13 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   const std::string vmMaps = readFile(vmMapsPath.string());
   const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4132\n- TODO-4122\n- TODO-4123") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4122\n- TODO-4123\n- TODO-4124") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4124\n- TODO-4125\n- TODO-4126\n- TODO-4127") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4125\n- TODO-4126\n- TODO-4127\n- TODO-4128") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4132\n2. TODO-4122\n3. TODO-4123\n4. TODO-4124") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4122\n2. TODO-4123\n3. TODO-4124\n4. TODO-4125") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -300,6 +300,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites") ==
         std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4132: Add `==` support for reflected `Equal` helpers") ==
+        std::string::npos);
   CHECK(todo.find("- [ ] TODO-4133: Let `generate(...)` imply reflection enablement") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4134: Accept type-qualified dot-call syntax for static helpers") ==
@@ -315,6 +317,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todoFinished.find("✓ TODO-4118: Re-enable or prune remaining VM non-i32 map key runtime skips.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4132: Add `==` support for reflected `Equal` helpers.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4133: Let `generate(...)` imply reflection enablement.") !=
         std::string::npos);
@@ -1067,6 +1071,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(codeExamples.find("preferred type-qualified dot-call form for static\nhelpers together.") !=
         std::string::npos);
+  CHECK(codeExamples.find("prefer `left == right` at the call site and\nkeep `/Type/Equal(left, right)` as the helper contract underneath.") !=
+        std::string::npos);
+  CHECK(codeExamples.find("return(left == right)") != std::string::npos);
 
   CHECK(maybeStdlib.find("out{take(this.value)}") != std::string::npos);
   CHECK(maybeStdlib.find("[mut] out{Maybe<T>()}") != std::string::npos);

@@ -1730,7 +1730,8 @@ or a semicolon if you intended to index.
   - **`Equal`/`NotEqual`:** emits `/Type/Equal([Type] left, [Type] right) -> bool` and `/Type/NotEqual([Type] left,
     [Type] right) -> bool` with field-wise comparisons over non-static fields (`equal(...)` folded by `and`,
     `not_equal(...)` folded by `or`), using identity results when no instance fields exist (`Equal -> true`, `NotEqual
-    -> false`).
+    -> false`). When `Equal` is generated for a reflected struct, surface `left == right` routes through the generated
+    `/Type/Equal(left, right)` helper instead of requiring the explicit helper spelling.
   - **`Default`:** emits `/Type/Default() -> Type` returning `Type()`; static fields are ignored by constructor argument
     mapping.
   - **`IsDefault`:** emits `/Type/IsDefault([Type] value) -> bool` by comparing non-static fields against a synthesized

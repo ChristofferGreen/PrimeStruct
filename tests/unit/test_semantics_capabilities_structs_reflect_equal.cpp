@@ -258,6 +258,84 @@ main() {
   CHECK(returnExpr.args[1].name == "equal");
 }
 
+TEST_CASE("reflected Equal structs accept operator equality") {
+  const std::string source = R"(
+[struct reflect generate(Equal)]
+Pair() {
+  [i32] x{1i32}
+  [bool] ok{true}
+}
+
+[return<bool>]
+main() {
+  [Pair] left{Pair()}
+  [Pair] right{Pair()}
+  return(left == right)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("reflected Equal operator equality resolves through generated helper") {
+  const std::string source = R"(
+[struct reflect generate(Equal)]
+Pair() {
+  [i32] x{1i32}
+  [bool] ok{true}
+}
+
+[return<bool>]
+main() {
+  [Pair] left{Pair()}
+  [Pair] right{Pair()}
+  return(left == right)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                             &semanticProgram));
+  CHECK(error.empty());
+
+  const primec::SemanticProgramDirectCallTarget *equalTarget = nullptr;
+  for (const auto *entry : primec::semanticProgramDirectCallTargetView(semanticProgram)) {
+    if (entry == nullptr) {
+      continue;
+    }
+    if (entry->scopePath == "/main" && entry->callName == "equal") {
+      equalTarget = entry;
+      break;
+    }
+  }
+  REQUIRE(equalTarget != nullptr);
+  CHECK(primec::semanticProgramDirectCallTargetResolvedPath(semanticProgram, *equalTarget) ==
+        "/Pair/Equal");
+}
+
+TEST_CASE("struct equality still rejects reflected structs without Equal generation") {
+  const std::string source = R"(
+[struct reflect]
+Pair() {
+  [i32] x{1i32}
+}
+
+[return<bool>]
+main() {
+  [Pair] left{Pair()}
+  [Pair] right{Pair()}
+  return(left == right)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("comparisons require numeric, bool, or string operands") != std::string::npos);
+}
+
 TEST_CASE("generate Equal for empty reflected struct returns true") {
   const std::string source = R"(
 [struct reflect generate(Equal)]

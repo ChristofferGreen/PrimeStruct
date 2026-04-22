@@ -358,12 +358,24 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         expr.templateArgs.empty() &&
         !expr.hasBodyArguments &&
         expr.bodyArguments.empty()) {
-      if (!validateNumericBuiltinExpr(params, locals, expr,
-                                      handledFastNumericBuiltin)) {
-        return false;
-      }
-      if (handledFastNumericBuiltin) {
-        return true;
+      std::string builtinName;
+      std::string reflectedStructEqualityHelperPath;
+      const bool shouldBypassFastNumericBuiltin =
+          getBuiltinComparisonName(expr, builtinName) &&
+          resolveReflectedStructEqualityHelperPath(
+              params,
+              locals,
+              expr,
+              builtinName,
+              reflectedStructEqualityHelperPath);
+      if (!shouldBypassFastNumericBuiltin) {
+        if (!validateNumericBuiltinExpr(params, locals, expr,
+                                        handledFastNumericBuiltin)) {
+          return false;
+        }
+        if (handledFastNumericBuiltin) {
+          return true;
+        }
       }
     }
     bool hasVectorHelperCallResolution = false;
