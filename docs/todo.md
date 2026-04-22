@@ -56,33 +56,33 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4123
 - TODO-4124
 - TODO-4125
+- TODO-4126
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4126
 - TODO-4127
 - TODO-4128
 - TODO-4129
 - TODO-4130
+- TODO-4131
 
 ### Priority Lanes (Current)
 
 - Semantic-product authority and lowerer ownership: TODO-4129
-- Validator/runtime boundary simplification: TODO-4123, TODO-4126,
-  TODO-4127, TODO-4128
+- Validator/runtime boundary simplification: TODO-4126, TODO-4127,
+  TODO-4128
 - Test-surface contraction: TODO-4124, TODO-4125
 - Runtime execution unification: TODO-4130
 - Parallel semantic publication determinism: TODO-4131
 
 ### Execution Queue (Recommended)
 
-1. TODO-4123
-2. TODO-4124
-3. TODO-4125
-4. TODO-4126
+1. TODO-4124
+2. TODO-4125
+3. TODO-4126
+4. TODO-4127
 
 ### PrimeStruct Coverage Snapshot
 
@@ -93,7 +93,7 @@ Task template:
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| Validator entrypoint and benchmark-plumbing split | TODO-4123, TODO-4127 |
+| Validator entrypoint and benchmark-plumbing split | TODO-4127 |
 | Semantic-product publication by module and fact family | TODO-4127 |
 | IR lowerer compile-unit breakup | TODO-4128 |
 | Backend validation/build ergonomics | none |
@@ -336,22 +336,3 @@ Task template:
   - stop_rule: Stop once one significant lowerer helper cluster is removed from
       the public testing aggregator and its tests use scenario contracts
       instead.
-
-- [ ] TODO-4123: Split validator core from publication and benchmark shadows
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Separate `SemanticsValidator` production validation logic from
-      semantic-publication collectors and benchmark/shadow instrumentation so
-      benchmark-only state stops sharing the same hot-path class boundary.
-  - acceptance:
-    - Production validation, semantic-publication collection, and benchmark or
-      shadow instrumentation have explicit component boundaries.
-    - Benchmark-only state is no longer carried through unaffected production
-      validation paths.
-    - Compile-pipeline and benchmark coverage confirm behavior parity after the
-      split.
-  - stop_rule: Stop once one explicit production/publication/instrumentation
-      split lands and removes benchmark-only state from the unaffected
-      validation hot path.

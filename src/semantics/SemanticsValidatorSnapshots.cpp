@@ -324,7 +324,7 @@ SemanticsValidator::returnResolutionSnapshotForTesting() const {
   return entries;
 }
 
-std::vector<SemanticsValidator::LocalAutoBindingSnapshotEntry>
+std::vector<LocalAutoBindingSnapshotEntry>
 SemanticsValidator::localAutoBindingSnapshotForTesting() const {
   std::vector<LocalAutoBindingSnapshotEntry> entries;
   std::function<void(const std::string &, const Expr &)> visitExpr;
@@ -764,31 +764,31 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   pilotRoutingSemanticCollectorsValid_ = true;
 }
 
-std::vector<SemanticsValidator::CollectedDirectCallTargetEntry>
+std::vector<CollectedDirectCallTargetEntry>
 SemanticsValidator::takeCollectedDirectCallTargetsForSemanticProduct() {
   collectPilotRoutingSemanticProductFacts();
   return std::exchange(collectedDirectCallTargets_, {});
 }
 
-std::vector<SemanticsValidator::CollectedMethodCallTargetEntry>
+std::vector<CollectedMethodCallTargetEntry>
 SemanticsValidator::takeCollectedMethodCallTargetsForSemanticProduct() {
   collectPilotRoutingSemanticProductFacts();
   return std::exchange(collectedMethodCallTargets_, {});
 }
 
-std::vector<SemanticsValidator::CollectedBridgePathChoiceEntry>
+std::vector<CollectedBridgePathChoiceEntry>
 SemanticsValidator::takeCollectedBridgePathChoicesForSemanticProduct() {
   collectPilotRoutingSemanticProductFacts();
   return std::exchange(collectedBridgePathChoices_, {});
 }
 
-std::vector<SemanticsValidator::CollectedCallableSummaryEntry>
+std::vector<CollectedCallableSummaryEntry>
 SemanticsValidator::takeCollectedCallableSummariesForSemanticProduct() {
   collectPilotRoutingSemanticProductFacts();
   return std::exchange(collectedCallableSummaries_, {});
 }
 
-SemanticsValidator::SemanticPublicationSurface
+SemanticPublicationSurface
 SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
     const SemanticProductBuildConfig *buildConfig) {
   SemanticPublicationSurface surface;
@@ -896,7 +896,7 @@ void SemanticsValidator::ensureOnErrorSnapshotFactCache() const {
   onErrorSnapshotFactCacheValid_ = true;
 }
 
-std::vector<SemanticsValidator::TypeMetadataSnapshotEntry>
+std::vector<TypeMetadataSnapshotEntry>
 SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
   std::vector<TypeMetadataSnapshotEntry> entries;
   entries.reserve(program_.definitions.size());
@@ -957,7 +957,7 @@ SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
   return entries;
 }
 
-std::vector<SemanticsValidator::StructFieldMetadataSnapshotEntry>
+std::vector<StructFieldMetadataSnapshotEntry>
 SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
   std::vector<StructFieldMetadataSnapshotEntry> entries;
 
@@ -1012,7 +1012,7 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
   return entries;
 }
 
-std::vector<SemanticsValidator::BindingFactSnapshotEntry>
+std::vector<BindingFactSnapshotEntry>
 SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
   using ActiveLocalBindings = std::unordered_map<std::string, BindingInfo>;
 
@@ -1226,7 +1226,7 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
   return entries;
 }
 
-std::vector<SemanticsValidator::ReturnFactSnapshotEntry>
+std::vector<ReturnFactSnapshotEntry>
 SemanticsValidator::returnFactSnapshotForSemanticProduct() {
   std::vector<ReturnFactSnapshotEntry> entries;
   entries.reserve(program_.definitions.size());
@@ -1285,19 +1285,19 @@ SemanticsValidator::returnFactSnapshotForSemanticProduct() {
   return entries;
 }
 
-std::vector<SemanticsValidator::LocalAutoBindingSnapshotEntry>
+std::vector<LocalAutoBindingSnapshotEntry>
 SemanticsValidator::localAutoFactSnapshotForSemanticProduct() const {
   return localAutoBindingSnapshotForTesting();
 }
 
-std::vector<SemanticsValidator::QueryFactSnapshotEntry>
+std::vector<QueryFactSnapshotEntry>
 SemanticsValidator::queryFactSnapshotForSemanticProduct() {
   ensureQuerySnapshotFactCaches();
   queryFactSnapshotCacheValid_ = false;
   return std::exchange(queryFactSnapshotCache_, {});
 }
 
-std::vector<SemanticsValidator::TryValueSnapshotEntry>
+std::vector<TryValueSnapshotEntry>
 SemanticsValidator::tryFactSnapshotForSemanticProduct() {
   ensureCallAndTrySnapshotFactCaches(
       true, false);
@@ -1305,7 +1305,7 @@ SemanticsValidator::tryFactSnapshotForSemanticProduct() {
   return std::exchange(tryValueSnapshotCache_, {});
 }
 
-std::vector<SemanticsValidator::OnErrorSnapshotEntry>
+std::vector<OnErrorSnapshotEntry>
 SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {
   ensureOnErrorSnapshotFactCache();
   onErrorSnapshotFactCacheValid_ = false;

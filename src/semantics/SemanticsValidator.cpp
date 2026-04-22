@@ -103,17 +103,14 @@ SemanticsValidator::SemanticsValidator(const Program &program,
           benchmarkSemanticDefinitionValidationWorkerCount),
       benchmarkSemanticPhaseCountersEnabled_(benchmarkSemanticPhaseCountersEnabled),
       methodTargetMemoizationEnabled_(!benchmarkSemanticDisableMethodTargetMemoization),
-      benchmarkGraphLocalAutoLegacyKeyShadowEnabled_(
-          benchmarkSemanticGraphLocalAutoLegacyKeyShadow),
-      benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_(
-          benchmarkSemanticGraphLocalAutoLegacySideChannelShadow),
       benchmarkGraphLocalAutoDependencyScratchPmrEnabled_(
           !benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr) {
   diagnosticSink_.reset();
-  if (benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ ||
-      benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_) {
-    benchmarkGraphLocalAutoLegacyShadowState_ =
-        std::make_unique<BenchmarkGraphLocalAutoLegacyShadowState>();
+  if (benchmarkSemanticGraphLocalAutoLegacyKeyShadow ||
+      benchmarkSemanticGraphLocalAutoLegacySideChannelShadow) {
+    graphLocalAutoBenchmarkShadow_ = std::make_unique<GraphLocalAutoBenchmarkShadow>(
+        benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
+        benchmarkSemanticGraphLocalAutoLegacySideChannelShadow);
   }
   auto registerMathImport = [&](const std::string &importPath) {
     if (importPath == "/std/math/*") {
@@ -268,19 +265,27 @@ bool SemanticsValidator::run() {
     if (!benchmarkDumpValidatorState) {
       return;
     }
-    const auto *legacyShadowState = benchmarkGraphLocalAutoLegacyShadowState_.get();
-    const size_t legacyBindingCount =
-        legacyShadowState == nullptr ? 0 : legacyShadowState->bindingShadow.size();
+    const size_t legacyBindingCount = graphLocalAutoBenchmarkShadow_ == nullptr
+                                          ? 0
+                                          : graphLocalAutoBenchmarkShadow_->legacyBindingCount();
     const size_t legacyBindingBucketCount =
-        legacyShadowState == nullptr ? 0 : legacyShadowState->bindingShadow.bucket_count();
-    const size_t legacyQueryCount =
-        legacyShadowState == nullptr ? 0 : legacyShadowState->querySnapshotShadow.size();
+        graphLocalAutoBenchmarkShadow_ == nullptr
+            ? 0
+            : graphLocalAutoBenchmarkShadow_->legacyBindingBucketCount();
+    const size_t legacyQueryCount = graphLocalAutoBenchmarkShadow_ == nullptr
+                                        ? 0
+                                        : graphLocalAutoBenchmarkShadow_->legacyQueryCount();
     const size_t legacyQueryBucketCount =
-        legacyShadowState == nullptr ? 0 : legacyShadowState->querySnapshotShadow.bucket_count();
-    const size_t legacyTryCount =
-        legacyShadowState == nullptr ? 0 : legacyShadowState->tryValueShadow.size();
+        graphLocalAutoBenchmarkShadow_ == nullptr
+            ? 0
+            : graphLocalAutoBenchmarkShadow_->legacyQueryBucketCount();
+    const size_t legacyTryCount = graphLocalAutoBenchmarkShadow_ == nullptr
+                                      ? 0
+                                      : graphLocalAutoBenchmarkShadow_->legacyTryCount();
     const size_t legacyTryBucketCount =
-        legacyShadowState == nullptr ? 0 : legacyShadowState->tryValueShadow.bucket_count();
+        graphLocalAutoBenchmarkShadow_ == nullptr
+            ? 0
+            : graphLocalAutoBenchmarkShadow_->legacyTryBucketCount();
     size_t parameterCount = 0;
     for (const auto &entry : paramsByDef_) {
       parameterCount += entry.second.size();

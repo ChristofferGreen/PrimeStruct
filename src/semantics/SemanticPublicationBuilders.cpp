@@ -532,7 +532,7 @@ void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
 
 void publishDirectCallTargetFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::CollectedDirectCallTargetEntry> &directCallTargets) {
+    const std::vector<CollectedDirectCallTargetEntry> &directCallTargets) {
   if (directCallTargets.empty()) {
     return;
   }
@@ -575,7 +575,7 @@ void publishDirectCallTargetFacts(
 
 void publishMethodCallTargetFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::CollectedMethodCallTargetEntry> &methodCallTargets) {
+    const std::vector<CollectedMethodCallTargetEntry> &methodCallTargets) {
   if (methodCallTargets.empty()) {
     return;
   }
@@ -621,7 +621,7 @@ void publishMethodCallTargetFacts(
 
 void publishBridgePathChoiceFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::CollectedBridgePathChoiceEntry> &bridgePathChoices) {
+    const std::vector<CollectedBridgePathChoiceEntry> &bridgePathChoices) {
   if (bridgePathChoices.empty()) {
     return;
   }
@@ -668,7 +668,7 @@ void publishBridgePathChoiceFacts(
 
 void publishCallableSummaryFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::CollectedCallableSummaryEntry> &callableSummaries) {
+    const std::vector<CollectedCallableSummaryEntry> &callableSummaries) {
   if (callableSummaries.empty()) {
     return;
   }
@@ -728,7 +728,7 @@ void publishCallableSummaryFacts(
 
 void publishSemanticRoutingFamilies(
     SemanticPublicationBuilderState &state,
-    SemanticsValidator::SemanticPublicationSurface &publicationSurface) {
+    SemanticPublicationSurface &publicationSurface) {
   publishDirectCallTargetFacts(state, publicationSurface.directCallTargets);
   publishMethodCallTargetFacts(state, publicationSurface.methodCallTargets);
   publishBridgePathChoiceFacts(state, publicationSurface.bridgePathChoices);
@@ -737,7 +737,7 @@ void publishSemanticRoutingFamilies(
 
 void publishTypeMetadataFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::TypeMetadataSnapshotEntry> &typeMetadata) {
+    const std::vector<TypeMetadataSnapshotEntry> &typeMetadata) {
   if (typeMetadata.empty()) {
     return;
   }
@@ -763,7 +763,7 @@ void publishTypeMetadataFacts(
 
 void publishStructFieldMetadataFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::StructFieldMetadataSnapshotEntry> &structFieldMetadata) {
+    const std::vector<StructFieldMetadataSnapshotEntry> &structFieldMetadata) {
   if (structFieldMetadata.empty()) {
     return;
   }
@@ -784,14 +784,14 @@ void publishStructFieldMetadataFacts(
 
 void publishSemanticMetadataFamilies(
     SemanticPublicationBuilderState &state,
-    SemanticsValidator::SemanticPublicationSurface &publicationSurface) {
+    SemanticPublicationSurface &publicationSurface) {
   publishTypeMetadataFacts(state, publicationSurface.typeMetadata);
   publishStructFieldMetadataFacts(state, publicationSurface.structFieldMetadata);
 }
 
 void publishBindingFacts(
     SemanticPublicationBuilderState &state,
-    std::vector<SemanticsValidator::BindingFactSnapshotEntry> bindingFacts) {
+    std::vector<BindingFactSnapshotEntry> bindingFacts) {
   if (bindingFacts.empty()) {
     return;
   }
@@ -839,7 +839,7 @@ void publishBindingFacts(
 
 void publishReturnFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::ReturnFactSnapshotEntry> &returnFacts) {
+    const std::vector<ReturnFactSnapshotEntry> &returnFacts) {
   if (returnFacts.empty()) {
     return;
   }
@@ -874,7 +874,7 @@ void publishReturnFacts(
 
 void publishLocalAutoFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::LocalAutoBindingSnapshotEntry> &localAutoFacts) {
+    const std::vector<LocalAutoBindingSnapshotEntry> &localAutoFacts) {
   if (localAutoFacts.empty()) {
     return;
   }
@@ -995,7 +995,7 @@ void publishLocalAutoFacts(
 }
 
 void publishQueryFacts(SemanticPublicationBuilderState &state,
-                       std::vector<SemanticsValidator::QueryFactSnapshotEntry> queryFacts) {
+                       std::vector<QueryFactSnapshotEntry> queryFacts) {
   if (queryFacts.empty()) {
     return;
   }
@@ -1063,7 +1063,7 @@ void publishQueryFacts(SemanticPublicationBuilderState &state,
 
 void publishTryFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::TryValueSnapshotEntry> &tryFacts) {
+    const std::vector<TryValueSnapshotEntry> &tryFacts) {
   if (tryFacts.empty()) {
     return;
   }
@@ -1130,7 +1130,7 @@ void publishTryFacts(
 
 void publishOnErrorFacts(
     SemanticPublicationBuilderState &state,
-    const std::vector<SemanticsValidator::OnErrorSnapshotEntry> &onErrorFacts) {
+    const std::vector<OnErrorSnapshotEntry> &onErrorFacts) {
   if (onErrorFacts.empty()) {
     return;
   }
@@ -1186,7 +1186,7 @@ void publishOnErrorFacts(
 
 void publishSemanticScopedFactFamilies(
     SemanticPublicationBuilderState &state,
-    SemanticsValidator::SemanticPublicationSurface &publicationSurface) {
+    SemanticPublicationSurface &publicationSurface) {
   publishBindingFacts(state, std::move(publicationSurface.bindingFacts));
   publishReturnFacts(state, publicationSurface.returnFacts);
   publishLocalAutoFacts(state, publicationSurface.localAutoFacts);
@@ -1217,7 +1217,7 @@ void finalizeSemanticModuleArtifacts(SemanticPublicationBuilderState &state) {
 SemanticProgram buildSemanticProgramFromPublicationSurface(
     const Program &program,
     const std::string &entryPath,
-    SemanticsValidator::SemanticPublicationSurface publicationSurface,
+    SemanticPublicationSurface publicationSurface,
     const SemanticProductBuildConfig *buildConfig) {
   SemanticPublicationBuilderState state(program, entryPath, buildConfig);
   initializeSemanticProgramPublicationShell(state);

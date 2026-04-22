@@ -1,8 +1,7 @@
 #pragma once
 
+#include "SemanticPublicationSurface.h"
 #include "primec/Semantics.h"
-
-#include "SemanticsValidator.h"
 
 #include <string>
 
@@ -12,7 +11,7 @@ namespace semantics {
 SemanticProgram buildSemanticProgramFromPublicationSurface(
     const Program &program,
     const std::string &entryPath,
-    SemanticsValidator::SemanticPublicationSurface publicationSurface,
+    SemanticPublicationSurface publicationSurface,
     const SemanticProductBuildConfig *buildConfig);
 
 } // namespace semantics

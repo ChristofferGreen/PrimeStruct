@@ -15,6 +15,8 @@
 #include <utility>
 #include <vector>
 
+#include "SemanticPublicationSurface.h"
+#include "SemanticsValidatorGraphLocalAuto.h"
 #include "SemanticsHelpers.h"
 #include "primec/SemanticsDefinitionPrepass.h"
 #include "primec/SymbolInterner.h"
@@ -34,87 +36,6 @@ public:
     BindingInfo binding;
   };
 
-  struct LocalAutoBindingSnapshotEntry {
-    std::string scopePath;
-    std::string bindingName;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    BindingInfo binding;
-    std::string initializerResolvedPath;
-    BindingInfo initializerBinding;
-    BindingInfo initializerReceiverBinding;
-    std::string initializerQueryTypeText;
-    bool initializerResultHasValue = false;
-    std::string initializerResultValueType;
-    std::string initializerResultErrorType;
-    bool initializerHasTry = false;
-    std::string initializerTryOperandResolvedPath;
-    BindingInfo initializerTryOperandBinding;
-    BindingInfo initializerTryOperandReceiverBinding;
-    std::string initializerTryOperandQueryTypeText;
-    std::string initializerTryValueType;
-    std::string initializerTryErrorType;
-    ReturnKind initializerTryContextReturnKind = ReturnKind::Unknown;
-    std::string initializerTryOnErrorHandlerPath;
-    std::string initializerTryOnErrorErrorType;
-    size_t initializerTryOnErrorBoundArgCount = 0;
-    uint64_t semanticNodeId = 0;
-    std::string initializerDirectCallResolvedPath;
-    ReturnKind initializerDirectCallReturnKind = ReturnKind::Unknown;
-    std::string initializerMethodCallResolvedPath;
-    ReturnKind initializerMethodCallReturnKind = ReturnKind::Unknown;
-  };
-
-  struct LocalAutoTrySnapshotData {
-    std::string operandResolvedPath;
-    BindingInfo operandBinding;
-    BindingInfo operandReceiverBinding;
-    std::string operandQueryTypeText;
-    std::string valueType;
-    std::string errorType;
-    ReturnKind contextReturnKind = ReturnKind::Unknown;
-    std::string onErrorHandlerPath;
-    std::string onErrorErrorType;
-    size_t onErrorBoundArgCount = 0;
-  };
-
-  struct ResultTypeInfo {
-    bool isResult = false;
-    bool hasValue = false;
-    std::string valueType;
-    std::string errorType;
-  };
-
-  struct QuerySnapshotData {
-    std::string resolvedPath;
-    std::string typeText;
-    BindingInfo binding;
-    ResultTypeInfo resultInfo;
-    BindingInfo receiverBinding;
-  };
-
-  struct CallSnapshotData {
-    std::string resolvedPath;
-    BindingInfo binding;
-  };
-
-  struct TryValueSnapshotEntry {
-    std::string scopePath;
-    std::string operandResolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    BindingInfo operandBinding;
-    BindingInfo operandReceiverBinding;
-    std::string operandQueryTypeText;
-    std::string valueType;
-    std::string errorType;
-    ReturnKind contextReturnKind = ReturnKind::Unknown;
-    std::string onErrorHandlerPath;
-    std::string onErrorErrorType;
-    size_t onErrorBoundArgCount = 0;
-    uint64_t semanticNodeId = 0;
-  };
-
   struct CallBindingSnapshotEntry {
     std::string scopePath;
     std::string callName;
@@ -122,144 +43,6 @@ public:
     int sourceLine = 0;
     int sourceColumn = 0;
     BindingInfo binding;
-  };
-
-  struct CollectedDirectCallTargetEntry {
-    std::string scopePath;
-    std::string callName;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct OnErrorSnapshotEntry {
-    std::string definitionPath;
-    ReturnKind returnKind = ReturnKind::Unknown;
-    std::string handlerPath;
-    std::string errorType;
-    size_t boundArgCount = 0;
-    std::vector<std::string> boundArgTexts;
-    bool returnResultHasValue = false;
-    std::string returnResultValueType;
-    std::string returnResultErrorType;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct CollectedMethodCallTargetEntry {
-    std::string scopePath;
-    std::string methodName;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    BindingInfo receiverBinding;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct CollectedBridgePathChoiceEntry {
-    std::string scopePath;
-    std::string collectionFamily;
-    std::string helperName;
-    std::string chosenPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct CollectedCallableSummaryEntry {
-    std::string fullPath;
-    bool isExecution = false;
-    ReturnKind returnKind = ReturnKind::Unknown;
-    bool isCompute = false;
-    bool isUnsafe = false;
-    std::vector<std::string> activeEffects;
-    std::vector<std::string> activeCapabilities;
-    bool hasResultType = false;
-    bool resultTypeHasValue = false;
-    std::string resultValueType;
-    std::string resultErrorType;
-    bool hasOnError = false;
-    std::string onErrorHandlerPath;
-    std::string onErrorErrorType;
-    size_t onErrorBoundArgCount = 0;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct TypeMetadataSnapshotEntry {
-    std::string fullPath;
-    std::string category;
-    bool isPublic = false;
-    bool hasNoPadding = false;
-    bool hasPlatformIndependentPadding = false;
-    bool hasExplicitAlignment = false;
-    uint32_t explicitAlignmentBytes = 0;
-    size_t fieldCount = 0;
-    size_t enumValueCount = 0;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct StructFieldMetadataSnapshotEntry {
-    std::string structPath;
-    std::string fieldName;
-    size_t fieldIndex = 0;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    BindingInfo binding;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct BindingFactSnapshotEntry {
-    std::string scopePath;
-    std::string siteKind;
-    std::string name;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    BindingInfo binding;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct ReturnFactSnapshotEntry {
-    std::string definitionPath;
-    ReturnKind kind = ReturnKind::Unknown;
-    std::string structPath;
-    BindingInfo binding;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct QueryFactSnapshotEntry {
-    std::string scopePath;
-    std::string callName;
-    std::string resolvedPath;
-    int sourceLine = 0;
-    int sourceColumn = 0;
-    std::string typeText;
-    BindingInfo binding;
-    BindingInfo receiverBinding;
-    bool hasResultType = false;
-    bool resultTypeHasValue = false;
-    std::string resultValueType;
-    std::string resultErrorType;
-    uint64_t semanticNodeId = 0;
-  };
-
-  struct SemanticPublicationSurface {
-    std::vector<CollectedDirectCallTargetEntry> directCallTargets;
-    std::vector<CollectedMethodCallTargetEntry> methodCallTargets;
-    std::vector<CollectedBridgePathChoiceEntry> bridgePathChoices;
-    std::vector<CollectedCallableSummaryEntry> callableSummaries;
-    std::vector<TypeMetadataSnapshotEntry> typeMetadata;
-    std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadata;
-    std::vector<BindingFactSnapshotEntry> bindingFacts;
-    std::vector<ReturnFactSnapshotEntry> returnFacts;
-    std::vector<LocalAutoBindingSnapshotEntry> localAutoFacts;
-    std::vector<QueryFactSnapshotEntry> queryFacts;
-    std::vector<TryValueSnapshotEntry> tryFacts;
-    std::vector<OnErrorSnapshotEntry> onErrorFacts;
   };
 
   struct ValidationCounters {
@@ -304,79 +87,6 @@ public:
   void releaseTransientSnapshotCaches();
 
 private:
-  struct GraphLocalAutoKey {
-    SymbolId scopePathId = InvalidSymbolId;
-    int32_t sourceLine = 0;
-    int32_t sourceColumn = 0;
-
-    bool operator==(const GraphLocalAutoKey &other) const {
-      return scopePathId == other.scopePathId &&
-             sourceLine == other.sourceLine &&
-             sourceColumn == other.sourceColumn;
-    }
-  };
-
-  struct GraphLocalAutoKeyHash {
-    std::size_t operator()(const GraphLocalAutoKey &key) const {
-      std::size_t hash = std::hash<SymbolId>{}(key.scopePathId);
-      hash ^= std::hash<int32_t>{}(key.sourceLine) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-      hash ^= std::hash<int32_t>{}(key.sourceColumn) + 0x9e3779b9 + (hash << 6) + (hash >> 2);
-      return hash;
-    }
-  };
-
-  struct GraphLocalAutoFacts {
-    bool hasBinding = false;
-    BindingInfo binding;
-    std::string initializerResolvedPath;
-    bool hasInitializerBinding = false;
-    BindingInfo initializerBinding;
-    bool hasQuerySnapshot = false;
-    QuerySnapshotData querySnapshot;
-    bool hasTryValue = false;
-    LocalAutoTrySnapshotData tryValue;
-    std::string directCallResolvedPath;
-    bool hasDirectCallReturnKind = false;
-    ReturnKind directCallReturnKind = ReturnKind::Unknown;
-    std::string methodCallResolvedPath;
-    bool hasMethodCallReturnKind = false;
-    ReturnKind methodCallReturnKind = ReturnKind::Unknown;
-  };
-
-  struct BenchmarkGraphLocalAutoLegacyShadowState {
-    std::unordered_set<std::string> keyShadow;
-    std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash> bindingShadow;
-    std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
-        initializerResolvedPathShadow;
-    std::unordered_map<GraphLocalAutoKey, BindingInfo, GraphLocalAutoKeyHash>
-        initializerBindingShadow;
-    std::unordered_map<GraphLocalAutoKey, QuerySnapshotData, GraphLocalAutoKeyHash>
-        querySnapshotShadow;
-    std::unordered_map<GraphLocalAutoKey, LocalAutoTrySnapshotData, GraphLocalAutoKeyHash>
-        tryValueShadow;
-    std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
-        directCallPathShadow;
-    std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash>
-        directCallReturnKindShadow;
-    std::unordered_map<GraphLocalAutoKey, std::string, GraphLocalAutoKeyHash>
-        methodCallPathShadow;
-    std::unordered_map<GraphLocalAutoKey, ReturnKind, GraphLocalAutoKeyHash>
-        methodCallReturnKindShadow;
-
-    void clear() {
-      keyShadow.clear();
-      bindingShadow.clear();
-      initializerResolvedPathShadow.clear();
-      initializerBindingShadow.clear();
-      querySnapshotShadow.clear();
-      tryValueShadow.clear();
-      directCallPathShadow.clear();
-      directCallReturnKindShadow.clear();
-      methodCallPathShadow.clear();
-      methodCallReturnKindShadow.clear();
-    }
-  };
-
   #include "SemanticsValidatorPrivateCore.h"
   #include "SemanticsValidatorPrivateExprValidation.h"
   #include "SemanticsValidatorPrivateExprInference.h"
@@ -771,8 +481,6 @@ private:
   bool benchmarkSemanticPhaseCountersEnabled_ = false;
   bool methodTargetMemoizationEnabled_ = true;
   bool structReturnMemoizationEnabled_ = true;
-  bool benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ = false;
-  bool benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_ = false;
   bool benchmarkGraphLocalAutoDependencyScratchPmrEnabled_ = true;
   ValidationCounters validationCounters_;
   bool allowRecursiveReturnInference_ = true;
@@ -786,7 +494,7 @@ private:
   std::unordered_map<std::string, std::string> returnStructs_;
   std::unordered_map<std::string, BindingInfo> returnBindings_;
   mutable SymbolInterner graphLocalAutoScopePathInterner_;
-  std::unique_ptr<BenchmarkGraphLocalAutoLegacyShadowState> benchmarkGraphLocalAutoLegacyShadowState_;
+  std::unique_ptr<GraphLocalAutoBenchmarkShadow> graphLocalAutoBenchmarkShadow_;
   std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;
   std::unordered_set<std::string> structNames_;
   std::unordered_set<std::string> publicDefinitions_;

@@ -191,36 +191,51 @@ TEST_CASE("method target resolution reuses scoped scratch cache") {
 TEST_CASE("graph local auto facts use compact structured keys") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
+  std::filesystem::path graphLocalAutoHeaderPath =
+      cwd / "src" / "semantics" / "SemanticsValidatorGraphLocalAuto.h";
   std::filesystem::path snapshotLocalsPath =
       cwd / "src" / "semantics" / "SemanticsValidatorSnapshotLocals.cpp";
   std::filesystem::path buildUtilityPath =
       cwd / "src" / "semantics" / "SemanticsValidatorBuildUtility.cpp";
   std::filesystem::path inferGraphPath =
       cwd / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
+  std::filesystem::path graphLocalAutoSourcePath =
+      cwd / "src" / "semantics" / "SemanticsValidatorGraphLocalAuto.cpp";
   if (!std::filesystem::exists(headerPath)) {
     headerPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
+    graphLocalAutoHeaderPath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorGraphLocalAuto.h";
     snapshotLocalsPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorSnapshotLocals.cpp";
     buildUtilityPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorBuildUtility.cpp";
     inferGraphPath =
         cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
+    graphLocalAutoSourcePath =
+        cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorGraphLocalAuto.cpp";
   }
   REQUIRE(std::filesystem::exists(headerPath));
+  REQUIRE(std::filesystem::exists(graphLocalAutoHeaderPath));
   REQUIRE(std::filesystem::exists(snapshotLocalsPath));
   REQUIRE(std::filesystem::exists(buildUtilityPath));
   REQUIRE(std::filesystem::exists(inferGraphPath));
+  REQUIRE(std::filesystem::exists(graphLocalAutoSourcePath));
 
   const std::string header = readTextFile(headerPath);
+  const std::string graphLocalAutoHeader = readTextFile(graphLocalAutoHeaderPath);
   const std::string snapshotLocals = readTextFile(snapshotLocalsPath);
   const std::string buildUtility = readTextFile(buildUtilityPath);
   const std::string inferGraph = readTextFile(inferGraphPath);
+  const std::string graphLocalAutoSource = readTextFile(graphLocalAutoSourcePath);
 
-  CHECK(header.find("struct GraphLocalAutoKey {") != std::string::npos);
-  CHECK(header.find("SymbolId scopePathId = InvalidSymbolId;") != std::string::npos);
+  CHECK(graphLocalAutoHeader.find("struct GraphLocalAutoKey {") != std::string::npos);
+  CHECK(graphLocalAutoHeader.find("SymbolId scopePathId = InvalidSymbolId;") !=
+        std::string::npos);
   CHECK(header.find("mutable SymbolInterner graphLocalAutoScopePathInterner_;") != std::string::npos);
-  CHECK(header.find("struct BenchmarkGraphLocalAutoLegacyShadowState {") != std::string::npos);
-  CHECK(header.find("std::unique_ptr<BenchmarkGraphLocalAutoLegacyShadowState> benchmarkGraphLocalAutoLegacyShadowState_;") !=
+  CHECK(graphLocalAutoHeader.find("class GraphLocalAutoBenchmarkShadow {") !=
+        std::string::npos);
+  CHECK(graphLocalAutoHeader.find("struct LegacyShadowState {") != std::string::npos);
+  CHECK(header.find("std::unique_ptr<GraphLocalAutoBenchmarkShadow> graphLocalAutoBenchmarkShadow_;") !=
         std::string::npos);
   CHECK(header.find("mutable std::unordered_set<std::string> graphLocalAutoLegacyKeyShadow_;") ==
         std::string::npos);
@@ -233,17 +248,15 @@ TEST_CASE("graph local auto facts use compact structured keys") {
   CHECK(header.find("graphLocalAutoLegacyDirectCallReturnKindShadow_") == std::string::npos);
   CHECK(header.find("graphLocalAutoLegacyMethodCallPathShadow_") == std::string::npos);
   CHECK(header.find("graphLocalAutoLegacyMethodCallReturnKindShadow_") == std::string::npos);
-  CHECK(header.find("struct GraphLocalAutoFacts {") != std::string::npos);
-  CHECK(header.find("bool hasBinding = false;") != std::string::npos);
+  CHECK(graphLocalAutoHeader.find("struct GraphLocalAutoFacts {") != std::string::npos);
+  CHECK(graphLocalAutoHeader.find("bool hasBinding = false;") != std::string::npos);
   CHECK(header.find("std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;") !=
         std::string::npos);
   CHECK(snapshotLocals.find("const SymbolId scopePathId = graphLocalAutoScopePathInterner_.intern(scopePath);") !=
         std::string::npos);
-  CHECK(snapshotLocals.find("if (benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ &&") !=
+  CHECK(snapshotLocals.find("if (graphLocalAutoBenchmarkShadow_ != nullptr) {") !=
         std::string::npos);
-  CHECK(snapshotLocals.find("benchmarkGraphLocalAutoLegacyShadowState_ != nullptr") !=
-        std::string::npos);
-  CHECK(snapshotLocals.find("benchmarkGraphLocalAutoLegacyShadowState_->keyShadow.insert(std::move(legacyKey));") !=
+  CHECK(snapshotLocals.find("graphLocalAutoBenchmarkShadow_->noteLegacyKey(scopePath, sourceLine,") !=
         std::string::npos);
   CHECK(snapshotLocals.find("return GraphLocalAutoKey{scopePathId, sourceLine, sourceColumn};") !=
         std::string::npos);
@@ -272,24 +285,20 @@ TEST_CASE("graph local auto facts use compact structured keys") {
   CHECK(buildUtility.find("  return defMap_.count(resolveCalleePath(expr)) == 0;\n") ==
         std::string::npos);
   CHECK(inferGraph.find("graphLocalAutoScopePathInterner_.clear();") != std::string::npos);
-  CHECK(inferGraph.find("if (benchmarkGraphLocalAutoLegacyShadowState_ != nullptr) {") !=
+  CHECK(inferGraph.find("if (graphLocalAutoBenchmarkShadow_ != nullptr) {") !=
         std::string::npos);
-  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->clear();") !=
+  CHECK(inferGraph.find("graphLocalAutoBenchmarkShadow_->clear();") !=
         std::string::npos);
   CHECK(inferGraph.find("graphLocalAutoFacts_.clear();") != std::string::npos);
   CHECK(inferGraph.find("graphLocalAutoFacts_.try_emplace(bindingKey);") != std::string::npos);
   CHECK(inferGraph.find("GraphLocalAutoFacts &fact = factIt->second;") != std::string::npos);
-  CHECK(inferGraph.find("if (benchmarkGraphLocalAutoLegacySideChannelShadowEnabled_ &&") !=
+  CHECK(inferGraph.find("graphLocalAutoBenchmarkShadow_->rebuildFromFacts(graphLocalAutoFacts_);") !=
         std::string::npos);
-  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_ != nullptr") !=
+  CHECK(graphLocalAutoSource.find("void GraphLocalAutoBenchmarkShadow::rebuildFromFacts(") !=
         std::string::npos);
-  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->bindingShadow.clear();") !=
+  CHECK(graphLocalAutoSource.find("legacyState_.bindingShadow.reserve(graphLocalAutoFacts.size());") !=
         std::string::npos);
-  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->initializerResolvedPathShadow.clear();") !=
-        std::string::npos);
-  CHECK(inferGraph.find("benchmarkGraphLocalAutoLegacyShadowState_->querySnapshotShadow.try_emplace") !=
-        std::string::npos);
-  CHECK(inferGraph.find("for (const auto &[bindingKey, fact] : graphLocalAutoFacts_) {") !=
+  CHECK(graphLocalAutoSource.find("for (const auto &[bindingKey, fact] : graphLocalAutoFacts) {") !=
         std::string::npos);
   CHECK(inferGraph.find("using PmrDependencyCountMap = std::pmr::unordered_map<GraphLocalAutoKey, size_t, GraphLocalAutoKeyHash>;") !=
         std::string::npos);
@@ -2053,6 +2062,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readRepoFile("src/ir_lowerer/IrLowererLowerSetupEntryEffects.h");
   const std::string semanticPublicationBuildersHeader =
       readRepoFile("src/semantics/SemanticPublicationBuilders.h");
+  const std::string semanticPublicationSurfaceHeader =
+      readRepoFile("src/semantics/SemanticPublicationSurface.h");
   const std::string semanticPublicationBuildersSource =
       readRepoFile("src/semantics/SemanticPublicationBuilders.cpp");
   const std::string semanticsValidate = readRepoFile("src/semantics/SemanticsValidate.cpp");
@@ -2165,6 +2176,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(compilePipelineSource.find("output.failure.stage = stage;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.failure.message = message;") != std::string::npos);
   CHECK(semanticPublicationBuildersHeader.find("buildSemanticProgramFromPublicationSurface(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersHeader.find("#include \"SemanticPublicationSurface.h\"") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersHeader.find("#include \"SemanticsValidator.h\"") ==
+        std::string::npos);
+  CHECK(semanticPublicationSurfaceHeader.find("struct SemanticPublicationSurface {") !=
+        std::string::npos);
+  CHECK(semanticPublicationSurfaceHeader.find("std::vector<CollectedDirectCallTargetEntry> directCallTargets;") !=
+        std::string::npos);
+  CHECK(semanticPublicationSurfaceHeader.find("std::vector<OnErrorSnapshotEntry> onErrorFacts;") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("struct SemanticPublicationBuilderState {") !=
         std::string::npos);

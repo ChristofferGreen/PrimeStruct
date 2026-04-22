@@ -112,6 +112,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidateReflectionMetadata.cpp
   src/semantics/SemanticsValidateTransformsEnums.cpp
   src/semantics/SemanticsValidateTransforms.cpp
+  src/semantics/SemanticsValidatorGraphLocalAuto.cpp
   src/semantics/SemanticsValidator.cpp
   src/semantics/SemanticsValidatorSnapshots.cpp
   src/semantics/SemanticsValidatorSnapshotLocals.cpp

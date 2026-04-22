@@ -516,16 +516,9 @@ void SemanticsValidator::ensureCallAndTrySnapshotFactCaches(bool includeTryValue
 SemanticsValidator::GraphLocalAutoKey SemanticsValidator::graphLocalAutoBindingKey(std::string_view scopePath,
                                                                                     int sourceLine,
                                                                                     int sourceColumn) const {
-  if (benchmarkGraphLocalAutoLegacyKeyShadowEnabled_ &&
-      benchmarkGraphLocalAutoLegacyShadowState_ != nullptr) {
-    std::string legacyKey;
-    legacyKey.reserve(scopePath.size() + 32);
-    legacyKey.append(scopePath);
-    legacyKey.push_back('#');
-    legacyKey.append(std::to_string(sourceLine));
-    legacyKey.push_back(':');
-    legacyKey.append(std::to_string(sourceColumn));
-    benchmarkGraphLocalAutoLegacyShadowState_->keyShadow.insert(std::move(legacyKey));
+  if (graphLocalAutoBenchmarkShadow_ != nullptr) {
+    graphLocalAutoBenchmarkShadow_->noteLegacyKey(scopePath, sourceLine,
+                                                  sourceColumn);
   }
   const SymbolId scopePathId = graphLocalAutoScopePathInterner_.intern(scopePath);
   return GraphLocalAutoKey{scopePathId, sourceLine, sourceColumn};

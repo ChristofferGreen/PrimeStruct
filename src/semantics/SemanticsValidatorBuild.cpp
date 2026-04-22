@@ -23,8 +23,8 @@ bool SemanticsValidator::buildDefinitionMaps() {
   returnBindings_.clear();
   graphLocalAutoFacts_.clear();
   graphLocalAutoScopePathInterner_.clear();
-  if (benchmarkGraphLocalAutoLegacyShadowState_ != nullptr) {
-    benchmarkGraphLocalAutoLegacyShadowState_->clear();
+  if (graphLocalAutoBenchmarkShadow_ != nullptr) {
+    graphLocalAutoBenchmarkShadow_->clear();
   }
   pilotRoutingSemanticCollectorsValid_ = false;
   collectedDirectCallTargets_.clear();
