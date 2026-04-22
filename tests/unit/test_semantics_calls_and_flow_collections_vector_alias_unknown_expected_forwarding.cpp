@@ -183,7 +183,7 @@ main() {
   CHECK(error.find("/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced bool mismatch fallback keeps compatibility diagnostics" * doctest::skip(true)) {
+TEST_CASE("vector namespaced bool mismatch fallback keeps compatibility diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
