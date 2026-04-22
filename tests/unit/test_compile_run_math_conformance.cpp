@@ -23,16 +23,17 @@ TEST_CASE("math conformance reference printer script") {
   CHECK(output.find("0.5") != std::string::npos);
 }
 
-TEST_CASE("math conformance PrimeStructc policy docs" * doctest::skip(true)) {
-  std::filesystem::path readmePath = std::filesystem::current_path() / "tools" / "PrimeStructc" / "README.md";
-  if (!std::filesystem::exists(readmePath)) {
-    readmePath = std::filesystem::current_path().parent_path() / "tools" / "PrimeStructc" / "README.md";
+TEST_CASE("math conformance PrimeStructc policy docs") {
+  std::filesystem::path specPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  if (!std::filesystem::exists(specPath)) {
+    specPath = std::filesystem::current_path().parent_path() / "docs" / "PrimeStruct.md";
   }
-  CHECK(std::filesystem::exists(readmePath));
-  const std::string contents = readFile(readmePath.string());
-  CHECK(contents.find("intentionally minimal") != std::string::npos);
+  CHECK(std::filesystem::exists(specPath));
+  const std::string contents = readFile(specPath.string());
+  CHECK(contents.find("tools/PrimeStructc") != std::string::npos);
+  CHECK(contents.find("PrimeStructc stays a minimal subset") != std::string::npos);
   CHECK(contents.find("template codegen") != std::string::npos);
-  CHECK(contents.find("version") != std::string::npos);
+  CHECK(contents.find("import version selection are explicitly out of scope for v1") != std::string::npos);
 }
 
 TEST_CASE("math conformance labeled output allowlist") {
