@@ -175,6 +175,55 @@ TEST_CASE("ir lowerer result helpers resolve file handle Result payload metadata
   CHECK(out.valueStructType.empty());
 }
 
+TEST_CASE("ir lowerer result helpers prefer file handles over stale struct paths") {
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo fileLocal;
+  fileLocal.isFileHandle = true;
+  fileLocal.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  fileLocal.structTypeName = "/std/file/File<Read>";
+  locals.emplace("file", fileLocal);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr fileExpr;
+  fileExpr.kind = primec::Expr::Kind::Name;
+  fileExpr.name = "file";
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultName, fileExpr};
+
+  auto resolveMethodCall = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) { return false; };
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &localsIn) {
+    if (expr.kind == primec::Expr::Kind::Name) {
+      auto localIt = localsIn.find(expr.name);
+      if (localIt != localsIn.end()) {
+        return localIt->second.valueKind;
+      }
+    }
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(
+      okExpr, locals, resolveMethodCall, resolveDefinitionCall, lookupReturnInfo, inferExprKind, out));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+}
+
 TEST_CASE("ir lowerer result helpers resolve array and vector Result payload metadata") {
   primec::ir_lowerer::LocalMap locals;
 

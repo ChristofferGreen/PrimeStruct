@@ -530,12 +530,12 @@ bool inferDirectResultValueStructType(const Expr &expr,
   if (expr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(expr.name);
     if (localIt != localsIn.end()) {
+      if (localIt->second.isFileHandle) {
+        return false;
+      }
       if (!localIt->second.structTypeName.empty()) {
         structTypeOut = localIt->second.structTypeName;
         return true;
-      }
-      if (localIt->second.isFileHandle) {
-        return false;
       }
     }
     return false;
