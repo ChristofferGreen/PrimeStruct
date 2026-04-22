@@ -432,6 +432,9 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       name == "std/gfx/experimental/Buffer" || name == "/std/gfx/experimental/Buffer") {
     return "Buffer";
   }
+  if (name == "/File" || name == "std/file/File" || name == "/std/file/File") {
+    return "File";
+  }
   if (name == "args") {
     return "array";
   }

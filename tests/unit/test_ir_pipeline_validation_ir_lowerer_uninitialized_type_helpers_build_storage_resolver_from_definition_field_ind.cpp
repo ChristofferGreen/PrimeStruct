@@ -307,6 +307,12 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
         "soa_vector");
   CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("SoaVector<Particle>") ==
         "soa_vector");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("std/file/File") ==
+        "File");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("/std/file/File") ==
+        "File");
+  CHECK(primec::ir_lowerer::normalizeCollectionBindingTypeName("/File") ==
+        "File");
 
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -412,6 +418,18 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   resultTransform.templateArgs = {"i64", "FileError"};
   resultExpr.transforms.push_back(resultTransform);
   CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(resultExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::Expr namespacedFileExpr;
+  primec::Transform namespacedFileTransform;
+  namespacedFileTransform.name = "/std/file/File";
+  namespacedFileTransform.templateArgs = {"Read"};
+  namespacedFileExpr.transforms.push_back(namespacedFileTransform);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(
+            namespacedFileExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTypeText(
+            "/std/file/File<Read>", primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 
   primec::Expr structExpr;
