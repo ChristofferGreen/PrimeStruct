@@ -284,7 +284,7 @@
         info.valueKind = LocalInfo::ValueKind::Int64;
       }
       for (const auto &transform : stmt.transforms) {
-        if (transform.name == "File") {
+        if (normalizeCollectionBindingTypeName(transform.name) == "File") {
           info.isFileHandle = true;
           info.valueKind = LocalInfo::ValueKind::Int64;
         } else if (transform.name == "Result") {

@@ -348,7 +348,7 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
   }
   bindingInfo.isFileError = isFileErrorBinding(bindingExpr);
   for (const auto &transform : bindingExpr.transforms) {
-    if (transform.name == "File") {
+    if (normalizeCollectionBindingTypeName(transform.name) == "File") {
       bindingInfo.isFileHandle = true;
       bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
     } else if (transform.name == "Result") {

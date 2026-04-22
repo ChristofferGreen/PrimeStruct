@@ -78,6 +78,43 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic File handle p
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer statement binding helper classifies namespaced File handle parameters") {
+  primec::Expr param;
+  param.name = "file";
+  primec::Transform fileTransform;
+  fileTransform.name = "/std/file/File";
+  fileTransform.templateArgs.push_back("Write");
+  param.transforms.push_back(fileTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 14;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.isFileHandle);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(info.structTypeName.empty());
+}
+
 TEST_CASE("ir lowerer statement binding helper classifies variadic borrowed File handle parameters") {
   primec::Expr param;
   param.name = "values";

@@ -1043,7 +1043,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
     }
   }
   for (const auto &transform : param.transforms) {
-    if (transform.name == "File") {
+    if (normalizeCollectionBindingTypeName(transform.name) == "File") {
       infoOut.isFileHandle = true;
       infoOut.valueKind = LocalInfo::ValueKind::Int64;
     } else if (applyErrorTypeMetadata(transform.name, infoOut)) {

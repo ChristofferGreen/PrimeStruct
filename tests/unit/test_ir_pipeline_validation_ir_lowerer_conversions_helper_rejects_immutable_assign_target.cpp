@@ -555,6 +555,44 @@ TEST_CASE("ir lowerer return inference helpers infer parameter locals") {
   CHECK(locals.at("param").valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer return inference helpers keep namespaced File bindings scalar") {
+  primec::Expr bindingExpr;
+  bindingExpr.name = "file";
+  primec::Transform fileTransform;
+  fileTransform.name = "/std/file/File";
+  fileTransform.templateArgs.push_back("Read");
+  bindingExpr.transforms.push_back(fileTransform);
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferReturnInferenceBindingIntoLocals(
+      bindingExpr,
+      true,
+      "/pkg/fn",
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &) { return false; },
+      error));
+  CHECK(error.empty());
+  REQUIRE(locals.count("file") == 1u);
+  CHECK(locals.at("file").isFileHandle);
+  CHECK(locals.at("file").valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(locals.at("file").structTypeName.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers recover bool comparison bindings") {
   primec::Expr lhs;
   lhs.kind = primec::Expr::Kind::Name;
