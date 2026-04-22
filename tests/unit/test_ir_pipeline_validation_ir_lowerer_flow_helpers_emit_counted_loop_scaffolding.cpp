@@ -124,6 +124,14 @@ TEST_CASE("ir lowerer statement bindings prefer struct constructor full paths") 
   CHECK(source.find("inferStructReturnPathFromDefinition(") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer statement bindings only rehydrate unresolved value structs") {
+  const std::string source = readTextFile(
+      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindings.h");
+  CHECK(source.find("if (info.kind == LocalInfo::Kind::Value &&") != std::string::npos);
+  CHECK(source.find("info.valueKind == LocalInfo::ValueKind::Unknown &&") != std::string::npos);
+  CHECK(source.find("info.structTypeName.empty())") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer flow helpers emit body statements") {
   primec::Expr firstStmt;
   firstStmt.kind = primec::Expr::Kind::Name;

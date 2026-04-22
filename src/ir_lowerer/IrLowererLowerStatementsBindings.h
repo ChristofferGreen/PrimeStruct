@@ -389,7 +389,9 @@
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
-      if (info.kind == LocalInfo::Kind::Value && info.structTypeName.empty()) {
+      if (info.kind == LocalInfo::Kind::Value &&
+          info.valueKind == LocalInfo::ValueKind::Unknown &&
+          info.structTypeName.empty()) {
         for (const auto &transform : bindingTypeExprRef.transforms) {
           if (transform.name == "effects" || transform.name == "capabilities" ||
               isBindingQualifierName(transform.name) || !transform.arguments.empty()) {
