@@ -504,7 +504,7 @@ main() {
   CHECK(err.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects vector method alias struct-return precedence without helper-backed receiver typing in C++ emitter") {
+TEST_CASE("compiles and runs vector method alias struct-return precedence in C++ emitter") {
   const std::string source = R"(
 AliasMarker {
   [i32] value
@@ -532,14 +532,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_struct_field_alias_precedence.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_vector_method_struct_field_alias_precedence.err")
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_vector_method_struct_field_alias_precedence_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects canonical vector method access struct forwarding in C++ emitter") {
