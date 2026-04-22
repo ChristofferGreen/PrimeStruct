@@ -467,9 +467,7 @@ Task template:
       surviving clusters.
   - notes: Remaining residual skips after the benchmark/pilot,
       count-forwarding smoke, native-image crc, gfx doc-contract,
-      borrow-example diagnostic, and PrimeStructc policy-doc re-enables now
-      live in the lifecycle and broader gfx smoke coverage such as
-      `test_compile_run_emitters_core_behaviors.cpp`,
-      and the gfx smoke suites.
+      borrow-example diagnostic, PrimeStructc policy-doc, and lifecycle
+      emitter re-enables now live only in the broader gfx smoke coverage.
   - stop_rule: Stop once every remaining non-collection skipped suite is either
       active and explicitly owned here or no longer skipped.

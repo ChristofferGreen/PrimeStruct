@@ -108,7 +108,7 @@ log(1i32)
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("struct Create/Destroy helpers run in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("struct Create/Destroy helpers run in C++ emitter") {
   const std::string source = R"(
 [struct]
 Thing() {
@@ -139,7 +139,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   const std::string runCmd = exePath + " > " + outPath;
   CHECK(runCommand(runCmd) == 0);
-  CHECK(readFile(outPath).empty());
+  CHECK(readFile(outPath) == "1\n2\n");
 }
 
 TEST_CASE("C++ emitter returns structs from functions") {
