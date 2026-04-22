@@ -593,6 +593,58 @@ TEST_CASE("ir lowerer return inference helpers keep namespaced File bindings sca
   CHECK(locals.at("file").structTypeName.empty());
 }
 
+TEST_CASE("ir lowerer return inference helpers keep namespaced File constructor bindings scalar") {
+  primec::Expr fileCtor;
+  fileCtor.kind = primec::Expr::Kind::Call;
+  fileCtor.name = "File";
+  fileCtor.namespacePrefix = "/std/file";
+  fileCtor.templateArgs.push_back("Read");
+
+  primec::Expr pathArg;
+  pathArg.kind = primec::Expr::Kind::String;
+  pathArg.stringValue = "in.txt";
+  fileCtor.args.push_back(pathArg);
+
+  primec::Expr bindingExpr;
+  bindingExpr.name = "file";
+  bindingExpr.args.push_back(fileCtor);
+
+  primec::ir_lowerer::LocalMap locals;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferReturnInferenceBindingIntoLocals(
+      bindingExpr,
+      false,
+      "/pkg/fn",
+      locals,
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        if (expr.kind == primec::Expr::Kind::Call && expr.name == "File" &&
+            expr.namespacePrefix == "/std/file") {
+          return std::string("/std/file/File<Read>");
+        }
+        return std::string();
+      },
+      [](const primec::Expr &) { return false; },
+      error));
+  CHECK(error.empty());
+  REQUIRE(locals.count("file") == 1u);
+  CHECK(locals.at("file").isFileHandle);
+  CHECK(locals.at("file").valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(locals.at("file").structTypeName.empty());
+}
+
 TEST_CASE("ir lowerer return inference helpers recover bool comparison bindings") {
   primec::Expr lhs;
   lhs.kind = primec::Expr::Kind::Name;

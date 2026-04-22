@@ -386,10 +386,15 @@ bool inferReturnInferenceBindingIntoLocals(const Expr &bindingExpr,
       }
     }
   }
+  if (bindingInfo.isFileHandle) {
+    bindingInfo.structTypeName.clear();
+    bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
+  }
   setReferenceArrayInfo(bindingExpr, bindingInfo);
   applyStructArrayInfo(bindingExpr, bindingInfo);
   applyStructValueInfo(bindingExpr, bindingInfo);
-  if (!isParameter && bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&
+  if (!isParameter && !bindingInfo.isFileHandle &&
+      bindingInfo.structTypeName.empty() && bindingInfo.kind == LocalInfo::Kind::Value &&
       bindingExpr.args.size() == 1) {
     std::string inferredStruct = inferStructExprPathFromLocals(bindingExpr.args.front(), activeLocals);
     if (!inferredStruct.empty()) {

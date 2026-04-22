@@ -116,6 +116,13 @@ TEST_CASE("ir lowerer binding local info recovers bool comparison initializers")
   CHECK(source.find("info.valueKind = LocalInfo::ValueKind::Int32;") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer binding local info clears struct paths for file handles") {
+  const std::string source = readTextFile(
+      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindingLocalInfo.h");
+  CHECK(source.find("if (info.isFileHandle)") != std::string::npos);
+  CHECK(source.find("info.structTypeName.clear();") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer statement bindings prefer struct constructor full paths") {
   const std::string source = readTextFile(
       "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindings.h");

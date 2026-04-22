@@ -350,5 +350,9 @@
           }
         }
       }
+      if (info.isFileHandle) {
+        info.structTypeName.clear();
+        info.valueKind = LocalInfo::ValueKind::Int64;
+      }
       info.isFileError = isFileErrorBinding(bindingTypeExprRef);
       valueKind = info.valueKind;
