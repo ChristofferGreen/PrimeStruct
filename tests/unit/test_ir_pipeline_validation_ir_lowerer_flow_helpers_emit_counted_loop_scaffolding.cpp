@@ -116,6 +116,14 @@ TEST_CASE("ir lowerer binding local info recovers bool comparison initializers")
   CHECK(source.find("info.valueKind = LocalInfo::ValueKind::Int32;") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer statement bindings prefer struct constructor full paths") {
+  const std::string source = readTextFile(
+      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindings.h");
+  CHECK(source.find("if (ir_lowerer::isStructDefinition(*initCallee))") != std::string::npos);
+  CHECK(source.find("initStruct = initCallee->fullPath;") != std::string::npos);
+  CHECK(source.find("inferStructReturnPathFromDefinition(") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer flow helpers emit body statements") {
   primec::Expr firstStmt;
   firstStmt.kind = primec::Expr::Kind::Name;

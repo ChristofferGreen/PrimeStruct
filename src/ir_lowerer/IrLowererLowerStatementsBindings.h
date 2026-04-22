@@ -424,7 +424,9 @@
           initCallee = resolveDefinitionCall(init);
         }
         if (initStruct.empty() && initCallee != nullptr) {
-          if (initCallee != nullptr) {
+          if (ir_lowerer::isStructDefinition(*initCallee)) {
+            initStruct = initCallee->fullPath;
+          } else {
             initStruct = ir_lowerer::inferStructReturnPathFromDefinition(
                 initCallee->fullPath,
                 structNames,
