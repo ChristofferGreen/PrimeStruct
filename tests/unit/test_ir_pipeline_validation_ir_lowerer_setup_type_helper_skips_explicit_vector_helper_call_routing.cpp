@@ -357,7 +357,7 @@ TEST_CASE("ir lowerer setup type helper rejects direct vector access helper rout
   CHECK(aliasAtUnsafeResolveCalls == 0);
 }
 
-TEST_CASE("ir lowerer setup type helper skips explicit map helper call routing" * doctest::skip(true)) {
+TEST_CASE("ir lowerer setup type helper skips explicit map helper call routing") {
   primec::Definition countDef;
   countDef.fullPath = "/map/count";
   primec::Definition atDef;
