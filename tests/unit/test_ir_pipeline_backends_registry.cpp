@@ -1126,7 +1126,7 @@ TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in p
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product callable summaries" * doctest::skip(true)) {
+TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -1355,7 +1355,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summary path id"
   CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer rejects invalid semantic-product callable summary path id" * doctest::skip(true)) {
+TEST_CASE("ir lowerer rejects invalid semantic-product callable summary path id") {
   primec::Program program;
 
   primec::Definition mainDef;

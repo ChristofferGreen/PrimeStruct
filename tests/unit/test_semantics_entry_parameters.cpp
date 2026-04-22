@@ -427,7 +427,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("typed variadic parameter rejects mismatched trailing argument" * doctest::skip(true)) {
+TEST_CASE("typed variadic parameter rejects mismatched trailing argument") {
   const std::string source = R"(
 [return<i32>]
 keep_head([i32] head, [i32] values...) {

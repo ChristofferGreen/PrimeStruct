@@ -658,7 +658,7 @@ TEST_CASE("ir lowerer call helpers keep direct canonical map count-like helpers 
   expectBuiltinFallback(tryAtCall, canonicalTryAt);
 }
 
-TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for stdlib-only helpers" * doctest::skip(true)) {
+TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for stdlib-only helpers") {
   using Result = primec::ir_lowerer::UnsupportedNativeCallResult;
 
   primec::Expr callExpr;

@@ -5802,8 +5802,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
   CHECK(observedBuiltinVectorExpr.args[1].boolValue);
 }
 
-TEST_CASE("ir lowerer statement call emission source delegation stays stable" *
-          doctest::skip(true)) {
+TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());

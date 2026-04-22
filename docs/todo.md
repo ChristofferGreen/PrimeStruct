@@ -465,5 +465,10 @@ Task template:
       removed when stale.
     - The residual skipped-test queue remains explicit and synchronized with the
       surviving clusters.
+  - notes: Remaining residual skips after the lowerer/backend negative-path
+      re-enables still live in broader source-lock and smoke/gfx files such as
+      `test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp`,
+      `test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`,
+      `test_compile_run_smoke_core_*.cpp`, and the gfx smoke suites.
   - stop_rule: Stop once every remaining non-collection skipped suite is either
       active and explicitly owned here or no longer skipped.
