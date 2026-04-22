@@ -581,6 +581,9 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   if (localIt == localsIn.end()) {
     return "";
   }
+  if (localIt->second.isFileHandle) {
+    return "";
+  }
   if (!localIt->second.structTypeName.empty()) {
     return localIt->second.structTypeName;
   }

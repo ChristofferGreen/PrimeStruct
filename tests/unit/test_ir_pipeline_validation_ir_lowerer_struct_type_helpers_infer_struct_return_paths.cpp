@@ -136,11 +136,19 @@ TEST_CASE("ir lowerer struct type helpers infer name-expression struct paths") {
   primec::ir_lowerer::LocalInfo structInfo;
   structInfo.structTypeName = "/pkg/Point";
   locals.emplace("point", structInfo);
+  primec::ir_lowerer::LocalInfo fileInfo;
+  fileInfo.isFileHandle = true;
+  fileInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  fileInfo.structTypeName = "/std/file/File<Read>";
+  locals.emplace("file", fileInfo);
 
   primec::Expr nameExpr;
   nameExpr.kind = primec::Expr::Kind::Name;
   nameExpr.name = "point";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals) == "/pkg/Point");
+
+  nameExpr.name = "file";
+  CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals).empty());
 
   nameExpr.name = "missing";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals).empty());
