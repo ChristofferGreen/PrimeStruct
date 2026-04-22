@@ -649,7 +649,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics" * doctest::skip(true)) {
+TEST_CASE("non-imported wrapper-returned canonical map reference access keeps primitive receiver diagnostics") {
   const std::string source = R"(
 [return<Reference</std/collections/map<i32, i32>>>]
 borrowMap([Reference</std/collections/map<i32, i32>>] values) {

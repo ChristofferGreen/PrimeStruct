@@ -110,7 +110,7 @@ main() {
   CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected vector envelope keeps compatibility diagnostics" * doctest::skip(true)) {
+TEST_CASE("vector namespaced unknown expected vector envelope mismatch keeps compatibility diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -132,8 +132,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK_FALSE(error.empty());
 }
 
 TEST_CASE("vector namespaced count alias arity fallback keeps compatibility diagnostics") {
