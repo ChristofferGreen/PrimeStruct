@@ -392,30 +392,39 @@
       if (info.kind == LocalInfo::Kind::Value &&
           info.valueKind == LocalInfo::ValueKind::Unknown &&
           info.structTypeName.empty()) {
-        for (const auto &transform : bindingTypeExprRef.transforms) {
-          if (transform.name == "effects" || transform.name == "capabilities" ||
-              isBindingQualifierName(transform.name) || !transform.arguments.empty()) {
-            continue;
+        if (init.kind == Expr::Kind::Call) {
+          if (const Definition *initCallee = resolveDefinitionCall(init);
+              initCallee != nullptr && ir_lowerer::isStructDefinition(*initCallee)) {
+            info.structTypeName = initCallee->fullPath;
+            info.valueKind = LocalInfo::ValueKind::Int64;
           }
-          std::string resolvedStructPath;
-          if (resolveStructTypeName(transform.name, stmt.namespacePrefix, resolvedStructPath)) {
-            info.structTypeName = std::move(resolvedStructPath);
-          } else if (transform.name == "ImageError" || transform.name == "/std/image/ImageError") {
-            info.structTypeName = "/std/image/ImageError";
-          } else if (transform.name == "ContainerError" ||
-                     transform.name == "/std/collections/ContainerError") {
-            info.structTypeName = "/std/collections/ContainerError";
-          } else if (transform.name == "GfxError" ||
-                     transform.name == "/std/gfx/GfxError" ||
-                     transform.name == "/std/gfx/experimental/GfxError") {
-            info.structTypeName =
-                transform.name == "/std/gfx/experimental/GfxError" ? "/std/gfx/experimental/GfxError"
-                                                                    : "/std/gfx/GfxError";
-          }
-          break;
         }
-        if (!info.structTypeName.empty()) {
-          info.valueKind = LocalInfo::ValueKind::Int64;
+        if (info.structTypeName.empty()) {
+          for (const auto &transform : bindingTypeExprRef.transforms) {
+            if (transform.name == "effects" || transform.name == "capabilities" ||
+                isBindingQualifierName(transform.name) || !transform.arguments.empty()) {
+              continue;
+            }
+            std::string resolvedStructPath;
+            if (resolveStructTypeName(transform.name, stmt.namespacePrefix, resolvedStructPath)) {
+              info.structTypeName = std::move(resolvedStructPath);
+            } else if (transform.name == "ImageError" || transform.name == "/std/image/ImageError") {
+              info.structTypeName = "/std/image/ImageError";
+            } else if (transform.name == "ContainerError" ||
+                       transform.name == "/std/collections/ContainerError") {
+              info.structTypeName = "/std/collections/ContainerError";
+            } else if (transform.name == "GfxError" ||
+                       transform.name == "/std/gfx/GfxError" ||
+                       transform.name == "/std/gfx/experimental/GfxError") {
+              info.structTypeName =
+                  transform.name == "/std/gfx/experimental/GfxError" ? "/std/gfx/experimental/GfxError"
+                                                                      : "/std/gfx/GfxError";
+            }
+            break;
+          }
+          if (!info.structTypeName.empty()) {
+            info.valueKind = LocalInfo::ValueKind::Int64;
+          }
         }
       }
       if ((info.kind == LocalInfo::Kind::Value || info.kind == LocalInfo::Kind::Map) &&

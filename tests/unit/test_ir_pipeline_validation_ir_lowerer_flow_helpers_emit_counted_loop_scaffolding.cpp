@@ -119,6 +119,7 @@ TEST_CASE("ir lowerer binding local info recovers bool comparison initializers")
 TEST_CASE("ir lowerer statement bindings prefer struct constructor full paths") {
   const std::string source = readTextFile(
       "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindings.h");
+  CHECK(source.find("info.structTypeName = initCallee->fullPath;") != std::string::npos);
   CHECK(source.find("if (ir_lowerer::isStructDefinition(*initCallee))") != std::string::npos);
   CHECK(source.find("initStruct = initCallee->fullPath;") != std::string::npos);
   CHECK(source.find("inferStructReturnPathFromDefinition(") != std::string::npos);
