@@ -528,6 +528,11 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
           typeNameOut = "FileError";
           return true;
         }
+        if (localInfo.isFileHandle &&
+            (receiverKind == LocalInfo::Kind::Reference || receiverKind == LocalInfo::Kind::Pointer)) {
+          typeNameOut = "File";
+          return true;
+        }
         if (isReferenceArray || isPointerArray) {
           typeNameOut = "array";
           return true;
@@ -574,6 +579,13 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
                localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
                localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
             typeNameOut = "FileError";
+            return true;
+          }
+          if (localIt->second.isFileHandle &&
+              (localIt->second.argsPackElementKind == LocalInfo::Kind::Value ||
+               localIt->second.argsPackElementKind == LocalInfo::Kind::Reference ||
+               localIt->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
+            typeNameOut = "File";
             return true;
           }
           if (!localIt->second.structTypeName.empty()) {

@@ -329,6 +329,157 @@ TEST_CASE("ir lowerer setup type helper resolves indexed args-pack pointer soa_v
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer setup type helper resolves indexed args-pack file receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.isFileHandle = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Value;
+  valuesLocal.valueKind = ValueKind::Int64;
+  valuesLocal.structTypeName = "/std/file/File<Read>";
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr callReceiver;
+  callReceiver.kind = primec::Expr::Kind::Call;
+  callReceiver.name = "at";
+  callReceiver.args = {receiverName, indexExpr};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(callReceiver,
+                                                        locals,
+                                                        "close",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "File");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack borrowed file receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.isFileHandle = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Reference;
+  valuesLocal.referenceToArray = false;
+  valuesLocal.referenceToVector = false;
+  valuesLocal.referenceToMap = false;
+  valuesLocal.referenceToBuffer = false;
+  valuesLocal.valueKind = ValueKind::Int64;
+  valuesLocal.structTypeName = "/std/file/File<Read>";
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "close",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "File");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
+TEST_CASE("ir lowerer setup type helper resolves dereferenced indexed args-pack pointer file receivers") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+  using ValueKind = LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo valuesLocal;
+  valuesLocal.kind = LocalInfo::Kind::Array;
+  valuesLocal.isArgsPack = true;
+  valuesLocal.isFileHandle = true;
+  valuesLocal.argsPackElementKind = LocalInfo::Kind::Pointer;
+  valuesLocal.pointerToArray = false;
+  valuesLocal.pointerToVector = false;
+  valuesLocal.pointerToMap = false;
+  valuesLocal.pointerToBuffer = false;
+  valuesLocal.valueKind = ValueKind::Int64;
+  valuesLocal.structTypeName = "/std/file/File<Write>";
+  locals.emplace("values", valuesLocal);
+
+  primec::Expr receiverName;
+  receiverName.kind = primec::Expr::Kind::Name;
+  receiverName.name = "values";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessReceiver;
+  accessReceiver.kind = primec::Expr::Kind::Call;
+  accessReceiver.name = "at";
+  accessReceiver.args = {receiverName, indexExpr};
+  primec::Expr dereferenceReceiver;
+  dereferenceReceiver.kind = primec::Expr::Kind::Call;
+  dereferenceReceiver.name = "dereference";
+  dereferenceReceiver.args = {accessReceiver};
+
+  std::string typeName;
+  std::string resolvedTypePath;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTarget(dereferenceReceiver,
+                                                        locals,
+                                                        "close",
+                                                        {},
+                                                        {},
+                                                        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                                                          return ValueKind::Unknown;
+                                                        },
+                                                        [](const primec::Expr &) { return std::string(); },
+                                                        typeName,
+                                                        resolvedTypePath,
+                                                        error));
+  CHECK(typeName == "File");
+  CHECK(resolvedTypePath.empty());
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper keeps borrowed local soa_vector receivers distinct from vector") {
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using ValueKind = LocalInfo::ValueKind;
