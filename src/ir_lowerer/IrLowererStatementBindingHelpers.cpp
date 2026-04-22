@@ -1244,6 +1244,10 @@ bool inferCallParameterLocalInfo(const Expr &param,
   applySpecializedWrappedMapBindingInfo(param, infoOut);
   applyStructArrayInfo(param, infoOut);
   applyStructValueInfo(param, infoOut);
+  if (infoOut.isFileHandle) {
+    infoOut.structTypeName.clear();
+    infoOut.valueKind = LocalInfo::ValueKind::Int64;
+  }
   if ((infoOut.kind == LocalInfo::Kind::Reference || infoOut.kind == LocalInfo::Kind::Pointer) &&
       (infoOut.referenceToVector || infoOut.pointerToVector)) {
     if (!(infoOut.isSoaVector &&
