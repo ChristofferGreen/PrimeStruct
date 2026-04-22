@@ -129,6 +129,64 @@ std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &s
   return semanticProgram.callTargetStringTable[id - 1];
 }
 
+const SemanticProgramDefinition *semanticProgramLookupPublishedDefinitionByPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId fullPathId) {
+  if (fullPathId == InvalidSymbolId) {
+    return nullptr;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.definitionIndicesByPathId.find(fullPathId);
+      it != semanticProgram.publishedRoutingLookups.definitionIndicesByPathId.end()) {
+    if (it->second < semanticProgram.definitions.size()) {
+      return &semanticProgram.definitions[it->second];
+    }
+    return nullptr;
+  }
+  const std::string_view resolvedPath = semanticProgramResolveCallTargetString(semanticProgram, fullPathId);
+  if (resolvedPath.empty()) {
+    return nullptr;
+  }
+  for (const auto &entry : semanticProgram.definitions) {
+    if (entry.fullPath == resolvedPath) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramDefinition *semanticProgramLookupPublishedDefinition(
+    const SemanticProgram &semanticProgram,
+    std::string_view fullPath) {
+  const auto fullPathId = semanticProgramLookupCallTargetStringId(semanticProgram, fullPath);
+  if (!fullPathId.has_value()) {
+    return nullptr;
+  }
+  return semanticProgramLookupPublishedDefinitionByPathId(semanticProgram, *fullPathId);
+}
+
+std::optional<SymbolId> semanticProgramLookupPublishedImportAliasTargetPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId aliasNameId) {
+  if (aliasNameId == InvalidSymbolId) {
+    return std::nullopt;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.importAliasTargetPathIdsByNameId.find(aliasNameId);
+      it != semanticProgram.publishedRoutingLookups.importAliasTargetPathIdsByNameId.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
+std::optional<SymbolId> semanticProgramLookupPublishedImportAliasTargetPathId(
+    const SemanticProgram &semanticProgram,
+    std::string_view aliasName) {
+  const auto aliasNameId = semanticProgramLookupCallTargetStringId(semanticProgram, aliasName);
+  if (!aliasNameId.has_value()) {
+    return std::nullopt;
+  }
+  return semanticProgramLookupPublishedImportAliasTargetPathId(semanticProgram, *aliasNameId);
+}
+
 std::optional<SymbolId> semanticProgramLookupPublishedDirectCallTargetId(const SemanticProgram &semanticProgram,
                                                                          uint64_t semanticNodeId) {
   if (semanticNodeId == 0) {

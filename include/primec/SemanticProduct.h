@@ -344,6 +344,8 @@ struct SemanticProgramModuleResolvedArtifacts {
 };
 
 struct SemanticProgramPublishedRoutingLookups {
+  std::unordered_map<SymbolId, std::size_t> definitionIndicesByPathId;
+  std::unordered_map<SymbolId, SymbolId> importAliasTargetPathIdsByNameId;
   std::unordered_map<uint64_t, SymbolId> directCallTargetIdsByExpr;
   std::unordered_map<uint64_t, SymbolId> methodCallTargetIdsByExpr;
   std::unordered_map<uint64_t, SymbolId> bridgePathChoiceIdsByExpr;
@@ -413,6 +415,18 @@ std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticPr
                                                                 std::string_view text);
 void releaseSemanticProgramLookupMap(SemanticProgram &semanticProgram);
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id);
+const SemanticProgramDefinition *semanticProgramLookupPublishedDefinitionByPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId fullPathId);
+const SemanticProgramDefinition *semanticProgramLookupPublishedDefinition(
+    const SemanticProgram &semanticProgram,
+    std::string_view fullPath);
+std::optional<SymbolId> semanticProgramLookupPublishedImportAliasTargetPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId aliasNameId);
+std::optional<SymbolId> semanticProgramLookupPublishedImportAliasTargetPathId(
+    const SemanticProgram &semanticProgram,
+    std::string_view aliasName);
 std::optional<SymbolId> semanticProgramLookupPublishedDirectCallTargetId(const SemanticProgram &semanticProgram,
                                                                          uint64_t semanticNodeId);
 std::optional<SymbolId> semanticProgramLookupPublishedMethodCallTargetId(const SemanticProgram &semanticProgram,

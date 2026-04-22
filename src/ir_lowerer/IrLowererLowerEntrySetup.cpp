@@ -2,8 +2,6 @@
 
 #include <array>
 #include <string_view>
-#include <unordered_map>
-#include <unordered_set>
 
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
@@ -21,8 +19,6 @@ struct SemanticProductCompletenessContext {
   const Program &program;
   const Definition *entryDef = nullptr;
   const SemanticProgram *semanticProgram = nullptr;
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
-  const std::unordered_map<std::string, std::string> *importAliases = nullptr;
 };
 
 using SemanticProductCompletenessCheckFn =
@@ -43,8 +39,6 @@ bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &cont
                                   std::string &error) {
   return validateSemanticProductDirectCallCoverage(context.program,
                                                    context.semanticProgram,
-                                                   *context.defMap,
-                                                   *context.importAliases,
                                                    error);
 }
 
@@ -52,8 +46,6 @@ bool validateBridgePathFactFamily(const SemanticProductCompletenessContext &cont
                                   std::string &error) {
   return validateSemanticProductBridgePathCoverage(context.program,
                                                    context.semanticProgram,
-                                                   *context.defMap,
-                                                   *context.importAliases,
                                                    error);
 }
 
@@ -191,8 +183,6 @@ bool validateModuleResolvedArtifactIdentity(const SemanticProgram &semanticProgr
 bool validateSemanticProductCompletenessMatrix(const Program &program,
                                                const Definition &entryDef,
                                                const SemanticProgram *semanticProgram,
-                                               const std::unordered_map<std::string, const Definition *> &defMap,
-                                               const std::unordered_map<std::string, std::string> &importAliases,
                                                std::string &error) {
   if (semanticProgram == nullptr) {
     return true;
@@ -216,8 +206,6 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
       .program = program,
       .entryDef = &entryDef,
       .semanticProgram = semanticProgram,
-      .defMap = &defMap,
-      .importAliases = &importAliases,
   };
   for (const auto &check : *kSemanticProductContractManifestV1.checks) {
     if (check.validate == nullptr) {
@@ -266,12 +254,8 @@ bool runLowerEntrySetup(const Program &program,
   if (!validateNoRuntimeReflectionQueries(program, error)) {
     return false;
   }
-  std::unordered_map<std::string, const Definition *> defMap;
-  std::unordered_set<std::string> unusedStructNames;
-  buildDefinitionMapAndStructNames(program.definitions, defMap, unusedStructNames, nullptr);
-  const auto importAliases = buildImportAliasesFromProgram(program.imports, program.definitions, defMap);
   if (!validateSemanticProductCompletenessMatrix(
-          program, *entryDefOut, semanticProgram, defMap, importAliases, error)) {
+          program, *entryDefOut, semanticProgram, error)) {
     return false;
   }
   if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {

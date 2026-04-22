@@ -56,15 +56,14 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4119
 - TODO-4120
 - TODO-4121
 - TODO-4106
 - TODO-4107
+- TODO-4134
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4134
 - TODO-4133
 - TODO-4132
 - TODO-4122
@@ -74,13 +73,14 @@ Task template:
 - TODO-4126
 - TODO-4127
 - TODO-4128
+- TODO-4129
 
 ### Priority Lanes (Current)
 
 - Reflection ergonomics and docs alignment: TODO-4132, TODO-4133
 - Struct helper call ergonomics: TODO-4134
-- Semantic-product authority and lowerer ownership: TODO-4119, TODO-4120,
-  TODO-4121, TODO-4122, TODO-4129
+- Semantic-product authority and lowerer ownership: TODO-4120, TODO-4121,
+  TODO-4122, TODO-4129
 - Validator/runtime boundary simplification: TODO-4123, TODO-4126,
   TODO-4127, TODO-4128
 - Test-surface contraction: TODO-4124, TODO-4125
@@ -90,23 +90,23 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4119
-2. TODO-4120
-3. TODO-4121
-4. TODO-4106
-5. TODO-4107
+1. TODO-4120
+2. TODO-4121
+3. TODO-4106
+4. TODO-4107
+5. TODO-4134
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4119, TODO-4120, TODO-4121, TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4120, TODO-4121, TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
 | Stdlib surface-style alignment and public helper readability | TODO-4132, TODO-4133, TODO-4134 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | Validator entrypoint and benchmark-plumbing split | TODO-4123, TODO-4127 |
-| Semantic-product publication by module and fact family | TODO-4119, TODO-4121, TODO-4122, TODO-4127 |
+| Semantic-product publication by module and fact family | TODO-4121, TODO-4122, TODO-4127 |
 | IR lowerer compile-unit breakup | TODO-4128 |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -119,7 +119,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4119, TODO-4121, TODO-4122 |
+| Semantic-product-authority conformance | TODO-4121, TODO-4122 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4132, TODO-4133, TODO-4134 |
 | Semantic-product publication parity and deterministic ordering | TODO-4121, TODO-4122, TODO-4127, TODO-4129, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4120, TODO-4128 |
@@ -493,27 +493,6 @@ Task template:
   - stop_rule: Stop once representative lowerer entry/setup paths no longer
       depend on raw `Program` for semantic meaning and rely on provenance-only
       AST access instead.
-
-- [ ] TODO-4119: Publish lowerer-ready entry and routing lookup indexes
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Add `SemanticProgram` lookup indexes for entry metadata,
-      effect/capability masks, and alias-equivalent routing data so lowerer
-      entry setup stops rebuilding AST-side definition and import maps for
-      those lookups.
-  - acceptance:
-    - `SemanticProgram` exposes direct lookup surfaces for entry metadata and
-      the routing facts currently rebuilt in `runLowerEntrySetup`.
-    - Lowerer entry setup resolves at least one representative entry or routing
-      metadata path without rebuilding AST-side definition or import alias
-      maps.
-    - Semantic-product conformance coverage pins lookup parity for the migrated
-      data.
-  - stop_rule: Stop once representative entry/routing lookups are served
-      directly from `SemanticProgram` and the matching AST rebuild path is
-      deleted or narrowed to provenance-only use.
 
 - [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites
   - owner: ai

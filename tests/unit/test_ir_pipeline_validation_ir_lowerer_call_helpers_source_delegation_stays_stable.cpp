@@ -3299,12 +3299,60 @@ TEST_CASE("ir lowerer bridge coverage uses published collection surface ids for 
   semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
       82, primec::StdlibSurfaceId::CollectionsMapHelpers);
 
-  const std::unordered_map<std::string, const primec::Definition *> defMap = {};
-  const std::unordered_map<std::string, std::string> importAliases = {};
   std::string error;
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
-      program, &semanticProgram, defMap, importAliases, error));
+      program, &semanticProgram, error));
   CHECK(error.find("missing semantic-product bridge-path choice: /main -> /std/collections/mapContains") !=
+        std::string::npos);
+}
+
+TEST_CASE("ir lowerer direct-call coverage uses published definition and import-alias lookups") {
+  primec::Program program;
+  program.imports.push_back("/pkg/*");
+
+  primec::Definition helperDef;
+  helperDef.fullPath = "/pkg/foo";
+  helperDef.name = "foo";
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "foo";
+  callExpr.semanticNodeId = 17;
+  mainDef.statements.push_back(callExpr);
+
+  program.definitions.push_back(helperDef);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.imports = program.imports;
+  semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
+      .name = "foo",
+      .fullPath = "/pkg/foo",
+  });
+  semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
+      .name = "main",
+      .fullPath = "/main",
+  });
+
+  const auto helperPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/pkg/foo");
+  const auto mainPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  const auto aliasNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "foo");
+  semanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
+      helperPathId, 0);
+  semanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
+      mainPathId, 1);
+  semanticProgram.publishedRoutingLookups.importAliasTargetPathIdsByNameId.insert_or_assign(
+      aliasNameId, helperPathId);
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error.find("missing semantic-product direct-call target: /main -> foo") !=
         std::string::npos);
 }
 

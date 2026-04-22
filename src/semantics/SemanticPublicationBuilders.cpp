@@ -210,6 +210,71 @@ void initializeSemanticProgramPublicationShell(SemanticPublicationBuilderState &
       state.semanticProgram.definitions.size() + state.semanticProgram.executions.size());
 }
 
+void publishRoutingLookupIndexes(SemanticPublicationBuilderState &state) {
+  auto &routingLookups = state.semanticProgram.publishedRoutingLookups;
+  routingLookups.definitionIndicesByPathId.reserve(state.semanticProgram.definitions.size());
+  for (std::size_t definitionIndex = 0;
+       definitionIndex < state.semanticProgram.definitions.size();
+       ++definitionIndex) {
+    const auto &definition = state.semanticProgram.definitions[definitionIndex];
+    const SymbolId fullPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, definition.fullPath);
+    if (fullPathId != InvalidSymbolId) {
+      routingLookups.definitionIndicesByPathId.insert_or_assign(fullPathId, definitionIndex);
+    }
+  }
+
+  auto publishImportAlias = [&](std::string_view aliasName, std::string_view targetPath) {
+    if (aliasName.empty() || targetPath.empty()) {
+      return;
+    }
+    const SymbolId aliasNameId =
+        semanticProgramInternCallTargetString(state.semanticProgram, aliasName);
+    const SymbolId targetPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, targetPath);
+    if (aliasNameId == InvalidSymbolId || targetPathId == InvalidSymbolId) {
+      return;
+    }
+    routingLookups.importAliasTargetPathIdsByNameId.try_emplace(aliasNameId, targetPathId);
+  };
+
+  routingLookups.importAliasTargetPathIdsByNameId.reserve(state.semanticProgram.imports.size() +
+                                                          state.semanticProgram.definitions.size());
+  for (const auto &importPath : state.semanticProgram.imports) {
+    if (importPath.empty() || importPath.front() != '/') {
+      continue;
+    }
+    if (importPath.size() >= 2 &&
+        importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+      const std::string prefix = importPath.substr(0, importPath.size() - 2);
+      const std::string scopedPrefix = prefix + "/";
+      for (const auto &definition : state.semanticProgram.definitions) {
+        if (definition.fullPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string_view remainder =
+            std::string_view(definition.fullPath).substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string_view::npos) {
+          continue;
+        }
+        publishImportAlias(remainder, definition.fullPath);
+      }
+      continue;
+    }
+
+    const SymbolId importPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, importPath);
+    if (!routingLookups.definitionIndicesByPathId.contains(importPathId)) {
+      continue;
+    }
+    const std::size_t slashPos = importPath.find_last_of('/');
+    if (slashPos == std::string::npos || slashPos + 1 >= importPath.size()) {
+      continue;
+    }
+    publishImportAlias(std::string_view(importPath).substr(slashPos + 1), importPath);
+  }
+}
+
 void publishDirectCallTargetFacts(
     SemanticPublicationBuilderState &state,
     const std::vector<SemanticsValidator::CollectedDirectCallTargetEntry> &directCallTargets) {
@@ -831,6 +896,7 @@ SemanticProgram buildSemanticProgramFromPublicationSurface(
     const SemanticProductBuildConfig *buildConfig) {
   SemanticPublicationBuilderState state(program, entryPath, buildConfig);
   initializeSemanticProgramPublicationShell(state);
+  publishRoutingLookupIndexes(state);
   publishSemanticRoutingFamilies(state, publicationSurface);
   publishSemanticMetadataFamilies(state, publicationSurface);
   publishSemanticScopedFactFamilies(state, publicationSurface);
