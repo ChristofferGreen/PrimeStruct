@@ -364,7 +364,7 @@ main() {
   CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
-TEST_CASE("rejects native wrapper-returned map method alias primitive receiver fallback") {
+TEST_CASE("compiles and runs native wrapper-returned map method alias primitive receiver fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return</std/collections/map<i32, i32>>]
 wrapMap() {
@@ -383,17 +383,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_map_method_alias_primitive_receiver_fallback.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_wrapper_map_method_alias_primitive_receiver_fallback.err")
+       "primec_native_wrapper_map_method_alias_primitive_receiver_fallback_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 47);
 }
 
-TEST_CASE("rejects native wrapper-returned canonical map slash-method struct receiver fallback") {
+TEST_CASE("compiles and runs native wrapper-returned canonical map slash-method struct receiver fallback") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -421,14 +421,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_map_method_alias_struct_receiver_forwarding.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_wrapper_map_method_alias_struct_receiver_forwarding.err")
+       "primec_native_wrapper_map_method_alias_struct_receiver_forwarding_exe")
           .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("rejects native wrapper-returned canonical direct-call map receiver fallback") {
