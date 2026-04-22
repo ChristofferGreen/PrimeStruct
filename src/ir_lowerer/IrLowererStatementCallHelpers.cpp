@@ -71,7 +71,10 @@ bool buildCallableDefinitionCallContext(
     if (!inferParameterLocalInfo(thisParam, definitionLocals, thisInfo, error)) {
       return false;
     }
-    if (!thisInfo.structTypeName.empty() && thisInfo.structSlotCount <= 0) {
+    if (thisInfo.isFileHandle) {
+      thisInfo.structTypeName.clear();
+    } else if (!thisInfo.structTypeName.empty() &&
+               thisInfo.structSlotCount <= 0) {
       StructSlotLayoutInfo layout;
       if (!resolveStructSlotLayout(thisInfo.structTypeName, layout)) {
         error = "internal error: missing struct slot layout for " + thisInfo.structTypeName;
@@ -94,7 +97,9 @@ bool buildCallableDefinitionCallContext(
     if (!inferParameterLocalInfo(param, definitionLocals, info, error)) {
       return false;
     }
-    if (!info.structTypeName.empty() && info.structSlotCount <= 0) {
+    if (info.isFileHandle) {
+      info.structTypeName.clear();
+    } else if (!info.structTypeName.empty() && info.structSlotCount <= 0) {
       StructSlotLayoutInfo layout;
       if (!resolveStructSlotLayout(info.structTypeName, layout)) {
         error = "internal error: missing struct slot layout for " + info.structTypeName;

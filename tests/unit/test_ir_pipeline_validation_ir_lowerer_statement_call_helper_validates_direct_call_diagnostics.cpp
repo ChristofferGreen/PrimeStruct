@@ -320,6 +320,52 @@ TEST_CASE("ir lowerer statement call helper builds callable context for struct h
   CHECK(callExpr.args.front().name == "this");
 }
 
+TEST_CASE("ir lowerer statement call helper skips struct layouts for file-handle this locals") {
+  primec::Definition helperDef;
+  helperDef.fullPath = "/std/file/File/close";
+  helperDef.namespacePrefix = "/std/file";
+  helperDef.isNested = true;
+  helperDef.transforms.push_back(primec::Transform{.name = "return", .templateArgs = {"void"}});
+
+  std::unordered_set<std::string> structNames = {"/std/file/File"};
+  int32_t nextLocal = 0;
+  primec::ir_lowerer::LocalMap locals;
+  primec::Expr callExpr;
+  std::string error;
+  int layoutLookups = 0;
+  CHECK(primec::ir_lowerer::buildCallableDefinitionCallContext(
+      helperDef,
+      structNames,
+      nextLocal,
+      locals,
+      callExpr,
+      [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+        ++layoutLookups;
+        return false;
+      },
+      [](const primec::Expr &param,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo &info,
+         std::string &) {
+        if (param.name == "this") {
+          info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+          info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+          info.isFileHandle = true;
+          info.structTypeName = "/std/file/File<Write>";
+          return true;
+        }
+        return false;
+      },
+      error));
+  CHECK(error.empty());
+  CHECK(layoutLookups == 0);
+  REQUIRE(locals.count("this") == 1u);
+  CHECK(locals.at("this").isFileHandle);
+  CHECK(locals.at("this").structTypeName.empty());
+  REQUIRE(callExpr.args.size() == 1u);
+  CHECK(callExpr.args.front().name == "this");
+}
+
 TEST_CASE("ir lowerer statement call helper preserves struct slot counts for variadic callable locals") {
   primec::Definition def;
   def.fullPath = "/pkg/score";
