@@ -648,7 +648,7 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
-TEST_CASE("native keeps vector constructor and literal parity across direct and canonical forms" * doctest::skip(true)) {
+TEST_CASE("native keeps vector constructor and literal parity across direct and canonical forms") {
   const std::string source = R"(
 import /std/collections/*
 
