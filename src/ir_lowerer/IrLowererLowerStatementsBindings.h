@@ -437,6 +437,20 @@
         if (initCallee != nullptr) {
           if (ir_lowerer::isStructDefinition(*initCallee)) {
             initStruct = initCallee->fullPath;
+            if (!info.structTypeName.empty() &&
+                info.structTypeName.front() != '/') {
+              const std::string declaredStructSurface =
+                  trimTemplateTypeText(info.structTypeName);
+              const size_t calleeLeafOffset =
+                  initCallee->fullPath.find_last_of('/');
+              const std::string calleeStructSurface =
+                  calleeLeafOffset == std::string::npos
+                      ? initCallee->fullPath
+                      : initCallee->fullPath.substr(calleeLeafOffset + 1);
+              if (declaredStructSurface == calleeStructSurface) {
+                info.structTypeName = initCallee->fullPath;
+              }
+            }
           } else if (initStruct.empty()) {
             initStruct = ir_lowerer::inferStructReturnPathFromDefinition(
                 initCallee->fullPath,

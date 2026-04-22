@@ -127,6 +127,9 @@ TEST_CASE("ir lowerer statement bindings prefer struct constructor full paths") 
   const std::string source = readTextFile(
       "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerStatementsBindings.h");
   CHECK(source.find("info.structTypeName = initCallee->fullPath;") != std::string::npos);
+  CHECK(source.find("const std::string declaredStructSurface =") != std::string::npos);
+  CHECK(source.find("const std::string calleeStructSurface =") != std::string::npos);
+  CHECK(source.find("if (declaredStructSurface == calleeStructSurface)") != std::string::npos);
   CHECK(source.find("if (ir_lowerer::isStructDefinition(*initCallee))") != std::string::npos);
   CHECK(source.find("initStruct = initCallee->fullPath;") != std::string::npos);
   CHECK(source.find("} else if (initStruct.empty()) {") != std::string::npos);
