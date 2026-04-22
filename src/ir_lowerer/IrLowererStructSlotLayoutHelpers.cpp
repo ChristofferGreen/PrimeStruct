@@ -733,6 +733,10 @@ void applyStructValueInfoFromBinding(const Expr &expr,
   if (!info.structTypeName.empty()) {
     return;
   }
+  if (info.kind == LocalInfo::Kind::Value &&
+      info.valueKind != LocalInfo::ValueKind::Unknown) {
+    return;
+  }
 
   std::string typeName;
   std::string typeTemplateArg;

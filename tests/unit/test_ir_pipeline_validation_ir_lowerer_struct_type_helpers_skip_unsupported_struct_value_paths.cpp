@@ -33,6 +33,31 @@ TEST_CASE("ir lowerer struct type helpers skip unsupported struct value paths") 
   CHECK(pointerInfo.structTypeName.empty());
 }
 
+TEST_CASE("ir lowerer struct type helpers skip known scalar-like value bindings") {
+  auto resolveStruct = [](const std::string &typeName,
+                          const std::string &,
+                          std::string &resolvedOut) {
+    if (typeName == "File<Read>") {
+      resolvedOut = "/std/file/File<Read>";
+      return true;
+    }
+    return false;
+  };
+
+  primec::Expr fileBinding;
+  fileBinding.namespacePrefix = "/std/file";
+  primec::Transform fileType;
+  fileType.name = "File";
+  fileType.templateArgs = {"Read"};
+  fileBinding.transforms.push_back(fileType);
+
+  primec::ir_lowerer::LocalInfo fileInfo;
+  fileInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  fileInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  primec::ir_lowerer::applyStructValueInfoFromBinding(fileBinding, resolveStruct, fileInfo);
+  CHECK(fileInfo.structTypeName.empty());
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers classify supported types") {
   auto resolveStruct = [](const std::string &typeName,
                           const std::string &,
