@@ -1,9 +1,5 @@
 #include "IrLowererLowerEffects.h"
 
-#include <cctype>
-#include <functional>
-#include <string_view>
-
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "primec/Ir.h"
@@ -11,165 +7,10 @@
 namespace primec::ir_lowerer {
 namespace {
 
-bool isSoftwareNumericName(const std::string &name) {
-  return name == "integer" || name == "decimal" || name == "complex";
-}
-
-bool isReflectionMetadataQueryName(const std::string &name) {
-  return name == "type_name" || name == "type_kind" || name == "is_struct" || name == "field_count" ||
-         name == "field_name" || name == "field_type" || name == "field_visibility" ||
-         name == "has_transform" || name == "has_trait";
-}
-
-bool isReflectionMetadataQueryPath(const std::string &path) {
-  constexpr std::string_view prefix = "/meta/";
-  if (path.rfind(prefix, 0) != 0) {
-    return false;
-  }
-  const std::string queryName = path.substr(prefix.size());
-  if (queryName.empty() || queryName.find('/') != std::string::npos) {
-    return false;
-  }
-  return isReflectionMetadataQueryName(queryName);
-}
-
-bool isRuntimeReflectionPath(const std::string &path) {
-  return path == "/meta/object" || path == "/meta/table" || path.rfind("/meta/object/", 0) == 0 ||
-         path.rfind("/meta/table/", 0) == 0;
-}
-
 void expandEffectImplications(std::unordered_set<std::string> &effects) {
   if (effects.count("file_write") != 0) {
     effects.insert("file_read");
   }
-}
-
-bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out) {
-  out.clear();
-  int depth = 0;
-  size_t start = 0;
-  auto pushSegment = [&](size_t end) {
-    size_t segStart = start;
-    while (segStart < end && std::isspace(static_cast<unsigned char>(text[segStart]))) {
-      ++segStart;
-    }
-    size_t segEnd = end;
-    while (segEnd > segStart && std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
-      --segEnd;
-    }
-    out.push_back(text.substr(segStart, segEnd - segStart));
-  };
-  for (size_t i = 0; i < text.size(); ++i) {
-    char c = text[i];
-    if (c == '<') {
-      ++depth;
-      continue;
-    }
-    if (c == '>') {
-      if (depth > 0) {
-        --depth;
-      }
-      continue;
-    }
-    if (c == ',' && depth == 0) {
-      pushSegment(i);
-      start = i + 1;
-    }
-  }
-  pushSegment(text.size());
-  for (const auto &seg : out) {
-    if (seg.empty()) {
-      return false;
-    }
-  }
-  return !out.empty();
-}
-
-std::string findSoftwareNumericType(const std::string &typeName) {
-  if (typeName.empty()) {
-    return {};
-  }
-  std::string base;
-  std::string arg;
-  if (!splitTemplateTypeName(typeName, base, arg)) {
-    return isSoftwareNumericName(typeName) ? typeName : std::string{};
-  }
-  if (isSoftwareNumericName(base)) {
-    return base;
-  }
-  std::vector<std::string> args;
-  if (!splitTopLevelTemplateArgs(arg, args)) {
-    return {};
-  }
-  for (const auto &nested : args) {
-    std::string found = findSoftwareNumericType(nested);
-    if (!found.empty()) {
-      return found;
-    }
-  }
-  return {};
-}
-
-std::string scanTransformsForSoftwareNumeric(const std::vector<Transform> &transforms) {
-  for (const auto &transform : transforms) {
-    std::string found = findSoftwareNumericType(transform.name);
-    if (!found.empty()) {
-      return found;
-    }
-    for (const auto &arg : transform.templateArgs) {
-      found = findSoftwareNumericType(arg);
-      if (!found.empty()) {
-        return found;
-      }
-    }
-  }
-  return {};
-}
-
-std::string scanExprForSoftwareNumeric(const Expr &expr) {
-  std::string found = scanTransformsForSoftwareNumeric(expr.transforms);
-  if (!found.empty()) {
-    return found;
-  }
-  for (const auto &arg : expr.templateArgs) {
-    found = findSoftwareNumericType(arg);
-    if (!found.empty()) {
-      return found;
-    }
-  }
-  for (const auto &arg : expr.args) {
-    found = scanExprForSoftwareNumeric(arg);
-    if (!found.empty()) {
-      return found;
-    }
-  }
-  for (const auto &arg : expr.bodyArguments) {
-    found = scanExprForSoftwareNumeric(arg);
-    if (!found.empty()) {
-      return found;
-    }
-  }
-  return {};
-}
-
-std::string scanExprForRuntimeReflectionQuery(const Expr &expr) {
-  if (expr.kind == Expr::Kind::Call &&
-      (isReflectionMetadataQueryPath(expr.name) || isRuntimeReflectionPath(expr.name))) {
-    return expr.name;
-  }
-  for (const auto &arg : expr.args) {
-    std::string found = scanExprForRuntimeReflectionQuery(arg);
-    if (!found.empty()) {
-      return found;
-    }
-  }
-  for (const auto &arg : expr.bodyArguments) {
-    std::string found = scanExprForRuntimeReflectionQuery(arg);
-    if (!found.empty()) {
-      return found;
-    }
-  }
-  return {};
 }
 
 } // namespace
@@ -192,124 +33,35 @@ bool findEntryDefinition(const Program &program,
   return true;
 }
 
-bool validateNoSoftwareNumericTypes(const Program &program, std::string &error) {
-  for (const auto &def : program.definitions) {
-    std::string found = scanTransformsForSoftwareNumeric(def.transforms);
-    if (!found.empty()) {
-      error = "native backend does not support software numeric types: " + found;
-      return false;
-    }
-    for (const auto &param : def.parameters) {
-      found = scanExprForSoftwareNumeric(param);
-      if (!found.empty()) {
-        error = "native backend does not support software numeric types: " + found;
-        return false;
-      }
-    }
-    for (const auto &stmt : def.statements) {
-      found = scanExprForSoftwareNumeric(stmt);
-      if (!found.empty()) {
-        error = "native backend does not support software numeric types: " + found;
-        return false;
-      }
-    }
-    if (def.returnExpr.has_value()) {
-      found = scanExprForSoftwareNumeric(*def.returnExpr);
-      if (!found.empty()) {
-        error = "native backend does not support software numeric types: " + found;
-        return false;
-      }
-    }
+bool validateNoSoftwareNumericTypes(const SemanticProgram *semanticProgram, std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
   }
-
-  for (const auto &exec : program.executions) {
-    std::string found = scanTransformsForSoftwareNumeric(exec.transforms);
-    if (!found.empty()) {
-      error = "native backend does not support software numeric types: " + found;
-      return false;
-    }
-    for (const auto &arg : exec.arguments) {
-      found = scanExprForSoftwareNumeric(arg);
-      if (!found.empty()) {
-        error = "native backend does not support software numeric types: " + found;
-        return false;
-      }
-    }
-    for (const auto &arg : exec.bodyArguments) {
-      found = scanExprForSoftwareNumeric(arg);
-      if (!found.empty()) {
-        error = "native backend does not support software numeric types: " + found;
-        return false;
-      }
-    }
+  const std::string_view found =
+      semanticProgramLookupPublishedLowererSoftwareNumericType(*semanticProgram);
+  if (found.empty()) {
+    return true;
   }
-
-  return true;
+  error = "native backend does not support software numeric types: " + std::string(found);
+  return false;
 }
 
-bool validateNoRuntimeReflectionQueries(const Program &program, std::string &error) {
-  for (const auto &def : program.definitions) {
-    for (const auto &param : def.parameters) {
-      const std::string found = scanExprForRuntimeReflectionQuery(param);
-      if (!found.empty()) {
-        if (isRuntimeReflectionPath(found)) {
-          error = "runtime reflection objects/tables are unsupported: " + found;
-        } else {
-          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
-        }
-        return false;
-      }
-    }
-    for (const auto &stmt : def.statements) {
-      const std::string found = scanExprForRuntimeReflectionQuery(stmt);
-      if (!found.empty()) {
-        if (isRuntimeReflectionPath(found)) {
-          error = "runtime reflection objects/tables are unsupported: " + found;
-        } else {
-          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
-        }
-        return false;
-      }
-    }
-    if (def.returnExpr.has_value()) {
-      const std::string found = scanExprForRuntimeReflectionQuery(*def.returnExpr);
-      if (!found.empty()) {
-        if (isRuntimeReflectionPath(found)) {
-          error = "runtime reflection objects/tables are unsupported: " + found;
-        } else {
-          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
-        }
-        return false;
-      }
-    }
+bool validateNoRuntimeReflectionQueries(const SemanticProgram *semanticProgram, std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
   }
-
-  for (const auto &exec : program.executions) {
-    for (const auto &arg : exec.arguments) {
-      const std::string found = scanExprForRuntimeReflectionQuery(arg);
-      if (!found.empty()) {
-        if (isRuntimeReflectionPath(found)) {
-          error = "runtime reflection objects/tables are unsupported: " + found;
-        } else {
-          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
-        }
-        return false;
-      }
-    }
-    for (const auto &arg : exec.bodyArguments) {
-      const std::string found = scanExprForRuntimeReflectionQuery(arg);
-      if (!found.empty()) {
-        if (isRuntimeReflectionPath(found)) {
-          error = "runtime reflection objects/tables are unsupported: " + found;
-        } else {
-          error = "native backend requires compile-time reflection query elimination before IR emission: " + found;
-        }
-        return false;
-      }
-    }
+  const std::string_view found =
+      semanticProgramLookupPublishedLowererRuntimeReflectionPath(*semanticProgram);
+  if (found.empty()) {
+    return true;
   }
-
-  return true;
+  if (semanticProgramLookupPublishedLowererRuntimeReflectionUsesObjectTable(*semanticProgram)) {
+    error = "runtime reflection objects/tables are unsupported: " + std::string(found);
+  } else {
+    error = "native backend requires compile-time reflection query elimination before IR emission: " +
+            std::string(found);
+  }
+  return false;
 }
 
 bool effectBitForName(const std::string &name, uint64_t &outBit) {

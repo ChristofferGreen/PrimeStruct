@@ -248,10 +248,10 @@ bool runLowerEntrySetup(const Program &program,
   if (!findEntryDefinition(program, entryPath, entryDefOut, error)) {
     return false;
   }
-  if (!validateNoSoftwareNumericTypes(program, error)) {
+  if (!validateNoSoftwareNumericTypes(semanticProgram, error)) {
     return false;
   }
-  if (!validateNoRuntimeReflectionQueries(program, error)) {
+  if (!validateNoRuntimeReflectionQueries(semanticProgram, error)) {
     return false;
   }
   if (!validateSemanticProductCompletenessMatrix(

@@ -53,6 +53,61 @@ TEST_CASE("ir lowerer entry setup step rejects missing entry") {
   CHECK(entryCapabilityMask == 0);
 }
 
+TEST_CASE("ir lowerer entry setup step rejects published software numeric preflight facts") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.publishedLowererPreflightFacts.firstSoftwareNumericTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "decimal");
+
+  const primec::Definition *resolvedEntry = nullptr;
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerEntrySetup(program,
+                                                     &semanticProgram,
+                                                     "/main",
+                                                     {"io_out"},
+                                                     {"io_err"},
+                                                     resolvedEntry,
+                                                     entryEffectMask,
+                                                     entryCapabilityMask,
+                                                     error));
+  CHECK(error == "native backend does not support software numeric types: decimal");
+}
+
+TEST_CASE("ir lowerer entry setup step rejects published runtime reflection preflight facts") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+  program.definitions.push_back(entryDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/meta/type_name");
+
+  const primec::Definition *resolvedEntry = nullptr;
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerEntrySetup(program,
+                                                     &semanticProgram,
+                                                     "/main",
+                                                     {"io_out"},
+                                                     {"io_err"},
+                                                     resolvedEntry,
+                                                     entryEffectMask,
+                                                     entryCapabilityMask,
+                                                     error));
+  CHECK(error ==
+        "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
+}
+
 TEST_CASE("ir lowerer imports structs setup step builds maps and layouts") {
   primec::Program program;
 

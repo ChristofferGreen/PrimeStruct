@@ -324,6 +324,27 @@ std::optional<StdlibSurfaceId> semanticProgramLookupPublishedBridgePathChoiceStd
   return std::nullopt;
 }
 
+std::string_view semanticProgramLookupPublishedLowererSoftwareNumericType(
+    const SemanticProgram &semanticProgram) {
+  return semanticProgramResolveCallTargetString(
+      semanticProgram,
+      semanticProgram.publishedLowererPreflightFacts.firstSoftwareNumericTypeId);
+}
+
+std::string_view semanticProgramLookupPublishedLowererRuntimeReflectionPath(
+    const SemanticProgram &semanticProgram) {
+  return semanticProgramResolveCallTargetString(
+      semanticProgram,
+      semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId);
+}
+
+bool semanticProgramLookupPublishedLowererRuntimeReflectionUsesObjectTable(
+    const SemanticProgram &semanticProgram) {
+  return semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId !=
+             InvalidSymbolId &&
+         semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathIsObjectTable;
+}
+
 const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummaryByPathId(
     const SemanticProgram &semanticProgram,
     SymbolId fullPathId) {

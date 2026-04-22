@@ -355,6 +355,12 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
 };
 
+struct SemanticProgramPublishedLowererPreflightFacts {
+  SymbolId firstSoftwareNumericTypeId = InvalidSymbolId;
+  SymbolId firstRuntimeReflectionPathId = InvalidSymbolId;
+  bool firstRuntimeReflectionPathIsObjectTable = false;
+};
+
 struct SemanticProgram {
   uint32_t contractVersion = SemanticProductContractVersionCurrent;
   std::string entryPath;
@@ -365,6 +371,7 @@ struct SemanticProgram {
       callTargetStringIdsByText;
   std::vector<SemanticProgramModuleResolvedArtifacts> moduleResolvedArtifacts;
   SemanticProgramPublishedRoutingLookups publishedRoutingLookups;
+  SemanticProgramPublishedLowererPreflightFacts publishedLowererPreflightFacts;
   std::vector<SemanticProgramDefinition> definitions;
   std::vector<SemanticProgramExecution> executions;
   std::vector<SemanticProgramDirectCallTarget> directCallTargets;
@@ -448,6 +455,12 @@ std::optional<StdlibSurfaceId> semanticProgramLookupPublishedMethodCallTargetStd
 std::optional<StdlibSurfaceId> semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId);
+std::string_view semanticProgramLookupPublishedLowererSoftwareNumericType(
+    const SemanticProgram &semanticProgram);
+std::string_view semanticProgramLookupPublishedLowererRuntimeReflectionPath(
+    const SemanticProgram &semanticProgram);
+bool semanticProgramLookupPublishedLowererRuntimeReflectionUsesObjectTable(
+    const SemanticProgram &semanticProgram);
 const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummaryByPathId(
     const SemanticProgram &semanticProgram,
     SymbolId fullPathId);

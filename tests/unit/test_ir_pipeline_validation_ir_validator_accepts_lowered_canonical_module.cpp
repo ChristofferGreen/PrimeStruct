@@ -183,19 +183,23 @@ TEST_CASE("ir lowerer effects unit resolves entry and non-entry defaults") {
   CHECK(nonEntryActive.count("io_err") == 0);
 }
 
-TEST_CASE("ir lowerer effects unit rejects software numeric envelopes") {
-  primec::Program program;
-  primec::Definition mainDef;
-  mainDef.fullPath = "/main";
-  primec::Transform returnTransform;
-  returnTransform.name = "return";
-  returnTransform.templateArgs.push_back("decimal");
-  mainDef.transforms.push_back(returnTransform);
-  program.definitions.push_back(std::move(mainDef));
-
+TEST_CASE("ir lowerer effects unit rejects published software numeric preflight facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.publishedLowererPreflightFacts.firstSoftwareNumericTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "decimal");
   std::string error;
-  CHECK_FALSE(primec::ir_lowerer::validateNoSoftwareNumericTypes(program, error));
+  CHECK_FALSE(primec::ir_lowerer::validateNoSoftwareNumericTypes(&semanticProgram, error));
   CHECK(error == "native backend does not support software numeric types: decimal");
+}
+
+TEST_CASE("ir lowerer effects unit rejects published runtime reflection preflight facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/meta/type_name");
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateNoRuntimeReflectionQueries(&semanticProgram, error));
+  CHECK(error ==
+        "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
 }
 
 TEST_CASE("ir lowerer helper classifies soa_vector as collection builtin") {

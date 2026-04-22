@@ -3,6 +3,7 @@
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
+#include <cctype>
 #include <optional>
 #include <string_view>
 #include <unordered_map>
@@ -121,6 +122,163 @@ std::optional<StdlibSurfaceId> classifyPublishedStdlibSurfaceId(std::string_view
     return metadata->id;
   }
   return std::nullopt;
+}
+
+bool isSoftwareNumericName(std::string_view name) {
+  return name == "integer" || name == "decimal" || name == "complex";
+}
+
+bool isReflectionMetadataQueryName(std::string_view name) {
+  return name == "type_name" || name == "type_kind" || name == "is_struct" ||
+         name == "field_count" || name == "field_name" || name == "field_type" ||
+         name == "field_visibility" || name == "has_transform" ||
+         name == "has_trait";
+}
+
+bool isReflectionMetadataQueryPath(std::string_view path) {
+  constexpr std::string_view prefix = "/meta/";
+  if (!path.starts_with(prefix)) {
+    return false;
+  }
+  const std::string_view queryName = path.substr(prefix.size());
+  return !queryName.empty() && queryName.find('/') == std::string_view::npos &&
+         isReflectionMetadataQueryName(queryName);
+}
+
+bool isRuntimeReflectionPath(std::string_view path) {
+  return path == "/meta/object" || path == "/meta/table" ||
+         path.starts_with("/meta/object/") || path.starts_with("/meta/table/");
+}
+
+bool splitTopLevelTemplateArgs(std::string_view text, std::vector<std::string> &out) {
+  out.clear();
+  int depth = 0;
+  size_t start = 0;
+  auto pushSegment = [&](size_t end) {
+    size_t segStart = start;
+    while (segStart < end &&
+           std::isspace(static_cast<unsigned char>(text[segStart]))) {
+      ++segStart;
+    }
+    size_t segEnd = end;
+    while (segEnd > segStart &&
+           std::isspace(static_cast<unsigned char>(text[segEnd - 1]))) {
+      --segEnd;
+    }
+    out.emplace_back(text.substr(segStart, segEnd - segStart));
+  };
+  for (size_t i = 0; i < text.size(); ++i) {
+    const char c = text[i];
+    if (c == '<') {
+      ++depth;
+      continue;
+    }
+    if (c == '>') {
+      if (depth > 0) {
+        --depth;
+      }
+      continue;
+    }
+    if (c == ',' && depth == 0) {
+      pushSegment(i);
+      start = i + 1;
+    }
+  }
+  pushSegment(text.size());
+  for (const auto &segment : out) {
+    if (segment.empty()) {
+      return false;
+    }
+  }
+  return !out.empty();
+}
+
+std::string findSoftwareNumericType(std::string_view typeName) {
+  if (typeName.empty()) {
+    return {};
+  }
+  std::string base;
+  std::string arg;
+  if (!splitTemplateTypeName(std::string(typeName), base, arg)) {
+    return isSoftwareNumericName(typeName) ? std::string(typeName) : std::string{};
+  }
+  if (isSoftwareNumericName(base)) {
+    return base;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(arg, args)) {
+    return {};
+  }
+  for (const auto &nested : args) {
+    std::string found = findSoftwareNumericType(nested);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  return {};
+}
+
+std::string scanTransformsForSoftwareNumeric(const std::vector<Transform> &transforms) {
+  for (const auto &transform : transforms) {
+    std::string found = findSoftwareNumericType(transform.name);
+    if (!found.empty()) {
+      return found;
+    }
+    for (const auto &arg : transform.templateArgs) {
+      found = findSoftwareNumericType(arg);
+      if (!found.empty()) {
+        return found;
+      }
+    }
+  }
+  return {};
+}
+
+std::string scanExprForSoftwareNumeric(const Expr &expr) {
+  std::string found = scanTransformsForSoftwareNumeric(expr.transforms);
+  if (!found.empty()) {
+    return found;
+  }
+  for (const auto &arg : expr.templateArgs) {
+    found = findSoftwareNumericType(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  for (const auto &arg : expr.args) {
+    found = scanExprForSoftwareNumeric(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  for (const auto &arg : expr.bodyArguments) {
+    found = scanExprForSoftwareNumeric(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  return {};
+}
+
+std::string scanExprForRuntimeReflectionQuery(const Expr &expr) {
+  if (expr.kind == Expr::Kind::Call &&
+      (isReflectionMetadataQueryPath(expr.name) ||
+       isRuntimeReflectionPath(expr.name))) {
+    return expr.name;
+  }
+  for (const auto &arg : expr.args) {
+    std::string found = scanExprForRuntimeReflectionQuery(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  for (const auto &arg : expr.bodyArguments) {
+    std::string found = scanExprForRuntimeReflectionQuery(arg);
+    if (!found.empty()) {
+      return found;
+    }
+  }
+  return {};
 }
 
 void releaseInternedField(std::string &text, SymbolId id) {
@@ -272,6 +430,83 @@ void publishRoutingLookupIndexes(SemanticPublicationBuilderState &state) {
       continue;
     }
     publishImportAlias(std::string_view(importPath).substr(slashPos + 1), importPath);
+  }
+}
+
+void publishLowererPreflightFacts(SemanticPublicationBuilderState &state) {
+  auto &facts = state.semanticProgram.publishedLowererPreflightFacts;
+
+  auto publishSoftwareNumericType = [&](const Expr &expr) {
+    if (facts.firstSoftwareNumericTypeId != InvalidSymbolId) {
+      return;
+    }
+    std::string found = scanExprForSoftwareNumeric(expr);
+    if (found.empty()) {
+      return;
+    }
+    facts.firstSoftwareNumericTypeId =
+        semanticProgramInternCallTargetString(state.semanticProgram, found);
+  };
+
+  auto publishRuntimeReflectionPath = [&](const Expr &expr) {
+    if (facts.firstRuntimeReflectionPathId != InvalidSymbolId) {
+      return;
+    }
+    std::string found = scanExprForRuntimeReflectionQuery(expr);
+    if (found.empty()) {
+      return;
+    }
+    facts.firstRuntimeReflectionPathId =
+        semanticProgramInternCallTargetString(state.semanticProgram, found);
+    facts.firstRuntimeReflectionPathIsObjectTable = isRuntimeReflectionPath(found);
+  };
+
+  for (const auto &def : state.program.definitions) {
+    if (facts.firstSoftwareNumericTypeId == InvalidSymbolId) {
+      if (std::string found = scanTransformsForSoftwareNumeric(def.transforms);
+          !found.empty()) {
+        facts.firstSoftwareNumericTypeId =
+            semanticProgramInternCallTargetString(state.semanticProgram, found);
+      }
+    }
+    for (const auto &param : def.parameters) {
+      publishSoftwareNumericType(param);
+      publishRuntimeReflectionPath(param);
+    }
+    for (const auto &stmt : def.statements) {
+      publishSoftwareNumericType(stmt);
+      publishRuntimeReflectionPath(stmt);
+    }
+    if (def.returnExpr.has_value()) {
+      publishSoftwareNumericType(*def.returnExpr);
+      publishRuntimeReflectionPath(*def.returnExpr);
+    }
+    if (facts.firstSoftwareNumericTypeId != InvalidSymbolId &&
+        facts.firstRuntimeReflectionPathId != InvalidSymbolId) {
+      return;
+    }
+  }
+
+  for (const auto &exec : state.program.executions) {
+    if (facts.firstSoftwareNumericTypeId == InvalidSymbolId) {
+      if (std::string found = scanTransformsForSoftwareNumeric(exec.transforms);
+          !found.empty()) {
+        facts.firstSoftwareNumericTypeId =
+            semanticProgramInternCallTargetString(state.semanticProgram, found);
+      }
+    }
+    for (const auto &arg : exec.arguments) {
+      publishSoftwareNumericType(arg);
+      publishRuntimeReflectionPath(arg);
+    }
+    for (const auto &arg : exec.bodyArguments) {
+      publishSoftwareNumericType(arg);
+      publishRuntimeReflectionPath(arg);
+    }
+    if (facts.firstSoftwareNumericTypeId != InvalidSymbolId &&
+        facts.firstRuntimeReflectionPathId != InvalidSymbolId) {
+      return;
+    }
   }
 }
 
@@ -897,6 +1132,7 @@ SemanticProgram buildSemanticProgramFromPublicationSurface(
   SemanticPublicationBuilderState state(program, entryPath, buildConfig);
   initializeSemanticProgramPublicationShell(state);
   publishRoutingLookupIndexes(state);
+  publishLowererPreflightFacts(state);
   publishSemanticRoutingFamilies(state, publicationSurface);
   publishSemanticMetadataFamilies(state, publicationSurface);
   publishSemanticScopedFactFamilies(state, publicationSurface);

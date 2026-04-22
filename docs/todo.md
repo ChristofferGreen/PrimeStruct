@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4120
 - TODO-4121
 - TODO-4106
 - TODO-4107
@@ -79,8 +78,8 @@ Task template:
 
 - Reflection ergonomics and docs alignment: TODO-4132, TODO-4133
 - Struct helper call ergonomics: TODO-4134
-- Semantic-product authority and lowerer ownership: TODO-4120, TODO-4121,
-  TODO-4122, TODO-4129
+- Semantic-product authority and lowerer ownership: TODO-4121, TODO-4122,
+  TODO-4129
 - Validator/runtime boundary simplification: TODO-4123, TODO-4126,
   TODO-4127, TODO-4128
 - Test-surface contraction: TODO-4124, TODO-4125
@@ -90,17 +89,16 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4120
-2. TODO-4121
-3. TODO-4106
-4. TODO-4107
-5. TODO-4134
+1. TODO-4121
+2. TODO-4106
+3. TODO-4107
+4. TODO-4134
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4120, TODO-4121, TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4121, TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
 | Stdlib surface-style alignment and public helper readability | TODO-4132, TODO-4133, TODO-4134 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
@@ -122,7 +120,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4121, TODO-4122 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4132, TODO-4133, TODO-4134 |
 | Semantic-product publication parity and deterministic ordering | TODO-4121, TODO-4122, TODO-4127, TODO-4129, TODO-4131 |
-| Lowerer/source-composition contract coverage | TODO-4120, TODO-4128 |
+| Lowerer/source-composition contract coverage | TODO-4128 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -473,26 +471,6 @@ Task template:
   - stop_rule: Stop once representative semantic-product completeness checks
       fail at publication time and the corresponding lowerer-time AST rewalks
       are removed.
-
-- [ ] TODO-4120: Remove raw `Program` from `IrLowerer` ownership
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Cut `IrLowerer::lower` away from raw semantic ownership of
-      `Program`, replacing AST-dependent lowering decisions with a
-      semantic-product-first interface plus provenance-only access keyed by
-      semantic node identity.
-  - acceptance:
-    - `IrLowerer::lower` no longer requires raw `Program` for representative
-      lowering-facing semantic decisions.
-    - Lowering reads meaning from semantic-product inputs and AST data only for
-      provenance or syntax-owned executable structure.
-    - Compile-pipeline and lowerer contract coverage prove parity for the
-      migrated path.
-  - stop_rule: Stop once representative lowerer entry/setup paths no longer
-      depend on raw `Program` for semantic meaning and rely on provenance-only
-      AST access instead.
 
 - [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites
   - owner: ai

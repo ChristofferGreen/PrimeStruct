@@ -1007,6 +1007,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductResultMetadataCompleteness(semanticProgram, error)") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("validateNoSoftwareNumericTypes(semanticProgram, error)") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateNoRuntimeReflectionQueries(semanticProgram, error)") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateNoSoftwareNumericTypes(program, error)") ==
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateNoRuntimeReflectionQueries(program, error)") ==
+        std::string::npos);
   CHECK(irEntrySetupSource.find("kSemanticProductCompletenessMatrix") != std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductCompletenessMatrix(program, *entryDefOut, semanticProgram, error)") !=
         std::string::npos);
@@ -2068,11 +2076,21 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("SemanticProgramPublishedRoutingLookups publishedRoutingLookups;") !=
         std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramPublishedLowererPreflightFacts") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("SemanticProgramPublishedLowererPreflightFacts publishedLowererPreflightFacts;") !=
+        std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramReturnFact> returnFacts;") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramLocalAutoFact> localAutoFacts;") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramQueryFact> queryFacts;") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramTryFact> tryFacts;") != std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramOnErrorFact> onErrorFacts;") != std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramLookupPublishedLowererSoftwareNumericType(") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramLookupPublishedLowererRuntimeReflectionPath(") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramLookupPublishedLowererRuntimeReflectionUsesObjectTable(") !=
+        std::string::npos);
   CHECK(semanticProduct.find("semanticProgramBindingFactView(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
   CHECK(semanticProduct.find("semanticProgramReturnFactView(const SemanticProgram &semanticProgram);") !=
@@ -2107,6 +2125,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("initializeSemanticProgramPublicationShell(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("publishRoutingLookupIndexes(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publishLowererPreflightFacts(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("publishDirectCallTargetFacts(") !=
         std::string::npos);
@@ -2176,6 +2196,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.importAliasTargetPathIdsByNameId.try_emplace(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("facts.firstSoftwareNumericTypeId =\n            semanticProgramInternCallTargetString(state.semanticProgram, found);") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("facts.firstRuntimeReflectionPathId =\n        semanticProgramInternCallTargetString(state.semanticProgram, found);") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("facts.firstRuntimeReflectionPathIsObjectTable = isRuntimeReflectionPath(found);") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("auto &module = state.ensureModuleResolvedArtifacts(moduleScopePath);") !=
         std::string::npos);

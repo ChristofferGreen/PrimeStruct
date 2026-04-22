@@ -8,8 +8,8 @@ bool findEntryDefinition(const ::primec::Program &program,
                          const ::primec::Definition *&entryDefOut,
                          std::string &error);
 
-bool validateNoSoftwareNumericTypes(const ::primec::Program &program, std::string &error);
-bool validateNoRuntimeReflectionQueries(const ::primec::Program &program, std::string &error);
+bool validateNoSoftwareNumericTypes(const ::primec::SemanticProgram *semanticProgram, std::string &error);
+bool validateNoRuntimeReflectionQueries(const ::primec::SemanticProgram *semanticProgram, std::string &error);
 
 bool effectBitForName(const std::string &name, uint64_t &outBit);
 bool isSupportedEffect(const std::string &name);
