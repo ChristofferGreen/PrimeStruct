@@ -32,27 +32,8 @@ struct SemanticProductCompletenessCheck {
 
 struct SemanticProductContractManifest {
   uint32_t version = SemanticProductContractVersionCurrent;
-  const std::array<SemanticProductCompletenessCheck, 8> *checks = nullptr;
+  const std::array<SemanticProductCompletenessCheck, 5> *checks = nullptr;
 };
-
-bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &context,
-                                  std::string &error) {
-  return validateSemanticProductDirectCallCoverage(context.program,
-                                                   context.semanticProgram,
-                                                   error);
-}
-
-bool validateBridgePathFactFamily(const SemanticProductCompletenessContext &context,
-                                  std::string &error) {
-  return validateSemanticProductBridgePathCoverage(context.program,
-                                                   context.semanticProgram,
-                                                   error);
-}
-
-bool validateMethodCallFactFamily(const SemanticProductCompletenessContext &context,
-                                  std::string &error) {
-  return validateSemanticProductMethodCallCoverage(context.program, context.semanticProgram, error);
-}
 
 bool validateBindingFactFamily(const SemanticProductCompletenessContext &context,
                                std::string &error) {
@@ -96,10 +77,7 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
                                   error);
 }
 
-const std::array<SemanticProductCompletenessCheck, 8> kSemanticProductCompletenessMatrix = {{
-    {"routing.direct-call", "directCallTargets[].resolvedPathId", validateDirectCallFactFamily},
-    {"routing.bridge-path", "bridgePathChoices[].helperNameId", validateBridgePathFactFamily},
-    {"routing.method-call", "methodCallTargets[].resolvedPathId", validateMethodCallFactFamily},
+const std::array<SemanticProductCompletenessCheck, 5> kSemanticProductCompletenessMatrix = {{
     {"type-shape.binding", "bindingFacts[].resolvedPathId", validateBindingFactFamily},
     {"type-shape.local-auto", "localAutoFacts[].bindingTypeText", validateLocalAutoFactFamily},
     {"result-control.entry-args", "entryPath + bindingFacts[]", validateEntryParameterFactFamily},

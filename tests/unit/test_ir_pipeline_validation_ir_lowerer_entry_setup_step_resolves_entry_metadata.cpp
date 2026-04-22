@@ -108,6 +108,57 @@ TEST_CASE("ir lowerer entry setup step rejects published runtime reflection pref
         "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
 }
 
+TEST_CASE("ir lowerer entry setup step defers routing completeness to conformance coverage") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Expr directCallExpr;
+  directCallExpr.kind = primec::Expr::Kind::Call;
+  directCallExpr.name = "callee";
+  directCallExpr.semanticNodeId = 41;
+  entryDef.statements.push_back(directCallExpr);
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr methodCallExpr;
+  methodCallExpr.kind = primec::Expr::Kind::Call;
+  methodCallExpr.name = "count";
+  methodCallExpr.isMethodCall = true;
+  methodCallExpr.semanticNodeId = 42;
+  methodCallExpr.args.push_back(receiverExpr);
+  entryDef.statements.push_back(methodCallExpr);
+
+  primec::Expr bridgeCallExpr;
+  bridgeCallExpr.kind = primec::Expr::Kind::Call;
+  bridgeCallExpr.name = "/std/collections/mapContains";
+  bridgeCallExpr.semanticNodeId = 43;
+  entryDef.statements.push_back(bridgeCallExpr);
+
+  program.definitions.push_back(entryDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+
+  const primec::Definition *resolvedEntry = nullptr;
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerEntrySetup(program,
+                                               &semanticProgram,
+                                               "/main",
+                                               {"io_out"},
+                                               {"io_err"},
+                                               resolvedEntry,
+                                               entryEffectMask,
+                                               entryCapabilityMask,
+                                               error));
+  CHECK(error.empty());
+  REQUIRE(resolvedEntry != nullptr);
+  CHECK(resolvedEntry->fullPath == "/main");
+}
+
 TEST_CASE("ir lowerer imports structs setup step builds maps and layouts") {
   primec::Program program;
 

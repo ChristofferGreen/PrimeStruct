@@ -993,17 +993,23 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irEntrySetupSource.find("semantic product entry path mismatch: expected ") != std::string::npos);
   CHECK(irLowererEntry.find("runLowerEntrySetup(program,") != std::string::npos);
   CHECK(irLowererEntry.find("semanticProgram,") != std::string::npos);
-  CHECK(irEntrySetupSource.find("validateSemanticProductDirectCallCoverage(context.program,") !=
+  CHECK(irEntrySetupSource.find("validateSemanticProductDirectCallCoverage(context.program,") ==
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateSemanticProductBridgePathCoverage(context.program,") !=
+  CHECK(irEntrySetupSource.find("validateSemanticProductBridgePathCoverage(context.program,") ==
         std::string::npos);
   CHECK(irEntrySetupSource.find("buildDefinitionMapAndStructNames(program.definitions, defMap, unusedStructNames, nullptr);") ==
         std::string::npos);
   CHECK(irEntrySetupSource.find("buildImportAliasesFromProgram(program.imports, program.definitions, defMap);") ==
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateSemanticProductMethodCallCoverage(program, semanticProgram, error)") !=
+  CHECK(irEntrySetupSource.find("{\"routing.direct-call\", \"directCallTargets[].resolvedPathId\"") ==
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateSemanticProductBindingCoverage(program, semanticProgram, error)") !=
+  CHECK(irEntrySetupSource.find("{\"routing.bridge-path\", \"bridgePathChoices[].helperNameId\"") ==
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("{\"routing.method-call\", \"methodCallTargets[].resolvedPathId\"") ==
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateSemanticProductMethodCallCoverage(program, semanticProgram, error)") ==
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateSemanticProductBindingCoverage(context.program, context.semanticProgram, error)") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductResultMetadataCompleteness(semanticProgram, error)") !=
         std::string::npos);

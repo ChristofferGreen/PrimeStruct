@@ -14,6 +14,7 @@
 #include "primec/IrLowerer.h"
 #include "primec/IrPreparation.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererCallDispatchHelpers.h"
 
 #include "test_ir_pipeline_backends_helpers.h"
 #include "test_ir_pipeline_helpers.h"
@@ -228,7 +229,7 @@ TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved e
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product direct-call targets") {
+TEST_CASE("semantic-product direct-call coverage conformance rejects missing targets") {
   primec::Program program;
 
   primec::Definition callee;
@@ -249,17 +250,14 @@ TEST_CASE("ir lowerer rejects missing semantic-product direct-call targets") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product direct-call target: /main -> callee");
-  CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product direct-call semantic ids") {
+TEST_CASE("semantic-product direct-call coverage conformance rejects missing semantic ids") {
   primec::Program program;
 
   primec::Definition callee;
@@ -278,14 +276,11 @@ TEST_CASE("ir lowerer rejects missing semantic-product direct-call semantic ids"
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product direct-call semantic id: /main -> callee");
-  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir lowerer keeps semantic-product direct-call targets authoritative over rooted rewritten expr names") {
@@ -361,7 +356,7 @@ TEST_CASE("ir lowerer keeps semantic-product direct-call targets authoritative o
   CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product method-call targets") {
+TEST_CASE("semantic-product method-call coverage conformance rejects missing targets") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -382,17 +377,14 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call targets") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product method-call target: /main -> count");
-  CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product method-call semantic ids") {
+TEST_CASE("semantic-product method-call coverage conformance rejects missing semantic ids") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -411,14 +403,11 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call semantic ids"
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product method-call semantic id: /main -> count");
-  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path ids") {
@@ -883,7 +872,7 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   std::string error;
   primec::DiagnosticSinkReport diagnosticInfo;
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
-  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
+  CHECK(error == "missing semantic-product binding fact: /main -> parameter value");
   CHECK(diagnosticInfo.message == error);
 
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
