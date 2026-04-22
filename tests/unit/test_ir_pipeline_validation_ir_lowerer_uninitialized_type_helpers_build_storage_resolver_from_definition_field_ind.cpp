@@ -414,6 +414,15 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(resultExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 
+  primec::Expr structExpr;
+  primec::Transform structTransform;
+  structTransform.name = "Holder";
+  structExpr.transforms.push_back(structTransform);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(structExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(primec::ir_lowerer::bindingValueKindFromTypeText("Holder", primec::ir_lowerer::LocalInfo::Kind::Value) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
   primec::Expr defaultExpr;
   CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(defaultExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int32);

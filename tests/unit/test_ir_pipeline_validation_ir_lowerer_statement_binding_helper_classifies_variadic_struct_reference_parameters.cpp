@@ -993,6 +993,7 @@ main() {
           &semanticProductTargets);
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(info.structTypeName.empty());
 }
 

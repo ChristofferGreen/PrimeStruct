@@ -170,7 +170,7 @@ LocalInfo::ValueKind bindingValueKindFromTypeText(const std::string &typeText, L
       return kindValue;
     }
   }
-  if (kind != LocalInfo::Kind::Value) {
+  if (kind != LocalInfo::Kind::Value || !normalizedType.empty()) {
     return LocalInfo::ValueKind::Unknown;
   }
   return LocalInfo::ValueKind::Int32;
@@ -581,10 +581,12 @@ bool isFileErrorBindingType(const Expr &expr) {
 }
 
 LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo::Kind kind) {
+  bool sawTypeTransform = false;
   for (const auto &transform : expr.transforms) {
     if (isBindingQualifierName(transform.name)) {
       continue;
     }
+    sawTypeTransform = true;
     const std::string normalizedName = normalizeCollectionBindingTypeName(transform.name);
     if (normalizedName == "Pointer" || normalizedName == "Reference") {
       if (transform.templateArgs.size() == 1) {
@@ -622,7 +624,7 @@ LocalInfo::ValueKind bindingValueKindFromTransforms(const Expr &expr, LocalInfo:
       return kindValue;
     }
   }
-  if (kind != LocalInfo::Kind::Value) {
+  if (kind != LocalInfo::Kind::Value || sawTypeTransform) {
     return LocalInfo::ValueKind::Unknown;
   }
   return LocalInfo::ValueKind::Int32;
