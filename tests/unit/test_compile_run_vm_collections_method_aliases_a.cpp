@@ -709,7 +709,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /array/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector method alias access struct method chain with primitive argument diagnostics" * doctest::skip(true)) {
+TEST_CASE("rejects vm vector method alias access struct method chain with primitive argument diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
