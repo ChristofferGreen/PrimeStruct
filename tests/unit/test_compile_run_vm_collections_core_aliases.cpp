@@ -65,7 +65,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("rejects vm namespaced wrapper string access method chain compatibility fallback" * doctest::skip(true)) {
+TEST_CASE("rejects vm namespaced wrapper string access method chain compatibility fallback") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -131,7 +131,7 @@ main() {
   CHECK(readFile(outPath).find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("vm keeps slash-method wrapper string access i32 diagnostics" * doctest::skip(true)) {
+TEST_CASE("vm keeps slash-method wrapper string access i32 diagnostics") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
