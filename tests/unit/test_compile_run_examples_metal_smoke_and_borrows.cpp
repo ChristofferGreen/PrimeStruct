@@ -230,8 +230,11 @@ TEST_CASE("spinning cube metal software surface bridge smoke") {
   CHECK(hostStdout.find("frame_rendered=1") != std::string::npos);
 }
 
-TEST_CASE("borrow checker negative examples fail with expected diagnostics" * doctest::skip(true)) {
-  const std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
+TEST_CASE("borrow checker negative examples fail with expected diagnostics") {
+  std::filesystem::path examplesDir = std::filesystem::path("..") / "examples" / "borrow_checker_negative";
+  if (!std::filesystem::exists(examplesDir)) {
+    examplesDir = std::filesystem::current_path() / "examples" / "borrow_checker_negative";
+  }
   REQUIRE(std::filesystem::exists(examplesDir));
 
   std::vector<std::filesystem::path> exampleFiles;

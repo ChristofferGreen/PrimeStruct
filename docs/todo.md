@@ -466,11 +466,10 @@ Task template:
     - The residual skipped-test queue remains explicit and synchronized with the
       surviving clusters.
   - notes: Remaining residual skips after the benchmark/pilot,
-      count-forwarding smoke, native-image crc, and gfx doc-contract
-      re-enables now live in the lifecycle, math policy-doc, and residual
-      example suites plus the broader gfx smoke coverage such as
+      count-forwarding smoke, native-image crc, gfx doc-contract, and
+      borrow-example diagnostic re-enables now live in the lifecycle, math
+      policy-doc, and broader gfx smoke coverage such as
       `test_compile_run_emitters_core_behaviors.cpp`,
-      `test_compile_run_examples_metal_smoke_and_borrows.cpp`,
       `test_compile_run_math_conformance.cpp`, and the gfx smoke suites.
   - stop_rule: Stop once every remaining non-collection skipped suite is either
       active and explicitly owned here or no longer skipped.
