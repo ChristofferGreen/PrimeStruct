@@ -177,7 +177,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("native materializes variadic borrowed map packs with indexed tryAt inference" * doctest::skip(true)) {
+TEST_CASE("native materializes variadic borrowed map packs with indexed tryAt inference") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -469,7 +469,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("native materializes variadic pointer map packs with indexed tryAt inference" * doctest::skip(true)) {
+TEST_CASE("native materializes variadic pointer map packs with indexed tryAt inference") {
   const std::string source = R"(
 import /std/collections/*
 
