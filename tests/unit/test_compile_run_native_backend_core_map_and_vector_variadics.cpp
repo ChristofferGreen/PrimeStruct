@@ -351,7 +351,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("native materializes variadic pointer map packs with indexed lookup helpers" * doctest::skip(true)) {
+TEST_CASE("native materializes variadic pointer map packs with indexed lookup helpers") {
   const std::string source = R"(
 import /std/collections/*
 

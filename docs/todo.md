@@ -468,10 +468,9 @@ Task template:
       broad umbrella files without an active owning TODO.
     - Docs/todo and adjacent source locks reflect the narrowed collection skip
       surface.
-  - notes: Remaining collection skips after the helper-routing and paired map
-      literal re-enables live in compile-run coverage such as
-      `test_compile_run_examples_docs.cpp` and
-      `test_compile_run_native_backend_core_map_and_vector_variadics.cpp`.
+  - notes: The remaining collection skip after the helper-routing, paired map
+      literal, and native pointer-map lookup re-enables lives in
+      `test_compile_run_examples_docs.cpp`.
   - stop_rule: Stop once the current collection compatibility umbrella skips
       are reduced to actively owned narrow blockers or deleted entirely.
 
