@@ -195,6 +195,46 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
+  error.clear();
+  primec::Expr dynamicVectorCallTarget;
+  dynamicVectorCallTarget.kind = primec::Expr::Kind::Call;
+  dynamicVectorCallTarget.name = "/wrapVector__ti32";
+  primec::Expr wrappedLiteral;
+  wrappedLiteral.kind = primec::Expr::Kind::Literal;
+  wrappedLiteral.literalValue = 6;
+  dynamicVectorCallTarget.args = {wrappedLiteral};
+  callExpr.name = "/std/collections/vector/count";
+  callExpr.args = {dynamicVectorCallTarget};
+  dynamicCountEmitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++dynamicCountEmitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 5});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(dynamicCountEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
+
+  instructions.clear();
   error = "stale";
   primec::Expr namedArgVectorTemporary;
   namedArgVectorTemporary.kind = primec::Expr::Kind::Call;
@@ -299,6 +339,40 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             error) == Result::NotHandled);
   CHECK(dynamicCapacityEmitExprCalls == 0);
   CHECK(instructions.empty());
+
+  instructions.clear();
+  error.clear();
+  callExpr.name = "/std/collections/vector/capacity";
+  callExpr.args = {dynamicVectorCallTarget};
+  dynamicCapacityEmitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++dynamicCapacityEmitExprCalls;
+              instructions.push_back({primec::IrOpcode::AddressOfLocal, 9});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(dynamicCapacityEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();

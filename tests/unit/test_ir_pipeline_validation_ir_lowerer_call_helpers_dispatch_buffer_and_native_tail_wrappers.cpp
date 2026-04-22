@@ -233,6 +233,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.isMapTarget);
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 
   std::string error;
   CHECK(primec::ir_lowerer::validateMapAccessTargetInfo(resolved, "at", error));
@@ -246,6 +247,21 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.isMapTarget);
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+
+  primec::ir_lowerer::LocalInfo experimentalMapInfo;
+  experimentalMapInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  experimentalMapInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  experimentalMapInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  experimentalMapInfo.structTypeName = "/std/collections/experimental_map/Map";
+  locals.emplace("experimentalValues", experimentalMapInfo);
+
+  primec::Expr experimentalMapName;
+  experimentalMapName.kind = primec::Expr::Kind::Name;
+  experimentalMapName.name = "experimentalValues";
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(experimentalMapName, locals);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 
   primec::ir_lowerer::LocalInfo mapArgsInfo;
   mapArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
@@ -270,6 +286,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.isMapTarget);
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 
   primec::Expr canonicalMapArgsAccess;
   canonicalMapArgsAccess.kind = primec::Expr::Kind::Call;
@@ -280,6 +297,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   CHECK(resolved.isMapTarget);
   CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(resolved.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
 
   primec::ir_lowerer::LocalInfo mapPointerInfo;
   mapPointerInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Pointer;
@@ -344,6 +362,28 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
   plain.name = "other";
   resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(plain, locals);
   CHECK_FALSE(resolved.isMapTarget);
+  primec::Expr helperMapName;
+  helperMapName.kind = primec::Expr::Kind::Name;
+  helperMapName.name = "/wrapMap__ti32_i64";
+  bool helperMapCallbackInvoked = false;
+  resolved = primec::ir_lowerer::resolveMapAccessTargetInfo(
+      helperMapName,
+      locals,
+      [&](const primec::Expr &targetExpr, primec::ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
+        helperMapCallbackInvoked = true;
+        if (targetExpr.kind != primec::Expr::Kind::Name ||
+            targetExpr.name != "/wrapMap__ti32_i64") {
+          return false;
+        }
+        targetInfoOut.isMapTarget = true;
+        targetInfoOut.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        targetInfoOut.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+        return true;
+      });
+  CHECK(helperMapCallbackInvoked);
+  CHECK(resolved.isMapTarget);
+  CHECK(resolved.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(resolved.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   error = "stale";
   CHECK(primec::ir_lowerer::validateMapAccessTargetInfo(resolved, "get", error));
   CHECK(error == "stale");
@@ -663,6 +703,35 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   primec::Expr plain;
   plain.kind = primec::Expr::Kind::Name;
   plain.name = "other";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(plain, locals);
+  CHECK_FALSE(resolved.isArrayOrVectorTarget);
+  primec::Expr helperVectorName;
+  helperVectorName.kind = primec::Expr::Kind::Name;
+  helperVectorName.name = "/wrapVector__ti32";
+  bool helperVectorCallbackInvoked = false;
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      helperVectorName,
+      locals,
+      [&](const primec::Expr &targetExpr,
+          primec::ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
+        helperVectorCallbackInvoked = true;
+        if (targetExpr.kind != primec::Expr::Kind::Name ||
+            targetExpr.name != "/wrapVector__ti32") {
+          return false;
+        }
+        targetInfoOut.isArrayOrVectorTarget = true;
+        targetInfoOut.isVectorTarget = true;
+        targetInfoOut.elemKind = Kind::Int32;
+        return true;
+      });
+  CHECK(helperVectorCallbackInvoked);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.isVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  error.clear();
+  CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
+  CHECK(error.empty());
+
   resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(plain, locals);
   CHECK_FALSE(resolved.isArrayOrVectorTarget);
   error.clear();

@@ -524,7 +524,8 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       normalizedName.erase(generatedSuffix);
     }
     return normalizedName == "map/entry" ||
-           normalizedName == "std/collections/map/entry";
+           normalizedName == "std/collections/map/entry" ||
+           normalizedName == "std/collections/experimental_map/entry";
   };
   const bool hasEntryCtorArgs = [&]() {
     for (const auto &arg : expr.args) {

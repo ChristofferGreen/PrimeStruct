@@ -632,6 +632,30 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
+  auto isMapEntryCallExpr = [](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+      return false;
+    }
+    std::string normalizedName = resolveExprPath(candidate);
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    const auto generatedSuffix = normalizedName.find("__");
+    if (generatedSuffix != std::string::npos) {
+      normalizedName.erase(generatedSuffix);
+    }
+    return normalizedName == "map/entry" ||
+           normalizedName == "std/collections/map/entry" ||
+           normalizedName == "std/collections/experimental_map/entry";
+  };
+  const bool hasEntryCtorArgs = [&]() {
+    for (const auto &arg : expr.args) {
+      if (isMapEntryCallExpr(arg)) {
+        return true;
+      }
+    }
+    return false;
+  }();
   std::string helperName;
   const std::string resolvedPath = resolveExprPath(expr);
   if ((resolvedPath.rfind("/map/", 0) == 0 ||
@@ -639,6 +663,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
       resolvePublishedCollectionSurfaceExprMemberName(
           expr, StdlibSurfaceId::CollectionsMapConstructors, helperName) &&
       helperName == "map") {
+    if (hasEntryCtorArgs) {
+      return false;
+    }
     out = "map";
     return true;
   }
@@ -656,6 +683,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   if (scopedName.rfind("map/", 0) == 0) {
     std::string alias = scopedName.substr(std::string("map/").size());
     if (alias == "map") {
+      if (hasEntryCtorArgs) {
+        return false;
+      }
       out = "map";
       return true;
     }
@@ -665,6 +695,9 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
     std::string alias =
         scopedName.substr(std::string("std/collections/map/").size());
     if (alias == "map") {
+      if (hasEntryCtorArgs) {
+        return false;
+      }
       out = "map";
       return true;
     }

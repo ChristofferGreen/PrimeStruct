@@ -512,6 +512,152 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer call helpers inline direct experimental map helper calls") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+
+  LocalInfo mapInfo;
+  mapInfo.kind = LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = LocalInfo::ValueKind::String;
+  mapInfo.mapValueKind = LocalInfo::ValueKind::Int32;
+  mapInfo.structTypeName = "/std/collections/experimental_map/Map__td48f7c0fb764e3c0";
+  locals.emplace("values", mapInfo);
+
+  LocalInfo keyInfo;
+  keyInfo.kind = LocalInfo::Kind::Value;
+  keyInfo.valueKind = LocalInfo::ValueKind::String;
+  locals.emplace("key", keyInfo);
+
+  primec::Definition callee;
+  callee.fullPath = "/std/collections/experimental_map/mapAt__td48f7c0fb764e3c0";
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyName;
+  keyName.kind = primec::Expr::Kind::Name;
+  keyName.name = "key";
+
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = callee.fullPath;
+  directCall.args = {valuesName, keyName};
+
+  std::string error = "stale";
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            directCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &expr) -> const primec::Definition * {
+              CHECK(expr.name == "/std/collections/experimental_map/mapAt__td48f7c0fb764e3c0");
+              return &callee;
+            },
+            [&](const primec::Expr &, const primec::Definition &resolvedCallee, const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              CHECK(resolvedCallee.fullPath ==
+                    "/std/collections/experimental_map/mapAt__td48f7c0fb764e3c0");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(emitCalls == 1);
+  CHECK(error == "stale");
+}
+
+TEST_CASE("ir lowerer call helpers keep direct canonical map count-like helpers on builtin fallback for map locals") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+
+  LocalInfo mapInfo;
+  mapInfo.kind = LocalInfo::Kind::Map;
+  mapInfo.mapKeyKind = LocalInfo::ValueKind::Int32;
+  mapInfo.mapValueKind = LocalInfo::ValueKind::Int64;
+  locals.emplace("values", mapInfo);
+
+  LocalInfo keyInfo;
+  keyInfo.kind = LocalInfo::Kind::Value;
+  keyInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("key", keyInfo);
+
+  primec::Definition canonicalCount;
+  canonicalCount.fullPath = "/std/collections/map/count";
+
+  primec::Definition canonicalContains;
+  canonicalContains.fullPath = "/std/collections/map/contains";
+
+  primec::Definition canonicalTryAt;
+  canonicalTryAt.fullPath = "/std/collections/map/tryAt";
+
+  primec::Expr valuesName;
+  valuesName.kind = primec::Expr::Kind::Name;
+  valuesName.name = "values";
+
+  primec::Expr keyName;
+  keyName.kind = primec::Expr::Kind::Name;
+  keyName.name = "key";
+
+  auto expectBuiltinFallback = [&](const primec::Expr &callExpr,
+                                   const primec::Definition &resolvedCallee) {
+    std::string error = "stale";
+    int emitCalls = 0;
+    CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+              callExpr,
+              locals,
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+                CHECK(false);
+                return nullptr;
+              },
+              [&](const primec::Expr &expr) -> const primec::Definition * {
+                CHECK(expr.name == callExpr.name);
+                CHECK(expr.namespacePrefix == callExpr.namespacePrefix);
+                CHECK_FALSE(expr.isMethodCall);
+                return &resolvedCallee;
+              },
+              [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+                ++emitCalls;
+                return true;
+              },
+              error) == Result::NotHandled);
+    CHECK(error == "stale");
+    CHECK(emitCalls == 0);
+  };
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.namespacePrefix = "/std/collections/map";
+  countCall.name = "count";
+  countCall.args = {valuesName};
+  expectBuiltinFallback(countCall, canonicalCount);
+
+  primec::Expr containsCall;
+  containsCall.kind = primec::Expr::Kind::Call;
+  containsCall.namespacePrefix = "/std/collections/map";
+  containsCall.name = "contains";
+  containsCall.args = {valuesName, keyName};
+  expectBuiltinFallback(containsCall, canonicalContains);
+
+  primec::Expr tryAtCall;
+  tryAtCall.kind = primec::Expr::Kind::Call;
+  tryAtCall.namespacePrefix = "/std/collections/map";
+  tryAtCall.name = "tryAt";
+  tryAtCall.args = {valuesName, keyName};
+  expectBuiltinFallback(tryAtCall, canonicalTryAt);
+}
+
 TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for stdlib-only helpers" * doctest::skip(true)) {
   using Result = primec::ir_lowerer::UnsupportedNativeCallResult;
 

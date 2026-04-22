@@ -163,7 +163,37 @@
             [&]() { return allocTempLocal(); },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
             [&](int32_t localIndex) { fileScopeStack.back().push_back(localIndex); },
-            error)) {
+            error,
+            [&](const Expr &argExpr,
+                const LocalMap &localsForInference,
+                LocalInfo &infoOut,
+                std::string &infoError) -> bool {
+              const Expr *targetExpr = &argExpr;
+              for (size_t peelSteps = 0; peelSteps < 8; ++peelSteps) {
+                if (targetExpr->kind != Expr::Kind::Call ||
+                    targetExpr->args.size() != 1 ||
+                    (!isSimpleCallName(*targetExpr, "location") &&
+                     !isSimpleCallName(*targetExpr, "dereference"))) {
+                  break;
+                }
+                targetExpr = &targetExpr->args.front();
+              }
+
+              if (targetExpr->kind == Expr::Kind::Name) {
+                auto existingIt = localsForInference.find(targetExpr->name);
+                if (existingIt != localsForInference.end()) {
+                  infoOut = existingIt->second;
+                  return true;
+                }
+              }
+
+              infoOut = {};
+              infoOut.kind = LocalInfo::Kind::Value;
+              infoOut.valueKind = inferExprKind(*targetExpr, localsForInference);
+              infoOut.structTypeName = inferStructExprPath(*targetExpr, localsForInference);
+              infoError.clear();
+              return true;
+            })) {
       inlineStack.erase(callee.fullPath);
       return false;
     }
@@ -178,27 +208,82 @@
       return false;
     }
 
-    if (callee.fullPath == "/std/collections/map/insert_builtin" ||
-        callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0) {
+    const bool isBuiltinCanonicalMapInsertCallee =
+        callee.fullPath == "/std/collections/map/insert_builtin" ||
+        callee.fullPath.rfind("/std/collections/map/insert_builtin__", 0) == 0;
+    const bool isGeneratedMapInsertHelper =
+        callee.fullPath == "/std/collections/mapInsert" ||
+        callee.fullPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
+        callee.fullPath == "/std/collections/experimental_map/mapInsert" ||
+        callee.fullPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
+        callee.fullPath == "/std/collections/experimental_map/mapInsertRef" ||
+        callee.fullPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
+    if (isBuiltinCanonicalMapInsertCallee || isGeneratedMapInsertHelper) {
+      auto extractParameterTypeName = [](const Expr &paramExpr) {
+        for (const auto &transform : paramExpr.transforms) {
+          if (transform.name == "mut" || transform.name == "public" || transform.name == "private" ||
+              transform.name == "static" || transform.name == "shared" || transform.name == "placement" ||
+              transform.name == "align" || transform.name == "packed" || transform.name == "reflection" ||
+              transform.name == "effects" || transform.name == "capabilities") {
+            continue;
+          }
+          if (!transform.arguments.empty()) {
+            continue;
+          }
+          std::string typeName = transform.name;
+          if (!transform.templateArgs.empty()) {
+            typeName += "<";
+            for (size_t index = 0; index < transform.templateArgs.size(); ++index) {
+              if (index != 0) {
+                typeName += ", ";
+              }
+              typeName += trimTemplateTypeText(transform.templateArgs[index]);
+            }
+            typeName += ">";
+          }
+          return typeName;
+        }
+        return std::string{};
+      };
+      auto inferValueKindFromTypeText = [&](std::string typeText,
+                                            LocalInfo::ValueKind &kindOut) {
+        kindOut = LocalInfo::ValueKind::Unknown;
+        typeText = trimTemplateTypeText(typeText);
+        while (!typeText.empty()) {
+          kindOut = valueKindFromTypeName(typeText);
+          if (kindOut != LocalInfo::ValueKind::Unknown) {
+            return true;
+          }
+
+          std::string base;
+          std::string argText;
+          if (!splitTemplateTypeName(typeText, base, argText)) {
+            return false;
+          }
+
+          const std::string normalizedBase = trimTemplateTypeText(base);
+          if ((normalizedBase == "Reference" || normalizedBase == "Pointer") && !argText.empty()) {
+            typeText = trimTemplateTypeText(argText);
+            continue;
+          }
+          return false;
+        }
+        return false;
+      };
       auto valuesIt = calleeLocals.find("values");
+      if (valuesIt == calleeLocals.end()) {
+        valuesIt = calleeLocals.find("entries");
+      }
       auto keyIt = calleeLocals.find("key");
       auto valueIt = calleeLocals.find("value");
       if (valuesIt == calleeLocals.end() || keyIt == calleeLocals.end() || valueIt == calleeLocals.end()) {
-        error = "builtin canonical map insert lowering requires values/key/value locals";
+        error = "builtin canonical map insert lowering requires values or entries plus key/value locals";
         inlineStack.erase(callee.fullPath);
         return false;
       }
-      if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown) {
-        error = "builtin canonical map insert lowering requires typed map bindings";
-        inlineStack.erase(callee.fullPath);
-        return false;
-      }
-      int32_t valuesLocal =
-          valuesIt->second.kind == LocalInfo::Kind::Map ? valuesIt->second.index : -1;
-      int32_t valuesWrapperLocal = -1;
-      int32_t ptrLocal = valuesIt->second.index;
+      const Expr *originalValuesArg = nullptr;
       if (!orderedArgs.empty() && orderedArgs.front() != nullptr) {
-        const Expr *originalValuesArg = orderedArgs.front();
+        originalValuesArg = orderedArgs.front();
         if (originalValuesArg->kind == Expr::Kind::Call &&
             isSimpleCallName(*originalValuesArg, "dereference") &&
             originalValuesArg->args.size() == 1 &&
@@ -207,45 +292,108 @@
         }
         if (originalValuesArg->kind == Expr::Kind::Name) {
           auto callerValuesIt = callerLocals.find(originalValuesArg->name);
-          if (callerValuesIt != callerLocals.end()) {
-            if (callerValuesIt->second.kind == LocalInfo::Kind::Map) {
-              valuesLocal = callerValuesIt->second.index;
-            } else if ((callerValuesIt->second.kind == LocalInfo::Kind::Reference &&
-                        callerValuesIt->second.referenceToMap) ||
-                       (callerValuesIt->second.kind == LocalInfo::Kind::Pointer &&
-                        callerValuesIt->second.pointerToMap)) {
-              valuesWrapperLocal = callerValuesIt->second.index;
-            }
+          if (callerValuesIt != callerLocals.end() &&
+              callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+              callerValuesIt->second.mapValueKind != LocalInfo::ValueKind::Unknown) {
+            valuesIt->second.mapKeyKind = callerValuesIt->second.mapKeyKind;
+            valuesIt->second.mapValueKind = callerValuesIt->second.mapValueKind;
           }
         }
       }
-      if (valuesIt->second.kind == LocalInfo::Kind::Reference ||
-          valuesIt->second.kind == LocalInfo::Kind::Pointer) {
-        valuesWrapperLocal = valuesIt->second.index;
-        ptrLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesIt->second.index)});
-        function.instructions.push_back({IrOpcode::LoadIndirect, 0});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+      auto isExperimentalMapStructPath = [](const std::string &structPath) {
+        return structPath == "/std/collections/experimental_map/Map" ||
+               structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+      };
+      bool receiverUsesExperimentalMapStruct =
+          isExperimentalMapStructPath(valuesIt->second.structTypeName);
+      if (!receiverUsesExperimentalMapStruct && originalValuesArg != nullptr &&
+          originalValuesArg->kind == Expr::Kind::Name) {
+        auto callerValuesIt = callerLocals.find(originalValuesArg->name);
+        if (callerValuesIt != callerLocals.end()) {
+          receiverUsesExperimentalMapStruct =
+              isExperimentalMapStructPath(callerValuesIt->second.structTypeName);
+        }
       }
-      if (!ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrGrow(
-              valuesLocal,
-              valuesWrapperLocal,
-              ptrLocal,
-              keyIt->second.index,
-              valueIt->second.index,
-              valuesIt->second.mapKeyKind,
-              [&]() { return allocTempLocal(); },
-              [&]() { return function.instructions.size(); },
-              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-              [&](size_t indexToPatch, uint64_t target) { function.instructions[indexToPatch].imm = target; })) {
-        error = "failed to lower builtin canonical map insert helper";
+      if (!isBuiltinCanonicalMapInsertCallee && receiverUsesExperimentalMapStruct) {
+        // Experimental-map receivers still need the real stdlib helper body,
+        // because the builtin canonical insert path mutates the flat map
+        // storage layout, not the struct-backed experimental map layout.
+      } else {
+        if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown &&
+            callee.parameters.size() >= 3) {
+          LocalInfo::ValueKind inferredKeyKind = LocalInfo::ValueKind::Unknown;
+          LocalInfo::ValueKind inferredValueKind = LocalInfo::ValueKind::Unknown;
+          if (inferValueKindFromTypeText(extractParameterTypeName(callee.parameters[1]), inferredKeyKind) &&
+              inferValueKindFromTypeText(extractParameterTypeName(callee.parameters[2]), inferredValueKind)) {
+            valuesIt->second.mapKeyKind = inferredKeyKind;
+            valuesIt->second.mapValueKind = inferredValueKind;
+          }
+        }
+        if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown) {
+          error = "builtin canonical map insert lowering requires typed map bindings";
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        auto isDirectMapStorageLocal = [](const LocalInfo &info) {
+          return info.kind == LocalInfo::Kind::Map ||
+                 (info.kind == LocalInfo::Kind::Value &&
+                  info.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+                  info.mapValueKind != LocalInfo::ValueKind::Unknown);
+        };
+        int32_t valuesLocal =
+            isDirectMapStorageLocal(valuesIt->second) ? valuesIt->second.index : -1;
+        int32_t valuesWrapperLocal = -1;
+        int32_t ptrLocal = valuesIt->second.index;
+        if (originalValuesArg != nullptr) {
+          if (originalValuesArg->kind == Expr::Kind::Name) {
+            auto callerValuesIt = callerLocals.find(originalValuesArg->name);
+            if (callerValuesIt != callerLocals.end()) {
+              if (isDirectMapStorageLocal(callerValuesIt->second)) {
+                valuesLocal = callerValuesIt->second.index;
+              } else if ((callerValuesIt->second.kind == LocalInfo::Kind::Reference &&
+                          callerValuesIt->second.referenceToMap) ||
+                         (callerValuesIt->second.kind == LocalInfo::Kind::Pointer &&
+                          callerValuesIt->second.pointerToMap)) {
+                valuesWrapperLocal = callerValuesIt->second.index;
+              }
+            }
+          }
+        }
+        if (valuesIt->second.kind == LocalInfo::Kind::Reference ||
+            valuesIt->second.kind == LocalInfo::Kind::Pointer) {
+          if (valuesIt->second.referenceToMap || valuesIt->second.pointerToMap) {
+            valuesWrapperLocal = valuesIt->second.index;
+            ptrLocal = allocTempLocal();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valuesIt->second.index)});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+          } else {
+            ptrLocal = valuesIt->second.index;
+          }
+        }
+        if (!ir_lowerer::emitBuiltinCanonicalMapInsertOverwriteOrGrow(
+                valuesLocal,
+                valuesWrapperLocal,
+                ptrLocal,
+                keyIt->second.index,
+                valueIt->second.index,
+                valuesIt->second.mapKeyKind,
+                [&]() { return allocTempLocal(); },
+                [&]() { return function.instructions.size(); },
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                [&](size_t indexToPatch, uint64_t target) { function.instructions[indexToPatch].imm = target; })) {
+          error = "failed to lower builtin canonical map insert helper";
+          inlineStack.erase(callee.fullPath);
+          return false;
+        }
+        if (requireValue) {
+          function.instructions.push_back({IrOpcode::PushI32, 0});
+        }
+        emitFileScopeCleanup(fileScopeStack.back());
+        popFileScope();
         inlineStack.erase(callee.fullPath);
-        return false;
+        return true;
       }
-      emitFileScopeCleanup(fileScopeStack.back());
-      popFileScope();
-      inlineStack.erase(callee.fullPath);
-      return true;
     }
 
     InlineContext context;
@@ -318,13 +466,6 @@
       inlineStack.erase(callee.fullPath);
       return false;
     }
-    const bool isGeneratedMapInsertHelper =
-        callee.fullPath == "/std/collections/mapInsert" ||
-        callee.fullPath.rfind("/std/collections/mapInsert__", 0) == 0 ||
-        callee.fullPath == "/std/collections/experimental_map/mapInsert" ||
-        callee.fullPath.rfind("/std/collections/experimental_map/mapInsert__", 0) == 0 ||
-        callee.fullPath == "/std/collections/experimental_map/mapInsertRef" ||
-        callee.fullPath.rfind("/std/collections/experimental_map/mapInsertRef__", 0) == 0;
     if (requireValue && context.returnsVoid && !structDef && isGeneratedMapInsertHelper) {
       function.instructions.push_back({IrOpcode::PushI32, 0});
     }

@@ -11,6 +11,49 @@
           }
           return candidate.name;
         };
+        auto resolveTailDispatchDirectHelperDefinition =
+            [&](const Expr &candidate) -> const Definition * {
+          if (const Definition *callee = resolveDefinitionCall(candidate);
+              callee != nullptr) {
+            return callee;
+          }
+          auto findDirectHelperDefinition = [&](const std::string &path)
+              -> const Definition * {
+            auto defIt = defMap.find(path);
+            if (defIt != defMap.end()) {
+              return defIt->second;
+            }
+            auto matchesGeneratedLeafDefinition = [&](const std::string &candidatePath,
+                                                      const char *marker,
+                                                      size_t markerSize) {
+              return candidatePath.rfind(path, 0) == 0 &&
+                     candidatePath.compare(path.size(), markerSize, marker) == 0 &&
+                     candidatePath.find('/', path.size() + markerSize) ==
+                         std::string::npos;
+            };
+            for (const auto &[candidatePath, def] : defMap) {
+              if (def == nullptr) {
+                continue;
+              }
+              if (matchesGeneratedLeafDefinition(candidatePath, "__t", 3) ||
+                  matchesGeneratedLeafDefinition(candidatePath, "__ov", 4)) {
+                return def;
+              }
+            }
+            return nullptr;
+          };
+          const std::string rawPath =
+              resolveTailDispatchDirectHelperPath(candidate);
+          if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
+              rawDef != nullptr) {
+            return rawDef;
+          }
+          const std::string resolvedPath = resolveExprPath(candidate);
+          if (resolvedPath != rawPath) {
+            return findDirectHelperDefinition(resolvedPath);
+          }
+          return nullptr;
+        };
         auto hasPublishedSemanticMapSurface = [&](const Expr &callExpr) {
           return findSemanticProductDirectCallStdlibSurfaceId(semanticProgram, callExpr) ==
                      primec::StdlibSurfaceId::CollectionsMapHelpers ||
@@ -87,10 +130,6 @@
                        helperName) &&
                    (helperName == "insert" || helperName == "insert_ref");
           };
-          if (matchesPublishedMapInsertPath(callExpr)) {
-            return false;
-          }
-
           auto stripGeneratedHelperSuffix = [](std::string helperName) {
             const size_t generatedSuffix = helperName.find("__");
             if (generatedSuffix != std::string::npos) {
@@ -126,7 +165,8 @@
             }
           } else {
             std::string helperName;
-            if ((!ir_lowerer::resolveMapHelperAliasName(callExpr, helperName) || helperName != "insert") &&
+            if ((!ir_lowerer::resolveMapHelperAliasName(callExpr, helperName) ||
+                 (helperName != "insert" && helperName != "insert_ref")) &&
                 !isDirectBareMapInsertHelperStem(callExpr)) {
               return false;
             }
@@ -146,22 +186,8 @@
           }
           const auto inferCallMapTargetInfo = [&](const Expr &targetExpr, ir_lowerer::MapAccessTargetInfo &out) {
             out = {};
-            const Definition *callee = resolveDefinitionCall(targetExpr);
-            if (callee == nullptr) {
-              const std::string resolvedPath = resolveExprPath(targetExpr);
-              auto defIt = defMap.find(resolvedPath);
-              if (defIt != defMap.end()) {
-                callee = defIt->second;
-              } else {
-                const std::string generatedPrefix = resolvedPath + "__";
-                for (const auto &entry : defMap) {
-                  if (entry.first.rfind(generatedPrefix, 0) == 0) {
-                    callee = entry.second;
-                    break;
-                  }
-                }
-              }
-            }
+            const Definition *callee =
+                resolveTailDispatchDirectHelperDefinition(targetExpr);
             if (callee == nullptr) {
               return false;
             }
@@ -182,6 +208,14 @@
               ir_lowerer::resolveMapAccessTargetInfo(callExpr.args[receiverIndex], localsIn, inferCallMapTargetInfo);
           if (!targetInfo.isMapTarget &&
               !matchesPublishedMapInsertPath(callExpr)) {
+            return false;
+          }
+          auto isExperimentalMapStructPath = [](const std::string &structPath) {
+            return structPath == "/std/collections/experimental_map/Map" ||
+                   structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+          };
+          if (targetInfo.isWrappedMapTarget ||
+              isExperimentalMapStructPath(targetInfo.structTypeName)) {
             return false;
           }
 
@@ -334,7 +368,10 @@
                ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                    resolveExprPath(callExpr),
                    primec::StdlibSurfaceId::CollectionsMapHelpers));
-          if (isCanonicalStdMapHelperPath) {
+          const bool preserveCanonicalStdMapHelperPath =
+              isCanonicalStdMapHelperPath &&
+              (!mapTargetInfo.isMapTarget || mapTargetInfo.isWrappedMapTarget);
+          if (preserveCanonicalStdMapHelperPath) {
             // Keep canonical stdlib helper calls intact so direct overrides on
             // /std/collections/map/* are honored.
             return false;
@@ -348,14 +385,17 @@
             return false;
           }
           if ((helperName == "count" || helperName == "contains" ||
-               helperName == "tryAt" || helperName == "insert") &&
-              resolveDefinitionCall(callExpr) != nullptr) {
+               helperName == "tryAt" || helperName == "insert" ||
+               helperName == "insert_ref") &&
+              resolveDefinitionCall(callExpr) != nullptr &&
+              !isCanonicalStdMapHelperPath) {
             return false;
           }
           const std::string resolvedHelperPath = resolveExprPath(callExpr);
           if (ir_lowerer::isCanonicalPublishedStdlibSurfaceHelperPath(
                   resolvedHelperPath,
-                  primec::StdlibSurfaceId::CollectionsMapHelpers)) {
+                  primec::StdlibSurfaceId::CollectionsMapHelpers) &&
+              !isCanonicalStdMapHelperPath) {
             // Keep canonical stdlib helper paths intact so custom overrides on
             // /std/collections/map/* retain their resolved return types.
             return false;
@@ -481,7 +521,8 @@
             return resolveBuiltinMapHelperName(candidate, false, helperName) &&
                    (helperName == "count" || helperName == "contains" ||
                     helperName == "tryAt" || helperName == "at" ||
-                    helperName == "at_unsafe" || helperName == "insert");
+                    helperName == "at_unsafe" || helperName == "insert" ||
+                    helperName == "insert_ref");
           };
 
           if (!shouldRewriteReceiver(callExpr) || !isBorrowedOrPointerMapReceiver(callExpr.args.front())) {
@@ -587,7 +628,8 @@
                     }
                     return structPath;
                   };
-              const Definition *callee = resolveDefinitionCall(targetCallExpr);
+              const Definition *callee =
+                  resolveTailDispatchDirectHelperDefinition(targetCallExpr);
               if (callee == nullptr) {
                 return false;
               }
@@ -675,7 +717,8 @@
                 targetInfoOut.structTypeName = inferredReceiverStruct;
                 return true;
               }
-              const Definition *callee = resolveDefinitionCall(targetCallExpr);
+              const Definition *callee =
+                  resolveTailDispatchDirectHelperDefinition(targetCallExpr);
               if (callee == nullptr) {
                 return false;
               }

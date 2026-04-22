@@ -533,6 +533,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
       (scopedExprPath == "count" || scopedExprPath == "/std/collections/vector/count" ||
        scopedExprPath == "std/collections/vector/count") &&
+      expr.args.front().kind != Expr::Kind::Call &&
       (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
        !isVectorCountTarget(expr.args.front(), localsIn) &&
        !isFieldAccessTarget);
@@ -545,6 +546,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
       (scopedExprPath == "capacity" || scopedExprPath == "/std/collections/vector/capacity" ||
        scopedExprPath == "std/collections/vector/capacity") &&
+      expr.args.front().kind != Expr::Kind::Call &&
       (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
        !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)) &&
        !isFieldAccessTarget);

@@ -3154,7 +3154,7 @@ TEST_CASE("compiles and runs native wrapper map constructors through explicit ex
   expectWrapperMapConstructorExperimentalParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map variadic constructors") {
+TEST_CASE("rejects native experimental map variadic constructors") {
   expectExperimentalMapVariadicConstructorConformance("native");
 }
 

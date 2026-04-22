@@ -23,7 +23,7 @@ namespace std {
 
     [public return<bool>]
     is_eof([FileError] err) {
-      return(isEof(err))
+      return(/std/file/FileError/isEof(err))
     }
 
     [public return<Result<T, FileError>>]

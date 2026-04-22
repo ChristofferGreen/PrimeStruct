@@ -264,6 +264,17 @@ bool prefersPublishedMapHelperDefinition(const Expr &expr,
       return true;
     }
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+    const bool isExplicitCanonicalMapHelperPath =
+        rawPath.rfind("/std/collections/map/", 0) == 0 ||
+        rawPath.rfind("std/collections/map/", 0) == 0;
+    if (isExplicitCanonicalMapHelperPath &&
+        (helperName == "count" || helperName == "count_ref" ||
+         helperName == "contains" || helperName == "contains_ref" ||
+         helperName == "tryAt" || helperName == "tryAt_ref" ||
+         helperName == "at" || helperName == "at_ref" ||
+         helperName == "at_unsafe" || helperName == "at_unsafe_ref")) {
+      return true;
+    }
     if (rawPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
         callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
       return true;
@@ -281,7 +292,9 @@ bool prefersPublishedMapHelperDefinition(const Expr &expr,
   if (helperName == "count" || helperName == "count_ref") {
     return true;
   }
-  if ((helperName == "at" || helperName == "at_ref" ||
+  if ((helperName == "contains" || helperName == "contains_ref" ||
+       helperName == "tryAt" || helperName == "tryAt_ref" ||
+       helperName == "at" || helperName == "at_ref" ||
        helperName == "at_unsafe" || helperName == "at_unsafe_ref") &&
       !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name) {
     return true;
@@ -295,6 +308,10 @@ bool isMapBuiltinInlinePath(const Expr &expr, const Definition &callee) {
       resolvePublishedInlineMapHelperName(callee.fullPath, resolvedHelperName);
   if (!expr.isMethodCall) {
     const std::string scopedExprPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+    if (scopedExprPath.rfind("/std/collections/experimental_map/map", 0) == 0 &&
+        callee.fullPath.rfind("/std/collections/experimental_map/map", 0) == 0) {
+      return false;
+    }
     if (prefersPublishedMapHelperDefinition(expr, resolvedHelperName, callee)) {
       return false;
     }
@@ -522,9 +539,16 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
   const Definition *directCallee = nullptr;
   if (!expr.isMethodCall) {
     directCallee = resolveDefinitionCall(expr);
+    const std::string directCallPath =
+        resolveInlineCallPathWithoutFallbackProbes(expr);
+    const bool isExplicitDirectExperimentalMapAccessHelperCall =
+        directCallee != nullptr &&
+        directCallPath.rfind("/std/collections/experimental_map/map", 0) == 0 &&
+        directCallee->fullPath.rfind("/std/collections/experimental_map/map", 0) == 0;
     if (directCallee != nullptr && isCollectionAccessReceiverExpr &&
         !expr.args.empty() && isCollectionAccessReceiverExpr(expr.args.front()) &&
-        isExplicitDirectMapAccessHelperCall(expr)) {
+        isExplicitDirectMapAccessHelperCall(expr) &&
+        !isExplicitDirectExperimentalMapAccessHelperCall) {
       return InlineCallDispatchResult::NotHandled;
     }
     if (directCallee != nullptr &&
@@ -536,6 +560,11 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
         (isSemanticBarePreferredMapHelperDefinitionCall(expr, *directCallee) ||
          isBareDirectWrapperMapAccessDefinitionCall(expr) ||
          isExplicitSamePathMapCountLikeDefinitionCall(expr, *directCallee))) {
+      if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
+          isCollectionAccessReceiverExpr(expr.args.front()) &&
+          isMapBuiltinInlinePath(expr, *directCallee)) {
+        return InlineCallDispatchResult::NotHandled;
+      }
       const auto emitResult = emitResolvedInlineDefinitionCall(
           expr, directCallee, emitInlineDefinitionCall, error);
       return emitResult == ResolvedInlineCallResult::Emitted
@@ -645,6 +674,21 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const bool isCanonicalStdMapHelperCall =
         rawPath.rfind("/std/collections/map/", 0) == 0 ||
         rawPath.rfind("std/collections/map/", 0) == 0;
+    if (isCanonicalStdMapHelperCall && !expr.args.empty()) {
+      const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+      std::string directHelperName = rawPath;
+      const size_t lastSlash = directHelperName.find_last_of('/');
+      if (lastSlash != std::string::npos) {
+        directHelperName = directHelperName.substr(lastSlash + 1);
+      }
+      directHelperName = canonicalInlineMapHelperName(std::move(directHelperName));
+      if (targetInfo.isMapTarget &&
+          (directHelperName == "count" || directHelperName == "contains" ||
+           directHelperName == "tryAt" || directHelperName == "at" ||
+           directHelperName == "at_unsafe")) {
+        return InlineCallDispatchResult::NotHandled;
+      }
+    }
     if (!expr.args.empty() &&
         (resolveMapHelperAliasName(expr, mapHelperName) ||
          (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2)) &&

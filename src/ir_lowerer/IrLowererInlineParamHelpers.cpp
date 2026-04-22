@@ -448,6 +448,31 @@ bool emitInlineDefinitionCallParameters(
     if (paramInfo.isFileHandle) {
       paramInfo.structTypeName.clear();
     }
+    if (orderedArg != nullptr && inferExprLocalInfo &&
+        paramInfo.kind == LocalInfo::Kind::Value &&
+        paramInfo.valueKind == LocalInfo::ValueKind::Unknown &&
+        paramInfo.structTypeName.empty() &&
+        !paramInfo.isFileHandle && !paramInfo.isFileError && !paramInfo.isResult) {
+      LocalInfo inferredArgInfo;
+      std::string inferredArgError;
+      if (!inferExprLocalInfo(*orderedArg, callerLocals, inferredArgInfo, inferredArgError)) {
+        error = inferredArgError;
+        return false;
+      }
+      if (inferredArgInfo.kind != LocalInfo::Kind::Value ||
+          !inferredArgInfo.structTypeName.empty() ||
+          inferredArgInfo.isFileHandle || inferredArgInfo.isFileError ||
+          inferredArgInfo.isResult) {
+        const bool paramIsMutable = paramInfo.isMutable;
+        const bool paramIsArgsPack = paramInfo.isArgsPack;
+        const int32_t paramArgsPackElementCount = paramInfo.argsPackElementCount;
+        paramInfo = inferredArgInfo;
+        paramInfo.index = 0;
+        paramInfo.isMutable = paramIsMutable;
+        paramInfo.isArgsPack = paramIsArgsPack;
+        paramInfo.argsPackElementCount = paramArgsPackElementCount;
+      }
+    }
     const bool reserveIndexEarly =
         i == packedParamIndex ||
         paramInfo.kind != LocalInfo::Kind::Map ||
@@ -585,7 +610,9 @@ bool emitInlineDefinitionCallParameters(
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
-            if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
+            if ((it->second.kind == LocalInfo::Kind::Value ||
+                 it->second.kind == LocalInfo::Kind::Map) &&
+                !it->second.structTypeName.empty()) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
@@ -718,7 +745,9 @@ bool emitInlineDefinitionCallParameters(
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }
-            if (it->second.kind == LocalInfo::Kind::Value && !it->second.structTypeName.empty()) {
+            if ((it->second.kind == LocalInfo::Kind::Value ||
+                 it->second.kind == LocalInfo::Kind::Map) &&
+                !it->second.structTypeName.empty()) {
               emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
               return true;
             }

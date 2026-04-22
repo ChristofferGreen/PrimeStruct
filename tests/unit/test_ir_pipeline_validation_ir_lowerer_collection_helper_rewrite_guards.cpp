@@ -40,6 +40,14 @@ TEST_CASE("ir lowerer collection helper rewrite guards explicit map defs") {
         std::string::npos);
   CHECK(source.find("if (helperName != \"insert\" && isRootedAliasSamePathCountLikeCall(callExpr)) {") !=
         std::string::npos);
+  CHECK(source.find(
+            "if (callExpr.namespacePrefix.empty() &&\n"
+            "              callExpr.name == helperName) {") !=
+        std::string::npos);
+  CHECK(source.find(
+            "if (directHelperPath.rfind(\"/std/collections/map/\", 0) == 0 ||\n"
+            "              directHelperPath.rfind(\"/std/collections/experimental_map/\", 0) == 0) {") !=
+        std::string::npos);
   CHECK(source.find("resolveDirectHelperPath(callExpr).rfind(\"/std/collections/experimental_map/\", 0) == 0") !=
         std::string::npos);
   CHECK(source.find("if (resolveDefinitionCall(callExpr) != nullptr)") != std::string::npos);
@@ -117,12 +125,52 @@ TEST_CASE("ir lowerer late collection constructor guards use published construct
   REQUIRE(std::filesystem::exists(collectionHelpersPath));
   const std::string source = readText(collectionHelpersPath);
 
+  CHECK(source.find("auto resolvePublishedLateCollectionConstructorName =") !=
+        std::string::npos);
   CHECK(source.find("primec::StdlibSurfaceId::CollectionsMapConstructors") !=
         std::string::npos);
   CHECK(source.find("primec::StdlibSurfaceId::CollectionsVectorConstructors") !=
         std::string::npos);
-  CHECK(source.find("resolvePublishedLateCollectionMemberName(") !=
+  CHECK(source.find("resolvePublishedStdlibSurfaceConstructorExprMemberName(") !=
         std::string::npos);
+  CHECK(source.find("resolvePublishedStdlibSurfaceConstructorMemberName(") !=
+        std::string::npos);
+  CHECK(source.find("resolvePublishedLateCollectionConstructorName(") !=
+        std::string::npos);
+}
+
+TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before resolving defs") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  const std::string source = readText(collectionHelpersPath);
+
+  const size_t constructorSurfaceCheck = source.find(
+      "if (!resolvePublishedLateCollectionMemberName(\n"
+      "                  callExpr,\n"
+      "                  primec::StdlibSurfaceId::CollectionsMapConstructors,\n"
+      "                  constructorName) ||");
+  const size_t resolveDefinitionCallPos =
+      source.find("const Definition *callee = resolveDefinitionCall(callExpr);");
+
+  REQUIRE(constructorSurfaceCheck != std::string::npos);
+  REQUIRE(resolveDefinitionCallPos != std::string::npos);
+  CHECK(constructorSurfaceCheck < resolveDefinitionCallPos);
 }
 
 TEST_CASE("ir lowerer constructor metadata helpers retire duplicated constructor tables") {
@@ -253,7 +301,18 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
   CHECK(source.find("if (!resolveBuiltinMapHelperName(callExpr, true, helperName) ||\n"
                     "                (helperName != \"insert\" && helperName != \"insert_ref\")) {") !=
         std::string::npos);
+  CHECK(source.find(
+            "if ((!ir_lowerer::resolveMapHelperAliasName(callExpr, helperName) ||\n"
+            "                 (helperName != \"insert\" && helperName != \"insert_ref\")) &&") !=
+        std::string::npos);
+  CHECK(source.find("if (matchesPublishedMapInsertPath(callExpr)) {\n"
+                    "            return false;\n"
+                    "          }") ==
+        std::string::npos);
   CHECK(source.find("if ((helperName == \"count\" || helperName == \"contains\" ||") !=
+        std::string::npos);
+  CHECK(source.find("helperName == \"tryAt\" || helperName == \"insert\" ||\n"
+                    "               helperName == \"insert_ref\") &&") !=
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/map/\", 0) == 0") != std::string::npos);
   CHECK(source.find("resolveDefinitionCall(callExpr) != nullptr") != std::string::npos);
@@ -271,6 +330,128 @@ TEST_CASE("ir lowerer tail dispatch rewrite guards explicit map defs") {
         std::string::npos);
   CHECK(source.find("if (!candidate.args.empty() &&\n"
                     "                (candidate.name == \"count\" || candidate.name == \"contains\" ||") ==
+        std::string::npos);
+}
+
+TEST_CASE("ir lowerer statement expr guards inline builtin map insert family") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path statementsExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+
+  REQUIRE(std::filesystem::exists(statementsExprPath));
+  const std::string source = readText(statementsExprPath);
+
+  CHECK(source.find("auto isBuiltinMapInsertFamilyPath = [&](const std::string &path) {") !=
+        std::string::npos);
+  CHECK(source.find("normalizedPath == \"/std/collections/map/insert_builtin\";") !=
+        std::string::npos);
+  CHECK(source.find("if (isBuiltinMapInsertFamilyPath(rawPath) ||\n"
+                    "                isBuiltinMapInsertFamilyPath(directCallee->fullPath)) {") !=
+        std::string::npos);
+  CHECK(source.find("if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {") !=
+        std::string::npos);
+}
+
+TEST_CASE("ir lowerer inline map insert builtin recovers typed bindings from caller and helper params") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path inlineCallsPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerInlineCalls.h";
+
+  REQUIRE(std::filesystem::exists(inlineCallsPath));
+  const std::string source = readText(inlineCallsPath);
+
+  CHECK(source.find("auto inferValueKindFromTypeText = [&](std::string typeText,") !=
+        std::string::npos);
+  CHECK(source.find("callerValuesIt->second.mapKeyKind != LocalInfo::ValueKind::Unknown") !=
+        std::string::npos);
+  CHECK(source.find("callee.parameters.size() >= 3") !=
+        std::string::npos);
+  CHECK(source.find("extractParameterTypeName(callee.parameters[1])") !=
+        std::string::npos);
+  CHECK(source.find("extractParameterTypeName(callee.parameters[2])") !=
+        std::string::npos);
+  CHECK(source.find("info.kind == LocalInfo::Kind::Value &&\n"
+                    "                info.mapKeyKind != LocalInfo::ValueKind::Unknown &&\n"
+                    "                info.mapValueKind != LocalInfo::ValueKind::Unknown") !=
+        std::string::npos);
+  CHECK(source.find("if (valuesIt->second.referenceToMap || valuesIt->second.pointerToMap) {") !=
+        std::string::npos);
+  CHECK(source.find("} else {\n"
+                    "          ptrLocal = valuesIt->second.index;\n"
+                    "        }") !=
+        std::string::npos);
+  CHECK(source.find("if (!isBuiltinCanonicalMapInsertCallee && receiverUsesExperimentalMapStruct) {") !=
+        std::string::npos);
+  CHECK(source.find("the builtin canonical insert path mutates the flat map") !=
+        std::string::npos);
+  CHECK(source.find("if (requireValue) {\n"
+                    "        function.instructions.push_back({IrOpcode::PushI32, 0});\n"
+                    "      }") !=
+        std::string::npos);
+}
+
+TEST_CASE("ir lowerer skips builtin map insert rewrite for direct experimental map locals") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path statementCallPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererStatementCallEmission.cpp";
+  const std::filesystem::path tailDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTailDispatch.h";
+
+  REQUIRE(std::filesystem::exists(statementCallPath));
+  REQUIRE(std::filesystem::exists(tailDispatchPath));
+  const std::string statementSource = readText(statementCallPath);
+  const std::string tailDispatchSource = readText(tailDispatchPath);
+
+  CHECK(statementSource.find("if (targetInfo.isWrappedMapTarget ||") !=
+        std::string::npos);
+  CHECK(statementSource.find("isExperimentalMapStructPath(targetInfo.structTypeName)) {") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("if (targetInfo.isWrappedMapTarget ||") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("isExperimentalMapStructPath(targetInfo.structTypeName)) {") !=
+        std::string::npos);
+  CHECK(statementSource.find("structPath.rfind(\"/std/collections/experimental_map/Map__\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(tailDispatchSource.find("structPath.rfind(\"/std/collections/experimental_map/Map__\", 0) == 0;") !=
         std::string::npos);
 }
 
@@ -303,10 +484,14 @@ TEST_CASE("ir lowerer direct expr and inference rewrites guard explicit map defs
   CHECK(emitExprSource.find("resolveMapHelperAliasName(expr, canonicalMapHelperName) &&") !=
         std::string::npos);
   CHECK(emitExprSource.find("resolveDefinitionCall(expr) == nullptr &&") != std::string::npos);
+  CHECK(emitExprSource.find("canonicalMapHelperName == \"insert_ref\"") !=
+        std::string::npos);
   CHECK(inferenceDispatchSource.find("resolveMapHelperAliasName(expr, canonicalMapHelperName) &&") !=
         std::string::npos);
   CHECK(inferenceDispatchSource.find(
             "(!stateInOut.resolveDefinitionCall || stateInOut.resolveDefinitionCall(expr) == nullptr) &&") !=
+        std::string::npos);
+  CHECK(inferenceDispatchSource.find("canonicalMapHelperName == \"insert_ref\"") !=
         std::string::npos);
 }
 
@@ -367,7 +552,13 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
   REQUIRE(std::filesystem::exists(statementsExprPath));
   const std::string source = readText(statementsExprPath);
 
-  CHECK(source.find("auto isDirectHelperDefinitionFamily = [&](const std::string &rawPath,") !=
+  CHECK(source.find("auto matchesDirectHelperDefinitionFamilyPath =") !=
+        std::string::npos);
+  CHECK(source.find("auto isDirectHelperDefinitionFamily = [&](const Expr &callExpr,") !=
+        std::string::npos);
+  CHECK(source.find("const std::string resolvedPath = resolveExprPath(callExpr);") !=
+        std::string::npos);
+  CHECK(source.find("matchesDirectHelperDefinitionFamilyPath(resolvedPath, callee);") !=
         std::string::npos);
   CHECK(source.find("auto findDirectHelperDefinition = [&](const std::string &rawPath) -> const Definition * {") !=
         std::string::npos);
@@ -422,6 +613,9 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("(helperName == \"count\" || helperName == \"contains\" ||") !=
         std::string::npos);
+  CHECK(source.find("helperName == \"tryAt\" || helperName == \"insert\" ||\n"
+                    "                 helperName == \"insert_ref\") &&") !=
+        std::string::npos);
   CHECK(source.find("const size_t generatedSuffix = helperPath.find(\"__\");") ==
         std::string::npos);
   CHECK(source.find("const std::string specializedPrefix = rawPath + \"__t\";") ==
@@ -430,13 +624,50 @@ TEST_CASE("ir lowerer late expression fallback guards explicit map helper defs")
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/map/\", 0) == 0 ||") !=
         std::string::npos);
+  CHECK(source.find("rawPath.rfind(\"/std/collections/experimental_map/\", 0) == 0) &&") !=
+        std::string::npos);
   CHECK(source.find("directCallee = findDirectHelperDefinition(rawPath);") !=
+        std::string::npos);
+  CHECK(source.find("directCallee = findDirectHelperDefinition(resolveExprPath(expr));") !=
         std::string::npos);
   CHECK(source.find("if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {") !=
         std::string::npos);
   CHECK(source.find("rawPath.rfind(\"/std/collections/map/\", 0) == 0 &&") !=
         std::string::npos);
   CHECK(source.find("getBuiltinArrayAccessName(expr, accessName)") !=
+        std::string::npos);
+}
+
+TEST_CASE("ir lowerer inline native dispatch prefers published canonical map access helpers") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path inlineDispatchPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererInlineNativeCallDispatch.cpp";
+
+  REQUIRE(std::filesystem::exists(inlineDispatchPath));
+  const std::string source = readText(inlineDispatchPath);
+
+  CHECK(source.find("const bool isExplicitCanonicalMapHelperPath =") !=
+        std::string::npos);
+  CHECK(source.find("rawPath.rfind(\"/std/collections/map/\", 0) == 0") !=
+        std::string::npos);
+  CHECK(source.find("helperName == \"contains\" || helperName == \"contains_ref\"") !=
+        std::string::npos);
+  CHECK(source.find("helperName == \"tryAt\" || helperName == \"tryAt_ref\"") !=
+        std::string::npos);
+  CHECK(source.find("expr.args.front().kind == Expr::Kind::Name") !=
         std::string::npos);
 }
 
@@ -498,6 +729,36 @@ TEST_CASE("ir lowerer packed result buffer helpers normalize scoped gfx calls") 
         std::string::npos);
   CHECK(source.find("candidate.name == \"/std/gfx/Buffer\"") == std::string::npos);
   CHECK(source.find("std::string normalized = valueExpr.name;") == std::string::npos);
+}
+
+TEST_CASE("ir lowerer rooted map alias definition fallback covers insert helpers") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path callResolutionPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp";
+
+  REQUIRE(std::filesystem::exists(callResolutionPath));
+  const std::string source = readText(callResolutionPath);
+
+  CHECK(source.find(
+            "return resolveMapHelperAliasName(expr, helperName) &&\n"
+            "         (helperName == \"count\" || helperName == \"contains\" ||\n"
+            "          helperName == \"tryAt\" || helperName == \"at\" ||\n"
+            "          helperName == \"at_unsafe\" || helperName == \"insert\" ||\n"
+            "          helperName == \"insert_ref\");") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();

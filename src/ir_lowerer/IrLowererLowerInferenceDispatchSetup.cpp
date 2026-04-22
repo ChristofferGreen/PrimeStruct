@@ -71,7 +71,8 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
           (canonicalMapHelperName == "count" || canonicalMapHelperName == "contains" ||
            canonicalMapHelperName == "tryAt" || canonicalMapHelperName == "at" ||
            canonicalMapHelperName == "at_unsafe" ||
-           canonicalMapHelperName == "insert") &&
+           canonicalMapHelperName == "insert" ||
+           canonicalMapHelperName == "insert_ref") &&
           !(isExplicitMapHelperFallbackPath(expr) &&
             (canonicalMapHelperName == "at" || canonicalMapHelperName == "at_unsafe" ||
              canonicalMapHelperName == "tryAt")) &&

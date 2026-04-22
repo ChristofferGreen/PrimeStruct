@@ -269,6 +269,13 @@ inline void expectExperimentalMapReferenceMethodConformance(const std::string &e
 }
 
 inline void expectExperimentalMapVariadicConstructorConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(makeExperimentalMapVariadicConstructorConformanceSource(),
+                                      "experimental_map_variadic_ctor_" + emitMode,
+                                      emitMode,
+                                      "native backend does not support variadic entry map constructors");
+    return;
+  }
   expectMapConformanceProgramRuns(makeExperimentalMapVariadicConstructorConformanceSource(),
                                   "experimental_map_variadic_ctor_" + emitMode,
                                   emitMode,
@@ -332,38 +339,18 @@ inline void expectCanonicalMapNamespaceExperimentalInsertConformance(const std::
 }
 
 inline void expectBuiltinCanonicalMapInsertFirstGrowthConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
-                                              "map_builtin_canonical_insert_first_growth_" + emitMode,
-                                              emitMode,
-                                              8,
-                                              "");
-    return;
-  }
-
-  const int expectedExitCode = emitMode == "native" ? 139 : 1;
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertFirstGrowthConformanceSource(),
                                             "map_builtin_canonical_insert_first_growth_" + emitMode,
                                             emitMode,
-                                            expectedExitCode,
+                                            8,
                                             "");
 }
 
 inline void expectBuiltinCanonicalMapInsertRepeatedGrowthConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
-                                              "map_builtin_canonical_insert_repeated_growth_" + emitMode,
-                                              emitMode,
-                                              197,
-                                              "");
-    return;
-  }
-
-  const int expectedExitCode = emitMode == "native" ? 139 : 1;
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertRepeatedGrowthConformanceSource(),
                                             "map_builtin_canonical_insert_repeated_growth_" + emitMode,
                                             emitMode,
-                                            expectedExitCode,
+                                            197,
                                             "");
 }
 
@@ -520,20 +507,10 @@ inline void expectBuiltinCanonicalMapInsertTwentiethGrowthConformance(const std:
 }
 
 inline void expectBuiltinCanonicalMapInsertOverwriteConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
-                                              "map_builtin_canonical_insert_overwrite_" + emitMode,
-                                              emitMode,
-                                              22,
-                                              "");
-    return;
-  }
-
-  const int expectedExitCode = emitMode == "native" ? 139 : 1;
   expectMapConformanceProgramRunsWithOutput(makeBuiltinCanonicalMapInsertOverwriteConformanceSource(),
                                             "map_builtin_canonical_insert_overwrite_" + emitMode,
                                             emitMode,
-                                            expectedExitCode,
+                                            22,
                                             "");
 }
 

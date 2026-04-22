@@ -449,8 +449,7 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(
             namespacedFileExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(primec::ir_lowerer::bindingValueKindFromTypeText(
-            "/std/file/File<Read>", primec::ir_lowerer::LocalInfo::Kind::Value) ==
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("/std/file/File<Read>") ==
         primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 
   primec::Expr structExpr;
@@ -459,7 +458,7 @@ TEST_CASE("ir lowerer binding type helpers resolve value kinds from transforms")
   structExpr.transforms.push_back(structTransform);
   CHECK(primec::ir_lowerer::bindingValueKindFromTransforms(structExpr, primec::ir_lowerer::LocalInfo::Kind::Value) ==
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(primec::ir_lowerer::bindingValueKindFromTypeText("Holder", primec::ir_lowerer::LocalInfo::Kind::Value) ==
+  CHECK(primec::ir_lowerer::valueKindFromTypeName("Holder") ==
         primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 
   primec::Expr defaultExpr;

@@ -233,6 +233,29 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("map wrapper temporary bare helper calls validate target classification") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<map<K, V>>]
+wrapMap<K, V>([K] key, [V] value) {
+  [map<K, V>] values{mapSingle<K, V>(key, value)}
+  return(values)
+}
+
+[return<int>]
+main() {
+  [i32] first{mapAt<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] second{mapAtUnsafe<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32), "only"raw_utf8)}
+  [i32] count{mapCount<string, i32>(wrapMap<string, i32>("only"raw_utf8, 4i32))}
+  return(plus(plus(first, second), count))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("declared canonical map access positional reorder keeps key diagnostics") {
   const std::string source = R"(
 [return<int>]

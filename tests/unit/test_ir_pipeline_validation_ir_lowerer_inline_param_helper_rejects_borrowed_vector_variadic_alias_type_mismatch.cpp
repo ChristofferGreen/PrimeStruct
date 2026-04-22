@@ -586,5 +586,148 @@ TEST_CASE("ir lowerer inline param helper materializes map variadic args packs")
   CHECK(instructions[7].imm == 3u);
 }
 
+TEST_CASE("ir lowerer inline param helper aliases immutable concrete map params from map locals") {
+  primec::Expr entriesParam;
+  entriesParam.kind = primec::Expr::Kind::Name;
+  entriesParam.isBinding = true;
+  entriesParam.name = "entries";
+
+  primec::Expr argExpr;
+  argExpr.kind = primec::Expr::Kind::Name;
+  argExpr.name = "values";
+
+  constexpr const char *MapStructPath = "/std/collections/experimental_map/Map__tabc";
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.index = 21;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesInfo.structTypeName = MapStructPath;
+  valuesInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  callerLocals.emplace("values", valuesInfo);
+
+  int32_t nextLocal = 3;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {entriesParam},
+      {&argExpr},
+      {},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.index = 7;
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+        infoOut.structTypeName = MapStructPath;
+        infoOut.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        return expr.name == "values" ? std::string(MapStructPath) : std::string();
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        FAIL("emitExpr should not materialize map locals for immutable concrete map params");
+        return false;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error));
+
+  CHECK(error.empty());
+  REQUIRE(calleeLocals.count("entries") == 1u);
+  CHECK(calleeLocals.at("entries").structTypeName == MapStructPath);
+  CHECK_FALSE(instructions.empty());
+}
+
+TEST_CASE("ir lowerer inline param helper aliases mutable concrete map params from map locals") {
+  primec::Expr entriesParam;
+  entriesParam.kind = primec::Expr::Kind::Name;
+  entriesParam.isBinding = true;
+  entriesParam.name = "entries";
+
+  primec::Expr argExpr;
+  argExpr.kind = primec::Expr::Kind::Name;
+  argExpr.name = "values";
+
+  constexpr const char *MapStructPath = "/std/collections/experimental_map/Map__tabc";
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo valuesInfo;
+  valuesInfo.index = 23;
+  valuesInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  valuesInfo.structTypeName = MapStructPath;
+  valuesInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  valuesInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  callerLocals.emplace("values", valuesInfo);
+
+  int32_t nextLocal = 5;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {entriesParam},
+      {&argExpr},
+      {},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.index = 11;
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+        infoOut.isMutable = true;
+        infoOut.structTypeName = MapStructPath;
+        infoOut.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        infoOut.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &) {
+        return expr.name == "values" ? std::string(MapStructPath) : std::string();
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        FAIL("emitExpr should not materialize map locals for mutable concrete map params");
+        return false;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error));
+
+  CHECK(error.empty());
+  REQUIRE(calleeLocals.count("entries") == 1u);
+  CHECK(calleeLocals.at("entries").structTypeName == MapStructPath);
+  CHECK_FALSE(instructions.empty());
+}
+
 
 TEST_SUITE_END();

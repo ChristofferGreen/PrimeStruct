@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -487,6 +488,62 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("constructor-backed builtin map insert method sugar avoids insert builtin rewrite") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32> mut] values{map<i32, i32>(1i32, 4i32)}
+  values.insert(2i32, 7i32)
+  values.insert(1i32, 9i32)
+  return(values.count())
+}
+)";
+  primec::Program program;
+  std::string error;
+  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
+  CHECK(error.empty());
+
+  const primec::Definition *mainDef = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/main") {
+      mainDef = &def;
+      break;
+    }
+  }
+  REQUIRE(mainDef != nullptr);
+
+  std::vector<std::string> callNames;
+  auto collectCallNames = [&](const auto &self, const primec::Expr &expr) -> void {
+    if (expr.kind == primec::Expr::Kind::Call) {
+      callNames.push_back(expr.name);
+    }
+    for (const auto &arg : expr.args) {
+      self(self, arg);
+    }
+    for (const auto &bodyArg : expr.bodyArguments) {
+      self(self, bodyArg);
+    }
+  };
+
+  for (const auto &stmt : mainDef->statements) {
+    collectCallNames(collectCallNames, stmt);
+  }
+  if (mainDef->returnExpr.has_value()) {
+    collectCallNames(collectCallNames, *mainDef->returnExpr);
+  }
+
+  CHECK(std::find(callNames.begin(),
+                  callNames.end(),
+                  "/std/collections/map/insert_builtin") == callNames.end());
+  CHECK(std::none_of(callNames.begin(),
+                     callNames.end(),
+                     [](const std::string &name) {
+                       return name.rfind("/std/collections/map/insert_builtin__", 0) == 0;
+                     }));
+}
+
 TEST_CASE("experimental map value methods validate ownership-sensitive values through Map helpers") {
   const std::string source = R"(
 import /std/collections/*
@@ -829,6 +886,11 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
   const std::string source = readText(experimentalMapStdlibPath);
 
   CHECK(source.find(
+            "  mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {\n"
+            "    [Reference<Map<K, V>> mut] ref{location(entries)}\n"
+            "    mapBorrowedInsert<K, V>(ref, key, value)") !=
+        std::string::npos);
+  CHECK(source.find(
             "  mapCountRef<K, V>([Reference<Map<K, V>>] entries) {\n"
             "    return(mapBorrowedCount<K, V>(entries))") !=
         std::string::npos);
@@ -848,10 +910,19 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
             "  mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
             "    return(mapBorrowedAtUnsafe<K, V>(entries, key))") !=
         std::string::npos);
+  CHECK(source.find(
+            "  mapInsertRef<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {\n"
+            "    mapBorrowedInsert<K, V>(entries, key, value)") !=
+        std::string::npos);
 
   CHECK(source.find("mapCountRef<K, V>([Reference<Map<K, V>>] entries) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapCount<K, V>(values))") ==
+        std::string::npos);
+  CHECK(source.find("mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {\n"
+                    "    [i32] index{mapFindIndex<K, V>(entries, key)}\n"
+                    "    [Vector<K> mut] keys{entries.keys}\n"
+                    "    [Vector<V> mut] payloads{entries.payloads}") ==
         std::string::npos);
   CHECK(source.find("/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values)") ==
         std::string::npos);
@@ -876,6 +947,11 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
   CHECK(source.find("mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapAtUnsafe<K, V>(values, key))") ==
+        std::string::npos);
+  CHECK(source.find("mapInsertRef<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {\n"
+                    "    [Map<K, V> mut] values{dereference(entries)}\n"
+                    "    mapInsert<K, V>(values, key, value)\n"
+                    "    assign(dereference(entries), values)") ==
         std::string::npos);
   CHECK(source.find("/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
         std::string::npos);

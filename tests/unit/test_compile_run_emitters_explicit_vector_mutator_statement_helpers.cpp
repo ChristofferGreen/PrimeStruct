@@ -492,7 +492,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /map/at") !=
+  CHECK(readFile(errPath).find("native backend does not support string array return types on /borrowMap") !=
         std::string::npos);
 }
 

@@ -869,7 +869,6 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(fileStdlib.find("return(/File/writeBytes(self, bytes))") != std::string::npos);
 
   CHECK(fileErrors.find("isEof([FileError] err)") != std::string::npos);
-  CHECK(fileErrors.find("return(isEof(err))") != std::string::npos);
   CHECK(fileErrors.find("return(/std/file/FileError/isEof(err))") != std::string::npos);
 
   CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);

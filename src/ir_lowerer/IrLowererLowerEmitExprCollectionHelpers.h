@@ -11,6 +11,48 @@
           }
           return candidate.name;
         };
+        auto resolveCollectionExprDirectDefinition =
+            [&](const Expr &candidate) -> const Definition * {
+          if (const Definition *callee = resolveDefinitionCall(candidate);
+              callee != nullptr) {
+            return callee;
+          }
+          auto findDirectHelperDefinition = [&](const std::string &path)
+              -> const Definition * {
+            auto defIt = defMap.find(path);
+            if (defIt != defMap.end()) {
+              return defIt->second;
+            }
+            auto matchesGeneratedLeafDefinition = [&](const std::string &candidatePath,
+                                                      const char *marker,
+                                                      size_t markerSize) {
+              return candidatePath.rfind(path, 0) == 0 &&
+                     candidatePath.compare(path.size(), markerSize, marker) == 0 &&
+                     candidatePath.find('/', path.size() + markerSize) ==
+                         std::string::npos;
+            };
+            for (const auto &[candidatePath, def] : defMap) {
+              if (def == nullptr) {
+                continue;
+              }
+              if (matchesGeneratedLeafDefinition(candidatePath, "__t", 3) ||
+                  matchesGeneratedLeafDefinition(candidatePath, "__ov", 4)) {
+                return def;
+              }
+            }
+            return nullptr;
+          };
+          const std::string rawPath = resolveCollectionExprDirectPath(candidate);
+          if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
+              rawDef != nullptr) {
+            return rawDef;
+          }
+          const std::string resolvedPath = resolveExprPath(candidate);
+          if (resolvedPath != rawPath) {
+            return findDirectHelperDefinition(resolvedPath);
+          }
+          return nullptr;
+        };
         auto normalizeLateCollectionHelperName = [&](std::string &helperName) {
           if (helperName == "count_ref") {
             helperName = "count";
@@ -54,20 +96,38 @@
               }
               return resolved;
             };
+        auto resolvePublishedLateCollectionConstructorName =
+            [&](const Expr &candidate,
+                primec::StdlibSurfaceId surfaceId,
+                std::string &memberNameOut) {
+              memberNameOut.clear();
+              return ir_lowerer::resolvePublishedStdlibSurfaceConstructorExprMemberName(
+                         candidate,
+                         surfaceId,
+                         memberNameOut) ||
+                     ir_lowerer::resolvePublishedStdlibSurfaceConstructorMemberName(
+                         resolveExprPath(candidate),
+                         surfaceId,
+                         memberNameOut) ||
+                     ir_lowerer::resolvePublishedStdlibSurfaceConstructorMemberName(
+                         resolveCollectionExprDirectPath(candidate),
+                         surfaceId,
+                         memberNameOut);
+            };
         auto rewriteBuiltinMapConstructorExpr = [&](const Expr &callExpr, Expr &rewrittenExpr) {
           if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall) {
             return false;
           }
-          const Definition *callee = resolveDefinitionCall(callExpr);
-          if (callee == nullptr) {
-            return false;
-          }
           std::string constructorName;
-          if (!resolvePublishedLateCollectionMemberName(
+          if (!resolvePublishedLateCollectionConstructorName(
                   callExpr,
                   primec::StdlibSurfaceId::CollectionsMapConstructors,
                   constructorName) ||
               constructorName == "entry") {
+            return false;
+          }
+          const Definition *callee = resolveDefinitionCall(callExpr);
+          if (callee == nullptr) {
             return false;
           }
           rewrittenExpr = callExpr;
@@ -81,7 +141,7 @@
               return false;
             }
             std::string entryName;
-            return resolvePublishedLateCollectionMemberName(
+            return resolvePublishedLateCollectionConstructorName(
                        candidateExpr,
                        primec::StdlibSurfaceId::CollectionsMapConstructors,
                        entryName) &&
@@ -281,7 +341,15 @@
                helperName != "tryAt" && helperName != "insert")) {
             return false;
           }
+          if (callExpr.namespacePrefix.empty() &&
+              callExpr.name == helperName) {
+            return false;
+          }
           const std::string directHelperPath = resolveCollectionExprDirectPath(callExpr);
+          if (directHelperPath.rfind("/std/collections/map/", 0) == 0 ||
+              directHelperPath.rfind("/std/collections/experimental_map/", 0) == 0) {
+            return false;
+          }
           if (ir_lowerer::isPublishedStdlibSurfaceLoweringPath(
                   directHelperPath,
                   primec::StdlibSurfaceId::CollectionsMapHelpers) &&
@@ -357,7 +425,8 @@
             }
           }
 
-          const Definition *receiverDef = resolveDefinitionCall(*receiverExpr);
+          const Definition *receiverDef =
+              resolveCollectionExprDirectDefinition(*receiverExpr);
           if (receiverDef == nullptr) {
             return false;
           }
@@ -515,7 +584,8 @@
           std::string collectionName;
           std::vector<std::string> collectionArgs;
           std::string collectionStructPath;
-          const Definition *receiverDef = resolveDefinitionCall(*receiverExpr);
+          const Definition *receiverDef =
+              resolveCollectionExprDirectDefinition(*receiverExpr);
           const bool resolvedCollectionFromDef =
               receiverDef != nullptr &&
               ir_lowerer::inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs);
@@ -751,7 +821,8 @@
               localsIn,
               [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
                 targetInfoOut = {};
-                const Definition *callee = resolveDefinitionCall(targetCallExpr);
+                const Definition *callee =
+                    resolveCollectionExprDirectDefinition(targetCallExpr);
                 if (callee == nullptr) {
                   return false;
                 }
@@ -839,7 +910,8 @@
                 receiverCallExpr.templateArgs.size() == 1) {
               receiverCollectionArgs = receiverCallExpr.templateArgs;
               knownVectorCallReceiver = true;
-            } else if (const Definition *receiverDef = resolveDefinitionCall(receiverCallExpr)) {
+            } else if (const Definition *receiverDef =
+                           resolveCollectionExprDirectDefinition(receiverCallExpr)) {
               if (!ir_lowerer::inferDeclaredReturnCollection(
                       *receiverDef, receiverCollectionName, receiverCollectionArgs) ||
                   receiverCollectionName != "vector" || receiverCollectionArgs.size() != 1) {
@@ -854,7 +926,8 @@
               localsIn,
               [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
                 targetInfoOut = {};
-                const Definition *callee = resolveDefinitionCall(targetCallExpr);
+                const Definition *callee =
+                    resolveCollectionExprDirectDefinition(targetCallExpr);
                 if (callee == nullptr) {
                   return false;
                 }

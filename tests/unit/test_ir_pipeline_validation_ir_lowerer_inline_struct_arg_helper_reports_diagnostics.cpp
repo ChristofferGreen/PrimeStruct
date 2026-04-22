@@ -346,6 +346,80 @@ TEST_CASE("ir lowerer inline param helper reports diagnostics") {
   CHECK(error == "struct parameter type mismatch: expected /pkg/Expected, got /pkg/Actual");
 }
 
+TEST_CASE("ir lowerer inline param helper adopts inferred vector auto params") {
+  primec::Expr param;
+  param.kind = primec::Expr::Kind::Name;
+  param.name = "values";
+
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::Name;
+  arg.name = "items";
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo itemInfo;
+  itemInfo.index = 14;
+  itemInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  itemInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  itemInfo.structTypeName = "/vector";
+  callerLocals.emplace("items", itemInfo);
+
+  int32_t nextLocal = 7;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {param},
+      {&arg},
+      {},
+      1,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error,
+      [](const primec::Expr &expr,
+         const primec::ir_lowerer::LocalMap &locals,
+         primec::ir_lowerer::LocalInfo &infoOut,
+         std::string &) {
+        auto it = locals.find(expr.name);
+        if (it == locals.end()) {
+          return false;
+        }
+        infoOut = it->second;
+        return true;
+      }));
+  CHECK(error.empty());
+  REQUIRE(calleeLocals.count("values") == 1);
+  const auto &valuesInfo = calleeLocals.at("values");
+  CHECK(valuesInfo.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(valuesInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(valuesInfo.structTypeName == "/vector");
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions.front().op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions.front().imm == 7u);
+}
+
 TEST_CASE("ir lowerer inline param helper materializes variadic args packs") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;

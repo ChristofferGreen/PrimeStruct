@@ -172,21 +172,8 @@ namespace std {
 
   [public effects(heap_alloc), return<void> Comparable<K>]
   mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {
-    [i32] index{mapFindIndex<K, V>(entries, key)}
-    [Vector<K> mut] keys{entries.keys}
-    [Vector<V> mut] payloads{entries.payloads}
-    [i32] limit{/std/collections/experimental_vector/vectorCount<K>(keys)}
-    if(less_than(index, limit),
-       then() {
-         mapOverwriteSlot<V>(payloads, index, value)
-         assign(entries.payloads, payloads)
-       },
-       else() {
-         /std/collections/experimental_vector/vectorPush<K>(keys, key)
-         /std/collections/experimental_vector/vectorPush<V>(payloads, value)
-         assign(entries.keys, keys)
-         assign(entries.payloads, payloads)
-       })
+    [Reference<Map<K, V>> mut] ref{location(entries)}
+    mapBorrowedInsert<K, V>(ref, key, value)
   }
 
   [effects(heap_alloc), return<void> Comparable<K>]
@@ -210,9 +197,7 @@ namespace std {
 
   [public effects(heap_alloc), return<void> Comparable<K>]
   mapInsertRef<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {
-    [Map<K, V> mut] values{dereference(entries)}
-    mapInsert<K, V>(values, key, value)
-    assign(dereference(entries), values)
+    mapBorrowedInsert<K, V>(entries, key, value)
   }
 
   [public effects(heap_alloc), return<Map<K, V>>]

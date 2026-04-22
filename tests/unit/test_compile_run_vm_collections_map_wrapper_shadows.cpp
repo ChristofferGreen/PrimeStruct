@@ -611,7 +611,7 @@ main() {
   )";
   const std::string srcPath = writeTemp("vm_user_array_at_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 61);
 }
 
 TEST_CASE("runs vm with user array at method shadow") {
@@ -647,7 +647,7 @@ main() {
   )";
   const std::string srcPath = writeTemp("vm_user_array_at_unsafe_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 85);
 }
 
 TEST_CASE("runs vm with user array at_unsafe method shadow") {

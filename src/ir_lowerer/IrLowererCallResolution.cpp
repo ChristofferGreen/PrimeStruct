@@ -387,7 +387,8 @@ bool isExactRootedMapAliasDefinitionCall(const Expr &expr) {
   return resolveMapHelperAliasName(expr, helperName) &&
          (helperName == "count" || helperName == "contains" ||
           helperName == "tryAt" || helperName == "at" ||
-          helperName == "at_unsafe");
+          helperName == "at_unsafe" || helperName == "insert" ||
+          helperName == "insert_ref");
 }
 
 bool isExplicitExperimentalMapHelperDefinitionCall(const Expr &expr,

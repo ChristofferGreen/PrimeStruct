@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "SemanticsValidatorInferCollectionCompatibilityInternal.h"
 
 #include <optional>
 
@@ -45,6 +46,41 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
   rewrittenExprOut.reset();
   handledOut = false;
   resolvedOut = resolveCalleePath(expr);
+  auto bareMapWrapperHelperPath = [&](const Expr &candidate,
+                                      std::string &helperNameOut) {
+    helperNameOut.clear();
+    if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+        candidate.name.empty() || !candidate.namespacePrefix.empty()) {
+      return std::string();
+    }
+    const std::string normalizedName =
+        std::string(trimLeadingSlash(candidate.name));
+    if (!resolvePublishedCollectionHelperMemberToken(
+            normalizedName,
+            StdlibSurfaceId::CollectionsMapHelpers,
+            helperNameOut) ||
+        normalizedName == helperNameOut) {
+      helperNameOut.clear();
+      return std::string();
+    }
+    return "/std/collections/" + normalizedName;
+  };
+  std::string bareMapWrapperHelperName;
+  const std::string normalizedBareMapWrapperHelperPath =
+      bareMapWrapperHelperPath(expr, bareMapWrapperHelperName);
+  if (!normalizedBareMapWrapperHelperPath.empty()) {
+    const std::string removedCompatibilityPath =
+        "/map/" + bareMapWrapperHelperName;
+    const bool resolvesRemovedCompatibilityPath =
+        resolvedOut == removedCompatibilityPath ||
+        resolvedOut.rfind(removedCompatibilityPath + "__t", 0) == 0;
+    if ((resolvedOut.empty() || resolvesRemovedCompatibilityPath) &&
+        (hasImportedDefinitionPath(normalizedBareMapWrapperHelperPath) ||
+         hasDeclaredDefinitionPath(normalizedBareMapWrapperHelperPath) ||
+         defMap_.count(normalizedBareMapWrapperHelperPath) > 0)) {
+      resolvedOut = normalizedBareMapWrapperHelperPath;
+    }
+  }
   auto failPreDispatchDirectCallDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };

@@ -506,6 +506,25 @@ main() {
   CHECK(runCommand(exePath) == 32);
 }
 
+TEST_CASE("compiles and runs std collections vectorAt wrapper in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(4i32, 5i32, 6i32)}
+  return(vectorAt<i32>(values, 1i32))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_std_collections_vectorat_wrapper.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_std_collections_vectorat_wrapper_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 5);
+}
+
 TEST_CASE("rejects wrapper std namespaced access helper named receiver without helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]

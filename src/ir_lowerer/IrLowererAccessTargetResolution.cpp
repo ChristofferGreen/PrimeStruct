@@ -44,6 +44,11 @@ bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind
          localInfo.mapValueKind != LocalInfo::ValueKind::Unknown;
 }
 
+bool isExperimentalMapStructPath(const std::string &structPath) {
+  return structPath == "/std/collections/experimental_map/Map" ||
+         structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+}
+
 std::string mapKindTypeName(LocalInfo::ValueKind kind) {
   switch (kind) {
   case LocalInfo::ValueKind::Int32:
@@ -98,9 +103,6 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
   auto matchesPath = [&](const std::string &basePath) {
     return normalizedName == basePath || normalizedName.rfind(basePath + "__", 0) == 0;
   };
-  auto inferExperimentalMapStructPath = [&](const std::string &path) -> std::string {
-    return inferPublishedExperimentalMapStructPathFromConstructorPath(path);
-  };
   auto isDirectMapConstructor = [&]() {
     return matchesPath("std/collections/map/map") ||
            isPublishedStdlibSurfaceConstructorExpr(
@@ -138,11 +140,8 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
     info.isMapTarget = true;
     info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
     info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
-    info.structTypeName = inferExperimentalMapStructPath(normalizedName);
-    if (info.structTypeName.empty()) {
-      info.structTypeName = inferExperimentalMapStructPathFromKinds(
-          info.mapKeyKind, info.mapValueKind);
-    }
+    info.structTypeName =
+        inferExperimentalMapStructPathFromKinds(info.mapKeyKind, info.mapValueKind);
     return true;
   }
 
@@ -174,10 +173,8 @@ bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo
 
   info.mapKeyKind = keyKind;
   info.mapValueKind = valueKind;
-  info.structTypeName = inferExperimentalMapStructPath(normalizedName);
-  if (info.structTypeName.empty()) {
-    info.structTypeName = inferExperimentalMapStructPathFromKinds(keyKind, valueKind);
-  }
+  info.structTypeName =
+      inferExperimentalMapStructPathFromKinds(info.mapKeyKind, info.mapValueKind);
   return true;
 }
 
@@ -205,6 +202,27 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
         !inferredWrappedMap) {
       return false;
     }
+    auto resolvedExperimentalMapStructPath = [&](const std::string &structTypeName) {
+      if (structTypeName.empty()) {
+        const std::string specialized =
+            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
+                                                    localInfo.mapValueKind);
+        if (!specialized.empty()) {
+          return specialized;
+        }
+      }
+      if (structTypeName == "Map" ||
+          structTypeName == "std/collections/experimental_map/Map" ||
+          structTypeName == "/std/collections/experimental_map/Map") {
+        const std::string specialized =
+            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
+                                                    localInfo.mapValueKind);
+        if (!specialized.empty()) {
+          return specialized;
+        }
+      }
+      return structTypeName;
+    };
     info.isMapTarget = true;
     info.mapKeyKind = localInfo.mapKeyKind;
     info.mapValueKind = localInfo.mapValueKind;
@@ -213,8 +231,14 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
         (localInfo.kind == LocalInfo::Kind::Pointer && localInfo.pointerToMap) ||
         inferredWrappedMap;
     info.isWrappedMapTarget = isWrappedMap && !dereferenced;
-    if (!info.isWrappedMapTarget || dereferenced) {
-      info.structTypeName = localInfo.structTypeName;
+    const bool isDirectMapStorage = localInfo.kind == LocalInfo::Kind::Map;
+    const std::string resolvedStructTypeName =
+        resolvedExperimentalMapStructPath(localInfo.structTypeName);
+    const bool preserveDirectExperimentalMapStruct =
+        isDirectMapStorage && isExperimentalMapStructPath(resolvedStructTypeName);
+    if ((!info.isWrappedMapTarget || dereferenced) &&
+        (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) {
+      info.structTypeName = resolvedStructTypeName;
     }
     return true;
   };
@@ -222,6 +246,27 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     if (!localInfo.isArgsPack) {
       return false;
     }
+    auto resolvedExperimentalMapStructPath = [&](const std::string &structTypeName) {
+      if (structTypeName.empty()) {
+        const std::string specialized =
+            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
+                                                    localInfo.mapValueKind);
+        if (!specialized.empty()) {
+          return specialized;
+        }
+      }
+      if (structTypeName == "Map" ||
+          structTypeName == "std/collections/experimental_map/Map" ||
+          structTypeName == "/std/collections/experimental_map/Map") {
+        const std::string specialized =
+            inferExperimentalMapStructPathFromKinds(localInfo.mapKeyKind,
+                                                    localInfo.mapValueKind);
+        if (!specialized.empty()) {
+          return specialized;
+        }
+      }
+      return structTypeName;
+    };
     const bool isDirectMap = localInfo.argsPackElementKind == LocalInfo::Kind::Map;
     const bool inferredWrappedMap =
         hasInferredTypedWrappedMap(localInfo, localInfo.argsPackElementKind);
@@ -236,8 +281,15 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     info.mapKeyKind = localInfo.mapKeyKind;
     info.mapValueKind = localInfo.mapValueKind;
     info.isWrappedMapTarget = isWrappedMap && !dereferenced;
-    if (!info.isWrappedMapTarget || dereferenced) {
-      info.structTypeName = localInfo.structTypeName;
+    const bool isDirectMapStorage =
+        localInfo.argsPackElementKind == LocalInfo::Kind::Map;
+    const std::string resolvedStructTypeName =
+        resolvedExperimentalMapStructPath(localInfo.structTypeName);
+    const bool preserveDirectExperimentalMapStruct =
+        isDirectMapStorage && isExperimentalMapStructPath(resolvedStructTypeName);
+    if ((!info.isWrappedMapTarget || dereferenced) &&
+        (!isDirectMapStorage || preserveDirectExperimentalMapStruct)) {
+      info.structTypeName = resolvedStructTypeName;
     }
     return true;
   };
@@ -245,6 +297,12 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
     auto it = localsIn.find(target.name);
     if (it != localsIn.end()) {
       populateFromDirectLocal(it->second, false);
+    }
+    if (!info.isMapTarget && resolveCallMapAccessTargetInfo) {
+      MapAccessTargetInfo inferred;
+      if (resolveCallMapAccessTargetInfo(target, inferred)) {
+        return inferred;
+      }
     }
     return info;
   }
@@ -317,8 +375,6 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
       info.isMapTarget = true;
       info.mapKeyKind = valueKindFromTypeName(target.templateArgs[0]);
       info.mapValueKind = valueKindFromTypeName(target.templateArgs[1]);
-      info.structTypeName = inferExperimentalMapStructPathFromKinds(
-          info.mapKeyKind, info.mapValueKind);
       return info;
     }
   }
@@ -513,6 +569,12 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.elemSlotCount = elementSlotCountForLocal(it->second);
       info.structTypeName = it->second.structTypeName;
       return info;
+    }
+    if (!info.isArrayOrVectorTarget && resolveCallArrayVectorAccessTargetInfo) {
+      ArrayVectorAccessTargetInfo inferred;
+      if (resolveCallArrayVectorAccessTargetInfo(target, inferred)) {
+        return inferred;
+      }
     }
     return info;
   }

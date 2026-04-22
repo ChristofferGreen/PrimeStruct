@@ -710,6 +710,14 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
   if (!targetInfo.isMapTarget) {
     return false;
   }
+  auto isExperimentalMapStructPath = [](const std::string &structPath) {
+    return structPath == "/std/collections/experimental_map/Map" ||
+           structPath.rfind("/std/collections/experimental_map/Map__", 0) == 0;
+  };
+  if (targetInfo.isWrappedMapTarget ||
+      isExperimentalMapStructPath(targetInfo.structTypeName)) {
+    return false;
+  }
 
   rewrittenStmt = stmt;
   rewrittenStmt.name = "/std/collections/map/insert_builtin";

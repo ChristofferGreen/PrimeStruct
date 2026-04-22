@@ -56,42 +56,42 @@ namespace std {
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPush<T>([auto mut] values, [T] value) {
+  vectorPush<T>([Vector<T> mut] values, [T] value) {
     /std/collections/vector/push<T>(values, value)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorPop<T>([auto mut] values) {
+  vectorPop<T>([Vector<T> mut] values) {
     /std/collections/vector/pop<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorReserve<T>([auto mut] values, [i32] capacity) {
+  vectorReserve<T>([Vector<T> mut] values, [i32] capacity) {
     /std/collections/vector/reserve<T>(values, capacity)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorClear<T>([auto mut] values) {
+  vectorClear<T>([Vector<T> mut] values) {
     /std/collections/vector/clear<T>(values)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveAt<T>([auto mut] values, [i32] index) {
+  vectorRemoveAt<T>([Vector<T> mut] values, [i32] index) {
     /std/collections/vector/remove_at<T>(values, index)
   }
 
   [public effects(heap_alloc), return<void>]
-  vectorRemoveSwap<T>([auto mut] values, [i32] index) {
+  vectorRemoveSwap<T>([Vector<T> mut] values, [i32] index) {
     /std/collections/vector/remove_swap<T>(values, index)
   }
 
   [public return<T>]
-  vectorAt<T>([auto] values, [i32] index) {
+  vectorAt<T>([Vector<T>] values, [i32] index) {
     return(/std/collections/vector/at<T>(values, index))
   }
 
   [public return<T>]
-  vectorAtUnsafe<T>([auto] values, [i32] index) {
+  vectorAtUnsafe<T>([Vector<T>] values, [i32] index) {
     return(/std/collections/vector/at_unsafe<T>(values, index))
   }
 

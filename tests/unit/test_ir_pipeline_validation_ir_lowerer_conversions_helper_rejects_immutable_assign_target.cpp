@@ -601,7 +601,7 @@ TEST_CASE("ir lowerer return inference helpers keep namespaced File constructor 
   fileCtor.templateArgs.push_back("Read");
 
   primec::Expr pathArg;
-  pathArg.kind = primec::Expr::Kind::String;
+  pathArg.kind = primec::Expr::Kind::StringLiteral;
   pathArg.stringValue = "in.txt";
   fileCtor.args.push_back(pathArg);
 

@@ -508,10 +508,22 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
     }
     return explicitCallPathForCandidate(candidate);
   }();
+  const std::string explicitPath = explicitCallPathForCandidate(candidate);
   std::string helperName;
   const bool resolvedCompatibilityHelper =
       resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(
           resolvedPath, helperName);
+  std::string explicitSurfaceHelperName;
+  const bool spellsCurrentMapWrapperSurface =
+      candidate.namespacePrefix.empty() &&
+      resolvePublishedCollectionHelperMemberToken(
+          candidate.name,
+          StdlibSurfaceId::CollectionsMapHelpers,
+          explicitSurfaceHelperName) &&
+      explicitSurfaceHelperName == helperName &&
+      trimLeadingSlash(candidate.name) != helperName &&
+      explicitPath.rfind("/map/", 0) != 0 &&
+      explicitPath.rfind("/std/collections/map/", 0) != 0;
   if (!resolvedCompatibilityHelper &&
       !resolveExplicitPublishedMapHelperExprMemberName(
           candidate.name, candidate.namespacePrefix, helperName)) {
@@ -521,6 +533,9 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
       StdlibSurfaceId::CollectionsMapHelpers, helperName);
   if (resolvedCompatibilityHelper &&
       matchesResolvedPath(resolvedPath, canonicalPath)) {
+    return "";
+  }
+  if (resolvedCompatibilityHelper && spellsCurrentMapWrapperSurface) {
     return "";
   }
   const std::string removedPath = "/map/" + helperName;
