@@ -271,7 +271,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("native keeps slash-method wrapper string access i32 diagnostics" * doctest::skip(true)) {
+TEST_CASE("native keeps slash-method wrapper string access i32 diagnostics") {
   const std::string source = R"(
 [return<string>]
 wrapText() {

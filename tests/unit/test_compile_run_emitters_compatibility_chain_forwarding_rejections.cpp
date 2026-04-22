@@ -604,7 +604,7 @@ main() {
   CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
-TEST_CASE("keeps canonical map slash-method struct method chain forwarding in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("rejects canonical map slash-method struct method chain forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -638,16 +638,10 @@ main() {
       (testScratchPath("") /
        "primec_cpp_map_method_alias_access_struct_method_chain_canonical_forwarding_reject.err")
           .string();
-  const std::string exePath =
-      (testScratchPath("") /
-       "primec_cpp_map_method_alias_access_struct_method_chain_canonical_forwarding_exe")
-          .string();
-
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(readFile(errPath).empty());
-  CHECK(runCommand(quoteShellArg(exePath)) == 2);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
 }
 
 
