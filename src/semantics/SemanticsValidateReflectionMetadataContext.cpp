@@ -266,7 +266,7 @@ ReflectionMetadataRewriteContext buildReflectionMetadataRewriteContext(const Pro
     if (hasStructTransform || fieldOnlyStruct) {
       context.structNames.insert(def.fullPath);
       if (std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
-            return transform.name == "reflect";
+            return transform.name == "reflect" || transform.name == "generate";
           })) {
         context.reflectedStructNames.insert(def.fullPath);
       }

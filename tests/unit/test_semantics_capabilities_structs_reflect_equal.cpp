@@ -25,7 +25,7 @@ use() {
 
 TEST_CASE("reflection transforms validate on field-only structs") {
   const std::string source = R"(
-[reflect generate(Equal)]
+[generate(Equal)]
 main() {
   [i32] value{1i32}
 }
@@ -53,16 +53,26 @@ main() {
   CHECK(error.find("reflection transforms are only valid on struct definitions") != std::string::npos);
 }
 
-TEST_CASE("generate transform requires reflect") {
+TEST_CASE("generate transform implies reflection on struct definitions") {
   const std::string source = R"(
 [struct generate(Equal)]
 main() {
   [i32] value{1i32}
 }
 )";
+  primec::Program program;
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("generate transform requires reflect") != std::string::npos);
+  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
+  CHECK(error.empty());
+
+  const primec::Definition *generated = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/main/Equal") {
+      generated = &def;
+      break;
+    }
+  }
+  REQUIRE(generated != nullptr);
 }
 
 TEST_CASE("generate transform rejects unsupported reflection generators") {
@@ -104,7 +114,7 @@ main() {
 
 TEST_CASE("generated reflection helpers are public") {
   const std::string source = R"(
-[struct reflect generate(Equal, Default)]
+[struct generate(Equal, Default)]
 Pair() {
   [i32] x{1i32}
 }
@@ -148,7 +158,7 @@ TEST_CASE("generated reflection helpers are importable via wildcard") {
   const std::string source = R"(
 import /Pair/*
 
-[struct reflect generate(Equal, Default)]
+[struct generate(Equal, Default)]
 Pair() {
   [i32] x{1i32}
 }

@@ -153,7 +153,7 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool shouldGenerateSerialize = false;
     bool shouldGenerateDeserialize = false;
     bool shouldGenerateSoaSchema = false;
-    if (isStruct && hasTransformNamed(def.transforms, "reflect")) {
+    if (isStruct && hasTransformNamed(def.transforms, "generate")) {
       for (const auto &transform : def.transforms) {
         if (transform.name != "generate") {
           continue;

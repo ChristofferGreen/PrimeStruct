@@ -73,6 +73,24 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("field_count accepts generate-enabled struct targets") {
+  const std::string source = R"(
+[struct generate(Equal)]
+Item() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  [i32] fieldCount{meta.field_count<Item>()}
+  return(fieldCount)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("field metadata core primitives validate") {
   const std::string source = R"(
 [struct reflect]

@@ -56,13 +56,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4133
 - TODO-4132
 - TODO-4122
+- TODO-4123
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4123
 - TODO-4124
 - TODO-4125
 - TODO-4126
@@ -72,7 +71,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Reflection ergonomics and docs alignment: TODO-4132, TODO-4133
+- Reflection ergonomics and docs alignment: TODO-4132
 - Semantic-product authority and lowerer ownership: TODO-4122,
   TODO-4129
 - Validator/runtime boundary simplification: TODO-4123, TODO-4126,
@@ -83,17 +82,17 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4133
-2. TODO-4132
-3. TODO-4122
-4. TODO-4123
+1. TODO-4132
+2. TODO-4122
+3. TODO-4123
+4. TODO-4124
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
-| Stdlib surface-style alignment and public helper readability | TODO-4132, TODO-4133 |
+| Stdlib surface-style alignment and public helper readability | TODO-4132 |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
@@ -112,7 +111,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4122 |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4132, TODO-4133 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4132 |
 | Semantic-product publication parity and deterministic ordering | TODO-4122, TODO-4127, TODO-4129, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4128 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
@@ -192,28 +191,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4133: Let `generate(...)` imply reflection enablement
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Language Surface Alignment
-  - depends_on: none
-  - scope: Remove the current requirement that struct definitions spell both
-      `reflect` and `generate(...)` together when the requested generator set
-      already depends on reflection metadata, while keeping deterministic
-      validation for non-struct targets and unsupported generator names.
-  - acceptance:
-    - A representative `[struct generate(Equal)]` definition succeeds and
-      exposes the same generated helper surface as the equivalent explicit
-      `[struct reflect generate(Equal)]` form.
-    - Reflection metadata queries and helper generation still reject
-      non-struct targets and keep deterministic diagnostics for unsupported or
-      duplicate generator names.
-    - The docs under `./docs` are updated to stop teaching redundant
-      `reflect generate(...)` spelling when generation alone is sufficient.
-  - stop_rule: Stop once one generated-helper slice treats `generate(...)` as
-      sufficient reflection enablement end-to-end, with focused coverage and
-      docs no longer requiring the redundant paired spelling.
 
 - [ ] TODO-4132: Add `==` support for reflected `Equal` helpers
   - owner: ai

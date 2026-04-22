@@ -1710,11 +1710,16 @@ or a semicolon if you intended to index.
 - **`static`:** on fields, hoists storage to namespace scope while keeping the field in the layout manifest. On struct
   helpers, disables the implicit `this` parameter and method-call sugar.
 - **`reflect`:** marks a struct definition as reflection-enabled. It accepts no template arguments or call arguments and
-  is rejected on non-struct definitions/executions.
-- **`generate(...)`:** declares reflection helper generation intents for reflected structs. It accepts one or more
-  generator names and validates the generator allowlist (`Equal`, `NotEqual`, `Default`, `IsDefault`, `Clone`,
-  `DebugPrint`, `Compare`, `Hash64`, `Clear`, `CopyFrom`, `Validate`, `Serialize`, `Deserialize`, `SoaSchema`) with
-  deterministic diagnostics.
+  is rejected on non-struct definitions/executions. Use it when a type needs
+  reflection metadata queries without requesting generated helpers.
+- **`generate(...)`:** declares reflection helper generation intents for struct
+  definitions. It accepts one or more generator names, implies reflection
+  enablement for that type, and validates the generator allowlist (`Equal`,
+  `NotEqual`, `Default`, `IsDefault`, `Clone`, `DebugPrint`, `Compare`,
+  `Hash64`, `Clear`, `CopyFrom`, `Validate`, `Serialize`, `Deserialize`,
+  `SoaSchema`) with deterministic diagnostics. Writing both `reflect` and
+  `generate(...)` remains valid but is redundant when generation alone is
+  sufficient.
   - **Naming contract:** generated helpers always use `/Type/Helper` paths (`/Type/Equal`, `/Type/Default`, etc.), where
     `Type` is the canonical struct path.
   - **Visibility contract:** generated helpers are emitted with explicit `[public]`, so `import /Type/*` exposes them by

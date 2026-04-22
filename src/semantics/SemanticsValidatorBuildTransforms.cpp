@@ -447,12 +447,6 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
     }
     return true;
   }
-  if (sawGenerate && !sawReflect) {
-    if (addTransformDiagnostic("generate transform requires reflect on " + def.fullPath)) {
-      return false;
-    }
-    return true;
-  }
   if (isStruct) {
     explicitStructs.insert(def.fullPath);
     if (hasReturnTransform) {
