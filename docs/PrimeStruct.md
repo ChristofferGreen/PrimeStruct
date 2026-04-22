@@ -1526,12 +1526,18 @@ or a semicolon if you intended to index.
   `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
 - **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method
   namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For struct
-  helpers with implicit `this`, the receiver becomes the hidden `this` parameter; static helpers do not accept
-  method-call sugar. For collections, method syntax is the preferred surface style (`value.count()`, `value.at(i)`,
-  `value.push(x)`), while helper calls remain canonical (`count(value)`, `at(value, i)`, `push(value, x)`). Vector
-  helper surface syntax currently requires `import /std/collections/*` so the canonical stdlib wrappers are in scope.
-  Indexing uses the safe helper by default: `value[index]` rewrites to `at(value, index)` with bounds checks and is
-  equivalent to `value.at(index)`; `at_unsafe(value, index)` / `value.at_unsafe(index)` skips checks.
+  helpers with implicit `this`, the receiver becomes the hidden `this`
+  parameter. Static helpers reject value-receiver method-call sugar
+  (`value.helper()`), but accept type-qualified dot calls such as
+  `Counter.default_step()` as a surface form for the same direct helper path.
+  For collections, method syntax is the preferred surface style
+  (`value.count()`, `value.at(i)`, `value.push(x)`), while helper calls remain
+  canonical (`count(value)`, `at(value, i)`, `push(value, x)`). Vector helper
+  surface syntax currently requires `import /std/collections/*` so the
+  canonical stdlib wrappers are in scope. Indexing uses the safe helper by
+  default: `value[index]` rewrites to `at(value, index)` with bounds checks and
+  is equivalent to `value.at(index)`; `at_unsafe(value, index)` /
+  `value.at_unsafe(index)` skips checks.
 - **Struct body semantics (example):**
   ```
   [struct]
@@ -1553,7 +1559,7 @@ or a semicolon if you intended to index.
       return(this.clampSize(this.size))
     }
 
-    // Static helper: no implicit `this`.
+    // Static helper: no implicit `this`; call via BrushSettings.defaultSize().
     [public static return<f32>]
     defaultSize() {
       return(12.0f32)
@@ -1608,8 +1614,9 @@ or a semicolon if you intended to index.
   use uppercase identifiers elsewhere—only the documented helper names receive special treatment.
   - **Helper visibility:** nested non-lifecycle helpers are normal definitions in the struct method namespace. Use
     `[public]` on the helper definition to export it; private helpers remain callable within the same compilation unit.
-    Non-static helpers receive an implicit `this` (`Reference<Self>`); `[static]` disables the implicit `this` and
-    method-call sugar.
+    Non-static helpers receive an implicit `this` (`Reference<Self>`); `[static]`
+    disables the implicit `this` and value-receiver method-call sugar, but still
+    allows type-qualified dot calls on the struct name.
   ```
   import /std/math/*
   namespace demo {

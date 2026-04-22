@@ -207,7 +207,8 @@ Why this is good:
 ### Visibility and Static Helpers
 
 When a struct exposes behavior but keeps its storage private, show the public
-instance helper and the current direct-call form for static helpers together.
+instance helper and the preferred type-qualified dot-call form for static
+helpers together.
 
 ```prime
 [struct]
@@ -228,14 +229,15 @@ Counter {
 [int]
 use_counter() {
   counter{Counter([value] 5)}
-  return(counter.doubled() + /Counter/default_step())
+  return(counter.doubled() + Counter.default_step())
 }
 ```
 
 Why this is good:
 - The private field keeps direct state access out of the call site.
 - The public instance helper shows the normal method-style surface for owned behavior.
-- The example also documents the current direct-call spelling for static helpers.
+- The static helper stays clearly namespaced to the type without falling back to
+  the slash-path workaround.
 
 ### Public Imports Respect Visibility
 

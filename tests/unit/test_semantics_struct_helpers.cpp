@@ -118,6 +118,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("static helper allows type-qualified dot calls") {
+  const std::string source = R"(
+[struct]
+Counter() {
+  [i32] value{5i32}
+
+  [static return<i32>]
+  default_step() {
+    return(2i32)
+  }
+
+  [return<i32>]
+  doubled() {
+    return(this.value * 2i32)
+  }
+}
+
+[return<i32>]
+main() {
+  [Counter] counter{Counter()}
+  return(counter.doubled() + Counter.default_step())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("mut helper allows assignment to this") {
   const std::string source = R"(
 [struct]

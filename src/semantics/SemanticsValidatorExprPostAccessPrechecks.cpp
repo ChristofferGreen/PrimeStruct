@@ -17,10 +17,33 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
   auto failPostAccessPrecheckDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
   };
+  auto isTypeQualifiedStaticHelperCall = [&]() -> bool {
+    if (!usedMethodTarget || expr.args.empty()) {
+      return false;
+    }
+    const Expr &receiver = expr.args.front();
+    if (receiver.kind != Expr::Kind::Name) {
+      return false;
+    }
+    if (findParamBinding(params, receiver.name) != nullptr ||
+        locals.find(receiver.name) != locals.end()) {
+      return false;
+    }
+    if (expr.name.empty()) {
+      return false;
+    }
+    const std::string resolvedReceiverType =
+        resolveTypePath(receiver.name, receiver.namespacePrefix);
+    if (resolvedReceiverType.empty()) {
+      return false;
+    }
+    return resolved.rfind(resolvedReceiverType + "/" + expr.name, 0) == 0;
+  };
 
   if (usedMethodTarget && !resolvedMethod) {
     auto defIt = defMap_.find(resolved);
-    if (defIt != defMap_.end() && isStaticHelperDefinition(*defIt->second)) {
+    if (defIt != defMap_.end() && isStaticHelperDefinition(*defIt->second) &&
+        !isTypeQualifiedStaticHelperCall()) {
       return failPostAccessPrecheckDiagnostic("static helper does not accept method-call syntax: " +
                                               resolved);
     }
