@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("semantics validator infer source delegation stays stable" * doctest::skip(true)) {
+TEST_CASE("semantics validator infer source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
     CHECK(file.is_open());

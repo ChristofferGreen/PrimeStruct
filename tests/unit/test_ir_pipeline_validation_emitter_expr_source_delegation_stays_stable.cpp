@@ -175,7 +175,7 @@ TEST_CASE("emitter expr source delegation stays stable") {
         std::string::npos);
 }
 
-TEST_CASE("semantics validator expr source delegation stays stable" * doctest::skip(true)) {
+TEST_CASE("semantics validator expr source delegation stays stable") {
 #include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_01.h"
 #include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_02.h"
 #include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_03.h"
