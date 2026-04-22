@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("runs vm bare map at_unsafe through canonical helper" * doctest::skip(true)) {
+TEST_CASE("runs vm bare map at_unsafe through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -428,7 +428,7 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector alias compatibility template forwarding on bool type mismatch" * doctest::skip(true)) {
+TEST_CASE("rejects vm vector alias compatibility template forwarding on bool type mismatch") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
