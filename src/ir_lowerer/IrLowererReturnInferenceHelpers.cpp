@@ -283,6 +283,12 @@ void analyzeDeclaredReturnTransforms(const Definition &def,
     if (applyWrappedCollectionReturnInfo(typeName)) {
       break;
     }
+    if (isFileHandleTypeText(typeName)) {
+      info.returnsArray = false;
+      info.kind = LocalInfo::ValueKind::Int64;
+      info.returnsVoid = false;
+      break;
+    }
     std::string structPath;
     StructArrayTypeInfo structInfo;
     if (resolveStructTypeName(typeName, def.namespacePrefix, structPath)) {
