@@ -556,7 +556,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects vm bare vector capacity method without imported helper" * doctest::skip(true)) {
+TEST_CASE("rejects vm bare vector capacity method without imported helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -595,7 +595,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("runs vm with bare vector capacity after pop through imported stdlib helper" * doctest::skip(true)) {
+TEST_CASE("rejects vm bare vector capacity after pop through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
