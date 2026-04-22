@@ -246,7 +246,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter" * doctest::skip(true)) {
+TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -503,7 +503,7 @@ main() {
   CHECK(err.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps vector method alias struct-return precedence over canonical helper" * doctest::skip(true)) {
+TEST_CASE("rejects vector method alias struct-return precedence without helper-backed receiver typing in C++ emitter") {
   const std::string source = R"(
 AliasMarker {
   [i32] value
@@ -531,16 +531,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_struct_field_alias_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_method_struct_field_alias_precedence_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_vector_method_struct_field_alias_precedence.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 42);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical vector method access struct forwarding" * doctest::skip(true)) {
+TEST_CASE("rejects canonical vector method access struct forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -564,16 +565,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_method_struct_chain_forwarding.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_canonical_vector_method_struct_chain_forwarding_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_canonical_vector_method_struct_chain_forwarding.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps canonical vector unsafe method field forwarding" * doctest::skip(true)) {
+TEST_CASE("rejects canonical vector unsafe method field forwarding in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -592,13 +594,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_canonical_vector_unsafe_method_field_forwarding.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_canonical_vector_unsafe_method_field_forwarding_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_canonical_vector_unsafe_method_field_forwarding.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("keeps canonical map slash-method struct method chain forwarding in C++ emitter" * doctest::skip(true)) {
