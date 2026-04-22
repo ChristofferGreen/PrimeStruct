@@ -213,7 +213,8 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     if (!emitIndirectPointer(*access.pointerExpr, ptrLocal)) {
       return UninitializedStorageInitDropEmitResult::Error;
     }
-    if (!access.typeInfo.structPath.empty()) {
+    if (!(access.pointer != nullptr && access.pointer->isFileHandle) &&
+        !access.typeInfo.structPath.empty()) {
       StructSlotLayoutInfo layout;
       if (!resolveStructSlotLayout(access.typeInfo.structPath, layout)) {
         return UninitializedStorageInitDropEmitResult::Error;
