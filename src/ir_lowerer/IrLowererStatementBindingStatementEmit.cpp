@@ -149,7 +149,7 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
   const Expr &valueExpr = stmt.args.back();
   if (access.location == UninitializedStorageAccessInfo::Location::Local) {
     const LocalInfo &storageInfo = *access.local;
-    if (!storageInfo.structTypeName.empty()) {
+    if (!storageInfo.isFileHandle && !storageInfo.structTypeName.empty()) {
       StructSlotLayoutInfo layout;
       if (!resolveStructSlotLayout(storageInfo.structTypeName, layout)) {
         return UninitializedStorageInitDropEmitResult::Error;

@@ -323,6 +323,72 @@ TEST_CASE("ir lowerer statement binding helper emits struct-storage init via ptr
   CHECK_FALSE(instructions.empty());
 }
 
+TEST_CASE("ir lowerer statement binding helper skips struct copy for file-handle storage locals") {
+  using EmitResult = primec::ir_lowerer::UninitializedStorageInitDropEmitResult;
+
+  primec::Expr storageExpr;
+  storageExpr.kind = primec::Expr::Kind::Name;
+  storageExpr.name = "slot";
+
+  primec::Expr valueExpr;
+  valueExpr.kind = primec::Expr::Kind::Call;
+  valueExpr.name = "/std/file/File<Read>";
+
+  primec::Expr initCall;
+  initCall.kind = primec::Expr::Kind::Call;
+  initCall.name = "init";
+  initCall.args = {storageExpr, valueExpr};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo storageInfo;
+  storageInfo.index = 11;
+  storageInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  storageInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  storageInfo.isFileHandle = true;
+  storageInfo.structTypeName = "/std/file/File<Read>";
+
+  std::vector<primec::IrInstruction> instructions;
+  int32_t nextTempLocal = 30;
+  int structCopyCalls = 0;
+  int layoutLookups = 0;
+  std::string error;
+
+  CHECK(primec::ir_lowerer::tryEmitUninitializedStorageInitDropStatement(
+            initCall,
+            locals,
+            instructions,
+            [&](const primec::Expr &,
+                const primec::ir_lowerer::LocalMap &,
+                primec::ir_lowerer::UninitializedStorageAccessInfo &access,
+                bool &resolved) {
+              access.location = primec::ir_lowerer::UninitializedStorageAccessInfo::Location::Local;
+              access.local = &storageInfo;
+              resolved = true;
+              return true;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              instructions.push_back({primec::IrOpcode::PushI64, 1234});
+              return true;
+            },
+            [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+              ++layoutLookups;
+              return false;
+            },
+            [&]() { return nextTempLocal++; },
+            [&](int32_t, int32_t, int32_t) {
+              ++structCopyCalls;
+              return true;
+            },
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(layoutLookups == 0);
+  CHECK(structCopyCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 11);
+}
+
 TEST_CASE("ir lowerer statement binding helper emits indirect uninitialized init") {
   using EmitResult = primec::ir_lowerer::UninitializedStorageInitDropEmitResult;
 
