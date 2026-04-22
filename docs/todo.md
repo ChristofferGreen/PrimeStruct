@@ -56,22 +56,21 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4122
 - TODO-4123
 - TODO-4124
+- TODO-4125
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4125
 - TODO-4126
 - TODO-4127
 - TODO-4128
 - TODO-4129
+- TODO-4130
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer ownership: TODO-4122,
-  TODO-4129
+- Semantic-product authority and lowerer ownership: TODO-4129
 - Validator/runtime boundary simplification: TODO-4123, TODO-4126,
   TODO-4127, TODO-4128
 - Test-surface contraction: TODO-4124, TODO-4125
@@ -80,22 +79,22 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4122
-2. TODO-4123
-3. TODO-4124
-4. TODO-4125
+1. TODO-4123
+2. TODO-4124
+3. TODO-4125
+4. TODO-4126
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4122, TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4126, TODO-4127, TODO-4129, TODO-4131 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | Validator entrypoint and benchmark-plumbing split | TODO-4123, TODO-4127 |
-| Semantic-product publication by module and fact family | TODO-4122, TODO-4127 |
+| Semantic-product publication by module and fact family | TODO-4127 |
 | IR lowerer compile-unit breakup | TODO-4128 |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -108,9 +107,9 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4122 |
+| Semantic-product-authority conformance | none |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
-| Semantic-product publication parity and deterministic ordering | TODO-4122, TODO-4127, TODO-4129, TODO-4131 |
+| Semantic-product publication parity and deterministic ordering | TODO-4127, TODO-4129, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4128 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
@@ -250,7 +249,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-20
   - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4120, TODO-4122
+  - depends_on: none
   - scope: Carve VM, native, and GPU lowering contracts out of the shared
       fallback helpers so backend-specific behavior is carried by explicit
       backend-scoped modules with clear inputs and validation boundaries.
@@ -269,7 +268,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-20
   - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4119, TODO-4122
+  - depends_on: none
   - scope: Extend the parallel definition-validation path from
       benchmark-oriented worker chunks into a production semantic-product
       publication path with deterministic worker-local fact and diagnostic
@@ -306,7 +305,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-20
   - phase: Testing API Contraction
-  - depends_on: TODO-4122
+  - depends_on: none
   - scope: Narrow `include/primec/testing/SemanticsValidationHelpers.h` from
       step-level helper exports toward graph and semantic-product contract
       probes, then migrate representative tests onto the contract surface.
@@ -356,22 +355,3 @@ Task template:
   - stop_rule: Stop once one explicit production/publication/instrumentation
       split lands and removes benchmark-only state from the unaffected
       validation hot path.
-
-- [ ] TODO-4122: Publish indexed graph-backed facts for lowering
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4119
-  - scope: Publish lowerer-authoritative indexed `query`, `try(...)`,
-      `on_error`, and local-`auto` semantic facts in `SemanticProgram` so
-      lowering can consume exact indexed facts instead of AST compatibility
-      lookups.
-  - acceptance:
-    - `SemanticProgram` publishes indexed lookup surfaces for `query`,
-      `try(...)`, `on_error`, and local-`auto` fact families.
-    - At least one lowering path consumes each of those fact families directly
-      from the semantic product.
-    - Deterministic ordering and lookup parity are pinned by semantic-product
-      dump or compile-pipeline conformance coverage.
-  - stop_rule: Stop once all four fact families exist in lowerer-ready indexed
-      form and representative lowering paths consume them directly.

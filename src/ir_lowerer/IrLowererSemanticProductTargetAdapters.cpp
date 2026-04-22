@@ -30,6 +30,28 @@ const FactT *findExpressionScopedSemanticFact(const std::unordered_map<uint64_t,
   return nullptr;
 }
 
+template <typename EntryT>
+const EntryT *findSemanticProductEntryByPublishedIndex(const std::vector<EntryT> &entries,
+                                                       std::size_t entryIndex) {
+  if (entryIndex >= entries.size()) {
+    return nullptr;
+  }
+  return &entries[entryIndex];
+}
+
+template <typename KeyT, typename EntryT>
+void populateSemanticFactIndex(std::unordered_map<KeyT, const EntryT *> &destination,
+                               const std::unordered_map<KeyT, std::size_t> &publishedIndices,
+                               const std::vector<EntryT> &entries) {
+  destination.reserve(publishedIndices.size());
+  for (const auto &[key, entryIndex] : publishedIndices) {
+    if (const auto *entry = findSemanticProductEntryByPublishedIndex(entries, entryIndex);
+        entry != nullptr) {
+      destination.insert_or_assign(key, entry);
+    }
+  }
+}
+
 uint64_t makeLocalAutoInitPathBindingNameKey(SymbolId initializerPathId, SymbolId bindingNameId) {
   return (static_cast<uint64_t>(initializerPathId) << 32) |
          static_cast<uint64_t>(bindingNameId);
@@ -116,6 +138,16 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildOnErrorIndex(SemanticProductIndex &index) const {
+    if (!semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionId.empty() ||
+        !semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.empty()) {
+      populateSemanticFactIndex(index.onErrorFactsByDefinitionId,
+                                semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionId,
+                                semanticProgram->onErrorFacts);
+      populateSemanticFactIndex(index.onErrorFactsByDefinitionPathId,
+                                semanticProgram->publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId,
+                                semanticProgram->onErrorFacts);
+      return;
+    }
     const auto onErrorFacts = semanticProgramOnErrorFactView(*semanticProgram);
     index.onErrorFactsByDefinitionId.reserve(onErrorFacts.size());
     index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size());
@@ -154,6 +186,17 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildLocalAutoIndex(SemanticProductIndex &index) const {
+    if (!semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr.empty() ||
+        !semanticProgram->publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.empty()) {
+      populateSemanticFactIndex(index.localAutoFactsByExpr,
+                                semanticProgram->publishedRoutingLookups.localAutoFactIndicesByExpr,
+                                semanticProgram->localAutoFacts);
+      populateSemanticFactIndex(index.localAutoFactsByInitPathAndBindingNameId,
+                                semanticProgram->publishedRoutingLookups
+                                    .localAutoFactIndicesByInitPathAndBindingNameId,
+                                semanticProgram->localAutoFacts);
+      return;
+    }
     const auto localAutoFacts = semanticProgramLocalAutoFactView(*semanticProgram);
     index.localAutoFactsByExpr.reserve(localAutoFacts.size());
     index.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size());
@@ -172,6 +215,17 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildQueryIndex(SemanticProductIndex &index) const {
+    if (!semanticProgram->publishedRoutingLookups.queryFactIndicesByExpr.empty() ||
+        !semanticProgram->publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.empty()) {
+      populateSemanticFactIndex(index.queryFactsByExpr,
+                                semanticProgram->publishedRoutingLookups.queryFactIndicesByExpr,
+                                semanticProgram->queryFacts);
+      populateSemanticFactIndex(index.queryFactsByResolvedPathAndCallNameId,
+                                semanticProgram->publishedRoutingLookups
+                                    .queryFactIndicesByResolvedPathAndCallNameId,
+                                semanticProgram->queryFacts);
+      return;
+    }
     const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
     index.queryFactsByExpr.reserve(queryFacts.size());
     index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size());
@@ -190,6 +244,16 @@ struct SemanticProductIndexBuilder {
   }
 
   void buildTryIndex(SemanticProductIndex &index) const {
+    if (!semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr.empty() ||
+        !semanticProgram->publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.empty()) {
+      populateSemanticFactIndex(index.tryFactsByExpr,
+                                semanticProgram->publishedRoutingLookups.tryFactIndicesByExpr,
+                                semanticProgram->tryFacts);
+      populateSemanticFactIndex(index.tryFactsByOperandPathAndSource,
+                                semanticProgram->publishedRoutingLookups.tryFactIndicesByOperandPathAndSource,
+                                semanticProgram->tryFacts);
+      return;
+    }
     const auto tryFacts = semanticProgramTryFactView(*semanticProgram);
     index.tryFactsByExpr.reserve(tryFacts.size());
     index.tryFactsByOperandPathAndSource.reserve(tryFacts.size());
@@ -393,6 +457,11 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(
   if (!definitionPathId.has_value()) {
     return nullptr;
   }
+  if (const auto *fact = semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
+          *semanticProgram, *definitionPathId);
+      fact != nullptr) {
+    return fact;
+  }
   if (const auto it = semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
       it != semanticIndex.onErrorFactsByDefinitionPathId.end()) {
     if (const auto *fact = it->second;
@@ -476,6 +545,11 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(
   if (!initializerPathId.has_value()) {
     return nullptr;
   }
+  if (const auto *fact = semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(
+          *semanticProgram, *initializerPathId, *bindingNameId);
+      fact != nullptr) {
+    return fact;
+  }
   if (const auto it = semanticIndex.localAutoFactsByInitPathAndBindingNameId.find(
           makeLocalAutoInitPathBindingNameKey(*initializerPathId, *bindingNameId));
       it != semanticIndex.localAutoFactsByInitPathAndBindingNameId.end()) {
@@ -521,6 +595,11 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(
   if (!resolvedPathId.has_value()) {
     return nullptr;
   }
+  if (const auto *fact = semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(
+          *semanticProgram, *resolvedPathId, *callNameId);
+      fact != nullptr) {
+    return fact;
+  }
   if (const auto it = semanticIndex.queryFactsByResolvedPathAndCallNameId.find(
           makeQueryFactResolvedPathCallNameKey(*resolvedPathId, *callNameId));
       it != semanticIndex.queryFactsByResolvedPathAndCallNameId.end()) {
@@ -561,6 +640,11 @@ const SemanticProgramTryFact *findSemanticProductTryFact(
   const auto operandPathId = resolveSemanticExprPathId(semanticProgram, expr.args.front());
   if (!operandPathId.has_value()) {
     return nullptr;
+  }
+  if (const auto *fact = semanticProgramLookupPublishedTryFactByOperandPathAndSource(
+          *semanticProgram, *operandPathId, expr.sourceLine, expr.sourceColumn);
+      fact != nullptr) {
+    return fact;
   }
   if (const auto it = semanticIndex.tryFactsByOperandPathAndSource.find(
           makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));

@@ -1975,12 +1975,14 @@ TEST_CASE("ir lowerer semantic-product adapter indexes on_error facts by definit
           primec::semanticProgramInternCallTargetString(semanticProgram, "value"),
       },
   });
-
-  const auto semanticTargets =
-      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   const auto mainPathId =
       primec::semanticProgramLookupCallTargetStringId(semanticProgram, "/main");
   REQUIRE(mainPathId.has_value());
+  semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.insert_or_assign(
+      *mainPathId, 0);
+
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionId.empty());
   CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *onErrorFact = primec::ir_lowerer::findSemanticProductOnErrorFact(semanticTargets, mainDef);
@@ -2095,6 +2097,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes local-auto facts by initi
       .bindingNameId = bindingNameId,
       .initializerResolvedPathId = initializerPathId,
   });
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId
+      .insert_or_assign((static_cast<uint64_t>(initializerPathId) << 32) |
+                            static_cast<uint64_t>(bindingNameId),
+                        0);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.semanticIndex.localAutoFactsByExpr.empty());
@@ -2286,6 +2292,11 @@ TEST_CASE("ir lowerer semantic-product adapter prefers local-auto semantic-id ma
       .initializerResolvedPathId = initializerPathId,
   };
   semanticProgram.localAutoFacts.push_back(std::move(fallbackFact));
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(7202, 0);
+  semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId
+      .insert_or_assign((static_cast<uint64_t>(initializerPathId) << 32) |
+                            static_cast<uint64_t>(bindingNameId),
+                        1);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(adapter, localBinding);
@@ -2414,6 +2425,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes query facts by resolved p
       .callNameId = callNameId,
       .resolvedPathId = resolvedPathId,
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId
+      .insert_or_assign((static_cast<uint64_t>(resolvedPathId) << 32) |
+                            static_cast<uint64_t>(callNameId),
+                        0);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.semanticIndex.queryFactsByExpr.empty());
@@ -2477,6 +2492,11 @@ TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches
       .callNameId = callNameId,
       .resolvedPathId = resolvedPathId,
   });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(8202, 0);
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId
+      .insert_or_assign((static_cast<uint64_t>(resolvedPathId) << 32) |
+                            static_cast<uint64_t>(callNameId),
+                        1);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
@@ -2575,12 +2595,14 @@ TEST_CASE("ir lowerer semantic-product adapter indexes try facts by operand path
       .semanticNodeId = 0,
       .operandResolvedPathId = operandResolvedPathId,
   });
-
-  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   const uint64_t tryKey =
       (static_cast<uint64_t>(operandResolvedPathId) << 32) ^
       (static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceLine)) * 1315423911ULL) ^
       static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceColumn));
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.insert_or_assign(
+      tryKey, 0);
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   CHECK(adapter.semanticIndex.tryFactsByExpr.empty());
   CHECK(adapter.semanticIndex.tryFactsByOperandPathAndSource.count(tryKey) == 1);
   const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(adapter, tryExpr);
@@ -2649,6 +2671,13 @@ TEST_CASE("ir lowerer semantic-product adapter prefers try semantic-id matches o
       .semanticNodeId = 0,
       .operandResolvedPathId = operandResolvedPathId,
   });
+  const uint64_t tryKey =
+      (static_cast<uint64_t>(operandResolvedPathId) << 32) ^
+      (static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceLine)) * 1315423911ULL) ^
+      static_cast<uint64_t>(static_cast<uint32_t>(tryExpr.sourceColumn));
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(9202, 0);
+  semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.insert_or_assign(
+      tryKey, 1);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
   const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(adapter, tryExpr);

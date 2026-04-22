@@ -287,6 +287,26 @@ void releaseInternedField(std::string &text, SymbolId id) {
   }
 }
 
+uint64_t makeLocalAutoInitPathBindingNameKey(SymbolId initializerPathId, SymbolId bindingNameId) {
+  return (static_cast<uint64_t>(initializerPathId) << 32) |
+         static_cast<uint64_t>(bindingNameId);
+}
+
+uint64_t makeQueryFactResolvedPathCallNameKey(SymbolId resolvedPathId, SymbolId callNameId) {
+  return (static_cast<uint64_t>(resolvedPathId) << 32) |
+         static_cast<uint64_t>(callNameId);
+}
+
+uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine, int sourceColumn) {
+  const uint64_t lineBits = static_cast<uint64_t>(
+      static_cast<uint32_t>(sourceLine > 0 ? sourceLine : 0));
+  const uint64_t columnBits = static_cast<uint64_t>(
+      static_cast<uint32_t>(sourceColumn > 0 ? sourceColumn : 0));
+  return (static_cast<uint64_t>(operandPathId) << 32) ^
+         (lineBits * 1315423911ULL) ^
+         columnBits;
+}
+
 struct SemanticPublicationBuilderState {
   const Program &program;
   const std::string &entryPath;
@@ -858,6 +878,12 @@ void publishLocalAutoFacts(
   if (localAutoFacts.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.reserve(
+      state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.size() +
+      localAutoFacts.size());
+  state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.reserve(
+      state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.size() +
+      localAutoFacts.size());
   state.semanticProgram.localAutoFacts.reserve(localAutoFacts.size());
   for (const auto &snapshotEntry : localAutoFacts) {
     SemanticProgramLocalAutoFact entry;
@@ -951,6 +977,18 @@ void publishLocalAutoFacts(
         state.semanticProgram, entry.initializerMethodCallReturnKind);
     state.semanticProgram.localAutoFacts.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.localAutoFacts.size() - 1;
+    const auto &publishedEntry = state.semanticProgram.localAutoFacts.back();
+    if (publishedEntry.semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(
+          publishedEntry.semanticNodeId, entryIndex);
+    }
+    if (publishedEntry.initializerResolvedPathId != InvalidSymbolId &&
+        publishedEntry.bindingNameId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId
+          .insert_or_assign(makeLocalAutoInitPathBindingNameKey(publishedEntry.initializerResolvedPathId,
+                                                                publishedEntry.bindingNameId),
+                            entryIndex);
+    }
     state.ensureModuleResolvedArtifacts(snapshotEntry.scopePath).localAutoFactIndices.push_back(
         entryIndex);
   }
@@ -961,6 +999,12 @@ void publishQueryFacts(SemanticPublicationBuilderState &state,
   if (queryFacts.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.reserve(
+      state.semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.size() +
+      queryFacts.size());
+  state.semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.reserve(
+      state.semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.size() +
+      queryFacts.size());
   state.semanticProgram.queryFacts.reserve(queryFacts.size());
   for (auto &snapshotEntry : queryFacts) {
     const std::string receiverBindingTypeText =
@@ -1001,6 +1045,18 @@ void publishQueryFacts(SemanticPublicationBuilderState &state,
     releaseInternedField(entry.callName, entry.callNameId);
     state.semanticProgram.queryFacts.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.queryFacts.size() - 1;
+    const auto &publishedEntry = state.semanticProgram.queryFacts.back();
+    if (publishedEntry.semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(
+          publishedEntry.semanticNodeId, entryIndex);
+    }
+    if (publishedEntry.resolvedPathId != InvalidSymbolId &&
+        publishedEntry.callNameId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId
+          .insert_or_assign(makeQueryFactResolvedPathCallNameKey(publishedEntry.resolvedPathId,
+                                                                 publishedEntry.callNameId),
+                            entryIndex);
+    }
     module.queryFactIndices.push_back(entryIndex);
   }
 }
@@ -1011,6 +1067,11 @@ void publishTryFacts(
   if (tryFacts.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.reserve(
+      state.semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.size() + tryFacts.size());
+  state.semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.reserve(
+      state.semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.size() +
+      tryFacts.size());
   state.semanticProgram.tryFacts.reserve(tryFacts.size());
   for (const auto &snapshotEntry : tryFacts) {
     SemanticProgramTryFact entry;
@@ -1049,6 +1110,20 @@ void publishTryFacts(
         semanticProgramInternCallTargetString(state.semanticProgram, entry.onErrorErrorType);
     state.semanticProgram.tryFacts.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.tryFacts.size() - 1;
+    const auto &publishedEntry = state.semanticProgram.tryFacts.back();
+    if (publishedEntry.semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(
+          publishedEntry.semanticNodeId, entryIndex);
+    }
+    if (publishedEntry.operandResolvedPathId != InvalidSymbolId &&
+        publishedEntry.sourceLine > 0 &&
+        publishedEntry.sourceColumn > 0) {
+      state.semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource
+          .insert_or_assign(makeTryFactOperandPathSourceKey(publishedEntry.operandResolvedPathId,
+                                                            publishedEntry.sourceLine,
+                                                            publishedEntry.sourceColumn),
+                            entryIndex);
+    }
     state.ensureModuleResolvedArtifacts(snapshotEntry.scopePath).tryFactIndices.push_back(entryIndex);
   }
 }
@@ -1059,6 +1134,12 @@ void publishOnErrorFacts(
   if (onErrorFacts.empty()) {
     return;
   }
+  state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.reserve(
+      state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.size() +
+      onErrorFacts.size());
+  state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.reserve(
+      state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.size() +
+      onErrorFacts.size());
   state.semanticProgram.onErrorFacts.reserve(onErrorFacts.size());
   for (const auto &snapshotEntry : onErrorFacts) {
     SemanticProgramOnErrorFact entry;
@@ -1089,6 +1170,15 @@ void publishOnErrorFacts(
         state.semanticProgram, entry.returnResultErrorType);
     state.semanticProgram.onErrorFacts.push_back(std::move(entry));
     const std::size_t entryIndex = state.semanticProgram.onErrorFacts.size() - 1;
+    const auto &publishedEntry = state.semanticProgram.onErrorFacts.back();
+    if (publishedEntry.semanticNodeId != 0) {
+      state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.insert_or_assign(
+          publishedEntry.semanticNodeId, entryIndex);
+    }
+    if (publishedEntry.definitionPathId != InvalidSymbolId) {
+      state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId
+          .insert_or_assign(publishedEntry.definitionPathId, entryIndex);
+    }
     state.ensureModuleResolvedArtifacts(snapshotEntry.definitionPath).onErrorFactIndices.push_back(
         entryIndex);
   }

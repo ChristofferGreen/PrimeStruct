@@ -1277,6 +1277,30 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("const SemanticProgramPublishedRoutingLookups *publishedRoutingLookups = nullptr;") !=
         std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByExpr;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByInitPathAndBindingNameId;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> queryFactIndicesByExpr;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> queryFactIndicesByResolvedPathAndCallNameId;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> tryFactIndicesByExpr;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::unordered_map<uint64_t, std::size_t> tryFactIndicesByOperandPathAndSource;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactByOperandPathAndSource(") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterHeader.find("std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(") !=
@@ -1364,7 +1388,17 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramOnErrorFactView(*semanticProgram)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("publishedRoutingLookups.onErrorFactIndicesByDefinitionId.empty()") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("publishedRoutingLookups.localAutoFactIndicesByExpr.empty()") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("publishedRoutingLookups.queryFactIndicesByExpr.empty()") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("publishedRoutingLookups.tryFactIndicesByExpr.empty()") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(semanticIndex.onErrorFactsByDefinitionId, definition)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size())") !=
         std::string::npos);
@@ -1421,6 +1455,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("resolveLocalAutoInitializerPathId(semanticProgram, expr)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramQueryFactView(*semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size())") !=
@@ -1435,6 +1471,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("resolveSemanticExprPathId(adapter, expr)") !=
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(") !=
+        std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramTryFactView(*semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.tryFactsByOperandPathAndSource.reserve(tryFacts.size())") !=
@@ -1448,6 +1486,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("const auto tryFacts = semanticProgramTryFactView(*adapter.semanticProgram);") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedTryFactByOperandPathAndSource(") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramBindingFactView(*semanticProgram)") !=
         std::string::npos);
@@ -2202,6 +2242,22 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.importAliasTargetPathIdsByNameId.try_emplace(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.insert_or_assign(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("facts.firstSoftwareNumericTypeId =\n            semanticProgramInternCallTargetString(state.semanticProgram, found);") !=
         std::string::npos);

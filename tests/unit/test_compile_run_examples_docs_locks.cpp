@@ -276,13 +276,13 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   const std::string vmMaps = readFile(vmMapsPath.string());
   const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4122\n- TODO-4123\n- TODO-4124") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4123\n- TODO-4124\n- TODO-4125") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4125\n- TODO-4126\n- TODO-4127\n- TODO-4128") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4126\n- TODO-4127\n- TODO-4128\n- TODO-4129") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4122\n2. TODO-4123\n3. TODO-4124\n4. TODO-4125") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4123\n2. TODO-4124\n3. TODO-4125\n4. TODO-4126") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -297,6 +297,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("- [ ] TODO-4118:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4110:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4106: Re-enable or prune skipped collection compatibility suites") ==
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4122: Publish indexed graph-backed facts for lowering") ==
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites") ==
         std::string::npos);
@@ -319,6 +321,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todoFinished.find("✓ TODO-4107: Re-enable or prune residual skipped IR, docs, and smoke suites.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4132: Add `==` support for reflected `Equal` helpers.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4122: Publish indexed graph-backed facts for lowering.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4133: Let `generate(...)` imply reflection enablement.") !=
         std::string::npos);

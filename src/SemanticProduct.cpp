@@ -77,6 +77,34 @@ std::string formatSemanticSourceLocation(int line, int column) {
   return std::to_string(line) + ":" + std::to_string(column);
 }
 
+template <typename EntryT>
+const EntryT *lookupPublishedSemanticEntryByIndex(const std::vector<EntryT> &entries, std::size_t entryIndex) {
+  if (entryIndex >= entries.size()) {
+    return nullptr;
+  }
+  return &entries[entryIndex];
+}
+
+uint64_t makeLocalAutoInitPathBindingNameKey(SymbolId initializerPathId, SymbolId bindingNameId) {
+  return (static_cast<uint64_t>(initializerPathId) << 32) |
+         static_cast<uint64_t>(bindingNameId);
+}
+
+uint64_t makeQueryFactResolvedPathCallNameKey(SymbolId resolvedPathId, SymbolId callNameId) {
+  return (static_cast<uint64_t>(resolvedPathId) << 32) |
+         static_cast<uint64_t>(callNameId);
+}
+
+uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine, int sourceColumn) {
+  const uint64_t lineBits = static_cast<uint64_t>(
+      static_cast<uint32_t>(sourceLine > 0 ? sourceLine : 0));
+  const uint64_t columnBits = static_cast<uint64_t>(
+      static_cast<uint32_t>(sourceColumn > 0 ? sourceColumn : 0));
+  return (static_cast<uint64_t>(operandPathId) << 32) ^
+         (lineBits * 1315423911ULL) ^
+         columnBits;
+}
+
 } // namespace
 
 SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text) {
@@ -377,6 +405,171 @@ const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSumm
     return nullptr;
   }
   return semanticProgramLookupPublishedCallableSummaryByPathId(semanticProgram, *fullPathId);
+}
+
+const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDefinitionSemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionId.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.onErrorFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.onErrorFacts) {
+    if (entry.semanticNodeId == semanticNodeId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId definitionPathId) {
+  if (definitionPathId == InvalidSymbolId) {
+    return nullptr;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.find(
+              definitionPathId);
+      it != semanticProgram.publishedRoutingLookups.onErrorFactIndicesByDefinitionPathId.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.onErrorFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.onErrorFacts) {
+    if (entry.definitionPathId == definitionPathId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.localAutoFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.localAutoFacts) {
+    if (entry.semanticNodeId == semanticNodeId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(
+    const SemanticProgram &semanticProgram,
+    SymbolId initializerPathId,
+    SymbolId bindingNameId) {
+  if (initializerPathId == InvalidSymbolId || bindingNameId == InvalidSymbolId) {
+    return nullptr;
+  }
+  const uint64_t compositeKey =
+      makeLocalAutoInitPathBindingNameKey(initializerPathId, bindingNameId);
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.find(
+              compositeKey);
+      it != semanticProgram.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.localAutoFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.localAutoFacts) {
+    if (entry.initializerResolvedPathId == initializerPathId &&
+        entry.bindingNameId == bindingNameId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.queryFactIndicesByExpr.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.queryFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.queryFacts) {
+    if (entry.semanticNodeId == semanticNodeId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(
+    const SemanticProgram &semanticProgram,
+    SymbolId resolvedPathId,
+    SymbolId callNameId) {
+  if (resolvedPathId == InvalidSymbolId || callNameId == InvalidSymbolId) {
+    return nullptr;
+  }
+  const uint64_t compositeKey = makeQueryFactResolvedPathCallNameKey(resolvedPathId, callNameId);
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.find(
+              compositeKey);
+      it != semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.queryFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.queryFacts) {
+    if (entry.resolvedPathId == resolvedPathId && entry.callNameId == callNameId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  if (const auto it = semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.find(semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.tryFactIndicesByExpr.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.tryFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.tryFacts) {
+    if (entry.semanticNodeId == semanticNodeId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
+const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactByOperandPathAndSource(
+    const SemanticProgram &semanticProgram,
+    SymbolId operandPathId,
+    int sourceLine,
+    int sourceColumn) {
+  if (operandPathId == InvalidSymbolId || sourceLine <= 0 || sourceColumn <= 0) {
+    return nullptr;
+  }
+  const uint64_t compositeKey =
+      makeTryFactOperandPathSourceKey(operandPathId, sourceLine, sourceColumn);
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.find(
+              compositeKey);
+      it != semanticProgram.publishedRoutingLookups.tryFactIndicesByOperandPathAndSource.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.tryFacts, it->second);
+  }
+  for (const auto &entry : semanticProgram.tryFacts) {
+    if (entry.operandResolvedPathId == operandPathId && entry.sourceLine == sourceLine &&
+        entry.sourceColumn == sourceColumn) {
+      return &entry;
+    }
+  }
+  return nullptr;
 }
 
 const SemanticProgramTypeMetadata *semanticProgramLookupTypeMetadata(

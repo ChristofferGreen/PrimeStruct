@@ -353,6 +353,14 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr;
   std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr;
   std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
+  std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId;
+  std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId;
+  std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByExpr;
+  std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByInitPathAndBindingNameId;
+  std::unordered_map<uint64_t, std::size_t> queryFactIndicesByExpr;
+  std::unordered_map<uint64_t, std::size_t> queryFactIndicesByResolvedPathAndCallNameId;
+  std::unordered_map<uint64_t, std::size_t> tryFactIndicesByExpr;
+  std::unordered_map<uint64_t, std::size_t> tryFactIndicesByOperandPathAndSource;
 };
 
 struct SemanticProgramPublishedLowererPreflightFacts {
@@ -467,6 +475,34 @@ const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSumm
 const SemanticProgramCallableSummary *semanticProgramLookupPublishedCallableSummary(
     const SemanticProgram &semanticProgram,
     std::string_view fullPath);
+const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDefinitionSemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
+const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
+    const SemanticProgram &semanticProgram,
+    SymbolId definitionPathId);
+const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
+const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(
+    const SemanticProgram &semanticProgram,
+    SymbolId initializerPathId,
+    SymbolId bindingNameId);
+const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
+const SemanticProgramQueryFact *semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(
+    const SemanticProgram &semanticProgram,
+    SymbolId resolvedPathId,
+    SymbolId callNameId);
+const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
+const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactByOperandPathAndSource(
+    const SemanticProgram &semanticProgram,
+    SymbolId operandPathId,
+    int sourceLine,
+    int sourceColumn);
 std::string_view semanticProgramDirectCallTargetResolvedPath(
     const SemanticProgram &semanticProgram,
     const SemanticProgramDirectCallTarget &entry);
