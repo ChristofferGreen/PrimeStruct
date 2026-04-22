@@ -47,7 +47,7 @@
             };
             if (access.location == UninitializedStorageAccess::Location::Local) {
               const LocalInfo &storageInfo = *access.local;
-              if (!storageInfo.structTypeName.empty()) {
+              if (!storageInfo.isFileHandle && !storageInfo.structTypeName.empty()) {
                 if (isBorrowCall) {
                   function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(storageInfo.index)});
                   return true;
@@ -119,7 +119,8 @@
                 function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
                 return true;
               }
-              if (!access.typeInfo.structPath.empty()) {
+              if (!(access.pointer != nullptr && access.pointer->isFileHandle) &&
+                  !access.typeInfo.structPath.empty()) {
                 StructSlotLayout layout;
                 if (!resolveStructSlotLayout(access.typeInfo.structPath, layout)) {
                   return false;

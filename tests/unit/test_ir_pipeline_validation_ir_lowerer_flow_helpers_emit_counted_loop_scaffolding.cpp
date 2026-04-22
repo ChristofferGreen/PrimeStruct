@@ -144,6 +144,16 @@ TEST_CASE("ir lowerer statement bindings only rehydrate unresolved value structs
   CHECK(source.find("info.structTypeName.empty())") != std::string::npos);
 }
 
+TEST_CASE("ir lowerer storage helpers skip file handle struct copies") {
+  const std::string source = readTextFile(
+      "/Users/chrgre01/src/PrimeStruct/src/ir_lowerer/IrLowererLowerEmitExprStorageHelpers.h");
+  CHECK(source.find("!storageInfo.isFileHandle && !storageInfo.structTypeName.empty()") !=
+        std::string::npos);
+  CHECK(source.find("!(access.pointer != nullptr && access.pointer->isFileHandle) &&") !=
+        std::string::npos);
+  CHECK(source.find("!access.typeInfo.structPath.empty()") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer flow helpers emit body statements") {
   primec::Expr firstStmt;
   firstStmt.kind = primec::Expr::Kind::Name;
