@@ -131,7 +131,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced vector access helper accepts named arguments through imported stdlib helper" * doctest::skip(true)) {
+TEST_CASE("stdlib namespaced vector access helper accepts named arguments through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -666,7 +666,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector stdlib namespaced helper auto inference follows alias precedence" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced helper auto inference follows alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
