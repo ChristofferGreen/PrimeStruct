@@ -555,7 +555,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
     }
     return false;
   }
-  if (isSimpleCallName(expr, "File")) {
+  if (isFileHandleCall(expr)) {
     kindOut = LocalInfo::ValueKind::Int64;
     return true;
   }
@@ -610,7 +610,7 @@ bool inferCallExprBaseKindImpl(const Expr &expr,
       }
     }
     if (arg.kind == Expr::Kind::Call) {
-      if (!arg.isMethodCall && isSimpleCallName(arg, "File")) {
+      if (isFileHandleCall(arg)) {
         kindOut = LocalInfo::ValueKind::Int64;
         return true;
       }

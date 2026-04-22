@@ -739,6 +739,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup wires callback") {
   primec::Expr fileCall;
   fileCall.kind = primec::Expr::Kind::Call;
   fileCall.name = "File";
+  fileCall.namespacePrefix = "/std/file";
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   CHECK(state.inferCallExprBaseKind(fileCall, locals, kindOut));
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);

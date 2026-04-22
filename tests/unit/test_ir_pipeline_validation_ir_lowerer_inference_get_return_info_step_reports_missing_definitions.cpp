@@ -897,6 +897,85 @@ TEST_CASE("ir lowerer inference expr-kind dispatch prefers builtin comparison fa
         primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 
+TEST_CASE("ir lowerer inference expr-kind dispatch infers try from namespaced File constructors") {
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.inferLiteralOrNameExprKind = [](const primec::Expr &,
+                                        const primec::ir_lowerer::LocalMap &,
+                                        primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprBaseKind = [](const primec::Expr &,
+                                   const primec::ir_lowerer::LocalMap &,
+                                   primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprDirectReturnKind = [](const primec::Expr &,
+                                           const primec::ir_lowerer::LocalMap &,
+                                           primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved;
+  };
+  state.inferCallExprCountAccessGpuFallbackKind = [](const primec::Expr &,
+                                                     const primec::ir_lowerer::LocalMap &,
+                                                     primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.resolveMethodCallDefinition =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  state.inferCallExprOperatorFallbackKind = [](const primec::Expr &,
+                                               const primec::ir_lowerer::LocalMap &,
+                                               primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprControlFlowFallbackKind = [](const primec::Expr &,
+                                                  const primec::ir_lowerer::LocalMap &,
+                                                  std::string &,
+                                                  primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+  state.inferCallExprPointerFallbackKind = [](const primec::Expr &,
+                                              const primec::ir_lowerer::LocalMap &,
+                                              primec::ir_lowerer::LocalInfo::ValueKind &kindOut) {
+    kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+    return false;
+  };
+
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::string inferenceError;
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &expr) { return "/" + expr.name; },
+          .error = &inferenceError,
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  CHECK(static_cast<bool>(state.inferExprKind));
+
+  primec::Expr fileCall;
+  fileCall.kind = primec::Expr::Kind::Call;
+  fileCall.name = "File";
+  fileCall.namespacePrefix = "/std/file";
+  fileCall.templateArgs = {"Read"};
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args.push_back(fileCall);
+
+  CHECK(state.inferExprKind(tryExpr, primec::ir_lowerer::LocalMap{}) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer inference expr-kind dispatch infers try from indexed pointer Result args packs") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   state.inferLiteralOrNameExprKind = [](const primec::Expr &expr,

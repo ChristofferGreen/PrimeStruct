@@ -47,14 +47,6 @@ bool isBufferHandleCall(const Expr &expr) {
          scopedName.rfind("/std/gfx/experimental/Buffer__t", 0) == 0;
 }
 
-bool isFileHandleCall(const Expr &expr) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding) {
-    return false;
-  }
-  const std::string scopedName = resolveScopedCallPath(expr);
-  return scopedName == "File" || scopedName == "/std/file/File";
-}
-
 bool extractResultValueTypeText(const std::string &typeText, std::string &valueTypeOut) {
   valueTypeOut.clear();
   std::string base;
@@ -308,8 +300,7 @@ bool populateMetadataBindingInfo(const Expr &bindingExpr,
       bindingInfo.valueKind = LocalInfo::ValueKind::Int64;
     }
   }
-  if (!bindingInfo.isFileHandle && bindingExpr.args.front().kind == Expr::Kind::Call &&
-      !bindingExpr.args.front().isMethodCall && isSimpleCallName(bindingExpr.args.front(), "File") &&
+  if (!bindingInfo.isFileHandle && isFileHandleCall(bindingExpr.args.front()) &&
       bindingExpr.args.front().templateArgs.size() == 1) {
     bindingInfo.isFileHandle = true;
     bindingInfo.valueKind = LocalInfo::ValueKind::Int64;

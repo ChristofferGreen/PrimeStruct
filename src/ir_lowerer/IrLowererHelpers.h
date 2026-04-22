@@ -20,6 +20,7 @@ std::string vectorPushAllocationFailedMessage();
 std::string vectorReserveAllocationFailedMessage();
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
+bool isFileHandleCall(const Expr &expr);
 bool isReturnCall(const Expr &expr);
 bool isIfCall(const Expr &expr);
 bool isMatchCall(const Expr &expr);

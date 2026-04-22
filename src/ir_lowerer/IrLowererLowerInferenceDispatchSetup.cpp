@@ -263,7 +263,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
       if (inferMapTryAtResultValueKind(resultExpr, localsIn, kindOut)) {
         return true;
       }
-      if (!resultExpr.isMethodCall && isSimpleCallName(resultExpr, "File")) {
+      if (isFileHandleCall(resultExpr)) {
         kindOut = LocalInfo::ValueKind::Int64;
         return true;
       }

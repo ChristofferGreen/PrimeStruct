@@ -184,6 +184,27 @@ bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {
   return name == targetName;
 }
 
+bool isFileHandleCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || expr.isBinding ||
+      expr.name.empty()) {
+    return false;
+  }
+
+  std::string scopedName = expr.name;
+  if (scopedName.find('/') == std::string::npos && !expr.namespacePrefix.empty()) {
+    if (expr.namespacePrefix == "/") {
+      scopedName = "/" + scopedName;
+    } else if (!expr.namespacePrefix.empty() &&
+               expr.namespacePrefix.back() == '/') {
+      scopedName = expr.namespacePrefix + scopedName;
+    } else {
+      scopedName = expr.namespacePrefix + "/" + scopedName;
+    }
+  }
+
+  return scopedName == "File" || scopedName == "/std/file/File";
+}
+
 bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }

@@ -41,8 +41,7 @@
           }
           return true;
         }
-        if (init.kind == Expr::Kind::Call && !init.isMethodCall && isSimpleCallName(init, "File") &&
-            init.templateArgs.size() == 1) {
+        if (isFileHandleCall(init) && init.templateArgs.size() == 1) {
           info.isFileHandle = true;
           info.valueKind = LocalInfo::ValueKind::Int64;
           return true;
