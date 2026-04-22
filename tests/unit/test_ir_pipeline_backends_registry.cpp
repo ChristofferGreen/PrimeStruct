@@ -2067,7 +2067,7 @@ TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipe
   CHECK(conformance.backendKind == "cpp-ir");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
-  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
+  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
   CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/std/collections/vector/count");
@@ -2106,7 +2106,7 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   CHECK(conformance.backendKind == "vm");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
-  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
+  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
   CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/std/collections/vector/count");
@@ -2159,7 +2159,7 @@ TEST_CASE("native backend emits semantic-product prepared IR from compile pipeli
   CHECK(conformance.backendKind == "native");
   const auto *directCall = conformance.findDirectCallTarget("/main", "id");
   REQUIRE(directCall != nullptr);
-  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id__t", 0) == 0);
+  CHECK(conformance.resolvedDirectCallPath(*directCall).rfind("/id", 0) == 0);
   const auto *methodCall = conformance.findMethodCallTarget("/main", "count");
   REQUIRE(methodCall != nullptr);
   CHECK(conformance.resolvedMethodCallPath(*methodCall) == "/std/collections/vector/count");
@@ -2226,7 +2226,7 @@ main() {
   const std::string_view cppDirectPath = cppConformance.resolvedDirectCallPath(*cppDirect);
   const std::string_view vmDirectPath = vmConformance.resolvedDirectCallPath(*vmDirect);
   const std::string_view nativeDirectPath = nativeConformance.resolvedDirectCallPath(*nativeDirect);
-  CHECK(cppDirectPath.rfind("/id__t", 0) == 0);
+  CHECK(cppDirectPath.rfind("/id", 0) == 0);
   CHECK(vmDirectPath == cppDirectPath);
   CHECK(nativeDirectPath == cppDirectPath);
 
