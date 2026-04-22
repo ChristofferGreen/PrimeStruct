@@ -201,6 +201,10 @@ bool resolveMethodReceiverTypeFromLocalInfo(const LocalInfo &localInfo,
   typeNameOut.clear();
   resolvedTypePathOut.clear();
 
+  if (localInfo.isFileHandle) {
+    typeNameOut = "File";
+    return true;
+  }
   if (!localInfo.structTypeName.empty()) {
     resolvedTypePathOut = localInfo.structTypeName;
     return true;

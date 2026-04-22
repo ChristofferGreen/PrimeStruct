@@ -385,6 +385,15 @@ TEST_CASE("ir lowerer setup type helper resolves method receiver local targets")
   CHECK(typeName == "i64");
   CHECK(resolvedTypePath.empty());
 
+  LocalInfo fileLocal;
+  fileLocal.kind = LocalInfo::Kind::Value;
+  fileLocal.valueKind = LocalInfo::ValueKind::Int64;
+  fileLocal.isFileHandle = true;
+  fileLocal.structTypeName = "/std/file/File<Read>";
+  CHECK(primec::ir_lowerer::resolveMethodReceiverTypeFromLocalInfo(fileLocal, typeName, resolvedTypePath));
+  CHECK(typeName == "File");
+  CHECK(resolvedTypePath.empty());
+
   LocalInfo unknownValueLocal;
   unknownValueLocal.kind = LocalInfo::Kind::Value;
   unknownValueLocal.valueKind = LocalInfo::ValueKind::Unknown;
