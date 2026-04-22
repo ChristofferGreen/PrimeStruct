@@ -146,6 +146,27 @@ TEST_CASE("ir lowerer uninitialized type helpers build bundled uninitialized res
   missingExpr.kind = primec::Expr::Kind::Name;
   missingExpr.name = "missing";
   CHECK(adapters.inferStructExprPath(missingExpr, locals).empty());
+
+  primec::ir_lowerer::LocalInfo filePack;
+  filePack.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  filePack.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  filePack.isArgsPack = true;
+  filePack.isFileHandle = true;
+  filePack.structTypeName = "/std/file/File<Read>";
+  filePack.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  locals.emplace("files", filePack);
+
+  primec::Expr filesExpr;
+  filesExpr.kind = primec::Expr::Kind::Name;
+  filesExpr.name = "files";
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.literalValue = 0;
+  primec::Expr accessExpr;
+  accessExpr.kind = primec::Expr::Kind::Call;
+  accessExpr.name = "at";
+  accessExpr.args = {filesExpr, indexExpr};
+  CHECK(adapters.inferStructExprPath(accessExpr, locals).empty());
 }
 
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {

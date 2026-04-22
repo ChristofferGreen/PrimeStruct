@@ -477,6 +477,7 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         if (accessReceiver.kind == Expr::Kind::Name) {
           auto receiverIt = localsInExpr.find(accessReceiver.name);
           if (receiverIt != localsInExpr.end() && receiverIt->second.isArgsPack &&
+              !receiverIt->second.isFileHandle &&
               !receiverIt->second.structTypeName.empty()) {
             return receiverIt->second.structTypeName;
           }
