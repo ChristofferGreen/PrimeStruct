@@ -3547,7 +3547,7 @@ TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/*
   CHECK(singleWorkerMessages.size() >= 2);
 }
 
-TEST_CASE("compile pipeline benchmark worker-count equivalence keeps semantic-product index families stable across 1,2,4 workers" * doctest::skip(true)) {
+TEST_CASE("compile pipeline benchmark worker-count equivalence keeps semantic-product index families stable across 1,2,4 workers") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
     std::ofstream file(tempPath);
