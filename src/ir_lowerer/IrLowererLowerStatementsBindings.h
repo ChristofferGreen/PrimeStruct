@@ -434,10 +434,10 @@
         if (init.kind == Expr::Kind::Call) {
           initCallee = resolveDefinitionCall(init);
         }
-        if (initStruct.empty() && initCallee != nullptr) {
+        if (initCallee != nullptr) {
           if (ir_lowerer::isStructDefinition(*initCallee)) {
             initStruct = initCallee->fullPath;
-          } else {
+          } else if (initStruct.empty()) {
             initStruct = ir_lowerer::inferStructReturnPathFromDefinition(
                 initCallee->fullPath,
                 structNames,
