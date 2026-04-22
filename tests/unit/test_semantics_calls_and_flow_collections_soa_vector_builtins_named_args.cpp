@@ -1448,7 +1448,7 @@ main() {
   CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
 }
 
-TEST_CASE("namespaced access wrapper temporary chained method reports i32 path diagnostics" * doctest::skip(true)) {
+TEST_CASE("namespaced access wrapper temporary chained method reports i32 path diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 

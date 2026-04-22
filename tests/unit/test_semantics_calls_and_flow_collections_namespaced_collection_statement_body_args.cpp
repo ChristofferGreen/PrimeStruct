@@ -264,7 +264,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize helper-returned reference receiver target" * doctest::skip(true)) {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize helper-returned reference receiver target") {
   const std::string source = R"(
 [return<Reference<i32>>]
 borrow([Reference<i32>] ref) {

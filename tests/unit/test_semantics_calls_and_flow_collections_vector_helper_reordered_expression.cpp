@@ -490,7 +490,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations" * doctest::skip(true)) {
+TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_vector/*
