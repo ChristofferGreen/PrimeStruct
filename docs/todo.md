@@ -465,10 +465,12 @@ Task template:
       removed when stale.
     - The residual skipped-test queue remains explicit and synchronized with the
       surviving clusters.
-  - notes: Remaining residual skips after the source-delegation,
-      lowerer/backend negative-path, benchmark, and pilot re-enables now live
-      in the broader smoke/gfx and residual example suites such as
-      `test_compile_run_smoke_core_*.cpp`,
+  - notes: Remaining residual skips after the benchmark/pilot and
+      count-forwarding smoke re-enables now live in the gfx/doc contract,
+      lifecycle/native-image, math policy-doc, and residual example suites
+      such as `test_compile_run_smoke_core_contracts_and_cli.cpp`,
+      `test_compile_run_emitters_core_behaviors.cpp`,
+      `test_compile_run_native_backend_core_runtime_and_ir_paths.cpp`,
       `test_compile_run_examples_metal_smoke_and_borrows.cpp`,
       `test_compile_run_math_conformance.cpp`, and the gfx smoke suites.
   - stop_rule: Stop once every remaining non-collection skipped suite is either

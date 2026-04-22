@@ -387,7 +387,7 @@ main() {
   CHECK(runCommand(nativePath) == 2);
 }
 
-TEST_CASE("compiles and runs count forwarding to method" * doctest::skip(true)) {
+TEST_CASE("compiles and runs count forwarding to method") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
