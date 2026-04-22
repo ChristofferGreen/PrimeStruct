@@ -402,7 +402,7 @@ main() {
   CHECK(error.find("expected i32") != std::string::npos);
 }
 
-TEST_CASE("vector stdlib namespaced count expression keeps non-builtin arity mismatch diagnostics" * doctest::skip(true)) {
+TEST_CASE("vector stdlib namespaced count expression keeps non-builtin arity mismatch diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/count([vector<i32>] values, [bool] marker) {
@@ -654,7 +654,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("map compatibility count call keeps explicit alias precedence with canonical templated helper present" * doctest::skip(true)) {
+TEST_CASE("map compatibility count call keeps explicit alias precedence with canonical templated helper present") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values) {
@@ -736,7 +736,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("map compatibility explicit-template count call keeps alias precedence with canonical templated helper" * doctest::skip(true)) {
+TEST_CASE("map compatibility explicit-template count call keeps alias precedence with canonical templated helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count<K, V>([map<K, V>] values, [bool] marker) {
