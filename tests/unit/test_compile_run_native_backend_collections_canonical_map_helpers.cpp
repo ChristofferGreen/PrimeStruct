@@ -582,7 +582,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native map namespaced at method compatibility alias") {
+TEST_CASE("compiles and runs native map namespaced at method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -596,18 +596,15 @@ main() {
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_native_map_namespaced_at_method_compatibility_alias_reject.prime", source);
-  const std::string outPath = (testScratchPath("") /
-                               "primec_native_map_namespaced_at_method_compatibility_alias_reject_out.txt")
-                                  .string();
+      writeTemp("compile_native_map_namespaced_at_method_compatibility_alias.prime", source);
   const std::string exePath = (testScratchPath("") /
-                               "primec_native_map_namespaced_at_method_compatibility_alias_reject_exe")
+                               "primec_native_map_namespaced_at_method_compatibility_alias_exe")
                                   .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_SUITE_END();

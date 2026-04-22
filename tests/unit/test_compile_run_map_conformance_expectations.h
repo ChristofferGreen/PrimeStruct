@@ -290,20 +290,11 @@ inline void expectExperimentalMapVariadicConstructorMismatchReject(const std::st
 }
 
 inline void expectExperimentalMapInsertConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapInsertConformanceSource(),
-                                              "experimental_map_insert",
-                                              emitMode,
-                                              36,
-                                              "3\n9\n13\n11\n");
-    return;
-  }
-
   expectMapConformanceProgramRunsWithOutput(makeExperimentalMapInsertConformanceSource(),
                                             "experimental_map_insert",
                                             emitMode,
-                                            3,
-                                            "");
+                                            36,
+                                            "3\n9\n13\n11\n");
 }
 
 inline void expectExperimentalMapOwnershipConformance(const std::string &emitMode) {

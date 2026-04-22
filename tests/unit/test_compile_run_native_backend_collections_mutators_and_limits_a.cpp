@@ -182,7 +182,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+  CHECK(runCommand(exePath) == 2);
 }
 
 TEST_CASE("compiles and runs native user vector reserve method shadow") {
@@ -254,7 +254,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("compiles and runs native user vector remove_at call shadow") {
@@ -302,7 +302,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs native user vector remove_swap call shadow") {

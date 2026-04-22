@@ -254,14 +254,6 @@ inline void expectStdlibWrapperVectorConstructorReceiverConformance(const std::s
         "count requires array, vector, map, or string target");
     return;
   }
-  if (emitMode == "native" || emitMode == "exe") {
-    expectVectorConformanceCompileReject(
-        makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
-        "vector_wrapper_constructor_receiver_" + emitMode,
-        emitMode,
-        "count requires array, vector, map, or string target");
-    return;
-  }
   expectVectorConformanceProgramRuns(
       makeStdlibWrapperVectorConstructorReceiverConformanceSource(),
       "vector_wrapper_constructor_receiver_" + emitMode,
@@ -297,14 +289,6 @@ inline void expectCanonicalVectorNamespaceNamedArgsConformance(const std::string
 
 inline void expectCanonicalVectorNamespaceNamedArgsTemporaryReceiverConformance(const std::string &emitMode) {
   if (emitMode == "vm") {
-    expectVectorConformanceCompileReject(
-        makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
-        "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
-        emitMode,
-        "count requires array, vector, map, or string target");
-    return;
-  }
-  if (emitMode == "native" || emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceNamedArgsTemporaryReceiverSource(),
         "vector_namespace_canonical_named_args_temporary_receiver_" + emitMode,
