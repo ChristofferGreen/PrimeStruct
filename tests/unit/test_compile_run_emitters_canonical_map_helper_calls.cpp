@@ -69,7 +69,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects bare map count through compatibility alias when canonical helper is absent in C++ emitter") {
+TEST_CASE("compiles and runs bare map count through compatibility alias when canonical helper is absent in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values) {
@@ -84,13 +84,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_count_compatibility_alias_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_compatibility_alias_reject.err")
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_compatibility_alias_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("compiles and runs bare map at with canonical helper declared while builtin access stays authoritative in C++ emitter") {
