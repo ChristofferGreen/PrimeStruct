@@ -70,7 +70,9 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
       "### Collection Method Sugar",
       "values.push(3)",
       "values.reserve(8)",
-      "values.at(0) + values.at(2) + values.count()",
+      "values.at(0)",
+      "values.at(2)",
+      "values.count()",
       "[vector<int> mut] values{1, 2}"};
 
   for (const std::string &snippet : requiredPrimeStructSnippets) {
