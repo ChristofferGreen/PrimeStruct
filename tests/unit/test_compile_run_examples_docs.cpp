@@ -61,7 +61,7 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
   const std::vector<std::string> requiredPrimeStructSnippets = {
       "value.push(item)", "value.at(index)", "value[index]", "value.count()",
       "map<string, i32>{\"a\"utf8=1i32}", "to_soa(spawnQueue)",
-      "two-phase: run a stable-size update pass first"};
+      "Preferred update pattern is two-phase"};
   const std::vector<std::string> requiredSyntaxSpecSnippets = {
       "vector<i32>{1i32, 2i32}", "vector<i32>[1i32, 2i32]",
       "map<i32, i32>{1i32=2i32, 3i32=4i32}", "value.push(item)",
