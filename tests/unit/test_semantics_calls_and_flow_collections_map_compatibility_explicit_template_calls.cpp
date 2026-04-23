@@ -25,7 +25,7 @@ main() {
   CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
 }
 
-TEST_CASE("map compatibility explicit-template count method keeps non-templated alias diagnostics") {
+TEST_CASE("map compatibility explicit-template count method resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -44,11 +44,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("wrapper reference templated map count method rejects without explicit alias") {
+TEST_CASE("wrapper reference templated map count method resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /Reference/count([Reference</std/collections/map<i32, i32>>] self) {
@@ -72,8 +72,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("wrapper reference templated map count method keeps canonical diagnostics") {
