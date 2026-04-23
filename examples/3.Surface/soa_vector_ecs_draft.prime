@@ -1,3 +1,5 @@
+import /std/collections/*
+
 Particle() {
   [i32] x{0i32}
   [i32] y{0i32}
@@ -6,15 +8,15 @@ Particle() {
 [effects(heap_alloc), return<void>]
 simulateStep([soa_vector<Particle> mut] particles, [vector<Particle> mut] spawnQueue) {
   [i32 mut] i{0i32}
-  while(less_than(i, count(particles))) {
+  while(less_than(i, particles.count())) {
     // Read/update pass over stable storage.
-    get(particles, i)
+    [Particle] current{particles.get(i)}
     assign(i, plus(i, 1i32))
   }
 
   // Structural mutations are deferred to a second phase.
   [soa_vector<Particle>] stagedSpawns{to_soa(spawnQueue)}
-  reserve(particles, plus(count(particles), count(stagedSpawns)))
+  particles.reserve(plus(particles.count(), stagedSpawns.count()))
 }
 
 [effects(heap_alloc), return<int>]

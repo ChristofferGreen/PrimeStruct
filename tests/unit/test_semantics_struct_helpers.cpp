@@ -146,6 +146,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("generic struct helper resolves local templated root helper") {
+  const std::string source = R"(
+[struct]
+VecLike<T>() {
+  [return<void>]
+  check() {
+    vectorCheckShape<T>(this)
+  }
+}
+
+/vectorCheckShape<T>([VecLike<T>] values) {
+}
+
+[return<int>]
+main() {
+  [VecLike<i32>] values{VecLike<i32>()}
+  values.check()
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("mut helper allows assignment to this") {
   const std::string source = R"(
 [struct]

@@ -1432,6 +1432,42 @@ TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
         "/std/collections/map/contains");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter falls back to method-call source lookup") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "at",
+      .receiverTypeText = "/std/collections/experimental_vector/Vector__t25a78a513414c3bf",
+      .sourceLine = 11,
+      .sourceColumn = 15,
+      .semanticNodeId = 244,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "at"),
+      .receiverTypeTextId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/experimental_vector/Vector__t25a78a513414c3bf"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/std/collections/vector/at"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+  });
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::Expr methodExpr;
+  methodExpr.kind = primec::Expr::Kind::Call;
+  methodExpr.isMethodCall = true;
+  methodExpr.name = "at";
+  methodExpr.sourceLine = 11;
+  methodExpr.sourceColumn = 15;
+  methodExpr.semanticNodeId = 0;
+
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, methodExpr) ==
+        "/std/collections/vector/at");
+  const auto surfaceId =
+      primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(adapter, methodExpr);
+  REQUIRE(surfaceId.has_value());
+  CHECK(*surfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+}
+
 TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface ids") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{

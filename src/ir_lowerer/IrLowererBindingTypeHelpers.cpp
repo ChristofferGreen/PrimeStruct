@@ -48,7 +48,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   }
 
   structPathOut =
-      "/std/collections/experimental_soa_vector/SoaVector__" + normalizedArg;
+      specializedExperimentalSoaVectorStructPathForElementType(normalizedArg);
   return true;
 }
 
@@ -441,6 +441,52 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
   return name;
 }
 
+bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText) {
+  const std::string normalized = trimTemplateTypeText(typeText);
+  std::string base;
+  std::string arg;
+  if (splitTemplateTypeName(normalized, base, arg)) {
+    const std::string trimmedBase = trimTemplateTypeText(base);
+    if (trimmedBase == "soa_vector" || trimmedBase == "/soa_vector" ||
+        trimmedBase == "std/collections/soa_vector" ||
+        trimmedBase == "/std/collections/soa_vector") {
+      return true;
+    }
+    std::vector<std::string> templateArgs;
+    if (splitTemplateArgs(arg, templateArgs)) {
+      for (const std::string &nested : templateArgs) {
+        if (typeTextUsesRawBuiltinSoaVectorLayout(nested)) {
+          return true;
+        }
+      }
+    } else if (!arg.empty() && typeTextUsesRawBuiltinSoaVectorLayout(arg)) {
+      return true;
+    }
+    return false;
+  }
+  return normalized == "soa_vector" || normalized == "/soa_vector" ||
+         normalized == "std/collections/soa_vector" ||
+         normalized == "/std/collections/soa_vector";
+}
+
+bool exprUsesRawBuiltinSoaVectorLayout(const Expr &expr) {
+  for (const auto &transform : expr.transforms) {
+    if (transform.name == "effects" || transform.name == "capabilities" ||
+        isBindingQualifierName(transform.name)) {
+      continue;
+    }
+    if (typeTextUsesRawBuiltinSoaVectorLayout(transform.name)) {
+      return true;
+    }
+    for (const std::string &templateArg : transform.templateArgs) {
+      if (typeTextUsesRawBuiltinSoaVectorLayout(templateArg)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram) {
   BindingTypeAdapters adapters;
   const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
@@ -672,7 +718,8 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
         info.valueKind = valueKindFromTypeName(elementType);
       }
       if (info.structTypeName.empty() && valueKindFromTypeName(elementType) == LocalInfo::ValueKind::Unknown) {
-        info.structTypeName = elementType;
+        info.structTypeName =
+            specializedExperimentalVectorStructPathForElementType(elementType);
       }
       return;
     }
@@ -688,7 +735,8 @@ void setReferenceArrayInfoFromTransforms(const Expr &expr, LocalInfo &info) {
         info.valueKind = valueKindFromTypeName(elementType);
       }
       if (info.structTypeName.empty() && valueKindFromTypeName(elementType) == LocalInfo::ValueKind::Unknown) {
-        info.structTypeName = elementType;
+        info.structTypeName =
+            specializedExperimentalSoaVectorStructPathForElementType(elementType);
       }
       return;
     }

@@ -288,6 +288,26 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported map size method calls resolve to local definitions") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<int>]
+/map/size([map<i32, i32>] items) {
+  return(/std/collections/map/count(items))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] items{map<i32, i32>(1i32, 2i32)}
+  return(items.size())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("vector method calls resolve to definitions") {
   const std::string source = R"(
 import /std/collections/*

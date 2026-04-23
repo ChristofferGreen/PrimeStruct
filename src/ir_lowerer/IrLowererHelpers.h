@@ -18,6 +18,10 @@ std::string vectorReserveExceedsLocalCapacityLimitMessage();
 std::string vectorLiteralExceedsLocalCapacityLimitMessage();
 std::string vectorPushAllocationFailedMessage();
 std::string vectorReserveAllocationFailedMessage();
+std::string specializedExperimentalVectorStructPathForElementType(
+    const std::string &elementTypeText);
+std::string specializedExperimentalSoaVectorStructPathForElementType(
+    const std::string &elementTypeText);
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isFileHandleCall(const Expr &expr);

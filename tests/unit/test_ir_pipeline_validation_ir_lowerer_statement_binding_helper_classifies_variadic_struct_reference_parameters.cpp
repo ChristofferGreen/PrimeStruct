@@ -909,6 +909,136 @@ main() {
             "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
 }
 
+TEST_CASE(
+    "ir lowerer statement binding helper canonicalizes imported bare struct "
+    "parameter semantic types") {
+  const std::string source = R"(
+import /std/ui/*
+
+[return<int>]
+use_layout([LayoutTree mut] layout) {
+  return(0i32)
+}
+
+[return<int>]
+main([array<string>] args) {
+  [LayoutTree mut] layout{LayoutTree()}
+  return(use_layout(layout))
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::Definition *useLayoutDef = findDefinitionByPath(program, "/use_layout");
+  REQUIRE(useLayoutDef != nullptr);
+  REQUIRE(useLayoutDef->parameters.size() == 1);
+  const primec::Definition *layoutTreeDef = findDefinitionByPath(program, "/std/ui/LayoutTree");
+  REQUIRE(layoutTreeDef != nullptr);
+
+  auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 17;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      useLayoutDef->parameters.front(),
+      {},
+      [](const primec::Expr &) { return false; },
+      bindingTypeAdapters.hasExplicitBindingTypeTransform,
+      bindingTypeAdapters.bindingKind,
+      bindingTypeAdapters.bindingValueKind,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      bindingTypeAdapters.isFileErrorBinding,
+      bindingTypeAdapters.setReferenceArrayInfo,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      bindingTypeAdapters.isStringBinding,
+      info,
+      error,
+      {},
+      [&](const primec::Expr &expr) -> const primec::Definition * {
+        return expr.name == "LayoutTree" ? layoutTreeDef : nullptr;
+      },
+      {},
+      &semanticProductTargets));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.structTypeName == "/std/ui/LayoutTree");
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper classifies specialized vector "
+    "semantic parameter types as vectors") {
+  const std::string source = R"(
+import /std/collections/*
+
+[return<void>]
+dump_words([vector<i32>] words) {}
+
+[return<int>]
+main([array<string>] args) {
+  [vector<i32> mut] words{vector<i32>()}
+  dump_words(words)
+  return(0i32)
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::Definition *dumpWordsDef = findDefinitionByPath(program, "/dump_words");
+  REQUIRE(dumpWordsDef != nullptr);
+  REQUIRE(dumpWordsDef->parameters.size() == 1);
+
+  auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 18;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      dumpWordsDef->parameters.front(),
+      {},
+      [](const primec::Expr &) { return false; },
+      bindingTypeAdapters.hasExplicitBindingTypeTransform,
+      bindingTypeAdapters.bindingKind,
+      bindingTypeAdapters.bindingValueKind,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      bindingTypeAdapters.isFileErrorBinding,
+      bindingTypeAdapters.setReferenceArrayInfo,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      bindingTypeAdapters.isStringBinding,
+      info,
+      error,
+      {},
+      [&](const primec::Expr &expr) -> const primec::Definition * {
+        if (!expr.name.empty() &&
+            expr.name.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+          return findDefinitionByPath(program, expr.name);
+        }
+        return nullptr;
+      },
+      {},
+      &semanticProductTargets));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.structTypeName.empty());
+}
+
 TEST_CASE("ir lowerer statement binding helper leaves explicit bare struct locals unresolved") {
   primec::Expr stmt;
   stmt.kind = primec::Expr::Kind::Call;

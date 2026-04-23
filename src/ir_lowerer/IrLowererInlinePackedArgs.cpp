@@ -196,6 +196,9 @@ bool emitInlinePackedCallParameter(
   };
 
   const auto requiresWrappedStructTypeMatch = [&]() {
+    if (paramInfo.isResult) {
+      return false;
+    }
     if (paramInfo.argsPackElementKind == LocalInfo::Kind::Reference) {
       return !(paramInfo.referenceToArray || paramInfo.referenceToVector ||
                paramInfo.referenceToMap || paramInfo.referenceToBuffer);

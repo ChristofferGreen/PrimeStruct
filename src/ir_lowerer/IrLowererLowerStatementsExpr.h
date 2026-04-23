@@ -158,6 +158,25 @@
           }
           return nullptr;
         };
+        auto findDirectSoaWrapperDefinition = [&](const Expr &callExpr,
+                                                 const std::string &rawPath)
+            -> const Definition * {
+          const std::string normalizedRawPath = stripGeneratedHelperSuffix(rawPath);
+          const bool isExperimentalSoaToAosCall =
+              normalizedRawPath ==
+              "/std/collections/experimental_soa_vector_conversions/soaVectorToAos";
+          if (isExperimentalSoaToAosCall && !callExpr.args.empty()) {
+            const std::string receiverStruct =
+                inferStructExprPath(callExpr.args.front(), localsIn);
+            if (normalizeCollectionBindingTypeName(receiverStruct) == "soa_vector") {
+              if (const Definition *canonicalSoaToAos =
+                      findDirectHelperDefinition("/std/collections/soa_vector/to_aos")) {
+                return canonicalSoaToAos;
+              }
+            }
+          }
+          return findDirectHelperDefinition(rawPath);
+        };
         auto findDirectEntryMapConstructorDefinition = [&](const Expr &callExpr)
             -> const Definition * {
           const std::string rawPath = resolveDirectHelperPath(callExpr);
@@ -198,8 +217,72 @@
             [&](const Expr &targetCallExpr,
                 ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
+              auto resolveSpecializedVectorElementKind =
+                  [&](const std::string &typeText,
+                      ir_lowerer::LocalInfo::ValueKind &elemKindOut) {
+                    elemKindOut = ir_lowerer::LocalInfo::ValueKind::Unknown;
+                    std::string normalized =
+                        ir_lowerer::trimTemplateTypeText(typeText);
+                    if (!normalized.empty() && normalized.front() != '/') {
+                      normalized.insert(normalized.begin(), '/');
+                    }
+                    if (normalized.rfind(
+                            "/std/collections/experimental_vector/Vector__",
+                            0) != 0) {
+                      return false;
+                    }
+                    Expr syntheticExpr;
+                    syntheticExpr.kind = Expr::Kind::Call;
+                    syntheticExpr.name = normalized;
+                    const Definition *structDef =
+                        resolveDefinitionCall(syntheticExpr);
+                    if (structDef == nullptr ||
+                        !ir_lowerer::isStructDefinition(*structDef)) {
+                      return false;
+                    }
+                    for (const auto &fieldExpr : structDef->statements) {
+                      if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+                        continue;
+                      }
+                      std::string typeName;
+                      std::vector<std::string> templateArgs;
+                      if (!ir_lowerer::extractFirstBindingTypeTransform(
+                              fieldExpr, typeName, templateArgs) ||
+                          ir_lowerer::normalizeCollectionBindingTypeName(
+                              typeName) != "Pointer" ||
+                          templateArgs.size() != 1) {
+                        continue;
+                      }
+                      std::string elementType =
+                          ir_lowerer::trimTemplateTypeText(
+                              templateArgs.front());
+                      if (!ir_lowerer::extractTopLevelUninitializedTypeText(
+                              elementType, elementType)) {
+                        continue;
+                      }
+                      elemKindOut =
+                          ir_lowerer::valueKindFromTypeName(elementType);
+                      return elemKindOut !=
+                             ir_lowerer::LocalInfo::ValueKind::Unknown;
+                    }
+                    return false;
+                  };
               const std::string inferredReceiverStruct =
                   inferStructExprPath(targetCallExpr, localsIn);
+              if (inferredReceiverStruct.rfind(
+                      "/std/collections/experimental_vector/Vector__", 0) ==
+                  0) {
+                ir_lowerer::LocalInfo::ValueKind elemKind;
+                if (!resolveSpecializedVectorElementKind(inferredReceiverStruct,
+                                                        elemKind)) {
+                  return false;
+                }
+                targetInfoOut.isArrayOrVectorTarget = true;
+                targetInfoOut.isVectorTarget = true;
+                targetInfoOut.elemKind = elemKind;
+                targetInfoOut.structTypeName = inferredReceiverStruct;
+                return true;
+              }
               if (inferredReceiverStruct.rfind(
                       "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
                   normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
@@ -240,14 +323,21 @@
                   elementTypeName.erase(elementTypeName.begin());
                 }
                 targetInfoOut.structTypeName =
-                    "/std/collections/experimental_soa_vector/SoaVector__" +
-                    elementTypeName;
+                    specializedExperimentalSoaVectorStructPathForElementType(
+                        elementTypeName);
               }
               return true;
             };
         if (!expr.isMethodCall) {
           const std::string rawPath = resolveDirectHelperPath(expr);
           const Definition *directCallee = resolveDefinitionCall(expr);
+          if (directCallee != nullptr &&
+              isSoaWrapperHelperFamilyPath(rawPath)) {
+            if (const Definition *preferredSoaWrapper =
+                    findDirectSoaWrapperDefinition(expr, rawPath)) {
+              directCallee = preferredSoaWrapper;
+            }
+          }
           if (directCallee == nullptr &&
               hasMapEntryCtorArgs(expr) &&
               (rawPath.rfind("/map/", 0) == 0 ||
@@ -264,7 +354,7 @@
           }
           if (directCallee == nullptr &&
               isSoaWrapperHelperFamilyPath(rawPath)) {
-            directCallee = findDirectHelperDefinition(rawPath);
+            directCallee = findDirectSoaWrapperDefinition(expr, rawPath);
           }
           if (directCallee == nullptr &&
               (rawPath.rfind("/map/", 0) == 0 ||
@@ -363,6 +453,22 @@
 
         std::string accessName;
         if (getBuiltinArrayAccessName(expr, accessName)) {
+          const bool isMethodCallTempReceiver =
+              expr.isMethodCall &&
+              !expr.args.empty() &&
+              expr.args.front().kind == Expr::Kind::Call &&
+              (accessName == "at" || accessName == "at_unsafe");
+          bool tempReceiverSupportsBuiltinAccess = false;
+          if (isMethodCallTempReceiver) {
+            ir_lowerer::ArrayVectorAccessTargetInfo targetInfo;
+            tempReceiverSupportsBuiltinAccess =
+                resolveHelperReturnedArrayVectorAccessTargetInfo(
+                    expr.args.front(), targetInfo);
+          }
+          if (isMethodCallTempReceiver && !tempReceiverSupportsBuiltinAccess) {
+            // Let normal helper lowering handle method calls on constructor- or
+            // helper-backed temporaries instead of forcing builtin raw access.
+          } else {
           if (expr.args.size() != 2) {
             error = accessName + " requires exactly two arguments";
             return false;
@@ -395,6 +501,7 @@
             return false;
           }
           return true;
+          }
         }
 
         const auto countAccessResult = tryEmitCountAccessCall(
@@ -454,6 +561,22 @@
         }
         if (countAccessResult == CountAccessCallEmitResult::Error) {
           return false;
+        }
+        if (expr.isMethodCall) {
+          const std::string priorError = error;
+          const Definition *methodCallee =
+              resolveMethodCallDefinition(expr, localsIn);
+          if (methodCallee == nullptr) {
+            methodCallee = findDirectHelperDefinition(resolveExprPath(expr));
+          }
+          if (methodCallee != nullptr) {
+            if (!emitInlineDefinitionCall(expr, *methodCallee, localsIn, true)) {
+              return false;
+            }
+            error = priorError;
+            return true;
+          }
+          error = priorError;
         }
         if (!expr.isMethodCall && hasMapEntryCtorArgs(expr) &&
             normalizeCollectionHelperPath(resolveExprPath(expr)) == "/map/map") {

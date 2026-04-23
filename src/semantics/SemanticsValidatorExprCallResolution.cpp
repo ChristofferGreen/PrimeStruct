@@ -112,6 +112,21 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
   auto pathExists = [&](const std::string &path) {
     return defMap_.count(path) > 0 || paramsByDef_.count(path) > 0;
   };
+  auto hasDefinitionFamilyPath = [&](std::string_view path) {
+    const std::string pathText(path);
+    if (pathExists(pathText)) {
+      return true;
+    }
+    const std::string templatedPrefix = pathText + "<";
+    const std::string specializedPrefix = pathText + "__t";
+    for (const auto &def : program_.definitions) {
+      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
+          def.fullPath.rfind(specializedPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
   if (candidatePath == "/equal" || candidatePath == "equal") {
     std::string reflectedStructEqualityHelperPath;
     if (resolveReflectedStructEqualityHelperPath(params,
@@ -457,20 +472,22 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     }
     const std::string samePathSoaCandidateBase =
         canonicalSamePathSoaHelperBase(candidatePath);
-    if (!samePathSoaCandidateBase.empty() && pathExists(samePathSoaCandidateBase)) {
+    if (!samePathSoaCandidateBase.empty() &&
+        hasDefinitionFamilyPath(samePathSoaCandidateBase)) {
       return samePathSoaCandidateBase;
     }
     for (const auto &basePath : baseCandidates) {
       const std::string samePathSoaHelperBase =
           canonicalSamePathSoaHelperBase(basePath);
-      if (!samePathSoaHelperBase.empty() && pathExists(samePathSoaHelperBase)) {
+      if (!samePathSoaHelperBase.empty() &&
+          hasDefinitionFamilyPath(samePathSoaHelperBase)) {
         return samePathSoaHelperBase;
       }
       if (const std::string specializedPath = specializedPathForBase(basePath);
           !specializedPath.empty()) {
         return specializedPath;
       }
-      if (pathExists(basePath)) {
+      if (hasDefinitionFamilyPath(basePath)) {
         return basePath;
       }
     }

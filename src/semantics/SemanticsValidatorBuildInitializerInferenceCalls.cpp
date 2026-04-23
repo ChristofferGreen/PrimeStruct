@@ -41,6 +41,20 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
                                                         const std::vector<ParameterInfo> &params,
                                                         const std::unordered_map<std::string, BindingInfo> &locals,
                                                         BindingInfo &bindingOut) {
+  auto canonicalizeResolvedPath = [](std::string path) {
+    const size_t suffix = path.find("__t");
+    if (suffix != std::string::npos) {
+      path.erase(suffix);
+    }
+    return path;
+  };
+  auto isImportedExperimentalVectorConstructorPath =
+      [&](std::string resolvedPath) {
+        resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
+        return resolvedPath == "/std/collections/experimental_vector/vector" ||
+               (resolvedPath == "/vector" &&
+                hasDirectExperimentalVectorImport());
+      };
   auto copyNamedBinding = [&](const std::string &name) -> bool {
     if (const BindingInfo *paramBinding = findParamBinding(params, name)) {
       bindingOut = *paramBinding;
@@ -57,6 +71,26 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
     return copyNamedBinding(expr.name);
   }
   if (expr.kind != Expr::Kind::Call) return false;
+  std::string resolvedCollectionPath = preferredCollectionHelperResolvedPath(expr);
+  if (resolvedCollectionPath.empty()) {
+    resolvedCollectionPath = resolveCalleePath(expr);
+  }
+  if (!resolvedCollectionPath.empty()) {
+    const std::string concreteResolvedCollectionPath =
+        resolveExprConcreteCallPath(params, locals, expr, resolvedCollectionPath);
+    if (!concreteResolvedCollectionPath.empty()) {
+      resolvedCollectionPath = concreteResolvedCollectionPath;
+    }
+  }
+  if (expr.templateArgs.size() == 1 &&
+      (isImportedExperimentalVectorConstructorPath(resolvedCollectionPath) ||
+       (expr.name == "vector" &&
+        expr.namespacePrefix.empty() &&
+        hasDirectExperimentalVectorImport()))) {
+    bindingOut.typeName = "Vector";
+    bindingOut.typeTemplateArg = expr.templateArgs.front();
+    return true;
+  }
   std::string collection;
   if (getBuiltinCollectionName(expr, collection)) {
     if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
@@ -69,17 +103,6 @@ bool SemanticsValidator::inferCollectionBindingFromExpr(const Expr &expr,
       bindingOut.typeName = "map";
       bindingOut.typeTemplateArg = joinTemplateArgs(expr.templateArgs);
       return true;
-    }
-  }
-  std::string resolvedCollectionPath = preferredCollectionHelperResolvedPath(expr);
-  if (resolvedCollectionPath.empty()) {
-    resolvedCollectionPath = resolveCalleePath(expr);
-  }
-  if (!resolvedCollectionPath.empty()) {
-    const std::string concreteResolvedCollectionPath =
-        resolveExprConcreteCallPath(params, locals, expr, resolvedCollectionPath);
-    if (!concreteResolvedCollectionPath.empty()) {
-      resolvedCollectionPath = concreteResolvedCollectionPath;
     }
   }
   auto defIt = defMap_.find(resolvedCollectionPath);

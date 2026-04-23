@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "IrLowererHelpers.h"
+#include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
@@ -74,6 +75,44 @@ bool inferDeclaredReturnCollection(const Definition &definition,
     }
     return inferCollectionFromType(declaredType, inferCollectionFromType);
   }
+  auto extractDeclaredExprTypeName = [&](const Expr &expr) {
+    std::string typeName;
+    std::vector<std::string> templateArgs;
+    if (extractFirstBindingTypeTransform(expr, typeName, templateArgs)) {
+      if (!templateArgs.empty()) {
+        typeName += "<";
+        for (size_t index = 0; index < templateArgs.size(); ++index) {
+          if (index != 0) {
+            typeName += ", ";
+          }
+          typeName += trimTemplateTypeText(templateArgs[index]);
+        }
+        typeName += ">";
+      }
+      return typeName;
+    }
+    return std::string{};
+  };
+  auto inferLiteralTypeName = [&](const Expr &value, std::string &typeOut) {
+    typeOut.clear();
+    if (value.kind == Expr::Kind::Literal) {
+      typeOut = value.isUnsigned ? "u64" : (value.intWidth == 64 ? "i64" : "i32");
+      return true;
+    }
+    if (value.kind == Expr::Kind::BoolLiteral) {
+      typeOut = "bool";
+      return true;
+    }
+    if (value.kind == Expr::Kind::FloatLiteral) {
+      typeOut = value.floatWidth == 64 ? "f64" : "f32";
+      return true;
+    }
+    if (value.kind == Expr::Kind::StringLiteral) {
+      typeOut = "string";
+      return true;
+    }
+    return false;
+  };
   auto isEnvelopeValueExpr = [&](const Expr &candidate, bool allowAnyName) -> bool {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
       return false;
@@ -145,33 +184,13 @@ bool inferDeclaredReturnCollection(const Definition &definition,
       return true;
     }
     if (isDirectMapConstructor() && candidate.args.size() % 2 == 0 && !candidate.args.empty()) {
-      auto inferLiteralType = [&](const Expr &value, std::string &typeOut) -> bool {
-        typeOut.clear();
-        if (value.kind == Expr::Kind::Literal) {
-          typeOut = value.isUnsigned ? "u64" : (value.intWidth == 64 ? "i64" : "i32");
-          return true;
-        }
-        if (value.kind == Expr::Kind::BoolLiteral) {
-          typeOut = "bool";
-          return true;
-        }
-        if (value.kind == Expr::Kind::FloatLiteral) {
-          typeOut = value.floatWidth == 64 ? "f64" : "f32";
-          return true;
-        }
-        if (value.kind == Expr::Kind::StringLiteral) {
-          typeOut = "string";
-          return true;
-        }
-        return false;
-      };
       std::string keyType;
       std::string valueType;
       for (size_t i = 0; i < candidate.args.size(); i += 2) {
         std::string currentKeyType;
         std::string currentValueType;
-        if (!inferLiteralType(candidate.args[i], currentKeyType) ||
-            !inferLiteralType(candidate.args[i + 1], currentValueType)) {
+        if (!inferLiteralTypeName(candidate.args[i], currentKeyType) ||
+            !inferLiteralTypeName(candidate.args[i + 1], currentValueType)) {
           return false;
         }
         if (keyType.empty()) {
@@ -194,10 +213,62 @@ bool inferDeclaredReturnCollection(const Definition &definition,
       argsOut = candidate.templateArgs;
       return true;
     }
+    if (isDirectVectorConstructor() && !candidate.args.empty()) {
+      std::string elementType;
+      for (const auto &arg : candidate.args) {
+        std::string currentElementType;
+        if (!inferLiteralTypeName(arg, currentElementType)) {
+          return false;
+        }
+        if (elementType.empty()) {
+          elementType = currentElementType;
+          continue;
+        }
+        if (elementType != currentElementType) {
+          return false;
+        }
+      }
+      nameOut = "vector";
+      argsOut = {elementType};
+      return true;
+    }
     return false;
   };
   std::function<bool(const Expr &)> inferCollectionFromExpr;
+  std::function<bool(const std::string &)> inferCollectionFromNamedValue;
+  inferCollectionFromNamedValue = [&](const std::string &name) {
+    for (const auto &parameter : definition.parameters) {
+      if (parameter.name != name) {
+        continue;
+      }
+      const std::string declaredType = extractDeclaredExprTypeName(parameter);
+      if (declaredType.empty()) {
+        return false;
+      }
+      return inferCollectionFromType(trimTemplateTypeText(declaredType),
+                                     inferCollectionFromType);
+    }
+    for (const auto &stmt : definition.statements) {
+      if (!stmt.isBinding || stmt.name != name) {
+        continue;
+      }
+      const std::string declaredType = extractDeclaredExprTypeName(stmt);
+      if (!declaredType.empty()) {
+        return inferCollectionFromType(trimTemplateTypeText(declaredType),
+                                       inferCollectionFromType);
+      }
+      if (stmt.args.size() == 1) {
+        return inferCollectionFromExpr(stmt.args.front());
+      }
+      return false;
+    }
+    return false;
+  };
   inferCollectionFromExpr = [&](const Expr &candidate) -> bool {
+    if (candidate.kind == Expr::Kind::Name &&
+        inferCollectionFromNamedValue(candidate.name)) {
+      return true;
+    }
     if (isIfCall(candidate) && candidate.args.size() == 3) {
       const Expr &thenArg = candidate.args[1];
       const Expr &elseArg = candidate.args[2];

@@ -35,6 +35,8 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
 
 std::string normalizeCollectionBindingTypeName(const std::string &name);
+bool typeTextUsesRawBuiltinSoaVectorLayout(const std::string &typeText);
+bool exprUsesRawBuiltinSoaVectorLayout(const Expr &expr);
 LocalInfo::Kind bindingKindFromTransforms(const Expr &expr);
 bool isStringTypeName(const std::string &name);
 bool isStringBindingType(const Expr &expr);

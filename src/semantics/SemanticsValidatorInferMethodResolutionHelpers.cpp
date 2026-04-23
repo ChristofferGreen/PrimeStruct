@@ -419,10 +419,13 @@ std::string SemanticsValidator::preferredMapMethodTargetForCall(
   }
   const std::string canonical = "/std/collections/map/" + helperName;
   const std::string alias = "/map/" + helperName;
+  if (hasDefinitionPath(alias)) {
+    return alias;
+  }
   if (hasDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
     return canonical;
   }
-  if (hasDefinitionPath(alias)) {
+  if (hasImportedDefinitionPath(alias)) {
     return alias;
   }
   return canonical;

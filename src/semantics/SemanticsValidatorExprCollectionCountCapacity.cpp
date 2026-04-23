@@ -124,6 +124,71 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                             instantiationPos - lastSlash - 1);
         return isCountOrCapacityHelperName(helperName);
       };
+  const auto canonicalizeDirectExperimentalSoaWrapperCountHelperCall =
+      [&]() -> std::string {
+        if (expr.isMethodCall || expr.args.size() != 1) {
+          return {};
+        }
+        const size_t lastSlash = resolved.find_last_of('/');
+        const size_t specializationSuffix =
+            resolved.find("__t", lastSlash == std::string::npos ? 0
+                                                                : lastSlash + 1);
+        std::string canonicalResolved = resolved;
+        if (specializationSuffix != std::string::npos) {
+          canonicalResolved.erase(specializationSuffix);
+        }
+        if (canonicalResolved.rfind(
+                "/std/collections/experimental_soa_vector/SoaVector__", 0) != 0) {
+          return {};
+        }
+        if (canonicalResolved.ends_with("/count")) {
+          return "/std/collections/soa_vector/count";
+        }
+        if (canonicalResolved.ends_with("/count_ref")) {
+          return "/std/collections/soa_vector/count_ref";
+        }
+        return {};
+      };
+  const auto canonicalizeDirectSoaCountHelperResolved =
+      [&]() -> std::string {
+        if (expr.isMethodCall || expr.args.size() != 1) {
+          return {};
+        }
+        const size_t lastSlash = resolved.find_last_of('/');
+        const size_t specializationSuffix =
+            resolved.find("__t", lastSlash == std::string::npos ? 0
+                                                                : lastSlash + 1);
+        std::string canonicalResolved = resolved;
+        if (specializationSuffix != std::string::npos) {
+          canonicalResolved.erase(specializationSuffix);
+        }
+        if (canonicalResolved == "/std/collections/soa_vector/count" ||
+            canonicalResolved == "/std/collections/soa_vector/count_ref") {
+          return canonicalResolved;
+        }
+        return {};
+      };
+  if (isResolvedCountOrCapacityHelperInstantiation()) {
+    handledOut = true;
+    return true;
+  }
+  if (const std::string canonicalDirectSoaCountPath =
+          canonicalizeDirectSoaCountHelperResolved();
+      canonicalDirectSoaCountPath == "/std/collections/soa_vector/count_ref") {
+    handledOut = true;
+    resolved = canonicalDirectSoaCountPath;
+    resolvedMethod = false;
+    return true;
+  }
+  if (const std::string canonicalDirectExperimentalSoaCountPath =
+          canonicalizeDirectExperimentalSoaWrapperCountHelperCall();
+      canonicalDirectExperimentalSoaCountPath ==
+      "/std/collections/soa_vector/count_ref") {
+    handledOut = true;
+    resolved = canonicalDirectExperimentalSoaCountPath;
+    resolvedMethod = false;
+    return true;
+  }
   const bool routesThroughNamespacedCountOrCapacityHelperSurface =
       context.isNamespacedVectorHelperCall &&
       isCountOrCapacityHelperName(context.namespacedHelper);
@@ -145,6 +210,7 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                defMap_.find(resolvedMethodTarget) != defMap_.end();
       };
   if (isResolvedCountOrCapacityHelperInstantiation()) {
+    handledOut = true;
     return true;
   }
 
@@ -471,6 +537,16 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 if (reusesResolvedMethodMonomorphizedTarget(methodResolved,
                                                             isBuiltinMethod)) {
                   methodResolved = resolved;
+                }
+                const bool resolvesCanonicalDirectSoaCountHelper =
+                    !expr.isMethodCall &&
+                    expr.args.size() == 1 &&
+                    (methodResolved == "/std/collections/soa_vector/count" ||
+                     methodResolved == "/std/collections/soa_vector/count_ref");
+                if (resolvesCanonicalDirectSoaCountHelper) {
+                  resolved = methodResolved;
+                  resolvedMethod = false;
+                  return true;
                 }
                 if (!failRemovedRootedVectorDirectCall()) {
                   return false;

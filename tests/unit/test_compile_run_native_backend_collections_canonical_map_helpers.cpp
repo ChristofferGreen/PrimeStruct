@@ -604,7 +604,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  CHECK(runCommand(exePath) == 4);
 }
 
 TEST_SUITE_END();

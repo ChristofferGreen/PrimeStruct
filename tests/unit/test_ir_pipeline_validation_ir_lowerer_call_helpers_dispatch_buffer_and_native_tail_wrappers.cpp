@@ -216,6 +216,47 @@ TEST_CASE("ir lowerer call helpers dispatch buffer and native tail wrappers") {
             patchInstructionImm,
             error) == NativeResult::NotHandled);
   CHECK(error.empty());
+
+  primec::Expr tempReceiverCall;
+  tempReceiverCall.kind = primec::Expr::Kind::Call;
+  tempReceiverCall.name = "wrapValues";
+  tempReceiverCall.args = {vecName};
+
+  primec::Expr tempReceiverAccessExpr;
+  tempReceiverAccessExpr.kind = primec::Expr::Kind::Call;
+  tempReceiverAccessExpr.name = "at_unsafe";
+  tempReceiverAccessExpr.isMethodCall = true;
+  tempReceiverAccessExpr.args = {tempReceiverCall, twoLiteral};
+
+  instructions.clear();
+  error.clear();
+  CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatchWithLocals(
+            tempReceiverAccessExpr,
+            locals,
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const std::string &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, std::string &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return LocalInfo::ValueKind::Int32;
+            },
+            [&]() { return nextTempLocal++; },
+            []() {},
+            []() {},
+            []() {},
+            instructionCount,
+            emitInstruction,
+            patchInstructionImm,
+            error) == NativeResult::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
 }
 
 TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
@@ -780,6 +821,14 @@ TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper con
   CHECK(source.find("auto rejectCanonicalVectorTemporaryReceiverExpr = [&](const Expr &callExpr) -> bool {") !=
         std::string::npos);
   CHECK(source.find("if (rejectCanonicalVectorTemporaryReceiverExpr(expr)) {") !=
+        std::string::npos);
+  CHECK(source.find("auto tryPopulateFromSemanticQueryFact = [&]() {") !=
+        std::string::npos);
+  CHECK(source.find("findSemanticProductQueryFactBySemanticId(*semanticIndex, targetCallExpr)") !=
+        std::string::npos);
+  CHECK(source.find("bindingType.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0") !=
+        std::string::npos);
+  CHECK(source.find("resolveSpecializedVectorElementKind(bindingType, elemKind)") !=
         std::string::npos);
 }
 

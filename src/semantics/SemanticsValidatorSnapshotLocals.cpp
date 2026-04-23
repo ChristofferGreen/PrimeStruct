@@ -513,9 +513,9 @@ void SemanticsValidator::ensureCallAndTrySnapshotFactCaches(bool includeTryValue
   }
 }
 
-SemanticsValidator::GraphLocalAutoKey SemanticsValidator::graphLocalAutoBindingKey(std::string_view scopePath,
-                                                                                    int sourceLine,
-                                                                                    int sourceColumn) const {
+GraphLocalAutoKey SemanticsValidator::graphLocalAutoBindingKey(std::string_view scopePath,
+                                                               int sourceLine,
+                                                               int sourceColumn) const {
   if (graphLocalAutoBenchmarkShadow_ != nullptr) {
     graphLocalAutoBenchmarkShadow_->noteLegacyKey(scopePath, sourceLine,
                                                   sourceColumn);

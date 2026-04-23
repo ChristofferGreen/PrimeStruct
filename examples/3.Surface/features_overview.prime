@@ -24,12 +24,12 @@ namespace demo {
       avg = convert<f32>(total) / convert<f32>(count)
     }
 
-    print_line("scores=")
-    print_line(count)
-    print_line("best=")
-    print_line(best)
-    print_line("total=")
-    print_line(total)
+    /print_line("scores=")
+    /print_line(count)
+    /print_line("best=")
+    /print_line(best)
+    /print_line("total=")
+    /print_line(total)
   }
 
   [effects(heap_alloc, io_out), return<void>]

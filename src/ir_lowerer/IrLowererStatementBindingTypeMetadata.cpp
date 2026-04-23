@@ -161,7 +161,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeTe
       normalizedArg.erase(normalizedArg.begin());
     }
     structPathOut =
-        "/std/collections/experimental_soa_vector/SoaVector__" + normalizedArg;
+        specializedExperimentalSoaVectorStructPathForElementType(normalizedArg);
     return true;
   }
 }

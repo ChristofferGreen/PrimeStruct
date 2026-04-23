@@ -656,6 +656,50 @@ TEST_CASE("ir lowerer statement binding helper infers call parameter local info"
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer statement binding helper preserves specialized vector struct paths for mutable vector parameters") {
+  primec::Expr param;
+  param.name = "pixels";
+  primec::Transform mutTransform;
+  mutTransform.name = "mut";
+  param.transforms.push_back(mutTransform);
+  primec::Transform vectorTransform;
+  vectorTransform.name = "vector";
+  vectorTransform.templateArgs.push_back("i32");
+  param.transforms.push_back(vectorTransform);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 4;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &expr) { return primec::ir_lowerer::isBindingMutable(expr); },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr); },
+      [](const primec::Expr &expr) { return primec::ir_lowerer::bindingKindFromTransforms(expr); },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error));
+  CHECK(error.empty());
+
+  primec::ir_lowerer::LocalMap locals;
+  locals.emplace("pixels", info);
+  primec::Expr nameExpr;
+  nameExpr.kind = primec::Expr::Kind::Name;
+  nameExpr.name = "pixels";
+  CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals)
+            .rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+}
+
 TEST_CASE("ir lowerer statement binding helper recovers bool default parameter kind from builtin comparison") {
   primec::Expr lhs;
   lhs.kind = primec::Expr::Kind::Literal;

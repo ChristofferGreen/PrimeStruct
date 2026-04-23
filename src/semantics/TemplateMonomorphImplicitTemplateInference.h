@@ -91,6 +91,64 @@ bool inferImplicitTemplateArgs(const Definition &def,
       inferred.emplace(def.templateArgs[i], resolvedArg.text);
     }
   }
+  auto extractBuiltinSoaElementTypeText = [&](std::string typeText,
+                                              std::string &elemTypeOut) {
+    typeText = normalizeBindingTypeName(typeText);
+    if (typeText.empty()) {
+      return false;
+    }
+    while (true) {
+      std::string base;
+      std::string argText;
+      if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+        return false;
+      }
+      const std::string normalizedBase = normalizeBindingTypeName(base);
+      if (normalizeCollectionReceiverTypeName(normalizedBase) == "soa_vector") {
+        elemTypeOut = normalizeBindingTypeName(argText);
+        return !elemTypeOut.empty();
+      }
+      if ((normalizedBase == "Reference" || normalizedBase == "Pointer") &&
+          !argText.empty()) {
+        std::vector<std::string> wrappedArgs;
+        if (!splitTopLevelTemplateArgs(argText, wrappedArgs) ||
+            wrappedArgs.size() != 1) {
+          return false;
+        }
+        typeText = normalizeBindingTypeName(wrappedArgs.front());
+        continue;
+      }
+      return false;
+    }
+  };
+  auto inferBuiltinSoaTemplateArgFromReceiverExpr = [&](const Expr *receiverExpr,
+                                                        std::string &elemTypeOut) {
+    if (receiverExpr == nullptr) {
+      return false;
+    }
+    BindingInfo receiverInfo;
+    if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare,
+                                     ctx, receiverInfo) &&
+        extractBuiltinSoaElementTypeText(bindingTypeToString(receiverInfo),
+                                         elemTypeOut)) {
+      return true;
+    }
+    return extractBuiltinSoaElementTypeText(
+        inferExprTypeTextForTemplatedVectorFallback(*receiverExpr, locals,
+                                                    namespacePrefix, ctx,
+                                                    allowMathBare),
+        elemTypeOut);
+  };
+  if (def.fullPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+      !def.templateArgs.empty() &&
+      inferred.count(def.templateArgs.front()) == 0 &&
+      !callExpr.args.empty()) {
+    std::string inferredSoaElemType;
+    if (inferBuiltinSoaTemplateArgFromReceiverExpr(&callExpr.args.front(),
+                                                   inferredSoaElemType)) {
+      inferred.emplace(def.templateArgs.front(), std::move(inferredSoaElemType));
+    }
+  }
   std::vector<ParameterInfo> callParams;
   callParams.reserve(def.parameters.size());
   for (const auto &paramExpr : def.parameters) {

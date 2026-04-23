@@ -136,6 +136,16 @@ TEST_CASE("ir lowerer struct type helpers infer name-expression struct paths") {
   primec::ir_lowerer::LocalInfo structInfo;
   structInfo.structTypeName = "/pkg/Point";
   locals.emplace("point", structInfo);
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  locals.emplace("values", vectorInfo);
+  primec::ir_lowerer::LocalInfo vectorRefInfo;
+  vectorRefInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  vectorRefInfo.referenceToVector = true;
+  vectorRefInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  vectorRefInfo.structTypeName = "/vector";
+  locals.emplace("valuesRef", vectorRefInfo);
   primec::ir_lowerer::LocalInfo fileInfo;
   fileInfo.isFileHandle = true;
   fileInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
@@ -146,6 +156,14 @@ TEST_CASE("ir lowerer struct type helpers infer name-expression struct paths") {
   nameExpr.kind = primec::Expr::Kind::Name;
   nameExpr.name = "point";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals) == "/pkg/Point");
+
+  nameExpr.name = "values";
+  CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals)
+            .rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+
+  nameExpr.name = "valuesRef";
+  CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals)
+            .rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
 
   nameExpr.name = "file";
   CHECK(primec::ir_lowerer::inferStructPathFromNameExpr(nameExpr, locals).empty());

@@ -10,6 +10,7 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   const std::string rawMethodName = expr.name;
   std::string methodName = rawMethodName;
+  const Expr &receiverExpr = expr.args.front();
   if (!methodName.empty() && methodName.front() == '/') {
     methodName.erase(methodName.begin());
   }
@@ -71,15 +72,17 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
         }
         return base + "<" + qualifyImportedCollectionTypeText(args.front()) + ">";
       }
-      auto aliasIt = ctx.importAliases.find(base);
-      if (aliasIt != ctx.importAliases.end()) {
-        return aliasIt->second + "<" + argText + ">";
+      if (const std::string *importAlias =
+              lookupScopedImportAliasForNamespace(base, receiverExpr.namespacePrefix, ctx);
+          importAlias != nullptr) {
+        return *importAlias + "<" + argText + ">";
       }
       return typeText;
     }
-    auto aliasIt = ctx.importAliases.find(typeText);
-    if (aliasIt != ctx.importAliases.end()) {
-      return aliasIt->second;
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(typeText, receiverExpr.namespacePrefix, ctx);
+        importAlias != nullptr) {
+      return *importAlias;
     }
     return typeText;
   };
@@ -392,9 +395,10 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   const bool isCollectionFamilyReceiver =
       typeName == "array" || typeName == "vector" || typeName == "map" || typeName == "soa_vector";
   if (ctx.sourceDefs.count(resolvedType) == 0 && !isCollectionFamilyReceiver) {
-    auto aliasIt = ctx.importAliases.find(normalizedTypeName);
-    if (aliasIt != ctx.importAliases.end()) {
-      resolvedType = aliasIt->second;
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(normalizedTypeName, receiver.namespacePrefix, ctx);
+        importAlias != nullptr) {
+      resolvedType = *importAlias;
     }
   }
   if (ctx.sourceDefs.count(resolvedType) == 0) {

@@ -46,9 +46,10 @@ std::string resolveStructLikeTypePathForTemplatedVectorFallback(const std::strin
   if (!normalized.empty() && normalized[0] == '/') {
     return ctx.sourceDefs.count(normalized) > 0 ? normalized : std::string{};
   }
-  auto aliasIt = ctx.importAliases.find(normalized);
-  if (aliasIt != ctx.importAliases.end() && ctx.sourceDefs.count(aliasIt->second) > 0) {
-    return aliasIt->second;
+  if (const std::string *importAlias =
+          lookupScopedImportAliasForNamespace(normalized, namespacePrefix, ctx);
+      importAlias != nullptr && ctx.sourceDefs.count(*importAlias) > 0) {
+    return *importAlias;
   }
   std::string resolved = resolveTypePath(normalized, namespacePrefix);
   if (ctx.sourceDefs.count(resolved) > 0) {

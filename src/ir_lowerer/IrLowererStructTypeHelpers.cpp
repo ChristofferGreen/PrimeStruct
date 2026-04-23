@@ -1,10 +1,12 @@
 #include "IrLowererStructTypeHelpers.h"
 
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
+#include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <sstream>
 
@@ -26,7 +28,23 @@ bool isStructLikeSemanticProductCategory(const std::string &category) {
   return category == "struct" || category == "pod" || category == "handle" || category == "gpu_lane";
 }
 
-std::string mapKindTypeName(LocalInfo::ValueKind kind) {
+bool isSpecializedExperimentalVectorStructPath(const std::string &path) {
+  std::string normalized = trimTemplateTypeText(path);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
+bool isSpecializedExperimentalSoaVectorStructPath(const std::string &path) {
+  std::string normalized = trimTemplateTypeText(path);
+  if (!normalized.empty() && normalized.front() != '/') {
+    normalized.insert(normalized.begin(), '/');
+  }
+  return normalized.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
+std::string scalarKindTypeName(LocalInfo::ValueKind kind) {
   switch (kind) {
   case LocalInfo::ValueKind::Int32:
     return "i32";
@@ -45,6 +63,69 @@ std::string mapKindTypeName(LocalInfo::ValueKind kind) {
   default:
     return "";
   }
+}
+
+std::string inferVectorLikeStructPathFromLocalInfo(const LocalInfo &localInfo) {
+  const std::string normalizedStructTypeName =
+      trimTemplateTypeText(localInfo.structTypeName);
+  if (localInfo.isSoaVector) {
+    if (normalizedStructTypeName.empty()) {
+      return "/soa_vector";
+    }
+
+    std::string normalizedStructPath = normalizedStructTypeName;
+    if (!normalizedStructPath.empty() && normalizedStructPath.front() != '/') {
+      normalizedStructPath.insert(normalizedStructPath.begin(), '/');
+    }
+    if (isSpecializedExperimentalSoaVectorStructPath(normalizedStructPath)) {
+      return normalizedStructPath;
+    }
+    if (normalizeCollectionBindingTypeName(normalizedStructTypeName) ==
+        "soa_vector") {
+      return "/soa_vector";
+    }
+
+    std::string elementType = normalizedStructTypeName;
+    if (!elementType.empty() && elementType.front() == '/') {
+      elementType.erase(elementType.begin());
+    }
+    return specializedExperimentalSoaVectorStructPathForElementType(
+        elementType);
+  }
+
+  if (normalizedStructTypeName.empty()) {
+    const std::string elementType = scalarKindTypeName(localInfo.valueKind);
+    if (!elementType.empty()) {
+      return specializedExperimentalVectorStructPathForElementType(elementType);
+    }
+    return "/vector";
+  }
+
+  std::string normalizedStructPath = normalizedStructTypeName;
+  if (!normalizedStructPath.empty() && normalizedStructPath.front() != '/') {
+    normalizedStructPath.insert(normalizedStructPath.begin(), '/');
+  }
+  if (isSpecializedExperimentalVectorStructPath(normalizedStructPath)) {
+    return normalizedStructPath;
+  }
+  if (normalizeCollectionBindingTypeName(normalizedStructTypeName) ==
+      "vector") {
+    const std::string elementType = scalarKindTypeName(localInfo.valueKind);
+    if (!elementType.empty()) {
+      return specializedExperimentalVectorStructPathForElementType(elementType);
+    }
+    return "/vector";
+  }
+
+  std::string elementType = normalizedStructTypeName;
+  if (!elementType.empty() && elementType.front() == '/') {
+    elementType.erase(elementType.begin());
+  }
+  return specializedExperimentalVectorStructPathForElementType(elementType);
+}
+
+std::string mapKindTypeName(LocalInfo::ValueKind kind) {
+  return scalarKindTypeName(kind);
 }
 
 std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind,
@@ -584,6 +665,15 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
   if (localIt->second.isFileHandle) {
     return "";
   }
+  const bool isVectorLikeLocal =
+      localIt->second.kind == LocalInfo::Kind::Vector ||
+      ((localIt->second.kind == LocalInfo::Kind::Reference ||
+        localIt->second.kind == LocalInfo::Kind::Pointer) &&
+       (localIt->second.referenceToVector || localIt->second.pointerToVector)) ||
+      (localIt->second.kind == LocalInfo::Kind::Value && localIt->second.isSoaVector);
+  if (isVectorLikeLocal) {
+    return inferVectorLikeStructPathFromLocalInfo(localIt->second);
+  }
   if (!localIt->second.structTypeName.empty()) {
     return localIt->second.structTypeName;
   }
@@ -597,17 +687,6 @@ std::string inferStructPathFromNameExpr(const Expr &expr, const LocalMap &locals
     if (!inferredMapStruct.empty()) {
       return inferredMapStruct;
     }
-  }
-  if (localIt->second.kind == LocalInfo::Kind::Vector) {
-    return localIt->second.isSoaVector ? "/soa_vector" : "/vector";
-  }
-  if ((localIt->second.kind == LocalInfo::Kind::Reference ||
-       localIt->second.kind == LocalInfo::Kind::Pointer) &&
-      localIt->second.isSoaVector) {
-    return "/soa_vector";
-  }
-  if (localIt->second.kind == LocalInfo::Kind::Value && localIt->second.isSoaVector) {
-    return "/soa_vector";
   }
   return localIt->second.structTypeName;
 }

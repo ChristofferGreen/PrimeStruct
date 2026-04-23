@@ -22,6 +22,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
+         helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
          helperName == "tryAt" || helperName == "tryAt_ref" ||
          helperName == "at" || helperName == "at_ref" ||
@@ -90,6 +91,25 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
       if (hasVisibleDefinitionPath(mapAlias)) {
         preferred = mapAlias;
       }
+    }
+  }
+  if (preferred.rfind("/soa_vector/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix = preferred.substr(std::string("/soa_vector/").size());
+    const std::string stdlibAlias = "/std/collections/soa_vector/" + suffix;
+    if (hasVisibleDefinitionPath(stdlibAlias)) {
+      preferred = stdlibAlias;
+    }
+  }
+  if (preferred.rfind("/std/collections/soa_vector/", 0) == 0 &&
+      !hasVisibleDefinitionPath(preferred)) {
+    const std::string suffix =
+        preferred.substr(std::string("/std/collections/soa_vector/").size());
+    const std::string samePath =
+        (suffix == "to_aos" || suffix == "to_aos_ref")
+            ? "/" + suffix
+            : "/soa_vector/" + suffix;
+    if (hasVisibleDefinitionPath(samePath)) {
+      preferred = samePath;
     }
   }
   return preferred;
@@ -594,7 +614,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool hasDeclaredResolvedVectorHelper = hasDeclaredDefinitionPath(vectorHelperResolved);
   const bool hasImportedResolvedVectorHelper = hasImportedDefinitionPath(vectorHelperResolved);
   const bool hasVisibleResolvedVectorHelper =
-      hasDeclaredResolvedVectorHelper || hasImportedResolvedVectorHelper;
+      hasDeclaredResolvedVectorHelper || hasImportedResolvedVectorHelper ||
+      hasResolvedVectorHelperDefinition;
   const bool canonicalBuiltinCompatibilityHelper =
       isStdNamespacedCanonicalBuiltinHelperCall && hasVisibleResolvedVectorHelper;
   const bool canonicalCompatibilityAllowsSoaVectorTarget =
@@ -680,6 +701,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
        vectorHelperResolved == "/std/collections/vector/remove_swap");
   const bool isResolvedExperimentalVectorHelper =
       vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
+  const bool isResolvedSoaHelper =
+      vectorHelperResolved.rfind("/std/collections/soa_vector/", 0) == 0 ||
+      vectorHelperResolved.rfind("/soa_vector/", 0) == 0;
   const bool isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall =
       !stmt.isMethodCall &&
       stmt.namespacePrefix.empty() &&
@@ -709,40 +733,14 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     Expr helperCall = stmt;
     helperCall.name = vectorHelperResolved;
     helperCall.isMethodCall = false;
-    if (helperCall.templateArgs.empty() && isResolvedExperimentalVectorHelper) {
+    if (helperCall.templateArgs.empty() &&
+        (isResolvedExperimentalVectorHelper || isResolvedSoaHelper)) {
       if (receiverIndex < stmt.args.size()) {
-        BindingInfo inferredBinding;
-        bool hasInferredBinding = false;
         const Expr &receiverExpr = stmt.args[receiverIndex];
-        if (receiverExpr.kind == Expr::Kind::Name) {
-          if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
-            inferredBinding = *paramBinding;
-            hasInferredBinding = true;
-          } else if (auto it = locals.find(receiverExpr.name); it != locals.end()) {
-            inferredBinding = it->second;
-            hasInferredBinding = true;
-          }
-        }
-        if (!hasInferredBinding) {
-          std::string receiverTypeText;
-          if (inferQueryExprTypeText(receiverExpr, params, locals, receiverTypeText)) {
-            std::string base;
-            std::string argText;
-            const std::string normalizedType = normalizeBindingTypeName(receiverTypeText);
-            if (splitTemplateTypeName(normalizedType, base, argText)) {
-              inferredBinding.typeName = normalizeBindingTypeName(base);
-              inferredBinding.typeTemplateArg = argText;
-            } else {
-              inferredBinding.typeName = normalizedType;
-            }
-            hasInferredBinding = true;
-          }
-        }
-        if (hasInferredBinding) {
-          std::string experimentalElemType;
-          if (extractExperimentalVectorElementType(inferredBinding, experimentalElemType)) {
-            helperCall.templateArgs = {experimentalElemType};
-          }
+        BindingInfo receiverBinding;
+        if (resolveVectorStatementBinding(params, locals, receiverExpr, receiverBinding) &&
+            !receiverBinding.typeTemplateArg.empty()) {
+          helperCall.templateArgs = {receiverBinding.typeTemplateArg};
         }
       }
     }

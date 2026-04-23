@@ -87,8 +87,8 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
     if (!normalizedArg.empty() && normalizedArg.front() == '/') {
       normalizedArg.erase(normalizedArg.begin());
     }
-    return "/std/collections/experimental_soa_vector/SoaVector__" +
-           normalizedArg;
+    return specializedExperimentalSoaVectorStructPathForElementType(
+        normalizedArg);
   }
 }
 
@@ -335,7 +335,9 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const bool requestsExplicitVectorCountMethod =
         explicitMethodPath == "/vector/count" ||
         explicitMethodPath == "/std/collections/vector/count";
-    if (callExpr.semanticNodeId == 0) {
+    if (callExpr.semanticNodeId == 0 &&
+        (callExpr.sourceLine <= 0 || callExpr.sourceColumn <= 0 ||
+         callExpr.name.empty())) {
       errorOut = "missing semantic-product method-call semantic id: " +
                  describeMethodCallExpr(callExpr);
       return nullptr;
@@ -699,6 +701,16 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     std::string nestedError = lookupError;
     const Definition *receiverDef = nullptr;
     std::string receiverPath = resolveExprPath(*receiver);
+    if (semanticProgram != nullptr) {
+      if (receiverPath.empty()) {
+        receiverPath =
+            findSemanticProductDirectCallTarget(semanticProgram, *receiver);
+      }
+      if (receiverPath.empty()) {
+        receiverPath =
+            findSemanticProductBridgePathChoice(semanticProgram, *receiver);
+      }
+    }
     if (receiverPath.empty() && !receiver->name.empty()) {
       receiverPath = receiver->name;
       if (!receiverPath.empty() && receiverPath.front() != '/') {

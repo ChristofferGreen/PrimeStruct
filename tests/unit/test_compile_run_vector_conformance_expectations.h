@@ -27,19 +27,12 @@ inline void expectVectorConformanceProgramRuns(const std::string &source,
 }
 
 inline void expectExperimentalVectorCanonicalHelperRoutingConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectVectorConformanceProgramRuns(makeExperimentalVectorCanonicalHelperRoutingSource(),
-                                       "experimental_vector_canonical_helper_routing_" + emitMode,
-                                       emitMode,
-                                       93);
-    return;
-  }
   if (emitMode == "native" || emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeExperimentalVectorCanonicalHelperRoutingSource(),
         "experimental_vector_canonical_helper_routing_" + emitMode,
         emitMode,
-        "unknown call target: /std/collections/experimental_vector/vectorPop");
+        "native backend only supports numeric/bool/string vector literals");
     return;
   }
   expectVectorConformanceProgramRuns(

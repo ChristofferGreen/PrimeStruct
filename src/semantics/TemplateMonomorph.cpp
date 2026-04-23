@@ -50,6 +50,8 @@ struct Context {
   Program &program;
   std::unordered_map<std::string, Definition> sourceDefs;
   std::unordered_set<std::string> templateDefs;
+  std::unordered_map<std::string, std::string> directImportAliases;
+  std::unordered_map<std::string, std::string> transitiveImportAliases;
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::vector<HelperOverloadEntry>> helperOverloads;
   std::unordered_map<std::string, std::string> helperOverloadInternalToPublic;
@@ -57,6 +59,7 @@ struct Context {
   std::unordered_set<std::string> outputPaths;
   std::vector<Definition> outputDefs;
   std::vector<Execution> outputExecs;
+  std::string currentDefinitionPath;
   std::unordered_set<std::string> implicitTemplateDefs;
   std::unordered_map<std::string, std::vector<std::string>> implicitTemplateParams;
   std::unordered_set<std::string> returnInferenceStack;
@@ -193,6 +196,40 @@ bool rewriteExpr(Expr &expr,
                  const LocalTypeMap &locals,
                  const std::vector<ParameterInfo> &params,
                  bool allowMathBare);
+
+const std::unordered_map<std::string, std::string> &scopedImportAliasesForNamespace(
+    const std::string &namespacePrefix,
+    const Context &ctx) {
+  auto isStdlibOwnedPath = [](const std::string &path) {
+    if (path.rfind("/std/", 0) == 0) {
+      return true;
+    }
+    if (path.size() <= 1 || path.front() != '/') {
+      return false;
+    }
+    const size_t nextSlash = path.find('/', 1);
+    const std::string rootName =
+        nextSlash == std::string::npos ? path.substr(1) : path.substr(1, nextSlash - 1);
+    return isRootBuiltinName(rootName) || rootName == "string" || rootName == "Result" ||
+           rootName == "Maybe" || rootName == "Buffer" || rootName == "ImageError" ||
+           rootName == "ContainerError" || rootName == "GfxError";
+  };
+  if (isStdlibOwnedPath(namespacePrefix) ||
+      (namespacePrefix.empty() && isStdlibOwnedPath(ctx.currentDefinitionPath))) {
+    return ctx.importAliases;
+  }
+  return ctx.importAliases;
+}
+
+const std::string *lookupScopedImportAliasForNamespace(std::string_view name,
+                                                       const std::string &namespacePrefix,
+                                                       const Context &ctx) {
+  const auto &scopedAliases = scopedImportAliasesForNamespace(namespacePrefix, ctx);
+  if (auto aliasIt = scopedAliases.find(std::string(name)); aliasIt != scopedAliases.end()) {
+    return &aliasIt->second;
+  }
+  return nullptr;
+}
 
 #include "TemplateMonomorphFallbackTypeInference.h"
 #include "TemplateMonomorphMethodTargets.h"

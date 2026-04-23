@@ -691,6 +691,44 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("borrowed helper-return experimental soa_vector helper surfaces validate semantically") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+import /std/collections/experimental_soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  values.push(Particle(7i32, 8i32))
+  values.push(Particle(9i32, 12i32))
+  return(
+    plus(count(pickBorrowed(location(values))),
+         plus(count(pickBorrowed(location(values)).to_aos()),
+              plus(pickBorrowed(location(values)).get(0i32).x,
+                   plus(ref(pickBorrowed(location(values)), 1i32).y,
+                        plus(get(pickBorrowed(location(values)), 1i32).y,
+                             plus(pickBorrowed(location(values)).y()[1i32],
+                                  y(pickBorrowed(location(values)))[0i32]))))))
+  )
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical soa_vector to_aos helper validates on experimental wrapper bindings") {
   const std::string source = R"(
 import /std/collections/*
@@ -706,6 +744,31 @@ main() {
   [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
   [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
   return(count(unpacked))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical soa_vector count helper validates inside generic helper on fully qualified experimental wrapper parameter") {
+  const std::string source = R"(
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+/helper<T>([/std/collections/experimental_soa_vector/SoaVector<T>] values) {
+  return(/std/collections/soa_vector/count<T>(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  return(helper<Particle>(values))
 }
 )";
   std::string error;
@@ -734,6 +797,20 @@ main() {
   [Reference<Particle>] second{ref(values, 1i32)}
   [vector<Particle>] unpacked{to_aos(values)}
   return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical soa_vector wildcard import does not poison transitive stdlib helper aliases") {
+  const std::string source = R"(
+import /std/collections/soa_vector/*
+
+[return<int>]
+/main() {
+  return(0i32)
 }
 )";
   std::string error;

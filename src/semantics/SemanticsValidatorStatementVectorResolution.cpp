@@ -92,6 +92,26 @@ bool SemanticsValidator::resolveVectorStatementBinding(
         bindingOut.isMutable = isMutable;
         return true;
       }
+      std::string resolvedBase = resolveTypePath(base, "");
+      if (resolvedBase.empty()) {
+        auto importIt = importAliases_.find(base);
+        if (importIt != importAliases_.end()) {
+          resolvedBase = importIt->second;
+        }
+      }
+      if (!resolvedBase.empty()) {
+        std::string normalizedResolvedBase = normalizeBindingTypeName(resolvedBase);
+        if (!normalizedResolvedBase.empty() && normalizedResolvedBase.front() == '/') {
+          normalizedResolvedBase.erase(normalizedResolvedBase.begin());
+        }
+        if (isExperimentalSoaVectorTypePath(normalizedResolvedBase) && !arg.empty()) {
+          bindingOut = {};
+          bindingOut.typeName = "soa_vector";
+          bindingOut.typeTemplateArg = arg;
+          bindingOut.isMutable = isMutable;
+          return true;
+        }
+      }
     } else if (normalizedType == "vector" || normalizedType == "soa_vector") {
       bindingOut = {};
       bindingOut.typeName = normalizedType;
@@ -106,6 +126,13 @@ bool SemanticsValidator::resolveVectorStatementBinding(
       inferredBinding.typeTemplateArg = arg;
     }
     std::string elemType;
+    if (extractExperimentalSoaVectorElementType(inferredBinding, elemType)) {
+      bindingOut = {};
+      bindingOut.typeName = "soa_vector";
+      bindingOut.typeTemplateArg = elemType;
+      bindingOut.isMutable = isMutable;
+      return true;
+    }
     if (!extractExperimentalVectorElementType(inferredBinding, elemType)) {
       return false;
     }
@@ -123,15 +150,11 @@ bool SemanticsValidator::resolveVectorStatementBinding(
         bindingOut = *binding;
         return true;
       }
-      std::string elemType;
-      if (!extractExperimentalVectorElementType(*binding, elemType)) {
-        return false;
-      }
-      bindingOut = {};
-      bindingOut.typeName = "Vector";
-      bindingOut.typeTemplateArg = elemType;
-      bindingOut.isMutable = binding->isMutable;
-      return true;
+      const std::string bindingTypeText =
+          binding->typeTemplateArg.empty()
+              ? binding->typeName
+              : binding->typeName + "<" + binding->typeTemplateArg + ">";
+      return resolveVectorTypeText(bindingTypeText, binding->isMutable);
     }
     return false;
   }

@@ -691,6 +691,87 @@
             },
             [&](const Expr &targetCallExpr, ir_lowerer::ArrayVectorAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
+              auto resolveSpecializedVectorElementKind = [&](const std::string &typeText,
+                                                            ir_lowerer::LocalInfo::ValueKind &elemKindOut) {
+                elemKindOut = ir_lowerer::LocalInfo::ValueKind::Unknown;
+                std::string normalized = ir_lowerer::trimTemplateTypeText(typeText);
+                if (!normalized.empty() && normalized.front() != '/') {
+                  normalized.insert(normalized.begin(), '/');
+                }
+                if (normalized.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+                  return false;
+                }
+                Expr syntheticExpr;
+                syntheticExpr.kind = Expr::Kind::Call;
+                syntheticExpr.name = normalized;
+                const Definition *structDef = resolveDefinitionCall(syntheticExpr);
+                if (structDef == nullptr || !ir_lowerer::isStructDefinition(*structDef)) {
+                  return false;
+                }
+                for (const auto &fieldExpr : structDef->statements) {
+                  if (!fieldExpr.isBinding || fieldExpr.name != "data") {
+                    continue;
+                  }
+                  std::string typeName;
+                  std::vector<std::string> templateArgs;
+                  if (!ir_lowerer::extractFirstBindingTypeTransform(fieldExpr, typeName, templateArgs) ||
+                      ir_lowerer::normalizeCollectionBindingTypeName(typeName) != "Pointer" ||
+                      templateArgs.size() != 1) {
+                    continue;
+                  }
+                  std::string elementType = ir_lowerer::trimTemplateTypeText(templateArgs.front());
+                  if (!ir_lowerer::extractTopLevelUninitializedTypeText(elementType, elementType)) {
+                    continue;
+                  }
+                  elemKindOut = ir_lowerer::valueKindFromTypeName(elementType);
+                  return elemKindOut != ir_lowerer::LocalInfo::ValueKind::Unknown;
+                }
+                return false;
+              };
+              auto tryPopulateFromSemanticQueryFact = [&]() {
+                if (semanticProgram == nullptr) {
+                  return false;
+                }
+                const SemanticProductIndex semanticIndex =
+                    ir_lowerer::buildSemanticProductIndex(semanticProgram);
+                const auto *queryFact =
+                    ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr);
+                if (queryFact == nullptr) {
+                  return false;
+                }
+                std::string bindingType = ir_lowerer::trimTemplateTypeText(queryFact->bindingTypeText);
+                if (bindingType.empty()) {
+                  bindingType = ir_lowerer::trimTemplateTypeText(queryFact->queryTypeText);
+                }
+                if (bindingType.empty()) {
+                  return false;
+                }
+                if (!bindingType.empty() && bindingType.front() != '/') {
+                  bindingType.insert(bindingType.begin(), '/');
+                }
+                if (bindingType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
+                  ir_lowerer::LocalInfo::ValueKind elemKind;
+                  if (!resolveSpecializedVectorElementKind(bindingType, elemKind)) {
+                    return false;
+                  }
+                  targetInfoOut.isArrayOrVectorTarget = true;
+                  targetInfoOut.isVectorTarget = true;
+                  targetInfoOut.elemKind = elemKind;
+                  targetInfoOut.structTypeName = bindingType;
+                  return true;
+                }
+                if (bindingType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
+                  targetInfoOut.isArrayOrVectorTarget = true;
+                  targetInfoOut.isVectorTarget = false;
+                  targetInfoOut.isSoaVector = true;
+                  targetInfoOut.structTypeName = bindingType;
+                  return true;
+                }
+                return false;
+              };
+              if (tryPopulateFromSemanticQueryFact()) {
+                return true;
+              }
               if (targetCallExpr.isFieldAccess && targetCallExpr.args.size() == 1) {
                 const std::string receiverStruct = inferStructExprPath(targetCallExpr.args.front(), localsIn);
                 if (!receiverStruct.empty()) {
@@ -707,6 +788,20 @@
               }
               const std::string inferredReceiverStruct =
                   inferStructExprPath(targetCallExpr, localsIn);
+              if (inferredReceiverStruct.rfind(
+                      "/std/collections/experimental_vector/Vector__", 0) ==
+                  0) {
+                ir_lowerer::LocalInfo::ValueKind elemKind;
+                if (!resolveSpecializedVectorElementKind(inferredReceiverStruct,
+                                                        elemKind)) {
+                  return false;
+                }
+                targetInfoOut.isArrayOrVectorTarget = true;
+                targetInfoOut.isVectorTarget = true;
+                targetInfoOut.elemKind = elemKind;
+                targetInfoOut.structTypeName = inferredReceiverStruct;
+                return true;
+              }
               if (inferredReceiverStruct.rfind(
                       "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
                   normalizeCollectionBindingTypeName(inferredReceiverStruct) ==
@@ -742,8 +837,8 @@
                   elementTypeName.erase(elementTypeName.begin());
                 }
                 targetInfoOut.structTypeName =
-                    "/std/collections/experimental_soa_vector/SoaVector__" +
-                    elementTypeName;
+                    specializedExperimentalSoaVectorStructPathForElementType(
+                        elementTypeName);
               }
               return true;
             },

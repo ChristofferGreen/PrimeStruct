@@ -953,6 +953,16 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     bindingOut.typeTemplateArg.clear();
     return preserveBindingQualifiers();
   }
+  if (initializer.kind == Expr::Kind::Call && initializer.isFieldAccess &&
+      initializer.args.size() == 1) {
+    BindingInfo fieldBinding;
+    if (resolveStructFieldBinding(
+            params, locals, initializer.args.front(), initializer.name, fieldBinding)) {
+      bindingOut.typeName = fieldBinding.typeName;
+      bindingOut.typeTemplateArg = fieldBinding.typeTemplateArg;
+      return preserveBindingQualifiers();
+    }
+  }
   auto inferUninitializedTakeBorrowBinding = [&]() -> bool {
     if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
         initializer.args.size() != 1 ||
@@ -992,11 +1002,27 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
       resolvedInitializerPath = concreteResolvedInitializerPath;
     }
   }
+  auto canonicalizeResolvedPath = [](std::string path) {
+    const size_t suffix = path.find("__t");
+    if (suffix != std::string::npos) {
+      path.erase(suffix);
+    }
+    return path;
+  };
+  const std::string canonicalResolvedInitializerPath =
+      canonicalizeResolvedPath(resolvedInitializerPath);
+  const bool isBareImportedExperimentalVectorConstructor =
+      initializer.name == "vector" &&
+      initializer.namespacePrefix.empty() &&
+      hasDirectExperimentalVectorImport();
   if (initializer.kind == Expr::Kind::Call &&
       !initializer.isMethodCall &&
       initializer.templateArgs.size() == 1 &&
-      resolvedInitializerPath == "/vector") {
-    if (!hasDirectExperimentalVectorImport()) {
+      (canonicalResolvedInitializerPath == "/std/collections/experimental_vector/vector" ||
+       canonicalResolvedInitializerPath == "/vector" ||
+       isBareImportedExperimentalVectorConstructor)) {
+    if (canonicalResolvedInitializerPath == "/vector" &&
+        !hasDirectExperimentalVectorImport()) {
       bindingOut.typeName = "vector";
       bindingOut.typeTemplateArg = initializer.templateArgs.front();
       return preserveBindingQualifiers();

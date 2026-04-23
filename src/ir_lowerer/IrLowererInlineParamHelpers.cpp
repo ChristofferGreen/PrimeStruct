@@ -59,7 +59,7 @@ bool resolveBuiltinSoaToAosStorageField(const StructSlotLayoutInfo &layout,
   if (resolveStructSlotFieldByName(layout.fields, "storage", fieldOut)) {
     return true;
   }
-  if (layout.fields.size() == 1 && layout.fields.front().slotCount >= 4) {
+  if (layout.fields.size() == 1 && layout.fields.front().slotCount >= 5) {
     fieldOut = layout.fields.front();
     return true;
   }
@@ -87,17 +87,30 @@ bool emitBuiltinSoaToAosStructBridge(
     const EmitInlineParameterInstructionFn &emitInstruction,
     std::string &error) {
   StructSlotFieldInfo storageField;
-  if (!resolveBuiltinSoaToAosStorageField(layout, storageField) || storageField.slotCount < 4) {
+  if (!resolveBuiltinSoaToAosStorageField(layout, storageField) || storageField.slotCount < 5) {
     error = "internal error: builtin soa_vector to_aos bridge requires SoaVector storage layout";
     return false;
   }
 
+  // Struct locals store their payload-slot count in the leading header slot.
+  // The experimental wrapper path expects a concrete SoaVector<T> header first,
+  // then the flattened nested SoaColumn<T> field starting at its slot offset.
+  emitInstruction(IrOpcode::PushI32,
+                  static_cast<uint64_t>(static_cast<int32_t>(layout.totalSlots - 1)));
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(destBaseLocal));
+
   const int32_t storageBaseLocal = destBaseLocal + storageField.slotOffset;
-  emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal, srcPtrLocal, 0, emitInstruction);
+  // Nested struct fields include their own leading slot-count header. Seed that
+  // header explicitly, then copy the builtin soa_vector payload slots after the
+  // builtin vector's own header.
+  emitInstruction(IrOpcode::PushI32,
+                  static_cast<uint64_t>(static_cast<int32_t>(storageField.slotCount - 1)));
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(storageBaseLocal));
   emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal + 1, srcPtrLocal, 1, emitInstruction);
   emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal + 2, srcPtrLocal, 2, emitInstruction);
+  emitCopyBuiltinSoaToAosSlotToLocal(storageBaseLocal + 3, srcPtrLocal, 3, emitInstruction);
   emitInstruction(IrOpcode::PushI32, 0);
-  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(storageBaseLocal + 3));
+  emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(storageBaseLocal + 4));
   return true;
 }
 
@@ -471,6 +484,20 @@ bool emitInlineDefinitionCallParameters(
         paramInfo.isMutable = paramIsMutable;
         paramInfo.isArgsPack = paramIsArgsPack;
         paramInfo.argsPackElementCount = paramArgsPackElementCount;
+      }
+    }
+    if (orderedArg != nullptr && inferExprLocalInfo &&
+        (paramInfo.isSoaVector ||
+         (paramInfo.kind == LocalInfo::Kind::Reference && paramInfo.referenceToVector) ||
+         (paramInfo.kind == LocalInfo::Kind::Pointer && paramInfo.pointerToVector))) {
+      LocalInfo inferredArgInfo;
+      std::string inferredArgError;
+      if (!inferExprLocalInfo(*orderedArg, callerLocals, inferredArgInfo, inferredArgError)) {
+        error = inferredArgError;
+        return false;
+      }
+      if (inferredArgInfo.usesBuiltinCollectionLayout && inferredArgInfo.isSoaVector) {
+        paramInfo.usesBuiltinCollectionLayout = true;
       }
     }
     const bool reserveIndexEarly =

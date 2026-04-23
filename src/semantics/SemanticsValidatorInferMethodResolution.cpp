@@ -212,6 +212,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
   };
   const auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
     return isValueSurfaceAccessMethodName(helperName) ||
+           helperName == "size" ||
            helperName == "at_ref" || helperName == "at_unsafe_ref";
   };
   std::string explicitRemovedMethodPath;
@@ -366,6 +367,10 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     if (normalizedMethodName == "insert" && collectionTypePath == "/map") {
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "insert");
+      return true;
+    }
+    if (normalizedMethodName == "size" && collectionTypePath == "/map") {
+      resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver, "size");
       return true;
     }
     if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
@@ -848,7 +853,8 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       resolvedOut = preferredBareVectorHelperTarget("capacity");
       return true;
     }
-    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
+    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
+         normalizedMethodName == "size") &&
         resolveMapTarget(receiver, keyType, valueType)) {
       resolvedOut = preferredMapMethodTargetForCall(params, locals, receiver,
                                                     normalizedMethodName);

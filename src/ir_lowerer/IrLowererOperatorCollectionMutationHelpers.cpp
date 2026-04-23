@@ -567,6 +567,35 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         return false;
       }
       if (it->second.kind == LocalInfo::Kind::Reference) {
+        if (!it->second.structTypeName.empty()) {
+          std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+          if (rhsStruct.empty() ||
+              !areCompatibleStructPaths(rhsStruct, it->second.structTypeName)) {
+            error = "assign requires matching struct value";
+            return false;
+          }
+          int32_t structSlotCount = 0;
+          if (!resolveStructSlotCount(it->second.structTypeName, structSlotCount)) {
+            return false;
+          }
+          const int32_t destPtrLocal = allocTempLocal();
+          instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+          if (!emitExpr(expr.args[1], localsIn)) {
+            return false;
+          }
+          const int32_t srcPtrLocal = allocTempLocal();
+          instructions.push_back(
+              {IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, structSlotCount)) {
+            return false;
+          }
+          instructions.push_back(
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
+          return true;
+        }
         const int32_t ptrLocal = allocTempLocal();
         instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index)});
         instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
@@ -999,6 +1028,52 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
       }
       const int32_t receiverPtrLocal = allocTempLocal();
       instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(receiverPtrLocal)});
+      const auto receiverLocalIt =
+          receiverExpr.kind == Expr::Kind::Name ? localsIn.find(receiverExpr.name) : localsIn.end();
+      const bool isRawBuiltinSoaStorageAssign =
+          receiverExpr.kind == Expr::Kind::Name &&
+          receiverLocalIt != localsIn.end() &&
+          receiverLocalIt->second.usesBuiltinCollectionLayout &&
+          receiverLocalIt->second.isSoaVector &&
+          target.name == "storage" &&
+          fieldStructPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
+      if (isRawBuiltinSoaStorageAssign) {
+        const std::string rhsStruct = inferStructExprPath(expr.args[1], localsIn);
+        if (rhsStruct.empty() || !areCompatibleStructPaths(rhsStruct, fieldStructPath)) {
+          error = "assign requires matching struct value";
+          return false;
+        }
+        if (!emitExpr(expr.args[1], localsIn)) {
+          return false;
+        }
+        const int32_t srcPtrLocal = allocTempLocal();
+        instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        const int32_t valueLocal = allocTempLocal();
+        auto emitCopySoaStorageSlot = [&](int32_t srcSlotOffset, int32_t dstSlotOffset) {
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (srcSlotOffset != 0) {
+            instructions.push_back(
+                {IrOpcode::PushI64, static_cast<uint64_t>(srcSlotOffset) * IrSlotBytes});
+            instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          instructions.push_back({IrOpcode::LoadIndirect, 0});
+          instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
+          if (dstSlotOffset != 0) {
+            instructions.push_back(
+                {IrOpcode::PushI64, static_cast<uint64_t>(dstSlotOffset) * IrSlotBytes});
+            instructions.push_back({IrOpcode::AddI64, 0});
+          }
+          instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+          instructions.push_back({IrOpcode::StoreIndirect, 0});
+          instructions.push_back({IrOpcode::Pop, 0});
+        };
+        emitCopySoaStorageSlot(1, 0);
+        emitCopySoaStorageSlot(2, 1);
+        emitCopySoaStorageSlot(3, 2);
+        instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
+        return true;
+      }
       instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
       const uint64_t fieldOffsetBytes = static_cast<uint64_t>(fieldSlotOffset) * IrSlotBytes;
       if (fieldOffsetBytes != 0) {

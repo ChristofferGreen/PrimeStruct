@@ -147,6 +147,28 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     const std::string &helperName,
     std::string &resolvedOut) {
   resolvedOut.clear();
+  const std::string rawHelperName = helperName;
+  std::string normalizedHelperName = helperName;
+  if (!normalizedHelperName.empty() && normalizedHelperName.front() == '/') {
+    normalizedHelperName.erase(normalizedHelperName.begin());
+  }
+  if (const size_t specializationSuffix = normalizedHelperName.find("__t");
+      specializationSuffix != std::string::npos) {
+    normalizedHelperName.erase(specializationSuffix);
+  }
+  if (normalizedHelperName.rfind("std/collections/vector/", 0) == 0) {
+    normalizedHelperName.erase(0, std::string("std/collections/vector/").size());
+  } else if (normalizedHelperName.rfind("vector/", 0) == 0) {
+    normalizedHelperName.erase(0, std::string("vector/").size());
+  } else if (normalizedHelperName.rfind("std/collections/soa_vector/", 0) == 0) {
+    normalizedHelperName.erase(0, std::string("std/collections/soa_vector/").size());
+  } else if (normalizedHelperName.rfind("soa_vector/", 0) == 0) {
+    normalizedHelperName.erase(0, std::string("soa_vector/").size());
+  } else if (normalizedHelperName.rfind("std/collections/map/", 0) == 0) {
+    normalizedHelperName.erase(0, std::string("std/collections/map/").size());
+  } else if (normalizedHelperName.rfind("map/", 0) == 0) {
+    normalizedHelperName.erase(0, std::string("map/").size());
+  }
   auto explicitCallPath = [](const Expr &callExpr) -> std::string {
     if (callExpr.kind != Expr::Kind::Call || callExpr.isMethodCall ||
         callExpr.name.empty()) {
@@ -273,6 +295,43 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   };
   auto resolveBorrowedSoaVectorReceiver = [&](const Expr &candidate,
                                               std::string &elemTypeOut) {
+    auto bindingTypeText = [](const BindingInfo &binding) {
+      if (binding.typeTemplateArg.empty()) {
+        return binding.typeName;
+      }
+      return binding.typeName + "<" + binding.typeTemplateArg + ">";
+    };
+    BindingInfo inferredBinding;
+    if (candidate.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, candidate.name)) {
+        return resolveExperimentalBorrowedSoaTypeText(bindingTypeText(*paramBinding),
+                                                      elemTypeOut);
+      }
+      if (auto localIt = locals.find(candidate.name); localIt != locals.end()) {
+        return resolveExperimentalBorrowedSoaTypeText(
+            bindingTypeText(localIt->second), elemTypeOut);
+      }
+    }
+    if (candidate.kind == Expr::Kind::Call) {
+      std::string resolvedCandidatePath = resolveCalleePath(candidate);
+      if (const std::string concreteResolvedCandidatePath =
+              resolveExprConcreteCallPath(params, locals, candidate, resolvedCandidatePath);
+          !concreteResolvedCandidatePath.empty()) {
+        resolvedCandidatePath = concreteResolvedCandidatePath;
+      }
+      auto defIt = defMap_.find(resolvedCandidatePath);
+      if (defIt != defMap_.end() && defIt->second != nullptr &&
+          inferDefinitionReturnBinding(*defIt->second, inferredBinding) &&
+          resolveExperimentalBorrowedSoaTypeText(bindingTypeText(inferredBinding),
+                                                 elemTypeOut)) {
+        return true;
+      }
+      if (inferBindingTypeFromInitializer(candidate, params, locals, inferredBinding) &&
+          resolveExperimentalBorrowedSoaTypeText(bindingTypeText(inferredBinding),
+                                                 elemTypeOut)) {
+        return true;
+      }
+    }
     std::string inferredTypeText;
     return inferQueryExprTypeText(candidate, params, locals, inferredTypeText) &&
            !inferredTypeText.empty() &&
@@ -292,69 +351,75 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   };
   std::string experimentalElemType;
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
-    if ((helperName == "at" || helperName == "at_unsafe") &&
-        (hasDeclaredDefinitionPath("/std/collections/vector/" + helperName) ||
-         hasImportedDefinitionPath("/std/collections/vector/" + helperName))) {
-      resolvedOut = preferredBareVectorHelperTarget(helperName);
+    if ((normalizedHelperName == "at" || normalizedHelperName == "at_unsafe") &&
+        (hasDeclaredDefinitionPath("/std/collections/vector/" + normalizedHelperName) ||
+         hasImportedDefinitionPath("/std/collections/vector/" + normalizedHelperName))) {
+      resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
       return true;
     }
-    resolvedOut = specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
+    resolvedOut = specializedExperimentalVectorHelperTarget(normalizedHelperName,
+                                                            experimentalElemType);
     return true;
   }
   std::string experimentalSoaElemType;
   if (resolveBorrowedSoaVectorReceiver(receiver, experimentalSoaElemType) &&
-      (helperName == "count" || helperName == "count_ref" ||
-       helperName == "get" || helperName == "get_ref" ||
-       helperName == "ref" || helperName == "ref_ref" ||
-       helperName == "to_aos" || helperName == "to_aos_ref")) {
-    resolvedOut = preferredBorrowedSoaAccessHelperTarget(helperName);
+      (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+       normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
+       normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
+       normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref")) {
+    resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedHelperName);
     return true;
   }
   if (resolveExperimentalSoaVectorReceiver(receiver, experimentalSoaElemType) &&
-      (helperName == "get" || helperName == "ref" ||
-       helperName == "to_aos" ||
-       helperName == "push" || helperName == "reserve")) {
+      (normalizedHelperName == "get" || normalizedHelperName == "ref" ||
+       normalizedHelperName == "to_aos" ||
+       normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     resolvedOut =
-        preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+        preferredSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                  "/soa_vector");
     return true;
   }
   if (receiver.kind == Expr::Kind::Call &&
-      (helperName == "count" || helperName == "count_ref" ||
-       helperName == "capacity" ||
-       helperName == "at" || helperName == "at_unsafe" || helperName == "insert" ||
-       helperName == "get" || helperName == "ref" || helperName == "to_aos" ||
-       helperName == "push" || helperName == "reserve")) {
+      (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+       normalizedHelperName == "capacity" ||
+       normalizedHelperName == "at" || normalizedHelperName == "at_unsafe" ||
+       normalizedHelperName == "insert" ||
+       normalizedHelperName == "get" || normalizedHelperName == "ref" ||
+       normalizedHelperName == "to_aos" ||
+       normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
       if (collectionTypePath == "/vector" &&
-          (helperName == "push" || helperName == "reserve") &&
-          usesSamePathSoaHelperTargetForCollectionType(helperName,
+          (normalizedHelperName == "push" || normalizedHelperName == "reserve") &&
+          usesSamePathSoaHelperTargetForCollectionType(normalizedHelperName,
                                                        "/vector")) {
         resolvedOut =
-            preferredSoaHelperTargetForCollectionType(helperName, "/vector");
+            preferredSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                      "/vector");
         return true;
       }
       if (collectionTypePath == "/vector") {
-        resolvedOut = preferredBareVectorHelperTarget(helperName);
+        resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
         return true;
       }
       if (collectionTypePath == "/soa_vector" &&
-          (helperName == "count" || helperName == "count_ref" ||
-           helperName == "get" || helperName == "ref" ||
-           helperName == "to_aos" ||
-           helperName == "push" || helperName == "reserve")) {
+          (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+           normalizedHelperName == "get" || normalizedHelperName == "ref" ||
+           normalizedHelperName == "to_aos" ||
+           normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
         resolvedOut =
-            preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+            preferredSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                      "/soa_vector");
         return true;
       }
       if (collectionTypePath == "/map" &&
           !isLocalRootMapAliasCall(receiver) &&
-          (helperName == "contains" || helperName == "contains_ref" ||
-           helperName == "tryAt" || helperName == "tryAt_ref" ||
-           helperName == "at" || helperName == "at_ref" ||
-           helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-           helperName == "insert" || helperName == "insert_ref")) {
-        resolvedOut = preferredBareMapHelperTarget(helperName);
+          (normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
+           normalizedHelperName == "tryAt" || normalizedHelperName == "tryAt_ref" ||
+           normalizedHelperName == "at" || normalizedHelperName == "at_ref" ||
+           normalizedHelperName == "at_unsafe" || normalizedHelperName == "at_unsafe_ref" ||
+           normalizedHelperName == "insert" || normalizedHelperName == "insert_ref")) {
+        resolvedOut = preferredBareMapHelperTarget(normalizedHelperName);
         return true;
       }
     }
@@ -378,7 +443,15 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   };
   auto tryResolveConcreteExperimentalSoaWrapperHelper =
       [&](const std::string &resolvedType) -> bool {
-    if (!isExperimentalSoaVectorSpecializedTypePath(resolvedType) ||
+    const std::string normalizedResolvedType =
+        std::string(trimLeadingSlash(resolvedType));
+    const bool isExperimentalSoaWrapperType =
+        normalizedResolvedType == "std/collections/experimental_soa_vector/SoaVector" ||
+        normalizedResolvedType.rfind(
+            "std/collections/experimental_soa_vector/SoaVector<",
+            0) == 0 ||
+        isExperimentalSoaVectorSpecializedTypePath(resolvedType);
+    if (!isExperimentalSoaWrapperType ||
         !hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
       return false;
     }
@@ -388,49 +461,71 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
   };
   if (receiver.kind == Expr::Kind::Name) {
     std::string typeName;
+    std::string receiverTypeText;
     if (const BindingInfo *paramBinding = findParamBinding(params, receiver.name)) {
       typeName = paramBinding->typeName;
+      receiverTypeText = bindingTypeText(*paramBinding);
     } else {
       auto it = locals.find(receiver.name);
       if (it != locals.end()) {
         typeName = it->second.typeName;
+        receiverTypeText = bindingTypeText(it->second);
       }
     }
     if (typeName.empty() || typeName == "Pointer" || typeName == "Reference") {
       return false;
     }
     const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
-    const std::string resolvedType = resolveReceiverTypePath(typeName, receiver.namespacePrefix);
+    const std::string collectionTypePath =
+        inferMethodCollectionTypePathFromTypeText(receiverTypeText.empty() ? typeName
+                                                                          : receiverTypeText);
+    const std::string resolvedType = !collectionTypePath.empty()
+                                         ? collectionTypePath
+                                         : resolveReceiverTypePath(typeName,
+                                                                   receiver.namespacePrefix);
     if (resolvedType.empty()) {
       return false;
     }
     if ((resolvedType == "/map" || isMapCollectionTypeName(normalizedTypeName)) &&
-        (helperName == "count" || helperName == "count_ref" ||
-         helperName == "contains" || helperName == "contains_ref" ||
-         helperName == "tryAt" || helperName == "tryAt_ref" ||
-         helperName == "at" || helperName == "at_ref" ||
-         helperName == "at_unsafe" || helperName == "at_unsafe_ref" ||
-         helperName == "insert" || helperName == "insert_ref")) {
-      resolvedOut = preferredBareMapHelperTarget(helperName);
+        (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+         normalizedHelperName == "size" ||
+         normalizedHelperName == "contains" || normalizedHelperName == "contains_ref" ||
+         normalizedHelperName == "tryAt" || normalizedHelperName == "tryAt_ref" ||
+         normalizedHelperName == "at" || normalizedHelperName == "at_ref" ||
+         normalizedHelperName == "at_unsafe" || normalizedHelperName == "at_unsafe_ref" ||
+         normalizedHelperName == "insert" || normalizedHelperName == "insert_ref")) {
+      resolvedOut = preferredBareMapHelperTarget(normalizedHelperName);
+      return true;
+    }
+    if (resolvedType == "/vector" &&
+        isVectorCompatibilityHelperName(normalizedHelperName)) {
+      resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
       return true;
     }
     if ((resolvedType == "/vector" || normalizedTypeName == "vector") &&
-        (helperName == "push" || helperName == "reserve") &&
-        usesSamePathSoaHelperTargetForCollectionType(helperName, "/vector")) {
+        (normalizedHelperName == "push" || normalizedHelperName == "reserve") &&
+        usesSamePathSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                     "/vector")) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType(helperName, "/vector");
+          preferredSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                    "/vector");
       return true;
     }
     if ((resolvedType == "/soa_vector" || normalizedTypeName == "soa_vector") &&
-        (helperName == "push" || helperName == "reserve")) {
+        (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+         normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
+         normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
+         normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
+         normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
       resolvedOut =
-          preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+          preferredSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                    "/soa_vector");
       return true;
     }
     if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {
       return true;
     }
-    resolvedOut = resolvedType + "/" + helperName;
+    resolvedOut = resolvedType + "/" + normalizedHelperName;
     return true;
   }
   if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {
@@ -440,42 +535,45 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     if (!resolvedType.empty()) {
       if ((resolvedType == "/vector" || normalizeBindingTypeName(resolvedType) == "vector") &&
-          (helperName == "push" || helperName == "reserve") &&
-          usesSamePathSoaHelperTargetForCollectionType(helperName,
+          (normalizedHelperName == "push" || normalizedHelperName == "reserve") &&
+          usesSamePathSoaHelperTargetForCollectionType(normalizedHelperName,
                                                        "/vector")) {
         resolvedOut =
-            preferredSoaHelperTargetForCollectionType(helperName, "/vector");
+            preferredSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                      "/vector");
         return true;
       }
       if (resolvedType == "/soa_vector" &&
-          (helperName == "count" || helperName == "count_ref" ||
-           helperName == "get" || helperName == "get_ref" ||
-           helperName == "ref" || helperName == "ref_ref" ||
-           helperName == "to_aos" || helperName == "to_aos_ref" ||
-           helperName == "push" || helperName == "reserve")) {
+          (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
+           normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
+           normalizedHelperName == "ref" || normalizedHelperName == "ref_ref" ||
+           normalizedHelperName == "to_aos" || normalizedHelperName == "to_aos_ref" ||
+           normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
         resolvedOut =
-            preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
+            preferredSoaHelperTargetForCollectionType(normalizedHelperName,
+                                                      "/soa_vector");
         return true;
       }
-      if (isVectorCompatibilityHelperName(helperName)) {
+      if (isVectorCompatibilityHelperName(normalizedHelperName)) {
         BindingInfo receiverBinding;
         receiverBinding.typeName = resolvedType;
         std::string experimentalElemType;
         if (extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
-          if ((helperName == "at" || helperName == "at_unsafe") &&
-              (hasDeclaredDefinitionPath("/std/collections/vector/" + helperName) ||
-               hasImportedDefinitionPath("/std/collections/vector/" + helperName))) {
-            resolvedOut = preferredBareVectorHelperTarget(helperName);
+          if ((normalizedHelperName == "at" || normalizedHelperName == "at_unsafe") &&
+              (hasDeclaredDefinitionPath("/std/collections/vector/" + normalizedHelperName) ||
+               hasImportedDefinitionPath("/std/collections/vector/" + normalizedHelperName))) {
+            resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
             return true;
           }
-          resolvedOut = specializedExperimentalVectorHelperTarget(helperName, experimentalElemType);
+          resolvedOut = specializedExperimentalVectorHelperTarget(normalizedHelperName,
+                                                                  experimentalElemType);
           return true;
         }
       }
       if (tryResolveConcreteExperimentalSoaWrapperHelper(resolvedType)) {
         return true;
       }
-      resolvedOut = resolvedType + "/" + helperName;
+      resolvedOut = resolvedType + "/" + normalizedHelperName;
       return true;
     }
     const ReturnKind receiverKind = inferExprReturnKind(receiver, params, locals);
@@ -487,7 +585,7 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (receiverType.empty()) {
       return false;
     }
-    resolvedOut = "/" + receiverType + "/" + helperName;
+    resolvedOut = "/" + receiverType + "/" + normalizedHelperName;
     return true;
   }
   return false;

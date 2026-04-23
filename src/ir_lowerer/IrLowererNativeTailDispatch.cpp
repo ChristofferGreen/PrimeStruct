@@ -345,6 +345,14 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::NotHandled;
   }
   if (getBuiltinArrayAccessName(expr, accessName)) {
+    const bool isMethodCallTempReceiver =
+        expr.isMethodCall &&
+        !expr.args.empty() &&
+        expr.args.front().kind == Expr::Kind::Call &&
+        (accessName == "at" || accessName == "at_unsafe");
+    if (isMethodCallTempReceiver) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     const auto arrayVectorTargetInfo = !expr.args.empty()
                                            ? resolveArrayVectorAccessTargetInfo(
                                                  expr.args.front(), localsIn, resolveCallArrayVectorAccessTargetInfo)

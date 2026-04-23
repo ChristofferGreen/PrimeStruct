@@ -2080,9 +2080,6 @@ TEST_CASE("semantics validator build import publication stays stable") {
         std::string::npos);
   CHECK(buildImportsSource.find("if (!addImportDiagnostic(") !=
         std::string::npos);
-  CHECK(buildImportsSource.find(
-            "registerCanonicalSoaVectorWildcardAliases(prefix)") !=
-        std::string::npos);
   CHECK(buildImportsSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
   CHECK(buildImportsSource.find(

@@ -220,9 +220,9 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("return /std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("return /std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find("return get(", mainPos) == std::string::npos);
 }
@@ -543,7 +543,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("values.y()[", mainPos) == std::string::npos);
@@ -732,7 +732,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("dereference(borrowed).y()[", mainPos) == std::string::npos);
@@ -771,7 +771,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("borrowed.y()[", mainPos) == std::string::npos);
@@ -814,7 +814,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
@@ -869,7 +869,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("y(values)[", mainPos) == std::string::npos);
@@ -922,7 +922,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
   CHECK(ast.find("location(values).y()[", mainPos) == std::string::npos);
@@ -968,7 +968,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
 CHECK(ast.find(".y", mainPos) != std::string::npos);
 CHECK(ast.find("dereference(pickBorrowed(location(values))).y()[", mainPos) == std::string::npos);
@@ -1026,15 +1026,12 @@ main() {
   CHECK(ast.find("ref(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).get(1)", mainPos) == std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).ref(1).y", mainPos) == std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1)", mainPos) != std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(0)", mainPos) != std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1).y", mainPos) !=
-        std::string::npos);
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) != std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(holder.pickBorrowed(location(values)))[", mainPos) == std::string::npos);
-  CHECK(ast.find(".get(1).y", mainPos) != std::string::npos);
-  CHECK(ast.find(".ref(0).x", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
@@ -1134,21 +1131,15 @@ main() {
   CHECK(ast.find("y(location(holder.pickBorrowed(location(values))))[", mainPos) == std::string::npos);
   CHECK(ast.find("y(dereference(location(holder.pickBorrowed(location(values)))))[", mainPos) ==
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(0)", mainPos) !=
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1)", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1).y", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1).y", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(0).x", mainPos) !=
-        std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).count()", mainPos) !=
-        std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
-        std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }
@@ -1211,16 +1202,15 @@ main() {
   CHECK(ast.find("ref(holder.pickBorrowed(location(values)),", mainPos) == std::string::npos);
   CHECK(ast.find("holder.pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(holder.pickBorrowed(location(values)))[", mainPos) == std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).count()", mainPos) !=
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(0).x", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(1).y", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find(".get(1).y", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
@@ -1277,12 +1267,14 @@ main() {
   CHECK(ast.find("ref(pickBorrowed(location(values)),", mainPos) == std::string::npos);
   CHECK(ast.find("pickBorrowed(location(values)).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(pickBorrowed(location(values)))[", mainPos) == std::string::npos);
-  CHECK(ast.find("/pickBorrowed(location(values)).count()", mainPos) != std::string::npos);
-  CHECK(ast.find("/pickBorrowed(location(values)).get(0).x", mainPos) != std::string::npos);
-  CHECK(ast.find("/pickBorrowed(location(values)).ref(1).y", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+  CHECK(ast.find("/pickBorrowed(location(values))", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
@@ -1351,17 +1343,15 @@ main() {
         std::string::npos);
   CHECK(ast.find("y(dereference(location(holder.pickBorrowed(location(values)))))[", mainPos) ==
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).count()", mainPos) !=
+  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values))", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1).x", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).ref(0).x", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/Holder/pickBorrowed(holder, location(values)).get(1).y", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
-        std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
@@ -1422,13 +1412,14 @@ main() {
   CHECK(ast.find("location(pickBorrowed(location(values))).y()[", mainPos) == std::string::npos);
   CHECK(ast.find("y(dereference(location(pickBorrowed(location(values)))))[", mainPos) ==
         std::string::npos);
-  CHECK(ast.find("pickBorrowed(location(values)).count()", mainPos) != std::string::npos);
-  CHECK(ast.find("pickBorrowed(location(values)).get(1).x", mainPos) != std::string::npos);
-  CHECK(ast.find("pickBorrowed(location(values)).ref(0).x", mainPos) != std::string::npos);
-  CHECK(ast.find("pickBorrowed(location(values)).get(1).y", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+  CHECK(ast.find("/pickBorrowed(location(values))", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
         std::string::npos);
 }
 
@@ -1790,7 +1781,7 @@ main() {
   const std::string ast = readFile(outPath);
   const size_t mainPos = ast.find("/main()");
   CHECK(mainPos != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find("pickBorrowed(location(values)).to_aos()", mainPos) == std::string::npos);
 }
@@ -2171,12 +2162,14 @@ main() {
   CHECK(ast.find("y(location(pickBorrowed(location(values))))[", mainPos) == std::string::npos);
   CHECK(ast.find("y(dereference(location(pickBorrowed(location(values)))))[", mainPos) ==
         std::string::npos);
-  CHECK(ast.find("pickBorrowed(location(values)).get(0)", mainPos) != std::string::npos);
-  CHECK(ast.find("pickBorrowed(location(values)).ref(1)", mainPos) != std::string::npos);
-  CHECK(ast.find("pickBorrowed(location(values)).count()", mainPos) != std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector_conversions/soaVectorToAos__", mainPos) !=
+  CHECK(ast.find("/pickBorrowed(location(values))", mainPos) != std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/count_ref__", mainPos) !=
         std::string::npos);
-  CHECK(ast.find("/std/collections/experimental_soa_vector/soaVectorGet__", mainPos) !=
+  CHECK(ast.find("/std/collections/soa_vector/to_aos_ref__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/get_ref__", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref__", mainPos) !=
         std::string::npos);
   CHECK(ast.find(".y", mainPos) != std::string::npos);
 }

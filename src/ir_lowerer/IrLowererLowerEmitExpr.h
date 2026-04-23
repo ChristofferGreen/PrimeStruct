@@ -155,6 +155,69 @@
             error = "unknown struct field: " + expr.name;
             return false;
           }
+          const auto receiverLocalIt =
+              receiver.kind == Expr::Kind::Name ? localsIn.find(receiver.name) : localsIn.end();
+          const bool isRawBuiltinSoaStorageFieldAccess =
+              receiver.kind == Expr::Kind::Name && receiverLocalIt != localsIn.end() &&
+              receiverLocalIt->second.usesBuiltinCollectionLayout &&
+              receiverLocalIt->second.isSoaVector && expr.name == "storage" &&
+              fieldInfo.structPath.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0;
+          if (isRawBuiltinSoaStorageFieldAccess) {
+            StructSlotLayoutInfo storageLayout;
+            if (!resolveStructSlotLayout(fieldInfo.structPath, storageLayout)) {
+              return false;
+            }
+            if (storageLayout.totalSlots < 5) {
+              error = "internal error: builtin soa_vector storage bridge requires SoaColumn layout";
+              return false;
+            }
+
+            const int32_t baseLocal = nextLocal;
+            nextLocal += storageLayout.totalSlots;
+            const int32_t receiverPtrLocal = allocTempLocal();
+            if (!emitExpr(receiver, localsIn)) {
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(receiverPtrLocal)});
+
+            function.instructions.push_back(
+                {IrOpcode::PushI32,
+                 static_cast<uint64_t>(static_cast<int32_t>(storageLayout.totalSlots - 1))});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal)});
+
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
+            function.instructions.push_back(
+                {IrOpcode::PushI64, static_cast<uint64_t>(IrSlotBytes)});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 2)});
+
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(receiverPtrLocal)});
+            function.instructions.push_back(
+                {IrOpcode::PushI64, static_cast<uint64_t>(2 * IrSlotBytes)});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 3)});
+
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            function.instructions.push_back(
+                {IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 4)});
+            function.instructions.push_back(
+                {IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+            return true;
+          }
           if (!emitExpr(receiver, localsIn)) {
             return false;
           }

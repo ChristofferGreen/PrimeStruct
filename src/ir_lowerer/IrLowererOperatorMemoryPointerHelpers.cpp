@@ -72,6 +72,9 @@ bool isAggregatePointerLikeLocal(const LocalInfo &info, bool fromArgsPack) {
   if (kind != LocalInfo::Kind::Pointer && kind != LocalInfo::Kind::Reference) {
     return false;
   }
+  if (info.isResult || info.isFileHandle || info.isFileError) {
+    return false;
+  }
   return !info.structTypeName.empty() || info.referenceToArray || info.pointerToArray || info.referenceToVector ||
          info.pointerToVector || info.referenceToMap || info.pointerToMap || info.referenceToBuffer ||
          info.pointerToBuffer;

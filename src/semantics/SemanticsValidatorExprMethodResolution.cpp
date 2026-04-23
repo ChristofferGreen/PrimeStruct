@@ -33,6 +33,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   };
   const auto isCanonicalMapAccessMethodName = [&](std::string_view helperName) {
     return isValueSurfaceAccessMethodName(helperName) ||
+           helperName == "size" ||
            helperName == "at_ref" || helperName == "at_unsafe_ref";
   };
 
@@ -178,6 +179,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         return false;
       }
       if (!(helperName == "count" || helperName == "count_ref" ||
+            helperName == "size" ||
             helperName == "contains" || helperName == "contains_ref" ||
             helperName == "tryAt" || helperName == "tryAt_ref" ||
             helperName == "at" || helperName == "at_ref" ||

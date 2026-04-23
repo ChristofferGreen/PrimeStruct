@@ -357,6 +357,19 @@ bool resolvesExperimentalVectorValueReceiver(const Expr *receiverExpr,
   if (receiverExpr == nullptr) {
     return false;
   }
+  if (receiverExpr->kind == Expr::Kind::Name) {
+    if (auto localIt = locals.find(receiverExpr->name); localIt != locals.end()) {
+      if (resolvesExperimentalVectorValueTypeText(bindingTypeToString(localIt->second))) {
+        return true;
+      }
+    }
+    for (const auto &param : params) {
+      if (param.name == receiverExpr->name &&
+          resolvesExperimentalVectorValueTypeText(bindingTypeToString(param.binding))) {
+        return true;
+      }
+    }
+  }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
       resolvesExperimentalVectorValueTypeText(experimentalCollectionValueBindingTypeText(receiverInfo))) {
@@ -469,34 +482,34 @@ std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)
 }
 
 std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path) {
-  if (path == "/std/collections/vector/count") {
+  if (path == "/std/collections/vector/count" || path == "/vector/count") {
     return "/std/collections/experimental_vector/vectorCount";
   }
-  if (path == "/std/collections/vector/capacity") {
+  if (path == "/std/collections/vector/capacity" || path == "/vector/capacity") {
     return "/std/collections/experimental_vector/vectorCapacity";
   }
-  if (path == "/std/collections/vector/push") {
+  if (path == "/std/collections/vector/push" || path == "/vector/push") {
     return "/std/collections/experimental_vector/vectorPush";
   }
-  if (path == "/std/collections/vector/pop") {
+  if (path == "/std/collections/vector/pop" || path == "/vector/pop") {
     return "/std/collections/experimental_vector/vectorPop";
   }
-  if (path == "/std/collections/vector/reserve") {
+  if (path == "/std/collections/vector/reserve" || path == "/vector/reserve") {
     return "/std/collections/experimental_vector/vectorReserve";
   }
-  if (path == "/std/collections/vector/clear") {
+  if (path == "/std/collections/vector/clear" || path == "/vector/clear") {
     return "/std/collections/experimental_vector/vectorClear";
   }
-  if (path == "/std/collections/vector/remove_at") {
+  if (path == "/std/collections/vector/remove_at" || path == "/vector/remove_at") {
     return "/std/collections/experimental_vector/vectorRemoveAt";
   }
-  if (path == "/std/collections/vector/remove_swap") {
+  if (path == "/std/collections/vector/remove_swap" || path == "/vector/remove_swap") {
     return "/std/collections/experimental_vector/vectorRemoveSwap";
   }
-  if (path == "/std/collections/vector/at") {
+  if (path == "/std/collections/vector/at" || path == "/vector/at") {
     return "/std/collections/experimental_vector/vectorAt";
   }
-  if (path == "/std/collections/vector/at_unsafe") {
+  if (path == "/std/collections/vector/at_unsafe" || path == "/vector/at_unsafe") {
     return "/std/collections/experimental_vector/vectorAtUnsafe";
   }
   return {};
@@ -606,6 +619,21 @@ bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr
   templateArgsOut.clear();
   if (receiverExpr == nullptr) {
     return false;
+  }
+  if (receiverExpr->kind == Expr::Kind::Name) {
+    if (auto localIt = locals.find(receiverExpr->name); localIt != locals.end()) {
+      if (extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(
+              bindingTypeToString(localIt->second), ctx, templateArgsOut)) {
+        return true;
+      }
+    }
+    for (const auto &param : params) {
+      if (param.name == receiverExpr->name &&
+          extractExperimentalVectorValueReceiverTemplateArgsFromTypeText(
+              bindingTypeToString(param.binding), ctx, templateArgsOut)) {
+        return true;
+      }
+    }
   }
   BindingInfo receiverInfo;
   if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&

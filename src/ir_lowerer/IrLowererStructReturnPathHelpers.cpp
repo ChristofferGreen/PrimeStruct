@@ -22,6 +22,46 @@ bool isRemovedMapCompatibilityHelper(const std::string &suffix) {
          suffix == "at" || suffix == "at_unsafe" || suffix == "insert";
 }
 
+std::string resolveSpecializedExperimentalVectorReturnPath(
+    std::string typeText) {
+  typeText = trimTemplateTypeText(typeText);
+  while (!typeText.empty()) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText)) {
+      break;
+    }
+    base = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+    std::vector<std::string> args;
+    if ((base != "Reference" && base != "Pointer") ||
+        !splitTemplateArgs(argText, args) || args.size() != 1) {
+      break;
+    }
+    typeText = trimTemplateTypeText(args.front());
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(typeText, base, argText)) {
+    return "";
+  }
+  base = normalizeDeclaredCollectionTypeBase(trimTemplateTypeText(base));
+  if (base != "vector") {
+    return "";
+  }
+
+  std::vector<std::string> args;
+  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+    return "";
+  }
+
+  std::string normalizedArg = trimTemplateTypeText(args.front());
+  if (!normalizedArg.empty() && normalizedArg.front() == '/') {
+    normalizedArg.erase(normalizedArg.begin());
+  }
+  return specializedExperimentalVectorStructPathForElementType(normalizedArg);
+}
+
 std::string resolveSpecializedExperimentalSoaVectorReturnPath(
     std::string typeText) {
   typeText = trimTemplateTypeText(typeText);
@@ -59,8 +99,8 @@ std::string resolveSpecializedExperimentalSoaVectorReturnPath(
   if (!normalizedArg.empty() && normalizedArg.front() == '/') {
     normalizedArg.erase(normalizedArg.begin());
   }
-  return "/std/collections/experimental_soa_vector/SoaVector__" +
-         normalizedArg;
+  return specializedExperimentalSoaVectorStructPathForElementType(
+      normalizedArg);
 }
 
 std::string resolveUniqueStructByLeafName(const std::string &typeName,
@@ -307,6 +347,11 @@ std::string inferStructReturnPathFromDefinitionInternal(
       continue;
     }
     const std::string &returnTypeName = transform.templateArgs.front();
+    const std::string specializedVectorResolved =
+        resolveSpecializedExperimentalVectorReturnPath(returnTypeName);
+    if (structNames.count(specializedVectorResolved) > 0) {
+      return specializedVectorResolved;
+    }
     const std::string specializedSoaResolved =
         resolveSpecializedExperimentalSoaVectorReturnPath(returnTypeName);
     if (structNames.count(specializedSoaResolved) > 0) {

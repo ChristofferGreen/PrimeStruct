@@ -56,10 +56,11 @@ namespace std {
     [mut effects(heap_alloc)]
     Destroy() {
       if(this.ownsData,
-         then() {
-           vectorCheckShape<T>(this)
-           vectorDropRange<T>(this, this.count)
-           /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(this.data)
+        then() {
+           [Pointer<uninitialized<T>>] dataPtr{vectorDataPtr<T>(this)}
+           /std/collections/experimental_vector/vectorCheckShape<T>(this)
+           /std/collections/experimental_vector/vectorDropRange<T>(this, this.count)
+           /std/collections/internal_buffer_checked/bufferFree<uninitialized<T>>(dataPtr)
            assign(this.ownsData, false)
            assign(this.count, 0i32)
            assign(this.capacity, 0i32)
@@ -79,6 +80,11 @@ namespace std {
        },
        else() { })
     return(/std/collections/internal_buffer_unchecked/bufferOffsetUnsafe<uninitialized<T>>(values.data, index))
+  }
+
+  [return<Pointer<uninitialized<T>>>]
+  vectorDataPtr<T>([Vector<T>] values) {
+    return(values.data)
   }
 
   [return<void>]

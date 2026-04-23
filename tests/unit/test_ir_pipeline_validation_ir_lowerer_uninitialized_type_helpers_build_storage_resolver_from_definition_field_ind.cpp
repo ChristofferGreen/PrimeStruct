@@ -169,6 +169,34 @@ TEST_CASE("ir lowerer uninitialized type helpers build bundled uninitialized res
   CHECK(adapters.inferStructExprPath(accessExpr, locals).empty());
 }
 
+TEST_CASE("ir lowerer bundled uninitialized adapters specialize vector local struct paths from element metadata") {
+  const std::unordered_map<std::string, const primec::Definition *> defMap;
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  auto resolveSlot = [](const std::string &, const std::string &,
+                        primec::ir_lowerer::StructSlotFieldInfo &) { return false; };
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveExprPath = [](const primec::Expr &) { return std::string(); };
+  std::string error;
+
+  auto adapters =
+      primec::ir_lowerer::makeUninitializedResolutionAdapters(
+          resolveStructTypeName, resolveExprPath, fieldIndex, defMap, resolveSlot, error);
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  vectorInfo.structTypeName = "/pkg/Particle";
+  locals.emplace("values", vectorInfo);
+
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+
+  const std::string inferredStructPath =
+      adapters.inferStructExprPath(valuesExpr, locals);
+  CHECK(inferredStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+}
+
 TEST_CASE("ir lowerer binding transform helpers classify qualifiers and mutability") {
   CHECK(primec::ir_lowerer::isBindingQualifierName("public"));
   CHECK(primec::ir_lowerer::isBindingQualifierName("mut"));

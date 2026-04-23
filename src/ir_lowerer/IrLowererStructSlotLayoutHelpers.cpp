@@ -163,8 +163,8 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   if (!normalizedArg.empty() && normalizedArg.front() == '/') {
     normalizedArg.erase(normalizedArg.begin());
   }
-  structPathOut = "/std/collections/experimental_soa_vector/SoaVector__" +
-                  normalizedArg;
+  structPathOut =
+      specializedExperimentalSoaVectorStructPathForElementType(normalizedArg);
   return true;
 }
 
@@ -763,10 +763,22 @@ void applyStructValueInfoFromBinding(const Expr &expr,
 
   if (typeName == "Reference" || typeName == "Pointer") {
     if (!typeTemplateArg.empty()) {
+      const std::string pointeeType =
+          unwrapTopLevelUninitializedTypeText(typeTemplateArg);
+      std::string pointeeBase;
+      std::string pointeeArgText;
+      if (splitTemplateTypeName(pointeeType, pointeeBase, pointeeArgText)) {
+        const std::string normalizedPointeeBase =
+            normalizeCollectionBindingTypeName(trimTemplateTypeText(pointeeBase));
+        if (normalizedPointeeBase == "Result" || normalizedPointeeBase == "File" ||
+            normalizedPointeeBase == "array" || normalizedPointeeBase == "vector" ||
+            normalizedPointeeBase == "soa_vector" || normalizedPointeeBase == "map" ||
+            normalizedPointeeBase == "Buffer") {
+          return;
+        }
+      }
       std::string resolved;
-      if (resolveStructTypeName(unwrapTopLevelUninitializedTypeText(typeTemplateArg),
-                                expr.namespacePrefix,
-                                resolved)) {
+      if (resolveStructTypeName(pointeeType, expr.namespacePrefix, resolved)) {
         info.structTypeName = resolved;
       }
     }

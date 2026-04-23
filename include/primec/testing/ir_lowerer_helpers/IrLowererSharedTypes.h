@@ -40,6 +40,7 @@ struct LocalInfo {
   bool isUninitializedStorage = false;
   bool targetsUninitializedStorage = false;
   bool isSoaVector = false;
+  bool usesBuiltinCollectionLayout = false;
 };
 
 using LocalMap = std::unordered_map<std::string, LocalInfo>;
@@ -57,4 +58,3 @@ struct ReturnInfo {
   std::string resultValueStructType;
   std::string resultErrorType;
 };
-

@@ -431,6 +431,42 @@ TEST_CASE("ir lowerer uninitialized type helpers build expression struct path in
   CHECK(inferStructExprPath(namespacedAccessExpr, locals) == "/pkg/Ctor");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers specialize explicit vector return paths from definition call targets") {
+  primec::Definition factoryDef;
+  factoryDef.fullPath = "/pkg/factory";
+  factoryDef.namespacePrefix = "/pkg";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"vector<Particle>"};
+  factoryDef.transforms.push_back(returnTransform);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/pkg/factory", &factoryDef},
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) { return false; };
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind != primec::Expr::Kind::Call) {
+      return std::string();
+    }
+    return std::string("/pkg/") + expr.name;
+  };
+  auto resolveStructFieldSlot = [](const std::string &, const std::string &,
+                                   primec::ir_lowerer::StructSlotFieldInfo &) { return false; };
+
+  auto inferStructExprPath =
+      primec::ir_lowerer::makeInferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+          defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "factory";
+  primec::ir_lowerer::LocalMap locals;
+
+  const std::string inferredStructPath = inferStructExprPath(callExpr, locals);
+  CHECK(inferredStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+}
+
 TEST_CASE("ir lowerer uninitialized type helpers infer dereference expression struct paths") {
   const std::unordered_map<std::string, const primec::Definition *> defMap;
   const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;

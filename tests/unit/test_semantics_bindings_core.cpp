@@ -632,4 +632,27 @@ main() {
   CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
+TEST_CASE("stdlib-owned definitions keep direct stdlib constructor imports visible") {
+  const std::string source = R"(
+import /std/math/*
+
+namespace std {
+  namespace demo {
+  [public struct]
+  Swatch() {
+    [public ColorRGBA] clear{ColorRGBA(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  }
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

@@ -5,7 +5,11 @@ bool rewriteDefinition(Definition &def,
                        const std::unordered_set<std::string> &allowedParams,
                        Context &ctx,
                        std::string &error) {
+  const std::string previousDefinitionPath = ctx.currentDefinitionPath;
+  ctx.currentDefinitionPath = def.fullPath;
+  auto restoreDefinitionPath = [&]() { ctx.currentDefinitionPath = previousDefinitionPath; };
   if (!rewriteTransforms(def.transforms, mapping, allowedParams, def.namespacePrefix, ctx, error)) {
+    restoreDefinitionPath();
     return false;
   }
   const bool allowMathBare = hasMathImport(ctx);
@@ -19,6 +23,7 @@ bool rewriteDefinition(Definition &def,
       determineDefinitionReturnStatementSelection(def);
   if (!rewriteDefinitionParameters(
           def.parameters, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
+    restoreDefinitionPath();
     return false;
   }
   for (size_t stmtIndex = 0; stmtIndex < def.statements.size(); ++stmtIndex) {
@@ -35,9 +40,11 @@ bool rewriteDefinition(Definition &def,
                                                          ctx,
                                                          allowMathBare,
                                                          error)) {
+      restoreDefinitionPath();
       return false;
     }
     if (!rewriteExpr(stmt, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params, allowMathBare)) {
+      restoreDefinitionPath();
       return false;
     }
     if (isReturnPathStmt &&
@@ -51,6 +58,7 @@ bool rewriteDefinition(Definition &def,
                                                          ctx,
                                                          allowMathBare,
                                                          error)) {
+      restoreDefinitionPath();
       return false;
     }
     recordDefinitionStatementBindingLocal(stmt, params, locals, allowMathBare, ctx, locals);
@@ -66,10 +74,12 @@ bool rewriteDefinition(Definition &def,
                                                          ctx,
                                                          allowMathBare,
                                                          error)) {
+      restoreDefinitionPath();
       return false;
     }
     if (!rewriteExpr(*def.returnExpr, mapping, allowedParams, def.namespacePrefix, ctx, error, locals, params,
                      allowMathBare)) {
+      restoreDefinitionPath();
       return false;
     }
     if (!rewriteDefinitionExperimentalReturnConstructors(*def.returnExpr,
@@ -85,5 +95,6 @@ bool rewriteDefinition(Definition &def,
       return false;
     }
   }
+  restoreDefinitionPath();
   return true;
 }

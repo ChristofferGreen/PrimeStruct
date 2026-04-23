@@ -712,6 +712,13 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       }
       return false;
     };
+    auto isImportedExperimentalVectorConstructorPath =
+        [&](std::string resolvedPath) {
+          resolvedPath = canonicalizeResolvedPath(std::move(resolvedPath));
+          return resolvedPath == "/std/collections/experimental_vector/vector" ||
+                 (resolvedPath == "/vector" &&
+                  hasDirectExperimentalVectorImport());
+        };
     const bool prefersImportedExperimentalVectorConstructor =
         !candidate.isMethodCall &&
         candidate.templateArgs.size() == 1 &&
@@ -722,9 +729,12 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                 canonicalizeResolvedPath(aliasIt->second) == "/std/collections/experimental_vector/vector") {
               return true;
             }
+            if (hasDirectExperimentalVectorImport()) {
+              return true;
+            }
           }
-          return canonicalizeResolvedPath(resolvedCandidate) == "/vector" &&
-                 hasDirectExperimentalVectorImport();
+          return isImportedExperimentalVectorConstructorPath(
+              resolvedCandidate);
         }();
     if (prefersImportedExperimentalVectorConstructor) {
       currentTypeTextOut = "Vector<" + candidate.templateArgs.front() + ">";

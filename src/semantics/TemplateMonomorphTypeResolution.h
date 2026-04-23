@@ -42,7 +42,8 @@ ResolvedType resolveTypeStringImpl(std::string input,
       result.concrete = false;
       return result;
     }
-    std::string resolvedPath = resolveNameToPath(trimmed, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
+    std::string resolvedPath =
+        resolveNameToPath(trimmed, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
     if (ctx.templateDefs.count(resolvedPath) > 0) {
       error = "template arguments required for " + resolvedPath;
       result.text.clear();
@@ -130,7 +131,8 @@ ResolvedType resolveTypeStringImpl(std::string input,
     recordExplicitTemplateArgFact(normalizedBase, result);
     return result;
   }
-  std::string resolvedBasePath = resolveNameToPath(base, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
+  std::string resolvedBasePath =
+      resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
   if (ctx.templateDefs.count(resolvedBasePath) == 0) {
     error = "template arguments are only supported on templated definitions: " + resolvedBasePath;
     result.text.clear();
@@ -214,7 +216,10 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
         }
 
         const std::string resolvedPath =
-            resolveNameToPath(transform.name, namespacePrefix, ctx.importAliases, ctx.sourceDefs);
+            resolveNameToPath(transform.name,
+                              namespacePrefix,
+                              scopedImportAliasesForNamespace(namespacePrefix, ctx),
+                              ctx.sourceDefs);
         const bool isImportedGfxBufferTemplate =
             resolvedPath == "/std/gfx/Buffer" || resolvedPath == "/std/gfx/experimental/Buffer";
         if (isImportedGfxBufferTemplate && allConcreteTemplateArgs) {
@@ -333,9 +338,10 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
       }
       prefix = prefix.substr(0, slash);
     }
-    auto aliasIt = ctx.importAliases.find(expr.name);
-    if (aliasIt != ctx.importAliases.end()) {
-      return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(aliasIt->second));
+    if (const std::string *importAlias =
+            lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
+        importAlias != nullptr) {
+      return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(*importAlias));
     }
     return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(namespacePrefix + "/" + expr.name));
   }
@@ -343,9 +349,10 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   if (ctx.sourceDefs.count(root) > 0) {
     return finalizeResolvedPath(root);
   }
-  auto aliasIt = ctx.importAliases.find(expr.name);
-  if (aliasIt != ctx.importAliases.end()) {
-    return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(aliasIt->second));
+  if (const std::string *importAlias =
+          lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
+      importAlias != nullptr) {
+    return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(*importAlias));
   }
   return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(root));
 }

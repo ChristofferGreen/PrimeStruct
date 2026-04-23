@@ -146,29 +146,11 @@ inline void expectWrapperMapHelperExperimentalValueConformance(const std::string
 }
 
 inline void expectExperimentalMapAssignConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(makeExperimentalMapAssignConformanceSource(),
-                                              "map_experimental_assign",
-                                              emitMode,
-                                              36,
-                                              "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n");
-    return;
-  }
-  if (emitMode == "native") {
-    expectMapConformanceCompileReject(
-        makeExperimentalMapAssignConformanceSource(),
-        "map_experimental_assign",
-        emitMode,
-        "native backend only supports arithmetic/comparison/clamp/min/max/abs/"
-        "sign/saturate/convert/pointer/assign/increment/decrement calls in "
-        "expressions");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeExperimentalMapAssignConformanceSource(),
-                                    "map_experimental_assign",
-                                    emitMode,
-                                    "native backend requires typed map bindings for at");
+  expectMapConformanceProgramRunsWithOutput(makeExperimentalMapAssignConformanceSource(),
+                                            "map_experimental_assign",
+                                            emitMode,
+                                            36,
+                                            "2\n4\n4\n7\n1\n2\n4\n4\n7\n1\n");
 }
 
 inline void expectImplicitMapAutoInferenceConformance(const std::string &emitMode) {
@@ -293,37 +275,21 @@ inline void expectExperimentalMapMethodParameterConformance(const std::string &e
 }
 
 inline void expectInferredExperimentalMapParameterConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(
-        makeInferredExperimentalMapParameterConformanceSource(),
-        "map_experimental_inferred_parameter_" + emitMode,
-        emitMode,
-        19,
-        "3\n4\n3\n9\n7\n12\n");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeInferredExperimentalMapParameterConformanceSource(),
-                                    "map_experimental_inferred_parameter_" + emitMode,
-                                    emitMode,
-                                    "native backend");
+  expectMapConformanceProgramRunsWithOutput(
+      makeInferredExperimentalMapParameterConformanceSource(),
+      "map_experimental_inferred_parameter_" + emitMode,
+      emitMode,
+      19,
+      "3\n4\n3\n9\n7\n12\n");
 }
 
 inline void expectInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(
-        makeInferredExperimentalMapDefaultParameterConformanceSource(),
-        "map_experimental_inferred_default_parameter_" + emitMode,
-        emitMode,
-        19,
-        "2\n4\n1\n4\n3\n5\n6\n5\n8\n");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeInferredExperimentalMapDefaultParameterConformanceSource(),
-                                    "map_experimental_inferred_default_parameter_" + emitMode,
-                                    emitMode,
-                                    "native backend");
+  expectMapConformanceProgramRunsWithOutput(
+      makeInferredExperimentalMapDefaultParameterConformanceSource(),
+      "map_experimental_inferred_default_parameter_" + emitMode,
+      emitMode,
+      19,
+      "2\n4\n1\n4\n3\n5\n6\n5\n8\n");
 }
 
 inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
@@ -340,7 +306,7 @@ inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(cons
   expectMapConformanceCompileReject(makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
                                     "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
                                     emitMode,
-                                    "native backend");
+                                    "template arguments required for /std/collections/experimental_map/mapNew");
 }
 
 inline void expectExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
@@ -353,47 +319,31 @@ inline void expectExperimentalMapHelperReceiverConformance(const std::string &em
 }
 
 inline void expectWrappedExperimentalMapHelperReceiverConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRuns(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
-                                    "map_wrapped_experimental_helper_receiver_" + emitMode,
-                                    emitMode,
-                                    16);
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
-                                    "map_wrapped_experimental_helper_receiver_" + emitMode,
-                                    emitMode,
-                                    "native backend");
-}
-
-inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(makeExperimentalMapMethodReceiverConformanceSource(),
-                                  "map_experimental_method_receiver",
-                                  emitMode,
-                                  15);
-}
-
-inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
-  expectMapConformanceProgramRuns(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
-                                  "map_wrapped_experimental_method_receiver_" + emitMode,
+  expectMapConformanceProgramRuns(makeWrappedExperimentalMapHelperReceiverConformanceSource(),
+                                  "map_wrapped_experimental_helper_receiver_" + emitMode,
                                   emitMode,
                                   16);
 }
 
-inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRuns(makeExperimentalMapFieldAssignConformanceSource(),
-                                    "map_experimental_field_assign",
+inline void expectExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
+  expectMapConformanceCompileReject(makeExperimentalMapMethodReceiverConformanceSource(),
+                                    "map_experimental_method_receiver",
                                     emitMode,
-                                    13);
-    return;
-  }
+                                    "unknown call target: /std/collections/experimental_map/mapCount");
+}
 
-  expectMapConformanceCompileReject(makeExperimentalMapFieldAssignConformanceSource(),
-                                    "map_experimental_field_assign",
+inline void expectWrappedExperimentalMapMethodReceiverConformance(const std::string &emitMode) {
+  expectMapConformanceCompileReject(makeWrappedExperimentalMapMethodReceiverConformanceSource(),
+                                    "map_wrapped_experimental_method_receiver_" + emitMode,
                                     emitMode,
-                                    "native backend");
+                                    "unknown call target: /std/collections/experimental_map/mapCount");
+}
+
+inline void expectExperimentalMapFieldAssignConformance(const std::string &emitMode) {
+  expectMapConformanceProgramRuns(makeExperimentalMapFieldAssignConformanceSource(),
+                                  "map_experimental_field_assign",
+                                  emitMode,
+                                  13);
 }
 
 inline void expectExperimentalMapStorageReferenceConformance(const std::string &emitMode) {

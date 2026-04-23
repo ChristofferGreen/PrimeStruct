@@ -343,6 +343,51 @@ bool validateVectorStatementHelperTarget(
   return false;
 }
 
+bool isSoaVectorMutatorTargetExpr(
+    const Expr &expr,
+    const LocalMap &localsIn,
+    const std::function<std::string(const Expr &, const LocalMap &)> &inferStructExprPath) {
+  auto localIsSoaVector = [](const LocalInfo &info) {
+    return info.isSoaVector;
+  };
+
+  if (expr.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(expr.name);
+    return it != localsIn.end() && localIsSoaVector(it->second);
+  }
+  if (expr.kind == Expr::Kind::Call) {
+    std::string accessName;
+    if (getBuiltinArrayAccessName(expr, accessName) && expr.args.size() == 2 &&
+        expr.args.front().kind == Expr::Kind::Name) {
+      auto it = localsIn.find(expr.args.front().name);
+      return it != localsIn.end() && it->second.isArgsPack &&
+             localIsSoaVector(it->second);
+    }
+    if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
+      const Expr &derefTarget = expr.args.front();
+      if (derefTarget.kind == Expr::Kind::Name) {
+        auto it = localsIn.find(derefTarget.name);
+        return it != localsIn.end() && localIsSoaVector(it->second);
+      }
+      if (getBuiltinArrayAccessName(derefTarget, accessName) &&
+          derefTarget.args.size() == 2 &&
+          derefTarget.args.front().kind == Expr::Kind::Name) {
+        auto it = localsIn.find(derefTarget.args.front().name);
+        return it != localsIn.end() && it->second.isArgsPack &&
+               localIsSoaVector(it->second);
+      }
+    }
+  }
+
+  std::string structPath = inferStructExprPath(expr, localsIn);
+  if (!structPath.empty() && structPath.front() == '/') {
+    structPath.erase(structPath.begin());
+  }
+  return structPath == "soa_vector" ||
+         structPath == "std/collections/soa_vector" ||
+         structPath.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
 bool isImportedBuiltinSoaMethodMutatorCall(
     const Expr &stmt,
     const LocalMap &localsIn,
@@ -600,6 +645,12 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
     error = "struct parameter type mismatch for /std/collections/soa_vector/" + vectorHelper +
             " parameter values: expected /std/collections/experimental_soa_vector/SoaVector__ specialization";
     return VectorStatementHelperPrepareResult::Error;
+  }
+  if ((vectorHelper == "push" || vectorHelper == "reserve") &&
+      isSoaVectorMutatorTargetExpr(callStmt.args.front(),
+                                   localsIn,
+                                   inferStructExprPath)) {
+    return VectorStatementHelperPrepareResult::NotMatched;
   }
 
   if (!validateVectorStatementHelperTarget(callStmt.args.front(),

@@ -10,6 +10,7 @@ namespace {
 
 bool isCanonicalMapMethodHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
+         helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
          helperName == "tryAt" || helperName == "tryAt_ref" ||
          helperName == "at" || helperName == "at_ref" ||
@@ -61,7 +62,11 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     return failExprDiagnostic(expr, std::move(message));
   };
   handledOut = false;
-  const std::string resolvedTarget = resolveCalleePath(expr);
+  const std::string resolvedTarget =
+      resolveExprConcreteCallPath(params, locals, expr, resolveCalleePath(expr));
+  if (hasDefinitionFamilyPath(resolvedTarget)) {
+    return true;
+  }
   if (!expr.isMethodCall && resolvedTarget == "/file_error/why") {
     handledOut = true;
     if (hasNamedArguments(expr.argNames)) {

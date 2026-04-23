@@ -203,8 +203,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend requires typed bindings",
-                                                "vm backend requires typed bindings")) {
+                                                std::string(NativeArrayLiteralUnsupportedMessage),
+                                                std::string(VmArrayLiteralUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 6);
@@ -295,8 +295,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend requires typed bindings",
-                                                "vm backend requires typed bindings")) {
+                                                std::string(NativeArrayLiteralUnsupportedMessage),
+                                                std::string(VmArrayLiteralUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 6);
@@ -361,8 +361,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend requires typed bindings",
-                                                "vm backend requires typed bindings")) {
+                                                std::string(NativeArrayLiteralUnsupportedMessage),
+                                                std::string(VmArrayLiteralUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 2);
@@ -481,8 +481,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend requires typed bindings",
-                                                "vm backend requires typed bindings")) {
+                                                std::string(NativeArrayLiteralUnsupportedMessage),
+                                                std::string(VmArrayLiteralUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 2);
@@ -535,8 +535,8 @@ main() {
                                                 runVmCmd,
                                                 compileNativeCmd,
                                                 nativePath,
-                                                "native backend requires typed bindings",
-                                                "vm backend requires typed bindings")) {
+                                                std::string(NativeArrayLiteralUnsupportedMessage),
+                                                std::string(VmArrayLiteralUnsupportedMessage))) {
     return;
   }
   CHECK(runCommand(exePath) == 2);

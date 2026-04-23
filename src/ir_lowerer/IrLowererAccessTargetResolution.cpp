@@ -35,7 +35,7 @@ std::string inferExperimentalSoaVectorStructPathFromTypeName(
   if (!normalizedArg.empty() && normalizedArg.front() == '/') {
     normalizedArg.erase(normalizedArg.begin());
   }
-  return "/std/collections/experimental_soa_vector/SoaVector__" + normalizedArg;
+  return specializedExperimentalSoaVectorStructPathForElementType(normalizedArg);
 }
 
 bool hasInferredTypedWrappedMap(const LocalInfo &localInfo, LocalInfo::Kind kind) {

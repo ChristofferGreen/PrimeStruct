@@ -585,4 +585,27 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib-owned definitions keep direct file helper imports visible") {
+  const std::string source = R"(
+import /std/file/*
+
+namespace std {
+  namespace demo {
+  [public return<bool>]
+  is_done([FileError] err) {
+    return(fileErrorIsEof(err))
+  }
+  }
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_SUITE_END();

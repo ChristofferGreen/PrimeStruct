@@ -73,7 +73,8 @@ const Definition *resolveMethodDefinitionFromReceiverTarget(
            normalized == "std/collections/vector" || normalized.rfind("std/collections/vector<", 0) == 0 ||
            normalized == "Vector" || normalized.rfind("Vector<", 0) == 0 ||
            normalized == "std/collections/experimental_vector/Vector" ||
-           normalized.rfind("std/collections/experimental_vector/Vector<", 0) == 0;
+           normalized.rfind("std/collections/experimental_vector/Vector<", 0) == 0 ||
+           normalized.rfind("std/collections/experimental_vector/Vector__", 0) == 0;
   };
   auto isRawBuiltinSoaVectorReceiverTarget = [&](const std::string &candidate) {
     const std::string normalized = stripReceiverPrefix(candidate);

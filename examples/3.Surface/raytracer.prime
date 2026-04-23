@@ -139,7 +139,7 @@ hit_sphere([Vec3] center, [f32] radius, [Vec3] origin, [Vec3] dir) {
   if(disc < 0.0) {
     return(-1.0)
   } else {
-    [f32] sqrtDisc{sqrt(disc)}
+    [f32] sqrtDisc{/sqrt(disc)}
     [f32] invDenom{1.0 / (2.0 * a)}
     [f32] t0{(-b - sqrtDisc) * invDenom}
     [f32] t1{(-b + sqrtDisc) * invDenom}
@@ -340,7 +340,7 @@ refract_dir([Vec3] dir, [Vec3] normal, [f32] ior) {
     return(dir.reflect(nn))
   } else {
     [Vec3] t1{dir.mulScalar(eta)}
-    [Vec3] t2{nn.mulScalar(eta * cosi - sqrt(k))}
+    [Vec3] t2{nn.mulScalar(eta * cosi - /sqrt(k))}
     return(Vec3(t1.x + t2.x, t1.y + t2.y, t1.z + t2.z))
   }
 }

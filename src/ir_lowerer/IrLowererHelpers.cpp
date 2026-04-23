@@ -1,5 +1,8 @@
 #include "IrLowererHelpers.h"
 
+#include <cctype>
+#include <sstream>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -85,6 +88,62 @@ std::string vectorPushAllocationFailedMessage() {
 
 std::string vectorReserveAllocationFailedMessage() {
   return "vector reserve allocation failed (out of memory)";
+}
+
+std::string specializedExperimentalVectorStructPathForElementType(
+    const std::string &elementTypeText) {
+  std::string normalized = elementTypeText;
+  while (!normalized.empty() &&
+         std::isspace(static_cast<unsigned char>(normalized.front()))) {
+    normalized.erase(normalized.begin());
+  }
+  while (!normalized.empty() &&
+         std::isspace(static_cast<unsigned char>(normalized.back()))) {
+    normalized.pop_back();
+  }
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : normalized) {
+    if (std::isspace(ch)) {
+      continue;
+    }
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_vector/Vector__t"
+                  << std::hex << hash;
+  return specializedPath.str();
+}
+
+std::string specializedExperimentalSoaVectorStructPathForElementType(
+    const std::string &elementTypeText) {
+  std::string normalized = elementTypeText;
+  while (!normalized.empty() &&
+         std::isspace(static_cast<unsigned char>(normalized.front()))) {
+    normalized.erase(normalized.begin());
+  }
+  while (!normalized.empty() &&
+         std::isspace(static_cast<unsigned char>(normalized.back()))) {
+    normalized.pop_back();
+  }
+  if (!normalized.empty() && normalized.front() == '/') {
+    normalized.erase(normalized.begin());
+  }
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char ch : normalized) {
+    if (std::isspace(ch)) {
+      continue;
+    }
+    hash ^= static_cast<uint64_t>(ch);
+    hash *= 1099511628211ULL;
+  }
+  std::ostringstream specializedPath;
+  specializedPath << "/std/collections/experimental_soa_vector/SoaVector__t"
+                  << std::hex << hash;
+  return specializedPath.str();
 }
 
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch) {

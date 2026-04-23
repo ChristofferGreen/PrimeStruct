@@ -719,11 +719,43 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         return resolvePointerTargetType(expr.args[0], targetOut);
       }
       auto resolveImplicitSoaRefTargetType = [&](std::string &targetOut) -> bool {
+        if (expr.args.size() != 2) {
+          return false;
+        }
         const std::string normalizedName =
             !expr.name.empty() && expr.name.front() == '/'
                 ? expr.name.substr(1)
                 : expr.name;
-        if (!expr.isMethodCall || normalizedName != "ref" || expr.args.empty()) {
+        std::string resolvedPath = preferredCollectionHelperResolvedPath(expr);
+        if (resolvedPath.empty()) {
+          resolvedPath = resolveCalleePath(expr);
+        }
+        if (const std::string concreteResolvedPath =
+                resolveExprConcreteCallPath(params, locals, expr, resolvedPath);
+            !concreteResolvedPath.empty()) {
+          resolvedPath = concreteResolvedPath;
+        }
+        const std::string resolvedPathCanonical =
+            canonicalizeLegacySoaRefHelperPath(resolvedPath);
+        const bool resolvedCanonicalRefLike =
+            isCanonicalSoaRefLikeHelperPath(resolvedPathCanonical);
+        const bool resolvedExperimentalRefLike =
+            isExperimentalSoaRefLikeHelperPath(resolvedPathCanonical);
+        const auto soaAccessHelper = builtinSoaAccessHelperName(expr, params, locals);
+        const bool helperResolvedRefLike =
+            soaAccessHelper.has_value() &&
+            (*soaAccessHelper == "ref" || *soaAccessHelper == "ref_ref");
+        const bool isMethodRefLike =
+            expr.isMethodCall &&
+            (normalizedName == "ref" || normalizedName == "ref_ref" ||
+             helperResolvedRefLike || resolvedCanonicalRefLike ||
+             resolvedExperimentalRefLike);
+        const bool isHelperRefLike =
+            !expr.isMethodCall &&
+            (isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref") ||
+             helperResolvedRefLike || resolvedCanonicalRefLike ||
+             resolvedExperimentalRefLike);
+        if (!isMethodRefLike && !isHelperRefLike) {
           return false;
         }
         std::string elemType;
@@ -739,7 +771,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         }
         BindingInfo receiverBinding;
         std::string receiverTypeText;
-        if (!inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
+        if (!resolvePointerTargetType(receiver, receiverTypeText) &&
+            !inferQueryExprTypeText(receiver, params, locals, receiverTypeText)) {
           return false;
         }
         std::string base;

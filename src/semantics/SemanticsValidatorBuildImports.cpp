@@ -3,6 +3,7 @@
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <unordered_set>
 
@@ -77,6 +78,8 @@ const StdlibSurfaceMetadata *findStdlibSurfaceWildcardAliasMetadata(const std::s
 } // namespace
 
 bool SemanticsValidator::buildImportAliases() {
+  directImportAliases_.clear();
+  transitiveImportAliases_.clear();
   importAliases_.clear();
   std::vector<SemanticDiagnosticRecord> importDiagnosticRecords;
   const bool collectImportDiagnostics = shouldCollectStructuredDiagnostics();
@@ -151,7 +154,9 @@ bool SemanticsValidator::buildImportAliases() {
     return false;
   };
 
-  auto registerStdlibSurfaceWildcardAliases = [&](const std::string &prefix) {
+  auto registerStdlibSurfaceWildcardAliases =
+      [&](const std::string &prefix,
+          std::unordered_map<std::string, std::string> &targetAliases) {
     for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
       if (metadata.canonicalImportRoot != prefix) {
         continue;
@@ -165,32 +170,30 @@ bool SemanticsValidator::buildImportAliases() {
         if (preferred != &metadata) {
           continue;
         }
-        importAliases_[std::string(spelling)] = std::string(preferred->canonicalPath);
+        const std::string aliasName(spelling);
+        const std::string aliasPath(preferred->canonicalPath);
+        targetAliases[aliasName] = aliasPath;
+        importAliases_[aliasName] = aliasPath;
       }
     }
   };
-
-  auto registerCanonicalSoaVectorWildcardAliases = [&](const std::string &prefix) {
-    if (prefix != "/std/collections/soa_vector") {
-      return false;
-    }
-    static constexpr std::array<std::pair<std::string_view, std::string_view>, 10> aliases = {{
-        {"count", "/std/collections/soa_vector/count"},
-        {"count_ref", "/std/collections/soa_vector/count_ref"},
-        {"get", "/std/collections/soa_vector/get"},
-        {"get_ref", "/std/collections/soa_vector/get_ref"},
-        {"ref", "/std/collections/soa_vector/ref"},
-        {"ref_ref", "/std/collections/soa_vector/ref_ref"},
-        {"reserve", "/std/collections/soa_vector/reserve"},
-        {"push", "/std/collections/soa_vector/push"},
-        {"to_aos", "/std/collections/soa_vector/to_aos"},
-        {"to_aos_ref", "/std/collections/soa_vector/to_aos_ref"},
-    }};
-    for (const auto &[name, path] : aliases) {
-      importAliases_[std::string(name)] = std::string(path);
-    }
-    return true;
-  };
+  auto registerCanonicalSoaVectorWildcardAliases =
+      [&](const std::string &prefix, std::unordered_map<std::string, std::string> &targetAliases) {
+        if (prefix != "/std/collections/soa_vector") {
+          return false;
+        }
+        bool sawAlias = false;
+        static const std::array<std::string_view, 10> kHelpers = {
+            "count", "get", "ref", "count_ref", "get_ref",
+            "ref_ref", "reserve", "push", "to_aos", "to_aos_ref"};
+        for (const std::string_view helperName : kHelpers) {
+          const std::string path = prefix + "/" + std::string(helperName);
+          targetAliases[std::string(helperName)] = path;
+          importAliases_[std::string(helperName)] = path;
+          sawAlias = true;
+        }
+        return sawAlias;
+      };
 
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
@@ -216,12 +219,11 @@ bool SemanticsValidator::buildImportAliases() {
       prefix = importPath;
     }
     if (isWildcard) {
-      registerStdlibSurfaceWildcardAliases(prefix);
-      if (registerCanonicalSoaVectorWildcardAliases(prefix)) {
-        continue;
-      }
+      registerStdlibSurfaceWildcardAliases(prefix, directImportAliases_);
+      bool sawCanonicalSoaVectorWildcardAliases =
+          registerCanonicalSoaVectorWildcardAliases(prefix, directImportAliases_);
       const std::string scopedPrefix = prefix + "/";
-      bool sawImmediateDefinition = false;
+      bool sawImmediateDefinition = sawCanonicalSoaVectorWildcardAliases;
       bool importError = false;
       std::vector<std::string> matchingPaths;
       matchingPaths.reserve(defMap_.size());
@@ -272,7 +274,7 @@ bool SemanticsValidator::buildImportAliases() {
           importError = true;
           break;
         }
-        auto [it, inserted] = importAliases_.emplace(remainder, path);
+        auto [it, inserted] = directImportAliases_.emplace(remainder, path);
         if (!inserted && it->second != path) {
           if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
@@ -280,6 +282,7 @@ bool SemanticsValidator::buildImportAliases() {
           importError = true;
           break;
         }
+        importAliases_.emplace(remainder, path);
       }
       if (importError) {
         continue;
@@ -306,12 +309,13 @@ bool SemanticsValidator::buildImportAliases() {
     if (findStdlibSurfaceImportAliasMetadata(importPath) != nullptr &&
         defMap_.find(aliasTargetPath) == defMap_.end()) {
       const std::string aliasName = importPath.substr(importPath.find_last_of('/') + 1);
-      auto [it, inserted] = importAliases_.emplace(aliasName, aliasTargetPath);
+      auto [it, inserted] = directImportAliases_.emplace(aliasName, aliasTargetPath);
       if (!inserted && it->second != aliasTargetPath) {
         if (!addImportDiagnostic("import creates name conflict: " + aliasName)) {
           return false;
         }
       }
+      importAliases_.emplace(aliasName, aliasTargetPath);
       continue;
     }
     auto defIt = defMap_.find(aliasTargetPath);
@@ -353,13 +357,14 @@ bool SemanticsValidator::buildImportAliases() {
       }
       continue;
     }
-    auto [it, inserted] = importAliases_.emplace(remainder, aliasTargetPath);
+    auto [it, inserted] = directImportAliases_.emplace(remainder, aliasTargetPath);
     if (!inserted && it->second != aliasTargetPath) {
       if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
         return false;
       }
       continue;
     }
+    importAliases_.emplace(remainder, aliasTargetPath);
   }
 
   if (!program_.sourceImports.empty()) {
@@ -378,7 +383,8 @@ bool SemanticsValidator::buildImportAliases() {
         prefix = importPath;
       }
       if (isWildcard) {
-        registerStdlibSurfaceWildcardAliases(prefix);
+        registerStdlibSurfaceWildcardAliases(prefix, transitiveImportAliases_);
+        registerCanonicalSoaVectorWildcardAliases(prefix, transitiveImportAliases_);
         const std::string scopedPrefix = prefix + "/";
         std::vector<std::string> matchingPaths;
         matchingPaths.reserve(defMap_.size());
@@ -404,6 +410,7 @@ bool SemanticsValidator::buildImportAliases() {
           if (defMap_.find(rootPath) != defMap_.end()) {
             continue;
           }
+          transitiveImportAliases_.emplace(remainder, path);
           importAliases_.emplace(remainder, path);
         }
         return;
@@ -415,6 +422,7 @@ bool SemanticsValidator::buildImportAliases() {
         if (!remainder.empty()) {
           const std::string rootPath = "/" + remainder;
           if (defMap_.find(rootPath) == defMap_.end()) {
+            transitiveImportAliases_.emplace(remainder, aliasTargetPath);
             importAliases_.emplace(remainder, aliasTargetPath);
           }
         }
@@ -433,6 +441,7 @@ bool SemanticsValidator::buildImportAliases() {
       if (defMap_.find(rootPath) != defMap_.end()) {
         return;
       }
+      transitiveImportAliases_.emplace(remainder, aliasTargetPath);
       importAliases_.emplace(remainder, aliasTargetPath);
     };
     for (const auto &importPath : program_.imports) {

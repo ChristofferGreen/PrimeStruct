@@ -241,7 +241,7 @@ bool SemanticsValidator::resolveReflectedStructEqualityHelperPath(
     if (transform.name != "generate") {
       continue;
     }
-    for (const std::string &arg : transform.args) {
+    for (const std::string &arg : transform.arguments) {
       if (arg == "Equal") {
         hasGeneratedEqual = true;
         break;

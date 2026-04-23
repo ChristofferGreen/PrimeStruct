@@ -97,6 +97,10 @@ inline void checkWasmWasiRuntimeInDir(const std::filesystem::path &tempRoot,
 
 inline constexpr std::string_view IrResultOkUnsupportedMessage =
     "IR backends only support Result.ok with supported payload values";
+inline constexpr std::string_view NativeArrayLiteralUnsupportedMessage =
+    "native backend only supports numeric/bool/string array literals";
+inline constexpr std::string_view VmArrayLiteralUnsupportedMessage =
+    "vm backend only supports numeric/bool/string array literals";
 
 inline bool compileAcrossBackendsOrExpectUnsupported(const std::string &nameStem,
                                                      const std::string &compileExeCmd,

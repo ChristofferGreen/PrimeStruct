@@ -876,7 +876,38 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return false;
     }
+    auto matchesResolvedFamilyPath = [&](std::string_view candidate,
+                                        std::string_view familyPath) {
+      const std::string templatedPrefix = std::string(familyPath) + "<";
+      const std::string specializedPrefix = std::string(familyPath) + "__t";
+      const std::string overloadPrefix = std::string(familyPath) + "__ov";
+      return candidate == familyPath ||
+             candidate.rfind(templatedPrefix, 0) == 0 ||
+             candidate.rfind(specializedPrefix, 0) == 0 ||
+             candidate.rfind(overloadPrefix, 0) == 0;
+    };
     auto it = defMap_.find(resolved);
+    const Definition *resolvedDefinition =
+        it != defMap_.end() ? it->second : nullptr;
+    if (resolvedDefinition == nullptr && hasDefinitionFamilyPath(resolved)) {
+      for (const auto &def : program_.definitions) {
+        if (matchesResolvedFamilyPath(def.fullPath, resolved)) {
+          resolvedDefinition = &def;
+          break;
+        }
+      }
+    }
+    auto calleeParamsIt = paramsByDef_.find(resolved);
+    if (calleeParamsIt == paramsByDef_.end() && hasDefinitionFamilyPath(resolved)) {
+      for (auto candidateIt = paramsByDef_.begin();
+           candidateIt != paramsByDef_.end();
+           ++candidateIt) {
+        if (matchesResolvedFamilyPath(candidateIt->first, resolved)) {
+          calleeParamsIt = candidateIt;
+          break;
+        }
+      }
+    }
     ExprLateBuiltinContext lateBuiltinContext;
     prepareExprLateBuiltinContext(
         params,
@@ -918,7 +949,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     const bool shouldLateValidateCanonicalSoaToAosRef =
         resolvedUsesCanonicalSoaNamespace &&
         isCanonicalStdlibSoaHelperPath(resolved, "to_aos_ref");
-    if (it == defMap_.end() || resolvedMethod || shouldLateValidateCanonicalSoaToAos ||
+    if (resolvedDefinition == nullptr || resolvedMethod || shouldLateValidateCanonicalSoaToAos ||
         shouldLateValidateCanonicalSoaToAosRef) {
       ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;
       prepareExprLateMapSoaBuiltinContext(
@@ -1007,7 +1038,11 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         return true;
       }
     }
-    const auto &calleeParams = paramsByDef_[resolved];
+    if (resolvedDefinition == nullptr || calleeParamsIt == paramsByDef_.end()) {
+      return failExprRootDiagnostic("unknown call target: " +
+                                    formatUnknownCallTarget(expr));
+    }
+    const auto &calleeParams = calleeParamsIt->second;
     ExprResolvedCallSetup resolvedCallSetup;
     prepareExprResolvedCallSetup(
         params,
@@ -1015,7 +1050,7 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         expr,
         resolved,
         dispatchBootstrap.dispatchResolvers,
-        *it->second,
+        *resolvedDefinition,
         calleeParams,
         hasMethodReceiverIndex,
         methodReceiverIndex,

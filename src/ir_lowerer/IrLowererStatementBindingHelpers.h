@@ -90,6 +90,7 @@ struct StatementBindingTypeInfo {
   bool referenceToMap = false;
   bool pointerToMap = false;
   bool isSoaVector = false;
+  bool usesBuiltinCollectionLayout = false;
 };
 
 bool resolveSpecializedExperimentalMapTypeKindsForBindingType(

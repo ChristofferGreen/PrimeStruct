@@ -29,6 +29,8 @@ void mergeStatementBindingAuxTypeInfo(const StatementBindingTypeInfo &source,
   dest.referenceToMap = dest.referenceToMap || source.referenceToMap;
   dest.pointerToMap = dest.pointerToMap || source.pointerToMap;
   dest.isSoaVector = dest.isSoaVector || source.isSoaVector;
+  dest.usesBuiltinCollectionLayout =
+      dest.usesBuiltinCollectionLayout || source.usesBuiltinCollectionLayout;
 }
 
 bool isSpecializedExperimentalMapTypeText(const std::string &typeText) {
@@ -234,7 +236,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeTe
       normalizedArg.erase(normalizedArg.begin());
     }
     structPathOut =
-        "/std/collections/experimental_soa_vector/SoaVector__" + normalizedArg;
+        specializedExperimentalSoaVectorStructPathForElementType(normalizedArg);
     return true;
   }
 }
@@ -247,6 +249,31 @@ bool isIfBlockEnvelopeForBindingTypeInfo(const Expr &candidate) {
     return false;
   }
   return candidate.hasBodyArguments || !candidate.bodyArguments.empty();
+}
+
+bool tryResolveCanonicalStructTypePath(
+    const std::string &typeText,
+    const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    std::string &structPathOut) {
+  structPathOut.clear();
+  if (!resolveDefinitionCall) {
+    return false;
+  }
+
+  Expr syntheticExpr;
+  syntheticExpr.kind = Expr::Kind::Call;
+  syntheticExpr.name = trimTemplateTypeText(typeText);
+  if (syntheticExpr.name.empty()) {
+    return false;
+  }
+
+  const Definition *definition = resolveDefinitionCall(syntheticExpr);
+  if (definition == nullptr || !isStructDefinition(*definition)) {
+    return false;
+  }
+
+  structPathOut = definition->fullPath;
+  return !structPathOut.empty();
 }
 
 bool shouldDeferSurfaceStructTypeName(const StatementBindingTypeInfo &info) {
@@ -298,6 +325,18 @@ bool populateBindingTypeInfoFromTypeText(
     infoOut.isSoaVector = true;
     return true;
   }
+  if (isSpecializedExperimentalVectorTypeText(normalizedTypeText)) {
+    infoOut.kind = LocalInfo::Kind::Vector;
+    infoOut.structTypeName = normalizedTypeText;
+    infoOut.valueKind = LocalInfo::ValueKind::Unknown;
+    LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+    if (resolveSpecializedExperimentalVectorElementKind(normalizedTypeText,
+                                                        resolveDefinitionCall,
+                                                        elementKind)) {
+      infoOut.valueKind = elementKind;
+    }
+    return true;
+  }
 
   std::string base;
   std::string argText;
@@ -312,7 +351,11 @@ bool populateBindingTypeInfoFromTypeText(
     }
     infoOut.kind = LocalInfo::Kind::Value;
     infoOut.valueKind = LocalInfo::ValueKind::Unknown;
-    infoOut.structTypeName = normalizedTypeText;
+    if (!tryResolveCanonicalStructTypePath(normalizedTypeText,
+                                           resolveDefinitionCall,
+                                           infoOut.structTypeName)) {
+      infoOut.structTypeName = normalizedTypeText;
+    }
     return true;
   }
 
@@ -328,8 +371,10 @@ bool populateBindingTypeInfoFromTypeText(
                                                         infoOut.structTypeName);
     } else {
       infoOut.structTypeName =
-          infoOut.valueKind == LocalInfo::ValueKind::Unknown ? elementType
-                                                             : std::string{};
+          infoOut.valueKind == LocalInfo::ValueKind::Unknown
+              ? specializedExperimentalVectorStructPathForElementType(
+                    elementType)
+              : std::string{};
     }
     return true;
   }
@@ -350,6 +395,22 @@ bool populateBindingTypeInfoFromTypeText(
         normalizedBase == "Pointer" ? LocalInfo::Kind::Pointer : LocalInfo::Kind::Reference;
     const std::string targetType =
         unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(argText));
+    if (isSpecializedExperimentalVectorTypeText(targetType)) {
+      if (infoOut.kind == LocalInfo::Kind::Reference) {
+        infoOut.referenceToVector = true;
+      } else {
+        infoOut.pointerToVector = true;
+      }
+      infoOut.structTypeName = trimTemplateTypeText(targetType);
+      LocalInfo::ValueKind elementKind = LocalInfo::ValueKind::Unknown;
+      infoOut.valueKind = LocalInfo::ValueKind::Unknown;
+      if (resolveSpecializedExperimentalVectorElementKind(targetType,
+                                                          resolveDefinitionCall,
+                                                          elementKind)) {
+        infoOut.valueKind = elementKind;
+      }
+      return true;
+    }
     if (isSpecializedExperimentalSoaVectorStructPathText(targetType)) {
       if (infoOut.kind == LocalInfo::Kind::Reference) {
         infoOut.referenceToVector = true;
@@ -387,7 +448,8 @@ bool populateBindingTypeInfoFromTypeText(
         const std::string elementType = trimTemplateTypeText(targetArgText);
         infoOut.valueKind = valueKindFromTypeName(elementType);
         if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {
-          infoOut.structTypeName = elementType;
+          infoOut.structTypeName =
+              specializedExperimentalVectorStructPathForElementType(elementType);
         }
         return true;
       }
@@ -429,11 +491,28 @@ bool populateBindingTypeInfoFromTypeText(
         infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(targetArgText));
         return true;
       }
+      if (normalizedTargetBase == "Result") {
+        bool resultHasValue = false;
+        LocalInfo::ValueKind resultValueKind = LocalInfo::ValueKind::Unknown;
+        std::string resultErrorType;
+        if (parseResultTypeName(targetType, resultHasValue, resultValueKind, resultErrorType)) {
+          infoOut.valueKind =
+              resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
+          infoOut.structTypeName.clear();
+          return true;
+        }
+      }
     }
     infoOut.valueKind = valueKindFromTypeName(targetType);
-    infoOut.structTypeName =
-        infoOut.valueKind == LocalInfo::ValueKind::Unknown ? targetType
-                                                           : std::string{};
+    if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {
+      if (!tryResolveCanonicalStructTypePath(targetType,
+                                             resolveDefinitionCall,
+                                             infoOut.structTypeName)) {
+        infoOut.structTypeName = targetType;
+      }
+    } else {
+      infoOut.structTypeName.clear();
+    }
     if (resolveSpecializedExperimentalSoaVectorStructPath(targetType,
                                                           infoOut.structTypeName)) {
       infoOut.valueKind = LocalInfo::ValueKind::Unknown;
@@ -478,7 +557,11 @@ bool populateBindingTypeInfoFromTypeText(
 
   infoOut.kind = LocalInfo::Kind::Value;
   infoOut.valueKind = LocalInfo::ValueKind::Unknown;
-  infoOut.structTypeName = normalizedTypeText;
+  if (!tryResolveCanonicalStructTypePath(normalizedTypeText,
+                                         resolveDefinitionCall,
+                                         infoOut.structTypeName)) {
+    infoOut.structTypeName = normalizedTypeText;
+  }
   return true;
 }
 
@@ -523,6 +606,7 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     infoOut.referenceToMap = it->second.referenceToMap;
     infoOut.pointerToMap = it->second.pointerToMap;
     infoOut.isSoaVector = it->second.isSoaVector;
+    infoOut.usesBuiltinCollectionLayout = it->second.usesBuiltinCollectionLayout;
     return true;
   }
   if (expr.kind == Expr::Kind::Literal) {
@@ -598,6 +682,7 @@ bool inferExprBindingTypeInfo(const Expr &expr,
     if ((collection == "array" || collection == "vector" || collection == "soa_vector") &&
         expr.templateArgs.size() == 1) {
       infoOut.kind = collection == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
+      infoOut.usesBuiltinCollectionLayout = (collection == "soa_vector");
       const std::string elementType = trimTemplateTypeText(expr.templateArgs.front());
       infoOut.valueKind = valueKindFromTypeName(elementType);
       if (collection == "soa_vector") {
@@ -605,8 +690,10 @@ bool inferExprBindingTypeInfo(const Expr &expr,
             expr.name + "<" + elementType + ">", infoOut.structTypeName);
       } else {
         infoOut.structTypeName =
-            infoOut.valueKind == LocalInfo::ValueKind::Unknown ? elementType
-                                                               : std::string{};
+            infoOut.valueKind == LocalInfo::ValueKind::Unknown
+                ? specializedExperimentalVectorStructPathForElementType(
+                      elementType)
+                : std::string{};
       }
       return true;
     }
@@ -695,6 +782,7 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
                             : ResolveDefinitionCallForStatementFn([](const Expr &) { return nullptr; });
   StatementBindingTypeInfo info;
   info.kind = bindingKind(stmt);
+  info.usesBuiltinCollectionLayout = exprUsesRawBuiltinSoaVectorLayout(stmt);
   const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
   auto isRawStructBufferInit = [&](const Expr &candidate) {
     if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall || candidate.isBinding) {
@@ -762,6 +850,8 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
       if (info.structTypeName.empty()) {
         info.structTypeName = inferredExprInfo.structTypeName;
       }
+      info.usesBuiltinCollectionLayout =
+          info.usesBuiltinCollectionLayout || inferredExprInfo.usesBuiltinCollectionLayout;
       mergeStatementBindingAuxTypeInfo(inferredExprInfo, info);
     }
   }
@@ -974,6 +1064,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  const SemanticProductIndex *semanticIndex) {
   infoOut.isMutable = isBindingMutable(param);
   infoOut.isSoaVector = hasSoaVectorTypeTransform(param);
+  infoOut.usesBuiltinCollectionLayout = exprUsesRawBuiltinSoaVectorLayout(param);
   infoOut.isArgsPack = isArgsPackBinding(param);
   infoOut.kind = bindingKind(param);
   if (hasExplicitBindingTypeTransform(param)) {
@@ -1019,6 +1110,27 @@ bool inferCallParameterLocalInfo(const Expr &param,
     }
   } else {
     infoOut.valueKind = bindingValueKind(param, infoOut.kind);
+  }
+
+  StatementBindingTypeInfo semanticBindingTypeInfo;
+  if (populateBindingTypeInfoFromSemanticBindingFact(
+          param, resolveDefinitionCall, semanticIndex, semanticBindingTypeInfo)) {
+    infoOut.kind = semanticBindingTypeInfo.kind;
+    infoOut.valueKind = semanticBindingTypeInfo.valueKind;
+    infoOut.mapKeyKind = semanticBindingTypeInfo.mapKeyKind;
+    infoOut.mapValueKind = semanticBindingTypeInfo.mapValueKind;
+    infoOut.structTypeName = semanticBindingTypeInfo.structTypeName;
+    infoOut.referenceToArray = semanticBindingTypeInfo.referenceToArray;
+    infoOut.pointerToArray = semanticBindingTypeInfo.pointerToArray;
+    infoOut.referenceToVector = semanticBindingTypeInfo.referenceToVector;
+    infoOut.pointerToVector = semanticBindingTypeInfo.pointerToVector;
+    infoOut.referenceToBuffer = semanticBindingTypeInfo.referenceToBuffer;
+    infoOut.pointerToBuffer = semanticBindingTypeInfo.pointerToBuffer;
+    infoOut.referenceToMap = semanticBindingTypeInfo.referenceToMap;
+    infoOut.pointerToMap = semanticBindingTypeInfo.pointerToMap;
+    infoOut.isSoaVector = semanticBindingTypeInfo.isSoaVector;
+    infoOut.usesBuiltinCollectionLayout =
+        semanticBindingTypeInfo.usesBuiltinCollectionLayout;
   }
 
   if (infoOut.kind == LocalInfo::Kind::Map) {
@@ -1108,7 +1220,8 @@ bool inferCallParameterLocalInfo(const Expr &param,
         const std::string elementType = trimTemplateTypeText(wrappedArg);
         infoOut.valueKind = valueKindFromTypeName(elementType);
         if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && infoOut.structTypeName.empty()) {
-          infoOut.structTypeName = elementType;
+          infoOut.structTypeName =
+              specializedExperimentalVectorStructPathForElementType(elementType);
         }
       }
       if (transform.name == "Pointer" &&
@@ -1119,7 +1232,9 @@ bool inferCallParameterLocalInfo(const Expr &param,
         const std::string elementType = trimTemplateTypeText(wrappedArg);
         infoOut.valueKind = valueKindFromTypeName(elementType);
         if (infoOut.valueKind == LocalInfo::ValueKind::Unknown && infoOut.structTypeName.empty()) {
-          infoOut.structTypeName = elementType;
+          infoOut.structTypeName =
+              specializedExperimentalSoaVectorStructPathForElementType(
+                  elementType);
         }
       }
       if (transform.name == "Pointer" &&
@@ -1250,8 +1365,12 @@ bool inferCallParameterLocalInfo(const Expr &param,
   }
   if ((infoOut.kind == LocalInfo::Kind::Reference || infoOut.kind == LocalInfo::Kind::Pointer) &&
       (infoOut.referenceToVector || infoOut.pointerToVector)) {
-    if (!(infoOut.isSoaVector &&
-          isSpecializedExperimentalSoaVectorStructPathText(infoOut.structTypeName))) {
+    const bool preserveSpecializedCollectionStruct =
+        (infoOut.isSoaVector &&
+         isSpecializedExperimentalSoaVectorStructPathText(infoOut.structTypeName)) ||
+        (!infoOut.isSoaVector &&
+         isSpecializedExperimentalVectorTypeText(infoOut.structTypeName));
+    if (!preserveSpecializedCollectionStruct) {
       infoOut.structTypeName = infoOut.isSoaVector ? "/soa_vector" : "/vector";
     }
   }

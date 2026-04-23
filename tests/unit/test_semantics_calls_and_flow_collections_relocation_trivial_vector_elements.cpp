@@ -155,6 +155,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical vector pop method routes experimental vector receivers onto experimental helpers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_vector/*
+
+[struct]
+Owned() {
+  [i32 mut] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, other.value)
+    assign(other.value, 0i32)
+  }
+}
+
+[effects(heap_alloc), return<Vector<Owned>>]
+wrapValues() {
+  return(vectorPair<Owned>(Owned(10i32), Owned(20i32)))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<Owned> mut] values{wrapValues()}
+  values.pop()
+  return(/std/collections/vector/count<Owned>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical vector indexed removal helpers accept ownership-sensitive explicit Vector bindings") {
   const std::string source = R"(
 import /std/collections/*

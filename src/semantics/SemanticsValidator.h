@@ -507,6 +507,8 @@ private:
   std::unordered_set<std::string> returnBindingInferenceStack_;
   std::unordered_set<std::string> queryTypeInferenceDefinitionStack_;
   std::unordered_set<const Expr *> queryTypeInferenceExprStack_;
+  std::unordered_map<std::string, std::string> directImportAliases_;
+  std::unordered_map<std::string, std::string> transitiveImportAliases_;
   std::unordered_map<std::string, std::string> importAliases_;
   bool queryFactSnapshotCacheValid_ = false;
   std::vector<QueryFactSnapshotEntry> queryFactSnapshotCache_;

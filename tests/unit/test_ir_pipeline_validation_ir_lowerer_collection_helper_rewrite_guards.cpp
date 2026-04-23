@@ -139,6 +139,53 @@ TEST_CASE("ir lowerer late collection constructor guards use published construct
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer temp receiver method access skips builtin array lowering") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path lowerStatementsExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+
+  REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
+  const std::string source = readText(lowerStatementsExprPath);
+
+  CHECK(source.find("const bool isMethodCallTempReceiver =") !=
+        std::string::npos);
+  CHECK(source.find("expr.args.front().kind == Expr::Kind::Call") !=
+        std::string::npos);
+  CHECK(source.find("(accessName == \"at\" || accessName == \"at_unsafe\")") !=
+        std::string::npos);
+  CHECK(source.find("bool tempReceiverSupportsBuiltinAccess = false;") !=
+        std::string::npos);
+  CHECK(source.find("resolveHelperReturnedArrayVectorAccessTargetInfo(") !=
+        std::string::npos);
+  CHECK(source.find("if (isMethodCallTempReceiver && !tempReceiverSupportsBuiltinAccess)") !=
+        std::string::npos);
+  CHECK(source.find(
+            "Let normal helper lowering handle method calls on constructor- or\n"
+            "            // helper-backed temporaries instead of forcing builtin raw access.") !=
+        std::string::npos);
+  CHECK(source.find("if (expr.isMethodCall) {") != std::string::npos);
+  CHECK(source.find("const Definition *methodCallee =\n"
+                    "                  resolveMethodCallDefinition(expr, localsIn);") !=
+        std::string::npos);
+  CHECK(source.find("methodCallee = findDirectHelperDefinition(resolveExprPath(expr));") !=
+        std::string::npos);
+  CHECK(source.find("emitInlineDefinitionCall(expr, *methodCallee, localsIn, true)") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before resolving defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
@@ -245,6 +292,19 @@ TEST_CASE("ir lowerer constructor metadata helpers retire duplicated constructor
             "isPublishedStdlibSurfaceConstructorExpr(") !=
         std::string::npos);
   CHECK(declaredInferenceSource.find("isSimpleCallName(candidate, \"mapSingle\")") ==
+        std::string::npos);
+  CHECK(declaredInferenceSource.find(
+            "std::function<bool(const std::string &)> inferCollectionFromNamedValue;") !=
+        std::string::npos);
+  CHECK(declaredInferenceSource.find(
+            "if (candidate.kind == Expr::Kind::Name &&\n"
+            "        inferCollectionFromNamedValue(candidate.name)) {") !=
+        std::string::npos);
+  CHECK(declaredInferenceSource.find(
+            "if (isDirectVectorConstructor() && !candidate.args.empty()) {") !=
+        std::string::npos);
+  CHECK(declaredInferenceSource.find(
+            "return inferCollectionFromType(trimTemplateTypeText(declaredType),") !=
         std::string::npos);
 }
 

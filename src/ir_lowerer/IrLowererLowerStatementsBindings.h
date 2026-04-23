@@ -386,6 +386,7 @@
       info.referenceToMap = bindingTypeInfo.referenceToMap;
       info.pointerToMap = bindingTypeInfo.pointerToMap;
       info.isSoaVector = bindingTypeInfo.isSoaVector;
+      info.usesBuiltinCollectionLayout = bindingTypeInfo.usesBuiltinCollectionLayout;
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"

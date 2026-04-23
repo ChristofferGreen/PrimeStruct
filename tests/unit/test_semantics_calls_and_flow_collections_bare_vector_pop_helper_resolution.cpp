@@ -144,6 +144,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("direct experimental vector constructor binds as Vector under wildcard import") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Vector<i32>] values{vector<i32>(2i32, 4i32, 6i32)}
+  return(vectorCount<i32>(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("direct experimental vector constructor keeps temporary receiver inference") {
+  const std::string source = R"(
+import /std/collections/experimental_vector/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(vectorCount<i32>(vector<i32>(2i32, 4i32, 6i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("clear call keeps user-defined vector helper precedence") {
   const std::string source = R"(
 import /std/collections/*

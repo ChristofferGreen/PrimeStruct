@@ -279,6 +279,39 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     return rewriteCanonicalCollectionHelperPath(resolvedPath);
   };
 
+  auto isStdlibOwnedPath = [](const std::string &path) {
+    if (path.rfind("/std/", 0) == 0) {
+      return true;
+    }
+    if (path.size() <= 1 || path.front() != '/') {
+      return false;
+    }
+    const size_t nextSlash = path.find('/', 1);
+    const std::string rootName =
+        nextSlash == std::string::npos ? path.substr(1) : path.substr(1, nextSlash - 1);
+    return isRootBuiltinName(rootName) || rootName == "string" || rootName == "Result" ||
+           rootName == "Maybe" || rootName == "Buffer" || rootName == "ImageError" ||
+           rootName == "ContainerError" || rootName == "GfxError";
+  };
+  const bool stdlibScopedOwner =
+      (activeDefinition != nullptr && isStdlibOwnedPath(activeDefinition->fullPath)) ||
+      (activeExecution != nullptr && isStdlibOwnedPath(activeExecution->fullPath));
+  auto lookupScopedImportAlias = [&](std::string_view name) -> const std::string * {
+    const std::string key(name);
+    if (auto it = directImportAliases_.find(key); it != directImportAliases_.end()) {
+      return &it->second;
+    }
+    if (auto it = transitiveImportAliases_.find(key); it != transitiveImportAliases_.end()) {
+      return &it->second;
+    }
+    if (!stdlibScopedOwner) {
+      if (auto it = importAliases_.find(key); it != importAliases_.end()) {
+        return &it->second;
+      }
+    }
+    return nullptr;
+  };
+
   if (expr.name.empty()) {
     return "";
   }
@@ -303,6 +336,7 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
     };
     auto isRemovedMapCompatibilityHelper = [](std::string_view helperName) {
       return helperName == "count" || helperName == "count_ref" ||
+             helperName == "size" ||
              helperName == "contains" || helperName == "contains_ref" ||
              helperName == "tryAt" || helperName == "tryAt_ref" ||
              helperName == "at" || helperName == "at_ref" ||
@@ -337,13 +371,13 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         return preferred;
       }
     }
-    if (suffix == expr.name && defMap_.count(normalizedPrefix) > 0) {
+    if (suffix == expr.name && hasDefinitionFamilyPath(normalizedPrefix)) {
       return normalizedPrefix;
     }
     std::string prefix = normalizedPrefix;
     while (!prefix.empty()) {
       const std::string candidate = joinedPath(prefix, expr.name);
-      if (defMap_.count(candidate) > 0) {
+      if (hasDefinitionFamilyPath(candidate)) {
         return candidate;
       }
       const size_t slash = prefix.find_last_of('/');
@@ -360,24 +394,24 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
         isRemovedMapCompatibilityHelper(expr.name)) {
       return normalizedPrefix + "/" + expr.name;
     }
-    auto it = importAliases_.find(expr.name);
-    if (it != importAliases_.end()) {
-      return rewriteCanonicalCollectionConstructorPath(it->second);
+    if (const std::string *importAlias = lookupScopedImportAlias(expr.name);
+        importAlias != nullptr) {
+      return rewriteCanonicalCollectionConstructorPath(*importAlias);
     }
     const std::string root = rootedPathForName(expr.name);
-    if (defMap_.count(root) > 0) {
+    if (hasDefinitionFamilyPath(root)) {
       return rewriteCanonicalCollectionConstructorPath(root);
     }
     return rewriteCanonicalCollectionConstructorPath(joinedPath(normalizedPrefix, expr.name));
   }
 
   const std::string root = rootedPathForName(expr.name);
-  if (defMap_.count(root) > 0) {
+  if (hasDefinitionFamilyPath(root)) {
     return rewriteCanonicalCollectionConstructorPath(root);
   }
-  auto it = importAliases_.find(expr.name);
-  if (it != importAliases_.end()) {
-    return rewriteCanonicalCollectionConstructorPath(it->second);
+  if (const std::string *importAlias = lookupScopedImportAlias(expr.name);
+      importAlias != nullptr) {
+    return rewriteCanonicalCollectionConstructorPath(*importAlias);
   }
   return rewriteCanonicalCollectionConstructorPath(root);
 }

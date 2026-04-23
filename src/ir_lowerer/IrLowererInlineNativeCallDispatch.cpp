@@ -494,11 +494,12 @@ ResolvedInlineCallResult emitResolvedInlineDefinitionCall(
   return ResolvedInlineCallResult::Emitted;
 }
 
-InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
+InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
     const Expr &expr,
     const std::function<bool(const Expr &)> &isArrayCountCall,
     const std::function<bool(const Expr &)> &isStringCountCall,
     const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &)> &isSoaVectorReceiverExpr,
     const std::function<bool(const Expr &)> &isCollectionAccessReceiverExpr,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
@@ -510,16 +511,18 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<bool(const Expr &)> &isArrayCountCall,
     const std::function<bool(const Expr &)> &isStringCountCall,
     const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &)> &isCollectionAccessReceiverExpr,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
     std::string &error) {
-  return tryEmitInlineCallWithCountFallbacks(
+  return tryEmitInlineCallWithCountFallbacksImpl(
       expr,
       isArrayCountCall,
       isStringCountCall,
       isVectorCapacityCall,
       {},
+      isCollectionAccessReceiverExpr,
       resolveMethodCallDefinition,
       resolveDefinitionCall,
       emitInlineDefinitionCall,
@@ -531,6 +534,29 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     const std::function<bool(const Expr &)> &isArrayCountCall,
     const std::function<bool(const Expr &)> &isStringCountCall,
     const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const Expr &, const Definition &)> &emitInlineDefinitionCall,
+    std::string &error) {
+  return tryEmitInlineCallWithCountFallbacksImpl(
+      expr,
+      isArrayCountCall,
+      isStringCountCall,
+      isVectorCapacityCall,
+      {},
+      {},
+      resolveMethodCallDefinition,
+      resolveDefinitionCall,
+      emitInlineDefinitionCall,
+      error);
+}
+
+InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
+    const Expr &expr,
+    const std::function<bool(const Expr &)> &isArrayCountCall,
+    const std::function<bool(const Expr &)> &isStringCountCall,
+    const std::function<bool(const Expr &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &)> &isSoaVectorReceiverExpr,
     const std::function<bool(const Expr &)> &isCollectionAccessReceiverExpr,
     const std::function<const Definition *(const Expr &)> &resolveMethodCallDefinition,
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
@@ -541,6 +567,33 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacks(
     directCallee = resolveDefinitionCall(expr);
     const std::string directCallPath =
         resolveInlineCallPathWithoutFallbackProbes(expr);
+    const std::string normalizedDirectCallPath =
+        stripGeneratedInlineHelperSuffix(directCallPath);
+    if (directCallee != nullptr &&
+        isSoaVectorReceiverExpr != nullptr &&
+        !expr.args.empty()) {
+      std::string preferredCanonicalPath;
+      if (normalizedDirectCallPath ==
+              "/std/collections/experimental_soa_vector_conversions/soaVectorToAos" &&
+          isSoaVectorReceiverExpr(expr.args.front())) {
+        preferredCanonicalPath = "/std/collections/soa_vector/to_aos";
+      } else if (
+          normalizedDirectCallPath ==
+              "/std/collections/experimental_soa_vector_conversions/soaVectorToAosRef" &&
+          isSoaVectorReceiverExpr(expr.args.front())) {
+        preferredCanonicalPath = "/std/collections/soa_vector/to_aos_ref";
+      }
+      if (!preferredCanonicalPath.empty()) {
+        Expr canonicalExpr = expr;
+        canonicalExpr.isMethodCall = false;
+        canonicalExpr.name = preferredCanonicalPath;
+        canonicalExpr.namespacePrefix.clear();
+        if (const Definition *preferredCallee =
+                resolveDefinitionCall(canonicalExpr)) {
+          directCallee = preferredCallee;
+        }
+      }
+    }
     const bool isExplicitDirectExperimentalMapAccessHelperCall =
         directCallee != nullptr &&
         directCallPath.rfind("/std/collections/experimental_map/map", 0) == 0 &&
@@ -797,11 +850,12 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
     return vectorMutatorCallFormResult;
   }
-  const auto inlineResult = tryEmitInlineCallWithCountFallbacks(
+  const auto inlineResult = tryEmitInlineCallWithCountFallbacksImpl(
       expr,
       [&](const Expr &callExpr) { return isArrayCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isStringCountCallFn(callExpr, localsIn); },
       [&](const Expr &callExpr) { return isVectorCapacityCallFn(callExpr, localsIn); },
+      [&](const Expr &receiverExpr) { return isSoaVectorTarget(receiverExpr, localsIn); },
       [&](const Expr &receiverExpr) {
         if (receiverExpr.kind == Expr::Kind::Name) {
           auto it = localsIn.find(receiverExpr.name);

@@ -14,6 +14,7 @@ bool allowsArrayVectorCompatibilitySuffix(const std::string &suffix) {
 
 bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
   return helperName == "count" || helperName == "count_ref" ||
+         helperName == "size" ||
          helperName == "contains" || helperName == "contains_ref" ||
          helperName == "tryAt" || helperName == "tryAt_ref" ||
          helperName == "at" || helperName == "at_ref" ||

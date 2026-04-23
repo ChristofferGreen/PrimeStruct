@@ -375,6 +375,23 @@ bool rewriteExpr(Expr &expr,
       return extractExperimentalSoaVectorValueReceiverTemplateArgsFromTypeText(
           wrappedArgs.front(), ctx, receiverTemplateArgs);
     };
+    auto definitionReturnsBorrowedExperimentalSoaVector =
+        [&](const Definition &definition) {
+          BindingInfo inferredReturn;
+          if (inferDefinitionReturnBindingForTemplatedFallback(
+                  definition, allowMathBare, ctx, inferredReturn) &&
+              inferFromTypeText(bindingTypeToString(inferredReturn))) {
+            return true;
+          }
+          for (const auto &transform : definition.transforms) {
+            if (transform.name == "return" &&
+                transform.templateArgs.size() == 1 &&
+                inferFromTypeText(transform.templateArgs.front())) {
+              return true;
+            }
+          }
+          return false;
+        };
     BindingInfo receiverInfo;
     if (inferBindingTypeForMonomorph(*receiverExpr, params, locals, allowMathBare, ctx, receiverInfo) &&
         inferFromTypeText(bindingTypeToString(receiverInfo))) {
@@ -412,11 +429,19 @@ bool rewriteExpr(Expr &expr,
         if (defIt == ctx.sourceDefs.end()) {
           continue;
         }
-        BindingInfo inferredReturn;
-        if (inferDefinitionReturnBindingForTemplatedFallback(
-                defIt->second, allowMathBare, ctx, inferredReturn) &&
-            inferFromTypeText(bindingTypeToString(inferredReturn))) {
+        if (definitionReturnsBorrowedExperimentalSoaVector(defIt->second)) {
           return true;
+        }
+      }
+      if (!receiverExpr->name.empty()) {
+        for (const auto &[defPath, definition] : ctx.sourceDefs) {
+          const size_t slash = defPath.find_last_of('/');
+          const std::string leaf =
+              slash == std::string::npos ? defPath : defPath.substr(slash + 1);
+          if (leaf == receiverExpr->name &&
+              definitionReturnsBorrowedExperimentalSoaVector(definition)) {
+            return true;
+          }
         }
       }
     }
@@ -538,6 +563,18 @@ bool rewriteExpr(Expr &expr,
         canonicalizeSoaHelperPath(canonicalizeLegacySoaRefHelperPath(path));
     const std::string canonicalSoaToAosPath =
         canonicalizeLegacySoaToAosHelperPath(path);
+    if (path == "/count" || path == "count") {
+      return std::string("/std/collections/soa_vector/count_ref");
+    }
+    if (path == "/get" || path == "get") {
+      return std::string("/std/collections/soa_vector/get_ref");
+    }
+    if (path == "/ref" || path == "ref") {
+      return std::string("/std/collections/soa_vector/ref_ref");
+    }
+    if (path == "/to_aos" || path == "to_aos") {
+      return std::string("/std/collections/soa_vector/to_aos_ref");
+    }
     if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, "count")) {
       return std::string("/std/collections/soa_vector/count_ref");
     }
@@ -743,6 +780,29 @@ bool rewriteExpr(Expr &expr,
   auto shouldDeferStdlibCollectionHelperTemplateRewrite = [&](const std::string &path) {
     if (!expr.templateArgs.empty() || !isCanonicalStdlibCollectionHelperPath(path)) {
       return false;
+    }
+    const Expr *helperReceiverExpr = mapHelperReceiverExpr(expr);
+    const bool borrowedExperimentalSoaReceiver =
+        resolvesBorrowedExperimentalSoaVectorReceiver(helperReceiverExpr);
+    const bool isCanonicalNonBorrowedSoaHelperPath =
+        path == "/std/collections/soa_vector/count" ||
+        path == "/std/collections/soa_vector/get" ||
+        path == "/std/collections/soa_vector/ref" ||
+        path == "/std/collections/soa_vector/to_aos";
+    if (borrowedExperimentalSoaReceiver &&
+        isCanonicalNonBorrowedSoaHelperPath) {
+      return true;
+    }
+    if (path.rfind("/std/collections/soa_vector/", 0) == 0 &&
+        helperReceiverExpr != nullptr) {
+      const bool directBuiltinSoaReceiver =
+          inferCollectionReceiverFamily(helperReceiverExpr) == "soa_vector";
+      const bool directExperimentalSoaReceiver =
+          resolvesExperimentalSoaVectorReceiver(helperReceiverExpr);
+      if (directBuiltinSoaReceiver || directExperimentalSoaReceiver ||
+          borrowedExperimentalSoaReceiver) {
+        return true;
+      }
     }
     if (hasVisibleStdCollectionsImportForPath(ctx, path) && ctx.templateDefs.count(path) > 0) {
       if (path.rfind("/std/collections/vector/", 0) == 0 &&
@@ -1295,7 +1355,8 @@ bool rewriteExpr(Expr &expr,
       const std::string experimentalSoaVectorMethodPath =
           experimentalSoaVectorHelperPathForCanonicalHelper(methodPath);
       const bool shouldRewriteCanonicalVectorMethodToExperimental =
-          ctx.sourceDefs.count(methodPath) == 0 && ctx.helperOverloads.count(methodPath) == 0 &&
+          !experimentalVectorMethodPath.empty() &&
+          ctx.sourceDefs.count(experimentalVectorMethodPath) > 0 &&
           hasVisibleStdCollectionsImportForPath(ctx, methodPath);
       if (shouldRewriteCanonicalVectorMethodToExperimental &&
           !experimentalVectorMethodPath.empty() &&
