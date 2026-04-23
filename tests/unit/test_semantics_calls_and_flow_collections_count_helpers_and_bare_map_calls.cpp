@@ -330,9 +330,9 @@ main() {
   mapInsert<string, i32>(values, "right"raw_utf8, 7i32)
   [Reference<Map<string, i32>> mut] ref{location(values)}
   mapInsertRef<string, i32>(ref, "third"raw_utf8, 11i32)
-  [i32] found{try(mapTryAtRef<string, i32>(ref, "left"raw_utf8))}
+  [Result<i32, ContainerError>] found{mapTryAtRef<string, i32>(ref, "left"raw_utf8)}
   [Result<i32, ContainerError>] missing{mapTryAtRef<string, i32>(ref, "missing"raw_utf8)}
-  [i32 mut] total{plus(mapCountRef<string, i32>(ref), found)}
+  [i32 mut] total{mapCountRef<string, i32>(ref)}
   assign(total, plus(total, mapAtRef<string, i32>(ref, "right"raw_utf8)))
   assign(total, plus(total, mapAtUnsafeRef<string, i32>(ref, "third"raw_utf8)))
   if(mapContainsRef<string, i32>(ref, "left"raw_utf8),
@@ -686,10 +686,11 @@ import /std/collections/*
 [effects(heap_alloc), return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  [Result<i32, ContainerError>] found{mapTryAt<string, i32>(values, "left"raw_utf8)}
+  [Result<i32, ContainerError>] missing{mapTryAt<string, i32>(values, "missing"raw_utf8)}
   [i32 mut] total{mapCount<string, i32>(values)}
   assign(total, plus(total, mapAt<string, i32>(values, "left"raw_utf8)))
   assign(total, plus(total, mapAtUnsafe<string, i32>(values, "right"raw_utf8)))
-  assign(total, plus(total, try(mapTryAt<string, i32>(values, "left"raw_utf8))))
   if(mapContains<string, i32>(values, "left"raw_utf8),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
