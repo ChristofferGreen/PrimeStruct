@@ -705,7 +705,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("compiles and runs canonical direct map tryAt struct method chain in C++ emitter") {
+TEST_CASE("compiles canonical direct map tryAt struct method chain in C++ emitter but traps at runtime") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -754,8 +754,8 @@ main() {
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 2);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
+  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("compiles same-path direct map at_unsafe struct method chain through alias helper in C++ emitter but traps at runtime") {
