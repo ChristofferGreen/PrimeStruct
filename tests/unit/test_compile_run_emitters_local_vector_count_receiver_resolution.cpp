@@ -24,7 +24,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps local canonical slash-method vector count same-path helper on string receiver") {
