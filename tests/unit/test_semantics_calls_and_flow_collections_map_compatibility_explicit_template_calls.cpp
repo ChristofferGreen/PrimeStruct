@@ -48,7 +48,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wrapper reference templated map count method resolves through canonical helper") {
+TEST_CASE("wrapper reference templated map count method rejects missing canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /Reference/count([Reference</std/collections/map<i32, i32>>] self) {
@@ -72,8 +72,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("wrapper reference templated map count method keeps canonical diagnostics") {
