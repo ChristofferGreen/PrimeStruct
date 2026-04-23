@@ -51,7 +51,7 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("rejects bare map count without imported canonical helper in C++ emitter") {
+TEST_CASE("compiles and runs bare map count without imported canonical helper in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -61,13 +61,12 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_reject.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_builtin_fallback_no_canonical.err")
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_map_unnamespaced_count_builtin_fallback_no_canonical_exe")
           .string();
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("rejects bare map count through compatibility alias when canonical helper is absent in C++ emitter") {
@@ -890,7 +889,7 @@ main() {
   CHECK(readFile(errPath).find("Semantic error") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects bare map count method without imported canonical helper") {
+TEST_CASE("C++ emitter compiles and runs bare map count method without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -899,13 +898,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_bare_map_count_method_without_import.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_cpp_bare_map_count_method_without_import.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_bare_map_count_method_without_import_exe").string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("C++ emitter rejects bare map contains method without imported canonical helper") {
