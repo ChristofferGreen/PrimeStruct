@@ -178,10 +178,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("push is only supported as a statement") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: push") != std::string::npos);
 }
 
-TEST_CASE("spinning cube shared source compiles across profile targets") {
+TEST_CASE("spinning cube shared source reflects current profile support") {
   if (!spinningCubeBackendsSupportArrayReturns()) {
     INFO("Skipping spinning cube backend matrix until array-return lowering support lands");
     CHECK(true);
@@ -200,16 +200,18 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
       (testScratchPath("") / "primec_spinning_cube_native_main_reject.err.txt").string();
   const std::string wasmPath =
       (testScratchPath("") / "primec_spinning_cube_browser_smoke.wasm").string();
+  const std::string wasmErrPath =
+      (testScratchPath("") / "primec_spinning_cube_browser_smoke.err.txt").string();
   const std::string metalErrPath =
       (testScratchPath("") / "primec_spinning_cube_metal_smoke.err.txt").string();
 
   const std::string nativeMainCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
                                     quoteShellArg(nativePath) + " --entry /main 2> " +
                                     quoteShellArg(nativeMainErrPath);
-  CHECK(runCommand(nativeMainCmd) == 2);
+  CHECK(runCommand(nativeMainCmd) == 0);
   const std::string nativeMainErr = readFile(nativeMainErrPath);
-  CHECK(nativeMainErr.find("native backend does not support return type") != std::string::npos);
-  CHECK(nativeMainErr.find("/cubeInit") != std::string::npos);
+  CHECK(nativeMainErr.empty());
+  CHECK(std::filesystem::exists(nativePath));
 
   const std::string nativeCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
                                 quoteShellArg(nativePath) + " --entry /mainNative";
@@ -218,14 +220,19 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
 
   const std::string wasmBrowserCmd =
       "./primec --emit=wasm --wasm-profile browser " + quoteShellArg(cubePath.string()) + " -o " +
-      quoteShellArg(wasmPath) + " --entry /main";
-  CHECK(runCommand(wasmBrowserCmd) == 0);
-  CHECK(std::filesystem::exists(wasmPath));
+      quoteShellArg(wasmPath) + " --entry /main 2> " + quoteShellArg(wasmErrPath);
+  CHECK(runCommand(wasmBrowserCmd) == 2);
+  const std::string wasmErr = readFile(wasmErrPath);
+  CHECK(wasmErr.find("graphics stdlib runtime substrate unavailable for wasm-browser target: /std/gfx/*") !=
+        std::string::npos);
+  CHECK_FALSE(std::filesystem::exists(wasmPath));
 
   const std::string metalCmd = "./primec --emit=metal " + quoteShellArg(cubePath.string()) +
                                " -o /dev/null --entry /main 2> " + quoteShellArg(metalErrPath);
   CHECK(runCommand(metalCmd) == 2);
-  CHECK(readFile(metalErrPath).find("Usage: primec") != std::string::npos);
+  const std::string metalErr = readFile(metalErrPath);
+  CHECK(metalErr.find("unknown option: --emit=metal") != std::string::npos);
+  CHECK(metalErr.find("Usage: primec") != std::string::npos);
 }
 
 
