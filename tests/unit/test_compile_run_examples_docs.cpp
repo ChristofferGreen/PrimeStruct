@@ -84,7 +84,8 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
   CHECK(syntaxSpecDoc.find(
             "Structural mutation boundaries are `push`, `reserve`, `remove_at`, `remove_swap`, `clear`,") !=
         std::string::npos);
-  CHECK(syntaxSpecDoc.find("`to_soa`, and `to_aos`.") != std::string::npos);
+  CHECK(syntaxSpecDoc.find("`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`.") !=
+        std::string::npos);
   for (const std::string &snippet : requiredCodeExamplesSnippets) {
     CAPTURE(snippet);
     CHECK(codeExamplesDoc.find(snippet) != std::string::npos);
