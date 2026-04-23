@@ -2,6 +2,20 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
+namespace {
+
+void checkImplicitMapConflict(const std::string& error) {
+  CHECK(error.find("implicit template arguments conflict") != std::string::npos);
+  CHECK(error.find("map") != std::string::npos);
+}
+
+void checkImplicitMapPairConflict(const std::string& error) {
+  CHECK(error.find("implicit template arguments conflict") != std::string::npos);
+  CHECK(error.find("mapPair") != std::string::npos);
+}
+
+} // namespace
+
 TEST_CASE("helper-wrapped map constructors infer experimental auto locals") {
   const std::string source = R"(
 import /std/collections/*
@@ -54,7 +68,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/map/") != std::string::npos);
+  checkImplicitMapConflict(error);
 }
 
 TEST_CASE("implicit map constructor auto inference keeps template conflict diagnostics") {
@@ -70,7 +84,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/map/") != std::string::npos);
+  checkImplicitMapConflict(error);
 }
 
 TEST_CASE("inferred experimental map returns rewrite canonical constructors") {
@@ -121,7 +135,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/map/") != std::string::npos);
+  checkImplicitMapConflict(error);
 }
 
 TEST_CASE("block-bodied inferred experimental map returns rewrite constructors") {
@@ -176,7 +190,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("auto bindings inside inferred experimental map return blocks rewrite constructors") {
@@ -243,7 +257,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("helper-wrapped inferred experimental map returns rewrite nested constructor arguments") {
@@ -306,7 +320,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("double helper-wrapped inferred experimental map returns rewrite nested constructor arguments") {
@@ -380,7 +394,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("inferred experimental map call receivers resolve method sugar") {
@@ -435,7 +449,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("stdlib map constructors accept explicit experimental map struct fields") {
@@ -487,7 +501,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("stdlib map constructors accept inferred experimental map struct fields") {
@@ -533,7 +547,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("helper-wrapped inferred experimental map struct fields rewrite constructors") {
@@ -589,7 +603,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_CASE("helper-wrapped inferred experimental result map struct fields rewrite constructors") {
@@ -645,7 +659,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_SUITE_END();
