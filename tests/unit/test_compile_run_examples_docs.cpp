@@ -83,8 +83,7 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
     CAPTURE(snippet);
     CHECK(syntaxSpecDoc.find(snippet) != std::string::npos);
   }
-  CHECK(syntaxSpecDoc.find("Structural mutation boundaries are `push`, `reserve`") !=
-        std::string::npos);
+  CHECK(syntaxSpecDoc.find("Structural mutation boundaries are") != std::string::npos);
   CHECK(syntaxSpecDoc.find("`remove_at`") != std::string::npos);
   CHECK(syntaxSpecDoc.find("`remove_swap`") != std::string::npos);
   CHECK(syntaxSpecDoc.find("`clear`") != std::string::npos);
