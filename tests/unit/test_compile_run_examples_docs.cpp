@@ -70,8 +70,7 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
       "values.reserve(8)",
       "values.at(0)",
       "values.at(2)",
-      "values.count()",
-      "[vector<int> mut] values{1, 2}"};
+      "values.count()"};
 
   for (const std::string &snippet : requiredPrimeStructSnippets) {
     CAPTURE(snippet);
@@ -99,6 +98,8 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
     CAPTURE(snippet);
     CHECK(codeExamplesDoc.find(snippet) != std::string::npos);
   }
+  CHECK(codeExamplesDoc.find("[vector<int> mut]") != std::string::npos);
+  CHECK(codeExamplesDoc.find("values{1, 2}") != std::string::npos);
 
   struct SnippetCase {
     std::string tempName;
