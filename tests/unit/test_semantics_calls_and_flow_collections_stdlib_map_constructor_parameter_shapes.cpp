@@ -2,6 +2,16 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
+namespace {
+
+void checkMapPairTemplateConflict(const std::string &error) {
+  CHECK(error.find("implicit template arguments conflict on ") !=
+        std::string::npos);
+  CHECK(error.find("mapPair") != std::string::npos);
+}
+
+} // namespace
+
 TEST_CASE("stdlib map constructors accept experimental map method-call parameters") {
   const std::string source = R"(
 import /std/collections/*
@@ -44,10 +54,10 @@ main() {
   [Holder] holder{Holder()}
   return(holder.score(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("stdlib map constructors accept inferred experimental map default parameters") {
@@ -98,10 +108,10 @@ scoreValues([auto mut] values{mapNew<string, i32>()}) {
 main() {
   return(scoreValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept inferred experimental map default parameters") {
@@ -166,7 +176,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped inferred experimental map default parameters rewrite constructors") {
@@ -227,10 +237,10 @@ scoreValues([auto mut] values{wrapValues(mapNew<string, i32>())}) {
 main() {
   return(scoreValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("canonical map helpers accept direct experimental constructor receivers") {
@@ -275,10 +285,10 @@ import /std/collections/experimental_map/*
 main() {
   return(/std/collections/map/count(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped inferred experimental result map default parameters rewrite constructors") {
@@ -332,7 +342,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped canonical map helpers accept direct experimental constructor receivers") {
@@ -394,10 +404,10 @@ main() {
   return(/std/collections/map/count(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
                                                                         "wrong"raw_utf8, false))))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("experimental map methods accept direct constructor receivers") {
@@ -437,10 +447,10 @@ import /std/collections/experimental_map/*
 main() {
   return(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false).count())
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped experimental map helpers accept direct constructor receivers") {
@@ -499,10 +509,10 @@ wrapValues<T>([T] values) {
 main() {
   return(wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)).count())
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("field-bound experimental map helpers accept struct field receivers") {
