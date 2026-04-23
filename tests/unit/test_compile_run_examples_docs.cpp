@@ -65,7 +65,7 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
   const std::vector<std::string> requiredSyntaxSpecSnippets = {
       "vector<i32>{1i32, 2i32}", "vector<i32>[1i32, 2i32]",
       "map<i32, i32>{1i32=2i32, 3i32=4i32}", "value.push(item)",
-      "value.at(index)", "value[index]", "Structural mutation boundaries are `push`, `reserve`, `to_soa`, and `to_aos`."};
+      "value.at(index)", "value[index]"};
   const std::vector<std::string> requiredGuidelinesSnippets = {
       "value.push(x)", "value.at(i)", "value[i]", "value.count()",
       "[vector<i32> mut] values{1, 2}"};
@@ -78,6 +78,10 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
     CAPTURE(snippet);
     CHECK(syntaxSpecDoc.find(snippet) != std::string::npos);
   }
+  CHECK(syntaxSpecDoc.find(
+            "Structural mutation boundaries are `push`, `reserve`, `remove_at`, `remove_swap`, `clear`,") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("`to_soa`, and `to_aos`.") != std::string::npos);
   for (const std::string &snippet : requiredGuidelinesSnippets) {
     CAPTURE(snippet);
     CHECK(guidelinesDoc.find(snippet) != std::string::npos);
