@@ -3663,7 +3663,7 @@ main() {
   CHECK(singleWorker.bridgePathChoiceCount > 0);
   CHECK(singleWorker.bindingFactCount > 0);
   CHECK(singleWorker.localAutoFactCount > 0);
-  CHECK(singleWorker.queryFactCount > 0);
+  CHECK(singleWorker.queryFactCount == 0);
   CHECK(singleWorker.tryFactCount > 0);
   CHECK(singleWorker.onErrorFactCount > 0);
   CHECK(singleWorker.returnFactCount > 0);
