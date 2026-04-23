@@ -33,7 +33,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map count call requires imported canonical helper or explicit definition") {
+TEST_CASE("bare map count call validates through builtin fallback without imported canonical helper") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -42,8 +42,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map count call resolves through canonical helper definition") {
@@ -64,7 +64,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare map count call rejects compatibility alias when canonical helper is absent") {
+TEST_CASE("bare map count call still validates when only compatibility alias is present") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -78,8 +78,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map count call keeps explicit root helper precedence") {
