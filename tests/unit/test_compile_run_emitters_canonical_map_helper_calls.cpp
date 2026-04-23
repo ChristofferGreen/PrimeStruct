@@ -811,7 +811,7 @@ main() {
   CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
 }
 
-TEST_CASE("rejects canonical direct map at_unsafe struct method chain in C++ emitter with lowering diagnostics") {
+TEST_CASE("compiles canonical direct map at_unsafe struct method chain in C++ emitter but traps at runtime") {
   const std::string source = R"(
 CanonicalMarker {
   [i32] value
@@ -849,20 +849,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_canonical_map_at_unsafe_struct_method_chain.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_direct_canonical_map_at_unsafe_struct_method_chain.err")
+       "primec_cpp_direct_canonical_map_at_unsafe_struct_method_chain_exe")
+          .string();
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_cpp_direct_canonical_map_at_unsafe_struct_method_chain.out")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("/std/collections/map/at_unsafe") != std::string::npos);
-  CHECK((diagnostics.find("call=/std/collections/map/at_unsafe") != std::string::npos ||
-         diagnostics.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos ||
-         diagnostics.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/") !=
-             std::string::npos));
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
+  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs map namespaced count method compatibility alias in C++ emitter") {
