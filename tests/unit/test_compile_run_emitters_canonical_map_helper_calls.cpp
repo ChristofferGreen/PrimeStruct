@@ -531,7 +531,7 @@ main() {
   CHECK(runCommand(exePath) == 162);
 }
 
-TEST_CASE("rejects explicit canonical map helper calls through same-path helpers in C++ emitter with current lowering diagnostics") {
+TEST_CASE("explicit canonical map helper calls through same-path helpers reach current runtime lowering fault in C++ emitter") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -585,19 +585,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_direct_canonical_map_helper_same_path_precedence.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_cpp_direct_canonical_map_helper_same_path_precedence.err")
+       "primec_cpp_direct_canonical_map_helper_same_path_precedence_exe")
+          .string();
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_cpp_direct_canonical_map_helper_same_path_precedence.out")
           .string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("/std/collections/map/at") != std::string::npos);
-  CHECK((diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
-         diagnostics.find("unknown call target: /std/collections/map/at") != std::string::npos ||
-         diagnostics.find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/") !=
-             std::string::npos));
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath + " 2>&1") == 1);
+  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
 }
 
 TEST_CASE("rejects bare map tryAt call without imported canonical helper in C++ emitter with unknown-target diagnostics") {
