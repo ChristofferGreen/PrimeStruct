@@ -38,7 +38,7 @@ TEST_CASE("compiles web examples to IR") {
                         spinningCubeBackendsSupportArrayReturns());
 }
 
-TEST_CASE("collection docs snippets stay c++ style and executable") {
+TEST_CASE("collection docs snippets stay code-examples style and executable") {
   auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
     std::filesystem::path path = std::filesystem::path("..") / "docs" / name;
     if (!std::filesystem::exists(path)) {
@@ -126,7 +126,7 @@ main() {
 }
 )",
        18},
-      {"docs_collections_guidelines_style.prime",
+      {"docs_collections_code_examples_style.prime",
        R"(
 import /std/collections/*
 
