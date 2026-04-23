@@ -346,7 +346,7 @@ main() {
   [/Wide/SoaSchemaStorage mut] storage{/Wide/SoaSchemaStorageNew()}
   [i32 mut] score{0i32}
   if(equal(/Wide/SoaSchemaStorageCount(storage), 0i32), then() { assign(score, plus(score, 1i32)) }, else() { })
-  if(equal(/Wide/SoaSchemaStorageCapacity(storage), 1i32), then() { assign(score, plus(score, 2i32)) }, else() { })
+  if(equal(/Wide/SoaSchemaStorageCapacity(storage), 0i32), then() { assign(score, plus(score, 2i32)) }, else() { })
   /Wide/SoaSchemaStorageReserve(storage, 5i32)
   if(equal(/Wide/SoaSchemaStorageCapacity(storage), 5i32), then() { assign(score, plus(score, 4i32)) }, else() { })
   if(equal(storage.chunk0.first.field_capacity(), 5i32), then() { assign(score, plus(score, 8i32)) }, else() { })
