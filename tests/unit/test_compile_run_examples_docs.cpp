@@ -49,14 +49,14 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
 
   const std::filesystem::path primeStructPath = resolveDocPath("PrimeStruct.md");
   const std::filesystem::path syntaxSpecPath = resolveDocPath("PrimeStruct_SyntaxSpec.md");
-  const std::filesystem::path guidelinesPath = resolveDocPath("Coding_Guidelines.md");
+  const std::filesystem::path codeExamplesPath = resolveDocPath("CodeExamples.md");
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
-  REQUIRE(std::filesystem::exists(guidelinesPath));
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
-  const std::string guidelinesDoc = readFile(guidelinesPath.string());
+  const std::string codeExamplesDoc = readFile(codeExamplesPath.string());
 
   const std::vector<std::string> requiredPrimeStructSnippets = {
       "value.push(item)", "value.at(index)", "value[index]", "value.count()",
@@ -66,9 +66,12 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
       "vector<i32>{1i32, 2i32}", "vector<i32>[1i32, 2i32]",
       "map<i32, i32>{1i32=2i32, 3i32=4i32}", "value.push(item)",
       "value.at(index)", "value[index]"};
-  const std::vector<std::string> requiredGuidelinesSnippets = {
-      "value.push(x)", "value.at(i)", "value[i]", "value.count()",
-      "[vector<i32> mut] values{1, 2}"};
+  const std::vector<std::string> requiredCodeExamplesSnippets = {
+      "### Collection Method Sugar",
+      "values.push(3)",
+      "values.reserve(8)",
+      "values.at(0) + values.at(2) + values.count()",
+      "[vector<int> mut] values{1, 2}"};
 
   for (const std::string &snippet : requiredPrimeStructSnippets) {
     CAPTURE(snippet);
@@ -82,9 +85,9 @@ TEST_CASE("collection docs snippets stay c++ style and executable") {
             "Structural mutation boundaries are `push`, `reserve`, `remove_at`, `remove_swap`, `clear`,") !=
         std::string::npos);
   CHECK(syntaxSpecDoc.find("`to_soa`, and `to_aos`.") != std::string::npos);
-  for (const std::string &snippet : requiredGuidelinesSnippets) {
+  for (const std::string &snippet : requiredCodeExamplesSnippets) {
     CAPTURE(snippet);
-    CHECK(guidelinesDoc.find(snippet) != std::string::npos);
+    CHECK(codeExamplesDoc.find(snippet) != std::string::npos);
   }
 
   struct SnippetCase {
