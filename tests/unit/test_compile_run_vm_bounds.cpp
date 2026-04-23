@@ -116,8 +116,8 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_vector_method_at_unsafe_oob_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("vm experimental vector at checks positive out-of-range index") {
@@ -152,8 +152,8 @@ main() {
   const std::string errPath =
       (testScratchPath("") / "primec_vm_experimental_vector_method_at_oob_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("vm experimental vector at_unsafe rejects index past capacity even if count is forged") {
@@ -194,8 +194,8 @@ main() {
       (testScratchPath("") / "primec_vm_experimental_vector_method_at_forged_count_capacity_err.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(errPath) == "array index out of bounds\n");
 }
 
 TEST_CASE("vm experimental vector reserve rejects forged count above capacity") {
