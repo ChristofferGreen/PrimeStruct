@@ -97,7 +97,7 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
     int expectedExitCode;
   };
   const std::vector<SnippetCase> snippetCases = {
-      {"docs_collections_prime_struct_style.prime",
+      {"docs_collections_prime_struct_doc_style.prime",
        R"(
 import /std/collections/*
 
@@ -112,7 +112,7 @@ main() {
 }
 )",
        21},
-      {"docs_collections_syntax_spec_style.prime",
+      {"docs_collections_syntax_spec_doc_style.prime",
        R"(
 import /std/collections/*
 
@@ -126,7 +126,7 @@ main() {
 }
 )",
        18},
-      {"docs_collections_code_examples_style.prime",
+      {"docs_collections_code_examples_doc_style.prime",
        R"(
 import /std/collections/*
 
