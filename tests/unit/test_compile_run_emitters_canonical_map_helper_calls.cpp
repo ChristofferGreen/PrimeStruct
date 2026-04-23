@@ -863,7 +863,7 @@ main() {
              std::string::npos));
 }
 
-TEST_CASE("rejects map namespaced count method compatibility alias in C++ emitter") {
+TEST_CASE("compiles and runs map namespaced count method compatibility alias in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -878,14 +878,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_map_namespaced_count_method_compatibility_alias_reject.prime", source);
-  const std::string errPath = (testScratchPath("") /
-                               "primec_cpp_map_namespaced_count_method_compatibility_alias_reject.err")
+  const std::string exePath = (testScratchPath("") /
+                               "primec_cpp_map_namespaced_count_method_compatibility_alias_exe")
                                   .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error") != std::string::npos);
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 17);
 }
 
 TEST_CASE("C++ emitter compiles and runs bare map count method without imported canonical helper") {
