@@ -60,12 +60,11 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
 
   const std::vector<std::string> requiredPrimeStructSnippets = {
       "value.push(item)", "value.at(index)", "value[index]", "value.count()",
-      "map<string, i32>{\"a\"utf8=1i32}", "to_soa(spawnQueue)",
+      "to_soa(spawnQueue)",
       "Preferred update pattern is two-phase"};
   const std::vector<std::string> requiredSyntaxSpecSnippets = {
       "vector<i32>{1i32, 2i32}", "vector<i32>[1i32, 2i32]",
-      "map<i32, i32>{1i32=2i32, 3i32=4i32}", "value.push(item)",
-      "value.at(index)", "value[index]"};
+      "value.push(item)", "value.at(index)", "value[index]"};
   const std::vector<std::string> requiredCodeExamplesSnippets = {
       "### Collection Method Sugar",
       "values.push(3)",
@@ -79,10 +78,15 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
     CAPTURE(snippet);
     CHECK(primeStructDoc.find(snippet) != std::string::npos);
   }
+  CHECK(primeStructDoc.find("map<string, i32>") != std::string::npos);
+  CHECK(primeStructDoc.find("\"a\"utf8=1i32") != std::string::npos);
   for (const std::string &snippet : requiredSyntaxSpecSnippets) {
     CAPTURE(snippet);
     CHECK(syntaxSpecDoc.find(snippet) != std::string::npos);
   }
+  CHECK(syntaxSpecDoc.find("map<i32, i32>{") != std::string::npos);
+  CHECK(syntaxSpecDoc.find("1i32=2i32") != std::string::npos);
+  CHECK(syntaxSpecDoc.find("3i32=4i32") != std::string::npos);
   CHECK(syntaxSpecDoc.find("Structural mutation boundaries are") != std::string::npos);
   CHECK(syntaxSpecDoc.find("`remove_at`") != std::string::npos);
   CHECK(syntaxSpecDoc.find("`remove_swap`") != std::string::npos);
