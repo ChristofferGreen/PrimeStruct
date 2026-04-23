@@ -887,32 +887,39 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
 
   CHECK(source.find(
             "  mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {\n"
-            "    [Reference<Map<K, V>> mut] ref{location(entries)}\n"
-            "    mapBorrowedInsert<K, V>(ref, key, value)") !=
+            "    [i32] index{/std/collections/experimental_map/mapFindIndex<K, V>(entries, key)}") !=
         std::string::npos);
   CHECK(source.find(
             "  mapCountRef<K, V>([Reference<Map<K, V>>] entries) {\n"
-            "    return(mapBorrowedCount<K, V>(entries))") !=
+            "    return(/std/collections/experimental_map/mapBorrowedCount<K, V>(entries))") !=
         std::string::npos);
   CHECK(source.find(
             "  mapContainsRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(mapBorrowedContains<K, V>(entries, key))") !=
+            "    return(/std/collections/experimental_map/mapBorrowedContains<K, V>(entries, key))") !=
         std::string::npos);
   CHECK(source.find(
             "  mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(mapBorrowedTryAt<K, V>(entries, key))") !=
+            "    return(/std/collections/experimental_map/mapBorrowedTryAt<K, V>(entries, key))") !=
         std::string::npos);
   CHECK(source.find(
             "  mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(mapBorrowedAt<K, V>(entries, key))") !=
+            "    return(/std/collections/experimental_map/mapBorrowedAt<K, V>(entries, key))") !=
         std::string::npos);
   CHECK(source.find(
             "  mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
-            "    return(mapBorrowedAtUnsafe<K, V>(entries, key))") !=
+            "    return(/std/collections/experimental_map/mapBorrowedAtUnsafe<K, V>(entries, key))") !=
         std::string::npos);
   CHECK(source.find(
             "  mapInsertRef<K, V>([Reference<Map<K, V>> mut] entries, [K] key, [V] value) {\n"
-            "    mapBorrowedInsert<K, V>(entries, key, value)") !=
+            "    /std/collections/experimental_map/mapBorrowedInsert<K, V>(entries, key, value)") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  /Reference/count<K, V>([Reference<Map<K, V>>] self) {\n"
+            "    return(/std/collections/experimental_map/mapCountRef<K, V>(self))") !=
+        std::string::npos);
+  CHECK(source.find(
+            "  /Reference/insert<K, V>([Reference<Map<K, V>> mut] self, [K] key, [V] value) {\n"
+            "    /std/collections/experimental_map/mapInsertRef<K, V>(self, key, value)") !=
         std::string::npos);
 
   CHECK(source.find("mapCountRef<K, V>([Reference<Map<K, V>>] entries) {\n"
@@ -920,11 +927,11 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
                     "    return(mapCount<K, V>(values))") ==
         std::string::npos);
   CHECK(source.find("mapInsert<K, V>([Map<K, V> mut] entries, [K] key, [V] value) {\n"
-                    "    [i32] index{mapFindIndex<K, V>(entries, key)}\n"
-                    "    [Vector<K> mut] keys{entries.keys}\n"
-                    "    [Vector<V> mut] payloads{entries.payloads}") ==
+                    "    [Reference<Map<K, V>> mut] ref{location(entries)}") ==
         std::string::npos);
   CHECK(source.find("/std/collections/map/count_ref<K, V>([Reference<Map<K, V>>] values)") ==
+        std::string::npos);
+  CHECK(source.find("return(mapBorrowedCount<K, V>(entries))") ==
         std::string::npos);
   CHECK(source.find("mapContainsRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
@@ -932,17 +939,23 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
         std::string::npos);
   CHECK(source.find("/std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
         std::string::npos);
+  CHECK(source.find("return(mapBorrowedContains<K, V>(entries, key))") ==
+        std::string::npos);
   CHECK(source.find("mapTryAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapTryAt<K, V>(values, key))") ==
         std::string::npos);
   CHECK(source.find("/std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
         std::string::npos);
+  CHECK(source.find("return(mapBorrowedTryAt<K, V>(entries, key))") ==
+        std::string::npos);
   CHECK(source.find("mapAtRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
                     "    return(mapAt<K, V>(values, key))") ==
         std::string::npos);
   CHECK(source.find("/std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
+        std::string::npos);
+  CHECK(source.find("return(mapBorrowedAt<K, V>(entries, key))") ==
         std::string::npos);
   CHECK(source.find("mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] entries, [K] key) {\n"
                     "    [Map<K, V>] values{dereference(entries)}\n"
@@ -956,6 +969,8 @@ TEST_CASE("experimental map Ref helpers route through borrowed implementations")
   CHECK(source.find("/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key)") ==
         std::string::npos);
   CHECK(source.find("/std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value)") ==
+        std::string::npos);
+  CHECK(source.find("return(mapBorrowedAtUnsafe<K, V>(entries, key))") ==
         std::string::npos);
 }
 
