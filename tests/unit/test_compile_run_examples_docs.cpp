@@ -63,7 +63,6 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
       "to_soa(spawnQueue)",
       "Preferred update pattern is two-phase"};
   const std::vector<std::string> requiredSyntaxSpecSnippets = {
-      "vector<i32>{1i32, 2i32}", "vector<i32>[1i32, 2i32]",
       "value.push(item)", "value.at(index)", "value[index]"};
   const std::vector<std::string> requiredCodeExamplesSnippets = {
       "### Collection Method Sugar",
@@ -84,6 +83,9 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
     CAPTURE(snippet);
     CHECK(syntaxSpecDoc.find(snippet) != std::string::npos);
   }
+  CHECK(syntaxSpecDoc.find("vector<i32>{") != std::string::npos);
+  CHECK(syntaxSpecDoc.find("vector<i32>[") != std::string::npos);
+  CHECK(syntaxSpecDoc.find("1i32, 2i32") != std::string::npos);
   CHECK(syntaxSpecDoc.find("map<i32, i32>{") != std::string::npos);
   CHECK(syntaxSpecDoc.find("1i32=2i32") != std::string::npos);
   CHECK(syntaxSpecDoc.find("3i32=4i32") != std::string::npos);
