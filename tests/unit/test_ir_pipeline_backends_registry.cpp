@@ -97,6 +97,43 @@ void checkOptionalRssCheckpointSnapshot(const primec::SemanticPhaseCounterSnapsh
   CHECK(snapshot.rssAfterBytes > 0);
 }
 
+void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, int semanticNodeId) {
+  const auto mainPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = semanticNodeId,
+      .provenanceHandle = 0,
+      .fullPathId = mainPathId,
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "void",
+      .structPath = "",
+      .bindingTypeText = "void",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = semanticNodeId,
+      .definitionPathId = mainPathId,
+  });
+}
+
 } // namespace
 
 TEST_CASE("ir backend registry reports deterministic order and lookup") {
@@ -249,6 +286,7 @@ TEST_CASE("semantic-product direct-call coverage conformance rejects missing tar
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
 
   std::string error;
 
@@ -415,6 +453,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 4200;
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Name;
   receiverExpr.name = "values";
@@ -429,6 +468,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 4200);
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",
       .methodName = "count",
@@ -493,6 +533,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") 
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 5200;
   primec::Expr valuesExpr;
   valuesExpr.kind = primec::Expr::Kind::Name;
   valuesExpr.name = "values";
@@ -506,6 +547,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") 
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 5200);
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
       .callName = "count",
@@ -541,6 +583,7 @@ TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target 
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 5204;
   primec::Expr valuesExpr;
   valuesExpr.kind = primec::Expr::Kind::Name;
   valuesExpr.name = "values";
@@ -554,6 +597,7 @@ TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target 
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 5204);
   semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
       .scopePath = "/main",
       .collectionFamily = "vector",
@@ -580,6 +624,7 @@ TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper 
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 5205;
   primec::Expr valuesExpr;
   valuesExpr.kind = primec::Expr::Kind::Name;
   valuesExpr.name = "values";
@@ -593,6 +638,7 @@ TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper 
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 5205);
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
       .callName = "count",
@@ -1142,7 +1188,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary path id");
+  CHECK(error == "missing semantic-product callable summary: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -1397,7 +1443,7 @@ TEST_CASE("ir lowerer rejects invalid semantic-product callable summary path id"
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product callable summary path id");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -2188,7 +2234,7 @@ lookup() {
 }
 
 [return<i32>]
-/vector/count([vector<i32>] self) {
+/std/collections/vector/count([vector<i32>] self) {
   return(17i32)
 }
 
