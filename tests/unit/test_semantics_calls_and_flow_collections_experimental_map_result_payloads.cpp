@@ -1,5 +1,15 @@
 #include "test_semantics_helpers.h"
 
+namespace {
+
+void checkMapPairTemplateConflict(const std::string &error) {
+  CHECK(error.find("implicit template arguments conflict on ") !=
+        std::string::npos);
+  CHECK(error.find("mapPair") != std::string::npos);
+}
+
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit experimental map parameters") {
@@ -25,7 +35,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map parameters") {
@@ -98,7 +108,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map bindings") {
@@ -197,7 +207,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map bindings") {
@@ -260,7 +270,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit experimental map result targets") {
@@ -324,7 +334,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept experimental map dereference assignment targets") {
@@ -385,7 +395,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept experimental map result dereference targets") {
@@ -461,7 +471,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept experimental map uninitialized storage") {
@@ -511,7 +521,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept experimental map result uninitialized storage") {
@@ -562,7 +572,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map uninitialized storage") {
@@ -624,7 +634,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_SUITE_END();

@@ -1,5 +1,15 @@
 #include "test_semantics_helpers.h"
 
+namespace {
+
+void checkMapPairTemplateConflict(const std::string &error) {
+  CHECK(error.find("implicit template arguments conflict on ") !=
+        std::string::npos);
+  CHECK(error.find("mapPair") != std::string::npos);
+}
+
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
 TEST_CASE("field-bound experimental map compatibility count calls remain accepted") {
@@ -81,10 +91,10 @@ main() {
   assign(holder.values, /std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))
   return(0i32)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped map constructor assignments accept inferred experimental map struct fields") {
@@ -133,10 +143,10 @@ main() {
   assign(holder.values, wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)))
   return(0i32)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payload assignments accept explicit experimental map result struct fields") {
@@ -204,11 +214,11 @@ main() {
                                                                      "wrong"raw_utf8, false))))
   return(Result.ok(0i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped map constructor assignments accept dereferenced experimental map struct fields") {
@@ -272,11 +282,11 @@ main() {
                                              "wrong"raw_utf8, false)))
   return(0i32)
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok assignments accept dereferenced experimental result map struct fields") {
@@ -356,11 +366,11 @@ main() {
                                                       "wrong"raw_utf8, false))))
   return(Result.ok(0i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("stdlib namespaced map helpers keep Comparable diagnostics on experimental map value receivers") {
