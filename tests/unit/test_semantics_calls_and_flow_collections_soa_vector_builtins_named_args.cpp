@@ -119,7 +119,7 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "ref_ref<i32>(values, 0i32)",
               "ref_ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
-              "/soa_vector/get<i32>(values, 0i32)", "get does not accept template arguments");
+              "/soa_vector/get<i32>(values, 0i32)", "get is only supported as a statement");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
               "/soa_vector/ref<i32>(values, 0i32)", "ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
