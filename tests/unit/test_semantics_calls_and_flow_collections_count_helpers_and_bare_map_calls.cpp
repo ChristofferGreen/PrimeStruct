@@ -349,7 +349,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental map borrowed method-call sugar validates") {
+TEST_CASE("experimental map borrowed method-call sugar rejects missing canonical count helper") {
   const std::string source = R"(
 import /std/collections/experimental_map/*
 
@@ -361,8 +361,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/experimental_map/mapCount") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental map insert helpers validate on value and borrowed mutation surfaces") {
