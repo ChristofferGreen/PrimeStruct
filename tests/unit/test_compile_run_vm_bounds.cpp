@@ -2,6 +2,11 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.bounds");
 
+static void checkEntryArgumentStringRestriction(const std::string& err) {
+  CHECK(err.find("entry argument strings are only supported in print calls or string bindings") !=
+        std::string::npos);
+}
+
 TEST_CASE("vm array access checks bounds") {
   const std::string source = R"(
 [return<int>]
@@ -562,8 +567,7 @@ main([array<string>] args) {
       (testScratchPath("") / "primec_vm_argv_binding_count_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
-        std::string::npos);
+  checkEntryArgumentStringRestriction(readFile(errPath));
 }
 
 TEST_CASE("vm argv string binding index fails") {
@@ -579,8 +583,7 @@ main([array<string>] args) {
       (testScratchPath("") / "primec_vm_argv_binding_index_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
-        std::string::npos);
+  checkEntryArgumentStringRestriction(readFile(errPath));
 }
 
 TEST_CASE("rejects vm argv call argument") {
@@ -600,8 +603,7 @@ main([array<string>] args) {
   const std::string errPath = (testScratchPath("") / "primec_vm_argv_call_bounds_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
-        std::string::npos);
+  checkEntryArgumentStringRestriction(readFile(errPath));
 }
 
 TEST_CASE("rejects vm argv call argument unsafe") {
@@ -621,8 +623,7 @@ main([array<string>] args) {
   const std::string errPath = (testScratchPath("") / "primec_vm_argv_call_unsafe_err.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
-        std::string::npos);
+  checkEntryArgumentStringRestriction(readFile(errPath));
 }
 
 TEST_SUITE_END();
