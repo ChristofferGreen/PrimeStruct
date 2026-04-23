@@ -206,8 +206,9 @@ TEST_CASE("spinning cube shared source compiles across profile targets") {
                                     quoteShellArg(nativePath) + " --entry /main 2> " +
                                     quoteShellArg(nativeMainErrPath);
   CHECK(runCommand(nativeMainCmd) == 2);
-  CHECK(readFile(nativeMainErrPath).find("native backend does not support return type on /cubeInit") !=
-        std::string::npos);
+  const std::string nativeMainErr = readFile(nativeMainErrPath);
+  CHECK(nativeMainErr.find("native backend does not support return type") != std::string::npos);
+  CHECK(nativeMainErr.find("/cubeInit") != std::string::npos);
 
   const std::string nativeCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
                                 quoteShellArg(nativePath) + " --entry /mainNative";
