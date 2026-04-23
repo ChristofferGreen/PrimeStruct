@@ -394,10 +394,10 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(vmMaps.find("TEST_CASE(\"rejects vm map lookup with argv string key\" * doctest::skip(true))") ==
         std::string::npos);
 
-  CHECK(examplesDocs.find("TEST_CASE(\"collection docs snippets stay c++ style and executable\")") !=
+  CHECK(examplesDocs.find("TEST_CASE(\"collection docs snippets stay code-examples style and executable\")") !=
         std::string::npos);
   CHECK(examplesDocs.find(
-            "TEST_CASE(\"collection docs snippets stay c++ style and executable\" * doctest::skip(true))") ==
+            "TEST_CASE(\"collection docs snippets stay code-examples style and executable\" * doctest::skip(true))") ==
         std::string::npos);
 }
 
