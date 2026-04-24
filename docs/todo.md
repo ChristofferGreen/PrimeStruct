@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4139
 - TODO-4131
 
 ### Immediate Next 10 (After Ready Now)
@@ -74,7 +73,7 @@ Task template:
 
 - Semantic-product authority and lowerer ownership: TODO-4131, TODO-4132,
   TODO-4133, TODO-4134
-- Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
+- Pipeline/publication boundary hardening: TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4140
 - Test-surface contraction: TODO-4142
 - Runtime execution unification: TODO-4130
@@ -82,18 +81,18 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4139
-2. TODO-4131
-3. TODO-4132
-4. TODO-4133
-5. TODO-4134
+1. TODO-4131
+2. TODO-4132
+3. TODO-4133
+4. TODO-4134
+5. TODO-4130
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4131 |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4139, TODO-4141 |
+| Compile-pipeline stage and publication-boundary contracts | TODO-4141 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
@@ -114,7 +113,7 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4141 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
-| Compile-pipeline stage handoff conformance | TODO-4139 |
+| Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4132, TODO-4133, TODO-4134 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
@@ -254,26 +253,6 @@ Task template:
   - stop_rule: Stop once one benchmark-only semantic configuration slice is
       removed from the production-facing API and preserved in benchmark
       coverage.
-
-- [ ] TODO-4139: Split `CompilePipeline` into explicit stage handoffs
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Pipeline Boundary Hardening
-  - depends_on: none
-  - scope: Break the current `runCompilePipeline(...)` orchestration into
-      explicit stage handoff objects or stage runners for import, transform,
-      parse, semantics, and dump/report branching, so the pipeline boundary is
-      clearer without introducing a new compiler IR layer.
-  - acceptance:
-    - At least one meaningful compile-pipeline stage boundary is represented by
-      an explicit typed handoff object or stage runner instead of implicit
-      shared local state inside `runCompilePipeline(...)`.
-    - The migrated stage preserves current dump behavior and failure staging for
-      the covered path.
-    - Contract or conformance coverage pins the new stage handoff without
-      regressing user-visible compile-pipeline behavior.
-  - stop_rule: Stop once one substantial compile-pipeline stage boundary uses an
-      explicit handoff object or stage runner with preserved coverage.
 
 - [ ] TODO-4134: Extract representative GPU lowering contract family
   - owner: ai

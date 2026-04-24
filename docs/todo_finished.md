@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 24, 2026)**
+- ✓ TODO-4139: Split `CompilePipeline` into explicit stage handoffs. Completed:
+  `src/CompilePipeline.cpp` now carries explicit import, transform, and parse
+  stage state objects plus dedicated stage runners, so
+  `runCompilePipeline(...)` no longer threads that pre-semantics path through
+  one implicit local-state block. Focused source-lock coverage in
+  `tests/unit/test_ir_pipeline_backends_graph_contexts.h` now pins those typed
+  handoffs and their pre-parse ordering, while
+  `tests/unit/test_ir_pipeline_backends_registry.cpp` proves `pre_ast` dumps
+  still return successfully before parser failures.
 - ✓ TODO-4129: Align `ResolvedModule` publication with import-order contract. Completed: the split rollout is now fully landed through `TODO-4137` and `TODO-4138`, so `SemanticProgram.moduleResolvedArtifacts` now groups by parsed or imported source unit and publishes in deterministic import order with focused semantic-product conformance and contract-probe coverage for both identity and ordering.
 - ✓ TODO-4138: Publish `ResolvedModule` ordering by import order. Completed: `finalizeSemanticModuleArtifacts(...)` now sorts module artifacts by deterministic import-order keys instead of lexical `moduleKey` comparison, root parsed-module artifacts stay ahead of imported source units, and focused semantic-product conformance plus architecture contract probes now pin the non-lexical `/std/math/max` before `/std/math/abs` ordering contract.
 - ✓ TODO-4137: Publish `ResolvedModule` identity by source unit. Completed: `SemanticPublicationBuilders.cpp` now resolves module identity through source-unit import matching instead of top-level path-prefix collapsing, local definitions and routing facts now land in the root parsed-module bucket when they are not imported, imported callable summaries publish under non-root imported-unit buckets, and focused semantic-product conformance plus architecture contract probes now lock the new source-unit grouping surface.

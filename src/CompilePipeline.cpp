@@ -592,6 +592,136 @@ bool validateGraphicsBackendSupport(const Program &program,
   return true;
 }
 
+struct CompilePipelineImportStageState {
+  std::string source;
+  std::vector<std::string> sourceImports;
+  std::vector<std::string> sourceStdImports;
+  std::vector<std::string> implicitStdlibKeys;
+};
+
+struct CompilePipelinePreParseStageState {
+  std::string filteredSource;
+  std::vector<std::string> sourceImports;
+};
+
+struct CompilePipelineParsedProgramStageState {
+  Program program;
+};
+
+bool runCompilePipelineImportStage(const Options &options,
+                                   CompilePipelineImportStageState &out,
+                                   std::string &error,
+                                   DiagnosticSink &diagnosticSink) {
+  ImportResolver importResolver;
+  if (!importResolver.expandImports(options.inputPath,
+                                    out.source,
+                                    error,
+                                    options.importPaths)) {
+    diagnosticSink.setSummary(error);
+    return false;
+  }
+
+  out.sourceImports = collectSourceImportPaths(out.source);
+  out.sourceStdImports = collectStdImportPaths(out.source);
+  out.implicitStdlibKeys = collectImplicitStdlibAutoIncludeKeys(out.source);
+  if (shouldAutoIncludeStdlib(out.source) || !out.implicitStdlibKeys.empty()) {
+    if (!appendStdlibModuleSources(options.importPaths,
+                                   out.sourceStdImports,
+                                   out.implicitStdlibKeys,
+                                   out.source,
+                                   error)) {
+      diagnosticSink.setSummary(error);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool runCompilePipelineTransformStage(
+    const Options &options,
+    const CompilePipelineImportStageState &importStage,
+    CompilePipelinePreParseStageState &out,
+    std::string &error,
+    DiagnosticSink &diagnosticSink) {
+  TextFilterPipeline textPipeline;
+  TextFilterOptions textOptions;
+  textOptions.enabledFilters = options.textFilters;
+  textOptions.rules = options.textTransformRules;
+  textOptions.allowEnvelopeTransforms = options.allowEnvelopeTextTransforms;
+
+  if (!textPipeline.apply(importStage.source,
+                          out.filteredSource,
+                          error,
+                          textOptions)) {
+    diagnosticSink.setSummary(error);
+    return false;
+  }
+
+  out.sourceImports = importStage.sourceImports;
+  return true;
+}
+
+bool runCompilePipelineParseStage(const Options &options,
+                                  const CompilePipelinePreParseStageState &preParseStage,
+                                  CompilePipelineParsedProgramStageState &out,
+                                  std::string &error,
+                                  DiagnosticSink &diagnosticSink) {
+  Lexer lexer(preParseStage.filteredSource);
+  Parser parser(lexer.tokenize(), !options.requireCanonicalSyntax);
+  Parser::ErrorInfo parserErrorInfo;
+  std::vector<Parser::ErrorInfo> parserErrors;
+  if (!parser.parse(out.program,
+                    error,
+                    &parserErrorInfo,
+                    options.collectDiagnostics ? &parserErrors : nullptr)) {
+    if (options.collectDiagnostics) {
+      if (parserErrors.empty() && !parserErrorInfo.message.empty()) {
+        parserErrors.push_back(parserErrorInfo);
+      }
+      sortParserErrorsForStableOrdering(parserErrors);
+      if (!parserErrors.empty()) {
+        const Parser::ErrorInfo &first = parserErrors.front();
+        if (!first.message.empty()) {
+          if (first.line > 0 && first.column > 0) {
+            error = first.message + " at " + std::to_string(first.line) +
+                    ":" + std::to_string(first.column);
+          } else {
+            error = first.message;
+          }
+        }
+      }
+    }
+    if (!parserErrors.empty()) {
+      std::vector<DiagnosticSinkRecord> records;
+      records.reserve(parserErrors.size());
+      for (const auto &item : parserErrors) {
+        DiagnosticSinkRecord record;
+        record.message = item.message;
+        if (item.line > 0 && item.column > 0) {
+          record.primarySpan.line = item.line;
+          record.primarySpan.column = item.column;
+          record.primarySpan.endLine = item.line;
+          record.primarySpan.endColumn = item.column;
+          record.hasPrimarySpan = true;
+        }
+        records.push_back(std::move(record));
+      }
+      diagnosticSink.setRecords(std::move(records));
+    } else {
+      diagnosticSink.setSummary(parserErrorInfo.message);
+      if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
+        diagnosticSink.capturePrimarySpanIfUnset(parserErrorInfo.line,
+                                                 parserErrorInfo.column);
+      }
+    }
+    return false;
+  }
+
+  out.program.sourceImports = preParseStage.sourceImports;
+  return true;
+}
+
 void sortParserErrorsForStableOrdering(std::vector<Parser::ErrorInfo> &errors) {
   auto normalize = [](int value) -> int {
     return value > 0 ? value : std::numeric_limits<int>::max();
@@ -693,95 +823,46 @@ bool runCompilePipeline(const Options &options,
     return false;
   };
 
-  std::string source;
-  ImportResolver importResolver;
-  if (!importResolver.expandImports(options.inputPath, source, error, options.importPaths)) {
-    diagnosticSink.setSummary(error);
+  CompilePipelineImportStageState importStage;
+  if (!runCompilePipelineImportStage(options,
+                                     importStage,
+                                     error,
+                                     diagnosticSink)) {
     return failPipeline(CompilePipelineErrorStage::Import, error, capturedDiagnosticInfo);
   }
 
-  const std::vector<std::string> sourceImports = collectSourceImportPaths(source);
-  const std::vector<std::string> sourceStdImports = collectStdImportPaths(source);
-  const std::vector<std::string> implicitStdlibKeys = collectImplicitStdlibAutoIncludeKeys(source);
-  output.program.sourceImports = sourceImports;
-
-  if (benchmarkAstHeapEstimate) {
-    emitProgramHeapEstimate(output.program, "post-parse-pre-semantics");
-  }
-
-  if (shouldAutoIncludeStdlib(source) || !implicitStdlibKeys.empty()) {
-    if (!appendStdlibModuleSources(options.importPaths, sourceStdImports, implicitStdlibKeys, source, error)) {
-      diagnosticSink.setSummary(error);
-      return failPipeline(CompilePipelineErrorStage::Import, error, capturedDiagnosticInfo);
-    }
-  }
-
-  TextFilterPipeline textPipeline;
-  TextFilterOptions textOptions;
-  textOptions.enabledFilters = options.textFilters;
-  textOptions.rules = options.textTransformRules;
-  textOptions.allowEnvelopeTransforms = options.allowEnvelopeTextTransforms;
-
-  if (!textPipeline.apply(source, output.filteredSource, error, textOptions)) {
-    diagnosticSink.setSummary(error);
+  CompilePipelinePreParseStageState preParseStage;
+  if (!runCompilePipelineTransformStage(options,
+                                        importStage,
+                                        preParseStage,
+                                        error,
+                                        diagnosticSink)) {
     return failPipeline(CompilePipelineErrorStage::Transform, error, capturedDiagnosticInfo);
   }
+
+  output.filteredSource = preParseStage.filteredSource;
 
   const DumpStage dumpStage = parseDumpStage(options.dumpStage);
 
   if (dumpStage == DumpStage::PreAst) {
-    output.dumpOutput = output.filteredSource;
+    output.dumpOutput = preParseStage.filteredSource;
     output.hasDumpOutput = true;
     return true;
   }
 
-  Lexer lexer(output.filteredSource);
-  Parser parser(lexer.tokenize(), !options.requireCanonicalSyntax);
-  Parser::ErrorInfo parserErrorInfo;
-  std::vector<Parser::ErrorInfo> parserErrors;
-  if (!parser.parse(
-          output.program, error, &parserErrorInfo, options.collectDiagnostics ? &parserErrors : nullptr)) {
-    if (options.collectDiagnostics) {
-      if (parserErrors.empty() && !parserErrorInfo.message.empty()) {
-        parserErrors.push_back(parserErrorInfo);
-      }
-      sortParserErrorsForStableOrdering(parserErrors);
-      if (!parserErrors.empty()) {
-        const Parser::ErrorInfo &first = parserErrors.front();
-        if (!first.message.empty()) {
-          if (first.line > 0 && first.column > 0) {
-            error = first.message + " at " + std::to_string(first.line) + ":" + std::to_string(first.column);
-          } else {
-            error = first.message;
-          }
-        }
-      }
-    }
-    if (!parserErrors.empty()) {
-      std::vector<DiagnosticSinkRecord> records;
-      records.reserve(parserErrors.size());
-      for (const auto &item : parserErrors) {
-        DiagnosticSinkRecord record;
-        record.message = item.message;
-        if (item.line > 0 && item.column > 0) {
-          record.primarySpan.line = item.line;
-          record.primarySpan.column = item.column;
-          record.primarySpan.endLine = item.line;
-          record.primarySpan.endColumn = item.column;
-          record.hasPrimarySpan = true;
-        }
-        records.push_back(std::move(record));
-      }
-      diagnosticSink.setRecords(std::move(records));
-    } else {
-      diagnosticSink.setSummary(parserErrorInfo.message);
-      if (parserErrorInfo.line > 0 && parserErrorInfo.column > 0) {
-        diagnosticSink.capturePrimarySpanIfUnset(parserErrorInfo.line, parserErrorInfo.column);
-      }
-    }
+  CompilePipelineParsedProgramStageState parsedStage;
+  if (!runCompilePipelineParseStage(options,
+                                    preParseStage,
+                                    parsedStage,
+                                    error,
+                                    diagnosticSink)) {
     return failPipeline(CompilePipelineErrorStage::Parse, error, capturedDiagnosticInfo);
   }
-  output.program.sourceImports = sourceImports;
+  output.program = std::move(parsedStage.program);
+
+  if (benchmarkAstHeapEstimate) {
+    emitProgramHeapEstimate(output.program, "post-parse-pre-semantics");
+  }
 
   if (dumpStage != DumpStage::None && dumpStage != DumpStage::AstSemantic &&
       dumpStage != DumpStage::SemanticProduct && dumpStage != DumpStage::TypeGraph) {

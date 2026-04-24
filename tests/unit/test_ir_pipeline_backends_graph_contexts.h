@@ -1028,6 +1028,24 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(compilePipelineSource.find("output.failure.stage = stage;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.failure.message = message;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.hasFailure = true;") != std::string::npos);
+  CHECK(compilePipelineSource.find("struct CompilePipelineImportStageState {") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("struct CompilePipelinePreParseStageState {") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("struct CompilePipelineParsedProgramStageState {") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("bool runCompilePipelineImportStage(") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("bool runCompilePipelineTransformStage(") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("bool runCompilePipelineParseStage(") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("CompilePipelineImportStageState importStage;") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("CompilePipelinePreParseStageState preParseStage;") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("CompilePipelineParsedProgramStageState parsedStage;") !=
+        std::string::npos);
   const size_t semanticProductPublishPos =
       compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);");
   const size_t graphicsValidationPos =
@@ -2217,6 +2235,25 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(compilePipelineSource.find("output.hasSemanticProgram = true;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.failure.stage = stage;") != std::string::npos);
   CHECK(compilePipelineSource.find("output.failure.message = message;") != std::string::npos);
+  CHECK(compilePipelineSource.find("struct CompilePipelineImportStageState {") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("struct CompilePipelinePreParseStageState {") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("struct CompilePipelineParsedProgramStageState {") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("bool runCompilePipelineImportStage(") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("bool runCompilePipelineTransformStage(") !=
+        std::string::npos);
+  CHECK(compilePipelineSource.find("bool runCompilePipelineParseStage(") !=
+        std::string::npos);
+  const size_t preAstDumpPos =
+      compilePipelineSource.find("if (dumpStage == DumpStage::PreAst) {");
+  const size_t parseStagePos =
+      compilePipelineSource.find("if (!runCompilePipelineParseStage(options,");
+  REQUIRE(preAstDumpPos != std::string::npos);
+  REQUIRE(parseStagePos != std::string::npos);
+  CHECK(preAstDumpPos < parseStagePos);
   CHECK(semanticPublicationBuildersHeader.find("buildSemanticProgramFromPublicationSurface(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersHeader.find("#include \"SemanticPublicationSurface.h\"") !=

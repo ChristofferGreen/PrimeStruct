@@ -2891,6 +2891,51 @@ main() {
   std::filesystem::remove(tempPath, ec);
 }
 
+TEST_CASE("compile pipeline pre-ast dump returns before parser failures") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(namespace bench {
+[return<i32>]
+main( {
+  return(0i32)
+}
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/bench/main";
+  options.emitKind = "native";
+  options.dumpStage = "pre_ast";
+  options.collectDiagnostics = true;
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  INFO(error);
+  REQUIRE(ok);
+  CHECK(error.empty());
+  CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+  CHECK_FALSE(output.hasFailure);
+  REQUIRE(output.hasDumpOutput);
+  CHECK(output.dumpOutput == output.filteredSource);
+  CHECK(output.dumpOutput.find("main( {") != std::string::npos);
+  CHECK(output.program.definitions.empty());
+  CHECK(output.program.executions.empty());
+  CHECK_FALSE(output.hasSemanticProgram);
+  CHECK(diagnosticInfo.records.empty());
+}
+
 TEST_CASE("compile pipeline explicit skip mode omits semantic product for non-consuming paths") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
