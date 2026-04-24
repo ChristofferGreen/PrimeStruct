@@ -456,9 +456,6 @@ int main(int argc, char **argv) {
   }
 
   primec::Program &program = pipelineOutput.program;
-  if (pipelineOutput.hasSemanticProgram) {
-    primec::releaseSemanticProgramLookupMap(pipelineOutput.semanticProgram);
-  }
   const primec::SemanticProgram *semanticProgram =
       pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
 

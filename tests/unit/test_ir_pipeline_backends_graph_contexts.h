@@ -2268,6 +2268,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("SemanticProgramPublishedRoutingLookups publishedRoutingLookups;") !=
         std::string::npos);
+  CHECK(semanticProduct.find("bool publishedStorageFrozen = false;") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramPublishedLowererPreflightFacts") !=
         std::string::npos);
   CHECK(semanticProduct.find("SemanticProgramPublishedLowererPreflightFacts publishedLowererPreflightFacts;") !=
@@ -2288,6 +2289,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("semanticProgramReturnFactView(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
   CHECK(semanticProduct.find("semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("freezeSemanticProgramPublishedStorage(SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramPublishedStorageFrozen(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::string formatSemanticProgram(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
@@ -2388,11 +2393,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("finalizeSemanticModuleArtifacts(") !=
         std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("freezeSemanticProgramPublishedStorage(state.semanticProgram);") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);") !=
         std::string::npos);
   CHECK(semanticsValidate.find("#include \"SemanticPublicationBuilders.h\"") != std::string::npos);
   CHECK(semanticsValidate.find("buildSemanticProgramFromPublicationSurface(") != std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("normalizeSemanticModulePathKey(") != std::string::npos);
+  CHECK(semanticProductSource.find("if (semanticProgram.publishedStorageFrozen) {") !=
+        std::string::npos);
+  CHECK(primecMain.find("releaseSemanticProgramLookupMap(pipelineOutput.semanticProgram)") ==
+        std::string::npos);
+  CHECK(primevmMain.find("releaseSemanticProgramLookupMap(pipelineOutput.semanticProgram)") ==
+        std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("semanticSourceUnitImportMatchesPath(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("semanticSourceUnitModuleKeyForPath(") !=

@@ -6,6 +6,18 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4141: Freeze published semantic-product storage. Completed:
+  `SemanticProgram` now crosses an explicit publication freeze boundary inside
+  `src/semantics/SemanticPublicationBuilders.cpp` before it leaves semantics.
+  The migrated call-target string-id scratch map now gets cleared and marked
+  frozen at publication time through
+  `freezeSemanticProgramPublishedStorage(...)`, post-freeze interning rejects
+  mutation in `src/SemanticProduct.cpp`, and the old delayed cleanup calls
+  were removed from `src/main.cpp` and `src/primevm_main.cpp`. Focused
+  conformance in `tests/unit/test_ir_pipeline_backends_registry.cpp` and
+  architecture/source-lock coverage in
+  `tests/unit/test_ir_pipeline_backends_graph_contexts.h` now pin the new
+  immutable-publication boundary for that published slice.
 - ✓ TODO-4140: Split benchmark semantic validation from the production API.
   Completed: `include/primec/Semantics.h` now exposes only the production
   `Semantics::validate(...)` contract, while benchmark-only configuration,

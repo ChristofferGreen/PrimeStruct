@@ -371,6 +371,7 @@ struct SemanticProgramPublishedLowererPreflightFacts {
 
 struct SemanticProgram {
   uint32_t contractVersion = SemanticProductContractVersionCurrent;
+  bool publishedStorageFrozen = false;
   std::string entryPath;
   std::vector<std::string> sourceImports;
   std::vector<std::string> imports;
@@ -425,6 +426,8 @@ semanticProgramTryFactView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramOnErrorFact *>
 semanticProgramOnErrorFactView(const SemanticProgram &semanticProgram);
 
+void freezeSemanticProgramPublishedStorage(SemanticProgram &semanticProgram);
+bool semanticProgramPublishedStorageFrozen(const SemanticProgram &semanticProgram);
 SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text);
 std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticProgram &semanticProgram,
                                                                 std::string_view text);

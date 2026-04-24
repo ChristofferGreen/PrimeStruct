@@ -56,28 +56,26 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4141
+- TODO-4142
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4142
+none
 
 ### Priority Lanes (Current)
 
-- Pipeline/publication boundary hardening: TODO-4141
 - Test-surface contraction: TODO-4142
 
 ### Execution Queue (Recommended)
 
-1. TODO-4141
-2. TODO-4142
+1. TODO-4142
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4141 |
+| Compile-pipeline stage and publication-boundary contracts | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
@@ -96,7 +94,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4141 |
+| Semantic-product-authority conformance | none |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
@@ -199,22 +197,3 @@ Task template:
       the migrated source-lock cluster is removed or narrowed.
   - stop_rule: Stop once one meaningful architecture source-lock cluster is
       replaced by contract probes with equivalent regression signal.
-
-- [ ] TODO-4141: Freeze published semantic-product storage
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Add one explicit post-build freeze boundary for
-      `SemanticProgram` publication so downstream lowering and reporting code
-      consume immutable published storage instead of treating the build artifact
-      as a mutable extension surface.
-  - acceptance:
-    - The semantic-product builder finishes through one explicit freeze step
-      before the published artifact leaves semantics.
-    - Downstream production consumers no longer mutate or rely on mutating the
-      published semantic-product storage for the migrated slice.
-    - Conformance or source-lock coverage pins the new immutable-publication
-      contract for the migrated semantic-product slice.
-  - stop_rule: Stop once one published semantic-product slice crosses an
-      explicit immutable freeze boundary with coverage.

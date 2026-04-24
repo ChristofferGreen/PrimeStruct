@@ -273,6 +273,54 @@ main() {
                     }));
 }
 
+TEST_CASE("compile pipeline freezes published semantic-product string scratch storage") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(
+[return<i32>]
+helper([i32] input) {
+  return(input)
+}
+
+[return<i32>]
+main() {
+  return(helper(21i32))
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.emitKind = "vm";
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  REQUIRE(primec::runCompilePipeline(options, output, errorStage, error));
+  REQUIRE(output.hasSemanticProgram);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  CHECK(primec::semanticProgramPublishedStorageFrozen(output.semanticProgram));
+  CHECK(output.semanticProgram.callTargetStringIdsByText.empty());
+
+  const auto mainPathId =
+      primec::semanticProgramLookupCallTargetStringId(output.semanticProgram, "/main");
+  REQUIRE(mainPathId.has_value());
+  CHECK(primec::semanticProgramResolveCallTargetString(output.semanticProgram, *mainPathId) ==
+        "/main");
+
+  const std::size_t stringCountBefore = output.semanticProgram.callTargetStringTable.size();
+  CHECK(primec::semanticProgramInternCallTargetString(output.semanticProgram, "/late_mutation") ==
+        primec::InvalidSymbolId);
+  CHECK(output.semanticProgram.callTargetStringTable.size() == stringCountBefore);
+}
+
 TEST_CASE("ir lowerer requires semantic product before lowering") {
   primec::Program program;
   primec::IrLowerer lowerer;

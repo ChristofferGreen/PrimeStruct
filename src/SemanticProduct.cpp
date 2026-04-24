@@ -107,8 +107,24 @@ uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine,
 
 } // namespace
 
+void freezeSemanticProgramPublishedStorage(SemanticProgram &semanticProgram) {
+  if (semanticProgram.publishedStorageFrozen) {
+    return;
+  }
+  semanticProgram.callTargetStringIdsByText.clear();
+  semanticProgram.callTargetStringIdsByText.rehash(0);
+  semanticProgram.publishedStorageFrozen = true;
+}
+
+bool semanticProgramPublishedStorageFrozen(const SemanticProgram &semanticProgram) {
+  return semanticProgram.publishedStorageFrozen;
+}
+
 SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text) {
   if (text.empty()) {
+    return InvalidSymbolId;
+  }
+  if (semanticProgram.publishedStorageFrozen) {
     return InvalidSymbolId;
   }
   if (const auto existing = semanticProgram.callTargetStringIdsByText.find(text);
@@ -146,8 +162,7 @@ std::optional<SymbolId> semanticProgramLookupCallTargetStringId(const SemanticPr
 }
 
 void releaseSemanticProgramLookupMap(SemanticProgram &semanticProgram) {
-  semanticProgram.callTargetStringIdsByText.clear();
-  semanticProgram.callTargetStringIdsByText.rehash(0);
+  freezeSemanticProgramPublishedStorage(semanticProgram);
 }
 
 std::string_view semanticProgramResolveCallTargetString(const SemanticProgram &semanticProgram, SymbolId id) {

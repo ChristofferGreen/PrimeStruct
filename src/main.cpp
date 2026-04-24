@@ -363,9 +363,6 @@ int main(int argc, char **argv) {
     const primec::IrBackendDiagnostics &diagnostics = irBackend->diagnostics();
     primec::IrBackendEmitResult emitResult;
     IrBackendRunFailure failure;
-    if (pipelineOutput.hasSemanticProgram) {
-      primec::releaseSemanticProgramLookupMap(pipelineOutput.semanticProgram);
-    }
     primec::SemanticProgram *semanticProgram =
         pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr;
     if (!runIrBackend(*irBackend, program, semanticProgram, options, emitResult, failure)) {

@@ -1338,6 +1338,7 @@ SemanticProgram buildSemanticProgramFromPublicationSurface(
   publishSemanticMetadataFamilies(state, publicationSurface);
   publishSemanticScopedFactFamilies(state, publicationSurface);
   finalizeSemanticModuleArtifacts(state);
+  freezeSemanticProgramPublishedStorage(state.semanticProgram);
   return std::move(state.semanticProgram);
 }
 
