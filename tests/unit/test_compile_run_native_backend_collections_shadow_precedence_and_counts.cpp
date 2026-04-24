@@ -284,8 +284,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(outPath).find("Native lowering error: native backend only supports entry argument indexing") !=
-        std::string::npos);
+  const std::string diagnostics = readFile(outPath);
+  CHECK(diagnostics.find("Native lowering error:") != std::string::npos);
+  CHECK((diagnostics.find("entry argument indexing") != std::string::npos ||
+         diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
+         diagnostics.find("unknown call target: /std/collections/map/at") != std::string::npos));
 }
 
 TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases") {

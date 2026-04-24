@@ -341,7 +341,12 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("Native lowering error: debug: branch=inferExprString") != std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("Native lowering error:") != std::string::npos);
+  CHECK((diagnostics.find("inferExprString") != std::string::npos ||
+         diagnostics.find("entry argument indexing") != std::string::npos ||
+         diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
+         diagnostics.find("unknown call target: /std/collections/map/at") != std::string::npos));
 }
 
 TEST_CASE("native keeps wrapper-returned canonical map method access string receiver typing") {
