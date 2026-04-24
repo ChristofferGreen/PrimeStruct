@@ -202,6 +202,25 @@ TEST_CASE("ir lowerer effects unit rejects published runtime reflection prefligh
         "native backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
 }
 
+TEST_CASE("ir lowerer gpu effects unit rejects published software numeric preflight facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.publishedLowererPreflightFacts.firstSoftwareNumericTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "decimal");
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateGpuNoSoftwareNumericTypes(&semanticProgram, error));
+  CHECK(error == "gpu backend does not support software numeric types: decimal");
+}
+
+TEST_CASE("ir lowerer gpu effects unit rejects published runtime reflection preflight facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.publishedLowererPreflightFacts.firstRuntimeReflectionPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/meta/type_name");
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateGpuNoRuntimeReflectionQueries(&semanticProgram, error));
+  CHECK(error ==
+        "gpu backend requires compile-time reflection query elimination before IR emission: /meta/type_name");
+}
+
 TEST_CASE("ir lowerer helper classifies soa_vector as collection builtin") {
   primec::Expr soaVectorCall;
   soaVectorCall.kind = primec::Expr::Kind::Call;
@@ -2617,6 +2636,26 @@ TEST_CASE("ir lowerer vm effects unit reports vm surface diagnostics") {
   CHECK(error == "vm backend does not support effect: unsupported_effect on /main");
 }
 
+TEST_CASE("ir lowerer gpu effects unit reports gpu surface diagnostics") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Expr statementExpr;
+  primec::Expr nestedArg;
+  primec::Transform badEffects;
+  badEffects.name = "effects";
+  badEffects.arguments = {"unsupported_effect"};
+  nestedArg.transforms.push_back(badEffects);
+  statementExpr.args.push_back(nestedArg);
+  entryDef.statements.push_back(statementExpr);
+  program.definitions.push_back(entryDef);
+
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateGpuProgramEffects(program, nullptr, "/main", {}, {}, error));
+  CHECK(error == "gpu backend does not support effect: unsupported_effect on /main");
+}
+
 TEST_CASE("ir lowerer effects unit prefers semantic product callable summaries") {
   primec::Program program;
   primec::Definition entryDef;
@@ -2715,6 +2754,34 @@ TEST_CASE("ir lowerer entry setup uses native effects surface when requested") {
                                                      entryCapabilityMask,
                                                      error));
   CHECK(error == "native backend does not support effect: unsupported_effect on /main");
+}
+
+TEST_CASE("ir lowerer entry setup uses gpu effects surface when requested") {
+  primec::Program program;
+  primec::Definition entryDef;
+  entryDef.fullPath = "/main";
+
+  primec::Transform badEffects;
+  badEffects.name = "effects";
+  badEffects.arguments = {"unsupported_effect"};
+  entryDef.transforms.push_back(badEffects);
+  program.definitions.push_back(entryDef);
+
+  const primec::Definition *entryDefOut = nullptr;
+  uint64_t entryEffectMask = 0;
+  uint64_t entryCapabilityMask = 0;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::runLowerEntrySetup(program,
+                                                     nullptr,
+                                                     "/main",
+                                                     {},
+                                                     {},
+                                                     primec::IrValidationTarget::Glsl,
+                                                     entryDefOut,
+                                                     entryEffectMask,
+                                                     entryCapabilityMask,
+                                                     error));
+  CHECK(error == "gpu backend does not support effect: unsupported_effect on /main");
 }
 
 TEST_CASE("ir lowerer effects unit keeps nested expression effect checks syntax owned") {

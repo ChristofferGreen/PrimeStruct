@@ -567,6 +567,7 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   const auto resultHelpersPos = irLowererHelpersHeader.find("IrLowererResultHelpers.h");
   const auto stringCallPos = irLowererHelpersHeader.find("IrLowererStringCallHelpers.h");
   const auto operatorArithmeticPos = irLowererHelpersHeader.find("IrLowererOperatorArithmeticHelpers.h");
+  const auto gpuEffectsPos = irLowererHelpersHeader.find("IrLowererGpuEffects.h");
   const auto nativeEffectsPos = irLowererHelpersHeader.find("IrLowererNativeEffects.h");
   const auto vmEffectsPos = irLowererHelpersHeader.find("IrLowererVmEffects.h");
   const auto lowerExprEmitSetupPos = irLowererHelpersHeader.find("IrLowererLowerExprEmitSetup.h");
@@ -584,6 +585,7 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   REQUIRE(resultHelpersPos != std::string::npos);
   REQUIRE(stringCallPos != std::string::npos);
   REQUIRE(operatorArithmeticPos != std::string::npos);
+  REQUIRE(gpuEffectsPos != std::string::npos);
   REQUIRE(nativeEffectsPos != std::string::npos);
   REQUIRE(vmEffectsPos != std::string::npos);
   REQUIRE(lowerExprEmitSetupPos != std::string::npos);
@@ -597,6 +599,8 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   CHECK(statementBindingPos < countAccessPos);
   CHECK(resultHelpersPos < operatorArithmeticPos);
   CHECK(stringCallPos < operatorArithmeticPos);
+  CHECK(operatorArithmeticPos < gpuEffectsPos);
+  CHECK(gpuEffectsPos < lowerExprEmitSetupPos);
   CHECK(operatorArithmeticPos < lowerExprEmitSetupPos);
   CHECK(lowerExprEmitSetupPos < lowerReturnCallsSetupPos);
   CHECK(lowerInferencePos < lowerSetupStagePos);
@@ -721,6 +725,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   std::filesystem::path irInferenceSetupPath =
       cwd / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
   std::filesystem::path irLowerEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
+  std::filesystem::path irGpuEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererGpuEffects.cpp";
   std::filesystem::path irNativeEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererNativeEffects.cpp";
   std::filesystem::path irVmEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererVmEffects.cpp";
   std::filesystem::path irReturnInferencePath =
@@ -801,6 +806,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeReturnKindHelpers.cpp";
     irInferenceSetupPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
     irLowerEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
+    irGpuEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererGpuEffects.cpp";
     irNativeEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererNativeEffects.cpp";
     irVmEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererVmEffects.cpp";
     irReturnInferencePath =
@@ -877,6 +883,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(irSetupTypeReturnKindHelpersPath));
   REQUIRE(std::filesystem::exists(irInferenceSetupPath));
   REQUIRE(std::filesystem::exists(irLowerEffectsPath));
+  REQUIRE(std::filesystem::exists(irGpuEffectsPath));
   REQUIRE(std::filesystem::exists(irNativeEffectsPath));
   REQUIRE(std::filesystem::exists(irVmEffectsPath));
   REQUIRE(std::filesystem::exists(irReturnInferencePath));
@@ -927,6 +934,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irSetupTypeReturnKindHelpers = readTextFile(irSetupTypeReturnKindHelpersPath);
   const std::string irInferenceSetup = readTextFile(irInferenceSetupPath);
   const std::string irLowerEffects = readTextFile(irLowerEffectsPath);
+  const std::string irGpuEffects = readTextFile(irGpuEffectsPath);
   const std::string irNativeEffects = readTextFile(irNativeEffectsPath);
   const std::string irVmEffects = readTextFile(irVmEffectsPath);
   const std::string irReturnInference = readTextFile(irReturnInferencePath);
@@ -1097,6 +1105,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irEntrySetupSource.find("validateNativeNoSoftwareNumericTypes(semanticProgram, error)") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateNativeNoRuntimeReflectionQueries(semanticProgram, error)") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateGpuNoSoftwareNumericTypes(semanticProgram, error)") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateGpuNoRuntimeReflectionQueries(semanticProgram, error)") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateNoSoftwareNumericTypes(semanticProgram, error)") ==
         std::string::npos);
@@ -1737,8 +1749,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(lowerEffectsHeader.find("struct Definition;") != std::string::npos);
   CHECK(lowerEffectsHeader.find("struct Program;") != std::string::npos);
   CHECK(lowerEffectsHeader.find("struct SemanticProgram;") != std::string::npos);
+  CHECK(lowerEffectsHeader.find("validateGpuNoSoftwareNumericTypes(") == std::string::npos);
+  CHECK(lowerEffectsHeader.find("validateGpuProgramEffects(") == std::string::npos);
   CHECK(lowerEffectsHeader.find("validateNativeNoSoftwareNumericTypes(") == std::string::npos);
   CHECK(lowerEffectsHeader.find("validateNativeProgramEffects(") == std::string::npos);
+  const auto gpuEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererGpuEffects.h");
+  CHECK(gpuEffectsHeader.find("validateGpuNoSoftwareNumericTypes(") != std::string::npos);
+  CHECK(gpuEffectsHeader.find("validateGpuNoRuntimeReflectionQueries(") != std::string::npos);
+  CHECK(gpuEffectsHeader.find("validateGpuProgramEffects(") != std::string::npos);
   const auto nativeEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererNativeEffects.h");
   CHECK(nativeEffectsHeader.find("validateNativeNoSoftwareNumericTypes(") != std::string::npos);
   CHECK(nativeEffectsHeader.find("validateNativeNoRuntimeReflectionQueries(") != std::string::npos);
@@ -2067,11 +2085,22 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irEntrySetupSource.find("validationTarget == IrValidationTarget::Vm") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("validationTarget == IrValidationTarget::Glsl") !=
+        std::string::npos);
   CHECK(irEntrySetupSource.find("validationTarget == IrValidationTarget::Native") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateGpuProgramEffects(") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateNativeProgramEffects(") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateVmProgramEffects(") != std::string::npos);
+  CHECK(irGpuEffects.find("validateNoSoftwareNumericTypesForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irGpuEffects.find("validateNoRuntimeReflectionQueriesForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irGpuEffects.find("return validateProgramEffectsForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irGpuEffects.find("\"gpu backend\"") != std::string::npos);
   CHECK(irNativeEffects.find("validateNoSoftwareNumericTypesForBackendSurface(") !=
         std::string::npos);
   CHECK(irNativeEffects.find("validateNoRuntimeReflectionQueriesForBackendSurface(") !=

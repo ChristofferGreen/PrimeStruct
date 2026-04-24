@@ -6,6 +6,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererCallHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
+#include "IrLowererGpuEffects.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererNativeEffects.h"
 #include "IrLowererOnErrorHelpers.h"
@@ -230,14 +231,18 @@ bool runLowerEntrySetup(const Program &program,
     return false;
   }
   const bool useNativeEffectSurface = validationTarget == IrValidationTarget::Native;
+  const bool useGpuEffectSurface = validationTarget == IrValidationTarget::Glsl;
   if ((useNativeEffectSurface && !validateNativeNoSoftwareNumericTypes(semanticProgram, error)) ||
-      (!useNativeEffectSurface &&
+      (useGpuEffectSurface && !validateGpuNoSoftwareNumericTypes(semanticProgram, error)) ||
+      (!useNativeEffectSurface && !useGpuEffectSurface &&
        !validateNoSoftwareNumericTypesForBackendSurface(semanticProgram, "native backend", error))) {
     return false;
   }
   if ((useNativeEffectSurface &&
        !validateNativeNoRuntimeReflectionQueries(semanticProgram, error)) ||
-      (!useNativeEffectSurface &&
+      (useGpuEffectSurface &&
+       !validateGpuNoRuntimeReflectionQueries(semanticProgram, error)) ||
+      (!useNativeEffectSurface && !useGpuEffectSurface &&
        !validateNoRuntimeReflectionQueriesForBackendSurface(semanticProgram, "native backend", error))) {
     return false;
   }
@@ -249,10 +254,14 @@ bool runLowerEntrySetup(const Program &program,
        !validateVmProgramEffects(
            program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
       (useNativeEffectSurface &&
-      !validateNativeProgramEffects(
+       !validateNativeProgramEffects(
+           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
+      (useGpuEffectSurface &&
+       !validateGpuProgramEffects(
            program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
       (validationTarget != IrValidationTarget::Vm &&
        !useNativeEffectSurface &&
+       !useGpuEffectSurface &&
        !validateProgramEffectsForBackendSurface(
            program,
            semanticProgram,

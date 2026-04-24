@@ -6,6 +6,24 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4128: Split lowering contracts by backend surface. Completed: the
+  representative VM, native, and GPU lowering contract families now each live
+  behind explicit backend-scoped modules, so the shared lowerer helpers keep
+  only backend-agnostic orchestration for the migrated entry-validation
+  surface. Focused conformance plus architecture/source-lock coverage now pins
+  each backend-owned family and the shared helper boundary that remains.
+- ✓ TODO-4134: Extract representative GPU lowering contract family.
+  Completed: `src/ir_lowerer/IrLowererGpuEffects.{h,cpp}` now owns the
+  migrated GPU preflight and entry effect-validation contract family, while
+  `src/ir_lowerer/IrLowererLowerEffects.cpp` stays backend-agnostic helper
+  glue parameterized by backend surface name. `src/ir_lowerer/IrLowererLowerEntrySetup.cpp`
+  now dispatches `IrValidationTarget::Glsl` through the explicit GPU module,
+  and focused conformance in
+  `tests/unit/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+  plus architecture/source-lock coverage in
+  `tests/unit/test_ir_pipeline_backends_graph_contexts.h` and
+  `tests/unit/test_ir_pipeline_backends_architecture.h` now pins the new
+  GPU-owned compile-unit boundary.
 - ✓ TODO-4133: Extract representative native lowering contract family.
   Completed: `src/ir_lowerer/IrLowererNativeEffects.{h,cpp}` now owns the
   migrated native preflight and entry effect-validation contract family,
