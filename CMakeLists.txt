@@ -241,6 +241,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
 )
 
 set(PRIMESTRUCT_IR_SOURCES
+  src/AstMemory.cpp
   src/CliDriver.cpp
   src/CompilePipeline.cpp
   src/IrBackendProfiles.cpp

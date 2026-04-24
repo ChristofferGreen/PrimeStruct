@@ -202,8 +202,8 @@ bool runIrBackend(const primec::IrBackend &backend,
     failure.cliFailure = primec::describeIrPreparationFailure(prepFailure, backend);
     return false;
   }
-  // Lowering no longer needs the parsed AST or semantic-product payload.
-  // Release them before backend emission (especially VM execution) to cap RSS.
+  // IR preparation already released body-heavy AST storage. Drop the remaining
+  // AST envelope and semantic-product payload before backend emission to cap RSS.
   program = {};
   if (semanticProgram != nullptr) {
     *semanticProgram = {};

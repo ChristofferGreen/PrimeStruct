@@ -470,7 +470,8 @@ int main(int argc, char **argv) {
         options,
         primec::describeIrPreparationFailure(irFailure, vmDiagnostics, &primec::normalizeVmLoweringError));
   }
-  // VM execution only needs lowered IR at this point.
+  // IR preparation already released body-heavy AST storage. VM execution only
+  // needs lowered IR plus the remaining envelope cleanup at this point.
   program = {};
   if (pipelineOutput.hasSemanticProgram) {
     pipelineOutput.semanticProgram = {};

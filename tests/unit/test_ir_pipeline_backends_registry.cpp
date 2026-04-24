@@ -3,11 +3,14 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "primec/AstMemory.h"
 #include "primec/CliDriver.h"
 #include "primec/EmitKind.h"
 #include "primec/IrBackends.h"
@@ -193,6 +196,81 @@ TEST_CASE("ir preparation helper requires semantic product before lowering") {
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(failure.message == "semantic product is required for IR preparation");
   CHECK(failure.diagnosticInfo.message == failure.message);
+}
+
+TEST_CASE("ir preparation releases lowered AST bodies while preserving source-map provenance") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(
+[return<i32>]
+helper([i32] input) {
+  [i32] local{input}
+  return(local)
+}
+
+[return<i32>]
+main() {
+  [i32] value{helper(21i32)}
+  return(value)
+}
+)";
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.emitKind = "vm";
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  REQUIRE(primec::runCompilePipeline(options, output, errorStage, error));
+  REQUIRE(output.hasSemanticProgram);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  const primec::ProgramHeapEstimateStats before = primec::estimateProgramHeap(output.program);
+  CHECK(before.dynamicBytes > 0);
+  CHECK(before.exprs > 0);
+  CHECK(std::any_of(output.program.definitions.begin(),
+                    output.program.definitions.end(),
+                    [](const primec::Definition &definition) {
+                      return !definition.parameters.empty() || !definition.statements.empty() ||
+                             definition.returnExpr.has_value();
+                    }));
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  REQUIRE(primec::prepareIrModule(
+      output.program, &output.semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
+
+  const primec::ProgramHeapEstimateStats after = primec::estimateProgramHeap(output.program);
+  CHECK(after.dynamicBytes < before.dynamicBytes);
+  CHECK(after.exprs < before.exprs);
+
+  for (const auto &definition : output.program.definitions) {
+    CHECK(definition.parameters.empty());
+    CHECK(definition.statements.empty());
+    CHECK_FALSE(definition.returnExpr.has_value());
+  }
+  for (const auto &execution : output.program.executions) {
+    CHECK(execution.arguments.empty());
+    CHECK(execution.argumentNames.empty());
+    CHECK(execution.bodyArguments.empty());
+    CHECK_FALSE(execution.hasBodyArguments);
+  }
+
+  REQUIRE_FALSE(ir.instructionSourceMap.empty());
+  CHECK(std::any_of(ir.instructionSourceMap.begin(),
+                    ir.instructionSourceMap.end(),
+                    [](const primec::IrInstructionSourceMapEntry &entry) {
+                      return entry.provenance == primec::IrSourceMapProvenance::CanonicalAst && entry.line > 0 &&
+                             entry.column > 0;
+                    }));
 }
 
 TEST_CASE("ir lowerer requires semantic product before lowering") {

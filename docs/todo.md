@@ -56,13 +56,12 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4126
+- TODO-4135
+- TODO-4137
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4135
 - TODO-4136
-- TODO-4137
 - TODO-4138
 - TODO-4139
 - TODO-4132
@@ -70,14 +69,15 @@ Task template:
 - TODO-4134
 - TODO-4130
 - TODO-4131
+- TODO-4140
+- TODO-4141
 
 ### Priority Lanes (Current)
 
 - Semantic-product authority and lowerer ownership: TODO-4137, TODO-4138,
   TODO-4132, TODO-4133, TODO-4134
 - Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
-- Validator/runtime boundary simplification: TODO-4126, TODO-4135,
-  TODO-4136, TODO-4140
+- Validator/runtime boundary simplification: TODO-4135, TODO-4136, TODO-4140
 - Test-surface contraction: TODO-4142
 - Runtime execution unification: TODO-4130
 - Parallel semantic publication determinism: TODO-4135, TODO-4136,
@@ -85,17 +85,17 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4126
-2. TODO-4135
+1. TODO-4135
+2. TODO-4137
 3. TODO-4136
-4. TODO-4137
-5. TODO-4138
+4. TODO-4138
+5. TODO-4139
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4126, TODO-4135, TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4135, TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4139, TODO-4141 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
@@ -517,21 +517,3 @@ Task template:
       family publication consumed through
       `IrLowererSemanticProductTargetAdapters.cpp` are separate shippable
       production seams.
-
-- [ ] TODO-4126: Release AST bodies after a lowered semantic handoff
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4120
-  - scope: Introduce a body-scoped lowered semantic handoff so heavy AST body
-      storage can be released earlier without breaking provenance, source-map,
-      or backend emission requirements.
-  - acceptance:
-    - A compile-pipeline path can release AST body-heavy state earlier than the
-      current post-IR-preparation cutoff while preserving required provenance.
-    - A representative RSS or allocation benchmark shows a measurable memory
-      improvement on that path.
-    - Source-map or debugger-oriented coverage proves the earlier release does
-      not break provenance consumers.
-  - stop_rule: Stop once one measured earlier-release path lands with preserved
-      provenance behavior and documented memory improvement.
