@@ -321,7 +321,7 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("- [ ] TODO-4114:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4116:") == std::string::npos);
 
-  CHECK(todoFinished.find("✓ TODO-4142: Retire brittle architecture source locks after contract migration.") !=
+  CHECK(todoFinished.find("✓ TODO-4142: Retire brittle architecture source locks after contract") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4123: Split validator core from publication and benchmark shadows.") !=
         std::string::npos);
@@ -1666,18 +1666,30 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   CHECK(gfxStdlib.find("plus(") == std::string::npos);
   CHECK(gfxExperimental.find("import /std/gfx/*") != std::string::npos);
   CHECK(gfxExperimental.find("targeted compatibility coverage and staged migration support.") != std::string::npos);
-  CHECK(gfxExperimental.find("return(canonicalWindow(this).is_open())") != std::string::npos);
-  CHECK(gfxExperimental.find("return(experimentalQueue(canonicalDevice(this).default_queue()))") !=
+  CHECK(gfxExperimental.find("Route behavior through the canonical helper surface whenever the old type") !=
         std::string::npos);
-  CHECK(gfxExperimental.find("return(experimentalRenderPass(canonicalFrame(this).render_pass(clear_color, clear_depth)))") !=
+  CHECK(gfxExperimental.find("return(greater_than(this.token, 0i32))") != std::string::npos);
+  CHECK(gfxExperimental.find("return(Queue([token] plus(this.token, 1i32)))") != std::string::npos);
+  CHECK(gfxExperimental.find("return(RenderPass([token] renderPassToken))") != std::string::npos);
+  CHECK(gfxExperimental.find("SubstrateDrawMeshConfig(") != std::string::npos);
+  CHECK(gfxExperimental.find("return(/std/gfx/Buffer/readback<T>(canonical))") !=
         std::string::npos);
-  CHECK(gfxExperimental.find("canonicalRenderPass(this).draw_mesh(canonicalMesh(mesh), canonicalMaterial(material))") !=
+  CHECK(gfxExperimental.find("canonical{/std/gfx/Buffer/upload<T>(values)}") !=
         std::string::npos);
-  CHECK(gfxExperimental.find("return(/std/gfx/Buffer/readback<T>(canonicalBuffer<T>(self)))") !=
+  CHECK(gfxExperimental.find("return(Buffer<T>([token] canonical.token, [elementCount] canonical.elementCount))") !=
         std::string::npos);
-  CHECK(gfxExperimental.find("return(experimentalBuffer<T>(/std/gfx/Buffer/upload<T>(values)))") !=
+  CHECK(gfxExperimental.find("return(canonicalWindow(this).is_open())") == std::string::npos);
+  CHECK(gfxExperimental.find("return(experimentalQueue(canonicalDevice(this).default_queue()))") ==
         std::string::npos);
-  CHECK(gfxExperimental.find("return(/std/gfx/GfxError/why(canonicalGfxError(err)))") !=
+  CHECK(gfxExperimental.find("return(experimentalRenderPass(canonicalFrame(this).render_pass(clear_color, clear_depth)))") ==
+        std::string::npos);
+  CHECK(gfxExperimental.find("canonicalRenderPass(this).draw_mesh(canonicalMesh(mesh), canonicalMaterial(material))") ==
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(/std/gfx/Buffer/readback<T>(canonicalBuffer<T>(self)))") ==
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(experimentalBuffer<T>(/std/gfx/Buffer/upload<T>(values)))") ==
+        std::string::npos);
+  CHECK(gfxExperimental.find("return(/std/gfx/GfxError/why(canonicalGfxError(err)))") ==
         std::string::npos);
   CHECK(gfxExperimental.find("return(/std/gpu/readback(self))") == std::string::npos);
   CHECK(gfxExperimental.find("return(/std/gpu/upload(values))") == std::string::npos);
