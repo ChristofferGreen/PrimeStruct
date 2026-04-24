@@ -522,16 +522,22 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(setupType.find("resolveMethodCallDefinitionFromExpr(") != std::string::npos);
 }
 
-TEST_CASE("public lowerer testing umbrella keeps alias owners ahead of users") {
+TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path irLowererHelpersHeaderPath = cwd / "include" / "primec" / "testing" / "IrLowererHelpers.h";
+  std::filesystem::path irLowererStageContractsHeaderPath =
+      cwd / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
   if (!std::filesystem::exists(irLowererHelpersHeaderPath)) {
     irLowererHelpersHeaderPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererHelpers.h";
+    irLowererStageContractsHeaderPath =
+        cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
   }
   REQUIRE(std::filesystem::exists(irLowererHelpersHeaderPath));
+  REQUIRE(std::filesystem::exists(irLowererStageContractsHeaderPath));
 
   const std::string irLowererHelpersHeader = readTextFile(irLowererHelpersHeaderPath);
+  const std::string irLowererStageContractsHeader = readTextFile(irLowererStageContractsHeaderPath);
 
   const auto setupTypePos = irLowererHelpersHeader.find("IrLowererSetupTypeHelpers.h");
   const auto callDispatchPos = irLowererHelpersHeader.find("IrLowererCallDispatchHelpers.h");
@@ -542,13 +548,11 @@ TEST_CASE("public lowerer testing umbrella keeps alias owners ahead of users") {
   const auto operatorArithmeticPos = irLowererHelpersHeader.find("IrLowererOperatorArithmeticHelpers.h");
   const auto lowerExprEmitSetupPos = irLowererHelpersHeader.find("IrLowererLowerExprEmitSetup.h");
   const auto lowerReturnCallsSetupPos = irLowererHelpersHeader.find("IrLowererLowerReturnCallsSetup.h");
-  const auto lowerReturnEmitStagePos = irLowererHelpersHeader.find("IrLowererLowerReturnEmitStage.h");
-  const auto lowerInferencePos = irLowererHelpersHeader.find("IrLowererLowerInferenceSetup.h");
-  const auto lowerSetupStagePos = irLowererHelpersHeader.find("IrLowererLowerSetupStage.h");
-  const auto lowerStatementsSourceMapPos =
-      irLowererHelpersHeader.find("IrLowererLowerStatementsSourceMapStep.h");
+  const auto lowerInferencePos = irLowererStageContractsHeader.find("IrLowererLowerInferenceSetup.h");
+  const auto lowerSetupStagePos = irLowererStageContractsHeader.find("IrLowererLowerSetupStage.h");
+  const auto lowerReturnEmitStagePos = irLowererStageContractsHeader.find("IrLowererLowerReturnEmitStage.h");
   const auto lowerStatementsCallsStagePos =
-      irLowererHelpersHeader.find("IrLowererLowerStatementsCallsStage.h");
+      irLowererStageContractsHeader.find("IrLowererLowerStatementsCallsStage.h");
 
   REQUIRE(setupTypePos != std::string::npos);
   REQUIRE(callDispatchPos != std::string::npos);
@@ -559,22 +563,38 @@ TEST_CASE("public lowerer testing umbrella keeps alias owners ahead of users") {
   REQUIRE(operatorArithmeticPos != std::string::npos);
   REQUIRE(lowerExprEmitSetupPos != std::string::npos);
   REQUIRE(lowerReturnCallsSetupPos != std::string::npos);
-  REQUIRE(lowerReturnEmitStagePos != std::string::npos);
   REQUIRE(lowerInferencePos != std::string::npos);
   REQUIRE(lowerSetupStagePos != std::string::npos);
-  REQUIRE(lowerStatementsSourceMapPos != std::string::npos);
+  REQUIRE(lowerReturnEmitStagePos != std::string::npos);
   REQUIRE(lowerStatementsCallsStagePos != std::string::npos);
 
   CHECK(setupTypePos < callDispatchPos);
   CHECK(statementBindingPos < countAccessPos);
-  CHECK(statementBindingPos < lowerInferencePos);
   CHECK(resultHelpersPos < operatorArithmeticPos);
   CHECK(stringCallPos < operatorArithmeticPos);
   CHECK(operatorArithmeticPos < lowerExprEmitSetupPos);
-  CHECK(lowerExprEmitSetupPos < lowerReturnEmitStagePos);
-  CHECK(lowerReturnCallsSetupPos < lowerReturnEmitStagePos);
+  CHECK(lowerExprEmitSetupPos < lowerReturnCallsSetupPos);
   CHECK(lowerInferencePos < lowerSetupStagePos);
-  CHECK(lowerStatementsSourceMapPos < lowerStatementsCallsStagePos);
+  CHECK(lowerSetupStagePos < lowerReturnEmitStagePos);
+  CHECK(lowerReturnEmitStagePos < lowerStatementsCallsStagePos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerInferenceSetup.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerSetupStage.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerReturnEmitStage.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerStatementsCallsStage.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerStatementsCallsStep.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerStatementsEntryExecutionStep.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerStatementsEntryStatementStep.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerStatementsFunctionTableStep.h") == std::string::npos);
+  CHECK(irLowererHelpersHeader.find("IrLowererLowerStatementsSourceMapStep.h") == std::string::npos);
+  CHECK(irLowererStageContractsHeader.find("IrLowererLowerStatementsCallsStep.h") == std::string::npos);
+  CHECK(irLowererStageContractsHeader.find("IrLowererLowerStatementsEntryExecutionStep.h") ==
+        std::string::npos);
+  CHECK(irLowererStageContractsHeader.find("IrLowererLowerStatementsEntryStatementStep.h") ==
+        std::string::npos);
+  CHECK(irLowererStageContractsHeader.find("IrLowererLowerStatementsFunctionTableStep.h") ==
+        std::string::npos);
+  CHECK(irLowererStageContractsHeader.find("IrLowererLowerStatementsSourceMapStep.h") ==
+        std::string::npos);
 }
 
 TEST_CASE("public call dispatch testing header stays in sync with alias-policy helpers") {

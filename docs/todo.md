@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4124
 - TODO-4125
 - TODO-4126
 
@@ -80,18 +79,18 @@ Task template:
 - Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4126, TODO-4135,
   TODO-4136, TODO-4140
-- Test-surface contraction: TODO-4124, TODO-4125, TODO-4142
+- Test-surface contraction: TODO-4125, TODO-4142
 - Runtime execution unification: TODO-4130
 - Parallel semantic publication determinism: TODO-4135, TODO-4136,
   TODO-4131
 
 ### Execution Queue (Recommended)
 
-1. TODO-4124
-2. TODO-4125
-3. TODO-4126
-4. TODO-4135
-5. TODO-4136
+1. TODO-4125
+2. TODO-4126
+3. TODO-4135
+4. TODO-4136
+5. TODO-4137
 
 ### PrimeStruct Coverage Snapshot
 
@@ -205,7 +204,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-24
   - phase: Testing API Contraction
-  - depends_on: TODO-4124, TODO-4125
+  - depends_on: TODO-4125
   - scope: Replace the remaining architecture/doc/file-placement source-lock
       tests with narrower contract probes once the helper-export contraction
       work has landed, so structural cleanup no longer requires large batches of
@@ -555,21 +554,3 @@ Task template:
     - Architecture/source-lock coverage records the narrower testing surface.
   - stop_rule: Stop once one remaining step-level helper cluster is replaced by
       contract probes and the migrated tests hold the same validation signal.
-
-- [ ] TODO-4124: Replace bulk lowerer helper exports with scenario contracts
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Testing API Contraction
-  - depends_on: TODO-4120
-  - scope: Shrink `include/primec/testing/IrLowererHelpers.h` from a blanket
-      internal-helper export surface into smaller scenario-focused semantic-
-      product and backend-conformance helpers.
-  - acceptance:
-    - `IrLowererHelpers.h` no longer bulk-reexports at least one significant
-      cluster of internal lowerer helper headers.
-    - Replacement scenario helpers cover the migrated test cases without
-      restoring `tests -> src` includes.
-    - Source-lock or architecture tests pin the narrower lowerer testing API.
-  - stop_rule: Stop once one significant lowerer helper cluster is removed from
-      the public testing aggregator and its tests use scenario contracts
-      instead.

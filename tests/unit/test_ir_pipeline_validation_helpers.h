@@ -38,6 +38,7 @@
 #include "primec/WasmEmitter.h"
 #include "primec/testing/EmitterHelpers.h"
 #include "primec/testing/IrLowererHelpers.h"
+#include "primec/testing/IrLowererStageContracts.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 #include "primec/testing/TestScratch.h"
 #include "test_ir_pipeline_helpers.h"
