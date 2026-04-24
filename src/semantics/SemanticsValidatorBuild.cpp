@@ -28,11 +28,13 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
   pilotRoutingSemanticCollectorsValid_ = false;
   mergedWorkerCallableSummariesValid_ = false;
+  mergedWorkerOnErrorFactsValid_ = false;
   collectedDirectCallTargets_.clear();
   collectedMethodCallTargets_.clear();
   collectedBridgePathChoices_.clear();
   collectedCallableSummaries_.clear();
   mergedWorkerCallableSummaries_.clear();
+  mergedWorkerOnErrorFacts_.clear();
   onErrorSnapshotFactCacheValid_ = false;
   onErrorSnapshotCache_.clear();
   structNames_.clear();

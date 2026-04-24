@@ -699,6 +699,20 @@ main() {
   primec::Semantics semantics;
   std::array<std::string, 3> formattedByWorkerCount;
   std::array<std::size_t, 3> onErrorFactCounts{};
+  struct OnErrorSnapshot {
+    bool present = false;
+    std::string definitionPath;
+    std::string returnKind;
+    std::string handlerPath;
+    std::string errorType;
+    std::size_t boundArgCount = 0;
+    std::vector<std::string> boundArgTexts;
+    bool returnResultHasValue = false;
+    std::string returnResultValueType;
+    std::string returnResultErrorType;
+    uint64_t semanticNodeId = 0;
+  };
+  std::array<OnErrorSnapshot, 3> onErrorSnapshots{};
   constexpr std::array<uint32_t, 3> workerCounts = {1u, 2u, 4u};
 
   for (std::size_t i = 0; i < workerCounts.size(); ++i) {
@@ -724,11 +738,68 @@ main() {
     formattedByWorkerCount[i] = primec::formatSemanticProgram(semanticProgram);
     CHECK(formattedByWorkerCount[i].find("/add_with_default") != std::string::npos);
     CHECK(formattedByWorkerCount[i].find("/record_error") != std::string::npos);
+    const auto onErrorFacts =
+        primec::semanticProgramOnErrorFactView(semanticProgram);
+    REQUIRE(onErrorFacts.size() == 1);
+    const auto &entry = *onErrorFacts.front();
+    onErrorSnapshots[i].present = true;
+    onErrorSnapshots[i].definitionPath = std::string(
+        primec::semanticProgramOnErrorFactDefinitionPath(semanticProgram,
+                                                         entry));
+    onErrorSnapshots[i].returnKind = entry.returnKind;
+    onErrorSnapshots[i].handlerPath = std::string(
+        primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, entry));
+    onErrorSnapshots[i].errorType = entry.errorType;
+    onErrorSnapshots[i].boundArgCount = entry.boundArgCount;
+    onErrorSnapshots[i].boundArgTexts = entry.boundArgTexts;
+    onErrorSnapshots[i].returnResultHasValue = entry.returnResultHasValue;
+    onErrorSnapshots[i].returnResultValueType = entry.returnResultValueType;
+    onErrorSnapshots[i].returnResultErrorType = entry.returnResultErrorType;
+    onErrorSnapshots[i].semanticNodeId = entry.semanticNodeId;
   }
 
   CHECK(onErrorFactCounts[0] == 1);
   CHECK(onErrorFactCounts[0] == onErrorFactCounts[1]);
   CHECK(onErrorFactCounts[1] == onErrorFactCounts[2]);
+  CHECK(onErrorSnapshots[0].present);
+  CHECK(onErrorSnapshots[1].present);
+  CHECK(onErrorSnapshots[2].present);
+  CHECK(onErrorSnapshots[0].definitionPath == onErrorSnapshots[1].definitionPath);
+  CHECK(onErrorSnapshots[0].definitionPath == onErrorSnapshots[2].definitionPath);
+  CHECK(onErrorSnapshots[0].returnKind == onErrorSnapshots[1].returnKind);
+  CHECK(onErrorSnapshots[0].returnKind == onErrorSnapshots[2].returnKind);
+  CHECK(onErrorSnapshots[0].handlerPath == onErrorSnapshots[1].handlerPath);
+  CHECK(onErrorSnapshots[0].handlerPath == onErrorSnapshots[2].handlerPath);
+  CHECK(onErrorSnapshots[0].errorType == onErrorSnapshots[1].errorType);
+  CHECK(onErrorSnapshots[0].errorType == onErrorSnapshots[2].errorType);
+  CHECK(onErrorSnapshots[0].boundArgCount == onErrorSnapshots[1].boundArgCount);
+  CHECK(onErrorSnapshots[0].boundArgCount == onErrorSnapshots[2].boundArgCount);
+  CHECK(onErrorSnapshots[0].boundArgTexts == onErrorSnapshots[1].boundArgTexts);
+  CHECK(onErrorSnapshots[0].boundArgTexts == onErrorSnapshots[2].boundArgTexts);
+  CHECK(onErrorSnapshots[0].returnResultHasValue ==
+        onErrorSnapshots[1].returnResultHasValue);
+  CHECK(onErrorSnapshots[0].returnResultHasValue ==
+        onErrorSnapshots[2].returnResultHasValue);
+  CHECK(onErrorSnapshots[0].returnResultValueType ==
+        onErrorSnapshots[1].returnResultValueType);
+  CHECK(onErrorSnapshots[0].returnResultValueType ==
+        onErrorSnapshots[2].returnResultValueType);
+  CHECK(onErrorSnapshots[0].returnResultErrorType ==
+        onErrorSnapshots[1].returnResultErrorType);
+  CHECK(onErrorSnapshots[0].returnResultErrorType ==
+        onErrorSnapshots[2].returnResultErrorType);
+  CHECK(onErrorSnapshots[0].semanticNodeId == onErrorSnapshots[1].semanticNodeId);
+  CHECK(onErrorSnapshots[0].semanticNodeId == onErrorSnapshots[2].semanticNodeId);
+  CHECK(onErrorSnapshots[0].definitionPath == "/main");
+  CHECK(onErrorSnapshots[0].returnKind == "value");
+  CHECK(onErrorSnapshots[0].handlerPath == "/record_error");
+  CHECK(onErrorSnapshots[0].errorType == "i32");
+  CHECK(onErrorSnapshots[0].boundArgCount == 1);
+  CHECK(onErrorSnapshots[0].boundArgTexts == std::vector<std::string>{"7i32"});
+  CHECK_FALSE(onErrorSnapshots[0].returnResultHasValue);
+  CHECK(onErrorSnapshots[0].returnResultValueType.empty());
+  CHECK(onErrorSnapshots[0].returnResultErrorType.empty());
+  CHECK(onErrorSnapshots[0].semanticNodeId > 0);
   CHECK(formattedByWorkerCount[0] == formattedByWorkerCount[1]);
   CHECK(formattedByWorkerCount[1] == formattedByWorkerCount[2]);
 }

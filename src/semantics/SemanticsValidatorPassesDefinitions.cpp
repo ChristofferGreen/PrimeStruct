@@ -505,6 +505,7 @@ bool SemanticsValidator::validateDefinitions() {
     SemanticDiagnosticInfo diagnostics;
     ValidationCounters counters;
     std::vector<CollectedCallableSummaryEntry> callableSummaries;
+    std::vector<OnErrorSnapshotEntry> onErrorFacts;
   };
 
   std::vector<std::future<WorkerChunkResult>> workerTasks;
@@ -538,6 +539,8 @@ bool SemanticsValidator::validateDefinitions() {
           if (result.ok) {
             worker.collectCallableSummaryEntriesForStableRange(
                 stableOrderOffset, stableOrderCount, result.callableSummaries);
+            worker.collectOnErrorSnapshotEntriesForStableRange(
+                stableOrderOffset, stableOrderCount, result.onErrorFacts);
           }
           return result;
         }));
@@ -585,6 +588,25 @@ bool SemanticsValidator::validateDefinitions() {
     mergedWorkerCallableSummariesValid_ = true;
   };
 
+  auto mergeWorkerOnErrorFacts = [&]() {
+    mergedWorkerOnErrorFactsValid_ = false;
+    std::vector<OnErrorSnapshotEntry>().swap(mergedWorkerOnErrorFacts_);
+
+    std::size_t onErrorFactCount = 0;
+    for (const WorkerChunkResult &result : workerResults) {
+      onErrorFactCount += result.onErrorFacts.size();
+    }
+    mergedWorkerOnErrorFacts_.reserve(onErrorFactCount);
+    for (WorkerChunkResult &result : workerResults) {
+      mergedWorkerOnErrorFacts_.insert(
+          mergedWorkerOnErrorFacts_.end(),
+          std::make_move_iterator(result.onErrorFacts.begin()),
+          std::make_move_iterator(result.onErrorFacts.end()));
+    }
+    sortCollectedOnErrorSnapshots(mergedWorkerOnErrorFacts_);
+    mergedWorkerOnErrorFactsValid_ = true;
+  };
+
   if (!collectDiagnostics) {
     for (const WorkerChunkResult &result : workerResults) {
       if (result.ok) {
@@ -599,6 +621,7 @@ bool SemanticsValidator::validateDefinitions() {
       return false;
     }
     mergeWorkerCallableSummaries();
+    mergeWorkerOnErrorFacts();
     return true;
   }
 
@@ -635,6 +658,7 @@ bool SemanticsValidator::validateDefinitions() {
   }
 
   mergeWorkerCallableSummaries();
+  mergeWorkerOnErrorFacts();
   return true;
 }
 

@@ -56,8 +56,8 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4136
 - TODO-4139
+- TODO-4131
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -65,7 +65,6 @@ Task template:
 - TODO-4133
 - TODO-4134
 - TODO-4130
-- TODO-4131
 - TODO-4140
 - TODO-4141
 - TODO-4142
@@ -73,18 +72,18 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer ownership: TODO-4132, TODO-4133,
-  TODO-4134
+- Semantic-product authority and lowerer ownership: TODO-4131, TODO-4132,
+  TODO-4133, TODO-4134
 - Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
-- Validator/runtime boundary simplification: TODO-4136, TODO-4140
+- Validator/runtime boundary simplification: TODO-4140
 - Test-surface contraction: TODO-4142
 - Runtime execution unification: TODO-4130
-- Parallel semantic publication determinism: TODO-4136, TODO-4131
+- Parallel semantic publication determinism: TODO-4131
 
 ### Execution Queue (Recommended)
 
-1. TODO-4136
-2. TODO-4139
+1. TODO-4139
+2. TODO-4131
 3. TODO-4132
 4. TODO-4133
 5. TODO-4134
@@ -93,14 +92,14 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4136, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4131 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4139, TODO-4141 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| Validator entrypoint and benchmark-plumbing split | TODO-4136, TODO-4140 |
-| Semantic-product publication by module and fact family | TODO-4136 |
+| Validator entrypoint and benchmark-plumbing split | TODO-4140 |
+| Semantic-product publication by module and fact family | TODO-4131 |
 | IR lowerer compile-unit breakup | TODO-4132, TODO-4133, TODO-4134 |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -116,7 +115,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4141 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | TODO-4139 |
-| Semantic-product publication parity and deterministic ordering | TODO-4136, TODO-4131 |
+| Semantic-product publication parity and deterministic ordering | TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4132, TODO-4133, TODO-4134 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
@@ -276,27 +275,6 @@ Task template:
   - stop_rule: Stop once one substantial compile-pipeline stage boundary uses an
       explicit handoff object or stage runner with preserved coverage.
 
-- [ ] TODO-4136: Publish fact-family indices from deterministic worker merges
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4135
-  - scope: Extend production worker publication from routing and callable
-      metadata into one representative semantic fact-family slice in
-      `publishedRoutingLookups`, with deterministic single-writer merges for
-      both the published indices and the consumer-visible semantic-product
-      view.
-  - acceptance:
-    - One representative fact-family slice (`onError`, `localAuto`, `query`,
-      or `try`) publishes through deterministic worker-local merges in the
-      production semantic-product path.
-    - The migrated fact-family indices and their consumer-visible semantic-
-      product view are identical for worker counts `1`, `2`, and `4`.
-    - Parity coverage pins semantic-product output and diagnostics for the
-      migrated fact-family slice across the supported worker counts.
-  - stop_rule: Stop once one representative fact-family slice uses
-      deterministic production worker merges with parity coverage.
-
 - [ ] TODO-4134: Extract representative GPU lowering contract family
   - owner: ai
   - created_at: 2026-04-24
@@ -358,7 +336,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-20
   - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4136
+  - depends_on: none
   - scope: Replace the current worker-id and local-order symbol-interner merge
       helper with the documented semantic-origin-key merge policy once
       production worker-fact publication depends on merged worker symbol
@@ -412,27 +390,3 @@ Task template:
       through TODO-4132, TODO-4133, and TODO-4134.
   - notes: Split on 2026-04-24 because the previous mixed VM/native/GPU leaf
       was too broad for one confident implementation slice.
-
-- [ ] TODO-4127: Track deterministic worker publication rollout
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4135, TODO-4136
-  - scope: Track the rollout from benchmark-oriented worker validation into
-      production semantic-product publication by landing the routing and
-      callable slice first, then a representative semantic fact-family slice,
-      with deterministic worker-local merges at each boundary.
-  - acceptance:
-    - TODO-4135 and TODO-4136 are completed.
-    - Production worker publication covers at least one routing or callable
-      slice and one semantic fact-family slice through deterministic
-      single-writer merges.
-    - Parity coverage pins diagnostics and semantic-product output across the
-      supported worker counts for the migrated slices.
-  - stop_rule: Stop once the deterministic worker-publication rollout is
-      complete through TODO-4135 and TODO-4136.
-  - notes: Split on 2026-04-24 after deeper code review showed that routing
-      and callable publication in `SemanticPublicationBuilders.cpp` and fact-
-      family publication consumed through
-      `IrLowererSemanticProductTargetAdapters.cpp` are separate shippable
-      production seams.

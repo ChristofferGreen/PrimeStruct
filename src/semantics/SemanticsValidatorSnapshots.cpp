@@ -619,6 +619,77 @@ void SemanticsValidator::sortCollectedCallableSummaries(
                    });
 }
 
+void SemanticsValidator::collectOnErrorSnapshotEntriesForStableRange(
+    std::size_t stableOrderOffset,
+    std::size_t stableOrderCount,
+    std::vector<OnErrorSnapshotEntry> &out) const {
+  const std::size_t declarationCount =
+      definitionPrepassSnapshot_.declarationsInStableOrder.size();
+  if (stableOrderCount == 0 || stableOrderOffset >= declarationCount) {
+    return;
+  }
+
+  const std::size_t boundedCount =
+      std::min(stableOrderCount, declarationCount - stableOrderOffset);
+  out.reserve(out.size() + boundedCount);
+  for (std::size_t stableOrdinal = 0; stableOrdinal < boundedCount;
+       ++stableOrdinal) {
+    const std::size_t stableIndex =
+        definitionPrepassSnapshot_
+            .declarationsInStableOrder[stableOrderOffset + stableOrdinal]
+            .stableIndex;
+    const Definition &def = program_.definitions[stableIndex];
+    const auto state = buildDefinitionValidationState(def);
+    const auto &context = state.context;
+    if (!context.onError.has_value()) {
+      continue;
+    }
+
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath);
+        returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
+    }
+
+    std::vector<std::string> boundArgTexts;
+    boundArgTexts.reserve(context.onError->boundArgs.size());
+    for (const auto &transform : def.transforms) {
+      if (transform.name != "on_error") {
+        continue;
+      }
+      boundArgTexts = transform.arguments;
+      break;
+    }
+
+    out.push_back(OnErrorSnapshotEntry{
+        def.fullPath,
+        returnKind,
+        context.onError->handlerPath,
+        context.onError->errorType,
+        context.onError->boundArgs.size(),
+        std::move(boundArgTexts),
+        context.resultType.has_value() && context.resultType->isResult &&
+            context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult
+            ? context.resultType->valueType
+            : std::string{},
+        context.resultType.has_value() && context.resultType->isResult
+            ? context.resultType->errorType
+            : std::string{},
+        def.semanticNodeId,
+    });
+  }
+}
+
+void SemanticsValidator::sortCollectedOnErrorSnapshots(
+    std::vector<OnErrorSnapshotEntry> &entries) {
+  std::stable_sort(entries.begin(),
+                   entries.end(),
+                   [](const auto &left, const auto &right) {
+                     return left.definitionPath < right.definitionPath;
+                   });
+}
+
 void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   if (pilotRoutingSemanticCollectorsValid_) {
     return;
@@ -919,49 +990,16 @@ void SemanticsValidator::ensureOnErrorSnapshotFactCache() const {
   }
 
   onErrorSnapshotCache_.clear();
-  onErrorSnapshotCache_.reserve(program_.definitions.size());
-
-  for (const auto &def : program_.definitions) {
-    const auto state = buildDefinitionValidationState(def);
-    const auto &context = state.context;
-    if (!context.onError.has_value()) {
-      continue;
-    }
-
-    ReturnKind returnKind = ReturnKind::Unknown;
-    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-      returnKind = returnKindIt->second;
-    }
-
-    std::vector<std::string> boundArgTexts;
-    boundArgTexts.reserve(context.onError->boundArgs.size());
-    for (const auto &transform : def.transforms) {
-      if (transform.name != "on_error") {
-        continue;
-      }
-      boundArgTexts = transform.arguments;
-      break;
-    }
-
-    onErrorSnapshotCache_.push_back(OnErrorSnapshotEntry{
-        def.fullPath,
-        returnKind,
-        context.onError->handlerPath,
-        context.onError->errorType,
-        context.onError->boundArgs.size(),
-        std::move(boundArgTexts),
-        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
-        def.semanticNodeId,
-    });
+  if (mergedWorkerOnErrorFactsValid_) {
+    onErrorSnapshotCache_ = mergedWorkerOnErrorFacts_;
+  } else {
+    onErrorSnapshotCache_.reserve(program_.definitions.size());
+    collectOnErrorSnapshotEntriesForStableRange(
+        0,
+        definitionPrepassSnapshot_.declarationsInStableOrder.size(),
+        onErrorSnapshotCache_);
   }
-
-  std::stable_sort(onErrorSnapshotCache_.begin(),
-                   onErrorSnapshotCache_.end(),
-                   [](const auto &left, const auto &right) {
-                     return left.definitionPath < right.definitionPath;
-                   });
+  sortCollectedOnErrorSnapshots(onErrorSnapshotCache_);
   onErrorSnapshotFactCacheValid_ = true;
 }
 

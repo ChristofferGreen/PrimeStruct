@@ -4550,3 +4550,52 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
   - stop_rule: Stop once the statement-call helper layer is registry-backed and parity-tested; split the remaining native-tail and expression-emission path tables into a separate follow-up leaf instead of widening this change.
   - finished_at: 2026-04-20
   - evidence: Replaced the local vector prefix table and map helper path checks in `src/ir_lowerer/IrLowererStatementCallEmission.cpp` with shared `StdlibSurfaceRegistry` classification via `findStdlibSurfaceMetadataByResolvedPath(...)`, canonical helper-name normalization, and a narrow residual fallback for `/std/collections/map/insert_builtin`; expanded `tests/unit/test_ir_pipeline_validation_ir_lowerer_statement_call_helper_validates_buffer_store_diagnostics.cpp` with experimental-vector direct-call and not-handled regressions plus a focused source-lock test for the statement-call emission seam; and split oversized `TODO-4093` in `docs/todo.md` so the remaining native-tail and expression-emission dispatch work continues as `TODO-4095`.
+
+- [x] TODO-4136: Publish fact-family indices from deterministic worker merges
+  - owner: ai
+  - created_at: 2026-04-24
+  - phase: Semantic Ownership Boundary
+  - depends_on: TODO-4135
+  - scope: Extend production worker publication from routing and callable
+      metadata into one representative semantic fact-family slice in
+      `publishedRoutingLookups`, with deterministic single-writer merges for
+      both the published indices and the consumer-visible semantic-product
+      view.
+  - acceptance:
+    - One representative fact-family slice (`onError`, `localAuto`, `query`,
+      or `try`) publishes through deterministic worker-local merges in the
+      production semantic-product path.
+    - The migrated fact-family indices and their consumer-visible semantic-
+      product view are identical for worker counts `1`, `2`, and `4`.
+    - Parity coverage pins semantic-product output and diagnostics for the
+      migrated fact-family slice across the supported worker counts.
+  - stop_rule: Stop once one representative fact-family slice uses
+      deterministic production worker merges with parity coverage.
+  - finished_at: 2026-04-24
+  - evidence: Extended the parallel definition-validation worker path in `src/semantics/SemanticsValidatorPassesDefinitions.cpp` so workers now collect `OnErrorSnapshotEntry` slices per stable definition range, then deterministically merge and sort those facts into `mergedWorkerOnErrorFacts_`; refactored `src/semantics/SemanticsValidatorSnapshots.cpp` to reuse a shared stable-range `collectOnErrorSnapshotEntriesForStableRange(...)` helper and to make `ensureOnErrorSnapshotFactCache()` consume the merged worker facts when present; expanded worker-count parity coverage in `tests/unit/test_ir_pipeline_backends_registry.cpp` and `tests/unit/test_semantics_definition_partitioner.cpp` to pin `/main` `on_error` fact fields across `1`, `2`, and `4` workers; and updated the architecture/source-lock probe in `tests/unit/test_ir_pipeline_backends_graph_contexts.h` so the new worker-merged `on_error` publication path is locked in.
+
+- [x] TODO-4127: Track deterministic worker publication rollout
+  - owner: ai
+  - created_at: 2026-04-20
+  - phase: Semantic Ownership Boundary
+  - depends_on: TODO-4135, TODO-4136
+  - scope: Track the rollout from benchmark-oriented worker validation into
+      production semantic-product publication by landing the routing and
+      callable slice first, then a representative semantic fact-family slice,
+      with deterministic worker-local merges at each boundary.
+  - acceptance:
+    - TODO-4135 and TODO-4136 are completed.
+    - Production worker publication covers at least one routing or callable
+      slice and one semantic fact-family slice through deterministic
+      single-writer merges.
+    - Parity coverage pins diagnostics and semantic-product output across the
+      supported worker counts for the migrated slices.
+  - stop_rule: Stop once the deterministic worker-publication rollout is
+      complete through TODO-4135 and TODO-4136.
+  - notes: Split on 2026-04-24 after deeper code review showed that routing
+      and callable publication in `SemanticPublicationBuilders.cpp` and fact-
+      family publication consumed through
+      `IrLowererSemanticProductTargetAdapters.cpp` are separate shippable
+      production seams.
+  - finished_at: 2026-04-24
+  - evidence: `TODO-4135` had already landed the deterministic worker-merged callable-summary publication slice, and this run completed the representative fact-family half by merging published `on_error` facts across workers with 1/2/4-worker parity coverage, satisfying the rollout tracker’s acceptance and leaving `TODO-4131` as the next deterministic-publication follow-up.

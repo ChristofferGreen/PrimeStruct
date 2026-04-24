@@ -3706,6 +3706,20 @@ main() {
     uint64_t semanticNodeId = 0;
   };
 
+  struct OnErrorFactSnapshot {
+    bool present = false;
+    std::string definitionPath;
+    std::string returnKind;
+    std::string handlerPath;
+    std::string errorType;
+    std::size_t boundArgCount = 0;
+    std::vector<std::string> boundArgTexts;
+    bool returnResultHasValue = false;
+    std::string returnResultValueType;
+    std::string returnResultErrorType;
+    uint64_t semanticNodeId = 0;
+  };
+
   struct IndexFamilySnapshot {
     std::string formattedSemanticProduct;
     std::size_t directCallTargetCount = 0;
@@ -3719,6 +3733,7 @@ main() {
     std::size_t returnFactCount = 0;
     CallableSummarySnapshot idCallableSummary;
     CallableSummarySnapshot mainCallableSummary;
+    OnErrorFactSnapshot mainOnErrorFact;
   };
 
   const auto captureCallableSummary =
@@ -3784,6 +3799,32 @@ main() {
         captureCallableSummary(output.semanticProgram, "/id");
     snapshot.mainCallableSummary =
         captureCallableSummary(output.semanticProgram, "/main");
+    if (const auto *entry = findSemanticEntry(
+            primec::semanticProgramOnErrorFactView(output.semanticProgram),
+            [&output](const primec::SemanticProgramOnErrorFact &candidate) {
+              return primec::semanticProgramOnErrorFactDefinitionPath(
+                         output.semanticProgram, candidate) == "/main";
+            });
+        entry != nullptr) {
+      snapshot.mainOnErrorFact.present = true;
+      snapshot.mainOnErrorFact.definitionPath = std::string(
+          primec::semanticProgramOnErrorFactDefinitionPath(
+              output.semanticProgram, *entry));
+      snapshot.mainOnErrorFact.returnKind = entry->returnKind;
+      snapshot.mainOnErrorFact.handlerPath = std::string(
+          primec::semanticProgramOnErrorFactHandlerPath(
+              output.semanticProgram, *entry));
+      snapshot.mainOnErrorFact.errorType = entry->errorType;
+      snapshot.mainOnErrorFact.boundArgCount = entry->boundArgCount;
+      snapshot.mainOnErrorFact.boundArgTexts = entry->boundArgTexts;
+      snapshot.mainOnErrorFact.returnResultHasValue =
+          entry->returnResultHasValue;
+      snapshot.mainOnErrorFact.returnResultValueType =
+          entry->returnResultValueType;
+      snapshot.mainOnErrorFact.returnResultErrorType =
+          entry->returnResultErrorType;
+      snapshot.mainOnErrorFact.semanticNodeId = entry->semanticNodeId;
+    }
     return snapshot;
   };
 
@@ -3871,6 +3912,51 @@ main() {
         fourWorkers.mainCallableSummary.semanticNodeId);
   CHECK(singleWorker.mainCallableSummary.semanticNodeId > 0);
 
+  CHECK(singleWorker.mainOnErrorFact.present);
+  CHECK(twoWorkers.mainOnErrorFact.present);
+  CHECK(fourWorkers.mainOnErrorFact.present);
+  CHECK(singleWorker.mainOnErrorFact.definitionPath ==
+        twoWorkers.mainOnErrorFact.definitionPath);
+  CHECK(singleWorker.mainOnErrorFact.definitionPath ==
+        fourWorkers.mainOnErrorFact.definitionPath);
+  CHECK(singleWorker.mainOnErrorFact.returnKind ==
+        twoWorkers.mainOnErrorFact.returnKind);
+  CHECK(singleWorker.mainOnErrorFact.returnKind ==
+        fourWorkers.mainOnErrorFact.returnKind);
+  CHECK(singleWorker.mainOnErrorFact.handlerPath ==
+        twoWorkers.mainOnErrorFact.handlerPath);
+  CHECK(singleWorker.mainOnErrorFact.handlerPath ==
+        fourWorkers.mainOnErrorFact.handlerPath);
+  CHECK(singleWorker.mainOnErrorFact.errorType ==
+        twoWorkers.mainOnErrorFact.errorType);
+  CHECK(singleWorker.mainOnErrorFact.errorType ==
+        fourWorkers.mainOnErrorFact.errorType);
+  CHECK(singleWorker.mainOnErrorFact.boundArgCount ==
+        twoWorkers.mainOnErrorFact.boundArgCount);
+  CHECK(singleWorker.mainOnErrorFact.boundArgCount ==
+        fourWorkers.mainOnErrorFact.boundArgCount);
+  CHECK(singleWorker.mainOnErrorFact.boundArgTexts ==
+        twoWorkers.mainOnErrorFact.boundArgTexts);
+  CHECK(singleWorker.mainOnErrorFact.boundArgTexts ==
+        fourWorkers.mainOnErrorFact.boundArgTexts);
+  CHECK(singleWorker.mainOnErrorFact.returnResultHasValue ==
+        twoWorkers.mainOnErrorFact.returnResultHasValue);
+  CHECK(singleWorker.mainOnErrorFact.returnResultHasValue ==
+        fourWorkers.mainOnErrorFact.returnResultHasValue);
+  CHECK(singleWorker.mainOnErrorFact.returnResultValueType ==
+        twoWorkers.mainOnErrorFact.returnResultValueType);
+  CHECK(singleWorker.mainOnErrorFact.returnResultValueType ==
+        fourWorkers.mainOnErrorFact.returnResultValueType);
+  CHECK(singleWorker.mainOnErrorFact.returnResultErrorType ==
+        twoWorkers.mainOnErrorFact.returnResultErrorType);
+  CHECK(singleWorker.mainOnErrorFact.returnResultErrorType ==
+        fourWorkers.mainOnErrorFact.returnResultErrorType);
+  CHECK(singleWorker.mainOnErrorFact.semanticNodeId ==
+        twoWorkers.mainOnErrorFact.semanticNodeId);
+  CHECK(singleWorker.mainOnErrorFact.semanticNodeId ==
+        fourWorkers.mainOnErrorFact.semanticNodeId);
+  CHECK(singleWorker.mainOnErrorFact.semanticNodeId > 0);
+
   CHECK(singleWorker.directCallTargetCount > 0);
   CHECK(singleWorker.methodCallTargetCount > 0);
   CHECK(singleWorker.bridgePathChoiceCount == 0);
@@ -3894,6 +3980,15 @@ main() {
   CHECK(singleWorker.mainCallableSummary.onErrorHandlerPath == "/unexpected_error");
   CHECK(singleWorker.mainCallableSummary.onErrorErrorType == "i32");
   CHECK(singleWorker.mainCallableSummary.onErrorBoundArgCount == 0);
+  CHECK(singleWorker.mainOnErrorFact.definitionPath == "/main");
+  CHECK(singleWorker.mainOnErrorFact.returnKind == "value");
+  CHECK(singleWorker.mainOnErrorFact.handlerPath == "/unexpected_error");
+  CHECK(singleWorker.mainOnErrorFact.errorType == "i32");
+  CHECK(singleWorker.mainOnErrorFact.boundArgCount == 0);
+  CHECK(singleWorker.mainOnErrorFact.boundArgTexts.empty());
+  CHECK_FALSE(singleWorker.mainOnErrorFact.returnResultHasValue);
+  CHECK(singleWorker.mainOnErrorFact.returnResultValueType.empty());
+  CHECK(singleWorker.mainOnErrorFact.returnResultErrorType.empty());
 }
 
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {

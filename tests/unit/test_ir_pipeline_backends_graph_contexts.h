@@ -3265,20 +3265,28 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
       semanticsSnapshots.find("SemanticsValidator::collectPilotRoutingSemanticProductFacts() {");
   const std::size_t callableSummaryStart =
       semanticsSnapshots.find("SemanticsValidator::takeCollectedCallableSummariesForSemanticProduct() {");
+  const std::size_t ensureOnErrorStart =
+      semanticsSnapshots.find("void SemanticsValidator::ensureOnErrorSnapshotFactCache() const {");
   const std::size_t typeMetadataStart =
       semanticsSnapshots.find("SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {");
   const std::size_t onErrorStart =
       semanticsSnapshots.find("SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {");
   REQUIRE(collectHelperStart != std::string::npos);
   REQUIRE(callableSummaryStart != std::string::npos);
+  REQUIRE(ensureOnErrorStart != std::string::npos);
   REQUIRE(typeMetadataStart != std::string::npos);
   REQUIRE(onErrorStart != std::string::npos);
   REQUIRE(collectHelperStart < callableSummaryStart);
   REQUIRE(callableSummaryStart < typeMetadataStart);
+  REQUIRE(ensureOnErrorStart < typeMetadataStart);
 
   CHECK(semanticsHeader.find("bool mergedWorkerCallableSummariesValid_ = false;") !=
         std::string::npos);
+  CHECK(semanticsHeader.find("bool mergedWorkerOnErrorFactsValid_ = false;") !=
+        std::string::npos);
   CHECK(semanticsHeader.find("std::vector<CollectedCallableSummaryEntry> mergedWorkerCallableSummaries_;") !=
+        std::string::npos);
+  CHECK(semanticsHeader.find("std::vector<OnErrorSnapshotEntry> mergedWorkerOnErrorFacts_;") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find("SemanticsValidator::collectCallableSummaryEntriesForStableRange(") !=
         std::string::npos);
@@ -3287,6 +3295,10 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   CHECK(semanticsSnapshots.find("SemanticsValidator::rebindCollectedCallableSummarySemanticNodeIds(") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find("SemanticsValidator::sortCollectedCallableSummaries(") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::collectOnErrorSnapshotEntriesForStableRange(") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::sortCollectedOnErrorSnapshots(") !=
         std::string::npos);
 
   const std::string collectHelperBody =
@@ -3317,11 +3329,30 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("mergedWorkerCallableSummariesValid_ = true;") !=
         std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("std::vector<OnErrorSnapshotEntry> onErrorFacts;") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("worker.collectOnErrorSnapshotEntriesForStableRange(") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergeWorkerOnErrorFacts") != std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("sortCollectedOnErrorSnapshots(mergedWorkerOnErrorFacts_);") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergedWorkerOnErrorFactsValid_ = true;") !=
+        std::string::npos);
 
   const std::string callableSummaryBody =
       semanticsSnapshots.substr(callableSummaryStart, typeMetadataStart - callableSummaryStart);
   CHECK(callableSummaryBody.find("collectPilotRoutingSemanticProductFacts();") != std::string::npos);
   CHECK(callableSummaryBody.find("return std::exchange(collectedCallableSummaries_, {});") !=
+        std::string::npos);
+
+  const std::string ensureOnErrorBody =
+      semanticsSnapshots.substr(ensureOnErrorStart, typeMetadataStart - ensureOnErrorStart);
+  CHECK(ensureOnErrorBody.find("if (mergedWorkerOnErrorFactsValid_) {") != std::string::npos);
+  CHECK(ensureOnErrorBody.find("onErrorSnapshotCache_ = mergedWorkerOnErrorFacts_;") !=
+        std::string::npos);
+  CHECK(ensureOnErrorBody.find("collectOnErrorSnapshotEntriesForStableRange(") !=
+        std::string::npos);
+  CHECK(ensureOnErrorBody.find("sortCollectedOnErrorSnapshots(onErrorSnapshotCache_);") !=
         std::string::npos);
 
   const std::string onErrorBody = semanticsSnapshots.substr(onErrorStart);

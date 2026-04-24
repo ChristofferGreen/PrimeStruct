@@ -21,6 +21,12 @@
       std::vector<CollectedCallableSummaryEntry> &entries) const;
   static void sortCollectedCallableSummaries(
       std::vector<CollectedCallableSummaryEntry> &entries);
+  void collectOnErrorSnapshotEntriesForStableRange(
+      std::size_t stableOrderOffset,
+      std::size_t stableOrderCount,
+      std::vector<OnErrorSnapshotEntry> &out) const;
+  static void sortCollectedOnErrorSnapshots(
+      std::vector<OnErrorSnapshotEntry> &entries);
   void ensureOnErrorSnapshotFactCache() const;
   bool buildDefinitionMaps();
   bool validateDefinitionBuildTransforms(const Definition &def,
