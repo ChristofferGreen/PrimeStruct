@@ -163,8 +163,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               CHECK(false);
               return false;
             },
-            error) == Result::Error);
-  CHECK_FALSE(error.empty());
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   int soaGetEmitCalls = 0;
   error.clear();
@@ -207,8 +207,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               CHECK(false);
               return false;
             },
-            error) == Result::Error);
-  CHECK_FALSE(error.empty());
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   int soaRefEmitCalls = 0;
   error.clear();
