@@ -263,10 +263,12 @@ TEST_CASE("symbol interner two-worker merge tie-breaks equal worker ids lexicogr
   const primec::WorkerSymbolInternerSnapshot snapshotLexLow{
       .workerId = 7,
       .symbolsByLocalId = {"/std/math/alpha", "/std/math/shared"},
+      .firstOriginByLocalId = {},
   };
   const primec::WorkerSymbolInternerSnapshot snapshotLexHigh{
       .workerId = 7,
       .symbolsByLocalId = {"/std/math/zeta", "/std/math/shared"},
+      .firstOriginByLocalId = {},
   };
 
   const primec::SymbolInterner mergedLowHigh =
@@ -408,14 +410,17 @@ TEST_CASE("symbol interner N-worker merge tie-breaks equal worker ids lexicograp
       primec::WorkerSymbolInternerSnapshot{
           .workerId = 9,
           .symbolsByLocalId = {"/std/math/gamma", "/std/math/shared-a"},
+          .firstOriginByLocalId = {},
       },
       primec::WorkerSymbolInternerSnapshot{
           .workerId = 9,
           .symbolsByLocalId = {"/std/math/alpha", "/std/math/shared-b"},
+          .firstOriginByLocalId = {},
       },
       primec::WorkerSymbolInternerSnapshot{
           .workerId = 9,
           .symbolsByLocalId = {"/std/math/beta", "/std/math/shared-a"},
+          .firstOriginByLocalId = {},
       },
   };
 

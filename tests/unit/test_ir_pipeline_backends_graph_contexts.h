@@ -2201,6 +2201,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readRepoFile("src/semantics/SemanticPublicationSurface.h");
   const std::string semanticPublicationBuildersSource =
       readRepoFile("src/semantics/SemanticPublicationBuilders.cpp");
+  const std::string semanticProductSource = readRepoFile("src/SemanticProduct.cpp");
   const std::string semanticsValidate = readRepoFile("src/semantics/SemanticsValidate.cpp");
   const std::string semanticsSnapshots = readRepoFile("src/semantics/SemanticsValidatorSnapshots.cpp");
   const std::string semanticTargetAdapterHeader =

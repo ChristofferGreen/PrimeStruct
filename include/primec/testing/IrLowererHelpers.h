@@ -15,6 +15,11 @@
 #include "primec/Ir.h"
 #include "primec/SemanticProduct.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererSemanticProductTargetAdapters.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererGpuEffects.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererNativeEffects.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererVmEffects.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerEntrySetup.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerEffects.h"
 
 namespace primec::ir_lowerer {
 
@@ -39,11 +44,6 @@ namespace primec::ir_lowerer {
 #include "primec/testing/ir_lowerer_helpers/IrLowererInlineStructArgHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererStringCallHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererOperatorArithmeticHelpers.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerEffects.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererGpuEffects.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererNativeEffects.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererVmEffects.h"
-#include "primec/testing/ir_lowerer_helpers/IrLowererLowerEntrySetup.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererStatementCallHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerInlineCallActiveContextStep.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerExprEmitSetup.h"

@@ -1,16 +1,30 @@
+#pragma once
 
+#include <cstdint>
+#include <string>
+#include <vector>
 
+#include "primec/IrValidation.h"
 
+namespace primec {
 
-bool runLowerEntrySetup(const Program &program,
-                        const SemanticProgram *semanticProgram,
+struct Definition;
+struct Program;
+struct SemanticProgram;
+
+namespace ir_lowerer {
+
+bool runLowerEntrySetup(const ::primec::Program &program,
+                        const ::primec::SemanticProgram *semanticProgram,
                         const std::string &entryPath,
                         const std::vector<std::string> &defaultEffects,
                         const std::vector<std::string> &entryDefaultEffects,
                         ::primec::IrValidationTarget validationTarget,
-                        const Definition *&entryDefOut,
+                        const ::primec::Definition *&entryDefOut,
                         uint64_t &entryEffectMaskOut,
                         uint64_t &entryCapabilityMaskOut,
                         std::string &error);
 
-#include "primec/IrValidation.h"
+} // namespace ir_lowerer
+
+} // namespace primec

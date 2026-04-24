@@ -1,8 +1,3 @@
-using ::primec::Definition;
-using ::primec::IrFunction;
-using ::primec::Program;
-using ::primec::SemanticProgram;
-
 struct LowerSetupStageInput;
 struct LowerSetupStageState;
 

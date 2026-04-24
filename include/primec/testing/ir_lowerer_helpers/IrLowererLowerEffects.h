@@ -1,12 +1,22 @@
+#pragma once
 
+#include <cstdint>
+#include <string>
+#include <string_view>
+#include <unordered_set>
+#include <vector>
 
+#include "primec/Ast.h"
+#include "primec/SemanticProduct.h"
 
-
+namespace primec {
 
 struct Definition;
 struct Program;
 struct SemanticProgram;
 struct Transform;
+
+namespace ir_lowerer {
 
 bool findEntryDefinition(const ::primec::Program &program,
                          const std::string &entryPath,
@@ -23,28 +33,28 @@ bool validateNoRuntimeReflectionQueriesForBackendSurface(const ::primec::Semanti
 bool effectBitForName(const std::string &name, uint64_t &outBit);
 bool isSupportedEffect(const std::string &name);
 
-std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform> &transforms,
+std::unordered_set<std::string> resolveActiveEffects(const std::vector<::primec::Transform> &transforms,
                                                      bool isEntry,
                                                      const std::vector<std::string> &defaultEffects,
                                                      const std::vector<std::string> &entryDefaultEffects);
 
-bool validateEffectsTransforms(const std::vector<Transform> &transforms,
+bool validateEffectsTransforms(const std::vector<::primec::Transform> &transforms,
                                const std::string &context,
                                std::string &error);
 
-bool validateActiveEffects(const std::vector<Transform> &transforms,
+bool validateActiveEffects(const std::vector<::primec::Transform> &transforms,
                            const std::string &context,
                            bool isEntry,
                            const std::vector<std::string> &defaultEffects,
                            const std::vector<std::string> &entryDefaultEffects,
                            std::string &error);
 
-bool validateEffectsTransformsForBackendSurface(const std::vector<Transform> &transforms,
+bool validateEffectsTransformsForBackendSurface(const std::vector<::primec::Transform> &transforms,
                                                 const std::string &context,
                                                 std::string_view backendSurfaceName,
                                                 std::string &error);
 
-bool validateActiveEffectsForBackendSurface(const std::vector<Transform> &transforms,
+bool validateActiveEffectsForBackendSurface(const std::vector<::primec::Transform> &transforms,
                                             const std::string &context,
                                             bool isEntry,
                                             const std::vector<std::string> &defaultEffects,
@@ -76,15 +86,19 @@ bool resolveEntryMetadataMasks(const ::primec::Definition &entryDef,
                                uint64_t &entryCapabilityMaskOut,
                                std::string &error);
 
-bool resolveEffectMask(const std::vector<Transform> &transforms,
+bool resolveEffectMask(const std::vector<::primec::Transform> &transforms,
                        bool isEntry,
                        const std::vector<std::string> &defaultEffects,
                        const std::vector<std::string> &entryDefaultEffects,
                        uint64_t &maskOut,
                        std::string &error);
 
-bool resolveCapabilityMask(const std::vector<Transform> &transforms,
+bool resolveCapabilityMask(const std::vector<::primec::Transform> &transforms,
                            const std::unordered_set<std::string> &effects,
                            const std::string &duplicateContext,
                            uint64_t &maskOut,
                            std::string &error);
+
+} // namespace ir_lowerer
+
+} // namespace primec

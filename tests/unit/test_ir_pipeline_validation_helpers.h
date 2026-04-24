@@ -43,6 +43,15 @@
 #include "primec/testing/SemanticsValidationHelpers.h"
 #include "primec/testing/TestScratch.h"
 #include "test_ir_pipeline_helpers.h"
+
+namespace primec::ir_lowerer {
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStep.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryExecutionStep.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsEntryStatementStep.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsFunctionTableStep.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsSourceMapStep.h"
+}
+
 #if defined(__unix__) || defined(__APPLE__)
 #include <sys/wait.h>
 #endif

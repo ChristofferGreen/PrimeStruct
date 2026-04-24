@@ -1,16 +1,23 @@
+#pragma once
 
+#include <functional>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
-
-
+#include "primec/testing/IrLowererHelpers.h"
 
 namespace primec {
+
+struct Definition;
+struct Program;
 struct SemanticProgram;
-}
+
+namespace ir_lowerer {
 
 struct ReturnInfo;
 struct SemanticProductIndex;
 struct SemanticProductTargetAdapter;
-
 struct UninitializedStorageAccessInfo;
 
 struct LowerInferenceSetupBootstrapState {
@@ -32,18 +39,18 @@ struct LowerInferenceSetupBootstrapState {
       inferCallExprControlFlowFallbackKind;
   std::function<bool(const Expr &, const LocalMap &, LocalInfo::ValueKind &)> inferCallExprPointerFallbackKind;
 
-  std::function<const Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
-  std::function<const Definition *(const Expr &)> resolveDefinitionCall;
+  std::function<const ::primec::Definition *(const Expr &, const LocalMap &)> resolveMethodCallDefinition;
+  std::function<const ::primec::Definition *(const Expr &)> resolveDefinitionCall;
   std::function<LocalInfo::ValueKind(const Expr &, const LocalMap &)> inferPointerTargetKind;
-  const SemanticProgram *semanticProgram = nullptr;
+  const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
 };
 
 struct LowerInferenceSetupBootstrapInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
-  const SemanticProgram *semanticProgram = nullptr;
+  const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
 
   IsArrayCountCallFn isArrayCountCall = {};
@@ -54,7 +61,7 @@ struct LowerInferenceSetupBootstrapInput {
 };
 
 struct LowerInferenceArrayKindSetupInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
 
   ResolveExprPathFn resolveExprPath = {};
   ResolveStructArrayTypeInfoFn resolveStructArrayInfoFromPath = {};
@@ -73,14 +80,14 @@ struct LowerInferenceExprKindCallBaseSetupInput {
       resolveUninitializedStorage = {};
 };
 struct LowerInferenceExprKindCallReturnSetupInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
 
   ResolveExprPathFn resolveExprPath = {};
   IsArrayCountCallFn isArrayCountCall = {};
   IsStringCountCallFn isStringCountCall = {};
 };
 struct LowerInferenceExprKindCallFallbackSetupInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
 
   ResolveExprPathFn resolveExprPath = {};
   IsArrayCountCallFn isArrayCountCall = {};
@@ -95,8 +102,8 @@ struct LowerInferenceExprKindCallOperatorFallbackSetupInput {
   SetupInferenceCombineNumericKindsFn combineNumericKinds = {};
 };
 struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
-  const SemanticProgram *semanticProgram = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
+  const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
   ResolveSetupInferenceExprPathFn resolveExprPath = {};
   LowerSetupInferenceMatchToIfFn lowerMatchToIf = {};
@@ -111,7 +118,7 @@ struct LowerInferenceExprKindCallControlFlowFallbackSetupInput {
 };
 struct LowerInferenceExprKindCallPointerFallbackSetupInput {};
 struct LowerInferenceExprKindDispatchSetupInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
   ResolveExprPathFn resolveExprPath = {};
   std::string *error = nullptr;
 };
@@ -134,28 +141,28 @@ struct LowerInferenceReturnInfoSetupInput {
   ExpandMatchToIfFn lowerMatchToIf = {};
 };
 struct LowerInferenceGetReturnInfoStepInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
-  const SemanticProgram *semanticProgram = nullptr;
+  const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
 };
 struct LowerInferenceGetReturnInfoCallbackSetupInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
   const LowerInferenceReturnInfoSetupInput *returnInfoSetupInput = nullptr;
-  const SemanticProgram *semanticProgram = nullptr;
+  const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
   std::string *error = nullptr;
 };
 struct LowerInferenceGetReturnInfoSetupInput {
-  const Program *program = nullptr;
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const ::primec::Program *program = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
   std::unordered_map<std::string, ReturnInfo> *returnInfoCache = nullptr;
   std::unordered_set<std::string> *returnInferenceStack = nullptr;
-  const SemanticProgram *semanticProgram = nullptr;
+  const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
   ResolveStructTypeNameForReturnFn resolveStructTypeName = {};
   ResolveStructArrayInfoForReturnFn resolveStructArrayInfoFromPath = {};
@@ -175,11 +182,11 @@ struct LowerInferenceGetReturnInfoSetupInput {
   std::string *error = nullptr;
 };
 struct LowerInferenceSetupInput {
-  const Program *program = nullptr;
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const ::primec::Program *program = nullptr;
+  const std::unordered_map<std::string, const ::primec::Definition *> *defMap = nullptr;
   const std::unordered_map<std::string, std::string> *importAliases = nullptr;
   const std::unordered_set<std::string> *structNames = nullptr;
-  const SemanticProgram *semanticProgram = nullptr;
+  const ::primec::SemanticProgram *semanticProgram = nullptr;
   const SemanticProductIndex *semanticIndex = nullptr;
 
   IsArrayCountCallFn isArrayCountCall = {};
@@ -247,7 +254,7 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
                                             LowerInferenceSetupBootstrapState &stateInOut,
                                             std::string &errorOut);
 bool runLowerInferenceReturnInfoSetup(const LowerInferenceReturnInfoSetupInput &input,
-                                      const Definition &definition,
+                                      const ::primec::Definition &definition,
                                       ReturnInfo &infoInOut,
                                       std::string &errorOut);
 bool runLowerInferenceGetReturnInfoStep(const LowerInferenceGetReturnInfoStepInput &input,
@@ -260,3 +267,7 @@ bool runLowerInferenceGetReturnInfoCallbackSetup(const LowerInferenceGetReturnIn
 bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupInput &input,
                                          std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoOut,
                                          std::string &errorOut);
+
+} // namespace ir_lowerer
+
+} // namespace primec

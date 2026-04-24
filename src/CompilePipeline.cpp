@@ -663,6 +663,8 @@ bool runCompilePipelineTransformStage(
   return true;
 }
 
+void sortParserErrorsForStableOrdering(std::vector<Parser::ErrorInfo> &errors);
+
 bool runCompilePipelineParseStage(const Options &options,
                                   const CompilePipelinePreParseStageState &preParseStage,
                                   CompilePipelineParsedProgramStageState &out,
