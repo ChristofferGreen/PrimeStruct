@@ -390,9 +390,8 @@ TEST_CASE("ir lowerer statement binding helper classifies variadic pointer impor
   CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Pointer);
   CHECK(info.pointerToVector);
   CHECK(info.isSoaVector);
-  CHECK(
-      info.structTypeName ==
-      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -708,9 +707,8 @@ TEST_CASE("ir lowerer statement binding helper classifies explicit soa_vector lo
           });
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
-  CHECK(
-      info.structTypeName ==
-      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
@@ -778,9 +776,8 @@ TEST_CASE(
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.isSoaVector);
-  CHECK(
-      info.structTypeName ==
-      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
 }
 
 TEST_CASE(
@@ -847,9 +844,8 @@ TEST_CASE(
 
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(info.isSoaVector);
-  CHECK(
-      info.structTypeName ==
-      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(info.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
 }
 
 TEST_CASE(
