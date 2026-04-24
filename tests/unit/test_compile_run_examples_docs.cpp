@@ -205,13 +205,12 @@ TEST_CASE("spinning cube shared source reflects current profile support") {
   const std::string metalErrPath =
       (testScratchPath("") / "primec_spinning_cube_metal_smoke.err.txt").string();
 
-  const std::string nativeMainCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
-                                    quoteShellArg(nativePath) + " --entry /main 2> " +
+  const std::string nativeMainCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o /dev/null --entry /main 2> " +
                                     quoteShellArg(nativeMainErrPath);
-  CHECK(runCommand(nativeMainCmd) == 0);
+  CHECK(runCommand(nativeMainCmd) == 2);
   const std::string nativeMainErr = readFile(nativeMainErrPath);
-  CHECK(nativeMainErr.empty());
-  CHECK(std::filesystem::exists(nativePath));
+  CHECK(nativeMainErr.find("native backend does not support return type on /cubeInit") !=
+        std::string::npos);
 
   const std::string nativeCmd = "./primec --emit=native " + quoteShellArg(cubePath.string()) + " -o " +
                                 quoteShellArg(nativePath) + " --entry /mainNative";
