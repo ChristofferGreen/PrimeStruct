@@ -793,7 +793,7 @@ inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std
         makeCanonicalVectorNamespaceTemporaryReceiverSource(),
         "vector_namespace_canonical_temporary_receiver_" + emitMode,
         emitMode,
-        "unknown call target: /std/collections/vector/vector");
+        "count requires array, vector, map, or string target");
     return;
   }
   expectVectorConformanceProgramRuns(
