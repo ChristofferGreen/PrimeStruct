@@ -14,17 +14,29 @@ namespace primec {
 using SymbolId = uint32_t;
 constexpr SymbolId InvalidSymbolId = 0;
 
+struct SymbolOriginKey {
+  uint32_t moduleOrder = UINT32_MAX;
+  uint32_t declarationOrder = UINT32_MAX;
+  uint64_t semanticNodeOrder = UINT64_MAX;
+  uint32_t fieldOrder = UINT32_MAX;
+
+  bool operator==(const SymbolOriginKey &other) const = default;
+};
+
 // Immutable transfer object for crossing worker boundaries.
 // symbolsByLocalId[i] corresponds to worker-local SymbolId i+1.
 struct WorkerSymbolInternerSnapshot {
   uint32_t workerId = 0;
+  uint32_t partitionKey = 0;
   std::vector<std::string> symbolsByLocalId;
+  std::vector<SymbolOriginKey> firstOriginByLocalId;
 };
 
 class SymbolInterner {
 public:
   // Assigns deterministic IDs in first-seen order for this interner instance.
   SymbolId intern(std::string_view text);
+  SymbolId intern(std::string_view text, const SymbolOriginKey &originKey);
 
   // Returns the existing ID without inserting when present.
   std::optional<SymbolId> lookup(std::string_view text) const;
@@ -76,6 +88,7 @@ private:
 
   // Deque keeps element addresses stable so map keys remain valid.
   std::deque<std::string> storage_;
+  std::vector<SymbolOriginKey> firstOriginById_;
   std::unordered_map<std::string_view, SymbolId, StringViewHash, StringViewEqual> idsByText_;
 };
 

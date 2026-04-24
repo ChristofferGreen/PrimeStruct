@@ -19,6 +19,17 @@ static std::vector<std::string> resolveSymbolTable(const primec::SymbolInterner 
   return symbols;
 }
 
+static primec::SymbolOriginKey makeOriginKey(uint32_t declarationOrder,
+                                             uint64_t semanticNodeOrder,
+                                             uint32_t fieldOrder) {
+  return primec::SymbolOriginKey{
+      .moduleOrder = 0,
+      .declarationOrder = declarationOrder,
+      .semanticNodeOrder = semanticNodeOrder,
+      .fieldOrder = fieldOrder,
+  };
+}
+
 TEST_CASE("symbol interner assigns deterministic first-seen ids") {
   primec::SymbolInterner interner;
   const primec::SymbolId alpha1 = interner.intern("/std/math/Vec2");
@@ -113,6 +124,55 @@ TEST_CASE("symbol interner worker snapshot keeps local id order") {
   CHECK(snapshot.symbolsByLocalId[0] == "/worker/a");
   CHECK(snapshot.symbolsByLocalId[1] == "/worker/b");
   CHECK(snapshot.symbolsByLocalId[2] == "/worker/c");
+  REQUIRE(snapshot.firstOriginByLocalId.size() == 3);
+  CHECK(snapshot.firstOriginByLocalId[0] == primec::SymbolOriginKey{});
+  CHECK(snapshot.firstOriginByLocalId[1] == primec::SymbolOriginKey{});
+  CHECK(snapshot.firstOriginByLocalId[2] == primec::SymbolOriginKey{});
+}
+
+TEST_CASE("symbol interner worker snapshot keeps earliest explicit origin per local id") {
+  primec::SymbolInterner interner;
+  CHECK(interner.intern("/worker/shared", makeOriginKey(4, 400, 3)) == 1);
+  CHECK(interner.intern("/worker/other", makeOriginKey(8, 800, 1)) == 2);
+  CHECK(interner.intern("/worker/shared", makeOriginKey(2, 200, 0)) == 1);
+
+  const primec::WorkerSymbolInternerSnapshot snapshot = interner.snapshotForWorker(5);
+  REQUIRE(snapshot.firstOriginByLocalId.size() == 2);
+  CHECK(snapshot.firstOriginByLocalId[0] == makeOriginKey(2, 200, 0));
+  CHECK(snapshot.firstOriginByLocalId[1] == makeOriginKey(8, 800, 1));
+}
+
+TEST_CASE("symbol interner merge prefers earliest origin over worker order") {
+  primec::SymbolInterner workerA;
+  CHECK(workerA.intern("/std/math/late", makeOriginKey(9, 900, 0)) == 1);
+  CHECK(workerA.intern("/std/math/shared", makeOriginKey(5, 500, 0)) == 2);
+
+  primec::SymbolInterner workerB;
+  CHECK(workerB.intern("/std/math/shared", makeOriginKey(1, 100, 0)) == 1);
+  CHECK(workerB.intern("/std/math/early", makeOriginKey(2, 200, 0)) == 2);
+
+  primec::WorkerSymbolInternerSnapshot snapshotA = workerA.snapshotForWorker(30);
+  primec::WorkerSymbolInternerSnapshot snapshotB = workerB.snapshotForWorker(10);
+  snapshotA.partitionKey = 30;
+  snapshotB.partitionKey = 10;
+
+  const primec::SymbolInterner merged =
+      primec::SymbolInterner::mergeWorkerSnapshotsDeterministic({snapshotA, snapshotB});
+  CHECK(resolveSymbolTable(merged) == std::vector<std::string>{
+                                       "/std/math/shared",
+                                       "/std/math/early",
+                                       "/std/math/late"});
+
+  const std::vector<primec::SymbolId> remapA =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotA, merged);
+  const std::vector<primec::SymbolId> remapB =
+      primec::SymbolInterner::remapLocalIdsToMerged(snapshotB, merged);
+  REQUIRE(remapA.size() == 2);
+  REQUIRE(remapB.size() == 2);
+  CHECK(remapA[0] == 3);
+  CHECK(remapA[1] == 1);
+  CHECK(remapB[0] == 1);
+  CHECK(remapB[1] == 2);
 }
 
 TEST_CASE("symbol interner two-worker merge helper is input-order independent") {

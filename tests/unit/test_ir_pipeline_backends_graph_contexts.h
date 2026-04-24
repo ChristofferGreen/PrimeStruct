@@ -2229,6 +2229,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irPreparationSource.find("semantic product is required for IR preparation") != std::string::npos);
   CHECK(irLowererEntrySetup.find("semantic product is required for IR lowering") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticPublicationBuilders.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsWorkerSymbolMerge.cpp") != std::string::npos);
 
   CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") !=
         std::string::npos);
@@ -2262,6 +2263,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationSurfaceHeader.find("struct SemanticPublicationSurface {") !=
         std::string::npos);
+  CHECK(semanticPublicationSurfaceHeader.find("std::vector<std::string> callTargetSeedStrings;") !=
+        std::string::npos);
   CHECK(semanticPublicationSurfaceHeader.find("std::vector<CollectedDirectCallTargetEntry> directCallTargets;") !=
         std::string::npos);
   CHECK(semanticPublicationSurfaceHeader.find("std::vector<OnErrorSnapshotEntry> onErrorFacts;") !=
@@ -2269,6 +2272,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("struct SemanticPublicationBuilderState {") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("initializeSemanticProgramPublicationShell(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("preseedSemanticProgramCallTargetStrings(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("publicationSurface.callTargetSeedStrings") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("publishRoutingLookupIndexes(") !=
         std::string::npos);
@@ -3321,9 +3328,13 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(semanticsHeader.find("bool mergedWorkerOnErrorFactsValid_ = false;") !=
         std::string::npos);
+  CHECK(semanticsHeader.find("bool mergedWorkerPublicationSeedStringsValid_ = false;") !=
+        std::string::npos);
   CHECK(semanticsHeader.find("std::vector<CollectedCallableSummaryEntry> mergedWorkerCallableSummaries_;") !=
         std::string::npos);
   CHECK(semanticsHeader.find("std::vector<OnErrorSnapshotEntry> mergedWorkerOnErrorFacts_;") !=
+        std::string::npos);
+  CHECK(semanticsHeader.find("std::vector<std::string> mergedWorkerPublicationSeedStrings_;") !=
         std::string::npos);
   CHECK(semanticsSnapshots.find("SemanticsValidator::collectCallableSummaryEntriesForStableRange(") !=
         std::string::npos);
@@ -3368,6 +3379,10 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("std::vector<OnErrorSnapshotEntry> onErrorFacts;") !=
         std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("WorkerSymbolInternerSnapshot publicationStringSnapshot;") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("appendSemanticPublicationStringOrigins(") !=
+        std::string::npos);
   CHECK(semanticsDefinitionPasses.find("worker.collectOnErrorSnapshotEntriesForStableRange(") !=
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("mergeWorkerOnErrorFacts") != std::string::npos);
@@ -3375,11 +3390,23 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("mergedWorkerOnErrorFactsValid_ = true;") !=
         std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergeWorkerPublicationSeedStrings") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("SymbolInterner::mergeWorkerSnapshotsDeterministic(") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergedWorkerPublicationSeedStrings_ =") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergedWorkerPublicationSeedStringsValid_ = true;") !=
+        std::string::npos);
 
   const std::string callableSummaryBody =
       semanticsSnapshots.substr(callableSummaryStart, typeMetadataStart - callableSummaryStart);
   CHECK(callableSummaryBody.find("collectPilotRoutingSemanticProductFacts();") != std::string::npos);
   CHECK(callableSummaryBody.find("return std::exchange(collectedCallableSummaries_, {});") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("surface.callTargetSeedStrings = mergedWorkerPublicationSeedStrings_;") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("appendSemanticPublicationStringOrigins(publicationStringInterner,") !=
         std::string::npos);
 
   const std::string ensureOnErrorBody =

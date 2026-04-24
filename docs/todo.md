@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4131
+- TODO-4132
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4132
 - TODO-4133
 - TODO-4134
 - TODO-4130
@@ -71,34 +70,33 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer ownership: TODO-4131, TODO-4132,
-  TODO-4133, TODO-4134
+- Semantic-product authority and lowerer ownership: TODO-4132, TODO-4133,
+  TODO-4134
 - Pipeline/publication boundary hardening: TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4140
 - Test-surface contraction: TODO-4142
 - Runtime execution unification: TODO-4130
-- Parallel semantic publication determinism: TODO-4131
 
 ### Execution Queue (Recommended)
 
-1. TODO-4131
-2. TODO-4132
-3. TODO-4133
-4. TODO-4134
-5. TODO-4130
+1. TODO-4132
+2. TODO-4133
+3. TODO-4134
+4. TODO-4130
+5. TODO-4140
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4141 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | Validator entrypoint and benchmark-plumbing split | TODO-4140 |
-| Semantic-product publication by module and fact family | TODO-4131 |
+| Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | TODO-4132, TODO-4133, TODO-4134 |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -114,7 +112,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4141 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | none |
-| Semantic-product publication parity and deterministic ordering | TODO-4131 |
+| Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | TODO-4132, TODO-4133, TODO-4134 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
@@ -310,26 +308,6 @@ Task template:
   - stop_rule: Stop once one representative VM lowering family is explicit
       backend-scoped code and the shared fallback branch for that family is
       deleted or reduced to backend-agnostic glue.
-
-- [ ] TODO-4131: Implement origin-key worker interner merges
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Replace the current worker-id and local-order symbol-interner merge
-      helper with the documented semantic-origin-key merge policy once
-      production worker-fact publication depends on merged worker symbol
-      tables.
-  - acceptance:
-    - Worker-local interner snapshots carry the earliest semantic origin key
-      needed by the documented merge contract.
-    - Global merged symbol ids are assigned by origin-key policy rather than
-      worker-id and local-order only.
-    - Worker-count and repeated-run parity coverage pins identical merged
-      symbol-id views for the production publication path.
-  - stop_rule: Stop once production worker symbol merges use origin-key
-      ordering and parity coverage proves stability across worker counts and
-      repeated runs.
 
 - [ ] TODO-4130: Unify VM and debug-session interpreter cores
   - owner: ai

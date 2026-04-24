@@ -6,6 +6,24 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 24, 2026)**
+- ✓ TODO-4131: Implement origin-key worker interner merges. Completed:
+  `include/primec/SymbolInterner.h` and `src/SymbolInterner.cpp` now carry
+  explicit `SymbolOriginKey` metadata through worker snapshots and merge
+  canonical symbol ids by semantic origin instead of worker-id/local-order
+  alone. The worker-published callable-summary and `on_error` slice now builds
+  origin-aware publication string snapshots in
+  `src/semantics/SemanticsValidatorPassesDefinitions.cpp`, threads merged seed
+  strings through `src/semantics/SemanticsValidatorSnapshots.cpp` and
+  `src/semantics/SemanticPublicationSurface.h`, and pre-seeds
+  `SemanticProgram` publication in
+  `src/semantics/SemanticPublicationBuilders.cpp` so the production
+  semantic-product string table follows the merged origin-key order.
+  Focused interner regression coverage in
+  `tests/unit/test_semantics_symbol_interner.cpp` plus worker-count semantic
+  product parity checks in
+  `tests/unit/test_ir_pipeline_backends_registry.cpp` and source-lock coverage
+  in `tests/unit/test_ir_pipeline_backends_graph_contexts.h` now pin the
+  new contract.
 - ✓ TODO-4139: Split `CompilePipeline` into explicit stage handoffs. Completed:
   `src/CompilePipeline.cpp` now carries explicit import, transform, and parse
   stage state objects plus dedicated stage runners, so

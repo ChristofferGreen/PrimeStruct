@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsWorkerSymbolMerge.h"
 #include "primec/SemanticsDefinitionPartitioner.h"
 
 #include <algorithm>
@@ -506,6 +507,7 @@ bool SemanticsValidator::validateDefinitions() {
     ValidationCounters counters;
     std::vector<CollectedCallableSummaryEntry> callableSummaries;
     std::vector<OnErrorSnapshotEntry> onErrorFacts;
+    WorkerSymbolInternerSnapshot publicationStringSnapshot;
   };
 
   std::vector<std::future<WorkerChunkResult>> workerTasks;
@@ -541,6 +543,14 @@ bool SemanticsValidator::validateDefinitions() {
                 stableOrderOffset, stableOrderCount, result.callableSummaries);
             worker.collectOnErrorSnapshotEntriesForStableRange(
                 stableOrderOffset, stableOrderCount, result.onErrorFacts);
+            SymbolInterner publicationStringInterner;
+            appendSemanticPublicationStringOrigins(publicationStringInterner,
+                                                  program_,
+                                                  definitionPrepassSnapshot_,
+                                                  result.callableSummaries,
+                                                  result.onErrorFacts);
+            result.publicationStringSnapshot =
+                publicationStringInterner.snapshotForWorker(partitionKey);
           }
           return result;
         }));
@@ -607,6 +617,34 @@ bool SemanticsValidator::validateDefinitions() {
     mergedWorkerOnErrorFactsValid_ = true;
   };
 
+  auto mergeWorkerPublicationSeedStrings = [&]() {
+    mergedWorkerPublicationSeedStringsValid_ = false;
+    std::vector<std::string>().swap(mergedWorkerPublicationSeedStrings_);
+
+    std::vector<WorkerSymbolInternerSnapshot> snapshots;
+    snapshots.reserve(workerResults.size());
+    for (WorkerChunkResult &result : workerResults) {
+      if (result.publicationStringSnapshot.symbolsByLocalId.empty()) {
+        continue;
+      }
+      snapshots.push_back(std::move(result.publicationStringSnapshot));
+    }
+
+    SymbolInterner mergedPublicationStrings;
+    if (!snapshots.empty()) {
+      mergedPublicationStrings =
+          SymbolInterner::mergeWorkerSnapshotsDeterministic(std::move(snapshots));
+    }
+    appendSemanticPublicationStringOrigins(mergedPublicationStrings,
+                                           program_,
+                                           definitionPrepassSnapshot_,
+                                           mergedWorkerCallableSummaries_,
+                                           mergedWorkerOnErrorFacts_);
+    mergedWorkerPublicationSeedStrings_ =
+        mergedPublicationStrings.snapshotForWorker(0).symbolsByLocalId;
+    mergedWorkerPublicationSeedStringsValid_ = true;
+  };
+
   if (!collectDiagnostics) {
     for (const WorkerChunkResult &result : workerResults) {
       if (result.ok) {
@@ -622,6 +660,7 @@ bool SemanticsValidator::validateDefinitions() {
     }
     mergeWorkerCallableSummaries();
     mergeWorkerOnErrorFacts();
+    mergeWorkerPublicationSeedStrings();
     return true;
   }
 
@@ -659,6 +698,7 @@ bool SemanticsValidator::validateDefinitions() {
 
   mergeWorkerCallableSummaries();
   mergeWorkerOnErrorFacts();
+  mergeWorkerPublicationSeedStrings();
   return true;
 }
 

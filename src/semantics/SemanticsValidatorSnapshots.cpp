@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 
+#include "SemanticsWorkerSymbolMerge.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
 #include <algorithm>
@@ -978,6 +979,23 @@ SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
   }
   if (isSemanticCollectorEnabled(buildConfig, "on_error_facts")) {
     surface.onErrorFacts = onErrorFactSnapshotForSemanticProduct();
+  }
+
+  if (!surface.callableSummaries.empty() || !surface.onErrorFacts.empty()) {
+    if (mergedWorkerPublicationSeedStringsValid_ &&
+        isSemanticCollectorEnabled(buildConfig, "callable_summaries") &&
+        isSemanticCollectorEnabled(buildConfig, "on_error_facts")) {
+      surface.callTargetSeedStrings = mergedWorkerPublicationSeedStrings_;
+    } else {
+      SymbolInterner publicationStringInterner;
+      appendSemanticPublicationStringOrigins(publicationStringInterner,
+                                             program_,
+                                             definitionPrepassSnapshot_,
+                                             surface.callableSummaries,
+                                             surface.onErrorFacts);
+      surface.callTargetSeedStrings =
+          publicationStringInterner.snapshotForWorker(0).symbolsByLocalId;
+    }
   }
 
   releaseTransientSnapshotCaches();

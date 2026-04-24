@@ -214,6 +214,7 @@ struct ReturnFactSnapshotEntry {
 };
 
 struct SemanticPublicationSurface {
+  std::vector<std::string> callTargetSeedStrings;
   std::vector<CollectedDirectCallTargetEntry> directCallTargets;
   std::vector<CollectedMethodCallTargetEntry> methodCallTargets;
   std::vector<CollectedBridgePathChoiceEntry> bridgePathChoices;

@@ -7,8 +7,24 @@ namespace primec {
 
 namespace {
 
+bool symbol_origin_less(const SymbolOriginKey &left, const SymbolOriginKey &right) {
+  if (left.moduleOrder != right.moduleOrder) {
+    return left.moduleOrder < right.moduleOrder;
+  }
+  if (left.declarationOrder != right.declarationOrder) {
+    return left.declarationOrder < right.declarationOrder;
+  }
+  if (left.semanticNodeOrder != right.semanticNodeOrder) {
+    return left.semanticNodeOrder < right.semanticNodeOrder;
+  }
+  return left.fieldOrder < right.fieldOrder;
+}
+
 bool snapshot_order_less(const WorkerSymbolInternerSnapshot *left,
                          const WorkerSymbolInternerSnapshot *right) {
+  if (left->partitionKey != right->partitionKey) {
+    return left->partitionKey < right->partitionKey;
+  }
   if (left->workerId != right->workerId) {
     return left->workerId < right->workerId;
   }
@@ -17,40 +33,79 @@ bool snapshot_order_less(const WorkerSymbolInternerSnapshot *left,
 
 SymbolInterner merge_snapshots_deterministic(
     std::vector<const WorkerSymbolInternerSnapshot *> snapshots) {
-  std::sort(snapshots.begin(), snapshots.end(), snapshot_order_less);
-
-  struct FirstSeen {
-    std::size_t snapshotRank = 0;
+  struct MergeCandidate {
+    std::string text;
+    SymbolOriginKey firstOrigin;
+    uint32_t partitionKey = 0;
+    uint32_t workerId = 0;
     std::size_t localIndex = 0;
   };
-  std::unordered_map<std::string, FirstSeen> firstSeenByText;
-  for (std::size_t snapshotRank = 0; snapshotRank < snapshots.size(); ++snapshotRank) {
-    const auto &symbols = snapshots[snapshotRank]->symbolsByLocalId;
+
+  auto candidate_less = [](const MergeCandidate &left, const MergeCandidate &right) {
+    if (symbol_origin_less(left.firstOrigin, right.firstOrigin)) {
+      return true;
+    }
+    if (symbol_origin_less(right.firstOrigin, left.firstOrigin)) {
+      return false;
+    }
+    if (left.partitionKey != right.partitionKey) {
+      return left.partitionKey < right.partitionKey;
+    }
+    if (left.localIndex != right.localIndex) {
+      return left.localIndex < right.localIndex;
+    }
+    if (left.workerId != right.workerId) {
+      return left.workerId < right.workerId;
+    }
+    return left.text < right.text;
+  };
+
+  std::sort(snapshots.begin(), snapshots.end(), snapshot_order_less);
+
+  std::unordered_map<std::string, MergeCandidate> representativeByText;
+  for (const WorkerSymbolInternerSnapshot *snapshot : snapshots) {
+    const auto &symbols = snapshot->symbolsByLocalId;
     for (std::size_t localIndex = 0; localIndex < symbols.size(); ++localIndex) {
       const std::string &symbol = symbols[localIndex];
-      if (firstSeenByText.find(symbol) == firstSeenByText.end()) {
-        firstSeenByText.emplace(symbol, FirstSeen{snapshotRank, localIndex});
+      const SymbolOriginKey origin =
+          localIndex < snapshot->firstOriginByLocalId.size()
+              ? snapshot->firstOriginByLocalId[localIndex]
+              : SymbolOriginKey{};
+      MergeCandidate candidate{
+          .text = symbol,
+          .firstOrigin = origin,
+          .partitionKey = snapshot->partitionKey,
+          .workerId = snapshot->workerId,
+          .localIndex = localIndex,
+      };
+      const auto it = representativeByText.find(symbol);
+      if (it == representativeByText.end() || candidate_less(candidate, it->second)) {
+        representativeByText.insert_or_assign(symbol, std::move(candidate));
       }
     }
   }
 
-  struct MergeCandidate {
-    std::string text;
-    std::size_t snapshotRank = 0;
-    std::size_t localIndex = 0;
-  };
   std::vector<MergeCandidate> candidates;
-  candidates.reserve(firstSeenByText.size());
-  for (const auto &[text, seen] : firstSeenByText) {
-    candidates.push_back(MergeCandidate{text, seen.snapshotRank, seen.localIndex});
+  candidates.reserve(representativeByText.size());
+  for (auto &[_, candidate] : representativeByText) {
+    candidates.push_back(std::move(candidate));
   }
   std::sort(candidates.begin(), candidates.end(), [](const MergeCandidate &left,
                                                      const MergeCandidate &right) {
-    if (left.snapshotRank != right.snapshotRank) {
-      return left.snapshotRank < right.snapshotRank;
+    if (symbol_origin_less(left.firstOrigin, right.firstOrigin)) {
+      return true;
+    }
+    if (symbol_origin_less(right.firstOrigin, left.firstOrigin)) {
+      return false;
+    }
+    if (left.partitionKey != right.partitionKey) {
+      return left.partitionKey < right.partitionKey;
     }
     if (left.localIndex != right.localIndex) {
       return left.localIndex < right.localIndex;
+    }
+    if (left.workerId != right.workerId) {
+      return left.workerId < right.workerId;
     }
     return left.text < right.text;
   });
@@ -99,13 +154,23 @@ bool SymbolInterner::StringViewEqual::operator()(std::string_view left, const ch
 }
 
 SymbolId SymbolInterner::intern(std::string_view text) {
+  return intern(text, SymbolOriginKey{});
+}
+
+SymbolId SymbolInterner::intern(std::string_view text, const SymbolOriginKey &originKey) {
   if (const auto existing = idsByText_.find(text); existing != idsByText_.end()) {
+    const std::size_t existingIndex = static_cast<std::size_t>(existing->second - 1);
+    if (existingIndex < firstOriginById_.size() &&
+        symbol_origin_less(originKey, firstOriginById_[existingIndex])) {
+      firstOriginById_[existingIndex] = originKey;
+    }
     return existing->second;
   }
   if (storage_.size() >= static_cast<std::size_t>(std::numeric_limits<SymbolId>::max())) {
     return InvalidSymbolId;
   }
   storage_.emplace_back(text);
+  firstOriginById_.push_back(originKey);
   const SymbolId id = static_cast<SymbolId>(storage_.size());
   idsByText_.emplace(storage_.back(), id);
   return id;
@@ -141,15 +206,19 @@ bool SymbolInterner::empty() const noexcept {
 void SymbolInterner::clear() {
   idsByText_.clear();
   storage_.clear();
+  firstOriginById_.clear();
 }
 
 WorkerSymbolInternerSnapshot SymbolInterner::snapshotForWorker(uint32_t workerId) const {
   WorkerSymbolInternerSnapshot snapshot;
   snapshot.workerId = workerId;
+  snapshot.partitionKey = workerId;
   snapshot.symbolsByLocalId.reserve(storage_.size());
+  snapshot.firstOriginByLocalId.reserve(firstOriginById_.size());
   for (const std::string &symbol : storage_) {
     snapshot.symbolsByLocalId.push_back(symbol);
   }
+  snapshot.firstOriginByLocalId = firstOriginById_;
   return snapshot;
 }
 

@@ -475,6 +475,19 @@ void initializeSemanticProgramPublicationShell(SemanticPublicationBuilderState &
       state.semanticProgram.definitions.size() + state.semanticProgram.executions.size());
 }
 
+void preseedSemanticProgramCallTargetStrings(SemanticPublicationBuilderState &state,
+                                             const SemanticPublicationSurface &publicationSurface) {
+  state.semanticProgram.callTargetStringTable.reserve(
+      state.semanticProgram.callTargetStringTable.size() +
+      publicationSurface.callTargetSeedStrings.size());
+  state.semanticProgram.callTargetStringIdsByText.reserve(
+      state.semanticProgram.callTargetStringIdsByText.size() +
+      publicationSurface.callTargetSeedStrings.size());
+  for (const std::string &seed : publicationSurface.callTargetSeedStrings) {
+    (void)semanticProgramInternCallTargetString(state.semanticProgram, seed);
+  }
+}
+
 void publishRoutingLookupIndexes(SemanticPublicationBuilderState &state) {
   auto &routingLookups = state.semanticProgram.publishedRoutingLookups;
   routingLookups.definitionIndicesByPathId.reserve(state.semanticProgram.definitions.size());
@@ -1318,6 +1331,7 @@ SemanticProgram buildSemanticProgramFromPublicationSurface(
     const SemanticProductBuildConfig *buildConfig) {
   SemanticPublicationBuilderState state(program, entryPath, buildConfig);
   initializeSemanticProgramPublicationShell(state);
+  preseedSemanticProgramCallTargetStrings(state, publicationSurface);
   publishRoutingLookupIndexes(state);
   publishLowererPreflightFacts(state);
   publishSemanticRoutingFamilies(state, publicationSurface);

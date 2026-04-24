@@ -3767,6 +3767,7 @@ main() {
 
   struct IndexFamilySnapshot {
     std::string formattedSemanticProduct;
+    std::vector<std::string> callTargetStringTable;
     std::size_t directCallTargetCount = 0;
     std::size_t methodCallTargetCount = 0;
     std::size_t bridgePathChoiceCount = 0;
@@ -3831,6 +3832,7 @@ main() {
 
     IndexFamilySnapshot snapshot;
     snapshot.formattedSemanticProduct = primec::formatSemanticProgram(output.semanticProgram);
+    snapshot.callTargetStringTable = output.semanticProgram.callTargetStringTable;
     snapshot.directCallTargetCount = output.semanticProgram.directCallTargets.size();
     snapshot.methodCallTargetCount = output.semanticProgram.methodCallTargets.size();
     snapshot.bridgePathChoiceCount = output.semanticProgram.bridgePathChoices.size();
@@ -3883,6 +3885,9 @@ main() {
   CHECK(singleWorker.formattedSemanticProduct == twoWorkers.formattedSemanticProduct);
   CHECK(singleWorker.formattedSemanticProduct == fourWorkers.formattedSemanticProduct);
   CHECK(twoWorkers.formattedSemanticProduct == fourWorkers.formattedSemanticProduct);
+  CHECK(singleWorker.callTargetStringTable == twoWorkers.callTargetStringTable);
+  CHECK(singleWorker.callTargetStringTable == fourWorkers.callTargetStringTable);
+  CHECK(twoWorkers.callTargetStringTable == fourWorkers.callTargetStringTable);
 
   CHECK(singleWorker.directCallTargetCount == twoWorkers.directCallTargetCount);
   CHECK(singleWorker.directCallTargetCount == fourWorkers.directCallTargetCount);
