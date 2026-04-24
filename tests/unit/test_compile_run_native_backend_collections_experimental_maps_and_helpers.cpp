@@ -1058,7 +1058,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("native runs vector-target method soa mutator shadows") {
+TEST_CASE("rejects native vector-target method soa mutator shadows in expressions") {
   const std::string source = R"(
 [return<int>]
 /soa_vector/push([vector<i32>] values, [i32] value) {
@@ -1078,12 +1078,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_vector_target_method_soa_mutator_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_vector_target_method_soa_mutator_shadow").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_vector_target_method_soa_mutator_shadow_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("native runs vector-target to_aos helper shadows") {
