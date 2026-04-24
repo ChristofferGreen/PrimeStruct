@@ -178,13 +178,17 @@ Benchmark-only CI runs now enforce policy checks by default:
 
 This mode runs benchmark collection and then runs the trend/budget checker against
 the generated report and discovered history. Use
-`--skip-budget-check-in-benchmark` only for local exploratory runs that
-intentionally bypass policy gating.
+`--skip-budget-check-in-benchmark` for collector-only runs that intentionally
+separate artifact capture or parity checks from the sustained RSS budget gate.
 
-The release CMake/CTest collector target intentionally uses that skip flag:
+The release CMake/CTest collector targets intentionally use that skip flag:
 
 - `PrimeStruct_semantic_memory_benchmark` records the fresh benchmark report,
   artifact bundle, and history input for the current build.
+- `PrimeStruct_semantic_memory_definition_worker_parity` records the
+  worker-mode parity report/artifact bundle and still fails benchmark
+  collection on dump-hash mismatches, but it does not also own the RSS budget
+  gate.
 - `PrimeStruct_semantic_memory_trend` depends on that collector target and owns
   the sustained policy gate for the normal release path.
 

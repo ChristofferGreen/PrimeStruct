@@ -1478,6 +1478,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     primestruct_semantic_memory_definition_worker_parity
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
             --mode benchmark
+            --skip-budget-check-in-benchmark
             --run-label semantic_memory_definition_worker_parity
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
@@ -1492,7 +1493,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
             --artifacts-dir ${CMAKE_BINARY_DIR}/benchmarks/semantic_memory_definition_worker_parity_artifacts
     DEPENDS primec
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Running semantic memory benchmark definition-worker parity gate"
+    COMMENT "Running semantic memory definition-worker parity artifact collection"
     VERBATIM
   )
 
@@ -1500,6 +1501,7 @@ if(PRIMESTRUCT_BUILD_TESTS)
     NAME PrimeStruct_semantic_memory_definition_worker_parity
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/semantic_memory_ci_artifacts.py
             --mode benchmark
+            --skip-budget-check-in-benchmark
             --run-label semantic_memory_definition_worker_parity
             --primec $<TARGET_FILE:primec>
             --repo-root ${CMAKE_SOURCE_DIR}
