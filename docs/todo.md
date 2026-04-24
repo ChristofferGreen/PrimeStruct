@@ -56,12 +56,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4137
+- TODO-4138
 - TODO-4136
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4138
 - TODO-4139
 - TODO-4132
 - TODO-4133
@@ -71,11 +70,12 @@ Task template:
 - TODO-4129
 - TODO-4140
 - TODO-4141
+- TODO-4142
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer ownership: TODO-4137, TODO-4138,
-  TODO-4132, TODO-4133, TODO-4134
+- Semantic-product authority and lowerer ownership: TODO-4138, TODO-4132,
+  TODO-4133, TODO-4134
 - Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4136, TODO-4140
 - Test-surface contraction: TODO-4142
@@ -84,17 +84,17 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4137
+1. TODO-4138
 2. TODO-4136
-3. TODO-4138
-4. TODO-4139
-5. TODO-4132
+3. TODO-4139
+4. TODO-4132
+5. TODO-4133
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4136, TODO-4138, TODO-4131 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4139, TODO-4141 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
@@ -117,7 +117,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4141 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | TODO-4139 |
-| Semantic-product publication parity and deterministic ordering | TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
+| Semantic-product publication parity and deterministic ordering | TODO-4136, TODO-4138, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4132, TODO-4133, TODO-4134 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
@@ -296,24 +296,6 @@ Task template:
       ordering contract.
   - stop_rule: Stop once module publication order matches the documented
       deterministic import-order contract with coverage.
-
-- [ ] TODO-4137: Publish `ResolvedModule` identity by source unit
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Replace the current top-level-path-prefix `moduleKey` grouping in
-      `ensureModuleResolvedArtifacts(...)` with identity keyed to parsed or
-      imported source units, without yet changing the later ordering pass.
-  - acceptance:
-    - `SemanticProgram.moduleResolvedArtifacts` groups facts by parsed or
-      imported source unit rather than only by top-level path prefix.
-    - Published module identity no longer depends on `semanticModuleKeyForPath`
-      style top-level-path collapsing for the migrated surface.
-    - Semantic-product dump or conformance coverage pins the new module
-      identity contract.
-  - stop_rule: Stop once published resolved modules use source-unit identity
-      with coverage, even if the later ordering pass is still unchanged.
 
 - [ ] TODO-4136: Publish fact-family indices from deterministic worker merges
   - owner: ai

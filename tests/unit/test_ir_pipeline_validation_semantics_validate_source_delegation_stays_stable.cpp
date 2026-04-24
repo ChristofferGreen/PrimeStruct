@@ -132,7 +132,7 @@ main() {
   CHECK(semanticProgram.tryFacts.empty());
   CHECK(semanticProgram.onErrorFacts.empty());
 
-  const auto *mainArtifacts = findModuleArtifacts(semanticProgram, "/main");
+  const auto *mainArtifacts = findModuleArtifacts(semanticProgram, "/");
   REQUIRE(mainArtifacts != nullptr);
   CHECK(anySemanticEntry(
       mainArtifacts->directCallTargetIndices,
@@ -156,6 +156,28 @@ main() {
         return index < semanticProgram.callableSummaries.size() &&
                primec::semanticProgramCallableSummaryFullPath(semanticProgram,
                                                               semanticProgram.callableSummaries[index]) == "/main";
+      }));
+  CHECK_FALSE(anySemanticEntry(
+      mainArtifacts->callableSummaryIndices,
+      [&](std::size_t index) {
+        return index < semanticProgram.callableSummaries.size() &&
+               primec::semanticProgramCallableSummaryFullPath(semanticProgram,
+                                                              semanticProgram.callableSummaries[index])
+                   .starts_with("/std/collections/");
+      }));
+
+  CHECK(anySemanticEntry(
+      semanticProgram.moduleResolvedArtifacts,
+      [&](const primec::SemanticProgramModuleResolvedArtifacts &module) {
+        return module.identity.moduleKey != "/" &&
+               anySemanticEntry(
+                   module.callableSummaryIndices,
+                   [&](std::size_t index) {
+                     return index < semanticProgram.callableSummaries.size() &&
+                            primec::semanticProgramCallableSummaryFullPath(
+                                semanticProgram, semanticProgram.callableSummaries[index])
+                                .starts_with("/std/collections/");
+                   });
       }));
   CHECK(anySemanticEntry(
       semanticProgram.moduleResolvedArtifacts,

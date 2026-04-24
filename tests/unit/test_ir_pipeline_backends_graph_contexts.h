@@ -2273,7 +2273,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("#include \"SemanticPublicationBuilders.h\"") != std::string::npos);
   CHECK(semanticsValidate.find("buildSemanticProgramFromPublicationSurface(") != std::string::npos);
-  CHECK(semanticPublicationBuildersSource.find("semanticModuleKeyForPath(") != std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("normalizeSemanticModulePathKey(") != std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("semanticSourceUnitImportMatchesPath(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("semanticSourceUnitModuleKeyForPath(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find(
+            "semanticSourceUnitModuleKeyForPath(\n"
+            "        scopePath, semanticProgram.sourceImports, semanticProgram.imports)") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("semanticModuleKeyForPath(") == std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("semanticProgram.moduleResolvedArtifacts.reserve(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(") !=

@@ -77,7 +77,7 @@ uint64_t makeSemanticProvenanceHandle(uint64_t semanticNodeId) {
   return hash == 0 ? 1 : hash;
 }
 
-std::string semanticModuleKeyForPath(std::string_view path) {
+std::string normalizeSemanticModulePathKey(std::string_view path) {
   if (path.empty()) {
     return "/";
   }
@@ -86,15 +86,67 @@ std::string semanticModuleKeyForPath(std::string_view path) {
   if (normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  if (normalized == "/") {
-    return normalized;
+  return normalized;
+}
+
+bool semanticSourceUnitImportMatchesPath(std::string_view importPath, std::string_view path) {
+  const std::string normalizedImportPath = normalizeSemanticModulePathKey(importPath);
+  const std::string normalizedPath = normalizeSemanticModulePathKey(path);
+  if (normalizedImportPath == "/") {
+    return true;
   }
 
-  const size_t nextSlash = normalized.find('/', 1);
-  if (nextSlash == std::string::npos) {
-    return normalized;
+  std::string_view importPrefix = normalizedImportPath;
+  if (normalizedImportPath.size() >= 2 &&
+      normalizedImportPath.compare(normalizedImportPath.size() - 2, 2, "/*") == 0) {
+    importPrefix = std::string_view(normalizedImportPath).substr(0, normalizedImportPath.size() - 2);
   }
-  return normalized.substr(0, nextSlash);
+
+  if (normalizedPath == importPrefix) {
+    return true;
+  }
+  return normalizedPath.size() > importPrefix.size() &&
+         normalizedPath.rfind(importPrefix, 0) == 0 &&
+         normalizedPath[importPrefix.size()] == '/';
+}
+
+std::string semanticSourceUnitModuleKeyForPath(
+    std::string_view path,
+    const std::vector<std::string> &sourceImports,
+    const std::vector<std::string> &imports) {
+  const std::string normalizedPath = normalizeSemanticModulePathKey(path);
+
+  std::string bestMatch;
+  std::size_t bestSpecificity = 0;
+  auto considerImportPath = [&](std::string_view importPath) {
+    if (!semanticSourceUnitImportMatchesPath(importPath, normalizedPath)) {
+      return;
+    }
+
+    const std::string normalizedImportPath = normalizeSemanticModulePathKey(importPath);
+    const bool isWildcard =
+        normalizedImportPath.size() >= 2 &&
+        normalizedImportPath.compare(normalizedImportPath.size() - 2, 2, "/*") == 0;
+    const std::size_t specificity =
+        normalizedImportPath.size() * 2 + (isWildcard ? 0u : 1u);
+    if (!bestMatch.empty() && specificity <= bestSpecificity) {
+      return;
+    }
+    bestMatch = normalizedImportPath;
+    bestSpecificity = specificity;
+  };
+
+  for (const auto &importPath : sourceImports) {
+    considerImportPath(importPath);
+  }
+  for (const auto &importPath : imports) {
+    considerImportPath(importPath);
+  }
+
+  if (!bestMatch.empty()) {
+    return bestMatch;
+  }
+  return "/";
 }
 
 std::string fallbackBindingResolvedPathForSemanticProduct(std::string_view scopePath,
@@ -335,7 +387,8 @@ struct SemanticPublicationBuilderState {
   }
 
   SemanticProgramModuleResolvedArtifacts &ensureModuleResolvedArtifacts(std::string_view scopePath) {
-    const std::string moduleKey = semanticModuleKeyForPath(scopePath);
+    const std::string moduleKey = semanticSourceUnitModuleKeyForPath(
+        scopePath, semanticProgram.sourceImports, semanticProgram.imports);
     const auto it = moduleIndexByKey.find(moduleKey);
     if (it != moduleIndexByKey.end()) {
       return semanticProgram.moduleResolvedArtifacts[it->second];
