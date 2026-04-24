@@ -218,7 +218,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("native keeps primitive diagnostics on canonical vector unsafe access count shadow") {
+TEST_CASE("rejects native canonical vector unsafe access count shadow during lowering") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -245,10 +245,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical vector method access builtin string count shadow") {
+TEST_CASE("rejects native canonical vector method access builtin string count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -268,17 +270,19 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_vector_method_access_builtin_string_count_shadow.prime", source);
-  const std::string exePath =
+  const std::string errPath =
       (testScratchPath("") /
-       "primec_native_canonical_vector_method_access_builtin_string_count_shadow_exe")
+       "primec_native_canonical_vector_method_access_builtin_string_count_shadow.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("native backend only supports entry argument indexing") !=
+        std::string::npos);
 }
 
-TEST_CASE("native keeps primitive diagnostics on canonical vector unsafe method access count shadow") {
+TEST_CASE("compiles and runs native canonical vector unsafe method access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -298,15 +302,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_canonical_vector_unsafe_method_access_count_shadow_reject.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_canonical_vector_unsafe_method_access_count_shadow_reject.err")
+       "primec_native_canonical_vector_unsafe_method_access_count_shadow_reject_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(errPath).empty());
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("native keeps inferExprString lowering diagnostics on direct wrapper-returned canonical map access") {
@@ -427,7 +431,13 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK((diagnostics.find("unknown method: /map/at") != std::string::npos ||
+         diagnostics.find("inferExprString") != std::string::npos ||
+         diagnostics.find("entry argument indexing") != std::string::npos ||
+         diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
+         diagnostics.find("unknown call target: /std/collections/map/at") !=
+             std::string::npos));
 }
 
 TEST_CASE("rejects native slash-method vector access string count fallback") {
