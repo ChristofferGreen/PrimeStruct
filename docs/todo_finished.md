@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4130: Unify VM and debug-session interpreter cores. Completed: the
+  duplicated jump, call, and return interpreter-step slice now routes through
+  shared `src/VmControlFlowOpcodeShared.{h,cpp}` helpers instead of keeping
+  separate production and debug-session implementations in
+  `src/VmExecution.cpp` and `src/VmDebugSessionInstruction.cpp`. The runtime
+  and debug-session paths now keep only the thin state/hook adapters around
+  that shared control-flow core, focused VM/debug parity coverage in
+  `tests/unit/test_vm_debug_session.cpp` now locks identical behavior for the
+  migrated control-flow family, and source-delegation coverage in
+  `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`
+  now pins the shared helper boundary.
 - ✓ TODO-4128: Split lowering contracts by backend surface. Completed: the
   representative VM, native, and GPU lowering contract families now each live
   behind explicit backend-scoped modules, so the shared lowerer helpers keep

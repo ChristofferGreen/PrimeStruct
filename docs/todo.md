@@ -56,27 +56,24 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4130
+- TODO-4140
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4140
 - TODO-4141
 - TODO-4142
 
 ### Priority Lanes (Current)
 
-- Pipeline/publication boundary hardening: TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4140
+- Pipeline/publication boundary hardening: TODO-4140, TODO-4141
 - Test-surface contraction: TODO-4142
-- Runtime execution unification: TODO-4130
 
 ### Execution Queue (Recommended)
 
-1. TODO-4130
-2. TODO-4140
-3. TODO-4141
-4. TODO-4142
+1. TODO-4140
+2. TODO-4141
+3. TODO-4142
 
 ### PrimeStruct Coverage Snapshot
 
@@ -95,7 +92,7 @@ Task template:
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
 | Debug trace replay robustness | none |
-| VM/runtime debug stateful opcode parity | TODO-4130 |
+| VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | TODO-4142 |
 
 ### Validation Coverage Snapshot
@@ -114,7 +111,7 @@ Task template:
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
-| Shared VM/debug stateful opcode behavior | TODO-4130 |
+| Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 
 ### Vector/Map Bridge Contract Summary
@@ -244,23 +241,3 @@ Task template:
   - stop_rule: Stop once one benchmark-only semantic configuration slice is
       removed from the production-facing API and preserved in benchmark
       coverage.
-
-- [ ] TODO-4130: Unify VM and debug-session interpreter cores
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Runtime Architecture
-  - depends_on: none
-  - scope: Consolidate the still-duplicated stateful opcode execution logic in
-      `VmExecution.cpp` and `VmDebugSessionInstruction.cpp` behind one shared
-      interpreter-step core, while keeping the already-shared numeric opcode
-      helpers and layering debug hooks or session-state transitions around the
-      shared step path.
-  - acceptance:
-    - The selected stateful opcode slice no longer has separate production and
-      debug-session implementations.
-    - VM execution and debug-session stepping share one interpreter-step core
-      for the migrated stateful slice.
-    - Parity coverage proves identical execution behavior between normal VM and
-      debug stepping for the migrated stateful slice.
-  - stop_rule: Stop once one representative stateful interpreter slice runs
-      through a shared VM/debug execution core with parity coverage.

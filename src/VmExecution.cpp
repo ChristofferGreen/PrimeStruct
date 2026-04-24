@@ -1,5 +1,6 @@
 #include "VmExecution.h"
 
+#include "VmControlFlowOpcodeShared.h"
 #include "VmExecutionNumeric.h"
 #include "VmHeapHelpers.h"
 #include "VmIoHelpers.h"
@@ -66,6 +67,42 @@ bool executeVmModule(const IrModule &module,
       return false;
     }
     const auto &inst = fn.instructions[ip];
+    const auto controlFlowOutcome = handleSharedVmControlFlowOpcode(inst,
+                                                                    stack,
+                                                                    fn.instructions.size(),
+                                                                    module.functions.size(),
+                                                                    frames.size(),
+                                                                    4096,
+                                                                    frame.returnValueToCaller,
+                                                                    ip,
+                                                                    error);
+    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Fault) {
+      return false;
+    }
+    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Continue) {
+      continue;
+    }
+    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Call) {
+      Frame calleeFrame;
+      calleeFrame.functionIndex = controlFlowOutcome.targetFunctionIndex;
+      calleeFrame.function = &module.functions[controlFlowOutcome.targetFunctionIndex];
+      calleeFrame.locals.assign(localCounts[controlFlowOutcome.targetFunctionIndex], 0);
+      calleeFrame.returnValueToCaller = controlFlowOutcome.returnValueToCaller;
+      frames.push_back(std::move(calleeFrame));
+      continue;
+    }
+    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Exit) {
+      result = controlFlowOutcome.returnValue;
+      return true;
+    }
+    if (controlFlowOutcome.result == VmControlFlowOpcodeResult::Return) {
+      const bool returnToCaller = controlFlowOutcome.returnValueToCaller;
+      frames.pop_back();
+      if (returnToCaller) {
+        stack.push_back(controlFlowOutcome.returnValue);
+      }
+      continue;
+    }
     switch (inst.op) {
       case IrOpcode::PushI32:
         stack.push_back(static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(inst.imm))));
@@ -287,138 +324,6 @@ bool executeVmModule(const IrModule &module,
           return false;
         }
         ip += 1;
-        break;
-      }
-      case IrOpcode::JumpIfZero: {
-        if (stack.empty()) {
-          error = "IR stack underflow on jump";
-          return false;
-        }
-        uint64_t value = stack.back();
-        stack.pop_back();
-        if (inst.imm > fn.instructions.size()) {
-          error = "invalid jump target in IR";
-          return false;
-        }
-        if (value == 0) {
-          ip = static_cast<size_t>(inst.imm);
-        } else {
-          ip += 1;
-        }
-        break;
-      }
-      case IrOpcode::Jump: {
-        if (inst.imm > fn.instructions.size()) {
-          error = "invalid jump target in IR";
-          return false;
-        }
-        ip = static_cast<size_t>(inst.imm);
-        break;
-      }
-      case IrOpcode::Call:
-      case IrOpcode::CallVoid: {
-        constexpr size_t MaxCallDepth = 4096;
-        if (inst.imm >= module.functions.size()) {
-          error = "invalid call target in IR";
-          return false;
-        }
-        if (frames.size() >= MaxCallDepth) {
-          error = "VM call stack overflow";
-          return false;
-        }
-        const size_t target = static_cast<size_t>(inst.imm);
-        Frame calleeFrame;
-        calleeFrame.functionIndex = target;
-        calleeFrame.function = &module.functions[target];
-        calleeFrame.locals.assign(localCounts[target], 0);
-        calleeFrame.returnValueToCaller = (inst.op == IrOpcode::Call);
-        ip += 1;
-        frames.push_back(std::move(calleeFrame));
-        break;
-      }
-      case IrOpcode::ReturnVoid: {
-        uint64_t returnValue = 0;
-        const bool returnToCaller = frame.returnValueToCaller;
-        if (frames.size() == 1) {
-          result = returnValue;
-          return true;
-        }
-        frames.pop_back();
-        if (returnToCaller) {
-          stack.push_back(returnValue);
-        }
-        break;
-      }
-      case IrOpcode::ReturnI32: {
-        if (stack.empty()) {
-          error = "IR stack underflow on return";
-          return false;
-        }
-        uint64_t returnValue = static_cast<uint64_t>(static_cast<int64_t>(static_cast<int32_t>(stack.back())));
-        stack.pop_back();
-        const bool returnToCaller = frame.returnValueToCaller;
-        if (frames.size() == 1) {
-          result = returnValue;
-          return true;
-        }
-        frames.pop_back();
-        if (returnToCaller) {
-          stack.push_back(returnValue);
-        }
-        break;
-      }
-      case IrOpcode::ReturnI64: {
-        if (stack.empty()) {
-          error = "IR stack underflow on return";
-          return false;
-        }
-        uint64_t returnValue = stack.back();
-        stack.pop_back();
-        const bool returnToCaller = frame.returnValueToCaller;
-        if (frames.size() == 1) {
-          result = returnValue;
-          return true;
-        }
-        frames.pop_back();
-        if (returnToCaller) {
-          stack.push_back(returnValue);
-        }
-        break;
-      }
-      case IrOpcode::ReturnF32: {
-        if (stack.empty()) {
-          error = "IR stack underflow on return";
-          return false;
-        }
-        uint64_t returnValue = static_cast<uint64_t>(static_cast<uint32_t>(stack.back()));
-        stack.pop_back();
-        const bool returnToCaller = frame.returnValueToCaller;
-        if (frames.size() == 1) {
-          result = returnValue;
-          return true;
-        }
-        frames.pop_back();
-        if (returnToCaller) {
-          stack.push_back(returnValue);
-        }
-        break;
-      }
-      case IrOpcode::ReturnF64: {
-        if (stack.empty()) {
-          error = "IR stack underflow on return";
-          return false;
-        }
-        uint64_t returnValue = stack.back();
-        stack.pop_back();
-        const bool returnToCaller = frame.returnValueToCaller;
-        if (frames.size() == 1) {
-          result = returnValue;
-          return true;
-        }
-        frames.pop_back();
-        if (returnToCaller) {
-          stack.push_back(returnValue);
-        }
         break;
       }
       case IrOpcode::PrintI32:

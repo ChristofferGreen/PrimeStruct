@@ -1023,6 +1023,62 @@ TEST_CASE("vm numeric opcode helpers source delegation stays stable") {
   CHECK(vmNumericSharedSource.find("division by zero in IR") != std::string::npos);
 }
 
+TEST_CASE("vm control flow opcode helpers source delegation stays stable") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                            : std::filesystem::path("..");
+
+  const std::filesystem::path vmExecutionPath = repoRoot / "src" / "VmExecution.cpp";
+  const std::filesystem::path vmDebugInstructionPath =
+      repoRoot / "src" / "VmDebugSessionInstruction.cpp";
+  const std::filesystem::path vmControlFlowSharedPath =
+      repoRoot / "src" / "VmControlFlowOpcodeShared.cpp";
+  const std::filesystem::path vmControlFlowSharedHeaderPath =
+      repoRoot / "src" / "VmControlFlowOpcodeShared.h";
+  REQUIRE(std::filesystem::exists(vmExecutionPath));
+  REQUIRE(std::filesystem::exists(vmDebugInstructionPath));
+  REQUIRE(std::filesystem::exists(vmControlFlowSharedPath));
+  REQUIRE(std::filesystem::exists(vmControlFlowSharedHeaderPath));
+
+  const std::string vmExecutionSource = readText(vmExecutionPath);
+  const std::string vmDebugInstructionSource = readText(vmDebugInstructionPath);
+  const std::string vmControlFlowSharedSource = readText(vmControlFlowSharedPath);
+  const std::string vmControlFlowSharedHeaderSource = readText(vmControlFlowSharedHeaderPath);
+
+  CHECK(vmExecutionSource.find("#include \"VmControlFlowOpcodeShared.h\"") != std::string::npos);
+  CHECK(vmDebugInstructionSource.find("#include \"VmControlFlowOpcodeShared.h\"") !=
+        std::string::npos);
+  CHECK(vmExecutionSource.find("handleSharedVmControlFlowOpcode(") != std::string::npos);
+  CHECK(vmDebugInstructionSource.find("handleSharedVmControlFlowOpcode(") != std::string::npos);
+  CHECK(vmExecutionSource.find("case IrOpcode::JumpIfZero:") == std::string::npos);
+  CHECK(vmDebugInstructionSource.find("case IrOpcode::JumpIfZero:") == std::string::npos);
+  CHECK(vmExecutionSource.find("case IrOpcode::Call:") == std::string::npos);
+  CHECK(vmDebugInstructionSource.find("case IrOpcode::Call:") == std::string::npos);
+  CHECK(vmExecutionSource.find("case IrOpcode::ReturnI32:") == std::string::npos);
+  CHECK(vmDebugInstructionSource.find("case IrOpcode::ReturnI32:") == std::string::npos);
+
+  CHECK(vmControlFlowSharedHeaderSource.find("enum class VmControlFlowOpcodeResult") !=
+        std::string::npos);
+  CHECK(vmControlFlowSharedHeaderSource.find("struct VmControlFlowOpcodeOutcome") !=
+        std::string::npos);
+  CHECK(vmControlFlowSharedHeaderSource.find("handleSharedVmControlFlowOpcode(") !=
+        std::string::npos);
+
+  CHECK(vmControlFlowSharedSource.find("case IrOpcode::JumpIfZero:") != std::string::npos);
+  CHECK(vmControlFlowSharedSource.find("case IrOpcode::CallVoid:") != std::string::npos);
+  CHECK(vmControlFlowSharedSource.find("case IrOpcode::ReturnI32:") != std::string::npos);
+  CHECK(vmControlFlowSharedSource.find("invalid jump target in IR") != std::string::npos);
+  CHECK(vmControlFlowSharedSource.find("VM call stack overflow") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer effects unit rejects duplicate entry capabilities transform") {
   primec::Definition entryDef;
   entryDef.fullPath = "/main";

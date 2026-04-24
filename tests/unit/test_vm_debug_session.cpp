@@ -834,6 +834,127 @@ TEST_CASE("vm and debug session share numeric opcode behavior") {
   }
 }
 
+TEST_CASE("vm and debug session share control flow opcode behavior") {
+  struct ControlFlowParityCase {
+    std::string name;
+    primec::IrModule module;
+    bool expectedOk = true;
+    uint64_t expectedResult = 0;
+    std::string expectedError;
+    primec::VmDebugStopReason expectedStopReason = primec::VmDebugStopReason::Exit;
+  };
+
+  std::vector<ControlFlowParityCase> cases;
+
+  {
+    ControlFlowParityCase c;
+    c.name = "conditional jump taken";
+    c.expectedResult = 7;
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::JumpIfZero, 4});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 99});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 7});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    ControlFlowParityCase c;
+    c.name = "jump skips middle block";
+    c.expectedResult = 5;
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::Jump, 3});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 99});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    fn.instructions.push_back({primec::IrOpcode::PushI32, 5});
+    fn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    ControlFlowParityCase c;
+    c.name = "call and return to caller";
+    c.expectedResult = 11;
+
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::Call, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction calleeFn;
+    calleeFn.name = "/callee";
+    calleeFn.instructions.push_back({primec::IrOpcode::PushI32, 11});
+    calleeFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    c.module.functions.push_back(std::move(mainFn));
+    c.module.functions.push_back(std::move(calleeFn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    ControlFlowParityCase c;
+    c.name = "void call keeps caller stack unchanged";
+    c.expectedResult = 8;
+
+    primec::IrFunction mainFn;
+    mainFn.name = "/main";
+    mainFn.instructions.push_back({primec::IrOpcode::CallVoid, 1});
+    mainFn.instructions.push_back({primec::IrOpcode::PushI32, 8});
+    mainFn.instructions.push_back({primec::IrOpcode::ReturnI32, 0});
+
+    primec::IrFunction calleeFn;
+    calleeFn.name = "/callee";
+    calleeFn.instructions.push_back({primec::IrOpcode::PushI32, 22});
+    calleeFn.instructions.push_back({primec::IrOpcode::ReturnVoid, 0});
+
+    c.module.functions.push_back(std::move(mainFn));
+    c.module.functions.push_back(std::move(calleeFn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  {
+    ControlFlowParityCase c;
+    c.name = "invalid jump target faults";
+    c.expectedOk = false;
+    c.expectedError = "invalid jump target in IR";
+    c.expectedStopReason = primec::VmDebugStopReason::Fault;
+
+    primec::IrFunction fn;
+    fn.name = "/main";
+    fn.instructions.push_back({primec::IrOpcode::Jump, 9});
+    c.module.functions.push_back(std::move(fn));
+    c.module.entryIndex = 0;
+    cases.push_back(std::move(c));
+  }
+
+  for (const auto &c : cases) {
+    INFO(c.name);
+
+    const VmNumericRunOutcome vmOutcome = runVmModule(c.module);
+    const VmNumericRunOutcome debugOutcome = runVmDebugSession(c.module);
+
+    CHECK(vmOutcome.ok == c.expectedOk);
+    CHECK(debugOutcome.ok == c.expectedOk);
+    CHECK(debugOutcome.stopReason == c.expectedStopReason);
+    CHECK(vmOutcome.error == c.expectedError);
+    CHECK(debugOutcome.error == c.expectedError);
+    CHECK(vmOutcome.result == c.expectedResult);
+    CHECK(debugOutcome.result == c.expectedResult);
+  }
+}
+
 #include "test_vm_debug_session_protocol.h"
 
 TEST_CASE("vm debug hook event ordering is deterministic and replayable") {

@@ -449,6 +449,7 @@ set(PRIMESTRUCT_RUNTIME_SOURCES
   src/VmDebugSessionInstruction.cpp
   src/VmDebugSessionInstructionNumeric.cpp
   src/VmDebugSessionSetup.cpp
+  src/VmControlFlowOpcodeShared.cpp
   src/VmExecution.cpp
   src/VmExecutionNumeric.cpp
   src/VmNumericOpcodeShared.cpp
