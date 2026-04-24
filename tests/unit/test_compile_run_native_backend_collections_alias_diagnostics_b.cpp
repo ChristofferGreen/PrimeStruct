@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("rejects native vector method alias access struct method chain with primitive argument diagnostics") {
+TEST_CASE("rejects native vector method alias access without alias helper before chain diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -45,10 +45,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector method alias access field expression with struct receiver diagnostics") {
+TEST_CASE("rejects native vector method alias field expression without alias helper") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -79,10 +79,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector unsafe method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects native vector unsafe method alias access without alias helper before chain diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -119,10 +119,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector unsafe method alias access field expression with struct receiver diagnostics") {
+TEST_CASE("rejects native vector unsafe method alias field expression without alias helper") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -154,10 +154,10 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects native map method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects native map method alias access with helper receiver mismatch") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -194,7 +194,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self: expected /Marker got i32") !=
+        std::string::npos);
 }
 
 TEST_CASE("keeps canonical native map method access field expression forwarding") {
@@ -228,7 +229,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("native vector method alias struct-return precedence currently crashes at runtime") {
+TEST_CASE("rejects native vector method alias struct-return precedence without helper-backed receiver typing") {
   const std::string source = R"(
 AliasMarker {
   [i32] value
@@ -256,12 +257,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_vector_method_struct_field_alias_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_vector_method_struct_field_alias_precedence_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_vector_method_struct_field_alias_precedence.err")
           .string();
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) != 0);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("native keeps primitive diagnostics for canonical vector method access") {
