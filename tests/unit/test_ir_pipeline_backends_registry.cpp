@@ -4089,6 +4089,195 @@ main() {
   CHECK(singleWorker.mainOnErrorFact.returnResultErrorType.empty());
 }
 
+TEST_CASE("compile pipeline graph-local-auto benchmark shadows preserve published local-auto facts") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << R"(
+import /std/file/*
+
+[return<Result<i32, FileError>>]
+lookup([i32] input) {
+  return(Result.ok(plus(input, 1i32)))
+}
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<i32> effects(io_out, io_err) on_error<FileError, /log_file_error>]
+main() {
+  [auto] initial{lookup(40i32)}
+  [auto] mapped{Result.map(initial, []([i32] value) { return(plus(value, 1i32)) })}
+  [i32] selected{try(mapped)}
+  return(selected)
+}
+)";
+  }
+
+  struct LocalAutoPublicationSnapshot {
+    std::string bindingName;
+    std::string bindingTypeText;
+    std::string initializerResolvedPath;
+    std::string initializerBindingTypeText;
+    std::string initializerResultValueType;
+    std::string initializerResultErrorType;
+    bool initializerResultHasValue = false;
+    bool initializerHasTry = false;
+    uint64_t semanticNodeId = 0;
+
+    bool operator==(const LocalAutoPublicationSnapshot &) const = default;
+  };
+
+  struct GraphLocalAutoShadowSnapshot {
+    std::string formattedSemanticProduct;
+    std::vector<LocalAutoPublicationSnapshot> localAutos;
+  };
+
+  const auto runWithShadowOptions = [&](bool legacyKeyShadow,
+                                        bool legacySideChannelShadow,
+                                        bool disableDependencyScratchPmr) {
+    primec::Options options;
+    options.inputPath = tempPath.string();
+    options.entryPath = "/main";
+    options.emitKind = "native";
+    options.collectDiagnostics = true;
+    options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow = legacyKeyShadow;
+    options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow =
+        legacySideChannelShadow;
+    options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr =
+        disableDependencyScratchPmr;
+    primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+    primec::CompilePipelineOutput output;
+    primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+    primec::CompilePipelineErrorStage errorStage =
+        primec::CompilePipelineErrorStage::None;
+    std::string error;
+    const bool ok =
+        primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+
+    REQUIRE(ok);
+    CHECK(error.empty());
+    CHECK(errorStage == primec::CompilePipelineErrorStage::None);
+    CHECK_FALSE(output.hasFailure);
+    REQUIRE(output.hasSemanticProgram);
+    CHECK(diagnosticInfo.records.empty());
+
+    GraphLocalAutoShadowSnapshot snapshot;
+    snapshot.formattedSemanticProduct =
+        primec::formatSemanticProgram(output.semanticProgram);
+
+    for (const primec::SemanticProgramLocalAutoFact *entry :
+         primec::semanticProgramLocalAutoFactView(output.semanticProgram)) {
+      REQUIRE(entry != nullptr);
+      if (entry->scopePath != "/main") {
+        continue;
+      }
+
+      const std::string_view initializerResolvedPath =
+          primec::semanticProgramLocalAutoFactInitializerResolvedPath(
+              output.semanticProgram, *entry);
+      const auto *bySemanticId =
+          primec::semanticProgramLookupPublishedLocalAutoFactBySemanticId(
+              output.semanticProgram, entry->semanticNodeId);
+      REQUIRE(bySemanticId != nullptr);
+      CHECK(bySemanticId->bindingName == entry->bindingName);
+      CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(
+                output.semanticProgram, *bySemanticId) == initializerResolvedPath);
+
+      const auto initializerPathId =
+          primec::semanticProgramLookupCallTargetStringId(output.semanticProgram,
+                                                          initializerResolvedPath);
+      const auto bindingNameId =
+          primec::semanticProgramLookupCallTargetStringId(output.semanticProgram,
+                                                          entry->bindingName);
+      REQUIRE(initializerPathId.has_value());
+      REQUIRE(bindingNameId.has_value());
+      const auto *byInitPathAndName =
+          primec::semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(
+              output.semanticProgram, *initializerPathId, *bindingNameId);
+      REQUIRE(byInitPathAndName != nullptr);
+      CHECK(byInitPathAndName->semanticNodeId == entry->semanticNodeId);
+
+      snapshot.localAutos.push_back(LocalAutoPublicationSnapshot{
+          .bindingName = entry->bindingName,
+          .bindingTypeText = entry->bindingTypeText,
+          .initializerResolvedPath = std::string(initializerResolvedPath),
+          .initializerBindingTypeText = entry->initializerBindingTypeText,
+          .initializerResultValueType = entry->initializerResultValueType,
+          .initializerResultErrorType = entry->initializerResultErrorType,
+          .initializerResultHasValue = entry->initializerResultHasValue,
+          .initializerHasTry = entry->initializerHasTry,
+          .semanticNodeId = entry->semanticNodeId,
+      });
+    }
+
+    std::sort(snapshot.localAutos.begin(),
+              snapshot.localAutos.end(),
+              [](const LocalAutoPublicationSnapshot &left,
+                 const LocalAutoPublicationSnapshot &right) {
+                return std::pair(left.bindingName, left.semanticNodeId) <
+                       std::pair(right.bindingName, right.semanticNodeId);
+              });
+    return snapshot;
+  };
+
+  const GraphLocalAutoShadowSnapshot baseline =
+      runWithShadowOptions(false, false, false);
+  const GraphLocalAutoShadowSnapshot legacyKeyShadow =
+      runWithShadowOptions(true, false, false);
+  const GraphLocalAutoShadowSnapshot legacySideChannelShadow =
+      runWithShadowOptions(false, true, false);
+  const GraphLocalAutoShadowSnapshot dependencyScratchDisabled =
+      runWithShadowOptions(false, false, true);
+  const GraphLocalAutoShadowSnapshot combinedShadows =
+      runWithShadowOptions(true, true, true);
+
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(baseline.localAutos.size() >= 2);
+  CHECK(baseline.formattedSemanticProduct ==
+        legacyKeyShadow.formattedSemanticProduct);
+  CHECK(baseline.formattedSemanticProduct ==
+        legacySideChannelShadow.formattedSemanticProduct);
+  CHECK(baseline.formattedSemanticProduct ==
+        dependencyScratchDisabled.formattedSemanticProduct);
+  CHECK(baseline.formattedSemanticProduct ==
+        combinedShadows.formattedSemanticProduct);
+  CHECK(baseline.localAutos == legacyKeyShadow.localAutos);
+  CHECK(baseline.localAutos == legacySideChannelShadow.localAutos);
+  CHECK(baseline.localAutos == dependencyScratchDisabled.localAutos);
+  CHECK(baseline.localAutos == combinedShadows.localAutos);
+
+  const auto baselineInitial = std::find_if(
+      baseline.localAutos.begin(),
+      baseline.localAutos.end(),
+      [](const LocalAutoPublicationSnapshot &entry) {
+        return entry.bindingName == "initial";
+      });
+  const auto baselineMapped = std::find_if(
+      baseline.localAutos.begin(),
+      baseline.localAutos.end(),
+      [](const LocalAutoPublicationSnapshot &entry) {
+        return entry.bindingName == "mapped";
+      });
+  REQUIRE(baselineInitial != baseline.localAutos.end());
+  REQUIRE(baselineMapped != baseline.localAutos.end());
+  CHECK(baselineInitial->initializerResolvedPath == "/lookup");
+  CHECK(baselineInitial->bindingTypeText == "Result<i32, FileError>");
+  CHECK(baselineInitial->initializerResultHasValue);
+  CHECK(baselineInitial->initializerResultValueType == "i32");
+  CHECK(baselineInitial->initializerResultErrorType == "FileError");
+  CHECK_FALSE(baselineInitial->initializerHasTry);
+  CHECK(baselineMapped->bindingTypeText == "Result<i32, FileError>");
+  CHECK_FALSE(baselineMapped->initializerResolvedPath.empty());
+  CHECK_FALSE(baselineMapped->initializerHasTry);
+}
+
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {
   const primec::IrBackend *vmBackend = primec::findIrBackend("vm");
   REQUIRE(vmBackend != nullptr);

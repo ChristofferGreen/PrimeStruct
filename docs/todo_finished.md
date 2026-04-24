@@ -6,6 +6,19 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4142: Retire brittle architecture source locks after contract
+  migration. Completed: the old
+  `tests/unit/test_ir_pipeline_backends_graph_pilot_a.h` benchmark/semantics
+  source-lock cluster has been removed, so this lane no longer depends on a
+  wide batch of direct file-path and exact-source-string assertions across the
+  options, compile-pipeline, and validator implementation files. The unique
+  graph-local-auto benchmark-shadow signal now lives in the new observable
+  semantic-product parity coverage in
+  `tests/unit/test_ir_pipeline_backends_registry.cpp`, which proves the legacy
+  key-shadow, legacy side-channel shadow, and dependency-scratch benchmark
+  switches preserve published local-auto facts and their lookup surfaces. The
+  narrower benchmark API/header split signal remains covered by the existing
+  harness and option-parsing tests instead of one large architecture lock.
 - ✓ TODO-4141: Freeze published semantic-product storage. Completed:
   `SemanticProgram` now crosses an explicit publication freeze boundary inside
   `src/semantics/SemanticPublicationBuilders.cpp` before it leaves semantics.

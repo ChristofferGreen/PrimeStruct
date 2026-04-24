@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4142
+none
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -64,11 +64,11 @@ none
 
 ### Priority Lanes (Current)
 
-- Test-surface contraction: TODO-4142
+none
 
 ### Execution Queue (Recommended)
 
-1. TODO-4142
+none
 
 ### PrimeStruct Coverage Snapshot
 
@@ -88,7 +88,7 @@ none
 | VM debug-session argv ownership | none |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | TODO-4142 |
+| Test-suite audit follow-up and release-gate stability | none |
 
 ### Validation Coverage Snapshot
 
@@ -102,7 +102,7 @@ none
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
-| Architecture contract probe migration | TODO-4142 |
+| Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
@@ -178,22 +178,4 @@ none
 
 ### Task Blocks
 
-- [ ] TODO-4142: Retire brittle architecture source locks after contract migration
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Testing API Contraction
-  - depends_on: none
-  - scope: Replace the remaining architecture/doc/file-placement source-lock
-      tests with narrower contract probes once the helper-export contraction
-      work has landed, so structural cleanup no longer requires large batches of
-      string-literal test churn.
-  - acceptance:
-    - At least one remaining architecture source-lock cluster moves off direct
-      file-path or exact-doc-string assertions onto a contract-oriented helper
-      or dump/conformance probe.
-    - The migrated coverage still proves the intended architectural boundary
-      without depending on internal file placement.
-    - Release validation continues to catch real architectural regressions after
-      the migrated source-lock cluster is removed or narrowed.
-  - stop_rule: Stop once one meaningful architecture source-lock cluster is
-      replaced by contract probes with equivalent regression signal.
+none
