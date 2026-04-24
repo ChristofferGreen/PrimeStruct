@@ -56,26 +56,25 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4138
 - TODO-4136
+- TODO-4139
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4139
 - TODO-4132
 - TODO-4133
 - TODO-4134
 - TODO-4130
 - TODO-4131
-- TODO-4129
 - TODO-4140
 - TODO-4141
 - TODO-4142
+- TODO-4128
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer ownership: TODO-4138, TODO-4132,
-  TODO-4133, TODO-4134
+- Semantic-product authority and lowerer ownership: TODO-4132, TODO-4133,
+  TODO-4134
 - Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4136, TODO-4140
 - Test-surface contraction: TODO-4142
@@ -84,17 +83,17 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4138
-2. TODO-4136
-3. TODO-4139
-4. TODO-4132
-5. TODO-4133
+1. TODO-4136
+2. TODO-4139
+3. TODO-4132
+4. TODO-4133
+5. TODO-4134
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4136, TODO-4138, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4136, TODO-4131 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4139, TODO-4141 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
@@ -117,7 +116,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4141 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | TODO-4139 |
-| Semantic-product publication parity and deterministic ordering | TODO-4136, TODO-4138, TODO-4131 |
+| Semantic-product publication parity and deterministic ordering | TODO-4136, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4132, TODO-4133, TODO-4134 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
@@ -277,26 +276,6 @@ Task template:
   - stop_rule: Stop once one substantial compile-pipeline stage boundary uses an
       explicit handoff object or stage runner with preserved coverage.
 
-- [ ] TODO-4138: Publish `ResolvedModule` ordering by import order
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4137
-  - scope: Replace the current lexical `moduleKey` resort in
-      `finalizeSemanticModuleArtifacts(...)` with deterministic import-order
-      publication once `ResolvedModule` identity is already aligned to parsed
-      or imported source units.
-  - acceptance:
-    - Published `SemanticProgram.moduleResolvedArtifacts` ordering follows
-      deterministic source-import order instead of lexical `moduleKey`
-      ordering.
-    - `stableOrder` reflects the published import-order contract rather than
-      the current lexical regrouping pass.
-    - Semantic-product dump or conformance coverage pins the new module
-      ordering contract.
-  - stop_rule: Stop once module publication order matches the documented
-      deterministic import-order contract with coverage.
-
 - [ ] TODO-4136: Publish fact-family indices from deterministic worker merges
   - owner: ai
   - created_at: 2026-04-24
@@ -414,27 +393,6 @@ Task template:
       debug stepping for the migrated stateful slice.
   - stop_rule: Stop once one representative stateful interpreter slice runs
       through a shared VM/debug execution core with parity coverage.
-
-- [ ] TODO-4129: Align `ResolvedModule` publication with import-order contract
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Semantic Ownership Boundary
-  - depends_on: TODO-4137, TODO-4138
-  - scope: Track the `ResolvedModule` publication rollout by first aligning
-      module identity to parsed or imported source units and then aligning the
-      published module ordering to deterministic import order.
-  - acceptance:
-    - TODO-4137 and TODO-4138 are completed.
-    - Published resolved modules match the documented source-unit identity and
-      deterministic import-order contract.
-    - Semantic-product dump or conformance coverage pins the new module
-      identity and ordering contract.
-  - stop_rule: Stop once the `ResolvedModule` publication rollout is complete
-      through TODO-4137 and TODO-4138.
-  - notes: Split on 2026-04-24 after deeper code review showed that module
-      identity is created in `ensureModuleResolvedArtifacts(...)` while module
-      ordering is imposed later in `finalizeSemanticModuleArtifacts(...)`,
-      making them separate shippable seams.
 
 - [ ] TODO-4128: Split lowering contracts by backend surface
   - owner: ai

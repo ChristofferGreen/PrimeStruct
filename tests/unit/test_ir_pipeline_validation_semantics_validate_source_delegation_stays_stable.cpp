@@ -193,4 +193,112 @@ main() {
       }));
 }
 
+TEST_CASE("semantics validate publishes module artifacts in import order") {
+  const std::string source = R"(
+import /std/math/max
+import /std/math/abs
+
+[return<i32>]
+main() {
+  return(plus(max(3i32, 1i32), abs(-4i32)))
+}
+)";
+
+  const std::vector<std::string> collectorAllowlist = {
+      "callable_summaries",
+  };
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << source;
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.defaultEffects = defaults;
+  options.entryDefaultEffects = defaults;
+  options.benchmarkSemanticFactFamiliesSpecified = true;
+  options.benchmarkSemanticFactFamilies = collectorAllowlist;
+  applyCompilePipelineSemanticProductIntentForTesting(
+      options, CompilePipelineSemanticProductIntentForTesting::Require);
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage =
+      primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(error.empty());
+  REQUIRE(output.hasSemanticProgram);
+  const primec::SemanticProgram &semanticProgram = output.semanticProgram;
+
+  const auto *rootArtifacts = findModuleArtifacts(semanticProgram, "/");
+  const auto *maxArtifacts =
+      findModuleArtifacts(semanticProgram, "/std/math/max");
+  const auto *absArtifacts =
+      findModuleArtifacts(semanticProgram, "/std/math/abs");
+  REQUIRE(rootArtifacts != nullptr);
+  REQUIRE(maxArtifacts != nullptr);
+  REQUIRE(absArtifacts != nullptr);
+
+  CHECK(rootArtifacts->identity.stableOrder < maxArtifacts->identity.stableOrder);
+  CHECK(maxArtifacts->identity.stableOrder < absArtifacts->identity.stableOrder);
+
+  const auto rootIt = std::find_if(
+      semanticProgram.moduleResolvedArtifacts.begin(),
+      semanticProgram.moduleResolvedArtifacts.end(),
+      [](const primec::SemanticProgramModuleResolvedArtifacts &module) {
+        return module.identity.moduleKey == "/";
+      });
+  const auto maxIt = std::find_if(
+      semanticProgram.moduleResolvedArtifacts.begin(),
+      semanticProgram.moduleResolvedArtifacts.end(),
+      [](const primec::SemanticProgramModuleResolvedArtifacts &module) {
+        return module.identity.moduleKey == "/std/math/max";
+      });
+  const auto absIt = std::find_if(
+      semanticProgram.moduleResolvedArtifacts.begin(),
+      semanticProgram.moduleResolvedArtifacts.end(),
+      [](const primec::SemanticProgramModuleResolvedArtifacts &module) {
+        return module.identity.moduleKey == "/std/math/abs";
+      });
+  REQUIRE(rootIt != semanticProgram.moduleResolvedArtifacts.end());
+  REQUIRE(maxIt != semanticProgram.moduleResolvedArtifacts.end());
+  REQUIRE(absIt != semanticProgram.moduleResolvedArtifacts.end());
+  CHECK(rootIt < maxIt);
+  CHECK(maxIt < absIt);
+
+  CHECK(anySemanticEntry(
+      rootArtifacts->callableSummaryIndices,
+      [&](std::size_t index) {
+        return index < semanticProgram.callableSummaries.size() &&
+               primec::semanticProgramCallableSummaryFullPath(
+                   semanticProgram, semanticProgram.callableSummaries[index]) ==
+                   "/main";
+      }));
+  CHECK(anySemanticEntry(
+      maxArtifacts->callableSummaryIndices,
+      [&](std::size_t index) {
+        return index < semanticProgram.callableSummaries.size() &&
+               primec::semanticProgramCallableSummaryFullPath(
+                   semanticProgram, semanticProgram.callableSummaries[index]) ==
+                   "/std/math/max";
+      }));
+  CHECK(anySemanticEntry(
+      absArtifacts->callableSummaryIndices,
+      [&](std::size_t index) {
+        return index < semanticProgram.callableSummaries.size() &&
+               primec::semanticProgramCallableSummaryFullPath(
+                   semanticProgram, semanticProgram.callableSummaries[index]) ==
+                   "/std/math/abs";
+      }));
+}
+
 TEST_SUITE_END();

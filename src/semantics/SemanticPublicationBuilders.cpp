@@ -149,6 +149,40 @@ std::string semanticSourceUnitModuleKeyForPath(
   return "/";
 }
 
+std::size_t semanticSourceUnitImportOrderKeyForModuleKey(
+    std::string_view moduleKey,
+    const std::vector<std::string> &sourceImports,
+    const std::vector<std::string> &imports) {
+  const std::string normalizedModuleKey =
+      normalizeSemanticModulePathKey(moduleKey);
+  if (normalizedModuleKey == "/") {
+    return 0;
+  }
+
+  auto findExactImportOrder = [&](const std::vector<std::string> &paths,
+                                  std::size_t baseOrder) -> std::optional<std::size_t> {
+    for (std::size_t i = 0; i < paths.size(); ++i) {
+      if (normalizeSemanticModulePathKey(paths[i]) == normalizedModuleKey) {
+        return baseOrder + i;
+      }
+    }
+    return std::nullopt;
+  };
+
+  if (const auto sourceOrder =
+          findExactImportOrder(sourceImports, 1);
+      sourceOrder.has_value()) {
+    return *sourceOrder;
+  }
+  if (const auto importOrder =
+          findExactImportOrder(imports, 1 + sourceImports.size());
+      importOrder.has_value()) {
+    return *importOrder;
+  }
+
+  return 1 + sourceImports.size() + imports.size();
+}
+
 std::string fallbackBindingResolvedPathForSemanticProduct(std::string_view scopePath,
                                                           std::string_view bindingName) {
   if (scopePath.empty() || bindingName.empty()) {
@@ -1251,10 +1285,20 @@ void publishSemanticScopedFactFamilies(
 void finalizeSemanticModuleArtifacts(SemanticPublicationBuilderState &state) {
   std::sort(state.semanticProgram.moduleResolvedArtifacts.begin(),
             state.semanticProgram.moduleResolvedArtifacts.end(),
-            [](const SemanticProgramModuleResolvedArtifacts &left,
-               const SemanticProgramModuleResolvedArtifacts &right) {
-              if (left.identity.moduleKey != right.identity.moduleKey) {
-                return left.identity.moduleKey < right.identity.moduleKey;
+            [&state](const SemanticProgramModuleResolvedArtifacts &left,
+                     const SemanticProgramModuleResolvedArtifacts &right) {
+              const std::size_t leftImportOrder =
+                  semanticSourceUnitImportOrderKeyForModuleKey(
+                      left.identity.moduleKey,
+                      state.semanticProgram.sourceImports,
+                      state.semanticProgram.imports);
+              const std::size_t rightImportOrder =
+                  semanticSourceUnitImportOrderKeyForModuleKey(
+                      right.identity.moduleKey,
+                      state.semanticProgram.sourceImports,
+                      state.semanticProgram.imports);
+              if (leftImportOrder != rightImportOrder) {
+                return leftImportOrder < rightImportOrder;
               }
               return left.identity.stableOrder < right.identity.stableOrder;
             });

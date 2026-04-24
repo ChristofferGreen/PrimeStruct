@@ -2279,6 +2279,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("semanticSourceUnitModuleKeyForPath(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find(
+            "semanticSourceUnitImportOrderKeyForModuleKey(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find(
             "semanticSourceUnitModuleKeyForPath(\n"
             "        scopePath, semanticProgram.sourceImports, semanticProgram.imports)") !=
         std::string::npos);
@@ -2288,6 +2291,20 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("std::sort(state.semanticProgram.moduleResolvedArtifacts.begin(),") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("left.identity.moduleKey < right.identity.moduleKey") ==
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find(
+            "semanticSourceUnitImportOrderKeyForModuleKey(\n"
+            "                      left.identity.moduleKey,") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find(
+            "semanticSourceUnitImportOrderKeyForModuleKey(\n"
+            "                      right.identity.moduleKey,") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("if (leftImportOrder != rightImportOrder)") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("return leftImportOrder < rightImportOrder;") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("ensureModuleResolvedArtifacts(snapshotEntry.scopePath)\n        .directCallTargetIndices.push_back(entryIndex);") !=
         std::string::npos);
