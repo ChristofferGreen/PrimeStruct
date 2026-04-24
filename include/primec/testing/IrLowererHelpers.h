@@ -6,6 +6,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -39,6 +40,7 @@ namespace primec::ir_lowerer {
 #include "primec/testing/ir_lowerer_helpers/IrLowererStringCallHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererOperatorArithmeticHelpers.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerEffects.h"
+#include "primec/testing/ir_lowerer_helpers/IrLowererNativeEffects.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererVmEffects.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererLowerEntrySetup.h"
 #include "primec/testing/ir_lowerer_helpers/IrLowererStatementCallHelpers.h"

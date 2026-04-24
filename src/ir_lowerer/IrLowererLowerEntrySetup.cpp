@@ -7,6 +7,7 @@
 #include "IrLowererCallHelpers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererLowerEffects.h"
+#include "IrLowererNativeEffects.h"
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
@@ -228,23 +229,38 @@ bool runLowerEntrySetup(const Program &program,
   if (!findEntryDefinition(program, entryPath, entryDefOut, error)) {
     return false;
   }
-  if (!validateNoSoftwareNumericTypes(semanticProgram, error)) {
+  const bool useNativeEffectSurface = validationTarget == IrValidationTarget::Native;
+  if ((useNativeEffectSurface && !validateNativeNoSoftwareNumericTypes(semanticProgram, error)) ||
+      (!useNativeEffectSurface &&
+       !validateNoSoftwareNumericTypesForBackendSurface(semanticProgram, "native backend", error))) {
     return false;
   }
-  if (!validateNoRuntimeReflectionQueries(semanticProgram, error)) {
+  if ((useNativeEffectSurface &&
+       !validateNativeNoRuntimeReflectionQueries(semanticProgram, error)) ||
+      (!useNativeEffectSurface &&
+       !validateNoRuntimeReflectionQueriesForBackendSurface(semanticProgram, "native backend", error))) {
     return false;
   }
   if (!validateSemanticProductCompletenessMatrix(
           program, *entryDefOut, semanticProgram, error)) {
     return false;
   }
-  const bool useVmEffectSurface = validationTarget == IrValidationTarget::Vm;
-  if ((useVmEffectSurface &&
+  if ((validationTarget == IrValidationTarget::Vm &&
        !validateVmProgramEffects(
            program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
-      (!useVmEffectSurface &&
-       !validateProgramEffects(
-           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error))) {
+      (useNativeEffectSurface &&
+      !validateNativeProgramEffects(
+           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
+      (validationTarget != IrValidationTarget::Vm &&
+       !useNativeEffectSurface &&
+       !validateProgramEffectsForBackendSurface(
+           program,
+           semanticProgram,
+           entryPath,
+           defaultEffects,
+           entryDefaultEffects,
+           "native backend",
+           error))) {
     return false;
   }
   if (!resolveEntryMetadataMasks(*entryDefOut,

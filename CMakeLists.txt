@@ -285,6 +285,7 @@ set(PRIMESTRUCT_IR_SOURCES
   src/ir_lowerer/IrLowererInlineStructArgHelpers.cpp
   src/ir_lowerer/IrLowererLower.cpp
   src/ir_lowerer/IrLowererLowerEffects.cpp
+  src/ir_lowerer/IrLowererNativeEffects.cpp
   src/ir_lowerer/IrLowererVmEffects.cpp
   src/ir_lowerer/IrLowererLowerEntrySetup.cpp
   src/ir_lowerer/IrLowererLowerExprEmitSetup.cpp

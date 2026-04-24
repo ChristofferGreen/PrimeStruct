@@ -33,7 +33,9 @@ bool findEntryDefinition(const Program &program,
   return true;
 }
 
-bool validateNoSoftwareNumericTypes(const SemanticProgram *semanticProgram, std::string &error) {
+bool validateNoSoftwareNumericTypesForBackendSurface(const SemanticProgram *semanticProgram,
+                                                     std::string_view backendSurfaceName,
+                                                     std::string &error) {
   if (semanticProgram == nullptr) {
     return true;
   }
@@ -42,11 +44,13 @@ bool validateNoSoftwareNumericTypes(const SemanticProgram *semanticProgram, std:
   if (found.empty()) {
     return true;
   }
-  error = "native backend does not support software numeric types: " + std::string(found);
+  error = std::string(backendSurfaceName) + " does not support software numeric types: " + std::string(found);
   return false;
 }
 
-bool validateNoRuntimeReflectionQueries(const SemanticProgram *semanticProgram, std::string &error) {
+bool validateNoRuntimeReflectionQueriesForBackendSurface(const SemanticProgram *semanticProgram,
+                                                         std::string_view backendSurfaceName,
+                                                         std::string &error) {
   if (semanticProgram == nullptr) {
     return true;
   }
@@ -58,7 +62,7 @@ bool validateNoRuntimeReflectionQueries(const SemanticProgram *semanticProgram, 
   if (semanticProgramLookupPublishedLowererRuntimeReflectionUsesObjectTable(*semanticProgram)) {
     error = "runtime reflection objects/tables are unsupported: " + std::string(found);
   } else {
-    error = "native backend requires compile-time reflection query elimination before IR emission: " +
+    error = std::string(backendSurfaceName) + " requires compile-time reflection query elimination before IR emission: " +
             std::string(found);
   }
   return false;
@@ -194,24 +198,6 @@ bool validateActiveEffectsForBackendSurface(const std::vector<Transform> &transf
     }
   }
   return true;
-}
-
-bool validateProgramEffects(const Program &program,
-                            const std::string &entryPath,
-                            const std::vector<std::string> &defaultEffects,
-                            const std::vector<std::string> &entryDefaultEffects,
-                            std::string &error) {
-  return validateProgramEffects(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, error);
-}
-
-bool validateProgramEffects(const Program &program,
-                            const SemanticProgram *semanticProgram,
-                            const std::string &entryPath,
-                            const std::vector<std::string> &defaultEffects,
-                            const std::vector<std::string> &entryDefaultEffects,
-                            std::string &error) {
-  return validateProgramEffectsForBackendSurface(
-      program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, "native backend", error);
 }
 
 bool validateProgramEffectsForBackendSurface(const Program &program,

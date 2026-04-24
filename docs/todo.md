@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4133
+- TODO-4134
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4134
 - TODO-4130
 - TODO-4140
 - TODO-4141
@@ -69,7 +68,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer ownership: TODO-4133, TODO-4134
+- Semantic-product authority and lowerer ownership: TODO-4134
 - Pipeline/publication boundary hardening: TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4140
 - Test-surface contraction: TODO-4142
@@ -77,11 +76,11 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4133
-2. TODO-4134
-3. TODO-4130
-4. TODO-4140
-5. TODO-4141
+1. TODO-4134
+2. TODO-4130
+3. TODO-4140
+4. TODO-4141
+5. TODO-4142
 
 ### PrimeStruct Coverage Snapshot
 
@@ -95,7 +94,7 @@ Task template:
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | Validator entrypoint and benchmark-plumbing split | TODO-4140 |
 | Semantic-product publication by module and fact family | none |
-| IR lowerer compile-unit breakup | TODO-4133, TODO-4134 |
+| IR lowerer compile-unit breakup | TODO-4134 |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
@@ -111,7 +110,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
-| Lowerer/source-composition contract coverage | TODO-4133, TODO-4134 |
+| Lowerer/source-composition contract coverage | TODO-4134 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -268,25 +267,6 @@ Task template:
   - stop_rule: Stop once one representative GPU lowering family is explicit
       backend-scoped code and the shared fallback branch for that family is
       deleted or reduced to backend-agnostic glue.
-
-- [ ] TODO-4133: Extract representative native lowering contract family
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Move one native-only lowering contract family out of the shared
-      backend fallback helpers into an explicit native-scoped module with
-      clear inputs, validation boundaries, and focused conformance coverage.
-  - acceptance:
-    - One representative native lowering contract family no longer routes
-      through shared backend-specific fallback branches.
-    - The migrated behavior is owned by an explicit native-scoped lowering
-      module with clear interfaces.
-    - Focused conformance or source-lock coverage pins the migrated native
-      contract.
-  - stop_rule: Stop once one representative native lowering family is
-      explicit backend-scoped code and the shared fallback branch for that
-      family is deleted or reduced to backend-agnostic glue.
 
 - [ ] TODO-4130: Unify VM and debug-session interpreter cores
   - owner: ai

@@ -16,8 +16,12 @@ bool findEntryDefinition(const Program &program,
                          const Definition *&entryDefOut,
                          std::string &error);
 
-bool validateNoSoftwareNumericTypes(const SemanticProgram *semanticProgram, std::string &error);
-bool validateNoRuntimeReflectionQueries(const SemanticProgram *semanticProgram, std::string &error);
+bool validateNoSoftwareNumericTypesForBackendSurface(const SemanticProgram *semanticProgram,
+                                                     std::string_view backendSurfaceName,
+                                                     std::string &error);
+bool validateNoRuntimeReflectionQueriesForBackendSurface(const SemanticProgram *semanticProgram,
+                                                         std::string_view backendSurfaceName,
+                                                         std::string &error);
 
 bool effectBitForName(const std::string &name, uint64_t &outBit);
 bool isSupportedEffect(const std::string &name);
@@ -49,18 +53,6 @@ bool validateActiveEffectsForBackendSurface(const std::vector<Transform> &transf
                                             std::string_view backendSurfaceName,
                                             std::string &error);
 
-bool validateProgramEffects(const Program &program,
-                            const std::string &entryPath,
-                            const std::vector<std::string> &defaultEffects,
-                            const std::vector<std::string> &entryDefaultEffects,
-                            std::string &error);
-
-bool validateProgramEffects(const Program &program,
-                            const SemanticProgram *semanticProgram,
-                            const std::string &entryPath,
-                            const std::vector<std::string> &defaultEffects,
-                            const std::vector<std::string> &entryDefaultEffects,
-                            std::string &error);
 bool validateProgramEffectsForBackendSurface(const Program &program,
                                              const SemanticProgram *semanticProgram,
                                              const std::string &entryPath,

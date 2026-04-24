@@ -567,6 +567,7 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   const auto resultHelpersPos = irLowererHelpersHeader.find("IrLowererResultHelpers.h");
   const auto stringCallPos = irLowererHelpersHeader.find("IrLowererStringCallHelpers.h");
   const auto operatorArithmeticPos = irLowererHelpersHeader.find("IrLowererOperatorArithmeticHelpers.h");
+  const auto nativeEffectsPos = irLowererHelpersHeader.find("IrLowererNativeEffects.h");
   const auto vmEffectsPos = irLowererHelpersHeader.find("IrLowererVmEffects.h");
   const auto lowerExprEmitSetupPos = irLowererHelpersHeader.find("IrLowererLowerExprEmitSetup.h");
   const auto lowerReturnCallsSetupPos = irLowererHelpersHeader.find("IrLowererLowerReturnCallsSetup.h");
@@ -583,6 +584,7 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   REQUIRE(resultHelpersPos != std::string::npos);
   REQUIRE(stringCallPos != std::string::npos);
   REQUIRE(operatorArithmeticPos != std::string::npos);
+  REQUIRE(nativeEffectsPos != std::string::npos);
   REQUIRE(vmEffectsPos != std::string::npos);
   REQUIRE(lowerExprEmitSetupPos != std::string::npos);
   REQUIRE(lowerReturnCallsSetupPos != std::string::npos);
@@ -719,6 +721,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   std::filesystem::path irInferenceSetupPath =
       cwd / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
   std::filesystem::path irLowerEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
+  std::filesystem::path irNativeEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererNativeEffects.cpp";
   std::filesystem::path irVmEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererVmEffects.cpp";
   std::filesystem::path irReturnInferencePath =
       cwd / "src" / "ir_lowerer" / "IrLowererReturnInferenceHelpers.cpp";
@@ -798,6 +801,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeReturnKindHelpers.cpp";
     irInferenceSetupPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
     irLowerEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
+    irNativeEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererNativeEffects.cpp";
     irVmEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererVmEffects.cpp";
     irReturnInferencePath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererReturnInferenceHelpers.cpp";
@@ -873,6 +877,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(irSetupTypeReturnKindHelpersPath));
   REQUIRE(std::filesystem::exists(irInferenceSetupPath));
   REQUIRE(std::filesystem::exists(irLowerEffectsPath));
+  REQUIRE(std::filesystem::exists(irNativeEffectsPath));
   REQUIRE(std::filesystem::exists(irVmEffectsPath));
   REQUIRE(std::filesystem::exists(irReturnInferencePath));
   REQUIRE(std::filesystem::exists(semanticTargetAdapterHeaderPath));
@@ -922,6 +927,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irSetupTypeReturnKindHelpers = readTextFile(irSetupTypeReturnKindHelpersPath);
   const std::string irInferenceSetup = readTextFile(irInferenceSetupPath);
   const std::string irLowerEffects = readTextFile(irLowerEffectsPath);
+  const std::string irNativeEffects = readTextFile(irNativeEffectsPath);
   const std::string irVmEffects = readTextFile(irVmEffectsPath);
   const std::string irReturnInference = readTextFile(irReturnInferencePath);
   const std::string semanticTargetAdapterHeader = readTextFile(semanticTargetAdapterHeaderPath);
@@ -1088,13 +1094,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductResultMetadataCompleteness(semanticProgram, error)") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateNoSoftwareNumericTypes(semanticProgram, error)") !=
+  CHECK(irEntrySetupSource.find("validateNativeNoSoftwareNumericTypes(semanticProgram, error)") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateNoRuntimeReflectionQueries(semanticProgram, error)") !=
+  CHECK(irEntrySetupSource.find("validateNativeNoRuntimeReflectionQueries(semanticProgram, error)") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateNoSoftwareNumericTypes(program, error)") ==
+  CHECK(irEntrySetupSource.find("validateNoSoftwareNumericTypes(semanticProgram, error)") ==
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateNoRuntimeReflectionQueries(program, error)") ==
+  CHECK(irEntrySetupSource.find("validateNoRuntimeReflectionQueries(semanticProgram, error)") ==
         std::string::npos);
   CHECK(irEntrySetupSource.find("kSemanticProductCompletenessMatrix") != std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductCompletenessMatrix(program, *entryDefOut, semanticProgram, error)") !=
@@ -1731,6 +1737,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(lowerEffectsHeader.find("struct Definition;") != std::string::npos);
   CHECK(lowerEffectsHeader.find("struct Program;") != std::string::npos);
   CHECK(lowerEffectsHeader.find("struct SemanticProgram;") != std::string::npos);
+  CHECK(lowerEffectsHeader.find("validateNativeNoSoftwareNumericTypes(") == std::string::npos);
+  CHECK(lowerEffectsHeader.find("validateNativeProgramEffects(") == std::string::npos);
+  const auto nativeEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererNativeEffects.h");
+  CHECK(nativeEffectsHeader.find("validateNativeNoSoftwareNumericTypes(") != std::string::npos);
+  CHECK(nativeEffectsHeader.find("validateNativeNoRuntimeReflectionQueries(") != std::string::npos);
+  CHECK(nativeEffectsHeader.find("validateNativeProgramEffects(") != std::string::npos);
   const auto vmEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererVmEffects.h");
   CHECK(vmEffectsHeader.find("validateVmProgramEffects(") != std::string::npos);
 
@@ -2039,19 +2051,34 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irLowerEffects.find("std::string(backendSurfaceName) + \" does not support effect: \"") !=
         std::string::npos);
+  CHECK(irLowerEffects.find("validateNativeProgramEffects(") ==
+        std::string::npos);
+  CHECK(irLowerEffects.find("validateNoSoftwareNumericTypesForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irLowerEffects.find("validateNoRuntimeReflectionQueriesForBackendSurface(") !=
+        std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProgram, entryPath)") !=
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProgram, semanticIndex, entryDef)") !=
         std::string::npos);
   CHECK(irReturnInference.find("missing semantic-product return fact: ") !=
         std::string::npos);
-  CHECK(irLowerEffects.find("return validateProgramEffects(program, nullptr, entryPath, defaultEffects, entryDefaultEffects, error);") !=
-        std::string::npos);
   CHECK(irLowerEffects.find("findSemanticProductCallableSummary(semanticProgram, fullPath)") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validationTarget == IrValidationTarget::Vm") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("validationTarget == IrValidationTarget::Native") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateNativeProgramEffects(") !=
+        std::string::npos);
   CHECK(irEntrySetupSource.find("validateVmProgramEffects(") != std::string::npos);
+  CHECK(irNativeEffects.find("validateNoSoftwareNumericTypesForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irNativeEffects.find("validateNoRuntimeReflectionQueriesForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irNativeEffects.find("return validateProgramEffectsForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irNativeEffects.find("\"native backend\"") != std::string::npos);
   CHECK(irVmEffects.find("return validateProgramEffectsForBackendSurface(") !=
         std::string::npos);
   CHECK(irVmEffects.find("\"vm backend\"") != std::string::npos);
