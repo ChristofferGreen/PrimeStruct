@@ -241,9 +241,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "argument type mismatch for /Marker/tag parameter self: expected /Marker got array") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter") {
@@ -405,9 +403,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "argument type mismatch for /Marker/tag parameter self: expected /Marker got array") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
