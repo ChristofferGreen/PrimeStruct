@@ -146,7 +146,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("generic struct helper resolves local templated root helper") {
+TEST_CASE("generic struct helper resolves local templated root helper with implicit this reference") {
   const std::string source = R"(
 [struct]
 VecLike<T>() {
@@ -156,7 +156,7 @@ VecLike<T>() {
   }
 }
 
-/vectorCheckShape<T>([VecLike<T>] values) {
+/vectorCheckShape<T>([Reference<VecLike<T>>] values) {
 }
 
 [return<int>]
