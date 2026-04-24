@@ -276,15 +276,19 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   const std::string vmMaps = readFile(vmMapsPath.string());
   const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- TODO-4124\n- TODO-4125\n- TODO-4126") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\nnone") !=
         std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4127\n- TODO-4128\n- TODO-4129\n- TODO-4130\n- TODO-4131") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\nnone") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4124\n2. TODO-4125\n3. TODO-4126\n4. TODO-4127") !=
+  CHECK(todo.find("### Priority Lanes (Current)\n\nnone") !=
+        std::string::npos);
+  CHECK(todo.find("### Execution Queue (Recommended)\n\nnone") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
+        std::string::npos);
+  CHECK(todo.find("| Architecture contract probe migration | none |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
@@ -293,6 +297,7 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("New skipped doctest coverage must create a new explicit TODO before it lands.") !=
         std::string::npos);
+  CHECK(todo.find("### Task Blocks\n\nnone") != std::string::npos);
   CHECK(todo.find("- [ ] TODO-4117:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4118:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4110:") == std::string::npos);
@@ -310,14 +315,14 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4134: Accept type-qualified dot-call syntax for static helpers") ==
         std::string::npos);
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- none") ==
-        std::string::npos);
   CHECK(todo.find("- [ ] TODO-4105:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4109:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4112:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4114:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4116:") == std::string::npos);
 
+  CHECK(todoFinished.find("✓ TODO-4142: Retire brittle architecture source locks after contract migration.") !=
+        std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4123: Split validator core from publication and benchmark shadows.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4118: Re-enable or prune remaining VM non-i32 map key runtime skips.") !=
