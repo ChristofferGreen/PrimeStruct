@@ -1,4 +1,5 @@
 #include "primec/Semantics.h"
+#include "primec/SemanticsBenchmark.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 
@@ -6105,7 +6106,7 @@ bool Semantics::validate(Program &program,
                                nullptr);
 }
 
-bool Semantics::validateForBenchmark(
+bool validateSemanticsForBenchmark(
     Program &program,
     const std::string &entryPath,
     std::string &error,
@@ -6117,7 +6118,7 @@ bool Semantics::validateForBenchmark(
     SemanticProgram *semanticProgramOut,
     const SemanticProductBuildConfig *semanticProductBuildConfig,
     const SemanticValidationBenchmarkConfig &benchmarkConfig,
-    const SemanticValidationBenchmarkObserver &benchmarkObserver) const {
+    const SemanticValidationBenchmarkObserver &benchmarkObserver) {
   return runSemanticValidation(program,
                                entryPath,
                                error,

@@ -6,6 +6,18 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4140: Split benchmark semantic validation from the production API.
+  Completed: `include/primec/Semantics.h` now exposes only the production
+  `Semantics::validate(...)` contract, while benchmark-only configuration,
+  observers, and the dedicated benchmark entrypoint now live in the new public
+  `include/primec/SemanticsBenchmark.h` surface. The compile pipeline now
+  calls `validateSemanticsForBenchmark(...)` only for benchmark-configured
+  runs, focused benchmark contract probes in
+  `tests/unit/test_compile_run_benchmark_harness.cpp` and
+  `tests/unit/test_ir_pipeline_backends_graph_pilot_a.h` now pin the header
+  split, and `tests/unit/test_semantics_definition_partitioner.cpp` now proves
+  the benchmark and production entrypoints publish identical semantic-product
+  output for the same program.
 - ✓ TODO-4130: Unify VM and debug-session interpreter cores. Completed: the
   duplicated jump, call, and return interpreter-step slice now routes through
   shared `src/VmControlFlowOpcodeShared.{h,cpp}` helpers instead of keeping

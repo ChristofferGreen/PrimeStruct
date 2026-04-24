@@ -1,6 +1,7 @@
 #include "third_party/doctest.h"
 
 #include "primec/SemanticProduct.h"
+#include "primec/SemanticsBenchmark.h"
 #include "primec/SemanticsDefinitionPartitioner.h"
 #include "primec/SemanticsDefinitionPrepass.h"
 
@@ -66,19 +67,20 @@ bool validateWithWorkerCount(primec::Semantics &semantics,
                              primec::SemanticProgram *semanticProgramOut = nullptr,
                              const primec::SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
                              uint32_t workerCount = 1) {
+  (void)semantics;
   primec::SemanticValidationBenchmarkConfig benchmarkConfig;
   benchmarkConfig.definitionValidationWorkerCount = workerCount;
-  return semantics.validateForBenchmark(program,
-                                        entryPath,
-                                        error,
-                                        defaultEffects,
-                                        entryDefaultEffects,
-                                        semanticTransforms,
-                                        diagnosticInfo,
-                                        collectDiagnostics,
-                                        semanticProgramOut,
-                                        semanticProductBuildConfig,
-                                        benchmarkConfig);
+  return primec::validateSemanticsForBenchmark(program,
+                                               entryPath,
+                                               error,
+                                               defaultEffects,
+                                               entryDefaultEffects,
+                                               semanticTransforms,
+                                               diagnosticInfo,
+                                               collectDiagnostics,
+                                               semanticProgramOut,
+                                               semanticProductBuildConfig,
+                                               benchmarkConfig);
 }
 
 } // namespace
@@ -240,6 +242,58 @@ main() {
   CHECK(parallelOk);
   CHECK(serialError.empty());
   CHECK(parallelError.empty());
+}
+
+TEST_CASE("benchmark semantic entrypoint preserves production semantic-product output") {
+  const std::string source = R"(
+[return<i32>]
+leaf([i32] value) {
+  return(plus(value, 1i32))
+}
+
+[return<i32>]
+main() {
+  return(leaf(4i32))
+}
+)";
+
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::Program productionProgram = parseProgram(source);
+  primec::Program benchmarkProgram = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram productionSemanticProgram;
+  primec::SemanticProgram benchmarkSemanticProgram;
+  std::string productionError;
+  std::string benchmarkError;
+
+  const bool productionOk = semantics.validate(productionProgram,
+                                               "/main",
+                                               productionError,
+                                               defaults,
+                                               defaults,
+                                               {},
+                                               nullptr,
+                                               false,
+                                               &productionSemanticProgram);
+  const bool benchmarkOk = validateWithWorkerCount(semantics,
+                                                   benchmarkProgram,
+                                                   "/main",
+                                                   benchmarkError,
+                                                   defaults,
+                                                   defaults,
+                                                   {},
+                                                   nullptr,
+                                                   false,
+                                                   &benchmarkSemanticProgram,
+                                                   nullptr,
+                                                   1);
+
+  CHECK(productionOk);
+  CHECK(benchmarkOk);
+  CHECK(productionError.empty());
+  CHECK(benchmarkError.empty());
+  CHECK(primec::formatSemanticProgram(productionSemanticProgram) ==
+        primec::formatSemanticProgram(benchmarkSemanticProgram));
 }
 
 TEST_CASE("two-chunk definition validation flag preserves diagnostic ordering parity") {

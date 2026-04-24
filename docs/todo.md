@@ -56,24 +56,21 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4140
+- TODO-4141
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4141
 - TODO-4142
 
 ### Priority Lanes (Current)
 
-- Validator/runtime boundary simplification: TODO-4140
-- Pipeline/publication boundary hardening: TODO-4140, TODO-4141
+- Pipeline/publication boundary hardening: TODO-4141
 - Test-surface contraction: TODO-4142
 
 ### Execution Queue (Recommended)
 
-1. TODO-4140
-2. TODO-4141
-3. TODO-4142
+1. TODO-4141
+2. TODO-4142
 
 ### PrimeStruct Coverage Snapshot
 
@@ -85,7 +82,7 @@ Task template:
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| Validator entrypoint and benchmark-plumbing split | TODO-4140 |
+| Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
@@ -221,23 +218,3 @@ Task template:
       contract for the migrated semantic-product slice.
   - stop_rule: Stop once one published semantic-product slice crosses an
       explicit immutable freeze boundary with coverage.
-
-- [ ] TODO-4140: Split benchmark semantic validation from the production API
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Validator Boundary Simplification
-  - depends_on: none
-  - scope: Move benchmark-only semantic validation knobs and observers out of
-      the primary `Semantics` production entry contract into a dedicated harness
-      or benchmark-facing entrypoint, while preserving the existing measurement
-      coverage.
-  - acceptance:
-    - The main production `Semantics` validation contract no longer exposes at
-      least one benchmark-only configuration or observer surface.
-    - Benchmark runs still support the migrated measurement surface through a
-      dedicated benchmark-facing entrypoint or harness.
-    - Focused validation and benchmark coverage prove that production and
-      benchmark semantic publication still agree on observable results.
-  - stop_rule: Stop once one benchmark-only semantic configuration slice is
-      removed from the production-facing API and preserved in benchmark
-      coverage.

@@ -2,6 +2,7 @@
 
 #include "primec/SemanticProduct.h"
 #include "primec/Semantics.h"
+#include "primec/SemanticsBenchmark.h"
 
 #include <array>
 #include <cstddef>
@@ -71,19 +72,20 @@ bool validateWithWorkerCount(primec::Semantics &semantics,
                              primec::SemanticProgram *semanticProgramOut = nullptr,
                              const primec::SemanticProductBuildConfig *semanticProductBuildConfig = nullptr,
                              uint32_t workerCount = 1) {
+  (void)semantics;
   primec::SemanticValidationBenchmarkConfig benchmarkConfig;
   benchmarkConfig.definitionValidationWorkerCount = workerCount;
-  return semantics.validateForBenchmark(program,
-                                        entryPath,
-                                        error,
-                                        defaultEffects,
-                                        entryDefaultEffects,
-                                        semanticTransforms,
-                                        diagnosticInfo,
-                                        collectDiagnostics,
-                                        semanticProgramOut,
-                                        semanticProductBuildConfig,
-                                        benchmarkConfig);
+  return primec::validateSemanticsForBenchmark(program,
+                                               entryPath,
+                                               error,
+                                               defaultEffects,
+                                               entryDefaultEffects,
+                                               semanticTransforms,
+                                               diagnosticInfo,
+                                               collectDiagnostics,
+                                               semanticProgramOut,
+                                               semanticProductBuildConfig,
+                                               benchmarkConfig);
 }
 
 } // namespace

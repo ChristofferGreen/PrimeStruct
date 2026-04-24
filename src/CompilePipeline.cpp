@@ -7,6 +7,7 @@
 #include "primec/Lexer.h"
 #include "primec/Parser.h"
 #include "primec/Semantics.h"
+#include "primec/SemanticsBenchmark.h"
 #include "primec/StdlibSurfaceRegistry.h"
 #include "primec/TextFilterPipeline.h"
 #include "primec/TransformRules.h"
@@ -960,18 +961,18 @@ bool runCompilePipeline(const Options &options,
     benchmarkObserver.allocationCountersEnabled = options.benchmarkSemanticAllocationCounters;
     benchmarkObserver.rssCheckpointsEnabled = options.benchmarkSemanticRssCheckpoints;
 
-    semanticValidationOk = semantics.validateForBenchmark(output.program,
-                                                          options.entryPath,
-                                                          error,
-                                                          options.defaultEffects,
-                                                          options.entryDefaultEffects,
-                                                          options.semanticTransforms,
-                                                          &semanticDiagnosticInfo,
-                                                          options.collectDiagnostics,
-                                                          needsSemanticProduct ? &semanticProgram : nullptr,
-                                                          semanticProductBuildConfigPtr,
-                                                          benchmarkConfig,
-                                                          benchmarkObserver);
+    semanticValidationOk = validateSemanticsForBenchmark(output.program,
+                                                         options.entryPath,
+                                                         error,
+                                                         options.defaultEffects,
+                                                         options.entryDefaultEffects,
+                                                         options.semanticTransforms,
+                                                         &semanticDiagnosticInfo,
+                                                         options.collectDiagnostics,
+                                                         needsSemanticProduct ? &semanticProgram : nullptr,
+                                                         semanticProductBuildConfigPtr,
+                                                         benchmarkConfig,
+                                                         benchmarkObserver);
   } else {
     semanticValidationOk = semantics.validate(output.program,
                                               options.entryPath,

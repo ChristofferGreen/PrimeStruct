@@ -3,6 +3,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   std::filesystem::path optionsHeaderPath = cwd / "include" / "primec" / "Options.h";
   std::filesystem::path optionsParserPath = cwd / "src" / "OptionsParser.cpp";
   std::filesystem::path semanticsHeaderPath = cwd / "include" / "primec" / "Semantics.h";
+  std::filesystem::path semanticsBenchmarkHeaderPath =
+      cwd / "include" / "primec" / "SemanticsBenchmark.h";
   std::filesystem::path semanticsValidatePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
   std::filesystem::path validatorHeaderPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
   std::filesystem::path validatorPrivateCoreHeaderPath =
@@ -103,6 +105,8 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
     optionsHeaderPath = cwd.parent_path() / "include" / "primec" / "Options.h";
     optionsParserPath = cwd.parent_path() / "src" / "OptionsParser.cpp";
     semanticsHeaderPath = cwd.parent_path() / "include" / "primec" / "Semantics.h";
+    semanticsBenchmarkHeaderPath =
+        cwd.parent_path() / "include" / "primec" / "SemanticsBenchmark.h";
     semanticsValidatePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
     validatorHeaderPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidator.h";
     validatorPrivateCoreHeaderPath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidatorPrivateCore.h";
@@ -200,6 +204,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   REQUIRE(std::filesystem::exists(optionsHeaderPath));
   REQUIRE(std::filesystem::exists(optionsParserPath));
   REQUIRE(std::filesystem::exists(semanticsHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticsBenchmarkHeaderPath));
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   REQUIRE(std::filesystem::exists(validatorHeaderPath));
   REQUIRE(std::filesystem::exists(validatorPrivateCoreHeaderPath));
@@ -257,6 +262,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   const std::string optionsHeader = readTextFile(optionsHeaderPath);
   const std::string optionsParser = readTextFile(optionsParserPath);
   const std::string semanticsHeader = readTextFile(semanticsHeaderPath);
+  const std::string semanticsBenchmarkHeader = readTextFile(semanticsBenchmarkHeaderPath);
   const std::string semanticsValidate = readTextFile(semanticsValidatePath);
   const std::string validatorHeader = readTextFiles({
       validatorHeaderPath,
@@ -340,21 +346,24 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
   CHECK(optionsParser.find("--benchmark-semantic-disable-graph-local-auto-dependency-scratch-pmr") !=
         std::string::npos);
   CHECK(semanticsHeader.find("typeResolver") == std::string::npos);
-  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkConfig") != std::string::npos);
-  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkObserver") != std::string::npos);
-  CHECK(semanticsHeader.find("bool validateForBenchmark(") != std::string::npos);
+  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkConfig") == std::string::npos);
+  CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkObserver") == std::string::npos);
+  CHECK(semanticsHeader.find("bool validateForBenchmark(") == std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticDisableMethodTargetMemoization") == std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacyKeyShadow") == std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") == std::string::npos);
   CHECK(semanticsHeader.find("benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr") ==
         std::string::npos);
+  CHECK(semanticsBenchmarkHeader.find("struct SemanticValidationBenchmarkConfig") != std::string::npos);
+  CHECK(semanticsBenchmarkHeader.find("struct SemanticValidationBenchmarkObserver") != std::string::npos);
+  CHECK(semanticsBenchmarkHeader.find("bool validateSemanticsForBenchmark(") != std::string::npos);
   CHECK(semanticsValidate.find("collectDiagnostics") != std::string::npos);
   CHECK(semanticsValidate.find("runSemanticValidation(") != std::string::npos);
   CHECK(semanticsValidate.find("const SemanticValidationBenchmarkConfig *benchmarkConfig") !=
         std::string::npos);
   CHECK(semanticsValidate.find("const SemanticValidationBenchmarkObserver *benchmarkObserver") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("bool Semantics::validateForBenchmark(") != std::string::npos);
+  CHECK(semanticsValidate.find("bool validateSemanticsForBenchmark(") != std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticDisableMethodTargetMemoization") != std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow") != std::string::npos);
   CHECK(pipeline.find("options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow") !=
@@ -363,7 +372,7 @@ TEST_CASE("graph type resolver pilot is wired through options and semantics infe
         std::string::npos);
   CHECK(pipeline.find("SemanticValidationBenchmarkConfig benchmarkConfig;") != std::string::npos);
   CHECK(pipeline.find("SemanticValidationBenchmarkObserver benchmarkObserver;") != std::string::npos);
-  CHECK(pipeline.find("semantics.validateForBenchmark(") != std::string::npos);
+  CHECK(pipeline.find("validateSemanticsForBenchmark(") != std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-disable-method-target-memoization") != std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-graph-local-auto-legacy-key-shadow") != std::string::npos);
   CHECK(primecMain.find("--benchmark-semantic-graph-local-auto-legacy-side-channel-shadow") !=
