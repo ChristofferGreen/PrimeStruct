@@ -449,6 +449,8 @@ TEST_CASE("ir lowerer call helpers resolve and validate map access targets") {
 TEST_CASE("ir lowerer call helpers resolve and validate array vector access targets") {
   using Kind = primec::ir_lowerer::LocalInfo::ValueKind;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
+  const std::string soaVectorStructTypePrefix =
+      "/std/collections/experimental_soa_vector/SoaVector__";
 
   primec::ir_lowerer::LocalMap locals;
   LocalInfo arrayInfo;
@@ -603,8 +605,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.elemKind == Kind::Unknown);
   CHECK_FALSE(resolved.isVectorTarget);
   CHECK(resolved.isSoaVector);
-  CHECK(resolved.structTypeName ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(resolved.structTypeName.rfind(soaVectorStructTypePrefix, 0) == 0);
   error.clear();
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
@@ -630,8 +631,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.elemKind == Kind::Unknown);
   CHECK_FALSE(resolved.isVectorTarget);
   CHECK(resolved.isSoaVector);
-  CHECK(resolved.structTypeName ==
-        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(resolved.structTypeName.rfind(soaVectorStructTypePrefix, 0) == 0);
   error.clear();
   CHECK(primec::ir_lowerer::validateArrayVectorAccessTargetInfo(resolved, error));
   CHECK(error.empty());
@@ -822,11 +822,23 @@ TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper con
         std::string::npos);
   CHECK(source.find("if (rejectCanonicalVectorTemporaryReceiverExpr(expr)) {") !=
         std::string::npos);
-  CHECK(source.find("auto tryPopulateFromSemanticQueryFact = [&]() {") !=
+  CHECK(source.find("auto resolveCollectionExprDirectDefinition =") !=
         std::string::npos);
-  CHECK(source.find("findSemanticProductQueryFactBySemanticId(*semanticIndex, targetCallExpr)") !=
+  CHECK(source.find("auto findDirectHelperDefinition = [&](const std::string &path)") !=
         std::string::npos);
-  CHECK(source.find("bindingType.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0") !=
+  CHECK(source.find("matchesGeneratedLeafDefinition(candidatePath, \"__t\", 3)") !=
+        std::string::npos);
+  CHECK(source.find("matchesGeneratedLeafDefinition(candidatePath, \"__ov\", 4)") !=
+        std::string::npos);
+  CHECK(source.find("const Definition *receiverDef =") !=
+        std::string::npos);
+  CHECK(source.find("resolveCollectionExprDirectDefinition(*receiverExpr)") !=
+        std::string::npos);
+  CHECK(source.find("auto tryPopulateFromSemanticQueryFact = [&]() {") ==
+        std::string::npos);
+  CHECK(source.find("findSemanticProductQueryFactBySemanticId(*semanticIndex, targetCallExpr)") ==
+        std::string::npos);
+  CHECK(source.find("bindingType.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0") ==
         std::string::npos);
   CHECK(source.find("resolveSpecializedVectorElementKind(bindingType, elemKind)") !=
         std::string::npos);
