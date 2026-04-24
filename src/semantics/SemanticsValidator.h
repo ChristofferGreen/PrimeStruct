@@ -517,10 +517,12 @@ private:
   std::vector<TryValueSnapshotEntry> tryValueSnapshotCache_;
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotCache_;
   bool pilotRoutingSemanticCollectorsValid_ = false;
+  bool mergedWorkerCallableSummariesValid_ = false;
   std::vector<CollectedDirectCallTargetEntry> collectedDirectCallTargets_;
   std::vector<CollectedMethodCallTargetEntry> collectedMethodCallTargets_;
   std::vector<CollectedBridgePathChoiceEntry> collectedBridgePathChoices_;
   std::vector<CollectedCallableSummaryEntry> collectedCallableSummaries_;
+  std::vector<CollectedCallableSummaryEntry> mergedWorkerCallableSummaries_;
   mutable bool onErrorSnapshotFactCacheValid_ = false;
   mutable std::vector<OnErrorSnapshotEntry> onErrorSnapshotCache_;
   std::unordered_map<std::string, EffectFreeSummary> effectFreeDefCache_;

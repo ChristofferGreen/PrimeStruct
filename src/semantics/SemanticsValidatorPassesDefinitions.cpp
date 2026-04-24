@@ -504,6 +504,7 @@ bool SemanticsValidator::validateDefinitions() {
     std::string error;
     SemanticDiagnosticInfo diagnostics;
     ValidationCounters counters;
+    std::vector<CollectedCallableSummaryEntry> callableSummaries;
   };
 
   std::vector<std::future<WorkerChunkResult>> workerTasks;
@@ -534,6 +535,10 @@ bool SemanticsValidator::validateDefinitions() {
               stableOrderOffset,
               stableOrderCount);
           result.counters = worker.validationCounters();
+          if (result.ok) {
+            worker.collectCallableSummaryEntriesForStableRange(
+                stableOrderOffset, stableOrderCount, result.callableSummaries);
+          }
           return result;
         }));
   }
@@ -560,6 +565,26 @@ bool SemanticsValidator::validateDefinitions() {
     }
   }
 
+  auto mergeWorkerCallableSummaries = [&]() {
+    mergedWorkerCallableSummariesValid_ = false;
+    std::vector<CollectedCallableSummaryEntry>().swap(mergedWorkerCallableSummaries_);
+
+    std::size_t callableSummaryCount = program_.executions.size();
+    for (const WorkerChunkResult &result : workerResults) {
+      callableSummaryCount += result.callableSummaries.size();
+    }
+    mergedWorkerCallableSummaries_.reserve(callableSummaryCount);
+    for (WorkerChunkResult &result : workerResults) {
+      mergedWorkerCallableSummaries_.insert(
+          mergedWorkerCallableSummaries_.end(),
+          std::make_move_iterator(result.callableSummaries.begin()),
+          std::make_move_iterator(result.callableSummaries.end()));
+    }
+    collectExecutionCallableSummaryEntries(mergedWorkerCallableSummaries_);
+    sortCollectedCallableSummaries(mergedWorkerCallableSummaries_);
+    mergedWorkerCallableSummariesValid_ = true;
+  };
+
   if (!collectDiagnostics) {
     for (const WorkerChunkResult &result : workerResults) {
       if (result.ok) {
@@ -573,6 +598,7 @@ bool SemanticsValidator::validateDefinitions() {
       }
       return false;
     }
+    mergeWorkerCallableSummaries();
     return true;
   }
 
@@ -608,6 +634,7 @@ bool SemanticsValidator::validateDefinitions() {
     return false;
   }
 
+  mergeWorkerCallableSummaries();
   return true;
 }
 

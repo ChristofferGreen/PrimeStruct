@@ -11,6 +11,16 @@
   void ensureCallAndTrySnapshotFactCaches(bool includeTryValues,
                                           bool includeCallBindings);
   void collectPilotRoutingSemanticProductFacts();
+  void collectCallableSummaryEntriesForStableRange(
+      std::size_t stableOrderOffset,
+      std::size_t stableOrderCount,
+      std::vector<CollectedCallableSummaryEntry> &out) const;
+  void collectExecutionCallableSummaryEntries(
+      std::vector<CollectedCallableSummaryEntry> &out) const;
+  void rebindCollectedCallableSummarySemanticNodeIds(
+      std::vector<CollectedCallableSummaryEntry> &entries) const;
+  static void sortCollectedCallableSummaries(
+      std::vector<CollectedCallableSummaryEntry> &entries);
   void ensureOnErrorSnapshotFactCache() const;
   bool buildDefinitionMaps();
   bool validateDefinitionBuildTransforms(const Definition &def,

@@ -495,6 +495,130 @@ SemanticsValidator::callBindingSnapshotForTesting() {
   return callBindingSnapshotCache_;
 }
 
+void SemanticsValidator::collectCallableSummaryEntriesForStableRange(
+    std::size_t stableOrderOffset,
+    std::size_t stableOrderCount,
+    std::vector<CollectedCallableSummaryEntry> &out) const {
+  const std::size_t declarationCount =
+      definitionPrepassSnapshot_.declarationsInStableOrder.size();
+  if (stableOrderCount == 0 || stableOrderOffset >= declarationCount) {
+    return;
+  }
+
+  const std::size_t boundedCount =
+      std::min(stableOrderCount, declarationCount - stableOrderOffset);
+  out.reserve(out.size() + boundedCount);
+  for (std::size_t stableOrdinal = 0; stableOrdinal < boundedCount; ++stableOrdinal) {
+    const std::size_t stableIndex =
+        definitionPrepassSnapshot_
+            .declarationsInStableOrder[stableOrderOffset + stableOrdinal]
+            .stableIndex;
+    const Definition &def = program_.definitions[stableIndex];
+    const auto state = buildDefinitionValidationState(def);
+    const auto &context = state.context;
+    ReturnKind returnKind = ReturnKind::Unknown;
+    if (const auto returnKindIt = returnKinds_.find(def.fullPath);
+        returnKindIt != returnKinds_.end()) {
+      returnKind = returnKindIt->second;
+    }
+
+    out.push_back(CollectedCallableSummaryEntry{
+        def.fullPath,
+        false,
+        returnKind,
+        context.definitionIsCompute,
+        context.definitionIsUnsafe,
+        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
+        snapshotCapabilities(def.transforms),
+        context.resultType.has_value() && context.resultType->isResult,
+        context.resultType.has_value() && context.resultType->isResult &&
+            context.resultType->hasValue,
+        context.resultType.has_value() && context.resultType->isResult
+            ? context.resultType->valueType
+            : std::string{},
+        context.resultType.has_value() && context.resultType->isResult
+            ? context.resultType->errorType
+            : std::string{},
+        context.onError.has_value(),
+        context.onError.has_value() ? context.onError->handlerPath : std::string{},
+        context.onError.has_value() ? context.onError->errorType : std::string{},
+        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
+        def.semanticNodeId,
+    });
+  }
+}
+
+void SemanticsValidator::collectExecutionCallableSummaryEntries(
+    std::vector<CollectedCallableSummaryEntry> &out) const {
+  out.reserve(out.size() + program_.executions.size());
+  for (const auto &exec : program_.executions) {
+    const auto state = buildExecutionValidationState(exec);
+    const auto &context = state.context;
+    out.push_back(CollectedCallableSummaryEntry{
+        exec.fullPath,
+        true,
+        ReturnKind::Unknown,
+        context.definitionIsCompute,
+        context.definitionIsUnsafe,
+        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
+        snapshotCapabilities(exec.transforms),
+        false,
+        false,
+        {},
+        {},
+        false,
+        {},
+        {},
+        0,
+        exec.semanticNodeId,
+    });
+  }
+}
+
+void SemanticsValidator::rebindCollectedCallableSummarySemanticNodeIds(
+    std::vector<CollectedCallableSummaryEntry> &entries) const {
+  for (auto &entry : entries) {
+    entry.semanticNodeId = 0;
+    if (entry.isExecution) {
+      const auto execIt = std::find_if(
+          program_.executions.begin(),
+          program_.executions.end(),
+          [&](const Execution &exec) { return exec.fullPath == entry.fullPath; });
+      if (execIt != program_.executions.end()) {
+        entry.semanticNodeId = execIt->semanticNodeId;
+      }
+      continue;
+    }
+
+    const auto defIt = std::find_if(
+        program_.definitions.begin(),
+        program_.definitions.end(),
+        [&](const Definition &def) { return def.fullPath == entry.fullPath; });
+    if (defIt != program_.definitions.end()) {
+      entry.semanticNodeId = defIt->semanticNodeId;
+    }
+  }
+}
+
+void SemanticsValidator::sortCollectedCallableSummaries(
+    std::vector<CollectedCallableSummaryEntry> &entries) {
+  for (auto &entry : entries) {
+    std::sort(entry.activeEffects.begin(), entry.activeEffects.end());
+    entry.activeEffects.erase(
+        std::unique(entry.activeEffects.begin(), entry.activeEffects.end()),
+        entry.activeEffects.end());
+  }
+
+  std::stable_sort(entries.begin(),
+                   entries.end(),
+                   [](const auto &left, const auto &right) {
+                     if (left.fullPath != right.fullPath) {
+                       return left.fullPath < right.fullPath;
+                     }
+                     return left.isExecution < right.isExecution;
+                   });
+}
+
 void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   if (pilotRoutingSemanticCollectorsValid_) {
     return;
@@ -641,63 +765,16 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
     });
   });
 
-  for (const auto &def : program_.definitions) {
-    const auto state = buildDefinitionValidationState(def);
-    const auto &context = state.context;
-    ReturnKind returnKind = ReturnKind::Unknown;
-    if (const auto returnKindIt = returnKinds_.find(def.fullPath); returnKindIt != returnKinds_.end()) {
-      returnKind = returnKindIt->second;
-    }
-
-    collectedCallableSummaries_.push_back(CollectedCallableSummaryEntry{
-        def.fullPath,
-        false,
-        returnKind,
-        context.definitionIsCompute,
-        context.definitionIsUnsafe,
-        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
-        snapshotCapabilities(def.transforms),
-        context.resultType.has_value() && context.resultType->isResult,
-        context.resultType.has_value() && context.resultType->isResult && context.resultType->hasValue,
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->valueType : std::string{},
-        context.resultType.has_value() && context.resultType->isResult ? context.resultType->errorType : std::string{},
-        context.onError.has_value(),
-        context.onError.has_value() ? context.onError->handlerPath : std::string{},
-        context.onError.has_value() ? context.onError->errorType : std::string{},
-        context.onError.has_value() ? context.onError->boundArgs.size() : 0,
-        def.semanticNodeId,
-    });
-
+  if (mergedWorkerCallableSummariesValid_) {
+    collectedCallableSummaries_ = mergedWorkerCallableSummaries_;
+    rebindCollectedCallableSummarySemanticNodeIds(collectedCallableSummaries_);
+  } else {
+    collectCallableSummaryEntriesForStableRange(
+        0, definitionPrepassSnapshot_.declarationsInStableOrder.size(), collectedCallableSummaries_);
+    collectExecutionCallableSummaryEntries(collectedCallableSummaries_);
   }
 
-  for (const auto &exec : program_.executions) {
-    const auto state = buildExecutionValidationState(exec);
-    const auto &context = state.context;
-    collectedCallableSummaries_.push_back(CollectedCallableSummaryEntry{
-        exec.fullPath,
-        true,
-        ReturnKind::Unknown,
-        context.definitionIsCompute,
-        context.definitionIsUnsafe,
-        std::vector<std::string>(context.activeEffects.begin(), context.activeEffects.end()),
-        snapshotCapabilities(exec.transforms),
-        false,
-        false,
-        {},
-        {},
-        false,
-        {},
-        {},
-        0,
-        exec.semanticNodeId,
-    });
-  }
-
-  for (auto &entry : collectedCallableSummaries_) {
-    std::sort(entry.activeEffects.begin(), entry.activeEffects.end());
-    entry.activeEffects.erase(std::unique(entry.activeEffects.begin(), entry.activeEffects.end()),
-                              entry.activeEffects.end());
-  }
+  sortCollectedCallableSummaries(collectedCallableSummaries_);
 
   std::stable_sort(collectedDirectCallTargets_.begin(),
                    collectedDirectCallTargets_.end(),
@@ -752,14 +829,6 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
                        return left.helperName < right.helperName;
                      }
                      return left.chosenPath < right.chosenPath;
-                   });
-  std::stable_sort(collectedCallableSummaries_.begin(),
-                   collectedCallableSummaries_.end(),
-                   [](const auto &left, const auto &right) {
-                     if (left.fullPath != right.fullPath) {
-                       return left.fullPath < right.fullPath;
-                     }
-                     return left.isExecution < right.isExecution;
                    });
   pilotRoutingSemanticCollectorsValid_ = true;
 }

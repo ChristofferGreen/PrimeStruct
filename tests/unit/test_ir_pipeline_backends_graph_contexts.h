@@ -3230,6 +3230,8 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   const std::string semanticsHeader = readTextFile(headerPath);
   const std::string semanticsSnapshots =
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
+  const std::string semanticsDefinitionPasses =
+      readTextFile(root / "src" / "semantics" / "SemanticsValidatorPassesDefinitions.cpp");
   const std::string semanticsValidate =
       readTextFile(root / "src" / "semantics" / "SemanticsValidate.cpp");
 
@@ -3248,13 +3250,46 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   REQUIRE(collectHelperStart < callableSummaryStart);
   REQUIRE(callableSummaryStart < typeMetadataStart);
 
+  CHECK(semanticsHeader.find("bool mergedWorkerCallableSummariesValid_ = false;") !=
+        std::string::npos);
+  CHECK(semanticsHeader.find("std::vector<CollectedCallableSummaryEntry> mergedWorkerCallableSummaries_;") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::collectCallableSummaryEntriesForStableRange(") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::collectExecutionCallableSummaryEntries(") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::rebindCollectedCallableSummarySemanticNodeIds(") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::sortCollectedCallableSummaries(") !=
+        std::string::npos);
+
   const std::string collectHelperBody =
       semanticsSnapshots.substr(collectHelperStart, callableSummaryStart - collectHelperStart);
-  CHECK(collectHelperBody.find("collectedCallableSummaries_.push_back(") != std::string::npos);
-  CHECK(collectHelperBody.find("std::stable_sort(collectedCallableSummaries_.begin(),") !=
+  CHECK(collectHelperBody.find("if (mergedWorkerCallableSummariesValid_) {") != std::string::npos);
+  CHECK(collectHelperBody.find("collectedCallableSummaries_ = mergedWorkerCallableSummaries_;") !=
         std::string::npos);
-  CHECK(collectHelperBody.find("if (left.fullPath != right.fullPath)") != std::string::npos);
-  CHECK(collectHelperBody.find("return left.isExecution < right.isExecution;") !=
+  CHECK(collectHelperBody.find("rebindCollectedCallableSummarySemanticNodeIds(collectedCallableSummaries_);") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("collectCallableSummaryEntriesForStableRange(") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("collectExecutionCallableSummaryEntries(collectedCallableSummaries_);") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("sortCollectedCallableSummaries(collectedCallableSummaries_);") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("collectedCallableSummaries_.push_back(") != std::string::npos);
+  CHECK(semanticsSnapshots.find("if (left.fullPath != right.fullPath)") != std::string::npos);
+  CHECK(semanticsSnapshots.find("return left.isExecution < right.isExecution;") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("std::vector<CollectedCallableSummaryEntry> callableSummaries;") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("worker.collectCallableSummaryEntriesForStableRange(") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergeWorkerCallableSummaries") != std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("collectExecutionCallableSummaryEntries(mergedWorkerCallableSummaries_);") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("sortCollectedCallableSummaries(mergedWorkerCallableSummaries_);") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergedWorkerCallableSummariesValid_ = true;") !=
         std::string::npos);
 
   const std::string callableSummaryBody =

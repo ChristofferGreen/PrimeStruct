@@ -56,12 +56,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4135
 - TODO-4137
+- TODO-4136
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4136
 - TODO-4138
 - TODO-4139
 - TODO-4132
@@ -69,6 +68,7 @@ Task template:
 - TODO-4134
 - TODO-4130
 - TODO-4131
+- TODO-4129
 - TODO-4140
 - TODO-4141
 
@@ -77,32 +77,31 @@ Task template:
 - Semantic-product authority and lowerer ownership: TODO-4137, TODO-4138,
   TODO-4132, TODO-4133, TODO-4134
 - Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
-- Validator/runtime boundary simplification: TODO-4135, TODO-4136, TODO-4140
+- Validator/runtime boundary simplification: TODO-4136, TODO-4140
 - Test-surface contraction: TODO-4142
 - Runtime execution unification: TODO-4130
-- Parallel semantic publication determinism: TODO-4135, TODO-4136,
-  TODO-4131
+- Parallel semantic publication determinism: TODO-4136, TODO-4131
 
 ### Execution Queue (Recommended)
 
-1. TODO-4135
-2. TODO-4137
-3. TODO-4136
-4. TODO-4138
-5. TODO-4139
+1. TODO-4137
+2. TODO-4136
+3. TODO-4138
+4. TODO-4139
+5. TODO-4132
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4135, TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4139, TODO-4141 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| Validator entrypoint and benchmark-plumbing split | TODO-4135, TODO-4136, TODO-4140 |
-| Semantic-product publication by module and fact family | TODO-4135, TODO-4136 |
+| Validator entrypoint and benchmark-plumbing split | TODO-4136, TODO-4140 |
+| Semantic-product publication by module and fact family | TODO-4136 |
 | IR lowerer compile-unit breakup | TODO-4132, TODO-4133, TODO-4134 |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -118,7 +117,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4141 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | TODO-4139 |
-| Semantic-product publication parity and deterministic ordering | TODO-4135, TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
+| Semantic-product publication parity and deterministic ordering | TODO-4136, TODO-4137, TODO-4138, TODO-4131 |
 | Lowerer/source-composition contract coverage | TODO-4132, TODO-4133, TODO-4134 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
@@ -336,26 +335,6 @@ Task template:
       migrated fact-family slice across the supported worker counts.
   - stop_rule: Stop once one representative fact-family slice uses
       deterministic production worker merges with parity coverage.
-
-- [ ] TODO-4135: Publish routing metadata and callable summaries from deterministic worker merges
-  - owner: ai
-  - created_at: 2026-04-24
-  - phase: Semantic Ownership Boundary
-  - depends_on: none
-  - scope: Extend the parallel definition-validation path from benchmark-only
-      worker chunks into one production publication path for routing metadata
-      and callable summaries, with deterministic single-writer merges for the
-      published semantic-product surface.
-  - acceptance:
-    - One production publication slice emits deterministic merged routing
-      metadata or callable summaries from worker-local validation outputs.
-    - Worker-count `1`, `2`, and `4` runs produce identical published routing
-      output for the migrated slice.
-    - Parity coverage pins semantic-product output and diagnostics for the
-      migrated routing or callable-summary slice across the supported worker
-      counts.
-  - stop_rule: Stop once one routing or callable-summary publication slice
-      uses deterministic worker merges in production with parity coverage.
 
 - [ ] TODO-4134: Extract representative GPU lowering contract family
   - owner: ai

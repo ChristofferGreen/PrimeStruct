@@ -3688,6 +3688,24 @@ main() {
 )";
   }
 
+  struct CallableSummarySnapshot {
+    bool present = false;
+    bool isExecution = false;
+    std::string returnKind;
+    bool isCompute = false;
+    bool isUnsafe = false;
+    std::vector<std::string> activeEffects;
+    bool hasResultType = false;
+    bool resultTypeHasValue = false;
+    std::string resultValueType;
+    std::string resultErrorType;
+    bool hasOnError = false;
+    std::string onErrorHandlerPath;
+    std::string onErrorErrorType;
+    std::size_t onErrorBoundArgCount = 0;
+    uint64_t semanticNodeId = 0;
+  };
+
   struct IndexFamilySnapshot {
     std::string formattedSemanticProduct;
     std::size_t directCallTargetCount = 0;
@@ -3699,7 +3717,36 @@ main() {
     std::size_t tryFactCount = 0;
     std::size_t onErrorFactCount = 0;
     std::size_t returnFactCount = 0;
+    CallableSummarySnapshot idCallableSummary;
+    CallableSummarySnapshot mainCallableSummary;
   };
+
+  const auto captureCallableSummary =
+      [](const primec::SemanticProgram &semanticProgram, std::string_view fullPath) {
+        CallableSummarySnapshot snapshot;
+        const auto *entry =
+            primec::semanticProgramLookupPublishedCallableSummary(semanticProgram, fullPath);
+        if (entry == nullptr) {
+          return snapshot;
+        }
+
+        snapshot.present = true;
+        snapshot.isExecution = entry->isExecution;
+        snapshot.returnKind = entry->returnKind;
+        snapshot.isCompute = entry->isCompute;
+        snapshot.isUnsafe = entry->isUnsafe;
+        snapshot.activeEffects = entry->activeEffects;
+        snapshot.hasResultType = entry->hasResultType;
+        snapshot.resultTypeHasValue = entry->resultTypeHasValue;
+        snapshot.resultValueType = entry->resultValueType;
+        snapshot.resultErrorType = entry->resultErrorType;
+        snapshot.hasOnError = entry->hasOnError;
+        snapshot.onErrorHandlerPath = entry->onErrorHandlerPath;
+        snapshot.onErrorErrorType = entry->onErrorErrorType;
+        snapshot.onErrorBoundArgCount = entry->onErrorBoundArgCount;
+        snapshot.semanticNodeId = entry->semanticNodeId;
+        return snapshot;
+      };
 
   const auto runWithWorkerCount = [&](int workerCount) {
     primec::Options options;
@@ -3733,6 +3780,10 @@ main() {
     snapshot.tryFactCount = output.semanticProgram.tryFacts.size();
     snapshot.onErrorFactCount = output.semanticProgram.onErrorFacts.size();
     snapshot.returnFactCount = output.semanticProgram.returnFacts.size();
+    snapshot.idCallableSummary =
+        captureCallableSummary(output.semanticProgram, "/id");
+    snapshot.mainCallableSummary =
+        captureCallableSummary(output.semanticProgram, "/main");
     return snapshot;
   };
 
@@ -3766,6 +3817,60 @@ main() {
   CHECK(singleWorker.returnFactCount == twoWorkers.returnFactCount);
   CHECK(singleWorker.returnFactCount == fourWorkers.returnFactCount);
 
+  CHECK(singleWorker.idCallableSummary.present);
+  CHECK(twoWorkers.idCallableSummary.present);
+  CHECK(fourWorkers.idCallableSummary.present);
+  CHECK(singleWorker.idCallableSummary.isExecution == twoWorkers.idCallableSummary.isExecution);
+  CHECK(singleWorker.idCallableSummary.isExecution == fourWorkers.idCallableSummary.isExecution);
+  CHECK(singleWorker.idCallableSummary.returnKind == twoWorkers.idCallableSummary.returnKind);
+  CHECK(singleWorker.idCallableSummary.returnKind == fourWorkers.idCallableSummary.returnKind);
+  CHECK(singleWorker.idCallableSummary.hasResultType == twoWorkers.idCallableSummary.hasResultType);
+  CHECK(singleWorker.idCallableSummary.hasResultType == fourWorkers.idCallableSummary.hasResultType);
+  CHECK(singleWorker.idCallableSummary.resultTypeHasValue ==
+        twoWorkers.idCallableSummary.resultTypeHasValue);
+  CHECK(singleWorker.idCallableSummary.resultTypeHasValue ==
+        fourWorkers.idCallableSummary.resultTypeHasValue);
+  CHECK(singleWorker.idCallableSummary.resultValueType == twoWorkers.idCallableSummary.resultValueType);
+  CHECK(singleWorker.idCallableSummary.resultValueType == fourWorkers.idCallableSummary.resultValueType);
+  CHECK(singleWorker.idCallableSummary.resultErrorType == twoWorkers.idCallableSummary.resultErrorType);
+  CHECK(singleWorker.idCallableSummary.resultErrorType == fourWorkers.idCallableSummary.resultErrorType);
+  CHECK(singleWorker.idCallableSummary.semanticNodeId == twoWorkers.idCallableSummary.semanticNodeId);
+  CHECK(singleWorker.idCallableSummary.semanticNodeId == fourWorkers.idCallableSummary.semanticNodeId);
+  CHECK(singleWorker.idCallableSummary.semanticNodeId > 0);
+
+  CHECK(singleWorker.mainCallableSummary.present);
+  CHECK(twoWorkers.mainCallableSummary.present);
+  CHECK(fourWorkers.mainCallableSummary.present);
+  CHECK(singleWorker.mainCallableSummary.isExecution == twoWorkers.mainCallableSummary.isExecution);
+  CHECK(singleWorker.mainCallableSummary.isExecution == fourWorkers.mainCallableSummary.isExecution);
+  CHECK(singleWorker.mainCallableSummary.returnKind == twoWorkers.mainCallableSummary.returnKind);
+  CHECK(singleWorker.mainCallableSummary.returnKind == fourWorkers.mainCallableSummary.returnKind);
+  CHECK(singleWorker.mainCallableSummary.isCompute == twoWorkers.mainCallableSummary.isCompute);
+  CHECK(singleWorker.mainCallableSummary.isCompute == fourWorkers.mainCallableSummary.isCompute);
+  CHECK(singleWorker.mainCallableSummary.isUnsafe == twoWorkers.mainCallableSummary.isUnsafe);
+  CHECK(singleWorker.mainCallableSummary.isUnsafe == fourWorkers.mainCallableSummary.isUnsafe);
+  CHECK(singleWorker.mainCallableSummary.activeEffects == twoWorkers.mainCallableSummary.activeEffects);
+  CHECK(singleWorker.mainCallableSummary.activeEffects == fourWorkers.mainCallableSummary.activeEffects);
+  CHECK(singleWorker.mainCallableSummary.hasOnError == twoWorkers.mainCallableSummary.hasOnError);
+  CHECK(singleWorker.mainCallableSummary.hasOnError == fourWorkers.mainCallableSummary.hasOnError);
+  CHECK(singleWorker.mainCallableSummary.onErrorHandlerPath ==
+        twoWorkers.mainCallableSummary.onErrorHandlerPath);
+  CHECK(singleWorker.mainCallableSummary.onErrorHandlerPath ==
+        fourWorkers.mainCallableSummary.onErrorHandlerPath);
+  CHECK(singleWorker.mainCallableSummary.onErrorErrorType ==
+        twoWorkers.mainCallableSummary.onErrorErrorType);
+  CHECK(singleWorker.mainCallableSummary.onErrorErrorType ==
+        fourWorkers.mainCallableSummary.onErrorErrorType);
+  CHECK(singleWorker.mainCallableSummary.onErrorBoundArgCount ==
+        twoWorkers.mainCallableSummary.onErrorBoundArgCount);
+  CHECK(singleWorker.mainCallableSummary.onErrorBoundArgCount ==
+        fourWorkers.mainCallableSummary.onErrorBoundArgCount);
+  CHECK(singleWorker.mainCallableSummary.semanticNodeId ==
+        twoWorkers.mainCallableSummary.semanticNodeId);
+  CHECK(singleWorker.mainCallableSummary.semanticNodeId ==
+        fourWorkers.mainCallableSummary.semanticNodeId);
+  CHECK(singleWorker.mainCallableSummary.semanticNodeId > 0);
+
   CHECK(singleWorker.directCallTargetCount > 0);
   CHECK(singleWorker.methodCallTargetCount > 0);
   CHECK(singleWorker.bridgePathChoiceCount == 0);
@@ -3775,6 +3880,20 @@ main() {
   CHECK(singleWorker.tryFactCount > 0);
   CHECK(singleWorker.onErrorFactCount > 0);
   CHECK(singleWorker.returnFactCount > 0);
+  CHECK_FALSE(singleWorker.idCallableSummary.isExecution);
+  CHECK(singleWorker.idCallableSummary.returnKind == "result");
+  CHECK(singleWorker.idCallableSummary.hasResultType);
+  CHECK(singleWorker.idCallableSummary.resultTypeHasValue);
+  CHECK(singleWorker.idCallableSummary.resultValueType == "int");
+  CHECK(singleWorker.idCallableSummary.resultErrorType == "i32");
+  CHECK_FALSE(singleWorker.mainCallableSummary.isExecution);
+  CHECK(singleWorker.mainCallableSummary.returnKind == "value");
+  CHECK(singleWorker.mainCallableSummary.activeEffects ==
+        std::vector<std::string>{"heap_alloc"});
+  CHECK(singleWorker.mainCallableSummary.hasOnError);
+  CHECK(singleWorker.mainCallableSummary.onErrorHandlerPath == "/unexpected_error");
+  CHECK(singleWorker.mainCallableSummary.onErrorErrorType == "i32");
+  CHECK(singleWorker.mainCallableSummary.onErrorBoundArgCount == 0);
 }
 
 TEST_CASE("cli driver maps ir preparation failures through backend diagnostics") {

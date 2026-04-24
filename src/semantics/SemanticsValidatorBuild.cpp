@@ -27,10 +27,12 @@ bool SemanticsValidator::buildDefinitionMaps() {
     graphLocalAutoBenchmarkShadow_->clear();
   }
   pilotRoutingSemanticCollectorsValid_ = false;
+  mergedWorkerCallableSummariesValid_ = false;
   collectedDirectCallTargets_.clear();
   collectedMethodCallTargets_.clear();
   collectedBridgePathChoices_.clear();
   collectedCallableSummaries_.clear();
+  mergedWorkerCallableSummaries_.clear();
   onErrorSnapshotFactCacheValid_ = false;
   onErrorSnapshotCache_.clear();
   structNames_.clear();
