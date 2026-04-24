@@ -6,6 +6,7 @@
 #include "primec/Ast.h"
 #include "primec/Diagnostics.h"
 #include "primec/Ir.h"
+#include "primec/IrValidation.h"
 #include "primec/SemanticProduct.h"
 
 namespace primec {
@@ -19,7 +20,8 @@ class IrLowerer {
              const std::vector<std::string> &entryDefaultEffects,
              IrModule &out,
              std::string &error,
-             DiagnosticSinkReport *diagnosticInfo = nullptr) const;
+             DiagnosticSinkReport *diagnosticInfo = nullptr,
+             IrValidationTarget validationTarget = IrValidationTarget::Native) const;
 };
 
 } // namespace primec

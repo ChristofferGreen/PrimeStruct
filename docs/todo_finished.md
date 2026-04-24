@@ -5,6 +5,23 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4132: Extract representative VM lowering contract family. Completed:
+  `IrLowerer` and the lower setup/entry setup path now accept the backend
+  validation target so the lowering contract can choose a backend-scoped entry
+  surface without widening the rest of the lowerer into ad hoc emit-kind
+  branching. New `src/ir_lowerer/IrLowererVmEffects.{h,cpp}` now owns the
+  migrated VM effect-validation family, while
+  `src/ir_lowerer/IrLowererLowerEffects.cpp` has been reduced to
+  backend-agnostic effect-validation glue parameterized by backend surface
+  name instead of hardcoding only native diagnostics. Focused conformance in
+  `tests/unit/test_ir_pipeline_validation_ir_validator_accepts_lowered_canonical_module.cpp`
+  plus architecture/source-lock coverage in
+  `tests/unit/test_ir_pipeline_backends_graph_contexts.h` and
+  `tests/unit/test_ir_pipeline_backends_architecture.h` now pins the VM-owned
+  module, the `IrValidationTarget::Vm` entry-setup dispatch, and the new
+  compile-unit boundary.
+
 **Todo Cleanup (April 24, 2026)**
 - ✓ TODO-4131: Implement origin-key worker interner merges. Completed:
   `include/primec/SymbolInterner.h` and `src/SymbolInterner.cpp` now carry

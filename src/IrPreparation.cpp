@@ -56,7 +56,8 @@ bool prepareIrModule(Program &program,
                      options.entryDefaultEffects,
                      ir,
                      error,
-                     &failure.diagnosticInfo)) {
+                     &failure.diagnosticInfo,
+                     validationTarget)) {
     failure.stage = IrPreparationFailureStage::Lowering;
     failure.message = std::move(error);
     return false;

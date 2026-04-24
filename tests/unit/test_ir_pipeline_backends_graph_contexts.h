@@ -567,6 +567,7 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   const auto resultHelpersPos = irLowererHelpersHeader.find("IrLowererResultHelpers.h");
   const auto stringCallPos = irLowererHelpersHeader.find("IrLowererStringCallHelpers.h");
   const auto operatorArithmeticPos = irLowererHelpersHeader.find("IrLowererOperatorArithmeticHelpers.h");
+  const auto vmEffectsPos = irLowererHelpersHeader.find("IrLowererVmEffects.h");
   const auto lowerExprEmitSetupPos = irLowererHelpersHeader.find("IrLowererLowerExprEmitSetup.h");
   const auto lowerReturnCallsSetupPos = irLowererHelpersHeader.find("IrLowererLowerReturnCallsSetup.h");
   const auto lowerInferencePos = irLowererStageContractsHeader.find("IrLowererLowerInferenceSetup.h");
@@ -582,6 +583,7 @@ TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {
   REQUIRE(resultHelpersPos != std::string::npos);
   REQUIRE(stringCallPos != std::string::npos);
   REQUIRE(operatorArithmeticPos != std::string::npos);
+  REQUIRE(vmEffectsPos != std::string::npos);
   REQUIRE(lowerExprEmitSetupPos != std::string::npos);
   REQUIRE(lowerReturnCallsSetupPos != std::string::npos);
   REQUIRE(lowerInferencePos != std::string::npos);
@@ -717,6 +719,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   std::filesystem::path irInferenceSetupPath =
       cwd / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
   std::filesystem::path irLowerEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
+  std::filesystem::path irVmEffectsPath = cwd / "src" / "ir_lowerer" / "IrLowererVmEffects.cpp";
   std::filesystem::path irReturnInferencePath =
       cwd / "src" / "ir_lowerer" / "IrLowererReturnInferenceHelpers.cpp";
   std::filesystem::path semanticTargetAdapterHeaderPath =
@@ -795,6 +798,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererSetupTypeReturnKindHelpers.cpp";
     irInferenceSetupPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSetupInference.h";
     irLowerEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEffects.cpp";
+    irVmEffectsPath = cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererVmEffects.cpp";
     irReturnInferencePath =
         cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererReturnInferenceHelpers.cpp";
     semanticTargetAdapterHeaderPath =
@@ -869,6 +873,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   REQUIRE(std::filesystem::exists(irSetupTypeReturnKindHelpersPath));
   REQUIRE(std::filesystem::exists(irInferenceSetupPath));
   REQUIRE(std::filesystem::exists(irLowerEffectsPath));
+  REQUIRE(std::filesystem::exists(irVmEffectsPath));
   REQUIRE(std::filesystem::exists(irReturnInferencePath));
   REQUIRE(std::filesystem::exists(semanticTargetAdapterHeaderPath));
   REQUIRE(std::filesystem::exists(semanticTargetAdapterSourcePath));
@@ -917,6 +922,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string irSetupTypeReturnKindHelpers = readTextFile(irSetupTypeReturnKindHelpersPath);
   const std::string irInferenceSetup = readTextFile(irInferenceSetupPath);
   const std::string irLowerEffects = readTextFile(irLowerEffectsPath);
+  const std::string irVmEffects = readTextFile(irVmEffectsPath);
   const std::string irReturnInference = readTextFile(irReturnInferencePath);
   const std::string semanticTargetAdapterHeader = readTextFile(semanticTargetAdapterHeaderPath);
   const std::string semanticTargetAdapterSource = readTextFile(semanticTargetAdapterSourcePath);
@@ -1725,12 +1731,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(lowerEffectsHeader.find("struct Definition;") != std::string::npos);
   CHECK(lowerEffectsHeader.find("struct Program;") != std::string::npos);
   CHECK(lowerEffectsHeader.find("struct SemanticProgram;") != std::string::npos);
+  const auto vmEffectsHeader = readFile("include/primec/testing/ir_lowerer_helpers/IrLowererVmEffects.h");
+  CHECK(vmEffectsHeader.find("validateVmProgramEffects(") != std::string::npos);
 
   const auto lowerEntrySetupHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerEntrySetup.h");
   CHECK(lowerEntrySetupHeader.find("struct Definition;") != std::string::npos);
   CHECK(lowerEntrySetupHeader.find("struct Program;") != std::string::npos);
   CHECK(lowerEntrySetupHeader.find("struct SemanticProgram;") != std::string::npos);
+  CHECK(lowerEntrySetupHeader.find("::primec::IrValidationTarget validationTarget,") != std::string::npos);
 
   const auto lowerImportsStructsSetupHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerImportsStructsSetup.h");
@@ -2026,6 +2035,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irLowerEffects.find("missing semantic-product callable summary: ") !=
         std::string::npos);
+  CHECK(irLowerEffects.find("validateProgramEffectsForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irLowerEffects.find("std::string(backendSurfaceName) + \" does not support effect: \"") !=
+        std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductCallableSummary(semanticProgram, entryPath)") !=
         std::string::npos);
   CHECK(irReturnInference.find("findSemanticProductReturnFact(semanticProgram, semanticIndex, entryDef)") !=
@@ -2036,6 +2049,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irLowerEffects.find("findSemanticProductCallableSummary(semanticProgram, fullPath)") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("validationTarget == IrValidationTarget::Vm") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("validateVmProgramEffects(") != std::string::npos);
+  CHECK(irVmEffects.find("return validateProgramEffectsForBackendSurface(") !=
+        std::string::npos);
+  CHECK(irVmEffects.find("\"vm backend\"") != std::string::npos);
   CHECK(primecMain.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);
   CHECK(primecMain.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);

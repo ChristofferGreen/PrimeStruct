@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -29,6 +30,10 @@ std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform
 bool validateEffectsTransforms(const std::vector<Transform> &transforms,
                                const std::string &context,
                                std::string &error);
+bool validateEffectsTransformsForBackendSurface(const std::vector<Transform> &transforms,
+                                                const std::string &context,
+                                                std::string_view backendSurfaceName,
+                                                std::string &error);
 
 bool validateActiveEffects(const std::vector<Transform> &transforms,
                            const std::string &context,
@@ -36,6 +41,13 @@ bool validateActiveEffects(const std::vector<Transform> &transforms,
                            const std::vector<std::string> &defaultEffects,
                            const std::vector<std::string> &entryDefaultEffects,
                            std::string &error);
+bool validateActiveEffectsForBackendSurface(const std::vector<Transform> &transforms,
+                                            const std::string &context,
+                                            bool isEntry,
+                                            const std::vector<std::string> &defaultEffects,
+                                            const std::vector<std::string> &entryDefaultEffects,
+                                            std::string_view backendSurfaceName,
+                                            std::string &error);
 
 bool validateProgramEffects(const Program &program,
                             const std::string &entryPath,
@@ -49,6 +61,13 @@ bool validateProgramEffects(const Program &program,
                             const std::vector<std::string> &defaultEffects,
                             const std::vector<std::string> &entryDefaultEffects,
                             std::string &error);
+bool validateProgramEffectsForBackendSurface(const Program &program,
+                                             const SemanticProgram *semanticProgram,
+                                             const std::string &entryPath,
+                                             const std::vector<std::string> &defaultEffects,
+                                             const std::vector<std::string> &entryDefaultEffects,
+                                             std::string_view backendSurfaceName,
+                                             std::string &error);
 
 bool resolveEntryMetadataMasks(const Definition &entryDef,
                                const std::string &entryPath,

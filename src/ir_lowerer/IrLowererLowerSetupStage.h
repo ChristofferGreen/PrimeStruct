@@ -12,6 +12,7 @@
 #include "IrLowererLowerStatementsSourceMapStep.h"
 #include "IrLowererSetupLocalsHelpers.h"
 #include "primec/Ir.h"
+#include "primec/IrValidation.h"
 
 namespace primec::ir_lowerer {
 
@@ -21,6 +22,7 @@ struct LowerSetupStageInput {
   const std::string *entryPath = nullptr;
   const std::vector<std::string> *defaultEffects = nullptr;
   const std::vector<std::string> *entryDefaultEffects = nullptr;
+  IrValidationTarget validationTarget = IrValidationTarget::Native;
   IrModule *outModule = nullptr;
 };
 

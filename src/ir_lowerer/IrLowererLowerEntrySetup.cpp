@@ -10,6 +10,7 @@
 #include "IrLowererOnErrorHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
+#include "IrLowererVmEffects.h"
 
 namespace primec::ir_lowerer {
 
@@ -208,6 +209,7 @@ bool runLowerEntrySetup(const Program &program,
                         const std::string &entryPath,
                         const std::vector<std::string> &defaultEffects,
                         const std::vector<std::string> &entryDefaultEffects,
+                        IrValidationTarget validationTarget,
                         const Definition *&entryDefOut,
                         uint64_t &entryEffectMaskOut,
                         uint64_t &entryCapabilityMaskOut,
@@ -236,7 +238,13 @@ bool runLowerEntrySetup(const Program &program,
           program, *entryDefOut, semanticProgram, error)) {
     return false;
   }
-  if (!validateProgramEffects(program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) {
+  const bool useVmEffectSurface = validationTarget == IrValidationTarget::Vm;
+  if ((useVmEffectSurface &&
+       !validateVmProgramEffects(
+           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error)) ||
+      (!useVmEffectSurface &&
+       !validateProgramEffects(
+           program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, error))) {
     return false;
   }
   if (!resolveEntryMetadataMasks(*entryDefOut,

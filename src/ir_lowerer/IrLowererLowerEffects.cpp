@@ -148,13 +148,20 @@ std::unordered_set<std::string> resolveActiveEffects(const std::vector<Transform
 bool validateEffectsTransforms(const std::vector<Transform> &transforms,
                                const std::string &context,
                                std::string &error) {
+  return validateEffectsTransformsForBackendSurface(transforms, context, "native backend", error);
+}
+
+bool validateEffectsTransformsForBackendSurface(const std::vector<Transform> &transforms,
+                                                const std::string &context,
+                                                std::string_view backendSurfaceName,
+                                                std::string &error) {
   for (const auto &transform : transforms) {
     if (transform.name != "effects") {
       continue;
     }
     for (const auto &effect : transform.arguments) {
       if (!isSupportedEffect(effect)) {
-        error = "native backend does not support effect: " + effect + " on " + context;
+        error = std::string(backendSurfaceName) + " does not support effect: " + effect + " on " + context;
         return false;
       }
     }
@@ -168,10 +175,21 @@ bool validateActiveEffects(const std::vector<Transform> &transforms,
                            const std::vector<std::string> &defaultEffects,
                            const std::vector<std::string> &entryDefaultEffects,
                            std::string &error) {
+  return validateActiveEffectsForBackendSurface(
+      transforms, context, isEntry, defaultEffects, entryDefaultEffects, "native backend", error);
+}
+
+bool validateActiveEffectsForBackendSurface(const std::vector<Transform> &transforms,
+                                            const std::string &context,
+                                            bool isEntry,
+                                            const std::vector<std::string> &defaultEffects,
+                                            const std::vector<std::string> &entryDefaultEffects,
+                                            std::string_view backendSurfaceName,
+                                            std::string &error) {
   const auto effects = resolveActiveEffects(transforms, isEntry, defaultEffects, entryDefaultEffects);
   for (const auto &effect : effects) {
     if (!isSupportedEffect(effect)) {
-      error = "native backend does not support effect: " + effect + " on " + context;
+      error = std::string(backendSurfaceName) + " does not support effect: " + effect + " on " + context;
       return false;
     }
   }
@@ -192,6 +210,17 @@ bool validateProgramEffects(const Program &program,
                             const std::vector<std::string> &defaultEffects,
                             const std::vector<std::string> &entryDefaultEffects,
                             std::string &error) {
+  return validateProgramEffectsForBackendSurface(
+      program, semanticProgram, entryPath, defaultEffects, entryDefaultEffects, "native backend", error);
+}
+
+bool validateProgramEffectsForBackendSurface(const Program &program,
+                                             const SemanticProgram *semanticProgram,
+                                             const std::string &entryPath,
+                                             const std::vector<std::string> &defaultEffects,
+                                             const std::vector<std::string> &entryDefaultEffects,
+                                             std::string_view backendSurfaceName,
+                                             std::string &error) {
   const auto validateCallableEffects =
       [&](const std::string &fullPath,
           const std::vector<Transform> &transforms,
@@ -203,7 +232,7 @@ bool validateProgramEffects(const Program &program,
           callableSummary != nullptr) {
         for (const auto &effect : callableSummary->activeEffects) {
           if (!isSupportedEffect(effect)) {
-            error = "native backend does not support effect: " + effect + " on " + context;
+            error = std::string(backendSurfaceName) + " does not support effect: " + effect + " on " + context;
             return false;
           }
         }
@@ -212,11 +241,12 @@ bool validateProgramEffects(const Program &program,
       error = "missing semantic-product callable summary: " + fullPath;
       return false;
     }
-    return validateActiveEffects(transforms, context, isEntry, defaultEffects, entryDefaultEffects, error);
+    return validateActiveEffectsForBackendSurface(
+        transforms, context, isEntry, defaultEffects, entryDefaultEffects, backendSurfaceName, error);
   };
 
   const auto validateExprEffects = [&](const auto &self, const Expr &expr, const std::string &context) -> bool {
-    if (!validateEffectsTransforms(expr.transforms, context, error)) {
+    if (!validateEffectsTransformsForBackendSurface(expr.transforms, context, backendSurfaceName, error)) {
       return false;
     }
     for (const auto &arg : expr.args) {

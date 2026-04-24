@@ -65,7 +65,8 @@ bool IrLowerer::lower(const Program &program,
                       const std::vector<std::string> &entryDefaultEffects,
                       IrModule &out,
                       std::string &error,
-                      DiagnosticSinkReport *diagnosticInfo) const {
+                      DiagnosticSinkReport *diagnosticInfo,
+                      IrValidationTarget validationTarget) const {
   out = IrModule{};
   error.clear();
   DiagnosticSink diagnosticSink(diagnosticInfo);
@@ -96,6 +97,7 @@ bool IrLowerer::lower(const Program &program,
               .entryPath = &entryPath,
               .defaultEffects = &defaultEffects,
               .entryDefaultEffects = &entryDefaultEffects,
+              .validationTarget = validationTarget,
               .outModule = &out,
           },
           setupStage,
