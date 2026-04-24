@@ -1,5 +1,7 @@
 #include "SemanticsValidatorStatementLoopCountStep.h"
 
+#include "primec/testing/SemanticsControlFlowProbes.h"
+
 namespace primec::semantics {
 
 std::optional<uint64_t> runSemanticsValidatorStatementKnownIterationCountStep(const Expr &countExpr,
@@ -38,6 +40,14 @@ bool runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(const Expr &expr
     return static_cast<int32_t>(expr.literalValue) < 0;
   }
   return static_cast<int64_t>(expr.literalValue) < 0;
+}
+
+LoopCountProbeSnapshotForTesting probeLoopCountForTesting(const Expr &countExpr, bool allowBoolCount) {
+  return LoopCountProbeSnapshotForTesting{
+      .knownIterationCount = runSemanticsValidatorStatementKnownIterationCountStep(countExpr, allowBoolCount),
+      .canIterateMoreThanOnce = runSemanticsValidatorStatementCanIterateMoreThanOnceStep(countExpr, allowBoolCount),
+      .isNegativeIntegerLiteral = runSemanticsValidatorStatementIsNegativeIntegerLiteralStep(countExpr),
+  };
 }
 
 } // namespace primec::semantics

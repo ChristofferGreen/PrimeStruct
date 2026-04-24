@@ -6,7 +6,6 @@
 #include "primec/IrSerializer.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
-#include "primec/testing/SemanticsValidationHelpers.h"
 
 #include "third_party/doctest.h"
 #include "test_semantics_helpers.h"

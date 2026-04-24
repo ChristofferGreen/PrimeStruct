@@ -36,6 +36,7 @@
 #include "primec/Vm.h"
 #include "primec/VmDebugAdapter.h"
 #include "primec/WasmEmitter.h"
+#include "primec/testing/SemanticsControlFlowProbes.h"
 #include "primec/testing/EmitterHelpers.h"
 #include "primec/testing/IrLowererHelpers.h"
 #include "primec/testing/IrLowererStageContracts.h"

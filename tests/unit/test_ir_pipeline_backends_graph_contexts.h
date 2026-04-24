@@ -364,8 +364,29 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(testApi.find("struct TypeResolutionGraphSnapshot") != std::string::npos);
   CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
   CHECK(testApi.find("dumpTypeResolutionGraphForTesting") != std::string::npos);
+  CHECK(testApi.find("struct TemplatedFallbackQueryStateEnvelopeSnapshotForTesting") !=
+        std::string::npos);
+  CHECK(testApi.find("struct ExplicitTemplateArgResolutionFactForTesting") != std::string::npos);
+  CHECK(testApi.find("struct ImplicitTemplateArgResolutionFactForTesting") != std::string::npos);
+  CHECK(testApi.find("collectExplicitTemplateArgResolutionFactsForTesting") != std::string::npos);
+  CHECK(testApi.find("collectImplicitTemplateArgResolutionFactsForTesting") != std::string::npos);
+  CHECK(testApi.find("collectExplicitTemplateArgFactConsumptionMetricsForTesting") !=
+        std::string::npos);
+  CHECK(testApi.find("collectImplicitTemplateArgFactConsumptionMetricsForTesting") !=
+        std::string::npos);
+  CHECK(testApi.find("classifyTemplatedFallbackQueryTypeTextForTesting") != std::string::npos);
   CHECK(validationApi.find("struct TypeResolutionGraphSnapshotNode") == std::string::npos);
   CHECK(validationApi.find("buildTypeResolutionGraphForTesting") == std::string::npos);
+  CHECK(validationApi.find("TemplatedFallbackQueryStateEnvelopeSnapshotForTesting") == std::string::npos);
+  CHECK(validationApi.find("ExplicitTemplateArgResolutionFactForTesting") == std::string::npos);
+  CHECK(validationApi.find("ImplicitTemplateArgResolutionFactForTesting") == std::string::npos);
+  CHECK(validationApi.find("collectExplicitTemplateArgResolutionFactsForTesting") == std::string::npos);
+  CHECK(validationApi.find("collectImplicitTemplateArgResolutionFactsForTesting") == std::string::npos);
+  CHECK(validationApi.find("collectExplicitTemplateArgFactConsumptionMetricsForTesting") ==
+        std::string::npos);
+  CHECK(validationApi.find("collectImplicitTemplateArgFactConsumptionMetricsForTesting") ==
+        std::string::npos);
+  CHECK(validationApi.find("classifyTemplatedFallbackQueryTypeTextForTesting") == std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionEdgeKind") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraphNode") != std::string::npos);

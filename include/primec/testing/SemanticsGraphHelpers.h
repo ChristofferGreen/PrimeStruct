@@ -85,6 +85,37 @@ struct TypeResolutionGraphSnapshot {
   uint64_t implicitTemplateArgInferenceFactHitCount = 0;
 };
 
+struct TemplatedFallbackQueryStateEnvelopeSnapshotForTesting {
+  bool hasResultType = false;
+  bool resultTypeHasValue = false;
+  std::string resultValueType;
+  std::string resultErrorType;
+  std::string mismatchDiagnostic;
+};
+
+struct ExplicitTemplateArgResolutionFactForTesting {
+  std::string scopePath;
+  std::string targetPath;
+  std::string explicitArgsText;
+  std::string resolvedTypeText;
+  bool resolvedConcrete = false;
+};
+
+struct ImplicitTemplateArgResolutionFactForTesting {
+  std::string scopePath;
+  std::string callName;
+  std::string targetPath;
+  std::string inferredArgsText;
+};
+
+struct ExplicitTemplateArgFactConsumptionMetricsForTesting {
+  uint64_t hitCount = 0;
+};
+
+struct ImplicitTemplateArgFactConsumptionMetricsForTesting {
+  uint64_t hitCount = 0;
+};
+
 struct TypeResolutionReturnSnapshotEntry {
   std::string definitionPath;
   std::string returnKind;
@@ -332,5 +363,28 @@ bool computeTypeResolutionValidationContextSnapshotForTesting(
     std::string &error,
     TypeResolutionValidationContextSnapshot &out,
     const std::vector<std::string> &semanticTransforms = {});
+void classifyTemplatedFallbackQueryTypeTextForTesting(
+    const std::string &queryTypeText,
+    TemplatedFallbackQueryStateEnvelopeSnapshotForTesting &out);
+bool collectExplicitTemplateArgResolutionFactsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    std::vector<ExplicitTemplateArgResolutionFactForTesting> &out);
+bool collectImplicitTemplateArgResolutionFactsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    std::vector<ImplicitTemplateArgResolutionFactForTesting> &out);
+bool collectExplicitTemplateArgFactConsumptionMetricsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    ExplicitTemplateArgFactConsumptionMetricsForTesting &out);
+bool collectImplicitTemplateArgFactConsumptionMetricsForTesting(
+    Program program,
+    const std::string &entryPath,
+    std::string &error,
+    ImplicitTemplateArgFactConsumptionMetricsForTesting &out);
 
 } // namespace primec::semantics

@@ -480,6 +480,8 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   std::filesystem::path irLowererStageContractsApiPath =
       cwd / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
   std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
+  std::filesystem::path semanticsControlFlowApiPath =
+      cwd / "include" / "primec" / "testing" / "SemanticsControlFlowProbes.h";
   std::filesystem::path semanticsGraphTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
   std::filesystem::path semanticsTestApiPath = cwd / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
   std::filesystem::path textFilterTestApiPath = cwd / "include" / "primec" / "testing" / "TextFilterHelpers.h";
@@ -497,6 +499,8 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
     irLowererStageContractsApiPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
     parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
+    semanticsControlFlowApiPath =
+        cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsControlFlowProbes.h";
     semanticsGraphTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsGraphHelpers.h";
     semanticsTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsValidationHelpers.h";
     textFilterTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "TextFilterHelpers.h";
@@ -512,6 +516,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   REQUIRE(std::filesystem::exists(irLowererTestApiPath));
   REQUIRE(std::filesystem::exists(irLowererStageContractsApiPath));
   REQUIRE(std::filesystem::exists(parserTestApiPath));
+  REQUIRE(std::filesystem::exists(semanticsControlFlowApiPath));
   REQUIRE(std::filesystem::exists(semanticsGraphTestApiPath));
   REQUIRE(std::filesystem::exists(semanticsTestApiPath));
   REQUIRE(std::filesystem::exists(textFilterTestApiPath));
@@ -598,14 +603,38 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         std::string::npos);
 
   const std::string parserTestApi = readTextFile(parserTestApiPath);
+  const std::string semanticsControlFlowApi = readTextFile(semanticsControlFlowApiPath);
   const std::string semanticsGraphTestApi = readTextFile(semanticsGraphTestApiPath);
   CHECK(parserTestApi.find("namespace primec::parser") != std::string::npos);
   CHECK(parserTestApi.find("bool isBuiltinName(const std::string &name, bool allowMathBare);") !=
         std::string::npos);
 
+  CHECK(semanticsControlFlowApi.find("namespace primec::semantics") != std::string::npos);
+  CHECK(semanticsControlFlowApi.find("struct ExprCaptureSplitProbeSnapshotForTesting") !=
+        std::string::npos);
+  CHECK(semanticsControlFlowApi.find("struct LoopCountProbeSnapshotForTesting") != std::string::npos);
+  CHECK(semanticsControlFlowApi.find("probeExprCaptureSplitForTesting") != std::string::npos);
+  CHECK(semanticsControlFlowApi.find("probeLoopCountForTesting") != std::string::npos);
+
   CHECK(semanticsGraphTestApi.find("namespace primec::semantics") != std::string::npos);
   CHECK(semanticsGraphTestApi.find("struct TypeResolutionGraphSnapshotNode") != std::string::npos);
   CHECK(semanticsGraphTestApi.find("computeStronglyConnectedComponentsForTesting") != std::string::npos);
+  CHECK(semanticsGraphTestApi.find("struct TemplatedFallbackQueryStateEnvelopeSnapshotForTesting") !=
+        std::string::npos);
+  CHECK(semanticsGraphTestApi.find("struct ExplicitTemplateArgResolutionFactForTesting") !=
+        std::string::npos);
+  CHECK(semanticsGraphTestApi.find("struct ImplicitTemplateArgResolutionFactForTesting") !=
+        std::string::npos);
+  CHECK(semanticsGraphTestApi.find("collectExplicitTemplateArgResolutionFactsForTesting") !=
+        std::string::npos);
+  CHECK(semanticsGraphTestApi.find("collectImplicitTemplateArgResolutionFactsForTesting") !=
+        std::string::npos);
+  CHECK(semanticsGraphTestApi.find("collectExplicitTemplateArgFactConsumptionMetricsForTesting") !=
+        std::string::npos);
+  CHECK(semanticsGraphTestApi.find("collectImplicitTemplateArgFactConsumptionMetricsForTesting") !=
+        std::string::npos);
+  CHECK(semanticsGraphTestApi.find("classifyTemplatedFallbackQueryTypeTextForTesting") !=
+        std::string::npos);
 
   const std::string textFilterTestApi = readTextFile(textFilterTestApiPath);
   CHECK(textFilterTestApi.find("namespace primec::text_filter") != std::string::npos);
@@ -614,11 +643,23 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
 
   const std::string semanticsTestApi = readTextFile(semanticsTestApiPath);
   CHECK(semanticsTestApi.find("namespace primec::semantics") != std::string::npos);
-  CHECK(semanticsTestApi.find("std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep") !=
+  CHECK(semanticsTestApi.find("std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep") ==
         std::string::npos);
-  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementKnownIterationCountStep") != std::string::npos);
-  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementCanIterateMoreThanOnceStep") != std::string::npos);
-  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep") != std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementKnownIterationCountStep") == std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementCanIterateMoreThanOnceStep") ==
+        std::string::npos);
+  CHECK(semanticsTestApi.find("runSemanticsValidatorStatementIsNegativeIntegerLiteralStep") ==
+        std::string::npos);
+  CHECK(semanticsTestApi.find("TemplatedFallbackQueryStateEnvelopeSnapshotForTesting") == std::string::npos);
+  CHECK(semanticsTestApi.find("ExplicitTemplateArgResolutionFactForTesting") == std::string::npos);
+  CHECK(semanticsTestApi.find("ImplicitTemplateArgResolutionFactForTesting") == std::string::npos);
+  CHECK(semanticsTestApi.find("collectExplicitTemplateArgResolutionFactsForTesting") == std::string::npos);
+  CHECK(semanticsTestApi.find("collectImplicitTemplateArgResolutionFactsForTesting") == std::string::npos);
+  CHECK(semanticsTestApi.find("collectExplicitTemplateArgFactConsumptionMetricsForTesting") ==
+        std::string::npos);
+  CHECK(semanticsTestApi.find("collectImplicitTemplateArgFactConsumptionMetricsForTesting") ==
+        std::string::npos);
+  CHECK(semanticsTestApi.find("classifyTemplatedFallbackQueryTypeTextForTesting") == std::string::npos);
   CHECK(semanticsTestApi.find("buildTypeResolutionGraphForTesting") == std::string::npos);
 
   const std::string parserHelperTest = readTextFile(parserHelperTestPath);
@@ -645,6 +686,8 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         std::string::npos);
   CHECK(validationHelpersTest.find("#include \"primec/testing/IrLowererHelpers.h\"") != std::string::npos);
   CHECK(validationHelpersTest.find("#include \"primec/testing/IrLowererStageContracts.h\"") !=
+        std::string::npos);
+  CHECK(validationHelpersTest.find("#include \"primec/testing/SemanticsControlFlowProbes.h\"") !=
         std::string::npos);
 }
 

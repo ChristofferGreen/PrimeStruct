@@ -1,5 +1,7 @@
 #include "SemanticsValidatorExprCaptureSplitStep.h"
 
+#include "primec/testing/SemanticsControlFlowProbes.h"
+
 #include <cctype>
 
 namespace primec::semantics {
@@ -24,6 +26,10 @@ std::vector<std::string> runSemanticsValidatorExprCaptureSplitStep(const std::st
     tokens.push_back(token);
   }
   return tokens;
+}
+
+ExprCaptureSplitProbeSnapshotForTesting probeExprCaptureSplitForTesting(const std::string &text) {
+  return ExprCaptureSplitProbeSnapshotForTesting{.tokens = runSemanticsValidatorExprCaptureSplitStep(text)};
 }
 
 } // namespace primec::semantics

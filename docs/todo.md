@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4125
 - TODO-4126
 
 ### Immediate Next 10 (After Ready Now)
@@ -79,18 +78,18 @@ Task template:
 - Pipeline/publication boundary hardening: TODO-4139, TODO-4140, TODO-4141
 - Validator/runtime boundary simplification: TODO-4126, TODO-4135,
   TODO-4136, TODO-4140
-- Test-surface contraction: TODO-4125, TODO-4142
+- Test-surface contraction: TODO-4142
 - Runtime execution unification: TODO-4130
 - Parallel semantic publication determinism: TODO-4135, TODO-4136,
   TODO-4131
 
 ### Execution Queue (Recommended)
 
-1. TODO-4125
-2. TODO-4126
-3. TODO-4135
-4. TODO-4136
-5. TODO-4137
+1. TODO-4126
+2. TODO-4135
+3. TODO-4136
+4. TODO-4137
+5. TODO-4138
 
 ### PrimeStruct Coverage Snapshot
 
@@ -204,7 +203,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-24
   - phase: Testing API Contraction
-  - depends_on: TODO-4125
+  - depends_on: none
   - scope: Replace the remaining architecture/doc/file-placement source-lock
       tests with narrower contract probes once the helper-export contraction
       work has landed, so structural cleanup no longer requires large batches of
@@ -536,21 +535,3 @@ Task template:
       not break provenance consumers.
   - stop_rule: Stop once one measured earlier-release path lands with preserved
       provenance behavior and documented memory improvement.
-
-- [ ] TODO-4125: Replace semantics step helpers with contract probes
-  - owner: ai
-  - created_at: 2026-04-20
-  - phase: Testing API Contraction
-  - depends_on: none
-  - scope: Narrow the remaining step-level exports in
-      `include/primec/testing/SemanticsValidationHelpers.h` toward graph and
-      semantic-product contract probes, then migrate representative tests onto
-      the contract surface.
-  - acceptance:
-    - At least one remaining step-level semantics helper cluster is removed or
-      narrowed behind contract-oriented graph or semantic-product probes.
-    - Representative tests move off the removed step helpers without regressing
-      coverage intent.
-    - Architecture/source-lock coverage records the narrower testing surface.
-  - stop_rule: Stop once one remaining step-level helper cluster is replaced by
-      contract probes and the migrated tests hold the same validation signal.
