@@ -6,6 +6,18 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4144: Replace remaining private parameter and struct-field source
+  locks with public semantic-product probes. Completed: the last
+  `SemanticsValidatorBuildStructFields.cpp` and
+  `SemanticsValidatorBuildParameters.cpp` file-content lock tests were removed
+  from
+  `tests/unit/test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp`.
+  Their publication signal now lives in
+  `tests/unit/test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp`,
+  which proves `/Particle` type metadata and struct-field metadata plus `/sum`
+  parameter binding facts publish through the supported semantic-product
+  views and root module binding-fact indices instead of pinning private
+  fragment placement.
 - ✓ TODO-4143: Replace remaining private semantics build source locks with
   public publication probes. Completed: the last four
   `SemanticsValidatorBuild*.cpp` file-content lock tests for lifecycle,

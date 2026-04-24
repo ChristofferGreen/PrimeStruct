@@ -362,6 +362,125 @@ main() {
       }));
 }
 
+TEST_CASE("semantics validate publishes struct field metadata and parameter binding facts") {
+  const std::string source = R"(
+Particle {
+  [i32] left
+  [i64] right
+}
+
+[return<i32>]
+sum([Particle] particle, [i32] extra) {
+  return(plus(particle.left, plus(convert<i32>(particle.right), extra)))
+}
+
+[return<i32>]
+main() {
+  [Particle] particle{Particle(left: 1i32, right: 2i64)}
+  return(sum(particle, 3i32))
+}
+)";
+
+  const std::vector<std::string> collectorAllowlist = {
+      "binding_facts",
+  };
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  {
+    std::ofstream file(tempPath);
+    REQUIRE(file.good());
+    file << source;
+  }
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.defaultEffects = defaults;
+  options.entryDefaultEffects = defaults;
+  options.benchmarkSemanticFactFamiliesSpecified = true;
+  options.benchmarkSemanticFactFamilies = collectorAllowlist;
+  applyCompilePipelineSemanticProductIntentForTesting(
+      options, CompilePipelineSemanticProductIntentForTesting::Require);
+
+  primec::CompilePipelineOutput output;
+  primec::CompilePipelineErrorStage errorStage =
+      primec::CompilePipelineErrorStage::None;
+  std::string error;
+  const bool ok = primec::runCompilePipeline(options, output, errorStage, error);
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  REQUIRE(ok);
+  CHECK(error.empty());
+  REQUIRE(output.hasSemanticProgram);
+  const primec::SemanticProgram &semanticProgram = output.semanticProgram;
+
+  const auto *particleType =
+      primec::semanticProgramLookupTypeMetadata(semanticProgram, "/Particle");
+  REQUIRE(particleType != nullptr);
+  CHECK(particleType->category == "struct");
+  CHECK(particleType->fieldCount == 2);
+
+  const auto particleFields =
+      primec::semanticProgramStructFieldMetadataView(semanticProgram, "/Particle");
+  REQUIRE(particleFields.size() == 2);
+  const auto *leftField = findSemanticEntry(
+      particleFields,
+      [](const primec::SemanticProgramStructFieldMetadata &entry) {
+        return entry.structPath == "/Particle" && entry.fieldName == "left";
+      });
+  const auto *rightField = findSemanticEntry(
+      particleFields,
+      [](const primec::SemanticProgramStructFieldMetadata &entry) {
+        return entry.structPath == "/Particle" && entry.fieldName == "right";
+      });
+  REQUIRE(leftField != nullptr);
+  REQUIRE(rightField != nullptr);
+  CHECK(leftField->fieldIndex == 0);
+  CHECK(leftField->bindingTypeText == "i32");
+  CHECK(rightField->fieldIndex == 1);
+  CHECK(rightField->bindingTypeText == "i64");
+
+  const auto *particleParameter = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/sum" &&
+               entry.siteKind == "parameter" &&
+               entry.name == "particle";
+      });
+  const auto *extraParameter = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/sum" &&
+               entry.siteKind == "parameter" &&
+               entry.name == "extra";
+      });
+  REQUIRE(particleParameter != nullptr);
+  REQUIRE(extraParameter != nullptr);
+  CHECK((particleParameter->bindingTypeText == "Particle" ||
+         particleParameter->bindingTypeText == "/Particle"));
+  CHECK(extraParameter->bindingTypeText == "i32");
+
+  const auto *rootArtifacts = findModuleArtifacts(semanticProgram, "/");
+  REQUIRE(rootArtifacts != nullptr);
+  CHECK(anySemanticEntry(
+      rootArtifacts->bindingFactIndices,
+      [&](std::size_t index) {
+        return index < semanticProgram.bindingFacts.size() &&
+               semanticProgram.bindingFacts[index].scopePath == "/sum" &&
+               semanticProgram.bindingFacts[index].siteKind == "parameter" &&
+               semanticProgram.bindingFacts[index].name == "particle";
+      }));
+  CHECK(anySemanticEntry(
+      rootArtifacts->bindingFactIndices,
+      [&](std::size_t index) {
+        return index < semanticProgram.bindingFacts.size() &&
+               semanticProgram.bindingFacts[index].scopePath == "/sum" &&
+               semanticProgram.bindingFacts[index].siteKind == "parameter" &&
+               semanticProgram.bindingFacts[index].name == "extra";
+      }));
+}
+
 TEST_CASE("semantics validate publishes module artifacts in import order") {
   const std::string source = R"(
 import /std/math/max
