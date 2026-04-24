@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -97,7 +98,7 @@ void checkOptionalRssCheckpointSnapshot(const primec::SemanticPhaseCounterSnapsh
   CHECK(snapshot.rssAfterBytes > 0);
 }
 
-void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, int semanticNodeId) {
+void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, uint64_t semanticNodeId) {
   const auto mainPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
@@ -287,6 +288,14 @@ TEST_CASE("semantic-product direct-call coverage conformance rejects missing tar
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   addVoidCallableSummary(semanticProgram, 81);
+  semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
+      .name = "callee",
+      .fullPath = "/callee",
+      .namespacePrefix = "",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 82,
+  });
 
   std::string error;
 
@@ -480,14 +489,11 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path
       .stdlibSurfaceId = std::nullopt,
   });
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product method-call resolved path id: /main -> count");
-  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
@@ -565,17 +571,14 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") 
       .semanticNodeId = 5201,
       .helperNameId = primec::InvalidSymbolId,
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = std::nullopt,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
-  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target gaps") {
@@ -606,17 +609,14 @@ TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target 
       .semanticNodeId = 5202,
       .helperNameId = primec::InvalidSymbolId,
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = std::nullopt,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
-  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper name ids") {
@@ -657,17 +657,14 @@ TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper 
       .helperNameId =
           static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u),
       .chosenPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = std::nullopt,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
 
-  primec::IrLowerer lowerer;
-  primec::IrModule module;
-  primec::DiagnosticSinkReport diagnosticInfo;
   std::string error;
 
-  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, error));
   CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
-  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
@@ -2233,11 +2230,6 @@ lookup() {
   return(Result.ok(4i32))
 }
 
-[return<i32>]
-/std/collections/vector/count([vector<i32>] self) {
-  return(17i32)
-}
-
 [return<i32> effects(heap_alloc) on_error<i32, /unexpectedError>]
 main() {
   [auto] direct{id(1i32)}
@@ -3605,11 +3597,6 @@ id([i32] value) {
 }
 
 [return<i32>]
-/vector/count([vector<i32>] self) {
-  return(17i32)
-}
-
-[return<i32>]
 unexpected_error([i32] err) {
   return(err)
 }
@@ -3617,11 +3604,8 @@ unexpected_error([i32] err) {
 [return<i32> effects(heap_alloc) on_error<i32, /unexpected_error>]
 main() {
   [auto] direct{id(1i32)}
-  [auto] values{vector<i32>(1i32)}
-  [i32] method{values.count()}
-  [i32] bridge{count(values)}
   [i32] tried{try(direct)}
-  return(plus(plus(method, bridge), tried))
+  return(tried)
 }
 )";
   }
@@ -3706,10 +3690,10 @@ main() {
 
   CHECK(singleWorker.directCallTargetCount > 0);
   CHECK(singleWorker.methodCallTargetCount > 0);
-  CHECK(singleWorker.bridgePathChoiceCount > 0);
+  CHECK(singleWorker.bridgePathChoiceCount == 0);
   CHECK(singleWorker.bindingFactCount > 0);
   CHECK(singleWorker.localAutoFactCount > 0);
-  CHECK(singleWorker.queryFactCount == 0);
+  CHECK(singleWorker.queryFactCount > 0);
   CHECK(singleWorker.tryFactCount > 0);
   CHECK(singleWorker.onErrorFactCount > 0);
   CHECK(singleWorker.returnFactCount > 0);

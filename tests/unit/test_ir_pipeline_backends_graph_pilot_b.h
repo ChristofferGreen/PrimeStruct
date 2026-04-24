@@ -210,7 +210,7 @@
         std::string::npos);
   CHECK(validatorExprMain.find("auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {") ==
         std::string::npos);
-  CHECK(validatorExpr.find("auto isKnownCollectionTarget = [this, &dispatchBootstrap](") !=
+  CHECK(validatorExpr.find("auto isKnownCollectionTarget = [&dispatchBootstrap](") !=
         std::string::npos);
   CHECK(validatorExpr.find("auto resolveIndexedArgsPackElementType = [&](const Expr &target, std::string &elemTypeOut) -> bool {") !=
         std::string::npos);
@@ -233,7 +233,7 @@
   CHECK(validatorExprMain.find("const auto &resolveExperimentalMapTarget =") == std::string::npos);
   CHECK(validatorExprMain.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") ==
         std::string::npos);
-  CHECK(validatorExpr.find("bootstrapOut.resolveMapTarget = [this, paramsPtr, localsPtr, &bootstrapOut](const Expr &target) -> bool {") !=
+  CHECK(validatorExpr.find("bootstrapOut.resolveMapTarget = [this,") !=
         std::string::npos);
   CHECK(validatorExpr.find("bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,") !=
         std::string::npos);
@@ -326,7 +326,7 @@
   CHECK(validatorHeader.find("bool prepareExprCollectionDispatchSetup(") != std::string::npos);
   CHECK(validatorHeader.find("void prepareExprCollectionAccessDispatchContext(") !=
         std::string::npos);
-  CHECK(validatorHeader.find("struct ExprDirectCollectionFallbackContext") != std::string::npos);
+  CHECK(validatorHeader.find("struct ExprLateCollectionAccessFallbackContext") != std::string::npos);
   CHECK(validatorHeader.find("bool validateExprDirectCollectionFallbacks(") != std::string::npos);
   CHECK(validatorHeader.find("bool validateExprPostAccessPrechecks(") !=
         std::string::npos);

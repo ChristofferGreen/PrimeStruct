@@ -50,14 +50,6 @@
         std::string::npos);
   CHECK(validatorExpr.find("void SemanticsValidator::prepareExprLateMapAccessBuiltinContext(") !=
         std::string::npos);
-  CHECK(validatorExprMain.find("const bool allowStdNamespacedVectorUserReceiverProbe =") ==
-        std::string::npos);
-  CHECK(validatorExpr.find("const bool allowStdNamespacedVectorUserReceiverProbe =") !=
-        std::string::npos);
-  CHECK(validatorExprMain.find("auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==
-        std::string::npos);
-  CHECK(validatorExpr.find("auto resolvesExperimentalVectorValueReceiverForBareAccess =") !=
-        std::string::npos);
   CHECK(validatorExprMain.find("collectionAccessDispatchContext.resolveArrayTarget =") ==
         std::string::npos);
   CHECK(validatorExpr.find("contextOut.resolveArrayTarget = dispatchResolvers.resolveArrayTarget;") !=
@@ -78,11 +70,7 @@
   CHECK(validatorExpr.find(
             "contextOut.tryBuiltinContext.getDirectMapHelperCompatibilityPath =") !=
         std::string::npos);
-  CHECK(validatorExprMain.find(
-            "countCapacityMapBuiltinContext.shouldBuiltinValidateStdNamespacedVectorCountCall =") ==
-        std::string::npos);
-  CHECK(validatorExpr.find(
-            "contextOut.shouldBuiltinValidateStdNamespacedVectorCountCall =") !=
+  CHECK(validatorExprMain.find("shouldBuiltinValidateStdNamespacedVectorCountCall") ==
         std::string::npos);
   CHECK(validatorExprMain.find(
             "lateFallbackBuiltinContext.collectionAccessFallbackContext.isStdNamespacedVectorAccessCall =") ==

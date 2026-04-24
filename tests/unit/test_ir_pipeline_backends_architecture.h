@@ -43,7 +43,8 @@ TEST_CASE("design doc records semantic ownership boundary policy") {
   const std::string design = readTextFile(designPath);
   CHECK(design.find("semantic product follow an explicit ownership split") != std::string::npos);
   CHECK(design.find("benchmark-only") != std::string::npos);
-  CHECK(design.find("production lowering/publication paths.") != std::string::npos);
+  CHECK(design.find("shadow comparisons must stay isolated from production") != std::string::npos);
+  CHECK(design.find("lowering/publication paths.") != std::string::npos);
 }
 
 TEST_CASE("design doc records vector map bridge contract") {
@@ -63,7 +64,7 @@ TEST_CASE("design doc records vector map bridge contract") {
   CHECK(design.find("exact and wildcard `/std/collections`") != std::string::npos);
   CHECK(design.find("Migration-only seams:") != std::string::npos);
   CHECK(design.find("rooted `/vector/*` and `/map/*` spellings") != std::string::npos);
-  CHECK(design.find("Out of scope for this bridge lane: `array<T>` core ownership,") !=
+  CHECK(design.find("Out of scope for this bridge lane:** `array<T>` core ownership,") !=
         std::string::npos);
 }
 
@@ -399,11 +400,8 @@ TEST_CASE("cmake splits primec library into subsystem targets") {
   CHECK(cmake.find("add_executable(PrimeStruct_backend_ir_tests") != std::string::npos);
   CHECK(cmake.find("add_executable(PrimeStruct_backend_runtime_tests") != std::string::npos);
   CHECK(cmake.find("add_executable(PrimeStruct_compile_run_tests") != std::string::npos);
-  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_ir_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
-        std::string::npos);
-  CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_runtime_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
-        std::string::npos);
-  CHECK(cmake.find("target_link_libraries(PrimeStruct_compile_run_tests PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
+  CHECK(cmake.find("foreach(backendTestTarget IN ITEMS") != std::string::npos);
+  CHECK(cmake.find("target_link_libraries(${backendTestTarget} PRIVATE primec_ir_lib primec_backend_registry_lib)") !=
         std::string::npos);
   CHECK(cmake.find("target_link_libraries(PrimeStruct_backend_ir_tests PRIVATE primec_backend_lib)") ==
         std::string::npos);
