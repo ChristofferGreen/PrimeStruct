@@ -6,6 +6,18 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Cleanup (April 25, 2026)**
+- ✓ TODO-4143: Replace remaining private semantics build source locks with
+  public publication probes. Completed: the last four
+  `SemanticsValidatorBuild*.cpp` file-content lock tests for lifecycle,
+  build-transform, return-kind, and import publication were removed from
+  `tests/unit/test_ir_pipeline_validation_semantics_validator_infer_source_delegation_stays_stable.cpp`.
+  Their still-meaningful signal now lives in a public semantic-product
+  publication probe in
+  `tests/unit/test_ir_pipeline_validation_semantics_validate_source_delegation_stays_stable.cpp`,
+  which proves binding facts, return facts, root-module callable summaries,
+  and imported `/std/math/abs` callable summaries publish through the
+  supported semantic-product views and module-artifact indices instead of
+  pinning private fragment placement.
 - ✓ TODO-4142: Retire brittle architecture source locks after contract
   migration. Completed: the old
   `tests/unit/test_ir_pipeline_backends_graph_pilot_a.h` benchmark/semantics
