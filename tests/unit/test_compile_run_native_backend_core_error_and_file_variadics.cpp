@@ -366,7 +366,7 @@ TEST_CASE("native materializes variadic FileError packs with indexed why methods
   CHECK(runCommand(exePath) == 36);
 }
 
-TEST_CASE("native materializes variadic borrowed FileError packs with indexed dereference why methods") {
+TEST_CASE("native rejects variadic borrowed FileError packs with indexed dereference why methods") {
   const std::string source =
       "[return<int>]\n"
       "score_refs([args<Reference<FileError>>] values) {\n"
@@ -410,13 +410,17 @@ TEST_CASE("native materializes variadic borrowed FileError packs with indexed de
   const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_file_error.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_borrowed_file_error").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_borrowed_file_error.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic pointer FileError packs with indexed dereference why methods") {
+TEST_CASE("native rejects variadic pointer FileError packs with indexed dereference why methods") {
   const std::string source =
       "[return<int>]\n"
       "score_ptrs([args<Pointer<FileError>>] values) {\n"
@@ -460,13 +464,17 @@ TEST_CASE("native materializes variadic pointer FileError packs with indexed der
   const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_file_error.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_pointer_file_error").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_pointer_file_error.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 36);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic wrapped FileError packs with named free builtin at receivers") {
+TEST_CASE("native rejects variadic wrapped FileError packs with named free builtin at receivers") {
   const std::string source =
       "[return<int>]\n"
       "score_refs([args<Reference<FileError>>] values) {\n"
@@ -548,10 +556,14 @@ TEST_CASE("native materializes variadic wrapped FileError packs with named free 
   const std::string srcPath = writeTemp("compile_native_variadic_named_args_wrapped_file_error.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_variadic_named_args_wrapped_file_error").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_named_args_wrapped_file_error.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 72);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("native materializes variadic File handle packs with indexed file methods") {
