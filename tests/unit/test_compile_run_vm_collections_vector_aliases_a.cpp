@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("runs vm bare map at_unsafe through canonical helper") {
+TEST_CASE("keeps builtin vm bare map at_unsafe through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -26,7 +26,7 @@ main() {
                                "primec_vm_bare_map_at_unsafe_with_canonical_helper_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 17);
+  CHECK(runCommand(runCmd) == 4);
   CHECK(readFile(outPath).empty());
 }
 
@@ -64,7 +64,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects vm map namespaced count method compatibility alias") {
+TEST_CASE("keeps builtin vm map namespaced count method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -82,8 +82,8 @@ main() {
                                "primec_vm_map_namespaced_count_method_compatibility_alias_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error") != std::string::npos);
+  CHECK(runCommand(runCmd) == 1);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm bare map count method without imported canonical helper") {
@@ -193,7 +193,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm map namespaced at method compatibility alias") {
+TEST_CASE("keeps builtin vm map namespaced at method compatibility alias") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -211,8 +211,8 @@ main() {
                                "primec_vm_map_namespaced_at_method_compatibility_alias_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
-  CHECK(readFile(outPath).find("Semantic error") != std::string::npos);
+  CHECK(runCommand(runCmd) == 4);
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm array namespaced vector capacity alias") {
