@@ -315,7 +315,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_count_receiver_precedence_auto_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
@@ -364,7 +364,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_vector_count_expr_receiver_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
@@ -381,7 +381,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_count_import_requirement_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
@@ -424,7 +424,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_alias_count_map_target_import_requirement_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
@@ -445,7 +445,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_capacity_map_target_import_requirement_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
@@ -466,7 +466,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_alias_capacity_map_target_import_requirement_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
@@ -510,7 +510,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_alias_capacity_array_target_import_requirement_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
@@ -553,7 +553,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_std_namespaced_count_non_builtin_compat_fallback_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
@@ -599,7 +599,7 @@ main() {
        "primec_vm_std_namespaced_vector_capacity_expr_receiver_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("return type mismatch: expected i32") != std::string::npos);
 }
 
