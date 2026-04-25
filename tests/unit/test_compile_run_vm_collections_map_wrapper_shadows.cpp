@@ -557,7 +557,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects vm user array capacity call shadow") {
+TEST_CASE("runs vm user array capacity call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
@@ -571,11 +571,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_array_capacity_call_shadow.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_user_array_capacity_call_shadow.err").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 66);
 }
 
 TEST_CASE("runs vm with user array capacity method shadow") {
