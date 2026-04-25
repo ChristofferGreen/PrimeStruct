@@ -113,7 +113,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects vm map method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects vm map method alias access with helper receiver mismatch") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -148,7 +148,8 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unable to infer return type on /project") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self") !=
+        std::string::npos);
 }
 
 TEST_CASE("keeps canonical vm map method access field expression forwarding") {
