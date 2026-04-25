@@ -84,7 +84,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector clear alias requires mutable vector binding") {
+TEST_CASE("vector clear alias keeps rooted unknown target without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -95,7 +95,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("clear requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/clear") != std::string::npos);
 }
 
 TEST_CASE("bare vector clear validates through imported stdlib helper") {
@@ -241,7 +241,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/clear") != std::string::npos);
 }
 
-TEST_CASE("vector remove_at alias requires mutable vector binding") {
+TEST_CASE("vector remove_at alias keeps rooted unknown target without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -252,10 +252,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_at requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_at") != std::string::npos);
 }
 
-TEST_CASE("vector remove_at alias requires integer index") {
+TEST_CASE("vector remove_at alias keeps rooted unknown target before index validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -266,11 +266,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_at requires integer index") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_at") != std::string::npos);
 }
 
-TEST_CASE("remove_at rejects bool index in call and method forms") {
-  const auto checkInvalidRemoveAt = [](const std::string &stmtText) {
+TEST_CASE("remove_at bool index keeps routed unknown target diagnostics") {
+  const auto checkInvalidRemoveAt = [](const std::string &stmtText, const std::string &expected) {
     const std::string source =
         "[effects(heap_alloc), return<int>]\n"
         "main() {\n"
@@ -282,11 +282,11 @@ TEST_CASE("remove_at rejects bool index in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("remove_at requires integer index") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkInvalidRemoveAt("/vector/remove_at(values, true)");
-  checkInvalidRemoveAt("values.remove_at(true)");
+  checkInvalidRemoveAt("/vector/remove_at(values, true)", "unknown call target: /vector/remove_at");
+  checkInvalidRemoveAt("values.remove_at(true)", "unknown method: /std/collections/vector/remove_at");
 }
 
 TEST_CASE("bare vector remove_at template specialization keeps canonical unknown target without import") {
@@ -416,7 +416,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector remove_swap alias requires integer index") {
+TEST_CASE("vector remove_swap alias keeps rooted unknown target before index validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -427,11 +427,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_swap") != std::string::npos);
 }
 
-TEST_CASE("remove_swap rejects bool index in call and method forms") {
-  const auto checkInvalidRemoveSwap = [](const std::string &stmtText) {
+TEST_CASE("remove_swap bool index keeps routed unknown target diagnostics") {
+  const auto checkInvalidRemoveSwap = [](const std::string &stmtText, const std::string &expected) {
     const std::string source =
         "[effects(heap_alloc), return<int>]\n"
         "main() {\n"
@@ -443,14 +443,15 @@ TEST_CASE("remove_swap rejects bool index in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("remove_swap requires integer index") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkInvalidRemoveSwap("/vector/remove_swap(values, true)");
-  checkInvalidRemoveSwap("values.remove_swap(true)");
+  checkInvalidRemoveSwap("/vector/remove_swap(values, true)", "unknown call target: /vector/remove_swap");
+  checkInvalidRemoveSwap("values.remove_swap(true)",
+                         "unknown method: /std/collections/vector/remove_swap");
 }
 
-TEST_CASE("vector remove_swap alias requires mutable vector binding") {
+TEST_CASE("vector remove_swap alias keeps rooted unknown target without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -461,7 +462,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/remove_swap") != std::string::npos);
 }
 
 TEST_CASE("bare vector remove_swap template specialization keeps canonical unknown target without import") {
@@ -607,7 +608,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector helpers are statement-only in expressions") {
+TEST_CASE("vector helpers in expressions keep bare unknown target diagnostics") {
   struct HelperCase {
     const char *name;
     const char *args;
@@ -626,7 +627,7 @@ TEST_CASE("vector helpers are statement-only in expressions") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("only supported as a statement") != std::string::npos);
+    CHECK(error.find("unknown call target: " + std::string(helper.name)) != std::string::npos);
   }
 }
 
