@@ -573,7 +573,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects vm vector method alias access struct method chain with array receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -608,7 +608,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector namespaced access slash methods without alias helper on vector receiver") {
