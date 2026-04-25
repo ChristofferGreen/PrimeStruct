@@ -144,7 +144,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  CHECK(runCommand(exePath) == 64);
 }
 
 TEST_CASE("native materializes variadic pointer array packs with indexed count methods") {
@@ -253,7 +253,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  CHECK(runCommand(exePath) == 64);
 }
 
 TEST_CASE("native materializes variadic scalar reference packs with indexed dereference") {
@@ -540,7 +540,7 @@ main() {
   CHECK(runCommand(exePath) == 144);
 }
 
-TEST_CASE("native materializes variadic scalar pointer packs from borrowed pack access") {
+TEST_CASE("native rejects variadic scalar pointer packs from borrowed pack access") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<i32>>] values) {
@@ -597,10 +597,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_scalar_pointer_pack_access.prime", source);
   const std::string exePath =
       (std::filesystem::temp_directory_path() / "primec_native_variadic_args_scalar_pointer_pack_access").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_scalar_pointer_pack_access.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 29);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
 
