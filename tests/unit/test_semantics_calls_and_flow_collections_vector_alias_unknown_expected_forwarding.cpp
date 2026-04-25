@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("vector namespaced unknown expected primitive call return keeps compatibility diagnostics") {
+TEST_CASE("vector namespaced unknown expected primitive call return keeps builtin count diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -29,7 +29,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets primitive binding") {
@@ -58,7 +58,7 @@ main() {
   CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced unknown expected primitive binding keeps compatibility diagnostics") {
+TEST_CASE("vector namespaced unknown expected primitive binding keeps builtin count diagnostics") {
   const std::string source = R"(
 Marker() {}
 
@@ -81,7 +81,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /vector/count parameter marker") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias rejects compatibility template forwarding when unknown expected meets vector envelope binding") {
@@ -159,7 +159,7 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced non-bool mismatch fallback keeps compatibility diagnostics") {
+TEST_CASE("vector namespaced non-bool mismatch fallback keeps builtin count diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [string] marker) {
@@ -176,14 +176,13 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(values.count(1i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced bool mismatch fallback keeps compatibility diagnostics") {
+TEST_CASE("vector namespaced bool mismatch fallback keeps builtin count diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values, [i32] marker) {
@@ -200,11 +199,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(values.count(true))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("/vector/count") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count alias named arguments reject compatibility template forwarding") {
@@ -231,7 +229,7 @@ main() {
   CHECK(error.find("unknown named argument: marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count alias named arguments keep compatibility diagnostics") {
+TEST_CASE("vector namespaced count alias named arguments keep builtin count diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -248,10 +246,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(values.count([marker] 1i32))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown named argument: marker") != std::string::npos);
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity alias arity mismatch rejects compatibility template forwarding") {
@@ -277,7 +275,7 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity alias type mismatch rejects compatibility template forwarding") {
+TEST_CASE("vector namespaced capacity alias type mismatch keeps builtin capacity diagnostics") {
   const std::string source = R"(
 [return<int>]
 /vector/capacity([vector<i32>] values, [i32] marker) {
@@ -296,8 +294,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity alias named arguments reject compatibility template forwarding") {
