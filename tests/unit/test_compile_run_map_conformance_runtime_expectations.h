@@ -258,20 +258,12 @@ inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std
 }
 
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
-    expectMapConformanceProgramRunsWithOutput(
-        makeExperimentalMapMethodParameterConformanceSource(),
-        "map_experimental_method_parameter_" + emitMode,
-        emitMode,
-        10,
-        "2\n4\n2\n2\n6\n4\n");
-    return;
-  }
-
-  expectMapConformanceCompileReject(makeExperimentalMapMethodParameterConformanceSource(),
-                                    "map_experimental_method_parameter_" + emitMode,
-                                    emitMode,
-                                    "native backend");
+  expectMapConformanceProgramRunsWithOutput(
+      makeExperimentalMapMethodParameterConformanceSource(),
+      "map_experimental_method_parameter_" + emitMode,
+      emitMode,
+      10,
+      "2\n4\n2\n2\n6\n4\n");
 }
 
 inline void expectInferredExperimentalMapParameterConformance(const std::string &emitMode) {
