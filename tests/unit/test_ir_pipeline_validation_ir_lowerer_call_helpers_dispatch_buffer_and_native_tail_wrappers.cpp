@@ -840,7 +840,7 @@ TEST_CASE("ir lowerer temporary vector receiver reject guards stdlib wrapper con
         std::string::npos);
   CHECK(source.find("bindingType.rfind(\"/std/collections/experimental_vector/Vector__\", 0) == 0") ==
         std::string::npos);
-  CHECK(source.find("resolveSpecializedVectorElementKind(bindingType, elemKind)") !=
+  CHECK(source.find("targetInfoOut.elemKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front())") !=
         std::string::npos);
 }
 
