@@ -1141,7 +1141,7 @@ main() {
   CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view index syntax reports unsupported diagnostic") {
+TEST_CASE("soa_vector field-view index syntax reports get helper diagnostic") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1155,7 +1155,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(error.find("unknown method: /std/collections/soa_vector/get") != std::string::npos);
 }
 
 TEST_CASE("soa_vector field-view builtin rejects named arguments") {
@@ -1448,7 +1448,7 @@ main() {
   CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
 }
 
-TEST_CASE("namespaced access wrapper temporary chained method reports i32 path diagnostics") {
+TEST_CASE("namespaced access wrapper temporary chained method reports vector at mismatch") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1464,10 +1464,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /i32/missing_tag") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("slash-method access wrapper temporaries keep removed alias diagnostics") {
+TEST_CASE("slash-method access wrapper temporaries report missing namespaced at target") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -1489,7 +1489,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/vector/at") !=
+  CHECK(error.find("unknown call target: /std/collections/vector/at") !=
         std::string::npos);
 }
 
