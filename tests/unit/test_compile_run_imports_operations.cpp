@@ -778,7 +778,7 @@ main() {
   CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form rejects SoaVector-only canonical helper contract in C++ emitter") {
+TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form runs empty builtin soa_vector contract in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
@@ -796,12 +796,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_root_soa_vector_to_aos_ref_form_exe.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_root_soa_vector_to_aos_ref_form_exe_err.txt").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_root_soa_vector_to_aos_ref_form_exe").string();
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("struct parameter type mismatch") != std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("experimental SoaVector canonical to_aos_ref helper form runs in C++ emitter") {
@@ -831,7 +831,7 @@ main() {
 }
 
 TEST_CASE(
-    "rejects direct experimental soaVectorToAos helpers on builtin soa_vector in C++ emitter") {
+    "direct experimental soaVectorToAos helpers on builtin soa_vector run in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector_conversions/*
@@ -861,28 +861,16 @@ runRef() {
       writeTemp("compile_root_builtin_soa_vector_direct_experimental_to_aos_reject.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_root_builtin_soa_vector_direct_experimental_to_aos_reject").string();
-  const std::string directErrPath =
-      (testScratchPath("") / "primec_root_builtin_soa_vector_direct_experimental_to_aos_reject_direct.txt")
-          .string();
-  const std::string refErrPath =
-      (testScratchPath("") / "primec_root_builtin_soa_vector_direct_experimental_to_aos_reject_ref.txt")
-          .string();
 
   const std::string compileDirectCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /runDirect 2> " + directErrPath;
-  CHECK(runCommand(compileDirectCmd) == 2);
-  const std::string directErr = readFile(directErrPath);
-  CHECK(directErr.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(directErr.find("/std/collections/experimental_soa_vector/SoaVector__") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /runDirect";
+  CHECK(runCommand(compileDirectCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 
   const std::string compileRefCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /runRef 2> " + refErrPath;
-  CHECK(runCommand(compileRefCmd) == 2);
-  const std::string refErr = readFile(refErrPath);
-  CHECK(refErr.find("struct parameter type mismatch") != std::string::npos);
-  CHECK(refErr.find("/std/collections/experimental_soa_vector/SoaVector__") !=
-        std::string::npos);
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /runRef";
+  CHECK(runCommand(compileRefCmd) == 0);
+  CHECK(runCommand(exePath) == 1);
 }
 
 TEST_CASE("runs experimental soa_vector stdlib non-empty to-aos helper in C++ emitter") {
@@ -1179,7 +1167,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs vector-target method soa mutator shadows in C++ emitter") {
+TEST_CASE("vector-target method soa mutator shadows reject expression-form mutators in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /soa_vector/push([vector<i32>] values, [i32] value) {
@@ -1201,10 +1189,15 @@ main() {
       writeTemp("compile_vector_target_method_soa_mutator_shadow_exe.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_vector_target_method_soa_mutator_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_vector_target_method_soa_mutator_shadow_exe_err.txt")
+          .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("push is only supported as a statement") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs vector-target to_aos helper shadows in C++ emitter") {
