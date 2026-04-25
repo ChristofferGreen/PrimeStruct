@@ -699,7 +699,7 @@ main() {
   expectNativeVectorCountCompatibilityTypeMismatchReject(compileCmd);
 }
 
-TEST_CASE("rejects native local alias slash-method vector count on string receiver") {
+TEST_CASE("rejects native local alias slash-method vector count on string receiver during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -716,8 +716,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("semantic-product method-call target missing lowered definition: /string/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects native local alias slash-method vector count on array receiver") {
@@ -737,7 +738,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
