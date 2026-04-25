@@ -269,7 +269,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize helper-returned reference receiver target") {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics fail on borrow storage before reference receiver normalization") {
   const std::string source = R"(
 [return<Reference<i32>>]
 borrow([Reference<i32>] ref) {
@@ -281,10 +281,10 @@ main() {
   [i32] value{1i32}
   return(borrow(location(value)).count(true) { 1i32 })
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") !=
+  CHECK(error.find("borrow requires uninitialized<T> storage") !=
         std::string::npos);
 }
 
