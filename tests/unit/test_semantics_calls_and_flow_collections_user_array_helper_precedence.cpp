@@ -236,7 +236,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare vector count auto inference requires imported stdlib helper or explicit definition") {
+TEST_CASE("bare vector count auto inference keeps canonical unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -247,7 +247,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("bare vector capacity auto inference resolves through imported stdlib helper") {
@@ -266,7 +266,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare vector capacity auto inference requires imported stdlib helper or explicit definition") {
+TEST_CASE("bare vector capacity auto inference keeps canonical unknown target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -277,7 +277,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/capacity") !=
+        std::string::npos);
 }
 
 TEST_CASE("at call keeps user-defined array helper precedence") {
