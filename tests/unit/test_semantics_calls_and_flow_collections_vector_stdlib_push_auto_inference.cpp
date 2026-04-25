@@ -22,7 +22,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector namespaced count-capacity call-form requires explicit vector helper definitions") {
+TEST_CASE("vector namespaced count-capacity call-form without helpers fails on count first") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -34,7 +34,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count auto inference builtin vector target without helper reports unknown target") {
@@ -733,7 +733,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument count mismatch for /map/count") != std::string::npos);
 }
 
 TEST_CASE("map compatibility explicit-template count call keeps alias precedence with canonical templated helper") {
