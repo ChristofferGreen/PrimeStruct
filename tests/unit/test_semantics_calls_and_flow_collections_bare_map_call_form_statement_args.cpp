@@ -142,7 +142,7 @@ main() {
   CHECK(error.find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("map namespaced count method expression body arguments keep slash-path diagnostics") {
+TEST_CASE("map namespaced count method expression body arguments validate through stdlib helper target") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -156,11 +156,11 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced at method expression body arguments keep slash-path diagnostics") {
+TEST_CASE("map namespaced at method expression body arguments validate through slash-path target") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] key) {
@@ -174,8 +174,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("map stdlib call form expression body arguments use canonical helper target") {
