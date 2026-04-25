@@ -283,7 +283,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vector method alias access struct method chain with helper receiver diagnostics in C++ emitter") {
@@ -323,7 +323,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /Marker/tag parameter self: expected /Marker got i32") !=
+  CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker: expected bool got i32") !=
         std::string::npos);
 }
 
