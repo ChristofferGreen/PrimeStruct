@@ -159,7 +159,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("keeps builtin string access on vm user string at_unsafe call shadow") {
+TEST_CASE("runs vm with user string at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at_unsafe([string] values, [i32] index) {
@@ -174,7 +174,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_unsafe_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 98);
+  CHECK(runCommand(runCmd) == 71);
 }
 
 TEST_CASE("runs vm with user string at_unsafe method shadow") {
@@ -250,7 +250,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 98);
+  CHECK(runCommand(runCmd) == 83);
 }
 
 TEST_CASE("runs vm with user string at method shadow") {
