@@ -1167,7 +1167,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("compiles and runs vector-target method soa mutator shadows in C++ emitter") {
+TEST_CASE("rejects vector-target method soa mutator shadows in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /soa_vector/push([vector<i32>] values, [i32] value) {
@@ -1187,12 +1187,13 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_vector_target_method_soa_mutator_shadow_exe.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_vector_target_method_soa_mutator_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_vector_target_method_soa_mutator_shadow_err.txt").string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: push") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs vector-target to_aos helper shadows in C++ emitter") {
