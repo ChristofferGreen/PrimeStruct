@@ -25,6 +25,19 @@ bool isFlowEffectDiagnosticMessage(const std::string &message) {
          message.rfind("duplicate capabilities transform on ", 0) == 0;
 }
 
+bool isLoopBlockEnvelope(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isBinding || candidate.isMethodCall) {
+    return false;
+  }
+  if (!candidate.args.empty() || !candidate.templateArgs.empty()) {
+    return false;
+  }
+  if (!candidate.hasBodyArguments && candidate.bodyArguments.empty()) {
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
@@ -67,7 +80,8 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
       return true;
     }
     if (isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
-        isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr)) {
+        isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr) ||
+        isLoopBlockEnvelope(expr)) {
       return true;
     }
     const std::string resolved = resolveCalleePath(expr);
@@ -405,7 +419,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
         }
         effectScope.emplace(*this, std::move(executionEffects));
       }
-      if (!expr.isBinding && !expr.name.empty() && !expr.isMethodCall && !expr.isFieldAccess &&
+      if (!expr.isBinding && !expr.isLambda && !expr.name.empty() && !expr.isMethodCall && !expr.isFieldAccess &&
           !isBuiltinCall(expr)) {
         std::string reflectionDiagnostic;
         if (describeReflectionCallDiagnostic(expr, reflectionDiagnostic)) {

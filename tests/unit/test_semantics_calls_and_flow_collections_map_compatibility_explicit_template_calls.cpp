@@ -25,7 +25,7 @@ main() {
   CHECK(error.find("template arguments are only supported on templated definitions: /map/count") != std::string::npos);
 }
 
-TEST_CASE("map compatibility explicit-template count method resolves through canonical helper") {
+TEST_CASE("map compatibility explicit-template count method keeps non-templated alias diagnostics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -44,8 +44,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments are only supported on templated definitions: /map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("wrapper reference templated map count method rejects missing canonical helper") {
@@ -104,7 +105,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("map slash-path explicit-template count method stays on unknown method diagnostic") {
+TEST_CASE("map slash-path explicit-template count method stays on canonical unknown call target diagnostic") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -116,13 +117,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
   return(values./map/count<i32, i32>(true))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("map canonical slash-path explicit-template access method stays on unknown method diagnostic") {
+TEST_CASE("map canonical slash-path explicit-template access method stays on canonical unknown call target diagnostic") {
   const std::string source = R"(
 [effects(heap_alloc), return<i32>]
 /std/collections/map/at<K, V>([map<K, V>] values, [i32] key) {
@@ -137,7 +138,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/at") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("map canonical explicit-template count call keeps canonical non-templated diagnostics") {

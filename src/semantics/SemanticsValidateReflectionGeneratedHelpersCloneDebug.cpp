@@ -150,13 +150,20 @@ bool emitReflectionDebugPrintHelper(ReflectionGeneratedHelperContext &context) {
   helper.parameters.push_back(makeTypeBinding("value", context.def.fullPath, helper.namespacePrefix));
 
   if (context.fieldNames.empty()) {
-    helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr(context.def.fullPath + " {}")));
+    helper.statements.push_back(
+        makeCallExpr("/print_line",
+                     makeStringLiteralExpr(context.def.fullPath + " {}")));
   } else {
-    helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr(context.def.fullPath + " {")));
+    helper.statements.push_back(
+        makeCallExpr("/print_line",
+                     makeStringLiteralExpr(context.def.fullPath + " {")));
     for (const auto &fieldName : context.fieldNames) {
-      helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("  " + fieldName)));
+      helper.statements.push_back(
+          makeCallExpr("/print_line",
+                       makeStringLiteralExpr("  " + fieldName)));
     }
-    helper.statements.push_back(makeCallExpr("print_line", makeStringLiteralExpr("}")));
+    helper.statements.push_back(
+        makeCallExpr("/print_line", makeStringLiteralExpr("}")));
   }
 
   context.rewrittenDefinitions.push_back(std::move(helper));

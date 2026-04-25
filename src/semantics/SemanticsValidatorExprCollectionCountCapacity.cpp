@@ -233,6 +233,54 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
   if (applyNamedArgumentCountOrCapacityHelperFastPath()) {
     return true;
   }
+  const auto tryResolveBareSimpleCountForwardingMethod =
+      [&]() {
+        if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+            expr.args.size() != 1 || !expr.namespacePrefix.empty() ||
+            !isSimpleCallName(expr, "count") ||
+            hasNamedArguments(expr.argNames) ||
+            hasDeclaredDefinitionPath("/count") ||
+            hasImportedDefinitionPath("/count")) {
+          return false;
+        }
+        const Expr &receiver = expr.args.front();
+        std::string visibleCountHelperTarget;
+        const bool resolvesVisibleCollectionCountHelper =
+            resolveVisiblePreferredVectorHelperMethodTarget(
+                receiver, "count", visibleCountHelperTarget) &&
+            (visibleCountHelperTarget == "/vector/count" ||
+             visibleCountHelperTarget == "/std/collections/vector/count" ||
+             visibleCountHelperTarget == "/soa_vector/count" ||
+             visibleCountHelperTarget == "/std/collections/soa_vector/count" ||
+             visibleCountHelperTarget == "/soa_vector/count_ref" ||
+             visibleCountHelperTarget ==
+                 "/std/collections/soa_vector/count_ref");
+        const bool receiverLooksLikeBuiltinCountTarget =
+            resolvesVisibleCollectionCountHelper ||
+            (context.resolveMapTarget != nullptr &&
+             context.resolveMapTarget(receiver)) ||
+            inferExprReturnKind(receiver, params, locals) == ReturnKind::Array ||
+            inferExprReturnKind(receiver, params, locals) == ReturnKind::String;
+        if (receiverLooksLikeBuiltinCountTarget) {
+          return false;
+        }
+        bool isBuiltinMethod = false;
+        std::string methodResolved;
+        if (!resolveMethodTarget(params, locals, expr.namespacePrefix, receiver,
+                                 "count", methodResolved, isBuiltinMethod) ||
+            isBuiltinMethod ||
+            lacksVisibleMethodTargetPath(methodResolved)) {
+          return false;
+        }
+        handledOut = true;
+        markMethodTargetUsage();
+        resolved = methodResolved;
+        resolvedMethod = false;
+        return true;
+      };
+  if (tryResolveBareSimpleCountForwardingMethod()) {
+    return true;
+  }
 
   Expr rewrittenVectorHelperCall;
   const auto tryRewriteBareNamedVectorHelperCall =

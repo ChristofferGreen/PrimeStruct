@@ -637,8 +637,8 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
 bool SemanticsValidator::hasVisibleDefinitionPathForCurrentImports(
     std::string_view path) const {
   const std::string ownedPath(path);
-  return hasImportedDefinitionPath(ownedPath) ||
-         hasDeclaredDefinitionPath(ownedPath);
+  return hasDeclaredDefinitionPath(ownedPath) ||
+         hasImportedDefinitionPath(ownedPath);
 }
 
 std::string SemanticsValidator::preferredSoaHelperTargetForCurrentImports(
@@ -672,17 +672,15 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
     std::string_view collectionTypePath) const {
   const std::string helper(helperName);
   const std::string samePath = preferredSamePathSoaHelperTarget(helper);
+  const std::string canonicalPath = "/std/collections/soa_vector/" + helper;
   const std::string preferredTarget =
       preferredSoaHelperTargetForCurrentImports(helperName);
   if (preferredTarget != samePath) {
     return preferredTarget;
   }
-  if (collectionTypePath == "/soa_vector") {
-    return samePath;
-  }
   auto paramsIt = paramsByDef_.find(samePath);
   if (paramsIt == paramsByDef_.end() || paramsIt->second.empty()) {
-    return "/std/collections/soa_vector/" + helper;
+    return canonicalPath;
   }
   const BindingInfo &receiverBinding = paramsIt->second.front().binding;
   const std::string receiverTypeText =
@@ -700,7 +698,7 @@ std::string SemanticsValidator::preferredSoaHelperTargetForCollectionType(
   if (resolvedCollectionType == collectionTypePath) {
     return samePath;
   }
-  return "/std/collections/soa_vector/" + helper;
+  return canonicalPath;
 }
 
 bool SemanticsValidator::usesSamePathSoaHelperTargetForCollectionType(

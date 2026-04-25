@@ -105,6 +105,21 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     const LocalMap &localsIn,
     const std::function<bool(const Expr &, std::string &)> &tryGetPrintBuiltinName,
     std::string &error) {
+  const auto isBareSimpleCountLikeCall = [&](std::string_view helperName) {
+    return expr.kind == Expr::Kind::Call &&
+           !expr.isMethodCall &&
+           expr.namespacePrefix.empty() &&
+           isSimpleCallName(expr, std::string(helperName).c_str()) &&
+           expr.args.size() == 1;
+  };
+  if (isBareSimpleCountLikeCall("count") &&
+      !isVectorTarget(expr.args.front(), localsIn)) {
+    return UnsupportedNativeCallResult::NotHandled;
+  }
+  if (isBareSimpleCountLikeCall("capacity") &&
+      !isVectorTarget(expr.args.front(), localsIn)) {
+    return UnsupportedNativeCallResult::NotHandled;
+  }
   if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
       isVectorTarget(expr.args.front(), localsIn)) {
     return UnsupportedNativeCallResult::NotHandled;

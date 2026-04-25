@@ -58,36 +58,91 @@ Task template:
 
 - TODO-4146
 - TODO-4145
+- TODO-4147
+- TODO-4151
+- TODO-4152
+- TODO-4167
+- TODO-4169
+- TODO-4171
 
 ### Immediate Next 10 (After Ready Now)
 
-none
+- TODO-4148
+- TODO-4168
+- TODO-4170
+- TODO-4150
+- TODO-4153
+- TODO-4172
+- TODO-4155
+- TODO-4157
+- TODO-4158
+- TODO-4162
 
 ### Priority Lanes (Current)
 
 - Release-gate stability and test-suite audit follow-up: TODO-4145, TODO-4146
+- Semantic-product authority and lowerer boundary enforcement: TODO-4147,
+  TODO-4169, TODO-4151, TODO-4148, TODO-4170, TODO-4150, TODO-4155,
+  TODO-4157, TODO-4158, TODO-4159, TODO-4160, TODO-4161, TODO-4164
+- Test API cleanup and contract-probe migration: TODO-4152, TODO-4171,
+  TODO-4153, TODO-4172
+- Semantics orchestration cleanup: TODO-4167, TODO-4168
+- Compile-pipeline boundary hardening and provenance parity: TODO-4162,
+  TODO-4163, TODO-4165, TODO-4166
+- User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
+  TODO-4175
 
 ### Execution Queue (Recommended)
 
 1. TODO-4145
 2. TODO-4146
+3. TODO-4147
+4. TODO-4151
+5. TODO-4152
+6. TODO-4167
+7. TODO-4169
+8. TODO-4171
+9. TODO-4148
+10. TODO-4168
+11. TODO-4170
+12. TODO-4150
+13. TODO-4153
+14. TODO-4172
+15. TODO-4155
+16. TODO-4157
+17. TODO-4158
+18. TODO-4162
+19. TODO-4165
+20. TODO-4159
+21. TODO-4160
+22. TODO-4161
+23. TODO-4163
+24. TODO-4164
+25. TODO-4166
+26. TODO-4174
+27. TODO-4173
+28. TODO-4176
+29. TODO-4175
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | none |
-| Compile-pipeline stage and publication-boundary contracts | none |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4147, TODO-4148, TODO-4169, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
+| Compile-pipeline stage and publication-boundary contracts | TODO-4147, TODO-4155, TODO-4162, TODO-4166 |
+| Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | none |
+| Validator entrypoint and benchmark-plumbing split | TODO-4167, TODO-4168 |
+| Semantic-product publication by module and fact family | TODO-4169, TODO-4170, TODO-4155 |
+| Semantic-product public API factoring and versioning | TODO-4160, TODO-4161, TODO-4163 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
+| Debugger/source-map provenance parity | TODO-4165 |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | TODO-4145, TODO-4146 |
@@ -96,17 +151,19 @@ none
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | none |
-| Compile-pipeline stage handoff conformance | none |
-| Semantic-product publication parity and deterministic ordering | none |
-| Lowerer/source-composition contract coverage | none |
+| Semantic-product-authority conformance | TODO-4155, TODO-4161, TODO-4163 |
+| AST transform hook conformance | TODO-4173, TODO-4176 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
+| Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
+| Semantic-product publication parity and deterministic ordering | TODO-4169, TODO-4170, TODO-4155, TODO-4163 |
+| Lowerer/source-composition contract coverage | TODO-4147, TODO-4148, TODO-4150, TODO-4152, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4146 |
-| Architecture contract probe migration | none |
+| Architecture contract probe migration | TODO-4152, TODO-4171, TODO-4172 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
+| Debugger/source-map provenance parity | TODO-4165 |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | TODO-4145, TODO-4146 |
@@ -179,6 +236,553 @@ none
   skipped coverage is not a stable end state.
 
 ### Task Blocks
+
+- [ ] TODO-4176: Add a checked-in `.prime` example for user-authored AST transforms
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Compile-time macro hooks
+  - depends_on: TODO-4173
+  - scope: Add one checked-in `.prime` AST-transform module plus one consumer
+    `.prime` source that imports it, attaches `[trace_calls, ...]`, and serves
+    as the canonical example surface for docs and release validation.
+  - acceptance:
+    - The repo contains one `.prime` file that declares a user-authored AST
+      transform with the approved declaration contract.
+    - The repo contains one `.prime` file that imports that transform and uses
+      it through the bare `[trace_calls, ...]` attachment syntax on a
+      definition.
+    - The touched docs or release validation reference that checked-in example
+      instead of only inline pseudo-snippets.
+  - stop_rule: Stop after one end-to-end example module pair is checked in and
+    wired into docs or validation; do not broaden this slice into multiple
+    derives, text transforms, or stdlib packaging work.
+
+- [ ] TODO-4175: Track user-authored AST transform hooks
+  - owner: human
+  - created_at: 2026-04-25
+  - phase: Compile-time macro hooks
+  - depends_on: TODO-4174, TODO-4173, TODO-4176
+  - scope: Track the first user-authored AST transform lane so definitions can
+    attach visible transform symbols like `[trace_calls, effects(...), int]`,
+    resolve them through normal imports, and keep the docs/spec/examples aligned
+    with the chosen `[ast]` marker or signature-inference contract.
+  - acceptance:
+    - TODO-4174, TODO-4173, and TODO-4176 land with one documented
+      AST-transform surface that resolves normal local or imported symbols from
+      the transform list.
+    - `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`, and
+      `docs/CodeExamples.md` describe the same attachment syntax and declaration
+      contract for user-authored AST transforms.
+    - The tracked lane stays limited to AST transforms on definitions; text
+      rewriting and broader CT-eval expansion remain out of scope.
+  - stop_rule: Stop after the first definition-attached AST transform lane is
+    documented and validated; do not fold text transforms, struct/type derives,
+    or general CT-eval work into this tracker.
+
+- [ ] TODO-4174: Resolve user-authored AST transform symbols from normal imports
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Compile-time macro hooks
+  - depends_on: TODO-4168
+  - scope: Teach transform-list validation to accept visible symbols marked
+    `[ast]` or carrying the approved AST-transform signature, attach them to
+    definition nodes, reject ambiguous or non-transform symbols
+    deterministically, and document the chosen declaration rule.
+  - acceptance:
+    - A definition-attached transform like `[trace_calls, effects(...), int]`
+      can resolve to a visible local or imported AST-transform symbol under one
+      documented declaration contract.
+    - Non-visible, wrong-signature, or phase-mismatched symbols fail with
+      deterministic diagnostics.
+    - The touched docs/spec show the approved declaration rule without relying
+      on built-in-only transform names for the attached definition surface.
+  - stop_rule: Stop once definition-level AST-transform symbol resolution works
+    for one input/output contract; do not execute transforms yet or add text
+    hooks in this slice.
+
+- [ ] TODO-4173: Execute user-authored AST transform hooks in the semantic pipeline
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Compile-time macro hooks
+  - depends_on: TODO-4174
+  - scope: Run resolved AST-transform symbols through the compile-time VM /
+    CT-eval path on a narrow `FunctionAst`-style API, replace the touched
+    definition AST before the downstream semantic/lowering path, and add
+    release conformance coverage for success and failure cases.
+  - acceptance:
+    - One local or imported AST transform rewrites a definition deterministically
+      before the downstream semantic and lowering pipeline runs.
+    - The touched compile-pipeline coverage proves stable transformed output or
+      deterministic diagnostics when the transform fails or returns the wrong
+      shape.
+    - Release tests cover both a successful rewrite and at least one
+      wrong-result or transform-failure case.
+  - stop_rule: Stop after one definition-to-definition AST transform contract
+    works end-to-end; do not add text transforms, execution hooks, or broad
+    mutable AST editing APIs in this slice.
+
+- [ ] TODO-4166: Refactor compile-pipeline results into explicit success and failure variants
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Compile-pipeline boundary hardening
+  - depends_on: TODO-4162
+  - scope: Replace the touched flag-heavy compile-pipeline result surface with
+    explicit success and failure variants so callers cannot observe invalid
+    state combinations around diagnostics, semantic-product handoff, or IR
+    preparation.
+  - acceptance:
+    - The touched compile-pipeline callers consume explicit success or failure
+      variants instead of checking multiple flags or optional fields.
+    - Stage diagnostics and semantic-product handoff behavior remain unchanged
+      for the touched flows.
+    - Invalid mixed result states disappear from the touched pipeline surface.
+  - stop_rule: Stop once one compile-pipeline result surface uses explicit
+    variants end-to-end; do not rewrite every caller in one slice.
+
+- [ ] TODO-4165: Add debugger and source-map provenance parity coverage
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Compile-pipeline boundary hardening
+  - depends_on: TODO-4158, TODO-4155
+  - scope: Add release coverage proving debugger-facing and source-map
+    provenance stay stable when lowering consumes published semantic-product
+    identities plus syntax-owned provenance.
+  - acceptance:
+    - The touched tests assert matching debugger or source-map provenance for a
+      representative compile or runtime entrypoint.
+    - Failures surface readable provenance diffs for the touched coverage.
+    - The touched coverage remains deterministic and runnable from
+      `build-release/`.
+  - stop_rule: Stop once one representative debugger or source-map provenance
+    path has parity coverage; do not broaden into runtime or debugger redesign.
+
+- [ ] TODO-4164: Remove AST-side semantic re-derivation caches after boundary cutover
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4157, TODO-4158, TODO-4155
+  - scope: Delete one touched AST-side semantic fallback or cache that
+    re-derives facts already available through the published semantic-product
+    boundary.
+  - acceptance:
+    - One real AST-side semantic re-derivation seam is removed from the
+      touched production path.
+    - The touched lowerer or compile-pipeline flow reads published
+      semantic-product data instead of recomputing equivalent facts.
+    - Release diagnostics and lowering behavior remain unchanged for the
+      touched coverage.
+  - stop_rule: Stop once one real re-derivation seam is deleted end-to-end; do
+    not attempt a repo-wide cache purge in one slice.
+
+- [ ] TODO-4163: Add worker-count parity golden coverage for the full semantic-product dump
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Compile-pipeline boundary hardening
+  - depends_on: TODO-4155
+  - scope: Add release coverage comparing the formatted full semantic-product
+    dump across multiple validation worker counts so deterministic publication
+    regressions fail with readable diffs.
+  - acceptance:
+    - The touched tests assert identical semantic-product dump output for the
+      selected modules across worker counts `1`, `2`, and `4`.
+    - Parity failures surface readable dump diffs for the touched coverage.
+    - The touched coverage remains deterministic and runnable from
+      `build-release/`.
+  - stop_rule: Stop once one representative full semantic-product dump path
+    has worker-count parity coverage; do not build a massive worker-count
+    matrix in one slice.
+
+- [ ] TODO-4162: Split compile-pipeline benchmark knobs from the production pipeline entrypoint
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Compile-pipeline boundary hardening
+  - scope: Move the touched benchmark collector and worker-count plumbing out
+    of the main compile-pipeline entrypoint into a narrower config or helper
+    surface so production stage handoff stays explicit.
+  - acceptance:
+    - The main compile-pipeline entrypoint no longer directly owns the touched
+      benchmark-only knob set.
+    - Benchmark collection still works through a dedicated config or helper
+      path.
+    - Non-benchmark compile-pipeline behavior remains unchanged for the
+      touched entrypoints.
+  - stop_rule: Stop once one production compile-pipeline entrypoint no longer
+    co-owns the touched benchmark knobs; do not refactor all pipeline config
+    in one slice.
+
+- [ ] TODO-4161: Add semantic-product contract-version compatibility coverage
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4155, TODO-4160
+  - scope: Turn the touched semantic-product contract version into an enforced
+    compatibility surface with coverage that fails clearly when the published
+    shape changes without the required versioning update.
+  - acceptance:
+    - The touched coverage fails clearly when the semantic-product contract
+      shape changes without the corresponding compatibility update.
+    - Tests assert the touched contract version or compatibility marker for the
+      selected public surface.
+    - Version mismatch diagnostics or failures stay deterministic for the
+      touched coverage.
+  - stop_rule: Stop once one canonical semantic-product surface enforces
+    contract-version compatibility; do not broaden into general serialization
+    migration policy.
+
+- [ ] TODO-4160: Split `SemanticProduct.h` into family-specific public surfaces
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4155
+  - scope: Break the monolithic `include/primec/SemanticProduct.h` public API
+    into smaller family-specific headers while keeping a stable umbrella
+    include for existing consumers where needed.
+  - acceptance:
+    - At least two semantic-product fact families move to dedicated public
+      headers.
+    - `include/primec/SemanticProduct.h` becomes a smaller facade or umbrella
+      over the new family-specific surfaces.
+    - The touched consumers build through the new header layout without
+      including private semantics internals.
+  - stop_rule: Stop once one meaningful slice of the semantic-product API is
+    decomposed; do not attempt a repo-wide header taxonomy rewrite in one
+    slice.
+
+- [ ] TODO-4159: Move lowerer import-alias handling to a frontend-owned syntax helper
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4158
+  - scope: Move the touched import-alias expansion or shorthand-resolution
+    logic out of lowerer-specific setup into a frontend-owned syntax helper so
+    lowering stops owning syntax convenience behavior.
+  - acceptance:
+    - The touched lowerer files no longer own the moved import-alias handling
+      logic.
+    - The replacement helper surface is owned outside lowerer-specific setup
+      and outside private semantics internals.
+    - Release coverage for the touched alias-driven lowering paths remains
+      unchanged.
+  - stop_rule: Stop once one canonical import-alias helper surface is
+    introduced and production lowering uses it; do not broaden into unrelated
+    import resolver redesign.
+
+- [ ] TODO-4158: Introduce a narrow lowerer syntax and provenance view
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4147, TODO-4148
+  - scope: Replace one touched lowerer seam that currently receives broad AST
+    ownership (`Program`, wide `Definition*` reach-through, or equivalent)
+    with a syntax-owned body and provenance view that exposes only the data
+    lowering still needs.
+  - acceptance:
+    - One touched lowering path consumes the narrow syntax and provenance view
+      instead of broad AST ownership.
+    - The touched diagnostics and provenance behavior remain unchanged.
+    - The new view is owned outside private semantics internals.
+  - stop_rule: Stop once one production lowering seam uses the narrow syntax
+    and provenance view; do not migrate every lowerer entrypoint in one slice.
+
+- [ ] TODO-4157: Retire temporary semantic-product adapter code
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4147, TODO-4148, TODO-4150, TODO-4155
+  - scope: Delete one touched compatibility adapter or shim that keeps
+    lowerer or compile-pipeline code working before the semantic-product
+    boundary becomes fully authoritative.
+  - acceptance:
+    - One real semantic-product compatibility adapter or shim disappears from
+      the touched production path.
+    - The touched lowerer or compile-pipeline flow still works through
+      published semantic-product facts only.
+    - No touched caller falls back to the removed adapter seam.
+  - stop_rule: Stop once one real adapter seam is retired end-to-end; do not
+    attempt a repo-wide compatibility cleanup in one slice.
+
+- [ ] TODO-4172: Migrate graph-pilot and architecture source-lock suites to public inspection surfaces
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - depends_on: TODO-4171
+  - scope: Retire the remaining semantics source-lock suites that read private
+    `src/semantics/` fragments for graph-pilot or architecture checks,
+    replacing them with semantic-product, type-graph, or dedicated public
+    testing-helper assertions.
+  - acceptance:
+    - At least one graph-pilot or architecture source-lock suite no longer
+      reads private `src/semantics/` fragments directly.
+    - The migrated coverage still catches the touched architecture/delegation
+      regressions through public inspection surfaces.
+    - The touched tests remain deterministic and runnable from
+      `build-release/`.
+  - stop_rule: Stop once the touched graph-pilot or architecture suite
+    preserves behavioral signal without pinning private fragment placement; do
+    not broaden into unrelated semantics coverage reshaping.
+
+- [ ] TODO-4171: Migrate infer-source-delegation semantics source-lock suite to public inspection surfaces
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - scope: Retire the infer-source-delegation semantics source-lock suite that
+    reads `SemanticsValidatorPrivate*.h` fragments directly, replacing it with
+    `ast-semantic`, `semantic-product`, type-graph, or dedicated public
+    testing-helper assertions.
+  - acceptance:
+    - The infer-source-delegation suite no longer reads private
+      `src/semantics/` fragments directly.
+    - The migrated coverage still catches infer delegation regressions through
+      public inspection surfaces.
+    - The touched tests remain deterministic and runnable from
+      `build-release/`.
+  - stop_rule: Stop once the infer-source-delegation suite preserves
+    behavioral signal without pinning private fragment placement; do not fold
+    graph-pilot or unrelated source-lock suites into the same slice.
+
+- [ ] TODO-4170: Publish `soa_vector` specialization facts needed by the lowerer
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4169
+  - scope: Add explicit semantic-product facts for `soa_vector` collection
+    specialization and canonical helper-family routing that lowerer currently
+    infers from type text and private semantics helpers.
+  - acceptance:
+    - The semantic product publishes the touched `soa_vector`
+      specialization and helper-routing facts in deterministic order.
+    - Touched lowerer collection setup helpers can consume the published
+      `soa_vector` facts without private semantics specialization predicates.
+    - Focused release coverage for `soa_vector` helper lowering passes through
+      the new published surface.
+  - stop_rule: Stop once the lowerer can classify the touched `soa_vector`
+    flows from published facts; do not fold in broader vector/map ownership or
+    runtime redesign work.
+
+- [ ] TODO-4169: Publish vector and map specialization facts needed by the lowerer
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - scope: Add explicit semantic-product facts for vector/map collection
+    specialization and canonical helper-family routing that lowerer currently
+    infers from type text and private semantics helpers.
+  - acceptance:
+    - The semantic product publishes the touched vector/map specialization and
+      helper-routing facts in deterministic order.
+    - Touched lowerer collection setup helpers can consume the published
+      vector/map facts without private semantics specialization predicates.
+    - Focused release coverage for vector/map helper lowering passes through
+      the new published surface.
+  - stop_rule: Stop once the lowerer can classify the touched vector/map
+    families from published facts; do not fold in `soa_vector` maturity work
+    or unrelated stdlib ownership changes.
+
+- [ ] TODO-4168: Extract semantic-product publication orchestration from `Semantics::validate(...)`
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantics orchestration cleanup
+  - depends_on: TODO-4167
+  - scope: Refactor `src/semantics/SemanticsValidate.cpp` so semantic-product
+    publication lives in a separate compileable orchestration unit instead of
+    sharing one oversized production validation flow.
+  - acceptance:
+    - `Semantics::validate(...)` delegates semantic-product publication
+      orchestration to a dedicated unit.
+    - Release validation and semantic-product publication behavior remain
+      unchanged for the touched coverage.
+    - The touched publication path keeps deterministic diagnostic and
+      publication ordering.
+  - stop_rule: Stop once semantic-product publication no longer shares one
+    monolithic orchestration surface with the main validation path; do not
+    broaden into benchmark plumbing or new semantic feature work.
+
+- [ ] TODO-4167: Extract benchmark-only validation orchestration from `Semantics::validate(...)`
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantics orchestration cleanup
+  - scope: Refactor `src/semantics/SemanticsValidate.cpp` so benchmark-only
+    validation instrumentation lives in a separate compileable orchestration
+    unit instead of sharing one oversized production validation flow.
+  - acceptance:
+    - `Semantics::validate(...)` delegates benchmark-only validation
+      orchestration to a dedicated unit.
+    - Release validation behavior remains unchanged for the touched coverage.
+    - The touched orchestration path keeps deterministic diagnostic ordering.
+  - stop_rule: Stop once production validation no longer co-owns
+    benchmark-only plumbing in one oversized orchestration surface; do not
+    broaden into semantic-product publication or new semantic feature work.
+
+- [ ] TODO-4156: Track semantics validation orchestration split
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantics orchestration cleanup
+  - depends_on: TODO-4167, TODO-4168
+  - scope: Track the split of benchmark-only and semantic-product publication
+    orchestration out of the oversized `Semantics::validate(...)` production
+    flow.
+  - acceptance:
+    - TODO-4167 and TODO-4168 land with unchanged release behavior for the
+      touched validation and publication coverage.
+    - `Semantics::validate(...)` no longer co-owns benchmark-only or
+      semantic-product publication plumbing in one monolithic orchestration
+      file.
+  - stop_rule: Keep this item as a coordination tracker only; implement work
+    through child leaves and do not reopen the old broad slice directly.
+
+- [ ] TODO-4155: Add semantic-product-authority conformance coverage across entrypoints
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Boundary enforcement
+  - depends_on: TODO-4147, TODO-4148, TODO-4150
+  - scope: Add release coverage proving `primec` and `primevm` consume
+    published semantic-product facts consistently across consuming entrypoints
+    and reject missing lowerer-facing facts deterministically.
+  - acceptance:
+    - Tests exercise `primec` consuming backends and `primevm` through the same
+      published semantic-product contract.
+    - Missing or invalid lowerer-facing semantic facts fail with deterministic
+      diagnostics for the touched entrypoints.
+    - Compile-pipeline handoff coverage proves stage-dependent semantic-product
+      consumption stays explicit.
+  - stop_rule: Stop once the semantic-product boundary is covered as a contract
+    at the compile/runtime entrypoints; do not broaden into unrelated backend
+    feature additions.
+
+- [ ] TODO-4154: Track semantics source-lock migration to public inspection surfaces
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - depends_on: TODO-4171, TODO-4172
+  - scope: Track retirement of semantics source-lock suites that read private
+    `src/semantics/` fragments directly in favor of public inspection surfaces.
+  - acceptance:
+    - TODO-4171 and TODO-4172 land with deterministic coverage still runnable
+      from `build-release/`.
+    - The touched semantics source-lock suites preserve delegation and
+      architecture signal through public inspection surfaces.
+  - stop_rule: Keep this item as a coordination tracker only; implement work
+    through child leaves rather than reopening the broad migration slice.
+
+- [ ] TODO-4153: Migrate emitter-expr lowerer source-lock tests to contract-level assertions
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - depends_on: TODO-4152
+  - scope: Replace the emitter-expr lowerer source-lock suite that asserts
+    exact file names, includes, or source strings with tests over
+    semantic-product dumps, IR dumps, and backend-observable behavior.
+  - acceptance:
+    - The emitter-expr lowerer source-lock suite is rewritten to assert
+      contract output instead of `readText(...)` against `src/`.
+    - The migrated coverage still catches emitter-expr helper-routing or
+      lowering behavior regressions.
+    - The touched tests no longer break on file moves that preserve behavior.
+  - stop_rule: Stop once the emitter-expr source-lock suite is retired in
+    favor of contract assertions; do not attempt a repo-wide lowerer lock
+    purge in one slice.
+
+- [ ] TODO-4152: Replace the lowerer testing umbrella with narrow contract helpers
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - scope: Break up `include/primec/testing/IrLowererHelpers.h` into narrower
+    public testing helpers so lowerer validation no longer depends on one
+    umbrella that mirrors the internal file graph.
+  - acceptance:
+    - New or migrated lowerer tests can include focused testing headers without
+      pulling the full umbrella surface.
+    - At least one existing lowerer validation shard migrates off the umbrella
+      header with no coverage loss.
+    - The touched helper APIs expose contract-focused seams rather than
+      internal layout mirrors.
+  - stop_rule: Stop once focused testing helpers exist and at least one real
+    shard uses them; do not refactor every lowerer test in the same change.
+
+- [ ] TODO-4151: Add an include-layer guardrail for lowerer to private semantics includes
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Boundary enforcement
+  - scope: Extend include-layer checking so new direct includes from
+    `src/ir_lowerer/` into private `src/semantics/` files fail validation,
+    with any temporary exceptions documented narrowly.
+  - acceptance:
+    - The include-layer script rejects new `ir_lowerer -> src/semantics`
+      private-header dependencies.
+    - The release gate runs the new guardrail alongside the existing include
+      layer check.
+    - Any temporary migration allowlist is explicit, narrow, and removable.
+  - stop_rule: Stop once the boundary is enforced automatically for new code;
+    do not expand the script into unrelated style or layering policy work.
+
+- [ ] TODO-4150: Remove remaining lowerer binding-type reach-through into semantics helpers
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4169, TODO-4170
+  - scope: Refactor lowerer binding and uninitialized helpers so binding-kind
+    and specialization decisions come from published semantic facts or neutral
+    shared support utilities rather than private semantics helper headers.
+  - acceptance:
+    - The touched lowerer binding/setup helpers no longer include
+      `src/semantics/SemanticsHelpers.h`.
+    - Focused release coverage for binding setup, uninitialized flows, and
+      struct-layout-sensitive lowering passes unchanged behavior through the
+      published boundary.
+    - Any replacement utility surface is owned outside private semantics.
+  - stop_rule: Stop once the touched lowerer binding/type helpers no longer
+    depend on semantics-private helper headers; do not broaden into unrelated
+    runtime or backend redesign.
+
+- [ ] TODO-4149: Track collection specialization fact publication for the lowerer
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4169, TODO-4170
+  - scope: Track publication of collection specialization facts that lowerer
+    currently infers from type text and private semantics helpers.
+  - acceptance:
+    - TODO-4169 and TODO-4170 land with deterministic semantic-product
+      publication for the touched collection fact families.
+    - The touched lowerer collection setup helpers can consume the published
+      vector/map and `soa_vector` facts without private semantics
+      specialization predicates.
+  - stop_rule: Keep this item as a coordination tracker only; implement work
+    through child leaves rather than reopening the old broad slice.
+
+- [ ] TODO-4148: Cut method-target resolution over to published semantic-product facts
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4147
+  - scope: Remove lowerer-side method target rediscovery from
+    `IrLowererSetupTypeMethodCallResolution.cpp` and related helpers when
+    semantics already published the receiver and method target choice.
+  - acceptance:
+    - The touched method-target resolution helpers no longer include private
+      semantics helper headers.
+    - Focused release coverage for method-call helper routing and shadow
+      precedence passes through semantic-product-owned target lookups.
+    - User-facing behavior and diagnostics remain unchanged for the touched
+      method-call cases.
+  - stop_rule: Stop once method-target selection in lowering is driven by
+    published call-target facts rather than helper-path reconstruction.
+
+- [ ] TODO-4147: Cut lowerer return-info setup off semantics graph internals
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - scope: Replace `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp`
+    dependencies on `CondensationDag` and `TypeResolutionGraph` with published
+    semantic-product facts or one narrow immutable adapter built by semantics.
+  - acceptance:
+    - The touched return-info lowerer helpers no longer include private graph
+      headers from `src/semantics/`.
+    - Release lowerer and backend coverage for recursive and result-returning
+      definitions still passes with unchanged user-facing diagnostics.
+    - The replacement path reads published semantic facts plus syntax-owned
+      provenance only.
+  - stop_rule: Stop once return-info lowering no longer depends on semantics
+    graph internals; do not broaden into unrelated inference migration work.
 
 - [ ] TODO-4146: Split or optimize slow serialization shards
   - owner: ai

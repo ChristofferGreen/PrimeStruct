@@ -594,6 +594,7 @@ bool SemanticsValidator::validateDefinitions() {
           std::make_move_iterator(result.callableSummaries.end()));
     }
     collectExecutionCallableSummaryEntries(mergedWorkerCallableSummaries_);
+    rebindCollectedCallableSummarySemanticNodeIds(mergedWorkerCallableSummaries_);
     sortCollectedCallableSummaries(mergedWorkerCallableSummaries_);
     mergedWorkerCallableSummariesValid_ = true;
   };
@@ -613,6 +614,7 @@ bool SemanticsValidator::validateDefinitions() {
           std::make_move_iterator(result.onErrorFacts.begin()),
           std::make_move_iterator(result.onErrorFacts.end()));
     }
+    rebindCollectedOnErrorSemanticNodeIds(mergedWorkerOnErrorFacts_);
     sortCollectedOnErrorSnapshots(mergedWorkerOnErrorFacts_);
     mergedWorkerOnErrorFactsValid_ = true;
   };

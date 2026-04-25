@@ -451,7 +451,7 @@ main() {
   CHECK(runCommand(exePath) == 29);
 }
 
-TEST_CASE("native materializes variadic struct pointer packs from borrowed pack reference fields") {
+TEST_CASE("native rejects variadic struct pointer packs from borrowed pack reference fields") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -540,14 +540,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_variadic_args_struct_pointer_pack_reference_field.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() /
-       "primec_native_variadic_args_struct_pointer_pack_reference_field")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_pointer_pack_reference_field.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 75);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("native materializes variadic pointer uninitialized scalar packs with indexed init and take") {

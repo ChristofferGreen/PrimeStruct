@@ -19,6 +19,8 @@
       std::vector<CollectedCallableSummaryEntry> &out) const;
   void rebindCollectedCallableSummarySemanticNodeIds(
       std::vector<CollectedCallableSummaryEntry> &entries) const;
+  void rebindCollectedOnErrorSemanticNodeIds(
+      std::vector<OnErrorSnapshotEntry> &entries) const;
   static void sortCollectedCallableSummaries(
       std::vector<CollectedCallableSummaryEntry> &entries);
   void collectOnErrorSnapshotEntriesForStableRange(

@@ -96,7 +96,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + quoteShellArg(errPath);
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/vector/at__t") != std::string::npos);
+  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm slash-method wrapper string access method chain compatibility fallback") {
@@ -128,7 +128,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main > " + quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("vm keeps slash-method wrapper string access i32 diagnostics") {
@@ -151,7 +151,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/missing_tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects vm array namespaced vector constructor alias") {

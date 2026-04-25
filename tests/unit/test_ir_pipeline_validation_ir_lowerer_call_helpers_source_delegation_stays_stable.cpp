@@ -792,7 +792,7 @@ main() {
         return entry.scopePath == "/main" &&
                entry.callName == "count" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId) ==
-                   "/std/collections/map/count";
+                   "/count";
       });
   REQUIRE(mapDirectEntry != nullptr);
 
@@ -821,14 +821,13 @@ main() {
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
             mapDirectExpr.semanticNodeId) == 0);
   CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
-            mapDirectExpr.semanticNodeId) == 1);
+            mapDirectExpr.semanticNodeId) == 0);
   CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, mapDirectExpr) ==
-        "/std/collections/map/count");
+        "/count");
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, mapDirectExpr).empty());
   const auto mapDirectSurfaceId =
       primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(adapter, mapDirectExpr);
-  REQUIRE(mapDirectSurfaceId.has_value());
-  CHECK(*mapDirectSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK_FALSE(mapDirectSurfaceId.has_value());
 }
 
 TEST_CASE("soa field-view backend cleanup stays stable") {

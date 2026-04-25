@@ -751,6 +751,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
     return false;
   }();
   size_t resolvedReceiverIndex = 0;
+  bool resolvedReceiver = false;
   if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
        isStdNamespacedVectorCanonicalCountCapacityNamedArgException) &&
       !expr.args.empty()) {
@@ -775,7 +776,6 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       return true;
     };
 
-    bool resolvedReceiver = false;
     auto markResolvedReceiver = [&](bool didResolve) {
       resolvedReceiver = didResolve;
       return didResolve;
@@ -836,7 +836,33 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }
 
   if (resolvedVectorHelperDefinitionMissing) {
+    const bool requestsExplicitCollectionHelperNamespace =
+        expr.namespacePrefix == "vector" ||
+        expr.namespacePrefix == "/vector" ||
+        expr.namespacePrefix == "soa_vector" ||
+        expr.namespacePrefix == "/soa_vector" ||
+        expr.namespacePrefix == "std/collections/vector" ||
+        expr.namespacePrefix == "/std/collections/vector" ||
+        expr.namespacePrefix == "std/collections/soa_vector" ||
+        expr.namespacePrefix == "/std/collections/soa_vector" ||
+        expr.name.rfind("/vector/", 0) == 0 ||
+        expr.name.rfind("/soa_vector/", 0) == 0 ||
+        expr.name.rfind("/std/collections/vector/", 0) == 0 ||
+        expr.name.rfind("/std/collections/soa_vector/", 0) == 0 ||
+        namespacedCollection == "vector" ||
+        namespacedCollection == "soa_vector";
     if (!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite) {
+      const bool isExplicitOldSoaMethodSurface =
+          expr.isMethodCall &&
+          (expr.namespacePrefix == "soa_vector" ||
+           expr.namespacePrefix == "/soa_vector" ||
+           expr.name.rfind("/soa_vector/", 0) == 0);
+      if (isExplicitOldSoaMethodSurface) {
+        return true;
+      }
+      if (!requestsExplicitCollectionHelperNamespace && !resolvedReceiver) {
+        return true;
+      }
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");
     }
     return true;

@@ -388,10 +388,10 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               ++mapContainsEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(mapContainsResolveMethodCalls == 1);
   CHECK(error == "stale");
-  CHECK(mapContainsEmitCalls == 0);
+  CHECK(mapContainsEmitCalls == 1);
 
   primec::Expr mapMethodInsertCall;
   mapMethodInsertCall.kind = primec::Expr::Kind::Call;
@@ -687,8 +687,8 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
-            error) == Result::Error);
-  CHECK(error == "count requires array, vector, map, or string target (target=<none>)");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   callExpr.name = "/std/collections/vector/capacity";
   error.clear();

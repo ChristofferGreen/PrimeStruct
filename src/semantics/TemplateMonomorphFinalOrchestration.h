@@ -18,7 +18,27 @@ void buildImportAliases(Context &ctx) {
                            const std::string &aliasName,
                            const std::string &targetPath) {
     targetAliases.emplace(aliasName, targetPath);
-    ctx.importAliases.emplace(aliasName, targetPath);
+    if (!(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+          (aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
+           aliasName == "count_ref" || aliasName == "get_ref" ||
+           aliasName == "ref_ref" || aliasName == "reserve" ||
+           aliasName == "push" || aliasName == "to_aos" ||
+           aliasName == "to_aos_ref"))) {
+      ctx.importAliases.emplace(aliasName, targetPath);
+    }
+  };
+  auto registerDefinitionAlias = [&](std::unordered_map<std::string, std::string> &targetAliases,
+                                     const std::string &aliasName,
+                                     const std::string &targetPath) {
+    targetAliases[aliasName] = targetPath;
+    if (!(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+          (aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
+           aliasName == "count_ref" || aliasName == "get_ref" ||
+           aliasName == "ref_ref" || aliasName == "reserve" ||
+           aliasName == "push" || aliasName == "to_aos" ||
+           aliasName == "to_aos_ref"))) {
+      ctx.importAliases[aliasName] = targetPath;
+    }
   };
   for (const auto &importPath : directImportPaths) {
     if (importPath.empty() || importPath[0] != '/') {
@@ -64,7 +84,7 @@ void buildImportAliases(Context &ctx) {
         if (shouldSkipWildcardAlias(prefix, remainder)) {
           continue;
         }
-        registerAlias(ctx.directImportAliases, remainder, path);
+        registerDefinitionAlias(ctx.directImportAliases, remainder, path);
       }
       continue;
     }
@@ -78,7 +98,11 @@ void buildImportAliases(Context &ctx) {
     if (remainder.empty()) {
       continue;
     }
-    registerAlias(ctx.directImportAliases, remainder, importPath);
+    if (defIt != ctx.sourceDefs.end()) {
+      registerDefinitionAlias(ctx.directImportAliases, remainder, importPath);
+    } else {
+      registerAlias(ctx.directImportAliases, remainder, importPath);
+    }
   }
 
   if (ctx.program.sourceImports.empty()) {
@@ -130,7 +154,7 @@ void buildImportAliases(Context &ctx) {
         if (shouldSkipWildcardAlias(prefix, remainder)) {
           continue;
         }
-        registerAlias(ctx.transitiveImportAliases, remainder, path);
+        registerDefinitionAlias(ctx.transitiveImportAliases, remainder, path);
       }
       continue;
     }
@@ -138,7 +162,11 @@ void buildImportAliases(Context &ctx) {
     if (remainder.empty()) {
       continue;
     }
-    registerAlias(ctx.transitiveImportAliases, remainder, importPath);
+    if (ctx.sourceDefs.count(importPath) > 0) {
+      registerDefinitionAlias(ctx.transitiveImportAliases, remainder, importPath);
+    } else {
+      registerAlias(ctx.transitiveImportAliases, remainder, importPath);
+    }
   }
 }
 

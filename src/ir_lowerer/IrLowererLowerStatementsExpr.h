@@ -358,12 +358,16 @@
           }
           if (directCallee == nullptr &&
               (rawPath.rfind("/map/", 0) == 0 ||
+               rawPath.rfind("/std/collections/vector/", 0) == 0 ||
+               rawPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
                rawPath.rfind("/std/collections/map/", 0) == 0 ||
                rawPath.rfind("/std/collections/experimental_map/", 0) == 0)) {
             directCallee = findDirectHelperDefinition(rawPath);
           }
           if (directCallee == nullptr &&
               (rawPath.rfind("/map/", 0) == 0 ||
+               rawPath.rfind("/std/collections/vector/", 0) == 0 ||
+               rawPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
                rawPath.rfind("/std/collections/map/", 0) == 0 ||
                rawPath.rfind("/std/collections/experimental_map/", 0) == 0)) {
             directCallee = findDirectHelperDefinition(resolveExprPath(expr));
@@ -391,6 +395,16 @@
             }
             if (isBuiltinMapInsertFamilyPath(rawPath) ||
                 isBuiltinMapInsertFamilyPath(directCallee->fullPath)) {
+              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
+            if ((rawPath.rfind("/std/collections/vector/", 0) == 0 ||
+                 rawPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+                 directCallee->fullPath.rfind("/std/collections/vector/", 0) == 0 ||
+                 directCallee->fullPath.rfind("/std/collections/experimental_vector/", 0) == 0) &&
+                isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
               }
@@ -560,6 +574,23 @@
           return true;
         }
         if (countAccessResult == CountAccessCallEmitResult::Error) {
+          return false;
+        }
+        const auto countFallbackResult = tryEmitNonMethodCountFallback(
+            expr,
+            [&](const Expr &callExpr) { return isArrayCountCall(callExpr, localsIn); },
+            [&](const Expr &callExpr) { return isStringCountCall(callExpr, localsIn); },
+            [&](const Expr &callExpr) {
+              return resolveMethodCallDefinition(callExpr, localsIn);
+            },
+            [&](const Expr &callExpr, const Definition &callee) {
+              return emitInlineDefinitionCall(callExpr, callee, localsIn, true);
+            },
+            error);
+        if (countFallbackResult == CountMethodFallbackResult::Emitted) {
+          return true;
+        }
+        if (countFallbackResult == CountMethodFallbackResult::Error) {
           return false;
         }
         if (expr.isMethodCall) {

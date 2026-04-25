@@ -53,6 +53,14 @@ std::string resolveStdlibSurfaceImportAliasTarget(const std::string_view importP
   return std::string(metadata->canonicalPath);
 }
 
+bool isCanonicalSoaVectorHelperAliasName(std::string_view aliasName) {
+  return aliasName == "count" || aliasName == "get" || aliasName == "ref" ||
+         aliasName == "count_ref" || aliasName == "get_ref" ||
+         aliasName == "ref_ref" || aliasName == "reserve" ||
+         aliasName == "push" || aliasName == "to_aos" ||
+         aliasName == "to_aos_ref";
+}
+
 const StdlibSurfaceMetadata *findStdlibSurfaceWildcardAliasMetadata(const std::string_view importRoot,
                                                                     const std::string_view aliasName) {
   const StdlibSurfaceMetadata *bestMatch = nullptr;
@@ -178,7 +186,7 @@ bool SemanticsValidator::buildImportAliases() {
     }
   };
   auto registerCanonicalSoaVectorWildcardAliases =
-      [&](const std::string &prefix, std::unordered_map<std::string, std::string> &targetAliases) {
+      [&](const std::string &prefix, std::unordered_map<std::string, std::string> &) {
         if (prefix != "/std/collections/soa_vector") {
           return false;
         }
@@ -186,14 +194,16 @@ bool SemanticsValidator::buildImportAliases() {
         static const std::array<std::string_view, 10> kHelpers = {
             "count", "get", "ref", "count_ref", "get_ref",
             "ref_ref", "reserve", "push", "to_aos", "to_aos_ref"};
-        for (const std::string_view helperName : kHelpers) {
-          const std::string path = prefix + "/" + std::string(helperName);
-          targetAliases[std::string(helperName)] = path;
-          importAliases_[std::string(helperName)] = path;
+        for ([[maybe_unused]] const std::string_view helperName : kHelpers) {
           sawAlias = true;
         }
         return sawAlias;
       };
+  auto shouldPublishMergedImportAlias = [&](std::string_view aliasName,
+                                            std::string_view targetPath) {
+    return !(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
+             isCanonicalSoaVectorHelperAliasName(aliasName));
+  };
 
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
@@ -282,7 +292,9 @@ bool SemanticsValidator::buildImportAliases() {
           importError = true;
           break;
         }
-        importAliases_.emplace(remainder, path);
+        if (shouldPublishMergedImportAlias(remainder, path)) {
+          importAliases_.emplace(remainder, path);
+        }
       }
       if (importError) {
         continue;
@@ -315,7 +327,9 @@ bool SemanticsValidator::buildImportAliases() {
           return false;
         }
       }
-      importAliases_.emplace(aliasName, aliasTargetPath);
+      if (shouldPublishMergedImportAlias(aliasName, aliasTargetPath)) {
+        importAliases_.emplace(aliasName, aliasTargetPath);
+      }
       continue;
     }
     auto defIt = defMap_.find(aliasTargetPath);
@@ -364,7 +378,9 @@ bool SemanticsValidator::buildImportAliases() {
       }
       continue;
     }
-    importAliases_.emplace(remainder, aliasTargetPath);
+    if (shouldPublishMergedImportAlias(remainder, aliasTargetPath)) {
+      importAliases_.emplace(remainder, aliasTargetPath);
+    }
   }
 
   if (!program_.sourceImports.empty()) {
@@ -411,7 +427,9 @@ bool SemanticsValidator::buildImportAliases() {
             continue;
           }
           transitiveImportAliases_.emplace(remainder, path);
-          importAliases_.emplace(remainder, path);
+          if (shouldPublishMergedImportAlias(remainder, path)) {
+            importAliases_.emplace(remainder, path);
+          }
         }
         return;
       }
@@ -423,7 +441,9 @@ bool SemanticsValidator::buildImportAliases() {
           const std::string rootPath = "/" + remainder;
           if (defMap_.find(rootPath) == defMap_.end()) {
             transitiveImportAliases_.emplace(remainder, aliasTargetPath);
-            importAliases_.emplace(remainder, aliasTargetPath);
+            if (shouldPublishMergedImportAlias(remainder, aliasTargetPath)) {
+              importAliases_.emplace(remainder, aliasTargetPath);
+            }
           }
         }
         return;
@@ -442,7 +462,9 @@ bool SemanticsValidator::buildImportAliases() {
         return;
       }
       transitiveImportAliases_.emplace(remainder, aliasTargetPath);
-      importAliases_.emplace(remainder, aliasTargetPath);
+      if (shouldPublishMergedImportAlias(remainder, aliasTargetPath)) {
+        importAliases_.emplace(remainder, aliasTargetPath);
+      }
     };
     for (const auto &importPath : program_.imports) {
       if (directImportSet.count(importPath) != 0) {

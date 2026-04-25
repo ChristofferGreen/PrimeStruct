@@ -283,7 +283,7 @@
       if (info.kind == LocalInfo::Kind::Value && !info.structTypeName.empty()) {
         info.valueKind = LocalInfo::ValueKind::Int64;
       }
-      for (const auto &transform : stmt.transforms) {
+      for (const auto &transform : bindingTypeExprRef.transforms) {
         if (normalizeCollectionBindingTypeName(transform.name) == "File") {
           info.isFileHandle = true;
           info.valueKind = LocalInfo::ValueKind::Int64;

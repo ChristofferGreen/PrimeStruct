@@ -4065,13 +4065,13 @@ main() {
   CHECK(singleWorker.onErrorFactCount > 0);
   CHECK(singleWorker.returnFactCount > 0);
   CHECK_FALSE(singleWorker.idCallableSummary.isExecution);
-  CHECK(singleWorker.idCallableSummary.returnKind == "result");
+  CHECK(singleWorker.idCallableSummary.returnKind == "i64");
   CHECK(singleWorker.idCallableSummary.hasResultType);
   CHECK(singleWorker.idCallableSummary.resultTypeHasValue);
   CHECK(singleWorker.idCallableSummary.resultValueType == "int");
   CHECK(singleWorker.idCallableSummary.resultErrorType == "i32");
   CHECK_FALSE(singleWorker.mainCallableSummary.isExecution);
-  CHECK(singleWorker.mainCallableSummary.returnKind == "value");
+  CHECK(singleWorker.mainCallableSummary.returnKind == "i32");
   CHECK(singleWorker.mainCallableSummary.activeEffects ==
         std::vector<std::string>{"heap_alloc"});
   CHECK(singleWorker.mainCallableSummary.hasOnError);
@@ -4079,7 +4079,7 @@ main() {
   CHECK(singleWorker.mainCallableSummary.onErrorErrorType == "i32");
   CHECK(singleWorker.mainCallableSummary.onErrorBoundArgCount == 0);
   CHECK(singleWorker.mainOnErrorFact.definitionPath == "/main");
-  CHECK(singleWorker.mainOnErrorFact.returnKind == "value");
+  CHECK(singleWorker.mainOnErrorFact.returnKind == "i32");
   CHECK(singleWorker.mainOnErrorFact.handlerPath == "/unexpected_error");
   CHECK(singleWorker.mainOnErrorFact.errorType == "i32");
   CHECK(singleWorker.mainOnErrorFact.boundArgCount == 0);

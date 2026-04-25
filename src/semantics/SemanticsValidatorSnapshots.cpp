@@ -601,6 +601,27 @@ void SemanticsValidator::rebindCollectedCallableSummarySemanticNodeIds(
   }
 }
 
+void SemanticsValidator::rebindCollectedOnErrorSemanticNodeIds(
+    std::vector<OnErrorSnapshotEntry> &entries) const {
+  auto hashSemanticNodePath = [](const std::string &path) {
+    constexpr uint64_t FnvOffsetBasis = 14695981039346656037ull;
+    constexpr uint64_t FnvPrime = 1099511628211ull;
+
+    uint64_t hash = FnvOffsetBasis;
+    for (unsigned char ch : path) {
+      hash ^= static_cast<uint64_t>(ch);
+      hash *= FnvPrime;
+    }
+    return hash == 0 ? 1 : hash;
+  };
+  for (auto &entry : entries) {
+    entry.semanticNodeId =
+        entry.definitionPath.empty()
+            ? 0
+            : hashSemanticNodePath("definition:" + entry.definitionPath);
+  }
+}
+
 void SemanticsValidator::sortCollectedCallableSummaries(
     std::vector<CollectedCallableSummaryEntry> &entries) {
   for (auto &entry : entries) {

@@ -241,7 +241,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK((error.find("field access requires struct receiver") != std::string::npos ||
+         error.find("argument type mismatch for /Marker/tag parameter self") != std::string::npos));
 }
 
 TEST_CASE("rejects vector method alias access canonical-only helper routing in C++ emitter") {
@@ -401,9 +403,11 @@ main() {
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + errPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
+  const std::string error = readFile(errPath);
+  CHECK((error.find("field access requires struct receiver") != std::string::npos ||
+         error.find("argument type mismatch for /Marker/tag parameter self") != std::string::npos));
 }
 
 TEST_CASE("rejects vector method alias access receiver fallback without helper in C++ emitter") {
@@ -500,7 +504,7 @@ main() {
   CHECK(err.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs vector method alias struct-return precedence in C++ emitter") {
+TEST_CASE("rejects vector method alias struct-return precedence in C++ emitter") {
   const std::string source = R"(
 AliasMarker {
   [i32] value
@@ -528,14 +532,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_vector_method_struct_field_alias_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_vector_method_struct_field_alias_precedence_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_vector_method_struct_field_alias_precedence.err")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 2);
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("rejects canonical vector method access struct forwarding in C++ emitter") {

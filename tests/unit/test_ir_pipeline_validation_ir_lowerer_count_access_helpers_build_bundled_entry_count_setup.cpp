@@ -397,6 +397,65 @@ TEST_CASE("ir lowerer count access helpers emit dynamic string count calls") {
   CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
 }
 
+TEST_CASE("ir lowerer count access helpers emit canonical runtime string count calls") {
+  using Result = primec::ir_lowerer::CountAccessCallEmitResult;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo textInfo;
+  textInfo.index = 11;
+  textInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  textInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  textInfo.stringSource = primec::ir_lowerer::LocalInfo::StringSource::RuntimeIndex;
+  locals.emplace("text", textInfo);
+
+  primec::Expr targetExpr;
+  targetExpr.kind = primec::Expr::Kind::Name;
+  targetExpr.name = "text";
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "/std/collections/vector/count";
+  callExpr.args = {targetExpr};
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  int emitExprCalls = 0;
+
+  CHECK_FALSE(primec::ir_lowerer::isStringCountCall(callExpr, locals));
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &countExpr, const primec::ir_lowerer::LocalMap &countLocals) {
+              return primec::ir_lowerer::isStringCountCall(countExpr, countLocals);
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &valueLocals) {
+              if (valueExpr.kind == primec::Expr::Kind::Name) {
+                auto it = valueLocals.find(valueExpr.name);
+                if (it != valueLocals.end()) {
+                  return it->second.valueKind;
+                }
+              }
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              instructions.push_back({primec::IrOpcode::LoadLocal, 11});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 11);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadStringLength);
+}
+
 TEST_CASE("ir lowerer call helpers lower soa_vector count calls") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;

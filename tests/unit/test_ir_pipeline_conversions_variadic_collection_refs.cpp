@@ -508,7 +508,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  CHECK(error == "unknown struct field: value");
 }
 
 TEST_CASE("ir lowerer rejects variadic struct pointer packs with indexed field and helper access") {
@@ -585,5 +585,5 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  CHECK(error == "unknown struct field: value");
 }

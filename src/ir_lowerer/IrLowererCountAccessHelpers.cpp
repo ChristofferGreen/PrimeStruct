@@ -245,11 +245,10 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     return false;
   }
   const std::string scopedExprPath = resolveScopedCallPath(expr);
-  const bool isBareOrCanonicalVectorCountCall =
+  const bool isBareSimpleVectorCountCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
-      (scopedExprPath == "count" || scopedExprPath == "/std/collections/vector/count" ||
-       scopedExprPath == "std/collections/vector/count");
-  if (isBareOrCanonicalVectorCountCall &&
+      expr.namespacePrefix.empty() && isSimpleCallName(expr, "count");
+  if (isBareSimpleVectorCountCall &&
       isVectorCountTarget(target, localsIn)) {
     return false;
   }
@@ -477,6 +476,50 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
     std::string &error) {
+  const auto isCountLikeCall = [&]() {
+    return (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
+           expr.args.size() == 1;
+  };
+  const auto isBareSimpleCountLikeCall = [&](std::string_view helperName) {
+    return expr.kind == Expr::Kind::Call &&
+           !expr.isMethodCall &&
+           expr.namespacePrefix.empty() &&
+           isSimpleCallName(expr, std::string(helperName).c_str()) &&
+           expr.args.size() == 1;
+  };
+  const auto shouldDeferBareSimpleCountLikeCall = [&](std::string_view helperName) {
+    if (!isBareSimpleCountLikeCall(helperName)) {
+      return false;
+    }
+    const Expr &target = expr.args.front();
+    if (helperName == "count") {
+      const bool isRuntimeStringTarget =
+          inferExprKind &&
+          inferExprKind(target, localsIn) == LocalInfo::ValueKind::String;
+      if (isArrayCountCallFn(expr, localsIn) ||
+          isRuntimeStringTarget ||
+          (isStringCountCallFn != nullptr &&
+           isStringCountCallFn(expr, localsIn)) ||
+          (isDynamicCollectionCountTargetFn != nullptr &&
+           isDynamicCollectionCountTargetFn(target, localsIn)) ||
+          (isDynamicVectorCountTargetFn != nullptr &&
+           isDynamicVectorCountTargetFn(target, localsIn))) {
+        return false;
+      }
+      return true;
+    }
+    if ((isVectorCapacityCallFn != nullptr &&
+         isVectorCapacityCallFn(expr, localsIn)) ||
+        (isDynamicVectorCapacityTargetFn != nullptr &&
+         isDynamicVectorCapacityTargetFn(target, localsIn))) {
+      return false;
+    }
+    return true;
+  };
+  if (shouldDeferBareSimpleCountLikeCall("count") ||
+      shouldDeferBareSimpleCountLikeCall("capacity")) {
+    return CountAccessCallEmitResult::NotHandled;
+  }
   if (isExplicitVectorCountMethodCall(expr)) {
     return CountAccessCallEmitResult::NotHandled;
   }
@@ -492,23 +535,40 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     error = "count requires array, vector, map, or string target";
     return CountAccessCallEmitResult::Error;
   }
-  const std::string targetCallPath =
-      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call
-          ? resolveScopedCallPath(expr.args.front())
-          : std::string{};
-  const bool debugMapAtCountTarget =
-      (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
-      expr.args.size() == 1 &&
-      expr.args.front().kind == Expr::Kind::Call &&
-      targetCallPath == "/std/collections/map/at";
   const bool isFieldAccessTarget =
       expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Call && expr.args.front().isFieldAccess;
-  if (isArrayCountCallFn(expr, localsIn)) {
-    if (debugMapAtCountTarget) {
-      error = "debug: branch=isArrayCountCall";
-      return CountAccessCallEmitResult::Error;
+  const auto isStaticallyKnownStringCountTarget = [&]() {
+    if (!isCountLikeCall()) {
+      return false;
     }
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::StringLiteral) {
+      return true;
+    }
+    if (target.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto it = localsIn.find(target.name);
+    return it != localsIn.end() &&
+           it->second.valueKind == LocalInfo::ValueKind::String &&
+           it->second.stringSource == LocalInfo::StringSource::TableIndex;
+  };
+  const auto isRuntimeStringCountTarget = [&]() {
+    if (!isCountLikeCall() || isStaticallyKnownStringCountTarget()) {
+      return false;
+    }
+    const Expr &target = expr.args.front();
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end() && it->second.valueKind == LocalInfo::ValueKind::String) {
+        return true;
+      }
+    }
+    return inferExprKind &&
+           inferExprKind(target, localsIn) == LocalInfo::ValueKind::String;
+  };
+  if (isArrayCountCallFn(expr, localsIn)) {
     if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
         expr.args.front().kind == Expr::Kind::Name) {
       auto it = localsIn.find(expr.args.front().name);
@@ -528,31 +588,25 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return CountAccessCallEmitResult::Emitted;
   }
 
-  const std::string scopedExprPath = resolveScopedCallPath(expr);
   const bool blocksBareVectorCountCall =
-      expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
-      (scopedExprPath == "count" || scopedExprPath == "/std/collections/vector/count" ||
-       scopedExprPath == "std/collections/vector/count") &&
-      expr.args.front().kind != Expr::Kind::Call &&
+      isBareSimpleCountLikeCall("count") && expr.args.front().kind != Expr::Kind::Call &&
       (isDynamicVectorCountTargetFn && isDynamicVectorCountTargetFn(expr.args.front(), localsIn) &&
        !isVectorCountTarget(expr.args.front(), localsIn) &&
        !isFieldAccessTarget);
   const bool blocksLocalVectorCountCall =
-      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
-      isVectorBuiltinName(expr, "count") && isVectorCountTarget(expr.args.front(), localsIn) &&
+      isBareSimpleCountLikeCall("count") &&
+      isVectorCountTarget(expr.args.front(), localsIn) &&
       !(isDynamicCollectionCountTargetFn &&
         isDynamicCollectionCountTargetFn(expr.args.front(), localsIn));
   const bool blocksBareVectorCapacityCall =
-      expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
-      (scopedExprPath == "capacity" || scopedExprPath == "/std/collections/vector/capacity" ||
-       scopedExprPath == "std/collections/vector/capacity") &&
+      isBareSimpleCountLikeCall("capacity") &&
       expr.args.front().kind != Expr::Kind::Call &&
       (isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn) &&
        !(isVectorCapacityCallFn && isVectorCapacityCallFn(expr, localsIn)) &&
        !isFieldAccessTarget);
   const bool blocksLocalVectorCapacityCall =
-      expr.kind == Expr::Kind::Call && !expr.isMethodCall && expr.args.size() == 1 &&
-      isVectorBuiltinName(expr, "capacity") && isVectorCountTarget(expr.args.front(), localsIn) &&
+      isBareSimpleCountLikeCall("capacity") &&
+      isVectorCountTarget(expr.args.front(), localsIn) &&
       !(isDynamicVectorCapacityTargetFn &&
         isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn));
   if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
@@ -572,21 +626,15 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
 
   if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
       isDynamicCollectionCountTargetFn && isDynamicCollectionCountTargetFn(expr.args.front(), localsIn)) {
-    if (expr.args.front().kind == Expr::Kind::Call && targetCallPath == "/std/collections/map/at" &&
-        inferExprKind) {
-      error = "debug: dynamic count target /std/collections/map/at inferred kind=" +
-              std::to_string(static_cast<int>(inferExprKind(expr.args.front(), localsIn)));
-      return CountAccessCallEmitResult::Error;
-    }
     if (inferExprKind &&
         inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
       // String receivers can be dynamic call results; defer to string count emission.
     } else {
-    if (!emitExpr(expr.args.front(), localsIn)) {
-      return CountAccessCallEmitResult::Error;
-    }
-    emitInstruction(IrOpcode::LoadIndirect, 0);
-    return CountAccessCallEmitResult::Emitted;
+      if (!emitExpr(expr.args.front(), localsIn)) {
+        return CountAccessCallEmitResult::Error;
+      }
+      emitInstruction(IrOpcode::LoadIndirect, 0);
+      return CountAccessCallEmitResult::Emitted;
     }
   }
 
@@ -598,6 +646,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInstruction(IrOpcode::PushI64, IrSlotBytes);
     emitInstruction(IrOpcode::AddI64, 0);
     emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+
+  if (isRuntimeStringCountTarget()) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::LoadStringLength, 0);
     return CountAccessCallEmitResult::Emitted;
   }
 
@@ -641,10 +697,6 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         }
       }
       if (stringMapAccess) {
-        if (debugMapAtCountTarget) {
-          error = "debug: branch=stringMapAccess";
-          return CountAccessCallEmitResult::Error;
-        }
         if (!emitExpr(target, localsIn)) {
           return CountAccessCallEmitResult::Error;
         }
@@ -656,22 +708,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
 
   if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
       inferExprKind && inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
-    if (debugMapAtCountTarget) {
-      error = "debug: branch=inferExprString";
-      return CountAccessCallEmitResult::Error;
-    }
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;
     }
     emitInstruction(IrOpcode::LoadStringLength, 0);
     return CountAccessCallEmitResult::Emitted;
-  }
-  if ((isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) && expr.args.size() == 1 &&
-      expr.args.front().kind == Expr::Kind::Call && targetCallPath == "/std/collections/map/at" &&
-      inferExprKind) {
-    error = "debug: unresolved count target kind for /std/collections/map/at (kind=" +
-            std::to_string(static_cast<int>(inferExprKind(expr.args.front(), localsIn))) + ")";
-    return CountAccessCallEmitResult::Error;
   }
 
   return CountAccessCallEmitResult::NotHandled;
