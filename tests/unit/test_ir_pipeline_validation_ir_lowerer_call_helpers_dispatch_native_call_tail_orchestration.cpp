@@ -306,8 +306,13 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK(error ==
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus "
+        "args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/"
+        "args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/"
+        "args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/"
+        "args<Reference<soa_vector<T>>> packs");
 
   primec::Expr soaRefCall;
   soaRefCall.kind = primec::Expr::Kind::Call;
@@ -339,8 +344,13 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK(error ==
+        "native backend only supports at() on numeric/bool/string arrays or vectors, plus "
+        "args<Struct>/args<map<K, V>>/args<Pointer<Struct>>/args<Reference<Struct>>/"
+        "args<Pointer<map<K, V>>>/args<Reference<map<K, V>>>/args<vector<T>>/"
+        "args<Pointer<vector<T>>>/args<Reference<vector<T>>>/args<Pointer<soa_vector<T>>>/"
+        "args<Reference<soa_vector<T>>> packs");
 
   primec::Expr printCall;
   printCall.kind = primec::Expr::Kind::Call;
