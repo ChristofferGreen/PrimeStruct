@@ -348,7 +348,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_push_non_relocation_trivial_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find(
             "vector literal requires relocation-trivial vector element type until container move/reallocation semantics are "
             "implemented: Mover") != std::string::npos);
@@ -379,7 +379,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_vector_constructor_non_relocation_trivial_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find(
             "vector literal requires relocation-trivial vector element type until container move/reallocation "
             "semantics are implemented: Mover") != std::string::npos);
