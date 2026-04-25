@@ -6,7 +6,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
-TEST_CASE("rejects canonical slash-method map access without helper in C++ emitter") {
+TEST_CASE("rejects canonical slash-method map access without helper on canonical at first in C++ emitter") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -24,9 +24,9 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   const std::string errors = readFile(errPath);
-  CHECK(errors.find("unknown method: /map/at") != std::string::npos);
+  CHECK(errors.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs bare map count while builtin count stays authoritative in C++ emitter") {
