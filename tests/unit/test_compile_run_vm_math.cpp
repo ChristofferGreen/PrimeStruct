@@ -43,7 +43,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_software_numeric.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with convert bool from integers") {
@@ -109,7 +109,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_math_support_matrix_nominal_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 9);
 }
 
 TEST_CASE("rejects vm quaternion reference multiply and rotation during lowering") {
