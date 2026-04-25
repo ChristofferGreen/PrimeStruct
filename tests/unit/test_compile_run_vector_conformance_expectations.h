@@ -494,7 +494,15 @@ inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &
 }
 
 inline void expectCanonicalVectorIndexedRemovalOwnershipConformance(const std::string &emitMode) {
-  if (emitMode == "exe" || emitMode == "vm") {
+  if (emitMode == "vm") {
+    expectVectorConformanceCompileReject(
+        makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
+        "vector_indexed_removal_canonical_ownership_" + emitMode,
+        emitMode,
+        "/std/collections/vector/push");
+    return;
+  }
+  if (emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
         "vector_indexed_removal_canonical_ownership_" + emitMode,

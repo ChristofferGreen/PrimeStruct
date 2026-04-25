@@ -224,7 +224,7 @@ inline std::string makeVectorIndexedRemovalOwnershipConformanceSource(const std:
 inline void expectVectorIndexedRemovalOwnershipConformance(const std::string &emitMode,
                                                            const std::string &mode,
                                                            int expectedOut) {
-  if (emitMode == "exe") {
+  if (emitMode == "vm" || emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeVectorIndexedRemovalOwnershipConformanceSource(mode),
         "vector_indexed_removal_ownership_" + mode + "_" + emitMode,
