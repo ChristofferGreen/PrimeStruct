@@ -124,36 +124,39 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-WINDOW-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`,") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("dedicated stdlib helpers on both the experimental and") !=
+    CHECK(graphicsDoc.find("`Device()`, and `Buffer<T>(count)` now rewrite through dedicated stdlib") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("canonical paths") !=
+    CHECK(graphicsDoc.find("helpers on both experimental and canonical paths") !=
           std::string::npos);
-    CHECK(primeStructDoc.find(
-              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)`, `Device()`,") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
           std::string::npos);
   }
 
   {
     CAPTURE("GFX-V1-DEVICE-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`,") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("dedicated stdlib helpers on both the experimental and") !=
+    CHECK(graphicsDoc.find("`Device()`, and `Buffer<T>(count)` now rewrite through dedicated stdlib") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("canonical paths") !=
+    CHECK(graphicsDoc.find("helpers on both experimental and canonical paths") !=
           std::string::npos);
-    CHECK(primeStructDoc.find(
-              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)`, `Device()`,") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
           std::string::npos);
   }
 
   {
     CAPTURE("GFX-V1-BUFFER-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+    CHECK(graphicsDoc.find("constructor-shaped `Window(...)`,") !=
           std::string::npos);
-    CHECK(primeStructDoc.find(
-              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+    CHECK(graphicsDoc.find("`Device()`, and `Buffer<T>(count)` now rewrite through dedicated stdlib") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
           std::string::npos);
   }
 
@@ -282,8 +285,9 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
     CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
-    CHECK(primeStructDoc.find(
-              "constructor-shaped experimental and canonical `Window(...)`, `Device()`, and `Buffer<T>(count)` entry points") !=
+    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)`, `Device()`,") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("The canonical `/std/gfx/*` entry") != std::string::npos);
     CHECK(guidelinesDoc.find("real compile-run conformance across exe/vm/native") != std::string::npos);
