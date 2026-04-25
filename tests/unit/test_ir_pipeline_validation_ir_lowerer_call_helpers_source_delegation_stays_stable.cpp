@@ -792,7 +792,7 @@ main() {
         return entry.scopePath == "/main" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
-                   "/map/count";
+                   "/std/collections/map/count";
       });
   REQUIRE(mapBridgeEntry != nullptr);
 
@@ -821,7 +821,7 @@ main() {
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
             mapBridgeExpr.semanticNodeId) == 1);
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, mapBridgeExpr) ==
-        "/map/count");
+        "/std/collections/map/count");
   const auto mapBridgeSurfaceId =
       primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter,
                                                                               mapBridgeExpr);
