@@ -81,7 +81,7 @@ TEST_CASE("ir lowerer setup type helper rejects wrapper string slash-method acce
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper rejects parser-shaped canonical vector receiver primitive fallback") {
+TEST_CASE("ir lowerer setup type helper keeps parser-shaped canonical vector receiver routed diagnostics") {
   primec::Definition i32TagDef;
   i32TagDef.fullPath = "/i32/tag";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -154,7 +154,7 @@ TEST_CASE("ir lowerer setup type helper rejects parser-shaped canonical vector r
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /std/collections/vector/at");
 
   receiverCall.name = "capacity";
   receiverCall.args = {valuesExpr};
@@ -174,7 +174,7 @@ TEST_CASE("ir lowerer setup type helper rejects parser-shaped canonical vector r
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /std/collections/vector/capacity");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for explicit slash-method map access receivers") {
