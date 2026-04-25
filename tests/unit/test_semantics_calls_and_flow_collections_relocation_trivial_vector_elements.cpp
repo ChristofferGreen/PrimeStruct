@@ -413,7 +413,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("reserve requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("vector reserve alias requires heap_alloc effect") {
@@ -427,7 +427,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("reserve requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("reserve on array reports vector binding before effect requirement") {
@@ -676,7 +676,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("pop requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("bare vector pop validates through imported stdlib helper") {
