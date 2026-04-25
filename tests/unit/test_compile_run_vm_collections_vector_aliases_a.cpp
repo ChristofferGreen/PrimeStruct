@@ -699,7 +699,7 @@ main() {
                                "primec_vm_local_alias_slash_vector_count_string_no_helper_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   const std::string diagnostics = readFile(outPath);
   CHECK(diagnostics.find("semantic-product method-call target missing lowered definition: /string/count") !=
         std::string::npos);
@@ -719,7 +719,7 @@ main() {
                                "primec_vm_local_alias_slash_vector_count_array_no_helper_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
