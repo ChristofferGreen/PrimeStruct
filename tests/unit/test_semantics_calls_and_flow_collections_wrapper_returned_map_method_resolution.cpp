@@ -293,10 +293,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(plus(values.count(true), values.at(true)))
 }
-  )";
+)";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector helper alias keeps unknown-method diagnostics for auto inference") {
@@ -1017,7 +1017,7 @@ main() {
          error.find("unknown method") != std::string::npos));
 }
 
-TEST_CASE("bare vector capacity method on builtin vector receiver requires same-path helper") {
+TEST_CASE("bare vector capacity method on builtin vector receiver validates without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -1026,8 +1026,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib namespaced vector capacity method local same-path overload set rejects duplicate definitions") {
