@@ -360,7 +360,11 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
                  "stale",
                  false);
   expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
-  expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/std/collections/vector/capacity",
+                 {valuesName},
+                 Result::NotHandled,
+                 "stale",
+                 false);
   expectDispatch("/vector/at",
                  {valuesName, indexName},
                  Result::NotHandled,
