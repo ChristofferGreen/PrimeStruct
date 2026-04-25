@@ -120,10 +120,13 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
-  CHECK(capacityEmitExprCalls == 0);
+            error) == Result::Emitted);
+  CHECK(capacityEmitExprCalls == 1);
   CHECK(error.empty());
-  CHECK(instructions.empty());
+  REQUIRE(instructions.size() == 3);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[2].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -139,7 +142,8 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
+            error) == Result::Error);
+  CHECK(error.empty());
   CHECK(instructions.empty());
 
   instructions.clear();
