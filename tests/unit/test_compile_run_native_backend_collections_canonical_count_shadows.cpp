@@ -314,7 +314,7 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
-TEST_CASE("compiles and runs native direct wrapper-returned canonical map access count shadow") {
+TEST_CASE("compiles and runs native direct wrapper-returned canonical map access count shadow with zero exit") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -346,7 +346,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  CHECK(runCommand(exePath) == 0);
 }
 
 TEST_CASE("native keeps wrapper-returned canonical map method access string receiver typing") {
@@ -390,7 +390,7 @@ main() {
   CHECK(runCommand(exePath) == 182);
 }
 
-TEST_CASE("compiles and runs native wrapper-returned slash-method map access count shadow") {
+TEST_CASE("compiles and runs native wrapper-returned slash-method map access count shadow with direct exit") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -427,7 +427,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 91);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("rejects native slash-method vector access string count fallback") {
