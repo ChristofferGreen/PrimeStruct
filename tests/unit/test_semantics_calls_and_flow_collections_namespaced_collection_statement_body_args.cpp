@@ -109,8 +109,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK((error.find("unknown call target: /vector/count") != std::string::npos ||
-         error.find("block arguments require a definition target: /vector/count") != std::string::npos));
+  CHECK(error.find("block arguments require a definition target: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib canonical vector helper call-form expression body arguments reject compatibility fallback") {
