@@ -755,7 +755,7 @@ main() {
   CHECK(summary->returnKind == "i32");
 }
 
-TEST_CASE("ir lowerer call helpers keep exact-import vector and map bridge parity") {
+TEST_CASE("ir lowerer call helpers keep exact-import vector bridge and map direct parity") {
   const std::string source = R"(
 import /std/collections/vector
 import /std/collections/map
@@ -786,15 +786,15 @@ main() {
       });
   REQUIRE(vectorBridgeEntry != nullptr);
 
-  const auto *mapBridgeEntry = findLowererSemanticEntry(
-      primec::semanticProgramBridgePathChoiceView(semanticProgram),
-      [&semanticProgram](const primec::SemanticProgramBridgePathChoice &entry) {
+  const auto *mapDirectEntry = findLowererSemanticEntry(
+      primec::semanticProgramDirectCallTargetView(semanticProgram),
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
         return entry.scopePath == "/main" &&
-               primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
-               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
+               entry.callName == "count" &&
+               primec::semanticProgramResolveCallTargetString(semanticProgram, entry.resolvedPathId) ==
                    "/std/collections/map/count";
       });
-  REQUIRE(mapBridgeEntry != nullptr);
+  REQUIRE(mapDirectEntry != nullptr);
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
@@ -813,20 +813,22 @@ main() {
   REQUIRE(vectorBridgeSurfaceId.has_value());
   CHECK(*vectorBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
 
-  primec::Expr mapBridgeExpr;
-  mapBridgeExpr.kind = primec::Expr::Kind::Call;
-  mapBridgeExpr.semanticNodeId = mapBridgeEntry->semanticNodeId;
+  primec::Expr mapDirectExpr;
+  mapDirectExpr.kind = primec::Expr::Kind::Call;
+  mapDirectExpr.semanticNodeId = mapDirectEntry->semanticNodeId;
+  CHECK(semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.count(
+            mapDirectExpr.semanticNodeId) == 1);
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.count(
-            mapBridgeExpr.semanticNodeId) == 1);
-  CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
-            mapBridgeExpr.semanticNodeId) == 1);
-  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, mapBridgeExpr) ==
+            mapDirectExpr.semanticNodeId) == 0);
+  CHECK(semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.count(
+            mapDirectExpr.semanticNodeId) == 1);
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, mapDirectExpr) ==
         "/std/collections/map/count");
-  const auto mapBridgeSurfaceId =
-      primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter,
-                                                                              mapBridgeExpr);
-  REQUIRE(mapBridgeSurfaceId.has_value());
-  CHECK(*mapBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, mapDirectExpr).empty());
+  const auto mapDirectSurfaceId =
+      primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(adapter, mapDirectExpr);
+  REQUIRE(mapDirectSurfaceId.has_value());
+  CHECK(*mapDirectSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
 }
 
 TEST_CASE("soa field-view backend cleanup stays stable") {
