@@ -550,7 +550,7 @@ TEST_CASE("ir lowerer statement binding helper infers canonical map constructor 
   CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
 }
 
-TEST_CASE("ir lowerer statement binding helper treats scoped Buffer ctor as raw struct init") {
+TEST_CASE("ir lowerer statement binding helper keeps scoped Buffer ctor as Buffer metadata") {
   primec::Expr stmt;
   stmt.name = "value";
   primec::Transform typeTransform;
@@ -577,8 +577,8 @@ TEST_CASE("ir lowerer statement binding helper treats scoped Buffer ctor as raw 
         return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
       });
 
-  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
-  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Buffer);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer statement binding helper inherits map metadata from named source binding") {
