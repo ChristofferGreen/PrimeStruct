@@ -620,7 +620,7 @@ main() {
   CHECK(error.find("unknown method: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access slash method vector target without alias helper reports unknown method") {
+TEST_CASE("vector namespaced access slash method on vector target without alias helper reports alias access method") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -634,7 +634,7 @@ main() {
   CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access slash method vector target without canonical helper reports unknown method") {
+TEST_CASE("vector namespaced access slash method on vector target without canonical helper reports canonical access method") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -739,7 +739,7 @@ main() {
   CHECK(error.find("unknown method: /array/at") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access slash method array target without alias helper reports unknown method") {
+TEST_CASE("vector namespaced access slash method on array target without alias helper reports alias access method") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -757,7 +757,7 @@ main() {
   CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access slash method string target without canonical helper reports unknown method") {
+TEST_CASE("vector namespaced access slash method on string target without canonical helper reports canonical access method") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -774,7 +774,7 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced access slash method string target without alias helper reports unknown method") {
+TEST_CASE("vector namespaced access slash method on string target without alias helper reports alias access method") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
