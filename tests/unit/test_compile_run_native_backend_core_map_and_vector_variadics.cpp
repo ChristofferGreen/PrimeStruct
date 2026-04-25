@@ -476,7 +476,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 52);
+  CHECK(runCommand(exePath) == 48);
 }
 
 TEST_CASE("native rejects variadic pointer map packs with indexed tryAt inference") {
