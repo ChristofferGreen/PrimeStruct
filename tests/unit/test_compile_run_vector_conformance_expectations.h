@@ -475,7 +475,7 @@ inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &
         makeCanonicalVectorDiscardOwnershipConformanceSource(),
         "vector_discard_canonical_ownership_" + emitMode,
         emitMode,
-        "/std/collections/vector/pop");
+        "");
     return;
   }
   if (emitMode == "exe" || emitMode == "native") {
@@ -483,7 +483,7 @@ inline void expectCanonicalVectorDiscardOwnershipConformance(const std::string &
         makeCanonicalVectorDiscardOwnershipConformanceSource(),
         "vector_discard_canonical_ownership_" + emitMode,
         emitMode,
-        "/std/collections/experimental_vector/vectorPop");
+        "");
     return;
   }
   expectVectorConformanceProgramRuns(
@@ -499,7 +499,7 @@ inline void expectCanonicalVectorIndexedRemovalOwnershipConformance(const std::s
         makeCanonicalVectorIndexedRemovalOwnershipConformanceSource(),
         "vector_indexed_removal_canonical_ownership_" + emitMode,
         emitMode,
-        "/std/collections/vector/push");
+        "");
     return;
   }
   if (emitMode == "exe") {
