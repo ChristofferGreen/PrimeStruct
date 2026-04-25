@@ -115,7 +115,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count auto inference rejects string target without helper") {
@@ -200,7 +200,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count helper auto inference keeps inferred return mismatch diagnostics") {
@@ -267,7 +267,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("return type mismatch: expected i32") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count auto inference keeps non-builtin arity mismatch diagnostics") {
@@ -495,7 +495,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count non-builtin arity rejects array helper fallback") {
@@ -513,7 +513,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count non-builtin arity diagnostics report builtin mismatch") {
@@ -531,7 +531,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count auto inference non-builtin arity rejects array helper fallback") {
@@ -550,7 +550,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count expression keeps canonical helper return precedence") {
