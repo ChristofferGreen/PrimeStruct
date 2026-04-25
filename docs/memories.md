@@ -46,6 +46,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: In the VM compile-run path, imported stdlib vector `push` still wins over rooted `/vector/push` shadows for named-call and method syntax, but `push(...)` expression forms reject during VM lowering, auto-inferred named access helpers fail with `missing semantic-product local-auto fact`, and auto-inferred std namespaced access/push alias cases fail earlier with `return type mismatch: expected i32`.
 - Evidence: Focused release reruns of `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_vm_collections_vector_shadow_access.cpp` plus direct `./primec --emit=vm` reproductions against the same fixtures.
 
+### vm-canonical-map-helper-failure-modes
+- Updated: 2026-04-25
+- Tags: tests, vm, collections
+- Fact: In the VM path, explicit canonical map helper overrides can still reach runtime and fail with `VM error: unaligned indirect address in IR`, while imported canonical map-reference helper calls fail earlier in VM lowering with `call=/std/collections/map/at`.
+- Evidence: Focused release reruns of `PrimeStruct_primestruct_compile_run_vm_collections_alias_and_basics_51_60` plus direct `./primec --emit=vm` reproductions of `vm_direct_canonical_map_helper_same_path_precedence.prime` and `vm_stdlib_map_reference_helpers.prime`.
+
 ### vm-map-helper-calls-currently-reject-without-canonical-support
 - Updated: 2026-04-20
 - Tags: tests, vm, collections

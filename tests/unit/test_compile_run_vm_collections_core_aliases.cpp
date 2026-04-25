@@ -492,7 +492,7 @@ main() {
   CHECK(readFile(outPath).empty());
 }
 
-TEST_CASE("rejects vm explicit canonical map helper overrides in expressions during lowering") {
+TEST_CASE("fails vm explicit canonical map helper overrides with runtime alignment diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -550,12 +550,11 @@ main() {
        "primec_vm_direct_canonical_map_helper_same_path_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(outPath).find("VM lowering error") != std::string::npos);
-  CHECK(readFile(outPath).find("call=/std/collections/map/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
+  CHECK(readFile(outPath).find("unaligned indirect address in IR") != std::string::npos);
 }
 
-TEST_CASE("runs vm stdlib namespaced map helpers on canonical map references") {
+TEST_CASE("rejects vm stdlib namespaced map helpers on canonical map references during lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -573,8 +572,9 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_map_reference_helpers_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) == 11);
-  CHECK(readFile(outPath).empty());
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("VM lowering error") != std::string::npos);
+  CHECK(readFile(outPath).find("call=/std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("runs vm canonical map method with slash return type receiver") {
