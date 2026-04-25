@@ -79,7 +79,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > /dev/null 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
@@ -190,7 +190,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/vector") != std::string::npos);
 }
 
@@ -213,7 +213,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
 }
 
@@ -237,7 +237,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
 }
 
@@ -261,7 +261,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/at") != std::string::npos);
 }
 
@@ -286,7 +286,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/at_unsafe") != std::string::npos);
 }
 
@@ -309,7 +309,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/count") != std::string::npos);
 }
 
@@ -336,7 +336,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
 }
 
@@ -359,7 +359,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
@@ -386,7 +386,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown method: /array/capacity") != std::string::npos);
 }
 
@@ -409,7 +409,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /array/push") != std::string::npos);
 }
 
