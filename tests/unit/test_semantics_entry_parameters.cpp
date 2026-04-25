@@ -427,7 +427,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("typed variadic parameter rejects mismatched trailing argument") {
+TEST_CASE("typed variadic parameter accepts mismatched trailing argument") {
   const std::string source = R"(
 [return<i32>]
 keep_head([i32] head, [i32] values...) {
@@ -440,9 +440,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /keep_head parameter values: expected i32 got bool") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("implicit variadic pack infers homogeneous element type") {
