@@ -297,7 +297,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
 }
 
-TEST_CASE("compiles and runs native bare map count without imported canonical helper") {
+TEST_CASE("rejects native bare map count without imported canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -310,13 +310,11 @@ main() {
   const std::string outPath = (testScratchPath("") /
                                "primec_native_map_unnamespaced_count_builtin_fallback_no_canonical_reject_out.txt")
                                   .string();
-  const std::string exePath = (testScratchPath("") /
-                               "primec_native_map_unnamespaced_count_builtin_fallback_no_canonical_reject_exe")
-                                  .string();
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 1);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles native bare map at through canonical helper") {
