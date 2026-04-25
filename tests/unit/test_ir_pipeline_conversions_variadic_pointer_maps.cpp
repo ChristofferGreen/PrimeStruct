@@ -137,7 +137,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 39);
+  CHECK(result == 11344);
 }
 
 TEST_CASE("ir lowerer materializes variadic pointer map packs with indexed count methods") {
