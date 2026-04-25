@@ -218,7 +218,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native canonical vector unsafe access count shadow during lowering") {
+TEST_CASE("rejects native canonical vector unsafe access count shadow with builtin count lowering diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -246,8 +246,9 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("count requires array, vector, map, or string target") !=
-        std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find("native backend only supports") != std::string::npos);
+  CHECK(diagnostics.find("name=count") != std::string::npos);
 }
 
 TEST_CASE("rejects native canonical vector method access builtin string count shadow") {
@@ -313,7 +314,7 @@ main() {
   CHECK(runCommand(exePath) == 91);
 }
 
-TEST_CASE("native keeps inferExprString lowering diagnostics on direct wrapper-returned canonical map access") {
+TEST_CASE("compiles and runs native direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -337,20 +338,15 @@ main() {
   )";
   const std::string srcPath =
       writeTemp("compile_native_direct_wrapper_canonical_map_access_count_diag.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_direct_wrapper_canonical_map_access_count_diag.err")
+       "primec_native_direct_wrapper_canonical_map_access_count_diag_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK(diagnostics.find("Native lowering error:") != std::string::npos);
-  CHECK((diagnostics.find("inferExprString") != std::string::npos ||
-         diagnostics.find("entry argument indexing") != std::string::npos ||
-         diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
-         diagnostics.find("unknown call target: /std/collections/map/at") != std::string::npos));
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("native keeps wrapper-returned canonical map method access string receiver typing") {
@@ -394,7 +390,7 @@ main() {
   CHECK(runCommand(exePath) == 182);
 }
 
-TEST_CASE("native rejects wrapper-returned slash-method map access count with same-path diagnostics") {
+TEST_CASE("compiles and runs native wrapper-returned slash-method map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -423,21 +419,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_wrapper_slash_method_map_access_count_diag.prime", source);
-  const std::string errPath =
+  const std::string exePath =
       (testScratchPath("") /
-       "primec_native_wrapper_slash_method_map_access_count_diag.err")
+       "primec_native_wrapper_slash_method_map_access_count_diag_exe")
           .string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(errPath);
-  CHECK((diagnostics.find("unknown method: /map/at") != std::string::npos ||
-         diagnostics.find("inferExprString") != std::string::npos ||
-         diagnostics.find("entry argument indexing") != std::string::npos ||
-         diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
-         diagnostics.find("unknown call target: /std/collections/map/at") !=
-             std::string::npos));
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 91);
 }
 
 TEST_CASE("rejects native slash-method vector access string count fallback") {
