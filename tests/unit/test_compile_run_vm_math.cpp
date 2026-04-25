@@ -87,7 +87,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm support-matrix math nominal helpers") {
+TEST_CASE("rejects vm support-matrix math nominal helpers") {
   const std::string source = R"(
 import /std/math/*
 
@@ -109,7 +109,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_math_support_matrix_nominal_helpers.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 9);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("rejects vm quaternion reference multiply and rotation during lowering") {
