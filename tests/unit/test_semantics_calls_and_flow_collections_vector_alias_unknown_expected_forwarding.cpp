@@ -229,7 +229,7 @@ main() {
   CHECK(error.find("unknown named argument: marker") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count alias named arguments keep builtin count diagnostics") {
+TEST_CASE("vector namespaced count alias named arguments reject builtin named-argument calls first") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -249,7 +249,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin count") != std::string::npos);
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity alias arity mismatch rejects compatibility template forwarding") {
