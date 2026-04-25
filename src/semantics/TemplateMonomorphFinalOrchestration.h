@@ -7,6 +7,7 @@ Context makeTemplateMonomorphContext(Program &program) {
 void buildImportAliases(Context &ctx) {
   ctx.directImportAliases.clear();
   ctx.transitiveImportAliases.clear();
+  ctx.stdlibScopedImportAliases.clear();
   ctx.importAliases.clear();
   const auto &directImportPaths = ctx.program.sourceImports.empty()
                                       ? ctx.program.imports
@@ -167,6 +168,11 @@ void buildImportAliases(Context &ctx) {
     } else {
       registerAlias(ctx.transitiveImportAliases, remainder, importPath);
     }
+  }
+
+  ctx.stdlibScopedImportAliases = ctx.transitiveImportAliases;
+  for (const auto &[aliasName, targetPath] : ctx.directImportAliases) {
+    ctx.stdlibScopedImportAliases[aliasName] = targetPath;
   }
 }
 

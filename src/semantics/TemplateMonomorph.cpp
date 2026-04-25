@@ -53,6 +53,7 @@ struct Context {
   std::unordered_set<std::string> templateDefs;
   std::unordered_map<std::string, std::string> directImportAliases;
   std::unordered_map<std::string, std::string> transitiveImportAliases;
+  std::unordered_map<std::string, std::string> stdlibScopedImportAliases;
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::vector<HelperOverloadEntry>> helperOverloads;
   std::unordered_map<std::string, std::string> helperOverloadInternalToPublic;
@@ -216,6 +217,15 @@ bool usesStdlibScopedImportAliases(const std::string &namespacePrefix,
   };
   return isStdlibOwnedPath(namespacePrefix) ||
          (namespacePrefix.empty() && isStdlibOwnedPath(ctx.currentDefinitionPath));
+}
+
+const std::unordered_map<std::string, std::string> &scopedImportAliasesForNamespace(
+    const std::string &namespacePrefix,
+    const Context &ctx) {
+  if (usesStdlibScopedImportAliases(namespacePrefix, ctx)) {
+    return ctx.stdlibScopedImportAliases;
+  }
+  return ctx.importAliases;
 }
 
 const std::string *lookupScopedImportAliasForNamespace(std::string_view name,
