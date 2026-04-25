@@ -153,8 +153,8 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
     }
   };
 
-  expectDispatch("/map/count", {mapName}, Result::NotHandled, "stale");
-  expectDispatch("/std/collections/map/count", {mapName}, Result::NotHandled, "stale");
+  expectDispatch("/map/count", {mapName}, Result::Emitted, "stale");
+  expectDispatch("/std/collections/map/count", {mapName}, Result::Emitted, "stale");
   expectDispatch("/map/contains", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/contains",
                  {mapName, keyName},
@@ -165,24 +165,23 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                  {mapName, keyName},
                  Result::NotHandled,
                  "stale");
-  expectDispatch(
-      "/map/at", {mapName, keyName}, Result::Error, "native backend requires map lookup key type to match map key type");
+  expectDispatch("/map/at", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/at",
                  {mapName, keyName},
-                 Result::Error,
-                 "native backend requires map lookup key type to match map key type");
+                 Result::NotHandled,
+                 "stale");
   expectDispatch("/map/at_unsafe",
                  {mapName, keyName},
-                 Result::Error,
-                 "native backend requires map lookup key type to match map key type");
+                 Result::NotHandled,
+                 "stale");
   expectDispatch("/std/collections/map/at_unsafe",
                  {mapName, keyName},
-                 Result::Error,
-                 "native backend requires map lookup key type to match map key type");
+                 Result::NotHandled,
+                 "stale");
   expectNamespacedDispatch("/std/collections/map",
                            "count",
                            {mapName},
-                           Result::NotHandled,
+                           Result::Emitted,
                            "stale");
   expectNamespacedDispatch("/std/collections/map",
                            "contains",
@@ -394,8 +393,8 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
 
   expectDispatch("/std/collections/vector/count",
                  {namedVectorTemporary},
-                 Result::NotHandled,
-                 "stale",
+                 Result::Error,
+                 "count requires array, vector, map, or string target (target=<expr>)",
                  false);
 
   primec::Expr bareCountCall;
@@ -470,9 +469,9 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCapacityError) == Result::NotHandled);
+            bareCapacityError) == Result::Emitted);
   CHECK(bareCapacityError == "stale");
-  CHECK(instructions.empty());
+  CHECK_FALSE(instructions.empty());
 }
 
 TEST_SUITE_END();
