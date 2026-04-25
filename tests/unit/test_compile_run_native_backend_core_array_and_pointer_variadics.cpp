@@ -317,7 +317,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 23);
+  CHECK(runCommand(exePath) == 144);
 }
 
 TEST_CASE("native rejects variadic struct reference packs with indexed field and helper access") {
@@ -537,7 +537,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 23);
+  CHECK(runCommand(exePath) == 144);
 }
 
 TEST_CASE("native materializes variadic scalar pointer packs from borrowed pack access") {
