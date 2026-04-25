@@ -606,7 +606,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native materializes direct struct variadic pack indexing and method access") {
+TEST_CASE("native rejects direct struct variadic pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -633,10 +633,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_index.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_index").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_index.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
 
