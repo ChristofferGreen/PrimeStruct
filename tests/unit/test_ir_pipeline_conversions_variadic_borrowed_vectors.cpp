@@ -239,7 +239,7 @@ main() {
   CHECK(result == 9);
 }
 
-TEST_CASE("ir lowerer materializes variadic soa_vector packs with indexed count methods") {
+TEST_CASE("ir lowerer rejects variadic soa_vector packs with indexed count methods") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -283,17 +283,19 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 9);
+  CHECK_FALSE(lowerer.lower(program,
+                            &semanticProgram,
+                            "/main",
+                            {},
+                            {},
+                            module,
+                            error,
+                            nullptr,
+                            primec::IrValidationTarget::Vm));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes variadic map packs with indexed count methods") {
+TEST_CASE("ir lowerer rejects variadic map packs with indexed count methods") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -332,14 +334,16 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK_FALSE(lowerer.lower(program,
+                            &semanticProgram,
+                            "/main",
+                            {},
+                            {},
+                            module,
+                            error,
+                            nullptr,
+                            primec::IrValidationTarget::Vm));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
 TEST_CASE("ir lowerer rejects variadic map packs with indexed tryAt inference") {
@@ -389,7 +393,7 @@ main() {
   CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes variadic experimental map packs with indexed canonical count calls") {
+TEST_CASE("ir lowerer rejects variadic experimental map packs with indexed canonical count calls") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -432,14 +436,16 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK_FALSE(lowerer.lower(program,
+                            &semanticProgram,
+                            "/main",
+                            {},
+                            {},
+                            module,
+                            error,
+                            nullptr,
+                            primec::IrValidationTarget::Vm));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
 TEST_SUITE_END();
