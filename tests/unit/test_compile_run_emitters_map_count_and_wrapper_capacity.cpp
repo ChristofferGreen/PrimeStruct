@@ -415,7 +415,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /array/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects namespaced count capacity method chain compatibility fallback in C++ emitter") {
+TEST_CASE("rejects namespaced count/capacity method chain fallback on vector count first in C++ emitter") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
