@@ -836,7 +836,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector capacity method shadow") {
+TEST_CASE("rejects native user vector capacity method shadow during lowering") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/capacity([vector<i32>] values) {
@@ -850,13 +850,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_capacity_method_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_vector_capacity_method_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_vector_capacity_method_shadow.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 77);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string err = readFile(errPath);
+  CHECK(err.find("native backend only supports") != std::string::npos);
+  CHECK(err.find("name=capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects native user vector count call shadow") {
