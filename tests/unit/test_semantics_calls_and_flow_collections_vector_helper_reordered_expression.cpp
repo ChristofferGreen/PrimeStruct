@@ -490,6 +490,41 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib wrapper vector constructors accept public vector destinations") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] direct{vectorSingle<i32>(6i32)}
+  [vector<i32> mut] assigned{vectorNew<i32>()}
+  vectorPush<i32>(direct, 7i32)
+  vectorPush<i32>(assigned, 5i32)
+  vectorPush<i32>(assigned, 8i32)
+  return(plus(plus(vectorCount<i32>(direct), vectorAtUnsafe<i32>(direct, 1i32)),
+              plus(vectorCount<i32>(assigned), vectorAt<i32>(assigned, 0i32))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on public vector destinations") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vectorSingle<bool>(false)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib wrapper vector constructors keep mismatch diagnostics on explicit Vector destinations") {
   const std::string source = R"(
 import /std/collections/*

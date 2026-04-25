@@ -373,6 +373,19 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     }
     return {};
   };
+  auto collectionRepresentationsCompatible =
+      [](const std::string &expectedRepresentation,
+         const std::string &actualRepresentation) {
+        if (expectedRepresentation == actualRepresentation) {
+          return true;
+        }
+        const bool isVectorRepresentationPair =
+            (expectedRepresentation == "builtin_vector" &&
+             actualRepresentation == "experimental_vector") ||
+            (expectedRepresentation == "experimental_vector" &&
+             actualRepresentation == "builtin_vector");
+        return isVectorRepresentationPair;
+      };
 
   if (!hasExplicitType || explicitAutoType) {
     (void)inferBindingTypeFromInitializer(initializer, params, locals, info, &stmt);
@@ -413,7 +426,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
         }
         if (!expectedRepresentation.empty() &&
             !actualRepresentation.empty() &&
-            expectedRepresentation != actualRepresentation) {
+            !collectionRepresentationsCompatible(expectedRepresentation,
+                                                 actualRepresentation)) {
           return failBindingDiagnostic("binding initializer type mismatch");
         }
       } else if (hasInitializerBindingInfo) {
@@ -421,7 +435,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             collectionRepresentation(initializerBindingInfo.typeName, initializerBindingInfo.typeTemplateArg);
         if (!expectedRepresentation.empty() &&
             !actualRepresentation.empty() &&
-            expectedRepresentation != actualRepresentation) {
+            !collectionRepresentationsCompatible(expectedRepresentation,
+                                                 actualRepresentation)) {
           return failBindingDiagnostic("binding initializer type mismatch");
         }
       }
