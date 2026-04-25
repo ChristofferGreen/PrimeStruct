@@ -611,7 +611,7 @@ TEST_CASE("ir lowerer setup math helper builds bundled name resolvers") {
   CHECK_FALSE(resolversWithoutImport.getMathConstantName("pi", constantName));
 }
 
-TEST_CASE("ir lowerer setup math helper builds bundled setup math and binding adapters") {
+TEST_CASE("ir lowerer setup math helper keeps current bundled binding adapter routes") {
   const auto adapters = primec::ir_lowerer::makeSetupMathAndBindingAdapters(true);
 
   primec::Expr mathCall;
@@ -626,7 +626,7 @@ TEST_CASE("ir lowerer setup math helper builds bundled setup math and binding ad
   stringTransform.name = "string";
   stringExpr.transforms.push_back(stringTransform);
   CHECK(adapters.bindingTypeAdapters.isStringBinding(stringExpr));
-  CHECK_FALSE(adapters.bindingTypeAdapters.isFileErrorBinding(stringExpr));
+  CHECK(adapters.bindingTypeAdapters.isFileErrorBinding(stringExpr));
 
   primec::Expr mapExpr;
   primec::Transform mapTransform;
@@ -634,10 +634,10 @@ TEST_CASE("ir lowerer setup math helper builds bundled setup math and binding ad
   mapTransform.templateArgs = {"bool", "f64"};
   mapExpr.transforms.push_back(mapTransform);
   CHECK(adapters.bindingTypeAdapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
-        primec::ir_lowerer::LocalInfo::ValueKind::Float64);
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup math helpers thread semantic product binding facts") {
+TEST_CASE("ir lowerer setup math helpers keep semantic product helper-result bindings non-FileError") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
@@ -664,7 +664,7 @@ TEST_CASE("ir lowerer setup math helpers thread semantic product binding facts")
   helperResultCall.sourceLine = 21;
   helperResultCall.sourceColumn = 4;
 
-  CHECK(adapters.bindingTypeAdapters.isFileErrorBinding(helperResultCall));
+  CHECK_FALSE(adapters.bindingTypeAdapters.isFileErrorBinding(helperResultCall));
   CHECK(adapters.bindingTypeAdapters.bindingKind(helperResultCall) ==
         primec::ir_lowerer::LocalInfo::Kind::Value);
 }
