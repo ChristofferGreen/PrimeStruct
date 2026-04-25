@@ -4,6 +4,11 @@ TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 namespace {
 
+constexpr const char *kExperimentalSoaVectorStructTypePrefix =
+    "/std/collections/experimental_soa_vector/SoaVector__";
+const std::string kSpecializedExperimentalSoaVectorStructType =
+    std::string(kExperimentalSoaVectorStructTypePrefix) + "specialized";
+
 const primec::Definition *findDefinitionByPath(const primec::Program &program,
                                                std::string_view fullPath) {
   for (const auto &definition : program.definitions) {
@@ -438,8 +443,7 @@ TEST_CASE("ir lowerer statement binding helper keeps specialized experimental so
   param.name = "values";
   primec::Transform referenceTransform;
   referenceTransform.name = "Reference";
-  referenceTransform.templateArgs.push_back(
-      "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  referenceTransform.templateArgs.push_back(kSpecializedExperimentalSoaVectorStructType);
   param.transforms.push_back(referenceTransform);
 
   auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters();
@@ -724,8 +728,7 @@ TEST_CASE(
   valuesInfo.argsPackElementKind = LocalInfo::Kind::Reference;
   valuesInfo.referenceToVector = true;
   valuesInfo.isSoaVector = true;
-  valuesInfo.structTypeName =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  valuesInfo.structTypeName = kSpecializedExperimentalSoaVectorStructType;
   locals.emplace("values", valuesInfo);
 
   primec::Expr stmt;
@@ -792,8 +795,7 @@ TEST_CASE(
   valuesInfo.argsPackElementKind = LocalInfo::Kind::Pointer;
   valuesInfo.pointerToVector = true;
   valuesInfo.isSoaVector = true;
-  valuesInfo.structTypeName =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  valuesInfo.structTypeName = kSpecializedExperimentalSoaVectorStructType;
   locals.emplace("values", valuesInfo);
 
   primec::Expr stmt;
