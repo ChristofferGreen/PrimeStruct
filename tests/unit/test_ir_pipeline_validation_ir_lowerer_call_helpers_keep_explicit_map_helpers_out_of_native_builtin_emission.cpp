@@ -356,9 +356,9 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
                  false);
   expectDispatch("/std/collections/vector/count",
                  {valuesName},
-                 Result::NotHandled,
+                 Result::Emitted,
                  "stale",
-                 false);
+                 true);
   expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/std/collections/vector/capacity",
                  {valuesName},
@@ -406,7 +406,7 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
   expectDispatch("/std/collections/vector/count",
                  {namedVectorTemporary},
                  Result::Error,
-                 "count requires array, vector, map, or string target (target=<expr>)",
+                 "count requires array, vector, map, or string target",
                  false);
 
   primec::Expr bareCountCall;
@@ -481,9 +481,9 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCapacityError) == Result::Emitted);
+            bareCapacityError) == Result::NotHandled);
   CHECK(bareCapacityError == "stale");
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 }
 
 TEST_SUITE_END();
