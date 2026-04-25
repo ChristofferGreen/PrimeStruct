@@ -5269,7 +5269,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("builtin soa_vector method-like helper-return read helpers validate without same-path shadow") {
+TEST_CASE("builtin soa_vector method-like helper-return read helpers reject unresolved get call target first") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5299,10 +5299,10 @@ main() {
                         plus(getMethod,
                              plus(refBare, refMethod))))))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: get") != std::string::npos);
 }
 
 TEST_CASE("aos and soa containers do not implicitly convert") {
