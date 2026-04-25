@@ -118,7 +118,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects native vector alias access struct method chain with array receiver diagnostics") {
+TEST_CASE("rejects native vector alias access struct method chain with rooted helper diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -150,7 +150,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /array/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector alias access struct method chain with primitive receiver diagnostics") {
