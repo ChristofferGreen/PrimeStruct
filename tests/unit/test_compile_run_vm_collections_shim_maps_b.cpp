@@ -471,7 +471,7 @@ main() {
   CHECK(runCommand(runCmd) == 15);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector quint type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector quint bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -483,7 +483,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quint_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 5);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector sext constructor") {
@@ -502,7 +502,7 @@ main() {
   CHECK(runCommand(runCmd) == 20);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector sext type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector sext bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -514,7 +514,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_sext_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 6);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector sept constructor") {
@@ -533,7 +533,7 @@ main() {
   CHECK(runCommand(runCmd) == 31);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector sept type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector sept bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -545,7 +545,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_sept_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 7);
 }
 
 TEST_CASE("runs vm with stdlib collection shim vector oct constructor") {
@@ -564,7 +564,7 @@ main() {
   CHECK(runCommand(runCmd) == 44);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector oct type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector oct bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -576,7 +576,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_oct_mismatch.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 8);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map pair string keys") {
