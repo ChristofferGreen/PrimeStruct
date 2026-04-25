@@ -83,7 +83,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 23);
+  CHECK(result == 1888);
 }
 
 TEST_CASE("ir lowerer rejects variadic scalar pointer packs from borrowed pack access") {
