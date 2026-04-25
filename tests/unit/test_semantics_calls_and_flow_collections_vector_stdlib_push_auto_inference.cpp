@@ -422,7 +422,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("return type mismatch: expected bool") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced count expression non-builtin arity falls back to canonical helper return") {
@@ -755,8 +755,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_SUITE_END();
