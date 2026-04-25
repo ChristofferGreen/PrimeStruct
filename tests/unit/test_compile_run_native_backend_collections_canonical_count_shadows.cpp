@@ -903,7 +903,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects native user array capacity call shadow") {
+TEST_CASE("compiles and runs native user array capacity call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/capacity([array<i32>] values) {
@@ -917,13 +917,15 @@ main() {
 }
   )";
   const std::string srcPath = writeTemp("compile_native_user_array_capacity_call_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow_exe").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_user_array_capacity_call_shadow.out").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 66);
 }
 
 TEST_CASE("compiles and runs native user array capacity method shadow") {
