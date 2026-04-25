@@ -337,7 +337,7 @@ main() {
   CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced helper alias rejects method-call sugar auto inference") {
+TEST_CASE("vector namespaced helper alias keeps unknown-method auto-inference diagnostics") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/count([vector<i32>] values, [bool] marker) {
@@ -353,12 +353,10 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/vector/count") != std::string::npos);
-  CHECK((error.find("unknown call target") != std::string::npos ||
-         error.find("unknown method") != std::string::npos));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity alias rejects method-call sugar auto inference") {
+TEST_CASE("vector namespaced capacity alias keeps unknown-method auto-inference diagnostics") {
   const std::string source = R"(
 [return<bool>]
 /std/collections/vector/capacity([vector<i32>] values, [bool] marker) {
@@ -374,9 +372,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/vector/capacity") != std::string::npos);
-  CHECK((error.find("unknown call target") != std::string::npos ||
-         error.find("unknown method") != std::string::npos));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector capacity alias keeps unknown-method diagnostics for auto inference") {
