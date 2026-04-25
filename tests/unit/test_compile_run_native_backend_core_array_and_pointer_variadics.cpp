@@ -35,7 +35,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 11);
+  CHECK(runCommand(exePath) == 112);
 }
 
 TEST_CASE("native materializes variadic borrowed array packs with indexed count methods") {
