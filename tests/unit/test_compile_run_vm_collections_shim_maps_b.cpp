@@ -133,8 +133,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quint_standalone_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_quint_standalone_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map quint standalone key type mismatch") {
@@ -207,8 +212,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sext_standalone_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_sext_standalone_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sext standalone key type mismatch") {
@@ -281,8 +291,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sept_standalone_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_sept_standalone_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map sept standalone key type mismatch") {
@@ -358,8 +373,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_oct_standalone_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_oct_standalone_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map oct standalone key type mismatch") {
