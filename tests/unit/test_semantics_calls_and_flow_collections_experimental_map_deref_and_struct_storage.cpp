@@ -62,7 +62,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped map constructors accept experimental map struct storage fields") {
@@ -120,7 +120,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept experimental result struct storage fields") {
@@ -179,7 +179,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map struct storage fields") {
@@ -249,7 +249,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("map constructors accept dereferenced experimental map storage references") {
@@ -291,7 +291,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced result struct storage fields") {
@@ -362,7 +362,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads infer experimental result auto bindings") {
@@ -495,8 +495,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor keeps mismatch diagnostics on explicit experimental map parameters") {
@@ -559,8 +560,9 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") !=
+        std::string::npos);
 }
 
 TEST_CASE("canonical map constructor assignment keeps mismatch diagnostics on explicit experimental map bindings") {
@@ -643,7 +645,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("implicit map constructors infer experimental auto locals and auto returns") {
