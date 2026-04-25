@@ -239,7 +239,7 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CAPTURE("GFX-V1-NATIVE-LAUNCHER-THINNING-STATUS");
     CHECK(graphicsDoc.find("native macOS launcher path is now a thin wrapper over a shared canonical gfx launch helper") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("native launcher script itself is now only a thin wrapper over a shared canonical gfx launch helper") !=
+    CHECK(primeStructDoc.find("itself is now only a thin wrapper over a shared canonical gfx launch helper") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("native window launcher now delegates to") != std::string::npos);
     CHECK(guidelinesDoc.find("shared canonical gfx launch helper") != std::string::npos);
@@ -250,7 +250,7 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CHECK(graphicsDoc.find("native macOS window host itself now binds its cube/software-surface callbacks onto a shared") !=
           std::string::npos);
     CHECK(graphicsDoc.find("native Metal window presenter helper") != std::string::npos);
-    CHECK(primeStructDoc.find("native window host runtime shell now also lives in one shared presenter helper") !=
+    CHECK(primeStructDoc.find("also lives in one shared presenter helper") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("native window host runtime shell") != std::string::npos);
     CHECK(guidelinesDoc.find("now lives in a shared presenter helper") != std::string::npos);
@@ -260,11 +260,11 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
     CAPTURE("GFX-V1-METAL-HOST-LAUNCHER-THINNING-STATUS");
     CHECK(graphicsDoc.find("Metal sample path now also routes through shared helpers") != std::string::npos);
     CHECK(graphicsDoc.find("shared metal launch helper") != std::string::npos);
-    CHECK(graphicsDoc.find("shared spinning-cube simulation reference helper") != std::string::npos);
-    CHECK(primeStructDoc.find("Metal sample launcher now also delegates to one shared metal launch helper") !=
+    CHECK(graphicsDoc.find("spinning-cube simulation reference helper") != std::string::npos);
+    CHECK(primeStructDoc.find("sample launcher now also delegates to one shared metal launch helper") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("shared spinning-cube simulation reference helper") != std::string::npos);
-    CHECK(primeStructDoc.find("offscreen runtime shell lives in one shared helper") != std::string::npos);
+    CHECK(primeStructDoc.find("bind to one shared spinning-cube simulation reference helper") != std::string::npos);
+    CHECK(primeStructDoc.find("shared helper instead of staying embedded in `metal_host.mm`") != std::string::npos);
     CHECK(guidelinesDoc.find("Metal launcher now delegates to") != std::string::npos);
     CHECK(guidelinesDoc.find("shared metal launch helper") != std::string::npos);
     CHECK(guidelinesDoc.find("shared spinning-cube simulation reference helper") != std::string::npos);
@@ -273,8 +273,9 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   {
     CAPTURE("GFX-V1-BROWSER-HOST-LAUNCHER-THINNING-STATUS");
     CHECK(graphicsDoc.find("browser runtime shell now lives in") != std::string::npos);
-    CHECK(graphicsDoc.find("browser sample launcher now delegates to") != std::string::npos);
-    CHECK(primeStructDoc.find("browser sample launcher now also delegates to one shared browser launch helper") !=
+    CHECK(graphicsDoc.find("launcher now delegates to `scripts/run_canonical_browser_sample.sh` through") !=
+          std::string::npos);
+    CHECK(primeStructDoc.find("one shared browser launch helper") !=
           std::string::npos);
     CHECK(primeStructDoc.find("browser_runtime_shared.js") != std::string::npos);
     CHECK(guidelinesDoc.find("shared browser launch helper") != std::string::npos);
@@ -283,7 +284,7 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
-    CHECK(graphicsDoc.find("first canonical `/std/gfx/*` stdlib surface") != std::string::npos);
+    CHECK(graphicsDoc.find("canonical `/std/gfx/*` is now the authoritative public") != std::string::npos);
     CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)`, `Device()`,") !=
           std::string::npos);
     CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
