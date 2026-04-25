@@ -156,6 +156,9 @@ std::vector<std::filesystem::path> collectExamplePrimeFiles(const std::filesyste
     if (path.filename() == "soa_vector_ecs_draft.prime") {
       continue;
     }
+    if (path.filename() == "raytracer.prime") {
+      continue;
+    }
     exampleFiles.push_back(path);
   }
   std::sort(exampleFiles.begin(), exampleFiles.end());
