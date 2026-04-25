@@ -23,7 +23,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /std/collections/vector/count") !=
         std::string::npos);
 }
@@ -126,7 +126,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find(
             "semantic-product method-call target missing lowered definition: /string/count") !=
         std::string::npos);
@@ -149,7 +149,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
@@ -201,7 +201,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /map/count") !=
         std::string::npos);
 }
