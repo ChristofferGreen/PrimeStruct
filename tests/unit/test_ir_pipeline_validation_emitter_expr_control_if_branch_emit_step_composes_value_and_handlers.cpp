@@ -991,8 +991,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "    if (!concreteResolvedCollectionPath.empty()) {\n"
             "      resolvedCollectionPath = concreteResolvedCollectionPath;\n"
             "    }\n"
-            "  }\n"
-            "  auto defIt = defMap_.find(resolvedCollectionPath);") !=
+            "  }\n") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "  auto defIt = defMap_.find(resolveCalleePath(expr));") ==
@@ -1082,13 +1081,14 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "    }") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
-            "resolveMethodTarget(params,\n"
-            "                              locals,\n"
-            "                              initializer.namespacePrefix,\n"
-            "                              initializer.args.front(),\n"
-            "                              initializer.name,\n"
-            "                              resolvedMethodInitializer,\n"
-            "                              methodBuiltin)") !=
+            "    if (resolveMethodTarget(params,\n"
+            "                            locals,\n"
+            "                            initializer.namespacePrefix,\n"
+            "                            initializer.args.front(),\n"
+            "                            initializer.name,\n"
+            "                            resolvedMethodInitializer,\n"
+            "                            methodBuiltin) &&\n"
+            "        !resolvedMethodInitializer.empty()) {") !=
         std::string::npos);
   CHECK(buildInitializerInferenceCallsSource.find(
             "const std::string concreteResolvedMethodInitializer =\n"
@@ -1281,6 +1281,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "    }\n"
             "    if (resolvedPath == \"/to_aos\" || resolvedPath == \"/to_aos_ref\") {\n"
             "      return false;\n"
+            "    }\n"
+            "    const std::string resolvedCanonical =\n"
+            "        canonicalizeLegacySoaToAosHelperPath(resolvedPath);\n"
+            "    if (resolvedCanonical != \"/std/collections/soa_vector/to_aos\" &&\n"
+            "        resolvedCanonical != \"/std/collections/soa_vector/to_aos_ref\") {\n"
+            "      return false;\n"
             "    }\n") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
@@ -1300,10 +1306,20 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "        resolveExprConcreteCallPath(params, locals, initializer, resolvedInitializerPath);\n"
             "    if (!concreteResolvedInitializerPath.empty()) {\n"
             "      resolvedInitializerPath = concreteResolvedInitializerPath;\n"
-            "  }\n") !=
+            "    }\n"
+            "  }\n"
+            "  auto canonicalizeResolvedPath = [](std::string path) {\n"
+            "    const size_t suffix = path.find(\"__t\");\n"
+            "    if (suffix != std::string::npos) {\n"
+            "      path.erase(suffix);\n"
+            "    }\n"
+            "    return path;\n"
+            "  };\n"
+            "  const std::string canonicalResolvedInitializerPath =\n"
+            "      canonicalizeResolvedPath(resolvedInitializerPath);\n") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "      resolvedInitializerPath == \"/vector\") {\n") !=
+            "      canonicalResolvedInitializerPath == \"/vector\" ||\n") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "      resolveCalleePath(initializer) == \"/vector\") {\n") ==
