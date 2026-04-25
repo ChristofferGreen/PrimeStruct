@@ -2,7 +2,7 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("wrapper temporary templated vector method arity mismatch reports canonical argument mismatch") {
+TEST_CASE("wrapper temporary templated vector method rejects canonical-only helper path") {
   const std::string source = R"(
 [return<int>]
 /vector/count([vector<i32>] values) {
@@ -26,7 +26,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector namespaced alias keeps builtin count diagnostics when only canonical templated helper exists") {
