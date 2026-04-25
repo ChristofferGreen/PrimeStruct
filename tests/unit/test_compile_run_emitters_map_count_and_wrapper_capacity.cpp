@@ -445,7 +445,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects canonical slash-method vector count on string receiver without helper in C++ emitter") {
+TEST_CASE("C++ emitter keeps string-count diagnostic for slash-method vector count on string receiver") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -496,7 +496,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects canonical slash-method vector count on array receiver without helper in C++ emitter") {
+TEST_CASE("C++ emitter keeps array-count diagnostic for slash-method vector count on array receiver") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {

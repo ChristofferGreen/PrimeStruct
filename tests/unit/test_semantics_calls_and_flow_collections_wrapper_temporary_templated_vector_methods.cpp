@@ -386,7 +386,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method rejects same-path helper on string target") {
+TEST_CASE("vector namespaced count slash method on string target keeps string receiver diagnostic with same-path helper") {
   const std::string source = R"(
 [return<int>]
 /vector/count([string] values) {
@@ -447,7 +447,7 @@ main() {
   CHECK(error.find("unknown method: /map/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method string target without helper reports unknown method") {
+TEST_CASE("vector namespaced count slash method on string target without helper reports string receiver method") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -464,7 +464,7 @@ main() {
   CHECK(error.find("unknown method: /string/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method rejects same-path helper on array target") {
+TEST_CASE("vector namespaced count slash method on array target keeps array receiver diagnostic with same-path helper") {
   const std::string source = R"(
 [return<int>]
 /vector/count([array<i32>] values) {
@@ -486,7 +486,7 @@ main() {
   CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method array target without helper reports unknown method") {
+TEST_CASE("vector namespaced count slash method on array target without helper reports array receiver method") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -503,7 +503,7 @@ main() {
   CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity slash method rejects same-path helper on string target") {
+TEST_CASE("vector namespaced capacity slash method on string target keeps string receiver diagnostic with same-path helper") {
   const std::string source = R"(
 [return<int>]
 /vector/capacity([string] values) {
@@ -547,7 +547,7 @@ main() {
   CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity slash method rejects same-path helper on array target") {
+TEST_CASE("vector namespaced capacity slash method on array target keeps array receiver diagnostic with same-path helper") {
   const std::string source = R"(
 [return<int>]
 /vector/capacity([array<i32>] values) {
@@ -586,7 +586,7 @@ main() {
   CHECK(error.find("unknown method: /map/capacity") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity slash method string target without helper reports unknown method") {
+TEST_CASE("vector namespaced capacity slash method on string target without helper reports string receiver method") {
   const std::string source = R"(
 [return<string>]
 wrapText() {
@@ -603,7 +603,7 @@ main() {
   CHECK(error.find("unknown method: /string/capacity") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity slash method array target without helper reports unknown method") {
+TEST_CASE("vector namespaced capacity slash method on array target without helper reports array receiver method") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
