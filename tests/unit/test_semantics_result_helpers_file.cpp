@@ -59,7 +59,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/file/fileErrorIsEof parameter err") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib FileError why wrapper covers direct and Result-based access") {
@@ -188,7 +189,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("unknown call target: /FileError/why") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError root result aliases are removed") {
@@ -203,7 +204,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("unknown call target: /FileError/status") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError package status alias is removed") {
@@ -218,7 +219,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("unknown call target: fileErrorStatus") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError package value alias is removed") {
@@ -233,7 +234,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("unknown call target: fileErrorResult") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError result methods reject unexpected arguments") {
@@ -264,7 +265,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("unknown call target: /FileError/is_eof") != std::string::npos);
 }
 
 TEST_CASE("stdlib FileError eof wrapper rejects unexpected arguments") {
@@ -294,7 +295,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /std/file/FileError/status parameter err") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib File helpers cover imported method and slash-call wrappers") {
