@@ -238,8 +238,8 @@ TEST_CASE("ir lowerer call helpers dispatch native call tail orchestration") {
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            error) == Result::NotHandled);
-  CHECK(error == "stale");
+            error) == Result::Error);
+  CHECK(error == "count requires array, vector, map, or string target (target=soa)");
   CHECK(instructions.empty());
 
   primec::Expr soaStdlibAliasCountCall = soaCountCall;
