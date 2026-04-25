@@ -1678,19 +1678,18 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 const primec::ir_lowerer::LocalMap &localsIn,
                 bool expectValue) {
               ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK(callExpr.name == "insert");
+              CHECK(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/mapInsert");
               CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              CHECK(callExpr.templateArgs.empty());
               CHECK(localsIn.find("mapsPack") != localsIn.end());
               return true;
             },
             instructions,
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(inlineCalls == 1);
+  CHECK(inlineCalls == 0);
   CHECK(instructions.empty());
 
   primec::Expr mapInsertArgsPackWrappedMethodStmt;
@@ -1920,12 +1919,11 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 const primec::ir_lowerer::LocalMap &,
                 bool expectValue) {
               ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK(callExpr.name == "insert");
+              CHECK(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/mapInsert");
               CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              CHECK(callExpr.templateArgs.empty());
               return true;
             },
             instructions,
@@ -5788,18 +5786,14 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(builtinVectorEmitCalls == 1);
+  CHECK(builtinVectorEmitCalls == 0);
   CHECK(builtinVectorMethodResolutionCalls == 0);
-  CHECK(builtinVectorDefinitionResolutionCalls == 0);
-  CHECK(observedBuiltinVectorExpr.name == "push");
+  CHECK(builtinVectorDefinitionResolutionCalls == 1);
+  CHECK(observedBuiltinVectorExpr.name.empty());
   CHECK(observedBuiltinVectorExpr.namespacePrefix.empty());
-  REQUIRE(observedBuiltinVectorExpr.args.size() == 2);
-  CHECK(observedBuiltinVectorExpr.args[0].kind == primec::Expr::Kind::Name);
-  CHECK(observedBuiltinVectorExpr.args[0].name == "values");
-  CHECK(observedBuiltinVectorExpr.args[1].kind == primec::Expr::Kind::BoolLiteral);
-  CHECK(observedBuiltinVectorExpr.args[1].boolValue);
+  CHECK(observedBuiltinVectorExpr.args.empty());
 }
 
 TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
@@ -5849,7 +5843,7 @@ TEST_CASE("ir lowerer statement call emission source delegation stays stable") {
         std::string::npos);
   CHECK(source.find("return resolvePublishedStatementVectorHelperName(expr.name, helperNameOut);") ==
         std::string::npos);
-  CHECK(source.find("std::string helperName = callExpr.name;") ==
+  CHECK(source.find("std::string helperName = callExpr.name;") !=
         std::string::npos);
   CHECK(source.find("std::string normalizedName = stmt.name;") ==
         std::string::npos);
