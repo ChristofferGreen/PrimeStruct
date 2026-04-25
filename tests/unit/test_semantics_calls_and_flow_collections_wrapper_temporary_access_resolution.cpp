@@ -525,7 +525,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("wrapper vector capacity method requires helper") {
+TEST_CASE("wrapper vector capacity method keeps unknown method without helper") {
   const std::string source = R"(
 [effects(heap_alloc)]
 wrapVector() {
@@ -540,10 +540,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("capacity method rejects extra arguments") {
+TEST_CASE("capacity method rejects extra arguments with rooted mismatch") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -553,7 +553,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("argument count mismatch for /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("capacity rejects non-vector target") {
