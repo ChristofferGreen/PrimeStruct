@@ -219,7 +219,7 @@ main() {
   const std::string outPath =
       (std::filesystem::temp_directory_path() / "primec_vm_canonical_unknown_map_helper_out.txt").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   const std::string diagnostics = readFile(outPath);
   CHECK(diagnostics.find("unknown call target: /std/collections/map/missing") != std::string::npos);
   CHECK(diagnostics.find("unknown call target: std/collections/map/missing") == std::string::npos);
@@ -302,7 +302,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_canonical_map_access_string_shadow_before_aliases_diag.out")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 10);
   CHECK_FALSE(readFile(outPath).empty());
 }
 
@@ -331,7 +331,8 @@ main() {
        "primec_vm_map_count_call_alias_precedence_with_canonical_templated_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("rejects vm map compatibility count call mismatch with canonical templated helper present") {
@@ -359,7 +360,7 @@ main() {
        "primec_vm_map_count_call_alias_mismatch_with_canonical_templated_helper_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("argument count mismatch for /map/count") != std::string::npos);
 }
 
@@ -416,7 +417,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_map_count_explicit_template_non_templated_alias_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /map/count") !=
         std::string::npos);
 }
@@ -446,7 +447,7 @@ main() {
        "primec_vm_map_count_explicit_template_method_non_templated_alias_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /map/count") !=
         std::string::npos);
 }
@@ -476,7 +477,7 @@ main() {
        "primec_vm_canonical_map_count_explicit_template_non_templated_canonical_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("template arguments are only supported on templated definitions: /std/collections/map/count") !=
         std::string::npos);
 }
@@ -506,7 +507,7 @@ main() {
        "primec_vm_canonical_map_count_implicit_template_arg_shape_canonical_diag_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
