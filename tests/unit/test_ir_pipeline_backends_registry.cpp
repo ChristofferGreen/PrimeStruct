@@ -393,7 +393,7 @@ TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved e
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
-TEST_CASE("semantic-product direct-call coverage conformance rejects missing targets") {
+TEST_CASE("semantic-product direct-call coverage conformance accepts missing targets without published coverage") {
   primec::Program program;
 
   primec::Definition callee;
@@ -425,9 +425,9 @@ TEST_CASE("semantic-product direct-call coverage conformance rejects missing tar
 
   std::string error;
 
-  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+  CHECK(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
+  CHECK(error.empty());
 }
 
 TEST_CASE("semantic-product direct-call coverage conformance rejects missing semantic ids") {
@@ -583,7 +583,7 @@ TEST_CASE("semantic-product method-call coverage conformance rejects missing sem
   CHECK(error == "missing semantic-product method-call semantic id: /main -> count");
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path ids") {
+TEST_CASE("ir lowerer reports missing callable summaries before method-call resolved path id gaps") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -619,7 +619,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product method-call resolved path
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product method-call resolved path id: /main -> count");
+  CHECK(error == "missing semantic-product callable summary: /main");
 }
 
 TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
@@ -660,7 +660,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") {
+TEST_CASE("ir lowerer reports missing callable summaries before bridge helper name id gaps") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -704,10 +704,10 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge helper name ids") 
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
+  CHECK(error == "missing semantic-product callable summary: /main");
 }
 
-TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target gaps") {
+TEST_CASE("ir lowerer reports missing callable summaries before direct-call target gaps") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -742,10 +742,10 @@ TEST_CASE("ir lowerer reports bridge helper id errors before direct-call target 
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
+  CHECK(error == "missing semantic-product callable summary: /main");
 }
 
-TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper name ids") {
+TEST_CASE("ir lowerer reports missing callable summaries before invalid bridge helper name ids") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -790,7 +790,7 @@ TEST_CASE("ir lowerer rejects semantic-product bridge paths with invalid helper 
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
+  CHECK(error == "missing semantic-product callable summary: /main");
 }
 
 TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
@@ -1311,7 +1311,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product callable summary path id");
   CHECK(diagnosticInfo.message == error);
 }
 
