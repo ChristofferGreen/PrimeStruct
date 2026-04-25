@@ -167,7 +167,7 @@ main() {
   CHECK(readFile(errPath).find("count requires array, vector, map, or string target") != std::string::npos);
 }
 
-TEST_CASE("vm keeps builtin string count on canonical vector unsafe access shadow") {
+TEST_CASE("rejects vm canonical vector unsafe access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -192,7 +192,7 @@ main() {
        "primec_vm_canonical_vector_access_unsafe_count_shadow_reject.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("vm keeps primitive diagnostics for canonical vector method access count shadow") {
