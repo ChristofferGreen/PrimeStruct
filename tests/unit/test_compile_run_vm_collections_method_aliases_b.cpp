@@ -41,7 +41,7 @@ main() {
   CHECK(readFile(errPath).find("field access requires struct receiver") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector unsafe method alias access struct method chain with primitive receiver diagnostics") {
+TEST_CASE("rejects vm vector unsafe method alias access struct method chain with array receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -77,7 +77,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector unsafe method alias access field expression with struct receiver diagnostics") {
