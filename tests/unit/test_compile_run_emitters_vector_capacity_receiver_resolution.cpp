@@ -30,7 +30,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /string/capacity") !=
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 
@@ -86,7 +86,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /array/capacity") !=
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 
@@ -166,7 +166,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects alias direct-call vector capacity on array receiver without helper in C++ emitter") {
@@ -246,7 +246,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /map/capacity") !=
+  CHECK(readFile(errPath).find("capacity requires vector target") !=
         std::string::npos);
 }
 
