@@ -330,6 +330,14 @@ inline void expectCanonicalVectorNamespaceVmImportRequirement() {
                                        "/std/collections/vector/vector");
 }
 
+inline void expectCanonicalVectorNamespaceExplicitBindingConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespaceExplicitBindingRejectSource(),
+      "vector_namespace_canonical_binding_" + emitMode,
+      emitMode,
+      2);
+}
+
 inline void expectCanonicalVectorNamespaceExplicitBindingReject(const std::string &emitMode) {
   const std::string source = makeCanonicalVectorNamespaceExplicitBindingRejectSource();
   const std::string srcPath = writeTemp("vector_namespace_canonical_binding_reject_" + emitMode + ".prime", source);
@@ -355,6 +363,14 @@ inline void expectCanonicalVectorNamespaceExplicitBindingReject(const std::strin
                                  quoteShellArg(outPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("mismatch") != std::string::npos);
+}
+
+inline void expectCanonicalVectorNamespaceNamedArgsExplicitBindingConformance(const std::string &emitMode) {
+  expectVectorConformanceProgramRuns(
+      makeCanonicalVectorNamespaceNamedArgsExplicitBindingRejectSource(),
+      "vector_namespace_canonical_named_args_binding_" + emitMode,
+      emitMode,
+      2);
 }
 
 inline void expectCanonicalVectorNamespaceNamedArgsExplicitBindingReject(const std::string &emitMode) {
