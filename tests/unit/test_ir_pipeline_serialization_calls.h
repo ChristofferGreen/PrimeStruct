@@ -698,8 +698,7 @@ TEST_CASE("semantics and ir lowerer diverge on unresolved auto return_expr") {
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("missing semantic-product direct-call semantic id: /pick -> /if") !=
-        std::string::npos);
+  CHECK(lowerError.find("unable to infer return type on /pick") != std::string::npos);
 }
 
 TEST_SUITE_END();
