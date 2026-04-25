@@ -4930,10 +4930,10 @@ main() {
   [vector<Particle>] values{vector<Particle>()}
   return(count(to_aos(to_soa(values))))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("to_soa helper rejects non-vector target") {
