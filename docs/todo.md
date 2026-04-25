@@ -56,7 +56,8 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-none
+- TODO-4146
+- TODO-4145
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -64,11 +65,12 @@ none
 
 ### Priority Lanes (Current)
 
-none
+- Release-gate stability and test-suite audit follow-up: TODO-4145, TODO-4146
 
 ### Execution Queue (Recommended)
 
-none
+1. TODO-4145
+2. TODO-4146
 
 ### PrimeStruct Coverage Snapshot
 
@@ -88,7 +90,7 @@ none
 | VM debug-session argv ownership | none |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | none |
+| Test-suite audit follow-up and release-gate stability | TODO-4145, TODO-4146 |
 
 ### Validation Coverage Snapshot
 
@@ -101,13 +103,13 @@ none
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | none |
-| Focused backend rerun ergonomics and suite partitioning | none |
+| Focused backend rerun ergonomics and suite partitioning | TODO-4146 |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | none |
+| Release benchmark/example suite stability and doctest governance | TODO-4145, TODO-4146 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -178,4 +180,45 @@ none
 
 ### Task Blocks
 
-none
+- [ ] TODO-4146: Split or optimize slow serialization shards
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test-suite audit follow-up and release-gate stability
+  - scope: Investigate the `primestruct.ir_pipeline.serialization` release
+    shards that currently exceed the doctest runtime guardrail in
+    `build-release/Testing/Temporary/CTestCostData.txt`, especially cases
+    `53_56`, `57_60`, and `61_64`, and reduce the hotspot through smaller
+    shards or targeted test/runtime optimization without dropping coverage.
+  - acceptance:
+    - No serialization shard with multiple cases remains above 5 seconds in
+      routine release validation unless the test source or registration gains
+      a brief justification for the retained cost.
+    - The touched serialization shards keep deterministic ordering and preserve
+      the current serialization contract coverage.
+    - Focused release reruns for the touched serialization shards pass from
+      `build-release/`.
+  - stop_rule: Limit work to serialization tests, shard registration, and the
+    smallest helper/runtime changes needed to reduce the hotspot; do not
+    broaden into unrelated backend refactors.
+
+- [ ] TODO-4145: Reconcile stale wrapper-helper audit expectations
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test-suite audit follow-up and release-gate stability
+  - scope: Audit the pre-existing release failures in
+    `tests/unit/test_semantics_calls_and_flow_collections_wrapper_temporary_templated_vector_methods.cpp`
+    and `tests/unit/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp`,
+    then rewrite or split the stale vector/map helper expectations so the
+    files assert the current external contract instead of outdated diagnostics.
+  - acceptance:
+    - Focused release reruns for both touched source files pass from
+      `build-release/`, or any remaining blocker is narrowed into a smaller
+      explicit follow-up TODO with the stale expectations removed.
+    - Duplicate or stale assertions around namespaced vector/map helper routing
+      are removed, renamed, or rewritten to match the currently observed
+      semantics and C++ emitter behavior.
+    - Any queue/docs-lock coverage affected by the audit stays synchronized
+      with `docs/todo.md`.
+  - stop_rule: Keep the slice limited to those two audit families plus minimal
+    shared helper or docs-lock adjustments needed to make the release-facing
+    contract explicit.

@@ -276,17 +276,23 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   const std::string vmMaps = readFile(vmMapsPath.string());
   const std::string examplesDocs = readFile(examplesDocsPath.string());
 
-  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\nnone") !=
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
+  CHECK(todo.find("- TODO-4146") != std::string::npos);
+  CHECK(todo.find("- TODO-4145") != std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\nnone") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
-  CHECK(todo.find("### Priority Lanes (Current)\n\nnone") !=
+  CHECK(todo.find("### Priority Lanes (Current)\n\n- Release-gate stability and test-suite audit follow-up: TODO-4145, TODO-4146") !=
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\nnone") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4145\n2. TODO-4146") !=
         std::string::npos);
-  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4145, TODO-4146 |") !=
+        std::string::npos);
+  CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | TODO-4146 |") !=
+        std::string::npos);
+  CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | TODO-4145, TODO-4146 |") !=
         std::string::npos);
   CHECK(todo.find("| Architecture contract probe migration | none |") !=
         std::string::npos);
@@ -297,7 +303,10 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("New skipped doctest coverage must create a new explicit TODO before it lands.") !=
         std::string::npos);
-  CHECK(todo.find("### Task Blocks\n\nnone") != std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4146: Split or optimize slow serialization shards") !=
+        std::string::npos);
+  CHECK(todo.find("- [ ] TODO-4145: Reconcile stale wrapper-helper audit expectations") !=
+        std::string::npos);
   CHECK(todo.find("- [ ] TODO-4117:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4118:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4110:") == std::string::npos);
