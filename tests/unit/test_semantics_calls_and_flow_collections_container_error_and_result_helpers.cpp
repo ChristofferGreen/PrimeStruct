@@ -1299,7 +1299,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector direct helper shadows validate on wrapper state") {
+TEST_CASE("experimental soa_vector direct helper shadows reject duplicate reserve definitions") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -1402,8 +1402,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/soa_vector/reserve") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector inline location method-like borrowed helper-return helper surfaces validate on wrapper state") {
