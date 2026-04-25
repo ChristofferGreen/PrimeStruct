@@ -320,7 +320,7 @@ main() {
   CHECK(runCommand(exePath) == 23);
 }
 
-TEST_CASE("native materializes variadic struct reference packs with indexed field and helper access") {
+TEST_CASE("native rejects variadic struct reference packs with indexed field and helper access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -388,13 +388,17 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_reference.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_reference").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_reference.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 65);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: unknown struct field: value") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic struct pointer packs with indexed field and helper access") {
+TEST_CASE("native rejects variadic struct pointer packs with indexed field and helper access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -462,10 +466,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_pointer.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_pointer").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_pointer.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 65);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: unknown struct field: value") !=
+        std::string::npos);
 }
 
 TEST_CASE("native materializes variadic scalar pointer packs with indexed dereference") {
