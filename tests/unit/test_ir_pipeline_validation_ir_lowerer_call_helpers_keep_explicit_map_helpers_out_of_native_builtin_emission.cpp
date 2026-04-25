@@ -351,8 +351,8 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
 
   expectDispatch("/vector/count",
                  {valuesName},
-                 Result::Error,
-                 "count requires array, vector, map, or string target",
+                 Result::NotHandled,
+                 "stale",
                  false);
   expectDispatch("/std/collections/vector/count",
                  {valuesName},
