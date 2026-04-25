@@ -189,7 +189,7 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced slash method reference receiver diagnostics keep divide target") {
+TEST_CASE("array namespaced slash method reference receiver diagnostics normalize reference receiver target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -201,7 +201,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /Reference/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize reference receiver target") {
@@ -215,7 +216,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("block arguments require a definition target: /Reference/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method temporary pointer diagnostics keep divide target") {
