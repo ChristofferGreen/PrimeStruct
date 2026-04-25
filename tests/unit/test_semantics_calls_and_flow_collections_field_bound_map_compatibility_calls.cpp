@@ -473,7 +473,7 @@ main() {
   CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
 }
 
-TEST_CASE("map compatibility contains call keeps explicit alias precedence") {
+TEST_CASE("map compatibility contains call now rejects alias-only precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /map/contains([map<i32, i32>] values, [i32] key) {
@@ -493,8 +493,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /map/contains") != std::string::npos);
 }
 
 TEST_CASE("map compatibility tryAt call requires explicit alias definition") {
