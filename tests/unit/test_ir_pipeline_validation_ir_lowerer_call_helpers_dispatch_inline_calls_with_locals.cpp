@@ -86,8 +86,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
               return false;
             },
-            error) == Result::Error);
-  CHECK(error == "stale");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   primec::ir_lowerer::LocalInfo soaCountInfo;
   soaCountInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
@@ -110,8 +110,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               CHECK(false);
               return false;
             },
-            error) == Result::Error);
-  CHECK(error == "stale");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
 
   int soaEmitCalls = 0;
   error.clear();
@@ -163,8 +163,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               CHECK(false);
               return false;
             },
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK_FALSE(error.empty());
 
   int soaGetEmitCalls = 0;
   error.clear();
@@ -207,8 +207,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               CHECK(false);
               return false;
             },
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK_FALSE(error.empty());
 
   int soaRefEmitCalls = 0;
   error.clear();
