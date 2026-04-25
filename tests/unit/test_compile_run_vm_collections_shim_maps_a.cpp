@@ -285,8 +285,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_count_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapCount__") != std::string::npos);
+  CHECK(error.find("parameter values: expected map<bool, i32> got map<i32, i32>") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map count string key type mismatch") {
@@ -300,8 +307,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_count_string_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_count_string_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapCount__") != std::string::npos);
+  CHECK(error.find("parameter values: expected map<i32, i32> got map<string, i32>") !=
+        std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map at") {
@@ -345,8 +360,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_at_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapAt__") != std::string::npos);
+  CHECK(error.find("parameter values: expected map<bool, i32> got map<i32, i32>") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map at string key type mismatch") {
@@ -360,8 +382,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_string_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_at_string_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapAt__") != std::string::npos);
+  CHECK(error.find("parameter key: expected string") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map at unsafe") {
@@ -405,8 +434,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_at_unsafe_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
+        std::string::npos);
+  CHECK(error.find("parameter values: expected map<bool, i32> got map<i32, i32>") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm stdlib collection shim map at unsafe string key type mismatch") {
@@ -420,8 +458,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_at_unsafe_string_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_at_unsafe_string_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapAtUnsafe__") !=
+        std::string::npos);
+  CHECK(error.find("parameter key: expected string") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map method access string keys") {
