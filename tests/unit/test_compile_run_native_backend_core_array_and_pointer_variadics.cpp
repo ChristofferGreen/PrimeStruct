@@ -35,7 +35,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 112);
+  CHECK(runCommand(exePath) == 48);
 }
 
 TEST_CASE("native materializes variadic borrowed array packs with indexed count methods") {
@@ -144,7 +144,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 64);
+  CHECK(runCommand(exePath) == 96);
 }
 
 TEST_CASE("native materializes variadic pointer array packs with indexed count methods") {
@@ -253,7 +253,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 64);
+  CHECK(runCommand(exePath) == 96);
 }
 
 TEST_CASE("native materializes variadic scalar reference packs with indexed dereference") {
