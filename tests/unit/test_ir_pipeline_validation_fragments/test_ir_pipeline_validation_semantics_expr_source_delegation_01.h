@@ -2395,8 +2395,8 @@
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "      const bool needsDirectCountMethodTargetResolution =\n"
-            "          !hasVisibleCountHelperMethodTarget;\n") !=
+            "                  const bool needsDirectCountMethodTargetResolution =\n"
+            "                      !hasVisibleCountHelperMethodTarget;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "        if (resolvedCountMethodTargetDirectly) {\n"
@@ -3437,11 +3437,8 @@
             "                    stdlibMapCountTargetPath;\n") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "                if (!isBuiltinMethod &&\n"
-            "                    !hasDeclaredDefinitionPath(methodResolved) &&\n"
-            "                    !hasImportedDefinitionPath(methodResolved)) {\n"
-            "                  (void)failExprDiagnostic(expr,\n"
-            "                                           \"unknown method: \" + methodResolved);\n"
+            "                if (!failInvisibleResolvedMethodTarget(methodResolved,\n"
+            "                                                      isBuiltinMethod)) {\n"
             "                  return false;\n"
             "                }") !=
         std::string::npos);
@@ -3919,28 +3916,10 @@
             "                                          \"capacity\", methodResolved)) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!(hasNamedArguments(expr.argNames) ||\n"
-            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall,\n"
-            "          resolveCalleePath(expr),\n"
-            "          \"capacity\",\n"
-            "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
-            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n"
-            "    ((!(expr.args.empty() || expr.args.size() == 1 ||\n"
-            "        defMap_.find(resolved) == defMap_.end()) &&\n"
-            "      context.isNamespacedVectorHelperCall) ||\n"
-            "     (expr.args.size() == 1 &&\n"
-            "      (defMap_.find(resolved) == defMap_.end() ||\n"
-            "       context.isNamespacedVectorCapacityCall)))) {\n"
-            "  handledOut = true;\n"
-            "  markMethodTargetUsage();\n"
-            "  const Expr &receiver = expr.args.front();\n"
-            "  bool isBuiltinMethod = false;\n"
-            "  std::string methodResolved;\n"
-            "  {\n"
-            "                if (resolveVectorHelperMethodTarget(\n"
-            "                        params, locals, receiver, \"capacity\",\n"
-            "                        methodResolved) &&\n") !=
+            "  const bool violatesCapacityMethodSurfacePreconditions =\n"
+            "      capacityMethodSurfaceHasNamedArguments ||\n"
+            "      routesThroughUnimportedStdNamespacedVectorCapacityCompatibilityDirectCall ||\n"
+            "      capacityMethodSurfaceUsesNonVectorBuiltinName;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "return resolveCollectionMethodTargetFromReceiver(\n"
@@ -3979,30 +3958,9 @@
             "        context.isNamespacedVectorHelperCall) {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "if (!(hasNamedArguments(expr.argNames) ||\n"
-            "      isUnimportedStdNamespacedVectorCompatibilityDirectCall(\n"
-            "          expr.isMethodCall,\n"
-            "          resolveCalleePath(expr),\n"
-            "          \"capacity\",\n"
-            "          hasImportedDefinitionPath(\"/std/collections/vector/capacity\")) ||\n"
-            "      !isVectorBuiltinName(expr, \"capacity\")) &&\n"
-            "    ((!(expr.args.empty() || expr.args.size() == 1 ||\n"
-            "        defMap_.find(resolved) == defMap_.end()) &&\n"
-            "      context.isNamespacedVectorHelperCall) ||\n"
-            "     (expr.args.size() == 1 &&\n"
-            "      (defMap_.find(resolved) == defMap_.end() ||\n"
-            "       context.isNamespacedVectorCapacityCall)))) {\n"
-            "  handledOut = true;\n"
-            "  usedMethodTarget = true;\n"
-            "  hasMethodReceiverIndex = true;\n"
-            "  methodReceiverIndex = 0;\n"
-            "  const Expr &receiver = expr.args.front();\n"
-            "  bool isBuiltinMethod = false;\n"
-            "  std::string methodResolved;\n"
-            "  {\n"
-            "                if (resolveVectorHelperMethodTarget(\n"
-            "                        params, locals, receiver, \"capacity\",\n"
-            "                        methodResolved) &&\n") !=
+            "                const bool needsDirectCapacityMethodTargetResolution =\n"
+            "                    !usesStdNamespacedCapacityCompatibilityHelper &&\n"
+            "                    !hasVisibleCapacityHelperMethodTarget;\n") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "const bool capacityMethodSurfaceHasNamedArguments =\n"
@@ -5939,7 +5897,15 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "auto tryResolveConcreteExperimentalSoaWrapperHelper =\n"
             "      [&](const std::string &resolvedType) -> bool {\n"
-            "    if (!isExperimentalSoaVectorSpecializedTypePath(resolvedType) ||\n"
+            "    const std::string normalizedResolvedType =\n"
+            "        std::string(trimLeadingSlash(resolvedType));\n"
+            "    const bool isExperimentalSoaWrapperType =\n"
+            "        normalizedResolvedType == \"std/collections/experimental_soa_vector/SoaVector\" ||\n"
+            "        normalizedResolvedType.rfind(\n"
+            "            \"std/collections/experimental_soa_vector/SoaVector<\",\n"
+            "            0) == 0 ||\n"
+            "        isExperimentalSoaVectorSpecializedTypePath(resolvedType);\n"
+            "    if (!isExperimentalSoaWrapperType ||\n"
             "        !hasVisibleSoaHelperTargetForCurrentImports(helperName)) {\n"
             "      return false;\n"
             "    }\n"
