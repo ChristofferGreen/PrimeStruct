@@ -298,20 +298,16 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       (activeExecution != nullptr && isStdlibOwnedPath(activeExecution->fullPath));
   auto lookupScopedImportAlias = [&](std::string_view name) -> const std::string * {
     const std::string key(name);
-    if (stdlibScopedOwner) {
-      if (auto it = importAliases_.find(key); it != importAliases_.end()) {
-        return &it->second;
-      }
-      return nullptr;
-    }
     if (auto it = directImportAliases_.find(key); it != directImportAliases_.end()) {
       return &it->second;
     }
     if (auto it = transitiveImportAliases_.find(key); it != transitiveImportAliases_.end()) {
       return &it->second;
     }
-    if (auto it = importAliases_.find(key); it != importAliases_.end()) {
-      return &it->second;
+    if (!stdlibScopedOwner) {
+      if (auto it = importAliases_.find(key); it != importAliases_.end()) {
+        return &it->second;
+      }
     }
     return nullptr;
   };

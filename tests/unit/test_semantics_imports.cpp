@@ -751,6 +751,32 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/vector") != std::string::npos);
 }
 
+TEST_CASE("stdlib-owned definitions keep direct collection helper imports visible") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+  namespace demo {
+  [public effects(heap_alloc), return<int>]
+  probe() {
+    [vector<i32>] values{vector<i32>(4i32, 8i32)}
+    [map<i32, i32>] pairs{map<i32, i32>(1i32, 7i32)}
+    return(plus(plus(count(values), at(values, 1i32)),
+                plus(count(pairs), at(pairs, 1i32))))
+  }
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact gfx imports keep bare bridge aliases") {
   const std::string source = R"(
 import /std/gfx/Buffer
