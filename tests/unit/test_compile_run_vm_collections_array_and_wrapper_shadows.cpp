@@ -225,7 +225,7 @@ main() {
   CHECK(diagnostics.find("unknown call target: std/collections/map/missing") == std::string::npos);
 }
 
-TEST_CASE("vm canonical map access string shadow currently fails backend lowering") {
+TEST_CASE("rejects vm canonical map access string shadow before execution") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<i32, string>] values, [i32] key) {
@@ -260,10 +260,10 @@ main() {
   )";
   const std::string srcPath = writeTemp("vm_canonical_map_access_string_shadow_before_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 10);
+  CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("vm canonical map access non-string shadow currently fails backend lowering") {
+TEST_CASE("vm canonical map access non-string shadow exits without diagnostics") {
   const std::string source = R"(
 [return<string>]
 /map/at([map<i32, string>] values, [i32] key) {
@@ -303,7 +303,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(runCmd) == 10);
-  CHECK_FALSE(readFile(outPath).empty());
+  CHECK(readFile(outPath).empty());
 }
 
 TEST_CASE("rejects vm map compatibility count call with canonical templated helper present") {
@@ -511,7 +511,7 @@ main() {
   CHECK(readFile(outPath).find("argument count mismatch for /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("runs vm canonical implicit-template map count call with wrapper slash return envelope") {
+TEST_CASE("rejects vm canonical implicit-template map count call with wrapper slash return envelope") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -531,7 +531,7 @@ main() {
   const std::string srcPath =
       writeTemp("vm_canonical_map_count_implicit_template_wrapper_slash_return_envelope.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 96);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with builtin string count before user call shadow") {
