@@ -257,7 +257,7 @@ main() {
   CHECK(result == 5);
 }
 
-TEST_CASE("ir lowerer materializes direct struct variadic args packs for count") {
+TEST_CASE("ir lowerer rejects direct struct variadic args packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -273,20 +273,14 @@ count_values([args<Pair>] values) {
 main() {
   return(count_values(Pair(), Pair()))
 }
-)";
+  )";
   std::string error;
   primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 2);
+  CHECK_FALSE(parseValidateAndLower(source, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer forwards pure spread struct variadic packs for count") {
+TEST_CASE("ir lowerer rejects pure spread struct variadic packs for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -307,20 +301,14 @@ forward([args<Pair>] values) {
 main() {
   return(forward(Pair(), Pair()))
 }
-)";
+  )";
   std::string error;
   primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 2);
+  CHECK_FALSE(parseValidateAndLower(source, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes mixed struct spread variadic forwarding for count") {
+TEST_CASE("ir lowerer rejects mixed struct spread variadic forwarding for count") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -341,20 +329,14 @@ forward([args<Pair>] values) {
 main() {
   return(forward(Pair(), Pair()))
 }
-)";
+  )";
   std::string error;
   primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 3);
+  CHECK_FALSE(parseValidateAndLower(source, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes direct struct variadic pack indexing and method access") {
+TEST_CASE("ir lowerer rejects direct struct variadic pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -377,20 +359,14 @@ score_pairs([args<Pair>] values) {
 main() {
   return(score_pairs(Pair(7i32), Pair(9i32)))
 }
-)";
+  )";
   std::string error;
   primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 17);
+  CHECK_FALSE(parseValidateAndLower(source, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer forwards pure spread struct pack indexing and method access") {
+TEST_CASE("ir lowerer rejects pure spread struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -416,20 +392,14 @@ forward([args<Pair>] values) {
 main() {
   return(forward(Pair(7i32), Pair(9i32)))
 }
-)";
+  )";
   std::string error;
   primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 17);
+  CHECK_FALSE(parseValidateAndLower(source, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes mixed struct pack indexing and method access") {
+TEST_CASE("ir lowerer rejects mixed struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -455,17 +425,11 @@ forward([args<Pair>] values) {
 main() {
   return(forward(Pair(7i32), Pair(9i32)))
 }
-)";
+  )";
   std::string error;
   primec::IrModule module;
-  REQUIRE(parseValidateAndLower(source, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 15);
+  CHECK_FALSE(parseValidateAndLower(source, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
 TEST_SUITE_END();
