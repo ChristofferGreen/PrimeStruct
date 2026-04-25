@@ -13,7 +13,7 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.conversions");
 
-TEST_CASE("ir lowerer materializes variadic struct pointer packs from borrowed pack reference fields") {
+TEST_CASE("ir lowerer rejects variadic struct pointer packs from borrowed pack reference fields") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -108,17 +108,11 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 75);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes variadic pointer uninitialized scalar packs with indexed init and take") {
+TEST_CASE("ir lowerer rejects variadic pointer uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<uninitialized<i32>>>] values) {
@@ -167,17 +161,11 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 27);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed uninitialized scalar packs with indexed init and take") {
+TEST_CASE("ir lowerer rejects variadic borrowed uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<uninitialized<i32>>>] values) {
@@ -226,14 +214,8 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 27);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed count methods") {
@@ -435,7 +417,7 @@ main() {
   CHECK(result == 48);
 }
 
-TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed tryAt inference") {
+TEST_CASE("ir lowerer rejects variadic borrowed map packs with indexed tryAt inference") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -495,11 +477,6 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  CHECK_FALSE(vm.execute(module, result, error));
-  CHECK_FALSE(error.empty());
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
