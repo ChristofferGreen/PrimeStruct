@@ -85,12 +85,11 @@ main() {
   [vector<i32>] values{vector<i32>(4i32, 5i32)}
   return(/vector/capacity<i32>(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions") !=
+  CHECK(error.find("template arguments are only supported on templated definitions: /vector/capacity") !=
         std::string::npos);
-  CHECK(error.find("/vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count accepts named arguments through imported stdlib helper") {
