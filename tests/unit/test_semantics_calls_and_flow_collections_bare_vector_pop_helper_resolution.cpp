@@ -16,7 +16,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare vector pop requires imported stdlib helper before template specialization") {
+TEST_CASE("bare vector pop template specialization keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -27,10 +27,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
-TEST_CASE("bare vector pop requires imported stdlib helper before arity validation") {
+TEST_CASE("bare vector pop arity mismatch keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -41,7 +41,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/pop") != std::string::npos);
 }
 
 TEST_CASE("pop call keeps user-defined vector helper precedence") {
@@ -213,7 +213,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("bare vector clear requires imported stdlib helper before template specialization") {
+TEST_CASE("bare vector clear template specialization keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -224,10 +224,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/clear") != std::string::npos);
 }
 
-TEST_CASE("bare vector clear requires imported stdlib helper before arity validation") {
+TEST_CASE("bare vector clear arity mismatch keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -238,7 +238,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/clear") != std::string::npos);
 }
 
 TEST_CASE("vector remove_at alias requires mutable vector binding") {
@@ -289,7 +289,7 @@ TEST_CASE("remove_at rejects bool index in call and method forms") {
   checkInvalidRemoveAt("values.remove_at(true)");
 }
 
-TEST_CASE("bare vector remove_at requires imported stdlib helper before template specialization") {
+TEST_CASE("bare vector remove_at template specialization keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -300,10 +300,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
 }
 
-TEST_CASE("bare vector remove_at requires imported stdlib helper before arity validation") {
+TEST_CASE("bare vector remove_at arity mismatch keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -314,7 +314,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
 }
 
 TEST_CASE("remove_at accepts ownership-sensitive vector element types once survivor motion is wired") {
@@ -464,7 +464,7 @@ main() {
   CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
 }
 
-TEST_CASE("bare vector remove_swap requires imported stdlib helper before template specialization") {
+TEST_CASE("bare vector remove_swap template specialization keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -475,10 +475,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_swap") != std::string::npos);
 }
 
-TEST_CASE("bare vector remove_swap requires imported stdlib helper before arity validation") {
+TEST_CASE("bare vector remove_swap arity mismatch keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -489,7 +489,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_swap") != std::string::npos);
 }
 
 TEST_CASE("remove_swap accepts ownership-sensitive vector element types once survivor motion is wired") {
