@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("compiles native stdlib namespaced map helpers on canonical map references") {
+TEST_CASE("rejects native stdlib namespaced map reference access helpers during lowering") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -24,14 +24,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_stdlib_map_reference_helpers.prime", source);
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_stdlib_map_reference_helpers_out.txt").string();
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_stdlib_map_reference_helpers_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_stdlib_map_reference_helpers.err").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(diagnostics.find("call=/std/collections/map/at") != std::string::npos);
 }
 
 TEST_CASE("compiles and runs native canonical map method with slash return type receiver") {
