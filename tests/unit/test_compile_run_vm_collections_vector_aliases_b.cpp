@@ -500,7 +500,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("runs vm with vector method call") {
+TEST_CASE("rejects vm vector method call") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -517,7 +517,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_vector_method_call.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 4);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("runs vm with array literal unsafe access") {
