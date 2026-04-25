@@ -3108,7 +3108,7 @@ TEST_CASE("ir lowerer call helpers keep bare non-semantic contains and tryAt on 
         nullptr);
 }
 
-TEST_CASE("ir lowerer call helpers keep rooted map alias defs under canonical semantic remaps") {
+TEST_CASE("ir lowerer call helpers keep rooted map alias defs out of canonical semantic remaps") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
   primec::Definition canonicalMapContainsDef;
@@ -3164,11 +3164,11 @@ TEST_CASE("ir lowerer call helpers keep rooted map alias defs under canonical se
   aliasTryAtCall.name = "/map/tryAt";
 
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasCountCall, defMap, resolveExprPath) ==
-        &aliasMapCountDef);
+        nullptr);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasContainsCall, defMap, resolveExprPath) ==
-        &aliasMapContainsDef);
+        nullptr);
   CHECK(primec::ir_lowerer::resolveDefinitionCall(aliasTryAtCall, defMap, resolveExprPath) ==
-        &aliasMapTryAtDef);
+        nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers keep rooted map alias def families under same-path resolution") {
