@@ -141,7 +141,7 @@ main() {
                                "primec_vm_vector_helper_method_expression_canonical_stdlib_forwarding_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
@@ -170,7 +170,7 @@ main() {
                                "primec_vm_vector_alias_named_argument_compatibility_template_forwarding_reject_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown named argument: marker") != std::string::npos);
 }
 
