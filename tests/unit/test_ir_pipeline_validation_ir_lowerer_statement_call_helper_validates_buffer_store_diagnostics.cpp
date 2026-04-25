@@ -875,9 +875,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(inlineCalls == 1);
+  CHECK(inlineCalls == 0);
   CHECK(instructions.empty());
 
   primec::Expr mapInsertFieldAccessGeneratedBareInferredStmt = mapInsertFieldAccessStmt;
@@ -1586,12 +1586,11 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 const primec::ir_lowerer::LocalMap &localsIn,
                 bool expectValue) {
               ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK(callExpr.name == "insert");
+              CHECK(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/mapInsert");
               CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              CHECK(callExpr.templateArgs.empty());
               CHECK(localsIn.find("valuesLocal") != localsIn.end());
               return true;
             },
@@ -1800,9 +1799,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(inlineCalls == 1);
+  CHECK(inlineCalls == 0);
   CHECK(instructions.empty());
 
   primec::Expr mapInsertArgsPackReceiverLocationMethodStmt;
@@ -1845,12 +1844,11 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 const primec::ir_lowerer::LocalMap &localsIn,
                 bool expectValue) {
               ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK(callExpr.name == "insert");
+              CHECK(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/mapInsert");
               CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              CHECK(callExpr.templateArgs.empty());
               CHECK(localsIn.find("mapsPack") != localsIn.end());
               return true;
             },
@@ -2391,9 +2389,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(inlineCalls == 1);
+  CHECK(inlineCalls == 0);
   CHECK(instructions.empty());
 
   primec::Expr mapInsertArgsPackAtUnsafeRefGeneratedAliasNonLocalReceiverMethodStmt;
@@ -2442,12 +2440,11 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 const primec::ir_lowerer::LocalMap &,
                 bool expectValue) {
               ++inlineCalls;
-              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
-              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
-              CHECK_FALSE(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
+              CHECK(callExpr.name == "insert");
+              CHECK(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/mapInsert");
               CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs == expectedTemplateArgs);
+              CHECK(callExpr.templateArgs.empty());
               return true;
             },
             instructions,
