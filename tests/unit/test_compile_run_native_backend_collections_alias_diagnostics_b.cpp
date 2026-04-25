@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("rejects native vector method alias access without alias helper before chain diagnostics") {
+TEST_CASE("rejects native vector method alias access with current array receiver chain diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -45,7 +45,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector method alias field expression without alias helper") {
@@ -82,7 +82,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects native vector unsafe method alias access without alias helper before chain diagnostics") {
+TEST_CASE("rejects native vector unsafe method alias access with current array receiver chain diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -119,7 +119,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at_unsafe") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects native vector unsafe method alias field expression without alias helper") {
