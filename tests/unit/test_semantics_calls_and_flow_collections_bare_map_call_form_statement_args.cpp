@@ -821,7 +821,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector method alias access rejects canonical struct-return forwarding") {
+TEST_CASE("vector method alias access rejects routed array receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -850,7 +850,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /array/tag") != std::string::npos);
 }
 
 TEST_CASE("vector method alias access field expression keeps removed alias diagnostics") {
@@ -884,7 +884,7 @@ main() {
          error.find("unable to infer return type on /project") != std::string::npos));
 }
 
-TEST_CASE("vector unsafe method alias access struct method chain keeps primitive receiver diagnostics") {
+TEST_CASE("vector unsafe method alias access struct method chain keeps array receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -913,7 +913,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /array/tag") != std::string::npos);
 }
 
 TEST_SUITE_END();
