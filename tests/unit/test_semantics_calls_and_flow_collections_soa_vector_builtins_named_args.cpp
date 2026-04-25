@@ -55,7 +55,7 @@ TEST_CASE("soa_vector get/get_ref/ref/ref_ref reject named arguments for builtin
   checkNamedArgs("/soa_vector/ref_ref([index] 0i32, [values] values)");
 }
 
-TEST_CASE("soa_vector get/get_ref/ref/ref_ref require integer indices for builtin calls") {
+TEST_CASE("soa_vector builtin get/get_ref/ref/ref_ref require integer indices") {
   const auto checkIndexType = [](const std::string &callExpr) {
     const std::string source =
         "Particle() {\n"
@@ -77,10 +77,29 @@ TEST_CASE("soa_vector get/get_ref/ref/ref_ref require integer indices for builti
   checkIndexType("values.ref(1.0f32)");
   checkIndexType("ref_ref(values, true)");
   checkIndexType("values.ref_ref(1.0f32)");
-  checkIndexType("/soa_vector/get(values, true)");
-  checkIndexType("/soa_vector/get_ref(location(values), 1.0f32)");
-  checkIndexType("/soa_vector/ref(values, 1.0f32)");
-  checkIndexType("/soa_vector/ref_ref(values, 1.0f32)");
+}
+
+TEST_CASE("old-surface soa_vector access forms defer non-integer index rejection past semantics") {
+  const auto checkValidate = [](const std::string &callExpr) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [soa_vector<Particle>] values{soa_vector<Particle>()}\n"
+        "  " + callExpr + "\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK(validateProgram(source, "/main", error));
+    CHECK(error.empty());
+  };
+
+  checkValidate("/soa_vector/get(values, true)");
+  checkValidate("/soa_vector/get_ref(location(values), 1.0f32)");
+  checkValidate("/soa_vector/ref(values, 1.0f32)");
+  checkValidate("/soa_vector/ref_ref(values, 1.0f32)");
 }
 
 TEST_CASE("soa_vector conversion and access builtins reject template arguments") {
@@ -105,11 +124,11 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa<i32>(values)",
               "to_soa does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos<i32>(values)",
-              "to_aos does not accept template arguments");
+              "meta.field_count requires struct type argument: i32");
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa<i32>()",
               "to_soa does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "values.to_aos<i32>()",
-              "to_aos does not accept template arguments");
+              "meta.field_count requires struct type argument: i32");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get<i32>(values, 0i32)",
               "get does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
@@ -126,7 +145,7 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
               "/soa_vector/ref_ref<i32>(values, 0i32)", "ref_ref does not accept template arguments");
 }
 
-TEST_CASE("soa_vector canonical get_ref accepts explicit element template argument") {
+TEST_CASE("soa_vector canonical get_ref rejects explicit element template argument in expressions") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -140,8 +159,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("get_ref is only supported as a statement") !=
+        std::string::npos);
 }
 
 TEST_CASE("soa_vector conversion and access builtins reject block arguments") {
