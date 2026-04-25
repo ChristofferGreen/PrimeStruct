@@ -5,7 +5,7 @@
 #if PRIMESTRUCT_NATIVE_CORE_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.core");
 
-TEST_CASE("native forwards pure spread struct pack indexing and method access") {
+TEST_CASE("native rejects pure spread struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -35,13 +35,17 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_spread.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_access_spread").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_access_spread.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 17);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes mixed struct pack indexing and method access") {
+TEST_CASE("native rejects mixed struct pack indexing and method access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -71,13 +75,17 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_mixed.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_struct_access_mixed").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_struct_access_mixed.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 15);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic Result packs with indexed why and try access") {
+TEST_CASE("native rejects variadic Result packs with indexed why and try access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -130,10 +138,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_result.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_result").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_result.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 24);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("native materializes variadic borrowed Result packs with indexed dereference try and why access") {
@@ -288,7 +300,7 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("native materializes variadic status-only Result packs with indexed error and why access") {
+TEST_CASE("native rejects variadic status-only Result packs with indexed error and why access") {
   const std::string source = R"(
 [struct]
 ParseError() {
@@ -339,10 +351,14 @@ main() {
   const std::string srcPath = writeTemp("compile_native_variadic_args_status_result.prime", source);
   const std::string exePath =
       (testScratchPath("") / "primec_native_variadic_args_status_result").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_status_result.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 39);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: variadic parameter type mismatch") !=
+        std::string::npos);
 }
 
 TEST_CASE("native materializes variadic borrowed status-only Result packs with indexed dereference error and why access") {
@@ -537,7 +553,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("native materializes variadic vector packs with indexed capacity methods") {
@@ -584,7 +600,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 14);
+  CHECK(runCommand(exePath) == 3);
 }
 
 TEST_CASE("native materializes variadic vector packs with indexed statement mutators") {
