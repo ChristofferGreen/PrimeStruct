@@ -27,7 +27,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown call target: /vector/capacity") != std::string::npos);
 }
@@ -116,7 +116,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/count") !=
         std::string::npos);
 }
@@ -139,7 +139,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /vector/count") !=
         std::string::npos);
 }
@@ -164,7 +164,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") !=
         std::string::npos);
 }
