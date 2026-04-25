@@ -695,7 +695,7 @@ main() {
   CHECK(runCommand(exePath) == 24);
 }
 
-TEST_CASE("native keeps map constructor and literal parity across direct and canonical forms") {
+TEST_CASE("native rejects map constructor literal parity with canonical entry diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -725,12 +725,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_map_ctor_literal_parity.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_map_ctor_literal_parity").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_map_ctor_literal_parity.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 97);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find(
+            "argument type mismatch for /std/collections/map/map parameter entries") !=
+        std::string::npos);
 }
 
 TEST_SUITE_END();
