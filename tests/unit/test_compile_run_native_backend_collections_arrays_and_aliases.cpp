@@ -268,7 +268,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("argument type mismatch for /std/collections/vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
 TEST_CASE("native keeps slash-method wrapper string access i32 diagnostics") {
