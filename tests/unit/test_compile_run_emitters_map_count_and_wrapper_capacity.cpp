@@ -185,12 +185,15 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch_exe")
+  const std::string errPath =
+      (testScratchPath("") /
+       "primec_cpp_user_wrapper_temp_count_capacity_shadow_value_mismatch.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter rejects wrapper count capacity builtin fallback") {
