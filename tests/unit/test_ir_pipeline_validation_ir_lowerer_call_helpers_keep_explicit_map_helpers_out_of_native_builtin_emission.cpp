@@ -155,10 +155,10 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
 
   expectDispatch("/map/count", {mapName}, Result::Emitted, "stale");
   expectDispatch("/std/collections/map/count", {mapName}, Result::Emitted, "stale");
-  expectDispatch("/map/contains", {mapName, keyName}, Result::NotHandled, "stale");
+  expectDispatch("/map/contains", {mapName, keyName}, Result::Emitted, "stale");
   expectDispatch("/std/collections/map/contains",
                  {mapName, keyName},
-                 Result::NotHandled,
+                 Result::Emitted,
                  "stale");
   expectDispatch("/map/tryAt", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/tryAt",
@@ -186,7 +186,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   expectNamespacedDispatch("/std/collections/map",
                            "contains",
                            {mapName, keyName},
-                           Result::NotHandled,
+                           Result::Emitted,
                            "stale");
   expectNamespacedDispatch("/std/collections/map",
                            "tryAt",
@@ -354,7 +354,11 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
                  Result::Error,
                  "count requires array, vector, map, or string target",
                  false);
-  expectDispatch("/std/collections/vector/count", {valuesName}, Result::Emitted, "stale", true);
+  expectDispatch("/std/collections/vector/count",
+                 {valuesName},
+                 Result::NotHandled,
+                 "stale",
+                 false);
   expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/std/collections/vector/capacity", {valuesName}, Result::Emitted, "stale", true);
   expectDispatch("/vector/at",
