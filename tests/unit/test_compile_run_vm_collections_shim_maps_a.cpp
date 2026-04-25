@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("rejects vm stdlib collection shim vector new type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector new bool element") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -18,12 +18,12 @@ main() {
   return(vectorCount<i32>(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_new_mismatch.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_new_bool_element.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 0);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector single type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector single bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -33,7 +33,7 @@ main() {
   return(vectorCount<i32>(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_single_mismatch.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_single_bool_tail.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 1);
 }
@@ -53,7 +53,7 @@ main() {
   CHECK(runCommand(runCmd) == 26);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector pair type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector pair bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -63,7 +63,7 @@ main() {
   return(vectorCount<i32>(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_pair_mismatch.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_pair_bool_tail.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
@@ -83,7 +83,7 @@ main() {
   CHECK(runCommand(runCmd) == 43);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector triple type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector triple bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -93,7 +93,7 @@ main() {
   return(vectorCount<i32>(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_triple_mismatch.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_triple_bool_tail.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 3);
 }
@@ -113,7 +113,7 @@ main() {
   CHECK(runCommand(runCmd) == 19);
 }
 
-TEST_CASE("rejects vm stdlib collection shim vector quad type mismatch") {
+TEST_CASE("runs vm with stdlib collection shim vector quad bool tail") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -123,7 +123,7 @@ main() {
   return(vectorCount<i32>(values))
 }
 )";
-  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad_mismatch.prime", source);
+  const std::string srcPath = writeTemp("vm_stdlib_collection_shim_vector_quad_bool_tail.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 4);
 }
