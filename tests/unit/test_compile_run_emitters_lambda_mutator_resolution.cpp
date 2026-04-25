@@ -204,7 +204,7 @@ main() {
       "cpp",
       "compile_cpp_lambda_explicit_vector_mutator_same_path_reject",
       source,
-      {"\"message\":\"unknown call target: lambda\""});
+      {"\"message\":\"unknown call target: /std/collections/vector/push\""});
 }
 
 TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator statements before emission") {
@@ -227,8 +227,7 @@ main() {
       "cpp",
       "compile_cpp_lambda_cross_path_vector_mutator_same_path_reject",
       source,
-      {"\"message\":\"unknown call target: lambda\"",
-       "\"message\":\"unknown call target: /vector/push\""});
+      {"\"message\":\"unknown call target: /vector/push\""});
 }
 
 TEST_CASE("C++ emitter rejects lambda reordered cross-path explicit vector mutator statements before emission") {
@@ -251,8 +250,7 @@ main() {
       "cpp",
       "compile_cpp_lambda_reordered_cross_path_vector_mutator_same_path_reject",
       source,
-      {"\"message\":\"unknown call target: lambda\"",
-       "\"message\":\"unknown call target: /vector/push\""});
+      {"\"message\":\"unknown call target: /vector/push\""});
 }
 
 TEST_CASE("C++ emitter rejects lambda explicit vector mutator methods without helper before emission") {
@@ -271,7 +269,7 @@ main() {
       "cpp",
       "compile_cpp_lambda_explicit_vector_mutator_method_same_path_reject",
       source,
-      {"\"message\":\"unknown call target: lambda\""});
+      {"\"message\":\"unknown method: /std/collections/vector/push\""});
 }
 
 TEST_CASE("C++ emitter rejects lambda cross-path explicit vector mutator methods before emission") {
@@ -294,7 +292,7 @@ main() {
       "cpp",
       "compile_cpp_lambda_cross_path_vector_mutator_method_same_path_reject",
       source,
-      {"\"message\":\"unknown call target: lambda\""});
+      {"\"message\":\"unknown method: /vector/push\""});
 }
 
 TEST_CASE("C++ emitter lambda mutator mismatch rejects user helper signatures") {
