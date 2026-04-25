@@ -438,7 +438,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK_FALSE(readFile(outPath).empty());
+  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects canonical slash-method vector count on string receiver without helper in C++ emitter") {
