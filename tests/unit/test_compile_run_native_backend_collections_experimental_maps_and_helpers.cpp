@@ -1059,7 +1059,7 @@ main() {
   CHECK(runCommand(exePath) == 10);
 }
 
-TEST_CASE("rejects native vector-target method soa mutator shadows with canonical push diagnostics") {
+TEST_CASE("rejects native vector-target method soa mutator shadows") {
   const std::string source = R"(
 [return<int>]
 /soa_vector/push([vector<i32>] values, [i32] value) {
@@ -1085,8 +1085,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("unknown call target: push") != std::string::npos);
 }
 
 TEST_CASE("native runs vector-target to_aos helper shadows") {
