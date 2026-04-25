@@ -334,7 +334,7 @@ TEST_CASE("collection indexing syntax parity keeps integer-index diagnostics") {
   checkInvalidIndex("values[\"oops\"utf8]");
 }
 
-TEST_CASE("bare vector push requires imported stdlib helper before template specialization") {
+TEST_CASE("bare vector push template specialization keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -345,10 +345,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
-TEST_CASE("bare vector push requires imported stdlib helper before arity validation") {
+TEST_CASE("bare vector push arity mismatch keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -359,7 +359,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("push call keeps user-defined vector helper precedence") {
@@ -450,7 +450,7 @@ TEST_CASE("reserve on array reports vector binding before effect requirement") {
   checkInvalidReserve("values.reserve(8i32)");
 }
 
-TEST_CASE("vector reserve alias requires integer capacity") {
+TEST_CASE("vector reserve alias requires integer capacity for string arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -461,10 +461,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("reserve requires integer capacity") != std::string::npos);
 }
 
-TEST_CASE("reserve rejects bool capacity in call and method forms") {
+TEST_CASE("reserve rejects bool capacity with integer-capacity diagnostics") {
   const auto checkInvalidReserve = [](const std::string &stmtText) {
     const std::string source =
         "[effects(heap_alloc), return<int>]\n"
@@ -477,14 +477,14 @@ TEST_CASE("reserve rejects bool capacity in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK_FALSE(error.empty());
+    CHECK(error.find("reserve requires integer capacity") != std::string::npos);
   };
 
   checkInvalidReserve("/vector/reserve(values, true)");
   checkInvalidReserve("values.reserve(true)");
 }
 
-TEST_CASE("bare vector reserve requires imported stdlib helper before template specialization") {
+TEST_CASE("bare vector reserve template specialization keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -495,10 +495,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("bare vector reserve requires imported stdlib helper before arity validation") {
+TEST_CASE("bare vector reserve arity mismatch keeps canonical unknown target without import") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -509,7 +509,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/vector/reserve") != std::string::npos);
 }
 
 TEST_CASE("bare vector reserve validates through imported stdlib helper") {
