@@ -308,7 +308,6 @@ write_out([File<Write>] file, [array<i32>] bytes, [string] text) {
   [Result<FileError>] directWrite{/File/write<Write, i32>(file, 65i32)}
   [Result<FileError>] directWriteLine{/File/write_line<Write, i32>(file, 7i32)}
   [Result<FileError>] directTextWrite{/File/write<Write, string>(file, text)}
-  [Result<FileError>] directTextWriteLine{/File/write_line<Write, string>(file, text)}
   [Result<FileError>] methodByte{file.write_byte(65i32)}
   [Result<FileError>] directBytes{/File/write_bytes(file, bytes)}
   [Result<FileError>] methodFlush{file.flush()}
@@ -333,6 +332,29 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("stdlib File snake_case direct write_line overload mix rejects mismatched cached value types") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(file_write), return<void>]
+write_out([File<Write>] file, [string] text) {
+  [Result<FileError>] directWriteLine{/File/write_line<Write, i32>(file, 7i32)}
+  [Result<FileError>] directTextWriteLine{/File/write_line<Write, string>(file, text)}
+  return()
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument type mismatch for /File/write_line parameter value") !=
+        std::string::npos);
+  CHECK(error.find("expected i32") != std::string::npos);
 }
 
 TEST_CASE("stdlib File camelCase helpers cover imported method and slash-call wrappers") {
