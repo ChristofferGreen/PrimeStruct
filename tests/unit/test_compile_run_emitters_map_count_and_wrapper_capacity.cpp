@@ -275,7 +275,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects array namespaced wrapper count alias") {
+TEST_CASE("C++ emitter rejects mixed array-count wrapper fallback on array count first") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
