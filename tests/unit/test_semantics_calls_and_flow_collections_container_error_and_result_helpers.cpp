@@ -327,7 +327,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector count rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector count rejects as statement-only helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -341,7 +341,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/count") !=
+  CHECK(error.find("count is only supported as a statement") !=
         std::string::npos);
 }
 
