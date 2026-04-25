@@ -3621,7 +3621,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector get rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector get still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3635,9 +3635,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit old-surface soa_vector get slash-method still validates semantically without same-path helper") {
@@ -3658,7 +3657,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector get_ref rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector get_ref still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3672,9 +3671,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get_ref") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit old-surface soa_vector get_ref slash-method still validates semantically without same-path helper") {
@@ -3895,7 +3893,7 @@ main() {
   }
 }
 
-TEST_CASE("explicit old-surface soa_vector ref rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3909,9 +3907,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit old-surface soa_vector ref slash-method still validates semantically without same-path helper") {
@@ -3932,7 +3929,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("explicit old-surface soa_vector ref_ref rejects without same-path helper") {
+TEST_CASE("explicit old-surface soa_vector ref_ref still validates semantically without same-path helper") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -3946,9 +3943,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref_ref") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("explicit old-surface soa_vector ref_ref slash-method still validates semantically without same-path helper") {
