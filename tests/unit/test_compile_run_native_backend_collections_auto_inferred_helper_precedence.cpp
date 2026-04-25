@@ -9,7 +9,7 @@
 #if PRIMESTRUCT_NATIVE_COLLECTIONS_ENABLED
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.collections");
 
-TEST_CASE("rejects native named vector push expression receiver precedence during lowering") {
+TEST_CASE("rejects native named vector push expression receiver precedence in semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -38,13 +38,11 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+  CHECK(readFile(errPath).find("push is only supported as a statement") !=
         std::string::npos);
-  CHECK(readFile(errPath).find("call=/push") != std::string::npos);
 }
 
-TEST_CASE("rejects native auto-inferred named vector push expression receiver precedence during lowering") {
+TEST_CASE("rejects native auto-inferred named vector push expression receiver precedence in semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -74,10 +72,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+  CHECK(readFile(errPath).find("push is only supported as a statement") !=
         std::string::npos);
-  CHECK(readFile(errPath).find("call=/push") != std::string::npos);
 }
 
 TEST_CASE("rejects native auto-inferred std namespaced vector push compatibility alias precedence") {
