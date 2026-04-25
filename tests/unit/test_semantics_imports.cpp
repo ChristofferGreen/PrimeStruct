@@ -777,6 +777,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib-owned definitions keep direct collection shim imports visible") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+  namespace demo {
+  [public effects(heap_alloc), return<int>]
+  probe() {
+    [vector<i32> mut] values{vectorSingle<i32>(7i32)}
+    vectorPush<i32>(values, 9i32)
+    return(plus(vectorAtUnsafe<i32>(values, 1i32), vectorCount<i32>(values)))
+  }
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact gfx imports keep bare bridge aliases") {
   const std::string source = R"(
 import /std/gfx/Buffer

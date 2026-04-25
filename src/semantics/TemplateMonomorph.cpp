@@ -198,9 +198,8 @@ bool rewriteExpr(Expr &expr,
                  const std::vector<ParameterInfo> &params,
                  bool allowMathBare);
 
-const std::unordered_map<std::string, std::string> &scopedImportAliasesForNamespace(
-    const std::string &namespacePrefix,
-    const Context &ctx) {
+bool usesStdlibScopedImportAliases(const std::string &namespacePrefix,
+                                   const Context &ctx) {
   auto isStdlibOwnedPath = [](const std::string &path) {
     if (path.rfind("/std/", 0) == 0) {
       return true;
@@ -215,19 +214,27 @@ const std::unordered_map<std::string, std::string> &scopedImportAliasesForNamesp
            rootName == "Maybe" || rootName == "Buffer" || rootName == "ImageError" ||
            rootName == "ContainerError" || rootName == "GfxError";
   };
-  if (isStdlibOwnedPath(namespacePrefix) ||
-      (namespacePrefix.empty() && isStdlibOwnedPath(ctx.currentDefinitionPath))) {
-    return ctx.importAliases;
-  }
-  return ctx.importAliases;
+  return isStdlibOwnedPath(namespacePrefix) ||
+         (namespacePrefix.empty() && isStdlibOwnedPath(ctx.currentDefinitionPath));
 }
 
 const std::string *lookupScopedImportAliasForNamespace(std::string_view name,
                                                        const std::string &namespacePrefix,
                                                        const Context &ctx) {
-  const auto &scopedAliases = scopedImportAliasesForNamespace(namespacePrefix, ctx);
-  if (auto aliasIt = scopedAliases.find(std::string(name)); aliasIt != scopedAliases.end()) {
+  const std::string key(name);
+  if (auto aliasIt = ctx.directImportAliases.find(key);
+      aliasIt != ctx.directImportAliases.end()) {
     return &aliasIt->second;
+  }
+  if (auto aliasIt = ctx.transitiveImportAliases.find(key);
+      aliasIt != ctx.transitiveImportAliases.end()) {
+    return &aliasIt->second;
+  }
+  if (!usesStdlibScopedImportAliases(namespacePrefix, ctx)) {
+    if (auto aliasIt = ctx.importAliases.find(key);
+        aliasIt != ctx.importAliases.end()) {
+      return &aliasIt->second;
+    }
   }
   return nullptr;
 }
