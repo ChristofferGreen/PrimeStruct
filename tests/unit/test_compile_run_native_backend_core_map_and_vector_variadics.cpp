@@ -177,7 +177,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("native materializes variadic borrowed map packs with indexed tryAt inference") {
+TEST_CASE("native rejects variadic borrowed map packs with indexed tryAt inference") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -230,12 +230,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_borrowed_map_tryat.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_borrowed_map_tryat").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_borrowed_map_tryat.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 60);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(diagnostics.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("native materializes variadic pointer map packs with indexed count methods") {
@@ -469,7 +474,7 @@ main() {
   CHECK(runCommand(exePath) == 48);
 }
 
-TEST_CASE("native materializes variadic pointer map packs with indexed tryAt inference") {
+TEST_CASE("native rejects variadic pointer map packs with indexed tryAt inference") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -522,12 +527,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_map_tryat.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_pointer_map_tryat").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_pointer_map_tryat.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 60);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(diagnostics.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("native materializes variadic pointer vector packs with indexed count methods") {
