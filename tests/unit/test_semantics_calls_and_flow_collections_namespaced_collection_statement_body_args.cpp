@@ -468,7 +468,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("bare map helper statement body arguments fall back to canonical helper target") {
+TEST_CASE("bare map helper statement body arguments validate through canonical helper target") {
   const std::string source = R"(
 [return<int>]
 /std/collections/map/count([map<i32, i32>] values, [bool] marker) {
@@ -483,8 +483,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /std/collections/map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map helper statement body arguments keep canonical mismatch diagnostics") {
