@@ -95,7 +95,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("clear requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("bare vector clear validates through imported stdlib helper") {
@@ -252,7 +252,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("remove_at requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("vector remove_at alias requires integer index") {
@@ -266,7 +266,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("remove_at requires integer index") != std::string::npos);
 }
 
 TEST_CASE("remove_at rejects bool index in call and method forms") {
@@ -282,7 +282,7 @@ TEST_CASE("remove_at rejects bool index in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK_FALSE(error.empty());
+    CHECK(error.find("remove_at requires integer index") != std::string::npos);
   };
 
   checkInvalidRemoveAt("/vector/remove_at(values, true)");
@@ -427,7 +427,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("remove_swap requires integer index") != std::string::npos);
 }
 
 TEST_CASE("remove_swap rejects bool index in call and method forms") {
@@ -443,7 +443,7 @@ TEST_CASE("remove_swap rejects bool index in call and method forms") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK_FALSE(error.empty());
+    CHECK(error.find("remove_swap requires integer index") != std::string::npos);
   };
 
   checkInvalidRemoveSwap("/vector/remove_swap(values, true)");
@@ -461,7 +461,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("remove_swap requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("bare vector remove_swap requires imported stdlib helper before template specialization") {
