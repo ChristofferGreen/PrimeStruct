@@ -496,7 +496,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter keeps inferExprString lowering diagnostics on direct wrapper-returned canonical map access") {
+TEST_CASE("C++ emitter compiles direct wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -527,9 +527,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("EXE IR lowering error: debug: branch=inferExprString") !=
-        std::string::npos);
+  CHECK(runCommand(compileCmd) == 0);
 }
 
 TEST_CASE("C++ emitter keeps wrapper-returned canonical map method access string receiver typing") {
