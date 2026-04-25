@@ -131,7 +131,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced slash method pointer receiver diagnostics normalize pointer receiver target") {
+TEST_CASE("array namespaced slash method pointer receiver diagnostics keep array-qualified pointer target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -143,7 +143,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/count") !=
+  CHECK(error.find("block arguments require a definition target: /Pointer/array/count") !=
         std::string::npos);
 }
 
@@ -162,7 +162,7 @@ main() {
   CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced method expression body-arg diagnostics normalize pointer receiver target") {
+TEST_CASE("array namespaced method expression body-arg diagnostics normalize pointer expressions to i32 target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -173,10 +173,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize pointer receiver target") {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize pointer expressions to i32 target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -187,10 +187,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("array namespaced slash method reference receiver diagnostics normalize reference receiver target") {
+TEST_CASE("array namespaced slash method reference receiver diagnostics keep array-qualified reference target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -202,11 +202,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") !=
+  CHECK(error.find("block arguments require a definition target: /Reference/array/count") !=
         std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize reference receiver target") {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize reference expressions to i32 target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -217,11 +217,11 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Reference/count") !=
+  CHECK(error.find("block arguments require a definition target: /i32/count") !=
         std::string::npos);
 }
 
-TEST_CASE("array namespaced slash method temporary pointer diagnostics normalize pointer receiver target") {
+TEST_CASE("array namespaced slash method temporary pointer diagnostics keep array-qualified pointer target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -232,11 +232,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/count") !=
+  CHECK(error.find("block arguments require a definition target: /Pointer/array/count") !=
         std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize temporary pointer receiver target") {
+TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize temporary pointer expressions to i32 target") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -246,7 +246,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /Pointer/count") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced method body-arg diagnostics normalize helper-returned reference receiver target") {
