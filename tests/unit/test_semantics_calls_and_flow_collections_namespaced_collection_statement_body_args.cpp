@@ -288,7 +288,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("array namespaced method body-arg canonical-fallback helper keeps rooted borrow diagnostic") {
+TEST_CASE("array namespaced method body-arg canonical-fallback helper fails on bare count target after rooted borrow") {
   const std::string source = R"(
 [return<Reference<i32>>]
 /std/collections/vector/borrow([Reference<i32>] ref) {
@@ -368,7 +368,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /count") != std::string::npos);
 }
 
 TEST_CASE("map method expression body-arg infers canonical helper on referenced wrapper receiver") {
