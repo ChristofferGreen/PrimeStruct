@@ -478,5 +478,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  CHECK(error.find("native backend only supports arithmetic/comparison") !=
+        std::string::npos);
+  CHECK(error.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
