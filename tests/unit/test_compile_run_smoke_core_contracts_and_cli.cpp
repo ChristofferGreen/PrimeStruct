@@ -162,21 +162,20 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-PIPELINE-CONSTRUCTOR-STATUS");
-    CHECK(graphicsDoc.find("type-valued `Device.create_pipeline([vertex_type] VertexColored, ...)`") !=
+    CHECK(graphicsDoc.find("`Device.create_pipeline([vertex_type] VertexColored, ...)` entrypoint") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("VertexColored, ...)` entry") != std::string::npos);
     CHECK(graphicsDoc.find("locked v1 vertex wire type") != std::string::npos);
-    CHECK(primeStructDoc.find("`Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run through") !=
+    CHECK(primeStructDoc.find("`create_mesh(...)`, `frame()`, and `Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("`Device.create_pipeline([vertex_type] VertexColored, ...)`") != std::string::npos);
   }
 
   {
     CAPTURE("GFX-V1-RESOURCE-WRAPPER-STATUS");
-    CHECK(graphicsDoc.find("fallible `Device.create_swapchain(...)`,") != std::string::npos);
-    CHECK(graphicsDoc.find("`Device.create_mesh(...)`, and `Swapchain.frame()` wrapper paths") !=
+    CHECK(graphicsDoc.find("`Device.create_swapchain(...)`, `Device.create_mesh(...)`, and") != std::string::npos);
+    CHECK(graphicsDoc.find("`Swapchain.frame()` wrapper paths are also in place") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("experimental and canonical `create_swapchain(...)`, `create_mesh(...)`, `frame()`, and") !=
+    CHECK(primeStructDoc.find("experimental and canonical `create_swapchain(...)`,") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("the fallible `create_swapchain(...)`,") != std::string::npos);
     CHECK(guidelinesDoc.find("`create_mesh(...)`, and `frame()` wrapper paths now route through") !=
@@ -185,12 +184,12 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-RENDER-PASS-STATUS");
-    CHECK(graphicsDoc.find("The non-Result `Frame.render_pass(...)` plus") != std::string::npos);
-    CHECK(graphicsDoc.find("`RenderPass.draw_mesh(...)` / `RenderPass.end()` path now routes through") !=
+    CHECK(graphicsDoc.find("The non-Result `Frame.render_pass(...)`") != std::string::npos);
+    CHECK(graphicsDoc.find("`RenderPass.draw_mesh(...)` / `RenderPass.end()` path preserves") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("minimal pass-encoding substrate helpers while preserving deterministic") !=
+    CHECK(graphicsDoc.find("canonical path routes `render_pass(...)`, `draw_mesh(...)`, `end()`,") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("non-Result `render_pass(...)` / `draw_mesh(...)` / `end()` path now routes") !=
+    CHECK(primeStructDoc.find("the non-Result `render_pass(...)` / `draw_mesh(...)` / `end()`") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("the non-Result `render_pass(...)` /") != std::string::npos);
     CHECK(guidelinesDoc.find("`draw_mesh(...)` / `end()` path now routes through minimal pass-encoding") !=
@@ -199,12 +198,12 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-HOST-RUNTIME-STATUS");
-    CHECK(graphicsDoc.find("first real") != std::string::npos);
-    CHECK(graphicsDoc.find("native-desktop host/runtime path now consumes a deterministic canonical `/std/gfx/*` stream") !=
+    CHECK(graphicsDoc.find("first real native-desktop host/runtime path") != std::string::npos);
+    CHECK(graphicsDoc.find("deterministic canonical `/std/gfx/*` stream") !=
           std::string::npos);
     CHECK(graphicsDoc.find("submit/present") != std::string::npos);
-    CHECK(primeStructDoc.find("shared spinning-cube native-window sample path now emits a deterministic canonical `/std/gfx/*` stream") !=
-          std::string::npos);
+    CHECK(primeStructDoc.find("shared spinning-cube native-window") != std::string::npos);
+    CHECK(primeStructDoc.find("`cubeStdGfxEmitFrameStream`") != std::string::npos);
     CHECK(guidelinesDoc.find("shared spinning-cube native-window sample path now emits and") != std::string::npos);
     CHECK(guidelinesDoc.find("deterministic canonical `/std/gfx/*` stream") !=
           std::string::npos);
@@ -212,13 +211,13 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-CONFORMANCE-STATUS");
-    CHECK(graphicsDoc.find("real compile-run") != std::string::npos);
+    CHECK(graphicsDoc.find("real compile-run conformance") != std::string::npos);
     CHECK(graphicsDoc.find("programs that import canonical `/std/gfx/*`") != std::string::npos);
     CHECK(graphicsDoc.find("Separate compatibility-shim tests") != std::string::npos);
     CHECK(graphicsDoc.find("across exe/vm/native") != std::string::npos);
-    CHECK(primeStructDoc.find("real compile-run conformance now imports canonical `/std/gfx/*`") !=
+    CHECK(primeStructDoc.find("conformance now imports canonical `/std/gfx/*` and exercises that end-to-end wrapper path across exe/vm/native while") !=
           std::string::npos);
-    CHECK(guidelinesDoc.find("real compile-run conformance now imports canonical `/std/gfx/*`") !=
+    CHECK(guidelinesDoc.find("imports canonical `/std/gfx/*` and exercises that public path across") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("separate compatibility-shim coverage keeps") !=
           std::string::npos);
@@ -226,11 +225,11 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
 
   {
     CAPTURE("GFX-V1-SHARED-HOST-CONTRACT-STATUS");
-    CHECK(graphicsDoc.find("shared host definition rather than duplicate ad-hoc structs per sample") !=
+    CHECK(graphicsDoc.find("thin wrapper over a shared canonical gfx launch helper") !=
           std::string::npos);
-    CHECK(graphicsDoc.find("one shared mapping of these identifiers rather than re-declare them in") !=
+    CHECK(graphicsDoc.find("native Metal window presenter helper") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("host-side sample `GfxError` mapping plus locked `VertexColored` upload layout definitions now live in one shared example header") !=
+    CHECK(primeStructDoc.find("`VertexColored` upload layout definitions now live in one shared example header") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("native/Metal sample hosts now share one canonical host-side `GfxError` +") !=
           std::string::npos);
