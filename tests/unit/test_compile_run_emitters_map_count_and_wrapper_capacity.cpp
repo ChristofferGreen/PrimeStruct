@@ -366,7 +366,7 @@ main() {
   CHECK(runCommand(exePath) == 44);
 }
 
-TEST_CASE("rejects alias direct-call vector count on map receiver without helper in C++ emitter") {
+TEST_CASE("C++ emitter keeps canonical map-count diagnostic for alias direct-call vector count on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -470,7 +470,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /string/count") != std::string::npos);
 }
 
-TEST_CASE("rejects canonical slash-method vector count on map receiver without helper in C++ emitter") {
+TEST_CASE("C++ emitter keeps canonical map-count diagnostic for slash-method vector count on map receiver") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
