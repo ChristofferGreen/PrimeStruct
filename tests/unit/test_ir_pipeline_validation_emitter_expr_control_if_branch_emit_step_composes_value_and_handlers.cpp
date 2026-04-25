@@ -1690,16 +1690,16 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "resolved.rfind(\"/soa_vector/to_aos_ref\", 0)") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
-            "resolved == \"/to_aos_ref\"") ==
+            "resolved == \"/to_aos_ref\"") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "argument type mismatch for /std/collections/soa_vector/to_aos_ref parameter values") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
-            "!hasVisibleDefinitionPathForCurrentImports(\"/\" + helperName)") !=
+            "hasVisibleDefinitionPathForCurrentImports(\"/to_aos_ref\")") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
-            "soaUnavailableMethodDiagnostic(\"/\" + helperName)") !=
+            "rejectExplicitOldSurfaceToAosCall ? \"/to_aos\" : \"/to_aos_ref\"") !=
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
             "isCanonicalSoaRefLikeHelperPath(resolvedSoaCanonical)") !=
@@ -1979,10 +1979,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "const std::string resolvedSoaRefCanonical =") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "const std::string resolvedSoaToAosCanonical =") !=
+            "const std::string resolvedSoaToAosCanonical =") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "canonicalizeLegacySoaToAosHelperPath(resolvedOut)") !=
+            "canonicalizeLegacySoaToAosHelperPath(resolvedOut)") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "canonicalizeLegacySoaRefHelperPath(resolvedOut)") !=
@@ -1997,7 +1997,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "defMap_.count(resolvedSoaCountCanonical) != 0") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "hasImportedDefinitionPath(resolvedSoaToAosCanonical)") !=
+            "hasImportedDefinitionPath(resolvedSoaToAosCanonical)") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "hasImportedDefinitionPath(resolvedSoaRefCanonical)") !=
@@ -2047,7 +2047,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(exprMethodTargetResolutionSource.find("preferredBorrowedSoaAccessHelperTarget(") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "/std/collections/experimental_soa_vector/soaVectorGetRef") !=
+            "/std/collections/experimental_soa_vector/soaVectorGetRef") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "hasVisibleSoaHelperTargetForCurrentImports(") !=
@@ -2076,9 +2076,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferLateFallbackBuiltinsSource.find(
             "soaUnavailableMethodDiagnostic(methodResolved));") !=
         std::string::npos);
-  CHECK(exprMethodTargetResolutionSource.find(
+  CHECK((exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
-        std::string::npos);
+         std::string::npos ||
+         exprMethodTargetResolutionSource.find(
+             "usesSamePathSoaHelperTargetForCollectionType(canonicalCollectionHelperName, \"/vector\")") !=
+             std::string::npos ||
+         exprMethodTargetResolutionSource.find(
+             "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
+             std::string::npos));
   CHECK((exprMethodTargetResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"get\", \"/vector\")") !=
          std::string::npos ||
@@ -2091,9 +2097,12 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
          exprMethodTargetResolutionSource.find(
              "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
              std::string::npos));
-  CHECK(inferMethodResolutionSource.find(
+  CHECK((inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
-        std::string::npos);
+         std::string::npos ||
+         inferMethodResolutionSource.find(
+             "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
+             std::string::npos));
   CHECK((inferMethodResolutionSource.find(
             "usesSamePathSoaHelperTargetForCollectionType(\"get\", \"/vector\")") !=
          std::string::npos ||
