@@ -635,8 +635,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_single_standalone_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_single_standalone_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapSingle__") !=
+        std::string::npos);
+  CHECK(error.find("parameter key: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map pair standalone") {
@@ -665,8 +673,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_standalone_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_pair_standalone_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map pair standalone string keys") {
@@ -696,8 +709,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_pair_standalone_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_pair_standalone_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapPair__") !=
+        std::string::npos);
+  CHECK(error.find("parameter secondKey: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map double standalone string keys") {
@@ -727,8 +748,16 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_double_standalone_key_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() /
+       "primec_vm_stdlib_collection_shim_map_double_standalone_key_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  const std::string error = readFile(errPath);
+  CHECK(error.find("argument type mismatch for /std/collections/mapDouble__") !=
+        std::string::npos);
+  CHECK(error.find("parameter secondKey: expected i32") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map triple standalone string keys") {
