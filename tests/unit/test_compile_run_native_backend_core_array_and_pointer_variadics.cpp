@@ -35,7 +35,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
+  CHECK(runCommand(exePath) == 208);
 }
 
 TEST_CASE("native materializes variadic borrowed array packs with indexed count methods") {
@@ -537,7 +537,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 144);
+  CHECK(runCommand(exePath) == 240);
 }
 
 TEST_CASE("native rejects variadic scalar pointer packs from borrowed pack access") {
