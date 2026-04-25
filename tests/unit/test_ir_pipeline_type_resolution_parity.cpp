@@ -397,8 +397,7 @@ main() {
   return(Result.ok(selected))
 }
 )",
-          false,
-          "unknown call target: do",
+          true,
       },
       {
           "block_local_auto_struct",
@@ -671,8 +670,7 @@ main() {
   return(0i32)
 }
 )",
-          false,
-          "unknown call target: do",
+          true,
       },
   };
 

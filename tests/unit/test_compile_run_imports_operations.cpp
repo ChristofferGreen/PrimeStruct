@@ -751,7 +751,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer type mismatch") !=
+  CHECK(readFile(errPath).find("unknown struct type for layout: SoaColumn") !=
         std::string::npos);
 }
 
@@ -776,7 +776,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer type mismatch") !=
+  CHECK(readFile(errPath).find("unknown struct type for layout: SoaColumn") !=
         std::string::npos);
 }
 

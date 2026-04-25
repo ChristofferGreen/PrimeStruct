@@ -91,6 +91,8 @@ Task template:
   TODO-4163, TODO-4165, TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
   TODO-4175
+- `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
+  TODO-4178, TODO-4180, TODO-4182, TODO-4181
 
 ### Execution Queue (Recommended)
 
@@ -123,6 +125,12 @@ Task template:
 27. TODO-4173
 28. TODO-4176
 29. TODO-4175
+30. TODO-4179
+31. TODO-4177
+32. TODO-4178
+33. TODO-4180
+34. TODO-4182
+35. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -134,7 +142,8 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | none |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4179, TODO-4180, TODO-4182 |
+| SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4179, TODO-4180, TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | TODO-4167, TODO-4168 |
 | Semantic-product publication by module and fact family | TODO-4169, TODO-4170, TODO-4155 |
 | Semantic-product public API factoring and versioning | TODO-4160, TODO-4161, TODO-4163 |
@@ -158,7 +167,8 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | TODO-4169, TODO-4170, TODO-4155, TODO-4163 |
 | Lowerer/source-composition contract coverage | TODO-4147, TODO-4148, TODO-4150, TODO-4152, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | none |
+| De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
+| `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4146 |
 | Architecture contract probe migration | TODO-4152, TODO-4171, TODO-4172 |
 | Emitter map-helper canonicalization parity | none |
@@ -226,6 +236,9 @@ Task template:
 - Promotion requires borrowed-view/lifetime rules, backend/runtime parity, and
   retirement of direct experimental implementation imports before `soa_vector`
   can be treated as a promoted public contract.
+- Active promotion lane should keep the canonical public wrapper authoritative
+  first, then migrate conversions/examples/tests, and only then reclassify the
+  experimental namespaces as compatibility-only or removable seams.
 
 ### Skipped Doctest Debt Summary
 
@@ -236,6 +249,133 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
+
+- [ ] TODO-4182: Promote the `soa_vector` draft example and migrate canonical imports
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: `soa_vector` promotion
+  - depends_on: TODO-4178, TODO-4180
+  - scope: Replace draft/example-only `soa_vector` usage with one canonical
+    checked-in example plus focused release coverage that imports
+    `/std/collections/soa_vector/*` and `/std/collections/soa_vector_conversions/*`
+    instead of the experimental namespaces for ordinary public flows.
+  - acceptance:
+    - `examples/3.Surface/soa_vector_ecs_draft.prime` is promoted, replaced, or
+      renamed so the checked-in example reads like a supported canonical
+      `soa_vector` surface instead of a draft-only sketch.
+    - The touched tests/docs/examples exercise canonical `soa_vector` imports
+      for ordinary public flows; direct experimental imports remain only in
+      explicit compatibility coverage if still needed.
+    - Release validation or example-lock coverage references the canonical
+      example rather than the old draft/experimental import path.
+  - stop_rule: Stop after one canonical example path plus the touched
+    canonical-import coverage are in place; do not delete every compatibility
+    test in one slice.
+
+- [ ] TODO-4181: Track `soa_vector` promotion out of experimental
+  - owner: human
+  - created_at: 2026-04-25
+  - phase: `soa_vector` promotion
+  - depends_on: TODO-4179, TODO-4177, TODO-4178, TODO-4180, TODO-4182
+  - scope: Track the first full `soa_vector` promotion lane so the canonical
+    `/std/collections/soa_vector/*` surface becomes authoritative, the
+    experimental namespaces become compatibility-only or removable seams, and
+    docs/spec/examples all describe the same maturity status.
+  - acceptance:
+    - TODO-4179, TODO-4177, TODO-4178, TODO-4180, and TODO-4182 land with one
+      coherent canonical `soa_vector` public contract.
+    - `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`, `docs/todo.md`,
+      and the checked-in example corpus classify `soa_vector` consistently as
+      promoted or still compatibility-gated with explicit remaining blockers.
+    - The promotion lane no longer requires ordinary public code to import
+      `experimental_soa_vector` or
+      `experimental_soa_vector_conversions`.
+  - stop_rule: Stop after the first coherent public promotion pass is
+    documented and validated; do not fold broader SoA storage redesign or new
+    container families into this tracker.
+
+- [ ] TODO-4180: Move canonical `soa_vector` conversions off experimental receiver types
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: `soa_vector` promotion
+  - depends_on: TODO-4179
+  - scope: Move `to_aos` and related conversion helpers onto canonical
+    `/std/collections/soa_vector/*`-owned receiver and helper contracts so the
+    public conversion surface no longer names
+    `/std/collections/experimental_soa_vector/SoaVector<T>` directly.
+  - acceptance:
+    - The touched conversion `.prime` surface accepts canonical `soa_vector`
+      receiver types and helper paths without requiring experimental receiver
+      names in ordinary public code.
+    - The touched docs/spec explain conversion usage in canonical namespace
+      terms.
+    - Remaining experimental conversion seams, if any, are limited to
+      compatibility forwarding instead of defining the public receiver contract.
+  - stop_rule: Stop once the canonical conversion receiver contract is
+    authoritative for the touched flows; do not delete every experimental shim
+    in one slice.
+
+- [ ] TODO-4179: Make `/std/collections/soa_vector/*` the full public helper authority
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: `soa_vector` promotion
+  - depends_on: TODO-4170
+  - scope: Expand the canonical `soa_vector` wrapper layer so ordinary public
+    count/get/ref/push/reserve/conversion flows route through
+    `/std/collections/soa_vector/*` and
+    `/std/collections/soa_vector_conversions/*` instead of exposing the
+    experimental implementation modules as peer public APIs.
+  - acceptance:
+    - The touched canonical wrapper and conversion modules own the public helper
+      names needed for ordinary `soa_vector` use without requiring direct
+      experimental imports.
+    - The touched docs classify `experimental_soa_vector` and
+      `experimental_soa_vector_conversions` as internal or compatibility seams
+      rather than ordinary public APIs.
+    - The touched public wrapper surface stays aligned with the documented
+      canonical `soa_vector` helper contract.
+  - stop_rule: Stop after the canonical wrapper surface is authoritative for
+    the touched helper families; do not complete full promotion, borrow
+    semantics, and example migration in one slice.
+
+- [ ] TODO-4178: Add canonical `soa_vector` backend and runtime parity coverage
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: `soa_vector` promotion
+  - depends_on: TODO-4179, TODO-4177
+  - scope: Add focused release coverage proving the canonical
+    `/std/collections/soa_vector/*` helper path reaches the same C++/VM/native
+    semantics and diagnostics for the touched public flows, without depending on
+    experimental-only detours in ordinary public tests.
+  - acceptance:
+    - The touched release coverage exercises canonical `soa_vector` helper and
+      conversion imports across the supported backends or entrypoints.
+    - Failures surface canonical-path diagnostics rather than experimental-only
+      path leaks for the touched cases.
+    - Direct experimental imports remain only in explicit compatibility tests
+      when the canonical path is not the subject under test.
+  - stop_rule: Stop after one representative canonical parity slice is covered
+    end-to-end; do not migrate every historical compatibility test in one pass.
+
+- [ ] TODO-4177: Stabilize the borrowed-view and field-view contract for public `soa_vector`
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: `soa_vector` promotion
+  - depends_on: TODO-4170
+  - scope: Finish the next borrowed-view / field-view maturity slice so the
+    public `soa_vector` contract can rely on stable `ref(...)` and
+    `field_view`-style behavior, deterministic invalidation diagnostics, and
+    public wrapper semantics rather than pending or experimental-only gaps.
+  - acceptance:
+    - The touched `soa_vector` borrowed-view or field-view flows have one
+      stable documented contract on the canonical wrapper path.
+    - The touched diagnostics and validation coverage prove the invalidation /
+      lifetime rule for those borrowed flows deterministically.
+    - The touched docs/spec remove at least one current “pending” or
+      draft-only caveat from the promoted borrowed/field-view surface.
+  - stop_rule: Stop after one coherent borrowed-view maturity slice is stable
+    on the canonical path; do not attempt every future SoA borrow feature at
+    once.
 
 - [ ] TODO-4176: Add a checked-in `.prime` example for user-authored AST transforms
   - owner: ai

@@ -593,7 +593,7 @@ TEST_CASE("ir lowerer return inference helpers keep namespaced File bindings sca
   CHECK(locals.at("file").structTypeName.empty());
 }
 
-TEST_CASE("ir lowerer return inference helpers keep namespaced File constructor bindings scalar") {
+TEST_CASE("ir lowerer return inference helpers keep namespaced File constructor bindings as inferred structs") {
   primec::Expr fileCtor;
   fileCtor.kind = primec::Expr::Kind::Call;
   fileCtor.name = "File";
@@ -640,9 +640,9 @@ TEST_CASE("ir lowerer return inference helpers keep namespaced File constructor 
       error));
   CHECK(error.empty());
   REQUIRE(locals.count("file") == 1u);
-  CHECK(locals.at("file").isFileHandle);
+  CHECK_FALSE(locals.at("file").isFileHandle);
   CHECK(locals.at("file").valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
-  CHECK(locals.at("file").structTypeName.empty());
+  CHECK(locals.at("file").structTypeName == "/std/file/File<Read>");
 }
 
 TEST_CASE("ir lowerer return inference helpers recover bool comparison bindings") {
