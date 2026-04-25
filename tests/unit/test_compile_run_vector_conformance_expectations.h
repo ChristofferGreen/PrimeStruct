@@ -820,7 +820,15 @@ inline void expectCanonicalVectorNamespaceTemporaryReceiverConformance(const std
         "count requires array, vector, map, or string target");
     return;
   }
-  if (emitMode == "native" || emitMode == "exe") {
+  if (emitMode == "native") {
+    expectVectorConformanceCompileReject(
+        makeCanonicalVectorNamespaceTemporaryReceiverSource(),
+        "vector_namespace_canonical_temporary_receiver_" + emitMode,
+        emitMode,
+        "");
+    return;
+  }
+  if (emitMode == "exe") {
     expectVectorConformanceCompileReject(
         makeCanonicalVectorNamespaceTemporaryReceiverSource(),
         "vector_namespace_canonical_temporary_receiver_" + emitMode,
