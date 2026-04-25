@@ -48,7 +48,7 @@ main() {
   CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count capacity and access helpers require explicit alias definitions") {
+TEST_CASE("vector namespaced helper bundle without aliases fails on count first") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -974,7 +974,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("array namespaced slash-method helpers reject same-path helper returns on vector receivers") {
+TEST_CASE("array namespaced slash-method helper bundle on vector receivers fails on count first") {
   const std::string source = R"(
 Marker {
   [i32] value

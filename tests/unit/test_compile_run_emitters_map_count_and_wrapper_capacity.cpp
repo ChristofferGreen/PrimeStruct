@@ -97,7 +97,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects user wrapper temporary count capacity shadow precedence") {
+TEST_CASE("C++ emitter rejects user wrapper count/capacity shadow precedence on map count first") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -196,7 +196,7 @@ main() {
   CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects wrapper count capacity builtin fallback") {
+TEST_CASE("C++ emitter rejects wrapper count/capacity builtin fallback on map count first") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
