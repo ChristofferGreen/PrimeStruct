@@ -36,7 +36,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
-TEST_CASE("vm keeps inferExprString lowering diagnostics on direct wrapper-returned canonical map access") {
+TEST_CASE("vm keeps builtin string count on direct wrapper-returned canonical map access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -65,8 +65,7 @@ main() {
        "primec_vm_direct_wrapper_canonical_map_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("VM lowering error: debug: branch=inferExprString") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("vm keeps wrapper-returned canonical map method access string receiver typing") {
@@ -103,7 +102,7 @@ main() {
   CHECK(runCommand(runCmd) == 182);
 }
 
-TEST_CASE("vm rejects wrapper-returned slash-method map access count with same-path diagnostics") {
+TEST_CASE("vm keeps builtin string count on wrapper-returned slash-method map access") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -137,8 +136,7 @@ main() {
        "primec_vm_wrapper_slash_method_map_access_count_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /map/at") != std::string::npos);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("rejects vm canonical vector access string literals") {
@@ -197,7 +195,7 @@ main() {
   CHECK(runCommand(runCmd) == 3);
 }
 
-TEST_CASE("rejects vm canonical vector method access string literals") {
+TEST_CASE("vm keeps primitive diagnostics for canonical vector method access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -221,10 +219,11 @@ main() {
        "primec_vm_canonical_vector_method_access_builtin_string_count_shadow.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 91);
+  CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
 }
 
-TEST_CASE("vm keeps entry-indexing lowering diagnostics on canonical vector unsafe method access shadow") {
+TEST_CASE("vm keeps builtin string count on canonical vector unsafe method access shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -249,9 +248,7 @@ main() {
        "primec_vm_canonical_vector_unsafe_method_access_count_shadow_reject.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("VM lowering error: vm backend only supports entry argument indexing") !=
-        std::string::npos);
+  CHECK(runCommand(runCmd) == 91);
 }
 
 TEST_CASE("rejects vm slash-method vector access string count fallback") {
