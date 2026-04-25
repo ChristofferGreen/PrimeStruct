@@ -484,7 +484,7 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   soaValuesInfo.kind = LocalInfo::Kind::Value;
   soaValuesInfo.isSoaVector = true;
   soaValuesInfo.structTypeName =
-      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+      soaVectorStructTypePrefix + "tdd6edf08e597bb3d";
   locals.emplace("soaValues", soaValuesInfo);
 
   LocalInfo structArgsInfo{};
