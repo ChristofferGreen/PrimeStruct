@@ -286,7 +286,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("array namespaced method body-arg diagnostics normalize canonical-fallback helper receiver target") {
+TEST_CASE("array namespaced method body-arg canonical-fallback helper keeps rooted borrow diagnostic") {
   const std::string source = R"(
 [return<Reference<i32>>]
 /std/collections/vector/borrow([Reference<i32>] ref) {
@@ -302,10 +302,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
 }
 
-TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize canonical-fallback helper receiver target") {
+TEST_CASE("stdlib namespaced method expression body-arg canonical-fallback helper keeps rooted borrow diagnostic") {
   const std::string source = R"(
 [return<Reference<i32>>]
 /std/collections/vector/borrow([Reference<i32>] ref) {
@@ -320,10 +320,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
 }
 
-TEST_CASE("array namespaced method expression body-arg infers helper-returned reference target") {
+TEST_CASE("array namespaced method expression body-arg helper-returned reference keeps rooted borrow diagnostic") {
   const std::string source = R"(
 [return<Reference<i32>>]
 /std/collections/vector/borrow([Reference<i32>] ref) {
@@ -343,11 +343,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK((error.find("unknown call target: /vector/borrow") != std::string::npos ||
-         error.find("unknown call target: /std/collections/vector/borrow") != std::string::npos));
+  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
 }
 
-TEST_CASE("array namespaced method expression body-arg helper-returned reference keeps canonical diagnostics") {
+TEST_CASE("array namespaced method expression body-arg helper mismatch keeps rooted borrow diagnostic") {
   const std::string source = R"(
 [return<Reference<i32>>]
 /std/collections/vector/borrow([Reference<i32>] ref) {
@@ -367,8 +366,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK((error.find("unknown call target: /vector/borrow") != std::string::npos ||
-         error.find("unknown call target: /std/collections/vector/borrow") != std::string::npos));
+  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
 }
 
 TEST_CASE("map method expression body-arg infers canonical helper on referenced wrapper receiver") {
