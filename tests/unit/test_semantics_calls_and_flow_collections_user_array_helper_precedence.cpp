@@ -578,7 +578,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("push requires mutable vector binding") != std::string::npos);
 }
 
 TEST_CASE("vector push alias requires heap_alloc effect") {
@@ -592,7 +592,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("push requires heap_alloc effect") != std::string::npos);
 }
 
 TEST_CASE("push on array reports vector binding before effect requirement") {
