@@ -86,8 +86,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
               return false;
             },
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK(error == "stale");
 
   primec::ir_lowerer::LocalInfo soaCountInfo;
   soaCountInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
@@ -110,8 +110,8 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               CHECK(false);
               return false;
             },
-            error) == Result::NotHandled);
-  CHECK(error.empty());
+            error) == Result::Error);
+  CHECK(error == "stale");
 
   int soaEmitCalls = 0;
   error.clear();
@@ -368,6 +368,7 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   mapContainsCallee.fullPath = "/std/collections/mapContains";
 
   int mapContainsResolveMethodCalls = 0;
+  int mapContainsEmitCalls = 0;
   error = "stale";
   CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
             mapMethodContainsCall,
@@ -384,12 +385,13 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               return nullptr;
             },
             [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
-              CHECK(false);
-              return false;
+              ++mapContainsEmitCalls;
+              return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(mapContainsResolveMethodCalls == 1);
   CHECK(error == "stale");
+  CHECK(mapContainsEmitCalls == 1);
 
   primec::Expr mapMethodInsertCall;
   mapMethodInsertCall.kind = primec::Expr::Kind::Call;
@@ -670,7 +672,7 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
             error) == Result::Error);
-  CHECK(error == "count requires array, vector, map, or string target");
+  CHECK(error == "count requires array, vector, map, or string target (target=<none>)");
 
   callExpr.name = "capacity";
   error.clear();
@@ -686,7 +688,7 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
             callExpr,
             [](const primec::Expr &, std::string &) { return false; },
             error) == Result::Error);
-  CHECK(error == "count requires array, vector, map, or string target");
+  CHECK(error == "count requires array, vector, map, or string target (target=<none>)");
 
   callExpr.name = "/std/collections/vector/capacity";
   error.clear();
