@@ -179,8 +179,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") !=
-        std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
 }
 
 TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map struct storage fields") {
@@ -292,7 +291,8 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") !=
+        std::string::npos);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced result struct storage fields") {
