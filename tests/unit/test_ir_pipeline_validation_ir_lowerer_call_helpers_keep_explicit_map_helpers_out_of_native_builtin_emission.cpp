@@ -153,17 +153,17 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
     }
   };
 
-  expectDispatch("/map/count", {mapName}, Result::NotHandled, "stale");
-  expectDispatch("/std/collections/map/count", {mapName}, Result::NotHandled, "stale");
-  expectDispatch("/map/contains", {mapName, keyName}, Result::Emitted, "stale");
+  expectDispatch("/map/count", {mapName}, Result::Emitted, "stale");
+  expectDispatch("/std/collections/map/count", {mapName}, Result::Emitted, "stale");
+  expectDispatch("/map/contains", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/contains",
                  {mapName, keyName},
-                 Result::Emitted,
+                 Result::NotHandled,
                  "stale");
-  expectDispatch("/map/tryAt", {mapName, keyName}, Result::Emitted, "stale");
+  expectDispatch("/map/tryAt", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/tryAt",
                  {mapName, keyName},
-                 Result::Emitted,
+                 Result::NotHandled,
                  "stale");
   expectDispatch("/map/at", {mapName, keyName}, Result::NotHandled, "stale");
   expectDispatch("/std/collections/map/at",
@@ -181,17 +181,17 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   expectNamespacedDispatch("/std/collections/map",
                            "count",
                            {mapName},
-                           Result::NotHandled,
+                           Result::Emitted,
                            "stale");
   expectNamespacedDispatch("/std/collections/map",
                            "contains",
                            {mapName, keyName},
-                           Result::Emitted,
+                           Result::NotHandled,
                            "stale");
   expectNamespacedDispatch("/std/collections/map",
                            "tryAt",
                            {mapName, keyName},
-                           Result::Emitted,
+                           Result::NotHandled,
                            "stale");
 
   primec::SemanticProgram semanticProgram;
@@ -362,9 +362,9 @@ TEST_CASE("ir lowerer call helpers emit local vector count capacity calls throug
   expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/std/collections/vector/capacity",
                  {valuesName},
-                 Result::NotHandled,
+                 Result::Emitted,
                  "stale",
-                 false);
+                 true);
   expectDispatch("/vector/at",
                  {valuesName, indexName},
                  Result::NotHandled,
