@@ -659,7 +659,7 @@ main() {
        "primec_vm_canonical_map_access_helper_key_mismatch_wrapper_slash_return_receiver_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
@@ -702,7 +702,7 @@ main() {
        "primec_vm_explicit_canonical_map_typed_binding_builtin_helpers_diag_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") !=
         std::string::npos);
 }
