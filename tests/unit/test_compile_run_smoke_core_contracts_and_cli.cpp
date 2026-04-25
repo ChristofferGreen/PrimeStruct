@@ -229,7 +229,7 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
           std::string::npos);
     CHECK(graphicsDoc.find("native Metal window presenter helper") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("`VertexColored` upload layout definitions now live in one shared example header") !=
+    CHECK(primeStructDoc.find("native window host runtime shell now also lives in one shared presenter helper") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("native/Metal sample hosts now share one canonical host-side `GfxError` +") !=
           std::string::npos);
