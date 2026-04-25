@@ -4483,7 +4483,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("method-like same-path soa_vector helper shadows work for helper-return typed bindings") {
+TEST_CASE("method-like same-path soa_vector helper shadows reject duplicate reserve definitions") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -4935,8 +4935,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/soa_vector/reserve") !=
+        std::string::npos);
 }
 
 TEST_CASE("to_soa helper rejects non-vector target") {
