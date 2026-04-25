@@ -37,8 +37,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_quint_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_quint_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map sext") {
@@ -72,8 +76,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sext_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_sext_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map sept") {
@@ -108,8 +116,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_sept_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_sept_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim map oct") {
@@ -144,8 +156,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_stdlib_collection_shim_map_oct_mismatch.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_collection_shim_map_oct_mismatch.err")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("map literal value type mismatch") != std::string::npos);
 }
 
 TEST_CASE("runs vm with stdlib collection shim access helpers") {
