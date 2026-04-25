@@ -290,7 +290,7 @@ main() {
   CHECK(readFile(errPath).find("argument type mismatch for /i32/tag parameter marker") != std::string::npos);
 }
 
-TEST_CASE("rejects vm vector alias access struct method chain canonical forwarding") {
+TEST_CASE("rejects vm vector alias access struct method chain with array receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -321,7 +321,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /array/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector alias access struct method chain canonical diagnostics forwarding") {
