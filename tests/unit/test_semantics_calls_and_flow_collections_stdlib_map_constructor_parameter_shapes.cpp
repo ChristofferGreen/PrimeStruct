@@ -179,7 +179,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred experimental map default parameters rewrite constructors") {
+TEST_CASE("helper-wrapped inferred experimental map default parameters keep mapNew template diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -211,10 +211,11 @@ main() {
   return(plus(scoreValues(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)),
               holder.score(/std/collections/mapPair("left"raw_utf8, 2i32, "extra"raw_utf8, 9i32))))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
+        std::string::npos);
 }
 
 TEST_CASE("helper-wrapped inferred experimental map default parameters keep mismatch diagnostics") {
@@ -291,7 +292,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred experimental result map default parameters rewrite constructors") {
+TEST_CASE("helper-wrapped inferred experimental result map default parameters keep mapNew template diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -311,11 +312,12 @@ main() {
   return(scoreStatus(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
                                                                   "right"raw_utf8, 7i32)))))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.empty());
+  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
+        std::string::npos);
 }
 
 TEST_CASE("helper-wrapped inferred experimental result map default parameters keep mismatch diagnostics") {
@@ -410,7 +412,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("experimental map methods accept direct constructor receivers") {
+TEST_CASE("experimental map methods keep removed helper diagnostics on direct constructor receivers") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -432,10 +434,11 @@ main() {
      else() { })
   return(Result.ok(total))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/experimental_map/mapCount") !=
+        std::string::npos);
 }
 
 TEST_CASE("experimental map methods keep mismatch diagnostics on direct constructor receivers") {
