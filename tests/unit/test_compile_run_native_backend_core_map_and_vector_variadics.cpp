@@ -174,7 +174,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
+  CHECK(runCommand(exePath) == 52);
 }
 
 TEST_CASE("native rejects variadic borrowed map packs with indexed tryAt inference") {
@@ -356,7 +356,7 @@ main() {
   CHECK(runCommand(exePath) == 11);
 }
 
-TEST_CASE("native materializes variadic pointer map packs with indexed lookup helpers") {
+TEST_CASE("native rejects variadic pointer map packs with indexed lookup helpers") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -407,12 +407,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_pointer_map_lookup.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_pointer_map_lookup").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_pointer_map_lookup.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  const std::string diagnostics = readFile(errPath);
+  CHECK(diagnostics.find(
+            "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+        std::string::npos);
+  CHECK(diagnostics.find("call=/std/collections/map/at_unsafe") != std::string::npos);
 }
 
 TEST_CASE("native materializes variadic pointer map packs with indexed dereference lookup helpers") {
@@ -471,7 +476,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 48);
+  CHECK(runCommand(exePath) == 52);
 }
 
 TEST_CASE("native rejects variadic pointer map packs with indexed tryAt inference") {
