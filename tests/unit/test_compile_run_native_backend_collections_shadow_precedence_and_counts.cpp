@@ -112,7 +112,7 @@ main() {
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical map sugar before compatibility aliases") {
+TEST_CASE("compiles and runs native canonical map sugar with current precedence before compatibility aliases") {
   const std::string source = R"(
 [return<int>]
 /map/count([map<i32, i32>] values) {
@@ -157,7 +157,7 @@ main() {
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 97);
+  CHECK(runCommand(exePath) == 180);
 }
 
 TEST_CASE("rejects native canonical unknown map helper with canonical diagnostics") {
@@ -187,7 +187,7 @@ main() {
   CHECK(diagnostics.find("unknown call target: std/collections/map/missing") == std::string::npos);
 }
 
-TEST_CASE("compiles and runs native canonical map access string shadow before compatibility aliases") {
+TEST_CASE("rejects native canonical map access string shadow before compatibility aliases during lowering") {
   const std::string source = R"(
 [return<int>]
 /map/at([map<i32, string>] values, [i32] key) {
@@ -233,11 +233,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 10);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("Native lowering error: native backend only supports entry argument indexing") !=
+        std::string::npos);
 }
 
-TEST_CASE("rejects native canonical map access non-string shadow with current lowering diagnostics") {
+TEST_CASE("compiles and runs native canonical map access non-string shadow before compatibility aliases") {
   const std::string source = R"(
 [return<string>]
 /map/at([map<i32, string>] values, [i32] key) {
@@ -283,12 +284,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) == 2);
-  const std::string diagnostics = readFile(outPath);
-  CHECK(diagnostics.find("Native lowering error:") != std::string::npos);
-  CHECK((diagnostics.find("entry argument indexing") != std::string::npos ||
-         diagnostics.find("call=/std/collections/map/at") != std::string::npos ||
-         diagnostics.find("unknown call target: /std/collections/map/at") != std::string::npos));
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 10);
 }
 
 TEST_CASE("compiles and runs native explicit map helper calls through same-path aliases") {
