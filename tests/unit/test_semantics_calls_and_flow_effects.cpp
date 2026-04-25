@@ -252,7 +252,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("upload requires array input") != std::string::npos);
 }
 
 TEST_CASE("std gpu upload accepts builtin array literal input") {
@@ -1420,7 +1420,7 @@ log_file_error([FileError] err) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("missing on_error for ? usage") != std::string::npos);
 }
 
 TEST_CASE("File constructor requires file_read effect for read mode") {
@@ -1438,7 +1438,7 @@ log_file_error([FileError] err) {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("File requires file_read effect") != std::string::npos);
 }
 
 TEST_CASE("file read methods require file_read effect") {
@@ -1608,7 +1608,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("missing on_error for ? usage") != std::string::npos);
 }
 
 TEST_CASE("user-defined try helper keeps named arguments") {
