@@ -263,11 +263,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(((error.find("binding initializer validateExpr failed") !=
-         std::string::npos) ||
-        (error.find(
-             "argument type mismatch for /std/collections/ContainerError/status parameter err") !=
-         std::string::npos)));
+  CHECK(error.find(
+            "argument type mismatch for /std/collections/ContainerError/status parameter err") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib ContainerError receiver methods reject unexpected arguments") {
