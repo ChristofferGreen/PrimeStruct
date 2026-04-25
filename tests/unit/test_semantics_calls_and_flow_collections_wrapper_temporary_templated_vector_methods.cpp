@@ -662,7 +662,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("bare vector access method wrapper target without helper reports unknown method") {
@@ -680,7 +680,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("array compatibility access slash method vector target without helper reports unknown method") {
@@ -757,7 +757,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced access slash method string target without canonical helper reports unknown method") {
@@ -791,7 +791,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count accepts same-path helper on wrapper vector target") {
@@ -1122,7 +1122,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("array namespaced vector count call rejects named arguments via unknown target") {
