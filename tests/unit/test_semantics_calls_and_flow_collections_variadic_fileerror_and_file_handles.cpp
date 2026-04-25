@@ -101,7 +101,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("named arguments not supported for builtin calls") !=
+        std::string::npos);
 }
 
 TEST_CASE("variadic wrapped File handle packs accept canonical named free builtin at receivers") {
