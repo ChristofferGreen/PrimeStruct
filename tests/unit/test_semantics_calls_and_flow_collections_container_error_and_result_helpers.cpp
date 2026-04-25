@@ -5268,7 +5268,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("builtin soa_vector method-like helper-return read helpers reject unresolved get call target first") {
+TEST_CASE("builtin soa_vector method-like helper-return read helpers reject non-reflect Particle metadata first") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5301,7 +5301,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: get") != std::string::npos);
+  CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("aos and soa containers do not implicitly convert") {
