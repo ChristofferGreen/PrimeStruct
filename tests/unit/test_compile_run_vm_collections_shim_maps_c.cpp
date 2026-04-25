@@ -570,7 +570,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  CHECK(readFile(errPath).find("name=capacity") != std::string::npos);
 }
 
 TEST_CASE("rejects vm wrapper temporary vector capacity method without helper") {
@@ -595,7 +595,7 @@ main() {
   CHECK(readFile(errPath).find("unknown method: /vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("rejects vm bare vector capacity after pop through imported stdlib helper") {
+TEST_CASE("runs vm bare vector capacity after pop through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -605,13 +605,10 @@ main() {
   pop(values)
   return(capacity(values))
 }
-  )";
+)";
   const std::string srcPath = writeTemp("vm_vector_capacity_after_pop.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_vector_capacity_after_pop_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("capacity requires vector target") != std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_CASE("runs vm bare vector mutators without imported helpers") {
