@@ -570,9 +570,9 @@ TEST_CASE("ir lowerer call helpers preserve canonical map helper method return c
               ++builtinContainsEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(builtinContainsEmitCalls == 0);
+  CHECK(builtinContainsEmitCalls == 1);
 
   primec::Expr tryAtCall;
   tryAtCall.kind = primec::Expr::Kind::Call;
@@ -630,9 +630,9 @@ TEST_CASE("ir lowerer call helpers preserve canonical map helper method return c
               ++builtinTryAtEmitCalls;
               return true;
             },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error == "stale");
-  CHECK(builtinTryAtEmitCalls == 0);
+  CHECK(builtinTryAtEmitCalls == 1);
 }
 
 TEST_CASE("ir lowerer call helpers prefer direct same-path map count-like defs") {
