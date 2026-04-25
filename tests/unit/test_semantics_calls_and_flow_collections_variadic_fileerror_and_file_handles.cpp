@@ -570,7 +570,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("map namespaced at method keeps slash-path rejection diagnostics") {
+TEST_CASE("map namespaced at method now validates through slash-path routing") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at([map<i32, i32>] values, [i32] index) {
@@ -582,13 +582,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(values./map/at(1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/at") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced at_unsafe method auto inference keeps slash-path rejection diagnostics") {
+TEST_CASE("map namespaced at_unsafe method auto inference now validates through slash-path routing") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -601,13 +601,13 @@ main() {
   [auto] inferred{values./map/at_unsafe(1i32)}
   return(inferred)
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced contains method keeps slash-path rejection diagnostics") {
+TEST_CASE("map namespaced contains method now validates through slash-path routing") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -619,13 +619,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(values./map/contains(1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/contains") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced contains method keeps slash-path rejection diagnostics") {
+TEST_CASE("map stdlib namespaced contains method now validates through slash-path routing") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /std/collections/map/contains([map<i32, i32>] values, [i32] key) {
@@ -637,13 +637,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(values./std/collections/map/contains(1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/contains") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map namespaced tryAt method keeps slash-path rejection diagnostics") {
+TEST_CASE("map namespaced tryAt method now fails on try result diagnostics first") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -670,13 +670,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(try(values./map/tryAt(1i32)))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/tryAt") != std::string::npos);
+  CHECK(error.find("try requires Result argument") != std::string::npos);
 }
 
-TEST_CASE("map stdlib namespaced tryAt method keeps slash-path rejection diagnostics") {
+TEST_CASE("map stdlib namespaced tryAt method now fails on try result diagnostics first") {
   const std::string source = R"(
 [struct]
 ContainerError() {
@@ -703,13 +703,13 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(try(values./std/collections/map/tryAt(1i32)))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/tryAt") != std::string::npos);
+  CHECK(error.find("try requires Result argument") != std::string::npos);
 }
 
-TEST_CASE("map stdlib namespaced at_unsafe method keeps slash-path rejection diagnostics") {
+TEST_CASE("map stdlib namespaced at_unsafe method now validates through slash-path routing") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/at_unsafe([map<i32, i32>] values, [i32] index) {
@@ -721,10 +721,10 @@ main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
   return(values./std/collections/map/at_unsafe(1i32))
 }
-)";
+  )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/at_unsafe") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib canonical map contains and tryAt helpers resolve in method-call sugar") {
