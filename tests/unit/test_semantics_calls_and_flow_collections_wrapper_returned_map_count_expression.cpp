@@ -34,7 +34,7 @@ main() {
   CHECK(error.find("unknown method: /map/at") != std::string::npos);
 }
 
-TEST_CASE("map stdlib namespaced count expression inferred template fallback keeps alias diagnostics") {
+TEST_CASE("map stdlib namespaced count expression ignores templated alias fallback") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /map/count<K, V>([map<K, V>] values, [bool] marker) {
@@ -49,7 +49,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /std/collections/map/count") != std::string::npos);
 }
 
 TEST_CASE("map stdlib namespaced count auto inference keeps canonical helper return precedence") {
@@ -428,7 +428,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
 TEST_CASE("access helper call-form expression infers auto binding from labeled receiver helper") {
