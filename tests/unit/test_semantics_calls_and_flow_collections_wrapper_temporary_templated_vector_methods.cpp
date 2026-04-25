@@ -47,7 +47,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("vector namespaced count capacity and access helpers validate as builtin aliases") {
+TEST_CASE("vector namespaced count capacity and access helpers require explicit alias definitions") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -61,7 +61,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced vector count rejects template arguments as builtin alias") {
@@ -976,7 +976,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("array namespaced slash-method helpers accept same-path helper returns on vector receivers") {
+TEST_CASE("array namespaced slash-method helpers reject same-path helper returns on vector receivers") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -1022,7 +1022,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /array/count") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced count wrapper vector target without helper reports unknown target") {

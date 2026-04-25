@@ -97,7 +97,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter compiles user wrapper temporary count capacity shadow precedence") {
+TEST_CASE("C++ emitter rejects user wrapper temporary count capacity shadow precedence") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -193,7 +193,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("C++ emitter keeps wrapper count capacity builtin fallback") {
+TEST_CASE("C++ emitter rejects wrapper count capacity builtin fallback") {
   const std::string source = R"(
 [return<map<i32, i32>>]
 wrapMap() {
@@ -214,9 +214,14 @@ main() {
   const std::string srcPath = writeTemp("compile_cpp_wrapper_count_capacity_builtin_fallback.prime", source);
   const std::string outPath =
       (testScratchPath("") / "primec_cpp_wrapper_count_capacity_builtin_fallback.cpp").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_cpp_wrapper_count_capacity_builtin_fallback.err").string();
 
-  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects namespaced wrapper vector count map target in C++ emitter") {
