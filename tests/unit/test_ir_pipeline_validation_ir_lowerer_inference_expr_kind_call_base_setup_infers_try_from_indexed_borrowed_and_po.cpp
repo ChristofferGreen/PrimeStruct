@@ -145,7 +145,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 
-TEST_CASE("ir lowerer inference expr-kind call-base setup recovers builtin comparison bool without semantic facts") {
+TEST_CASE("ir lowerer inference expr-kind call-base setup leaves builtin comparison kind unresolved without semantic facts") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;
   CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
@@ -185,8 +185,8 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup recovers builtin compa
   comparisonExpr.args = {lhs, rhs};
 
   primec::ir_lowerer::LocalInfo::ValueKind kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
-  CHECK(state.inferCallExprBaseKind(comparisonExpr, primec::ir_lowerer::LocalMap{}, kindOut));
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
+  CHECK_FALSE(state.inferCallExprBaseKind(comparisonExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer inference expr-kind call-base setup validates dependencies") {
