@@ -188,7 +188,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical vector indexed removal helpers accept ownership-sensitive explicit Vector bindings") {
+TEST_CASE("canonical vector indexed removal helpers reject ownership-sensitive explicit Vector bindings on remove_at first") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_vector/*
@@ -220,10 +220,10 @@ main() {
       plus(/std/collections/vector/count<Wrapper>(swapped),
            /std/collections/vector/at_unsafe<Wrapper>(swapped, 0i32).value.value)))
 }
-)";
+  )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/remove_at") != std::string::npos);
 }
 
 TEST_CASE("canonical vector helpers still require stdlib imports for experimental vector receivers") {
