@@ -252,7 +252,7 @@ main() {
          error.find("argument type mismatch for /i32/tag parameter self") != std::string::npos));
 }
 
-TEST_CASE("vector namespaced access alias field expression keeps struct receiver diagnostics") {
+TEST_CASE("vector namespaced access alias field expression now fails on project inference first") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -276,9 +276,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK((error.find("unknown call target: /vector/at") != std::string::npos ||
-         error.find("unknown call target: /std/collections/vector/at") != std::string::npos ||
-         error.find("unable to infer return type on /project") != std::string::npos));
+  CHECK(error.find("unable to infer return type on /project") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector canonical access call keeps same-path struct receiver forwarding") {
@@ -853,7 +852,7 @@ main() {
   CHECK(error.find("unknown method: /array/tag") != std::string::npos);
 }
 
-TEST_CASE("vector method alias access field expression keeps removed alias diagnostics") {
+TEST_CASE("vector method alias access field expression keeps rooted alias diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -874,14 +873,10 @@ main() {
   [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
   return(project(values))
 }
-)";
+  )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK((error.find("unknown method: /vector/at") != std::string::npos ||
-         error.find("unknown method: /std/collections/vector/at") != std::string::npos ||
-         error.find("unknown call target: /vector/at") != std::string::npos ||
-         error.find("unknown call target: /std/collections/vector/at") != std::string::npos ||
-         error.find("unable to infer return type on /project") != std::string::npos));
+  CHECK(error.find("unknown method: /vector/at") != std::string::npos);
 }
 
 TEST_CASE("vector unsafe method alias access struct method chain keeps array receiver diagnostics") {
