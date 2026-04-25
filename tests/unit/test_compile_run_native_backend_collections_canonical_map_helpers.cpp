@@ -132,7 +132,7 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("Semantic error: argument type mismatch for /std/collections/map/at parameter key") !=
         std::string::npos);
 }
@@ -181,7 +181,7 @@ main() {
           .string();
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("Semantic error: at requires map key type i32") != std::string::npos);
 }
 
@@ -208,7 +208,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/map") != std::string::npos);
 }
 
@@ -237,7 +237,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
@@ -266,7 +266,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
@@ -390,7 +390,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
@@ -415,7 +415,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
@@ -514,7 +514,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
@@ -536,7 +536,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/contains") != std::string::npos);
 }
 
@@ -558,7 +558,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/tryAt") != std::string::npos);
 }
 
@@ -580,7 +580,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
