@@ -663,7 +663,7 @@ main() {
   CHECK(runCommand(exePath) == 16);
 }
 
-TEST_CASE("native keeps vector constructor and literal parity across direct and canonical forms") {
+TEST_CASE("native rejects vector constructor parity with canonical path diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -687,12 +687,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_vector_ctor_literal_parity.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_vector_ctor_literal_parity").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_vector_ctor_literal_parity.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 24);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/vector") !=
+        std::string::npos);
 }
 
 TEST_CASE("native rejects map constructor literal parity with canonical entry diagnostics") {
