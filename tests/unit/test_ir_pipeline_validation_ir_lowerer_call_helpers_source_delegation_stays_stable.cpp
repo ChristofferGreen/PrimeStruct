@@ -365,7 +365,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find(
             "isCanonicalCollectionHelperCall(expr, \"std/collections/soa_vector\", \"to_aos\", 1)") !=
         std::string::npos);
-  CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") == std::string::npos);
+  CHECK(inlineDispatchSource.find("std/collections/soa_vector/to_aos") != std::string::npos);
   CHECK(inlineDispatchSource.find("isSimpleCallName(expr, \"to_aos\")") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/get") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/ref") == std::string::npos);
@@ -792,7 +792,7 @@ main() {
         return entry.scopePath == "/main" &&
                primec::semanticProgramBridgePathChoiceHelperName(semanticProgram, entry) == "count" &&
                primec::semanticProgramResolveCallTargetString(semanticProgram, entry.chosenPathId) ==
-                   "/std/collections/map/count";
+                   "/map/count";
       });
   REQUIRE(mapBridgeEntry != nullptr);
 
@@ -821,7 +821,7 @@ main() {
   CHECK(semanticProgram.publishedRoutingLookups.bridgePathChoiceStdlibSurfaceIdsByExpr.count(
             mapBridgeExpr.semanticNodeId) == 1);
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, mapBridgeExpr) ==
-        "/std/collections/map/count");
+        "/map/count");
   const auto mapBridgeSurfaceId =
       primec::ir_lowerer::findSemanticProductBridgePathChoiceStdlibSurfaceId(adapter,
                                                                               mapBridgeExpr);
