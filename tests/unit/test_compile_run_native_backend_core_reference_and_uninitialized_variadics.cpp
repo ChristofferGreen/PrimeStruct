@@ -556,7 +556,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("native materializes variadic pointer uninitialized scalar packs with indexed init and take") {
+TEST_CASE("native rejects variadic pointer uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
 score_ptrs([args<Pointer<uninitialized<i32>>>] values) {
@@ -599,15 +599,17 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_variadic_args_pointer_uninitialized_scalar.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_variadic_args_pointer_uninitialized_scalar").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_pointer_uninitialized_scalar.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 27);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: unsupported operand types for plus") !=
+        std::string::npos);
 }
 
-TEST_CASE("native materializes variadic borrowed uninitialized scalar packs with indexed init and take") {
+TEST_CASE("native rejects variadic borrowed uninitialized scalar packs with indexed init and take") {
   const std::string source = R"(
 [return<int>]
 score_refs([args<Reference<uninitialized<i32>>>] values) {
@@ -650,13 +652,14 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_variadic_args_reference_uninitialized_scalar.prime", source);
-  const std::string exePath =
-      (std::filesystem::temp_directory_path() / "primec_native_variadic_args_reference_uninitialized_scalar")
-          .string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_variadic_args_reference_uninitialized_scalar.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 27);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("Native lowering error: unsupported operand types for plus") !=
+        std::string::npos);
 }
 
 

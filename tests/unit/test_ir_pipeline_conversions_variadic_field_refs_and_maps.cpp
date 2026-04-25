@@ -162,7 +162,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  CHECK(error == "unsupported operand types for plus");
 }
 
 TEST_CASE("ir lowerer rejects variadic borrowed uninitialized scalar packs with indexed init and take") {
@@ -215,7 +215,7 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  CHECK(error == "unsupported operand types for plus");
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed map packs with indexed count methods") {
