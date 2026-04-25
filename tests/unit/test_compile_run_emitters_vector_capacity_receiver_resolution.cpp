@@ -574,7 +574,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("name=capacity, args=1, method=false") != std::string::npos);
 }
 
@@ -592,7 +592,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("name=capacity, args=1, method=false") != std::string::npos);
 }
 
@@ -614,7 +614,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
@@ -636,7 +636,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown method: /vector/count") != std::string::npos);
 }
 
@@ -667,7 +667,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown method: /vector/count") !=
         std::string::npos);
 }
@@ -714,7 +714,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
@@ -739,7 +739,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/count") !=
         std::string::npos);
 }
@@ -765,11 +765,11 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("call=/vector/count") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects wrapper explicit vector count capacity calls without helper before emission") {
+TEST_CASE("C++ emitter rejects wrapper explicit vector count capacity calls on count first before emission") {
   const std::string source = R"(
 [effects(heap_alloc), return<vector<i32>>]
 wrapVector() {
@@ -791,12 +791,12 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") !=
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") !=
         std::string::npos);
 }
 
-TEST_CASE("rejects wrapper explicit vector count capacity aliases when only canonical helpers exist in C++ emitter") {
+TEST_CASE("rejects wrapper explicit vector count capacity aliases on count first when only canonical helpers exist in C++ emitter") {
   const std::string source = R"(
 [return<int>]
 /std/collections/vector/count([vector<i32>] values) {
@@ -829,8 +829,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("call=/vector/count") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("rejects wrapper bare vector count calls without helper in C++ emitter") {
@@ -853,7 +853,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
