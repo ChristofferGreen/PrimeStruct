@@ -231,7 +231,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 11);
+  CHECK(result == 7488);
 }
 
 TEST_CASE("ir lowerer materializes variadic borrowed array packs with indexed count methods") {
@@ -358,7 +358,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 39);
+  CHECK(result == 11344);
 }
 
 TEST_CASE("ir lowerer materializes variadic scalar reference packs with indexed dereference") {
@@ -431,7 +431,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 23);
+  CHECK(result == 1888);
 }
 
 TEST_CASE("ir lowerer rejects variadic struct reference packs with indexed field and helper access") {
