@@ -987,7 +987,7 @@ main() {
   CHECK(error.find("unknown method: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced count slash method wrapper vector chain stops before receiver typing") {
+TEST_CASE("vector namespaced count slash method wrapper vector chain keeps unknown-method diagnostics") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -1008,9 +1008,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/vector/count") != std::string::npos);
-  CHECK((error.find("unknown call target") != std::string::npos ||
-         error.find("unknown method") != std::string::npos));
+  CHECK(error.find("unknown method: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("bare vector capacity method on builtin vector receiver validates without helper") {
@@ -1314,7 +1312,7 @@ main() {
 }
 
 TEST_CASE(
-    "vector namespaced capacity slash method wrapper vector chain stops before receiver typing") {
+    "vector namespaced capacity slash method wrapper vector chain keeps unknown-method diagnostics") {
   const std::string source = R"(
 namespace i32 {
   [return<int>]
@@ -1335,9 +1333,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("/vector/capacity") != std::string::npos);
-  CHECK((error.find("unknown call target") != std::string::npos ||
-         error.find("unknown method") != std::string::npos));
+  CHECK(error.find("unknown method: /vector/capacity") != std::string::npos);
 }
 
 TEST_CASE("array namespaced slash method spelling rejects statement body arguments") {
