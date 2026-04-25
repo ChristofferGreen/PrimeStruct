@@ -496,9 +496,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor keeps mismatch diagnostics on explicit experimental map parameters") {
@@ -517,8 +516,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") !=
+        std::string::npos);
 }
 
 TEST_CASE("map constructor assigns into explicit experimental map targets") {
@@ -561,9 +561,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("canonical map constructor assignment keeps mismatch diagnostics on explicit experimental map bindings") {
