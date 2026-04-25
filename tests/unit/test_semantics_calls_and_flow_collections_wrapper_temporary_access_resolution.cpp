@@ -440,7 +440,7 @@ main() {
   CHECK(error.find("/vector/capacity") != std::string::npos);
 }
 
-TEST_CASE("vector capacity compatibility alias rejects block arguments") {
+TEST_CASE("vector capacity compatibility alias keeps rooted block-arg target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -450,7 +450,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /vector/capacity") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector capacity compatibility alias rejects wrong argument count") {
