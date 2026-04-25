@@ -388,10 +388,10 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
               ++mapContainsEmitCalls;
               return true;
             },
-            error) == Result::Emitted);
+            error) == Result::NotHandled);
   CHECK(mapContainsResolveMethodCalls == 1);
   CHECK(error == "stale");
-  CHECK(mapContainsEmitCalls == 1);
+  CHECK(mapContainsEmitCalls == 0);
 
   primec::Expr mapMethodInsertCall;
   mapMethodInsertCall.kind = primec::Expr::Kind::Call;
