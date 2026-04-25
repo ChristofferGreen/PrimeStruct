@@ -319,7 +319,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_vector_method_helper_precedence_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
@@ -346,7 +346,7 @@ main() {
       (std::filesystem::temp_directory_path() / "primec_vm_stdlib_vector_template_method_helper_precedence_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("argument count mismatch for builtin count") != std::string::npos);
 }
 
@@ -395,7 +395,7 @@ main() {
                                "primec_vm_vector_namespaced_templated_canonical_alias_call_out.txt")
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
@@ -424,7 +424,7 @@ main() {
        "primec_vm_vector_alias_arity_mismatch_compatibility_template_forwarding_reject_out.txt")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(runCmd) != 0);
+  CHECK(runCommand(runCmd) == 2);
   CHECK(readFile(outPath).find("argument count mismatch") != std::string::npos);
 }
 
