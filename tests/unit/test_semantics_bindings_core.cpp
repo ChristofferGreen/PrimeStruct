@@ -72,7 +72,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer requires a value") != std::string::npos);
+  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("binding infers type from user call") {
@@ -260,7 +260,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer validateExpr failed") != std::string::npos);
+  CHECK(error.find("unsupported convert target type: decimal") != std::string::npos);
 }
 
 TEST_CASE("soa_vector binding validates with soa-safe struct element type") {
