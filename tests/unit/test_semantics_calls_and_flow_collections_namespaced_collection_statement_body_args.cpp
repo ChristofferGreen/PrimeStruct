@@ -261,7 +261,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("block arguments require a definition target: /Reference/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced method expression body-arg diagnostics normalize helper-returned reference receiver target") {
@@ -279,7 +280,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("block arguments require a definition target: /Reference/count") !=
+        std::string::npos);
 }
 
 TEST_CASE("array namespaced method body-arg diagnostics normalize canonical-fallback helper receiver target") {
