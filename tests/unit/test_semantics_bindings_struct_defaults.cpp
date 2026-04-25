@@ -252,7 +252,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("omitted initializer rejects effect-free Create with extra-arg vector alias method fallback") {
+TEST_CASE("omitted initializer rejects Create when extra-arg vector alias method fallback makes constructor effectful") {
   const std::string source = R"(
 [effects(io_out), return<i32>]
 /vector/count([array<i32>] values, [bool] marker) {
@@ -284,7 +284,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") !=
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
         std::string::npos);
 }
 

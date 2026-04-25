@@ -33,7 +33,7 @@ main() {
   CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
-TEST_CASE("map method precedence keeps canonical mismatch diagnostics in Create") {
+TEST_CASE("map method precedence now rejects omitted initializer through Create effectfulness gate") {
   const std::string source = R"(
 [return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -64,8 +64,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
+        std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects Create with canonical map call precedence when constructor is not effect-free") {
@@ -103,7 +103,7 @@ main() {
   CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") != std::string::npos);
 }
 
-TEST_CASE("map call precedence keeps canonical mismatch diagnostics in Create") {
+TEST_CASE("map call precedence now rejects omitted initializer through Create effectfulness gate") {
   const std::string source = R"(
 [return<i32>]
 /map/count([map<i32, i32>] values, [bool] marker) {
@@ -134,8 +134,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch") != std::string::npos);
-  CHECK(error.find("effect-free zero-arg constructor") == std::string::npos);
+  CHECK(error.find("omitted initializer requires effect-free zero-arg constructor: /Thing") !=
+        std::string::npos);
 }
 
 TEST_CASE("omitted initializer rejects Create with canonical slash-path map call helper when constructor is not effect-free") {
