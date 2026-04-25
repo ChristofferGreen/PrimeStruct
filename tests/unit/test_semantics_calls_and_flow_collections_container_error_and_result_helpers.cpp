@@ -4483,7 +4483,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("method-like same-path soa_vector helper shadows reject duplicate reserve definitions") {
+TEST_CASE("method-like same-path soa_vector helper shadows reject duplicate canonical reserve definitions") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
@@ -4593,11 +4593,12 @@ main() {
               plus(pickedRef.x,
                    plus(count(unpacked),
                         plus(pushed, reserved)))))
-}
+  }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate definition: /std/collections/soa_vector/reserve") !=
+        std::string::npos);
 }
 
 TEST_CASE("push and reserve bare and method forms validate on experimental soa_vector bindings") {
