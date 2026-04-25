@@ -14,7 +14,7 @@ namespace std {
 
     [public return<f32>]
     length([Vec2] self) {
-      return(sqrt(self.lengthSquared()))
+      return(/std/math/sqrt(self.lengthSquared()))
     }
 
     [public return<f32>]
@@ -82,7 +82,7 @@ namespace std {
 
     [public return<f32>]
     length([Vec3] self) {
-      return(sqrt(self.lengthSquared()))
+      return(/std/math/sqrt(self.lengthSquared()))
     }
 
     [public return<f32>]
@@ -152,7 +152,7 @@ namespace std {
 
     [public return<Vec3>]
     refract([Vec3] self, [Vec3] normal, [f32] ior) {
-      [f32 mut] cosi{clamp(self.dot(normal), -1.0, 1.0)}
+      [f32 mut] cosi{/std/math/clamp(self.dot(normal), -1.0, 1.0)}
       [f32 mut] etai{1.0}
       [f32 mut] etat{ior}
       [Vec3 mut] nn{normal}
@@ -170,7 +170,7 @@ namespace std {
         return(self.reflect(nn))
       } else {
         [Vec3] t1{self.mulScalar(eta)}
-        [Vec3] t2{nn.mulScalar(eta * cosi - sqrt(k))}
+        [Vec3] t2{nn.mulScalar(eta * cosi - /std/math/sqrt(k))}
         return(Vec3(t1.x + t2.x, t1.y + t2.y, t1.z + t2.z))
       }
     }
@@ -192,7 +192,7 @@ namespace std {
 
     [public return<f32>]
     length([Vec4] self) {
-      return(sqrt(self.lengthSquared()))
+      return(/std/math/sqrt(self.lengthSquared()))
     }
 
     [public return<f32>]
