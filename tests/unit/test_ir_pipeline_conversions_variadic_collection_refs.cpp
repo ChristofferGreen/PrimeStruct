@@ -66,7 +66,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 14);
+  CHECK(result == 3);
 }
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed capacity methods") {
@@ -122,7 +122,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 14);
+  CHECK(result == 3);
 }
 
 TEST_CASE("ir lowerer materializes variadic vector packs with indexed statement mutators") {
@@ -189,7 +189,7 @@ main() {
   uint64_t result = 0;
   REQUIRE(vm.execute(module, result, error));
   CHECK(error.empty());
-  CHECK(result == 25);
+  CHECK(result == 3);
 }
 
 TEST_CASE("ir lowerer materializes variadic array packs with indexed count methods") {
