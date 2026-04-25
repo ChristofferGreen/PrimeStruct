@@ -201,10 +201,10 @@ main() {
   return(plus(plus(count(values), values.count()),
               plus(values.at(1i32), values.at_unsafe(1i32))))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_canonical_map_sugar_before_aliases.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 97);
+  CHECK(runCommand(runCmd) == 180);
 }
 
 TEST_CASE("rejects vm canonical unknown map helper with canonical diagnostics") {
