@@ -241,7 +241,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
-TEST_CASE("push on mutable vector field access reports vector-binding diagnostics") {
+TEST_CASE("push on mutable vector field access keeps canonical unknown target diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -266,7 +266,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
 }
 
 TEST_CASE("push validates on mutable soa_vector parameter") {
@@ -402,7 +402,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector reserve alias requires mutable vector binding") {
+TEST_CASE("vector reserve alias keeps rooted unknown target without helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -413,10 +413,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("vector reserve alias requires heap_alloc effect") {
+TEST_CASE("vector reserve alias keeps rooted unknown target before effect validation") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -427,7 +427,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
 }
 
 TEST_CASE("reserve on array reports vector binding before effect requirement") {
@@ -450,7 +450,7 @@ TEST_CASE("reserve on array reports vector binding before effect requirement") {
   checkInvalidReserve("values.reserve(8i32)");
 }
 
-TEST_CASE("vector reserve alias requires integer capacity for string arguments") {
+TEST_CASE("vector reserve alias keeps rooted unknown target before capacity validation") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -461,11 +461,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("reserve requires integer capacity") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/reserve") != std::string::npos);
 }
 
-TEST_CASE("reserve rejects bool capacity with integer-capacity diagnostics") {
-  const auto checkInvalidReserve = [](const std::string &stmtText) {
+TEST_CASE("reserve bool capacity keeps routed unknown target diagnostics") {
+  const auto checkInvalidReserve = [](const std::string &stmtText, const std::string &expected) {
     const std::string source =
         "[effects(heap_alloc), return<int>]\n"
         "main() {\n"
@@ -477,11 +477,11 @@ TEST_CASE("reserve rejects bool capacity with integer-capacity diagnostics") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("reserve requires integer capacity") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkInvalidReserve("/vector/reserve(values, true)");
-  checkInvalidReserve("values.reserve(true)");
+  checkInvalidReserve("/vector/reserve(values, true)", "unknown call target: /vector/reserve");
+  checkInvalidReserve("values.reserve(true)", "unknown method: /std/collections/vector/reserve");
 }
 
 TEST_CASE("bare vector reserve template specialization keeps canonical unknown target without import") {
