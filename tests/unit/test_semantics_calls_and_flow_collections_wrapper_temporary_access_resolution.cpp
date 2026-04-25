@@ -309,7 +309,7 @@ main() {
   CHECK(error.find("capacity requires vector target") != std::string::npos);
 }
 
-TEST_CASE("count preserves receiver call-target diagnostics") {
+TEST_CASE("count preserves missing receiver call-target diagnostics") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -318,10 +318,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target") != std::string::npos);
+  CHECK(error.find("unknown call target: missing") != std::string::npos);
 }
 
-TEST_CASE("capacity preserves receiver call-target diagnostics") {
+TEST_CASE("capacity preserves missing receiver call-target diagnostics") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -330,10 +330,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target") != std::string::npos);
+  CHECK(error.find("unknown call target: missing") != std::string::npos);
 }
 
-TEST_CASE("at preserves receiver call-target diagnostics") {
+TEST_CASE("at preserves missing receiver call-target diagnostics") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -343,7 +343,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target") != std::string::npos);
+  CHECK(error.find("unknown call target: missing") != std::string::npos);
 }
 
 TEST_CASE("vector access methods resolve through imported stdlib helper") {
