@@ -424,7 +424,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/map/count") !=
         std::string::npos);
 }
@@ -450,7 +450,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
         std::string::npos);
 }
@@ -571,7 +571,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("C++ emitter rejects alias slash-method vector count on array receiver before emission") {
+TEST_CASE("C++ emitter rejects alias slash-method vector count on array receiver with rooted target before emission") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -592,11 +592,11 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(outPath).find("unknown method: /array/count") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(outPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
-TEST_CASE("rejects alias slash-method vector count on array receiver in C++ emitter") {
+TEST_CASE("rejects alias slash-method vector count on array receiver with rooted target in C++ emitter") {
   const std::string source = R"(
 [return<array<i32>>]
 wrapArray() {
@@ -617,8 +617,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown method: /array/count") != std::string::npos);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /vector/count") != std::string::npos);
 }
 
 TEST_CASE("C++ emitter keeps canonical direct-call vector count same-path helper on string receiver") {
