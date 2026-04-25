@@ -507,25 +507,25 @@ TEST_CASE("ir lowerer setup math helper resolves root namespace builtin paths wi
   CHECK(builtinName == "abs");
 }
 
-TEST_CASE("ir lowerer builtin root helper resolves rooted paths without imports") {
+TEST_CASE("ir lowerer builtin root helper rejects rooted paths without imports") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "/sqrt";
 
   std::string builtinName;
-  CHECK(primec::ir_lowerer::getBuiltinRootName(callExpr, builtinName, false));
-  CHECK(builtinName == "sqrt");
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinRootName(callExpr, builtinName, false));
+  CHECK(builtinName.empty());
 }
 
-TEST_CASE("ir lowerer builtin root helper resolves root namespace paths without imports") {
+TEST_CASE("ir lowerer builtin root helper rejects root namespace paths without imports") {
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "cbrt";
   callExpr.namespacePrefix = "/";
 
   std::string builtinName;
-  CHECK(primec::ir_lowerer::getBuiltinRootName(callExpr, builtinName, false));
-  CHECK(builtinName == "cbrt");
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinRootName(callExpr, builtinName, false));
+  CHECK(builtinName.empty());
 }
 
 TEST_CASE("ir lowerer pointer helper resolves parser-shaped soa_vector builtins") {
