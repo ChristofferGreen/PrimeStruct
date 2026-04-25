@@ -169,7 +169,8 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects wrapper bare vector capacity through imported stdlib helper in C++ emitter") {
+TEST_CASE(
+    "rejects wrapper bare vector capacity imported override as duplicate definition in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -194,8 +195,8 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") !=
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("duplicate definition: /std/collections/vector/capacity") !=
         std::string::npos);
 }
 
@@ -218,7 +219,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(outPath).find("unknown call target: /std/collections/vector/capacity") !=
         std::string::npos);
 }
@@ -243,7 +244,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") !=
         std::string::npos);
 }
@@ -262,7 +263,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   const std::string out = readFile(outPath);
   CHECK(out.find("native backend only supports") != std::string::npos);
   CHECK(out.find("name=capacity") != std::string::npos);
@@ -282,7 +283,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("native backend only supports") != std::string::npos);
   CHECK(err.find("name=capacity") != std::string::npos);
@@ -306,7 +307,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
   CHECK(err.find("unknown method: /vector/capacity") != std::string::npos);
 }
@@ -331,7 +332,7 @@ main() {
 
   const std::string compileCmd =
       "./primec --emit=cpp " + srcPath + " -o /dev/null --entry /main > " + outPath + " 2>&1";
-  CHECK(runCommand(compileCmd) != 0);
+  CHECK(runCommand(compileCmd) == 2);
   const std::string out = readFile(outPath);
   CHECK(out.find("unknown method: /vector/capacity") != std::string::npos);
 }
