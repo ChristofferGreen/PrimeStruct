@@ -619,7 +619,8 @@ main() {
                                   .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports numeric/bool map values") != std::string::npos);
+  CHECK(readFile(errPath).find("struct binding initializer type mismatch on values") !=
+        std::string::npos);
 }
 
 TEST_CASE("rejects vm templated stdlib map return envelope unsupported value arg") {
