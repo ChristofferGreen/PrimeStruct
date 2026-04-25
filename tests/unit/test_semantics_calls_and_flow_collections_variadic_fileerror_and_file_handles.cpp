@@ -395,7 +395,7 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("map namespaced count method keeps slash-path rejection diagnostics") {
+TEST_CASE("map namespaced count method resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -409,11 +409,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced count method keeps slash-path rejection diagnostics") {
+TEST_CASE("map stdlib namespaced count method resolves through canonical helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -427,11 +427,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /map/count") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("map stdlib namespaced count method auto inference keeps stable slash-path diagnostics") {
+TEST_CASE("map stdlib namespaced count method supports auto inference") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /std/collections/map/count([map<i32, i32>] values) {
@@ -446,8 +446,8 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("bare map count method requires imported canonical helper or explicit definition") {
