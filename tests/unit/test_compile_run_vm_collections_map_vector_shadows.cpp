@@ -441,7 +441,7 @@ main() {
   CHECK(runCommand(runCmd) == 9);
 }
 
-TEST_CASE("runs vm with user map constructor shadow") {
+TEST_CASE("runs vm with builtin map constructor over user shadow") {
   const std::string source = R"(
 [return<int>]
 map([i32] key, [i32] value) {
@@ -452,10 +452,10 @@ map([i32] key, [i32] value) {
 main() {
   return(map([key] 4i32, [value] 6i32))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_user_map_constructor_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 10);
+  CHECK(runCommand(runCmd) == 0);
 }
 
 TEST_CASE("rejects vm builtin vector constructor named arguments") {
@@ -630,7 +630,7 @@ main() {
   CHECK(runCommand(runCmd) == 5);
 }
 
-TEST_CASE("runs vm with user vector push call shadow") {
+TEST_CASE("runs vm with user vector push call shadow returning grown count") {
   const std::string source = R"(
 import /std/collections/*
 
@@ -644,10 +644,10 @@ main() {
   push(values, 3i32)
   return(count(values))
 }
-)";
+  )";
   const std::string srcPath = writeTemp("vm_user_vector_push_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 2);
+  CHECK(runCommand(runCmd) == 3);
 }
 
 TEST_SUITE_END();
