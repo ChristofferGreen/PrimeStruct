@@ -259,7 +259,7 @@ main([array<string>] args) {
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
   const std::string err = readFile(errPath);
-  CHECK(err.find("Semantic error: binding initializer validateExpr failed") !=
+  CHECK(err.find("Semantic error: entry argument strings are only supported in print calls or string bindings") !=
         std::string::npos);
   CHECK(err.find("^") != std::string::npos);
 }
