@@ -8,7 +8,7 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.collections");
 
-TEST_CASE("runs vm with wrapper-returned canonical map access count shadow") {
+TEST_CASE("rejects vm wrapper-returned canonical map access count shadow") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -32,7 +32,7 @@ main() {
        "primec_vm_user_string_count_method_shadow_wrapper_canonical_map_access_diag.err")
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 3);
+  CHECK(runCommand(runCmd) == 2);
 }
 
 TEST_CASE("vm keeps builtin string count on direct wrapper-returned canonical map access") {
