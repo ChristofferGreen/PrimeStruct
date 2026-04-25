@@ -434,7 +434,7 @@ main() {
   CHECK(result == 23);
 }
 
-TEST_CASE("ir lowerer materializes variadic struct reference packs with indexed field and helper access") {
+TEST_CASE("ir lowerer rejects variadic struct reference packs with indexed field and helper access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -507,17 +507,11 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 65);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
 
-TEST_CASE("ir lowerer materializes variadic struct pointer packs with indexed field and helper access") {
+TEST_CASE("ir lowerer rejects variadic struct pointer packs with indexed field and helper access") {
   const std::string source = R"(
 [struct]
 Pair() {
@@ -590,12 +584,6 @@ main() {
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
-  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error.empty());
-
-  primec::Vm vm;
-  uint64_t result = 0;
-  REQUIRE(vm.execute(module, result, error));
-  CHECK(error.empty());
-  CHECK(result == 65);
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error == "variadic parameter type mismatch");
 }
