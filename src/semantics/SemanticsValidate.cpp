@@ -1056,6 +1056,261 @@ std::vector<std::string> candidateDefinitionPaths(const Expr &expr, const std::s
   return candidatePaths;
 }
 
+bool isFieldOnlyStructDefinition(const Definition &def) {
+  bool hasStructTransform = false;
+  bool hasReturnTransform = false;
+  for (const auto &transform : def.transforms) {
+    if (semantics::isStructTransformName(transform.name)) {
+      hasStructTransform = true;
+    }
+    if (transform.name == "return") {
+      hasReturnTransform = true;
+    }
+  }
+  if (hasStructTransform) {
+    return true;
+  }
+  if (hasReturnTransform || !def.parameters.empty() || def.hasReturnStatement ||
+      def.returnExpr.has_value()) {
+    return false;
+  }
+  return std::all_of(def.statements.begin(), def.statements.end(), [](const Expr &stmt) {
+    return stmt.isBinding;
+  });
+}
+
+bool isReflectEnabledStructDefinition(const Definition &def) {
+  return std::any_of(def.transforms.begin(), def.transforms.end(), [](const Transform &transform) {
+    return transform.name == "reflect" || transform.name == "generate";
+  });
+}
+
+struct BuiltinSoaReturnInfo {
+  semantics::BindingInfo binding;
+  std::string namespacePrefix;
+  std::unordered_set<std::string> templateParams;
+};
+
+std::string builtinSoaAccessHelperName(std::string_view rawName);
+std::string builtinSoaCountHelperName(std::string_view rawName);
+std::optional<semantics::BindingInfo> extractParsedBindingInfo(
+    const Expr &expr,
+    const std::unordered_set<std::string> *structTypes);
+
+bool validateBuiltinSoaHelperReturnMetadataExpr(
+    const Expr &expr,
+    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaVectorReturnDefinitions,
+    const std::unordered_set<std::string> &structPaths,
+    const std::unordered_set<std::string> &reflectedStructPaths,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::string &definitionNamespace,
+    std::string &error);
+
+bool validateBuiltinSoaHelperReturnMetadataStatements(
+    const std::vector<Expr> &statements,
+    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaVectorReturnDefinitions,
+    const std::unordered_set<std::string> &structPaths,
+    const std::unordered_set<std::string> &reflectedStructPaths,
+    std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::string &definitionNamespace,
+    std::string &error) {
+  for (const Expr &stmt : statements) {
+    if (!validateBuiltinSoaHelperReturnMetadataExpr(stmt,
+                                                    soaVectorReturnDefinitions,
+                                                    structPaths,
+                                                    reflectedStructPaths,
+                                                    bindings,
+                                                    definitionNamespace,
+                                                    error)) {
+      return false;
+    }
+    if (!stmt.bodyArguments.empty()) {
+      auto bodyBindings = bindings;
+      if (!validateBuiltinSoaHelperReturnMetadataStatements(stmt.bodyArguments,
+                                                            soaVectorReturnDefinitions,
+                                                            structPaths,
+                                                            reflectedStructPaths,
+                                                            bodyBindings,
+                                                            definitionNamespace,
+                                                            error)) {
+        return false;
+      }
+    }
+    if (stmt.isBinding) {
+      if (auto binding = extractParsedBindingInfo(stmt, &structPaths); binding.has_value()) {
+        bindings[stmt.name] = *binding;
+      }
+    }
+  }
+  return true;
+}
+
+bool validateBuiltinSoaHelperReturnMetadataExpr(
+    const Expr &expr,
+    const std::unordered_map<std::string, BuiltinSoaReturnInfo> &soaVectorReturnDefinitions,
+    const std::unordered_set<std::string> &structPaths,
+    const std::unordered_set<std::string> &reflectedStructPaths,
+    const std::unordered_map<std::string, semantics::BindingInfo> &bindings,
+    const std::string &definitionNamespace,
+    std::string &error) {
+  for (const Expr &arg : expr.args) {
+    if (!validateBuiltinSoaHelperReturnMetadataExpr(arg,
+                                                    soaVectorReturnDefinitions,
+                                                    structPaths,
+                                                    reflectedStructPaths,
+                                                    bindings,
+                                                    definitionNamespace,
+                                                    error)) {
+      return false;
+    }
+  }
+  for (const Expr &bodyArg : expr.bodyArguments) {
+    if (!validateBuiltinSoaHelperReturnMetadataExpr(bodyArg,
+                                                    soaVectorReturnDefinitions,
+                                                    structPaths,
+                                                    reflectedStructPaths,
+                                                    bindings,
+                                                    definitionNamespace,
+                                                    error)) {
+      return false;
+    }
+  }
+  if (expr.kind != Expr::Kind::Call || expr.args.empty()) {
+    return true;
+  }
+  const std::string helperName = builtinSoaCountHelperName(expr.name).empty()
+                                     ? builtinSoaAccessHelperName(expr.name)
+                                     : builtinSoaCountHelperName(expr.name);
+  if (helperName.empty()) {
+    return true;
+  }
+  const bool helperArityMatches =
+      (helperName == "count" || helperName == "count_ref") ? expr.args.size() == 1
+                                                           : expr.args.size() == 2;
+  if (!helperArityMatches || !expr.templateArgs.empty() ||
+      semantics::hasNamedArguments(expr.argNames) || expr.hasBodyArguments) {
+    return true;
+  }
+  const Expr &receiver = expr.args.front();
+  if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
+    return true;
+  }
+  auto appendMethodReceiverCandidatePath =
+      [&](const Expr &callExpr, std::vector<std::string> &candidatePaths) {
+        if (!callExpr.isMethodCall || callExpr.args.empty() ||
+            callExpr.args.front().kind != Expr::Kind::Name) {
+          return;
+        }
+        auto bindingIt = bindings.find(callExpr.args.front().name);
+        if (bindingIt == bindings.end()) {
+          return;
+        }
+        const std::string receiverTypePath =
+            semantics::resolveStructTypePath(bindingIt->second.typeName,
+                                             definitionNamespace,
+                                             structPaths);
+        if (receiverTypePath.empty()) {
+          return;
+        }
+        candidatePaths.push_back(receiverTypePath + "/" + callExpr.name);
+      };
+  const BuiltinSoaReturnInfo *returnInfo = nullptr;
+  std::vector<std::string> receiverCandidatePaths =
+      candidateDefinitionPaths(receiver, definitionNamespace);
+  appendMethodReceiverCandidatePath(receiver, receiverCandidatePaths);
+  for (const std::string &candidatePath : receiverCandidatePaths) {
+    auto returnIt = soaVectorReturnDefinitions.find(candidatePath);
+    if (returnIt != soaVectorReturnDefinitions.end()) {
+      returnInfo = &returnIt->second;
+      break;
+    }
+  }
+  if (returnInfo == nullptr || returnInfo->binding.typeTemplateArg.empty()) {
+    return true;
+  }
+  const std::string elemType = semantics::normalizeBindingTypeName(returnInfo->binding.typeTemplateArg);
+  if (returnInfo->templateParams.count(elemType) > 0) {
+    return true;
+  }
+  const std::string structPath =
+      semantics::resolveStructTypePath(elemType, returnInfo->namespacePrefix, structPaths);
+  if (structPath.empty()) {
+    if (elemType.find('<') == std::string::npos) {
+      error = "meta.field_count requires struct type argument: " + elemType;
+      return false;
+    }
+    return true;
+  }
+  if (reflectedStructPaths.count(structPath) == 0) {
+    error = "meta.field_count requires reflect-enabled struct type argument: " + structPath;
+    return false;
+  }
+  return true;
+}
+
+bool validateBuiltinSoaHelperReturnMetadataRequirements(Program &program,
+                                                        std::string &error) {
+  error.clear();
+  std::unordered_map<std::string, BuiltinSoaReturnInfo> soaVectorReturnDefinitions;
+  std::unordered_set<std::string> structPaths;
+  std::unordered_set<std::string> reflectedStructPaths;
+  for (const Definition &def : program.definitions) {
+    if (auto binding = extractBuiltinSoaVectorReturnBinding(def); binding.has_value()) {
+      BuiltinSoaReturnInfo info;
+      info.binding = *binding;
+      info.namespacePrefix = def.namespacePrefix;
+      info.templateParams.insert(def.templateArgs.begin(), def.templateArgs.end());
+      soaVectorReturnDefinitions[def.fullPath] = info;
+      const size_t slash = def.fullPath.find_last_of('/');
+      if (slash != std::string::npos && slash + 1 < def.fullPath.size()) {
+        soaVectorReturnDefinitions[def.fullPath.substr(slash + 1)] = std::move(info);
+      }
+    }
+    if (isFieldOnlyStructDefinition(def)) {
+      structPaths.insert(def.fullPath);
+      if (isReflectEnabledStructDefinition(def)) {
+        reflectedStructPaths.insert(def.fullPath);
+      }
+    }
+  }
+  if (soaVectorReturnDefinitions.empty()) {
+    return true;
+  }
+  for (const Definition &def : program.definitions) {
+    std::string definitionNamespace;
+    const size_t slash = def.fullPath.find_last_of('/');
+    if (slash != std::string::npos && slash > 0) {
+      definitionNamespace = def.fullPath.substr(0, slash);
+    }
+    std::unordered_map<std::string, semantics::BindingInfo> bindings;
+    for (const Expr &param : def.parameters) {
+      if (auto binding = extractParsedBindingInfo(param, &structPaths); binding.has_value()) {
+        bindings[param.name] = *binding;
+      }
+    }
+    if (!validateBuiltinSoaHelperReturnMetadataStatements(def.statements,
+                                                          soaVectorReturnDefinitions,
+                                                          structPaths,
+                                                          reflectedStructPaths,
+                                                          bindings,
+                                                          definitionNamespace,
+                                                          error)) {
+      return false;
+    }
+    if (def.returnExpr.has_value() &&
+        !validateBuiltinSoaHelperReturnMetadataExpr(*def.returnExpr,
+                                                    soaVectorReturnDefinitions,
+                                                    structPaths,
+                                                    reflectedStructPaths,
+                                                    bindings,
+                                                    definitionNamespace,
+                                                    error)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 std::optional<semantics::BindingInfo> extractParsedBindingInfo(
     const Expr &expr,
     const std::unordered_set<std::string> *structTypes = nullptr) {
@@ -5721,6 +5976,9 @@ bool runSemanticValidation(Program &program,
     return false;
   }
   if (!rewriteBuiltinSoaToAosCalls(program, error)) {
+    return false;
+  }
+  if (!validateBuiltinSoaHelperReturnMetadataRequirements(program, error)) {
     return false;
   }
   if (!rewriteBuiltinSoaAccessCalls(program, error)) {
