@@ -230,6 +230,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
+    if (expr.args.front().kind == Expr::Kind::Call) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     const auto containsResult = tryEmitMapContainsLookup(
         expr.args.front(),
         expr.args[1],
@@ -261,6 +264,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
       error = "contains requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
     }
+    if (expr.args.front().kind == Expr::Kind::Call) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     const auto containsResult = tryEmitMapContainsLookup(
         expr.args.front(),
         expr.args[1],
@@ -288,6 +294,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     if (expr.args.size() != 2) {
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
+    }
+    if (expr.args.front().kind == Expr::Kind::Call) {
+      return NativeCallTailDispatchResult::NotHandled;
     }
     const auto mapTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
     if (!mapTargetInfo.isMapTarget) {
@@ -323,6 +332,9 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     if (expr.args.size() != 2) {
       error = "tryAt requires exactly two arguments";
       return NativeCallTailDispatchResult::Error;
+    }
+    if (expr.args.front().kind == Expr::Kind::Call) {
+      return NativeCallTailDispatchResult::NotHandled;
     }
     const auto mapTargetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo);
     if (!mapTargetInfo.isMapTarget) {
@@ -410,6 +422,10 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
         (explicitHelperName == "at" || explicitHelperName == "at_ref" ||
          explicitHelperName == "at_unsafe" ||
          explicitHelperName == "at_unsafe_ref");
+    if (isExplicitMapAccessCall && !expr.args.empty() &&
+        expr.args.front().kind == Expr::Kind::Call) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
     if (isExplicitMapAccessCall && !expr.args.empty() &&
         resolveMapAccessTargetInfo(expr.args.front(), localsIn, resolveCallMapAccessTargetInfo).isMapTarget) {
       return NativeCallTailDispatchResult::NotHandled;

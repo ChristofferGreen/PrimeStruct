@@ -30,6 +30,10 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   keyName.kind = primec::Expr::Kind::Name;
   keyName.name = "key";
 
+  primec::Expr helperReturnMap;
+  helperReturnMap.kind = primec::Expr::Kind::Call;
+  helperReturnMap.name = "wrapMap";
+
   std::vector<primec::IrInstruction> instructions;
   auto emitInstruction = [&](primec::IrOpcode op, uint64_t imm) {
     instructions.push_back({op, imm});
@@ -193,6 +197,61 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                            {mapName, keyName},
                            Result::NotHandled,
                            "stale");
+  expectDispatch("/std/collections/map/contains",
+                 {helperReturnMap, keyName},
+                 Result::NotHandled,
+                 "stale");
+  expectDispatch("/std/collections/map/tryAt",
+                 {helperReturnMap, keyName},
+                 Result::NotHandled,
+                 "stale");
+  expectDispatch("/std/collections/map/at",
+                 {helperReturnMap, keyName},
+                 Result::NotHandled,
+                 "stale");
+
+  const auto expectMethodTemporaryReceiverDispatch =
+      [&](const char *helperName) {
+        primec::Expr callExpr;
+        callExpr.kind = primec::Expr::Kind::Call;
+        callExpr.isMethodCall = true;
+        callExpr.name = helperName;
+        callExpr.args = {helperReturnMap, keyName};
+
+        instructions.clear();
+        std::string error = "stale";
+        CHECK(primec::ir_lowerer::tryEmitNativeCallTailDispatch(
+                  callExpr,
+                  locals,
+                  [](const primec::Expr &, std::string &) { return false; },
+                  [](const std::string &) { return true; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+                    return false;
+                  },
+                  emitExpr,
+                  resolveMapAccessTargetInfo,
+                  resolveArrayVectorAccessTargetInfo,
+                  [](const primec::Expr &, std::string &) { return false; },
+                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+                    return LocalInfo::ValueKind::Unknown;
+                  },
+                  []() { return 0; },
+                  []() {},
+                  []() {},
+                  []() {},
+                  instructionCount,
+                  emitInstruction,
+                  patchInstructionImm,
+                  error) == Result::NotHandled);
+        CHECK(error == "stale");
+        CHECK(instructions.empty());
+      };
+  expectMethodTemporaryReceiverDispatch("contains");
+  expectMethodTemporaryReceiverDispatch("tryAt");
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
