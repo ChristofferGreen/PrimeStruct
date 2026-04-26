@@ -3641,6 +3641,10 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
       repoRoot / "src" / "semantics" / "SemanticsValidationBenchmarkOrchestration.h";
   const std::filesystem::path benchmarkOrchestrationSourcePath =
       repoRoot / "src" / "semantics" / "SemanticsValidationBenchmarkOrchestration.cpp";
+  const std::filesystem::path publicationOrchestrationHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidationPublicationOrchestration.h";
+  const std::filesystem::path publicationOrchestrationSourcePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidationPublicationOrchestration.cpp";
   const std::filesystem::path semanticsValidatePath =
       repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   const std::filesystem::path pipelinePath = repoRoot / "src" / "CompilePipeline.cpp";
@@ -3648,6 +3652,10 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   const std::string semanticsBenchmarkHeader = readFile(semanticsBenchmarkHeaderPath.string());
   const std::string benchmarkOrchestrationHeader = readFile(benchmarkOrchestrationHeaderPath.string());
   const std::string benchmarkOrchestrationSource = readFile(benchmarkOrchestrationSourcePath.string());
+  const std::string publicationOrchestrationHeader =
+      readFile(publicationOrchestrationHeaderPath.string());
+  const std::string publicationOrchestrationSource =
+      readFile(publicationOrchestrationSourcePath.string());
   const std::string semanticsValidateText = readFile(semanticsValidatePath.string());
   const std::string pipelineText = readFile(pipelinePath.string());
 
@@ -3655,6 +3663,8 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   REQUIRE_FALSE(semanticsBenchmarkHeader.empty());
   REQUIRE_FALSE(benchmarkOrchestrationHeader.empty());
   REQUIRE_FALSE(benchmarkOrchestrationSource.empty());
+  REQUIRE_FALSE(publicationOrchestrationHeader.empty());
+  REQUIRE_FALSE(publicationOrchestrationSource.empty());
   REQUIRE_FALSE(semanticsValidateText.empty());
   REQUIRE_FALSE(pipelineText.empty());
 
@@ -3691,6 +3701,17 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   CHECK(semanticsValidateText.find("SemanticValidationBenchmarkPhase validationBenchmark") !=
         std::string::npos);
   CHECK(semanticsValidateText.find("PRIMEC_BENCHMARK_SEMANTIC_VALIDATOR_LIFETIME") ==
+        std::string::npos);
+  CHECK(publicationOrchestrationHeader.find("publishSemanticProgramAfterValidation(") !=
+        std::string::npos);
+  CHECK(publicationOrchestrationSource.find("semanticProductBuild.callsVisited = 1;") !=
+        std::string::npos);
+  CHECK(publicationOrchestrationSource.find(
+            "populateAllocationDelta(benchmarkRuntime.phaseCounters->semanticProductBuild") !=
+        std::string::npos);
+  CHECK(semanticsValidateText.find("semanticProductBuild.callsVisited = 1;") ==
+        std::string::npos);
+  CHECK(semanticsValidateText.find("semanticProgramFactCountForValidationPublication(") ==
         std::string::npos);
 
   CHECK(pipelineText.find("SemanticValidationBenchmarkConfig benchmarkConfig;") != std::string::npos);

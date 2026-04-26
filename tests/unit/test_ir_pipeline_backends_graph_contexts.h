@@ -2168,6 +2168,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readRepoFile("src/semantics/SemanticPublicationSurface.h");
   const std::string semanticPublicationBuildersSource =
       readRepoFile("src/semantics/SemanticPublicationBuilders.cpp");
+  const std::string semanticPublicationOrchestrationHeader =
+      readRepoFile("src/semantics/SemanticsValidationPublicationOrchestration.h");
+  const std::string semanticPublicationOrchestrationSource =
+      readRepoFile("src/semantics/SemanticsValidationPublicationOrchestration.cpp");
   const std::string semanticProductSource = readRepoFile("src/SemanticProduct.cpp");
   const std::string semanticsValidate = readRepoFile("src/semantics/SemanticsValidate.cpp");
   const std::string semanticsSnapshots = readRepoFile("src/semantics/SemanticsValidatorSnapshots.cpp");
@@ -2277,6 +2281,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irPreparationSource.find("semantic product is required for IR preparation") != std::string::npos);
   CHECK(irLowererEntrySetup.find("semantic product is required for IR lowering") != std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticPublicationBuilders.cpp") != std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticsValidationPublicationOrchestration.cpp") !=
+        std::string::npos);
   CHECK(cmake.find("src/semantics/SemanticsWorkerSymbolMerge.cpp") != std::string::npos);
 
   CHECK(compilePipelineSource.find("output.semanticProgram = std::move(semanticProgram);") !=
@@ -2363,10 +2369,26 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("freezeSemanticProgramPublishedStorage(state.semanticProgram);") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);") !=
+  CHECK(semanticsValidate.find("semantics::publishSemanticProgramAfterValidation(program,") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("#include \"SemanticPublicationBuilders.h\"") != std::string::npos);
-  CHECK(semanticsValidate.find("buildSemanticProgramFromPublicationSurface(") != std::string::npos);
+  CHECK(semanticsValidate.find("#include \"SemanticsValidationPublicationOrchestration.h\"") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("#include \"SemanticPublicationBuilders.h\"") ==
+        std::string::npos);
+  CHECK(semanticsValidate.find("buildSemanticProgramFromPublicationSurface(") ==
+        std::string::npos);
+  CHECK(semanticPublicationOrchestrationHeader.find(
+            "publishSemanticProgramAfterValidation(") != std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find(
+            "validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig)") !=
+        std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find(
+            "buildSemanticProgramFromPublicationSurface(") != std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find(
+            "semanticProgramFactCountForValidationPublication(") != std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find(
+            "benchmarkRuntime.phaseCounters->semanticProductBuild.callsVisited = 1;") !=
+        std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("normalizeSemanticModulePathKey(") != std::string::npos);
   CHECK(semanticProductSource.find("if (semanticProgram.publishedStorageFrozen) {") !=
         std::string::npos);

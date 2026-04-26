@@ -4912,6 +4912,61 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     promoted `TODO-4168` to Ready Now, and deferred release reruns to CI per
     the lite workflow.
 
+- [x] TODO-4168: Extract semantic-product publication orchestration from `Semantics::validate(...)`
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantics orchestration cleanup
+  - depends_on: TODO-4167
+  - scope: Refactor `src/semantics/SemanticsValidate.cpp` so semantic-product
+    publication lives in a separate compileable orchestration unit instead of
+    sharing one oversized production validation flow.
+  - acceptance:
+    - `Semantics::validate(...)` delegates semantic-product publication
+      orchestration to a dedicated unit.
+    - Release validation and semantic-product publication behavior remain
+      unchanged for the touched coverage.
+    - The touched publication path keeps deterministic diagnostic and
+      publication ordering.
+  - stop_rule: Stop once semantic-product publication no longer shares one
+    monolithic orchestration surface with the main validation path; do not
+    broaden into benchmark plumbing or new semantic feature work.
+  - finished_at: 2026-04-26
+  - evidence: Added
+    `src/semantics/SemanticsValidationPublicationOrchestration.{h,cpp}` as the
+    dedicated compileable unit for semantic-product publication and
+    semantic-product build phase accounting. Rewired `Semantics::validate(...)`
+    to delegate publication through that unit, kept deterministic fact-count
+    accounting with the publication path, source-locked the new source in CMake
+    and benchmark/publication architecture tests, removed `TODO-4168` from the
+    live queue, promoted `TODO-4162` and `TODO-4174` to Ready Now, and deferred
+    release reruns to CI per the lite workflow.
+
+- [x] TODO-4156: Track semantics validation orchestration split
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantics orchestration cleanup
+  - depends_on: TODO-4167, TODO-4168
+  - scope: Track the split of benchmark-only and semantic-product publication
+    orchestration out of the oversized `Semantics::validate(...)` production
+    flow.
+  - acceptance:
+    - TODO-4167 and TODO-4168 land with unchanged release behavior for the
+      touched validation and publication coverage.
+    - `Semantics::validate(...)` no longer co-owns benchmark-only or
+      semantic-product publication plumbing in one monolithic orchestration
+      file.
+  - stop_rule: Keep this item as a coordination tracker only; implement work
+    through child leaves and do not reopen the old broad slice directly.
+  - finished_at: 2026-04-26
+  - evidence: Closed the coordination tracker after TODO-4167 moved
+    benchmark-only validation orchestration into
+    `SemanticsValidationBenchmarkOrchestration` and TODO-4168 moved
+    semantic-product publication orchestration into
+    `SemanticsValidationPublicationOrchestration`. `Semantics::validate(...)`
+    now delegates both benchmark-only and publication plumbing to dedicated
+    units, the live queue no longer carries a semantics orchestration cleanup
+    lane, and release reruns remain deferred to CI per the lite workflow.
+
 - [x] TODO-4169: Publish vector and map specialization facts needed by the lowerer
   - owner: ai
   - created_at: 2026-04-25

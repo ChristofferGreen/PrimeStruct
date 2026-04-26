@@ -56,24 +56,25 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4168
 - TODO-4170
 - TODO-4153
 - TODO-4172
 - TODO-4158
+- TODO-4162
+- TODO-4174
 
 ### Immediate Next 10 (After Ready Now)
 
 - TODO-4150
 - TODO-4155
 - TODO-4157
-- TODO-4162
 - TODO-4165
 - TODO-4159
 - TODO-4160
 - TODO-4161
 - TODO-4163
 - TODO-4164
+- TODO-4166
 
 ### Priority Lanes (Current)
 
@@ -81,7 +82,6 @@ Task template:
   TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4159,
   TODO-4160, TODO-4161, TODO-4164
 - Test API cleanup and contract-probe migration: TODO-4153, TODO-4172
-- Semantics orchestration cleanup: TODO-4168
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -91,32 +91,31 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4168
-2. TODO-4170
-3. TODO-4150
-4. TODO-4153
-5. TODO-4172
-6. TODO-4155
-7. TODO-4157
-8. TODO-4158
-9. TODO-4162
-10. TODO-4165
-11. TODO-4159
-12. TODO-4160
-13. TODO-4161
-14. TODO-4163
-15. TODO-4164
-16. TODO-4166
-17. TODO-4174
-18. TODO-4173
-19. TODO-4176
-20. TODO-4175
-21. TODO-4179
-22. TODO-4177
-23. TODO-4178
-24. TODO-4180
-25. TODO-4182
-26. TODO-4181
+1. TODO-4170
+2. TODO-4150
+3. TODO-4153
+4. TODO-4172
+5. TODO-4155
+6. TODO-4157
+7. TODO-4158
+8. TODO-4162
+9. TODO-4165
+10. TODO-4159
+11. TODO-4160
+12. TODO-4161
+13. TODO-4163
+14. TODO-4164
+15. TODO-4166
+16. TODO-4174
+17. TODO-4173
+18. TODO-4176
+19. TODO-4175
+20. TODO-4179
+21. TODO-4177
+22. TODO-4178
+23. TODO-4180
+24. TODO-4182
+25. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -130,7 +129,7 @@ Task template:
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4179, TODO-4180, TODO-4182 |
 | SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4179, TODO-4180, TODO-4182 |
-| Validator entrypoint and benchmark-plumbing split | TODO-4168 |
+| Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | TODO-4170, TODO-4155 |
 | Semantic-product public API factoring and versioning | TODO-4160, TODO-4161, TODO-4163 |
 | IR lowerer compile-unit breakup | none |
@@ -665,42 +664,6 @@ Task template:
   - stop_rule: Stop once the lowerer can classify the touched `soa_vector`
     flows from published facts; do not fold in broader vector/map ownership or
     runtime redesign work.
-
-- [ ] TODO-4168: Extract semantic-product publication orchestration from `Semantics::validate(...)`
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantics orchestration cleanup
-  - depends_on: TODO-4167
-  - scope: Refactor `src/semantics/SemanticsValidate.cpp` so semantic-product
-    publication lives in a separate compileable orchestration unit instead of
-    sharing one oversized production validation flow.
-  - acceptance:
-    - `Semantics::validate(...)` delegates semantic-product publication
-      orchestration to a dedicated unit.
-    - Release validation and semantic-product publication behavior remain
-      unchanged for the touched coverage.
-    - The touched publication path keeps deterministic diagnostic and
-      publication ordering.
-  - stop_rule: Stop once semantic-product publication no longer shares one
-    monolithic orchestration surface with the main validation path; do not
-    broaden into benchmark plumbing or new semantic feature work.
-
-- [ ] TODO-4156: Track semantics validation orchestration split
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantics orchestration cleanup
-  - depends_on: TODO-4167, TODO-4168
-  - scope: Track the split of benchmark-only and semantic-product publication
-    orchestration out of the oversized `Semantics::validate(...)` production
-    flow.
-  - acceptance:
-    - TODO-4167 and TODO-4168 land with unchanged release behavior for the
-      touched validation and publication coverage.
-    - `Semantics::validate(...)` no longer co-owns benchmark-only or
-      semantic-product publication plumbing in one monolithic orchestration
-      file.
-  - stop_rule: Keep this item as a coordination tracker only; implement work
-    through child leaves and do not reopen the old broad slice directly.
 
 - [ ] TODO-4155: Add semantic-product-authority conformance coverage across entrypoints
   - owner: ai

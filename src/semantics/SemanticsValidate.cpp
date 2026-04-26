@@ -8,9 +8,9 @@
 #include "SemanticsValidateReflectionGeneratedHelpers.h"
 #include "SemanticsValidateReflectionMetadata.h"
 #include "SemanticsValidateTransforms.h"
-#include "SemanticPublicationBuilders.h"
 #include "SemanticsHelpers.h"
 #include "SemanticsValidationBenchmarkOrchestration.h"
+#include "SemanticsValidationPublicationOrchestration.h"
 #include "SemanticsValidator.h"
 #include "TypeResolutionGraphPreparation.h"
 
@@ -161,41 +161,6 @@ bool runTypeResolutionSnapshot(
 }
 
 namespace {
-
-SemanticProgram buildSemanticProgram(const Program &program,
-                                     const std::string &entryPath,
-                                     semantics::SemanticsValidator &validator,
-                                     const SemanticProductBuildConfig *buildConfig) {
-  auto publicationSurface =
-      validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig);
-  semantics::maybeRelieveSemanticAllocatorPressure();
-  SemanticProgram semanticProgram = semantics::buildSemanticProgramFromPublicationSurface(
-      program,
-      entryPath,
-      std::move(publicationSurface),
-      buildConfig);
-  semantics::maybeRelieveSemanticAllocatorPressure();
-  return semanticProgram;
-}
-
-uint64_t semanticProgramFactCount(const SemanticProgram &semanticProgram) {
-  return static_cast<uint64_t>(
-      semanticProgram.definitions.size() +
-      semanticProgram.executions.size() +
-      semanticProgram.directCallTargets.size() +
-      semanticProgram.methodCallTargets.size() +
-      semanticProgram.bridgePathChoices.size() +
-      semanticProgram.callableSummaries.size() +
-      semanticProgram.typeMetadata.size() +
-      semanticProgram.structFieldMetadata.size() +
-      semanticProgram.collectionSpecializations.size() +
-      semanticProgram.bindingFacts.size() +
-      semanticProgram.returnFacts.size() +
-      semanticProgram.localAutoFacts.size() +
-      semanticProgram.queryFacts.size() +
-      semanticProgram.tryFacts.size() +
-      semanticProgram.onErrorFacts.size());
-}
 
 bool isExperimentalMapTypeText(const std::string &typeText) {
   std::string keyType;
@@ -5850,32 +5815,12 @@ bool runSemanticValidation(Program &program,
     validationBenchmark.captureAfter();
     validatorLifetimeBenchmark.captureAfterRun();
     if (semanticProgramOut != nullptr) {
-      semantics::ProcessAllocationSample semanticProductAllocationBefore;
-      semantics::ProcessRssSample semanticProductRssBefore;
-      if (benchmarkRuntime.phaseCounters != nullptr && benchmarkRuntime.allocationCountersEnabled) {
-        semanticProductAllocationBefore = semantics::captureProcessAllocationSample();
-      }
-      if (benchmarkRuntime.phaseCounters != nullptr && benchmarkRuntime.rssCheckpointsEnabled) {
-        semanticProductRssBefore = semantics::captureProcessRssSample();
-      }
-      *semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);
-      if (benchmarkRuntime.phaseCounters != nullptr) {
-        benchmarkRuntime.phaseCounters->semanticProductBuild.callsVisited = 1;
-        benchmarkRuntime.phaseCounters->semanticProductBuild.factsProduced =
-            semanticProgramFactCount(*semanticProgramOut);
-        if (benchmarkRuntime.allocationCountersEnabled) {
-          const auto semanticProductAllocationAfter = semantics::captureProcessAllocationSample();
-          semantics::populateAllocationDelta(benchmarkRuntime.phaseCounters->semanticProductBuild,
-                                             semanticProductAllocationBefore,
-                                             semanticProductAllocationAfter);
-        }
-        if (benchmarkRuntime.rssCheckpointsEnabled) {
-          const auto semanticProductRssAfter = semantics::captureProcessRssSample();
-          semantics::populateRssCheckpoints(benchmarkRuntime.phaseCounters->semanticProductBuild,
-                                            semanticProductRssBefore,
-                                            semanticProductRssAfter);
-        }
-      }
+      semantics::publishSemanticProgramAfterValidation(program,
+                                                       entryPath,
+                                                       validator,
+                                                       semanticProductBuildConfig,
+                                                       benchmarkRuntime,
+                                                       *semanticProgramOut);
     }
   }
 
