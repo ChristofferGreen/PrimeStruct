@@ -725,9 +725,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Emitted);
   CHECK(error.empty());
-  CHECK(inlineCalls == 0);
+  CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
   primec::Expr mapInsertFieldAccessAliasInferredStmt = mapInsertFieldAccessStmt;
@@ -766,11 +766,12 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
                 const primec::ir_lowerer::LocalMap &,
                 bool expectValue) {
               ++inlineCalls;
-              CHECK(callExpr.name == "insert");
-              CHECK(callExpr.isMethodCall);
-              CHECK(callee.fullPath == "/std/collections/mapInsert");
+              const std::vector<std::string> expectedTemplateArgs{"i32", "i32"};
+              CHECK(callExpr.name == "/std/collections/map/insert_builtin");
+              CHECK_FALSE(callExpr.isMethodCall);
+              CHECK(callee.fullPath == "/std/collections/map/insert_builtin");
               CHECK_FALSE(expectValue);
-              CHECK(callExpr.templateArgs.empty());
+              CHECK(callExpr.templateArgs == expectedTemplateArgs);
               return true;
             },
             instructions,
@@ -875,7 +876,7 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Error);
   CHECK(error.empty());
   CHECK(inlineCalls == 0);
   CHECK(instructions.empty());
@@ -1541,9 +1542,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::Emitted);
+            error) == EmitResult::NotMatched);
   CHECK(error.empty());
-  CHECK(inlineCalls == 1);
+  CHECK(inlineCalls == 0);
   CHECK(instructions.empty());
 
   primec::Expr mapInsertLocationLocalMapMethodStmt;
@@ -1924,9 +1925,9 @@ TEST_CASE("ir lowerer statement call helper emits direct calls") {
               return true;
             },
             instructions,
-            error) == EmitResult::NotMatched);
+            error) == EmitResult::Emitted);
   CHECK(error.empty());
-  CHECK(inlineCalls == 0);
+  CHECK(inlineCalls == 1);
   CHECK(instructions.empty());
 
   primec::Expr mapInsertArgsPackNonLocalReceiverMethodStmt;
