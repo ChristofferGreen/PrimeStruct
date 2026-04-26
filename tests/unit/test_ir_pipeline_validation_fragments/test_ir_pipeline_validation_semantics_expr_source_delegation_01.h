@@ -951,7 +951,16 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
-            "        defMap_.count(vectorMethodTarget) == 0 &&") !=
+            "          defMap_.count(vectorMethodTarget) == 0 &&") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (expr.name == \"count\") {\n"
+            "      std::string elemType;\n"
+            "      if (resolveVectorTarget(expr.args.front(), elemType)) {\n"
+            "        resolved = \"/std/collections/vector/count\";\n"
+            "        isBuiltinMethod = true;\n"
+            "      }\n"
+            "    }") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "const bool isVectorCompatibilityMethod =\n"
@@ -973,9 +982,9 @@
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "if (!hasImportedDefinitionPath(vectorMethodTarget) &&\n"
-            "        defMap_.count(vectorMethodTarget) == 0 &&\n"
-            "        shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {\n"
-            "      vectorMethodTarget = \"/std/collections/vector/\" + expr.name;\n"
+            "          defMap_.count(vectorMethodTarget) == 0 &&\n"
+            "          shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {\n"
+            "        vectorMethodTarget = \"/std/collections/vector/\" + expr.name;\n"
             "    }") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(

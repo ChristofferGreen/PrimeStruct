@@ -141,22 +141,31 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.namespacePrefix != "/std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
-    if (!hasImportedDefinitionPath(vectorMethodTarget) &&
-        defMap_.count(vectorMethodTarget) == 0 &&
-        shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {
-      vectorMethodTarget = "/std/collections/vector/" + expr.name;
+    if (expr.name == "count") {
+      std::string elemType;
+      if (resolveVectorTarget(expr.args.front(), elemType)) {
+        resolved = "/std/collections/vector/count";
+        isBuiltinMethod = true;
+      }
     }
-    if (hasImportedDefinitionPath(vectorMethodTarget) ||
-        defMap_.count(vectorMethodTarget) > 0) {
-      resolved = vectorMethodTarget;
-      isBuiltinMethod = false;
-    } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
-                                    expr.name, resolved, isBuiltinMethod)) {
-      if (hasBlockArgs &&
-          resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
+    if (!isBuiltinMethod) {
+      if (!hasImportedDefinitionPath(vectorMethodTarget) &&
+          defMap_.count(vectorMethodTarget) == 0 &&
+          shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {
+        vectorMethodTarget = "/std/collections/vector/" + expr.name;
+      }
+      if (hasImportedDefinitionPath(vectorMethodTarget) ||
+          defMap_.count(vectorMethodTarget) > 0) {
+        resolved = vectorMethodTarget;
         isBuiltinMethod = false;
-      } else {
-        return false;
+      } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
+                                      expr.name, resolved, isBuiltinMethod)) {
+        if (hasBlockArgs &&
+            resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
+          isBuiltinMethod = false;
+        } else {
+          return false;
+        }
       }
     }
   } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), expr.name, resolved,
