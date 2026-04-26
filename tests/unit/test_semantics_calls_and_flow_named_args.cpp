@@ -255,12 +255,12 @@ Collector() {
 [return<i32>]
 main() {
   [Collector] collector{Collector(7i32)}
-  return(collector.collect(1i32, true))
+  return(collector.collect(1i32, "wrong"raw_utf8))
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Collector/collect parameter values: expected i32 got bool") !=
+  CHECK(error.find("argument type mismatch for /Collector/collect parameter values: expected i32") !=
         std::string::npos);
 }
 
@@ -276,11 +276,11 @@ job([i32] head, [i32] values...) {
   return(head)
 }
 
-job(1i32, true)
+job(1i32, "wrong"raw_utf8)
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /job parameter values: expected i32 got bool") !=
+  CHECK(error.find("argument type mismatch for /job parameter values: expected i32") !=
         std::string::npos);
 }
 
