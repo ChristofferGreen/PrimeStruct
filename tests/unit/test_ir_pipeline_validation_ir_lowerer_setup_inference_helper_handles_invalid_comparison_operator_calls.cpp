@@ -2,6 +2,70 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
+TEST_CASE("ir lowerer setup inference helpers tolerate missing callbacks") {
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = "make";
+
+  primec::ir_lowerer::LocalInfo::ValueKind kindOut =
+      primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            directCall,
+            {},
+            primec::ir_lowerer::ResolveSetupInferenceCallReturnKindFn{},
+            primec::ir_lowerer::ResolveSetupInferenceCallReturnKindFn{},
+            primec::ir_lowerer::ResolveSetupInferenceCallReturnKindFn{},
+            kindOut) == primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+  primec::Expr methodCall = directCall;
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiver};
+  CHECK(primec::ir_lowerer::resolveCallExpressionReturnKind(
+            methodCall,
+            {},
+            primec::ir_lowerer::ResolveSetupInferenceCallReturnKindFn{},
+            primec::ir_lowerer::ResolveSetupInferenceCallReturnKindFn{},
+            primec::ir_lowerer::ResolveSetupInferenceCallReturnKindFn{},
+            kindOut) == primec::ir_lowerer::CallExpressionReturnKindResolution::NotResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr index;
+  index.kind = primec::Expr::Kind::Literal;
+  index.intWidth = 32;
+  index.literalValue = 0;
+  primec::Expr accessCall;
+  accessCall.kind = primec::Expr::Kind::Call;
+  accessCall.name = "at";
+  accessCall.args = {receiver, index};
+  CHECK(primec::ir_lowerer::resolveArrayMapAccessElementKind(
+            accessCall,
+            {},
+            primec::ir_lowerer::IsSetupInferenceEntryArgsNameFn{},
+            kindOut) == primec::ir_lowerer::ArrayMapAccessElementKindResolution::Resolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::Expr returnCall;
+  returnCall.kind = primec::Expr::Kind::Call;
+  returnCall.name = "return";
+  returnCall.args = {directCall};
+  CHECK(primec::ir_lowerer::inferBodyValueKindWithLocalsScaffolding(
+            {returnCall},
+            {},
+            primec::ir_lowerer::InferSetupInferenceValueKindFn{},
+            primec::ir_lowerer::IsSetupInferenceBindingMutableFn{},
+            primec::ir_lowerer::SetupInferenceBindingKindFn{},
+            primec::ir_lowerer::HasSetupInferenceExplicitBindingTypeTransformFn{},
+            primec::ir_lowerer::SetupInferenceBindingValueKindFn{},
+            primec::ir_lowerer::ApplySetupInferenceStructInfoFn{},
+            primec::ir_lowerer::ApplySetupInferenceStructInfoFn{},
+            primec::ir_lowerer::InferSetupInferenceStructExprPathFn{}) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer setup inference helper handles invalid comparison/operator calls") {
   using Resolution = primec::ir_lowerer::ComparisonOperatorCallReturnKindResolution;
 

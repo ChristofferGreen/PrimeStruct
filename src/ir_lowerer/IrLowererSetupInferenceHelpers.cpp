@@ -250,6 +250,20 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
     const ResolveSetupInferenceCallReturnKindFn &resolveMethodCallReturnKind,
     LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
+  const ResolveSetupInferenceCallReturnKindFn noopResolveCallReturnKind =
+      [](const Expr &, const LocalMap &, LocalInfo::ValueKind &, bool &matched) {
+        matched = false;
+        return false;
+      };
+  const ResolveSetupInferenceCallReturnKindFn &resolveDefinitionCallReturnKindFn =
+      resolveDefinitionCallReturnKind ? resolveDefinitionCallReturnKind
+                                      : noopResolveCallReturnKind;
+  const ResolveSetupInferenceCallReturnKindFn &resolveCountMethodCallReturnKindFn =
+      resolveCountMethodCallReturnKind ? resolveCountMethodCallReturnKind
+                                       : noopResolveCallReturnKind;
+  const ResolveSetupInferenceCallReturnKindFn &resolveMethodCallReturnKindFn =
+      resolveMethodCallReturnKind ? resolveMethodCallReturnKind
+                                  : noopResolveCallReturnKind;
   std::string pointerBuiltinName;
   std::string memoryBuiltinName;
   const bool isPointerBuiltinCall = getBuiltinPointerName(expr, pointerBuiltinName);
@@ -266,7 +280,7 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
   bool matched = false;
 
   if (!expr.isMethodCall) {
-    if (resolveDefinitionCallReturnKind(expr, localsIn, returnKind, matched)) {
+    if (resolveDefinitionCallReturnKindFn(expr, localsIn, returnKind, matched)) {
       kindOut = returnKind;
       return CallExpressionReturnKindResolution::Resolved;
     }
@@ -275,7 +289,7 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
     }
 
     matched = false;
-    if (resolveCountMethodCallReturnKind(expr, localsIn, returnKind, matched)) {
+    if (resolveCountMethodCallReturnKindFn(expr, localsIn, returnKind, matched)) {
       kindOut = returnKind;
       return CallExpressionReturnKindResolution::Resolved;
     }
@@ -286,7 +300,7 @@ CallExpressionReturnKindResolution resolveCallExpressionReturnKind(
     return CallExpressionReturnKindResolution::NotResolved;
   }
 
-  if (resolveMethodCallReturnKind(expr, localsIn, returnKind, matched)) {
+  if (resolveMethodCallReturnKindFn(expr, localsIn, returnKind, matched)) {
     kindOut = returnKind;
     return CallExpressionReturnKindResolution::Resolved;
   }
@@ -303,6 +317,10 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
     LocalInfo::ValueKind &kindOut,
     const ResolveSetupInferenceCallCollectionAccessValueKindFn &resolveCallCollectionAccessValueKind) {
   kindOut = LocalInfo::ValueKind::Unknown;
+  const IsSetupInferenceEntryArgsNameFn noopIsEntryArgsName =
+      [](const Expr &, const LocalMap &) { return false; };
+  const IsSetupInferenceEntryArgsNameFn &isEntryArgsNameFn =
+      isEntryArgsName ? isEntryArgsName : noopIsEntryArgsName;
 
   std::string accessName;
   if (!getBuiltinArrayAccessName(expr, accessName)) {
@@ -406,7 +424,7 @@ ArrayMapAccessElementKindResolution resolveArrayMapAccessElementKind(
         return ArrayMapAccessElementKindResolution::Resolved;
       }
     }
-    if (isEntryArgsName(target, localsIn)) {
+    if (isEntryArgsNameFn(target, localsIn)) {
       return ArrayMapAccessElementKindResolution::Resolved;
     }
 
@@ -481,6 +499,37 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
     const ResolveSetupInferenceDefinitionCallFn &resolveDefinitionCall,
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex) {
+  const InferSetupInferenceValueKindFn noopInferExprKind =
+      [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; };
+  const IsSetupInferenceBindingMutableFn noopIsBindingMutable =
+      [](const Expr &) { return false; };
+  const SetupInferenceBindingKindFn noopBindingKind =
+      [](const Expr &) { return LocalInfo::Kind::Value; };
+  const HasSetupInferenceExplicitBindingTypeTransformFn noopHasExplicitBindingTypeTransform =
+      [](const Expr &) { return false; };
+  const SetupInferenceBindingValueKindFn noopBindingValueKind =
+      [](const Expr &, LocalInfo::Kind) { return LocalInfo::ValueKind::Unknown; };
+  const ApplySetupInferenceStructInfoFn noopApplyStructInfo =
+      [](const Expr &, LocalInfo &) {};
+  const InferSetupInferenceStructExprPathFn noopInferStructExprPath =
+      [](const Expr &, const LocalMap &) { return std::string{}; };
+  const InferSetupInferenceValueKindFn &inferExprKindFn =
+      inferExprKind ? inferExprKind : noopInferExprKind;
+  const IsSetupInferenceBindingMutableFn &isBindingMutableFn =
+      isBindingMutable ? isBindingMutable : noopIsBindingMutable;
+  const SetupInferenceBindingKindFn &bindingKindFn =
+      bindingKind ? bindingKind : noopBindingKind;
+  const HasSetupInferenceExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransformFn =
+      hasExplicitBindingTypeTransform ? hasExplicitBindingTypeTransform
+                                      : noopHasExplicitBindingTypeTransform;
+  const SetupInferenceBindingValueKindFn &bindingValueKindFn =
+      bindingValueKind ? bindingValueKind : noopBindingValueKind;
+  const ApplySetupInferenceStructInfoFn &applyStructArrayInfoFn =
+      applyStructArrayInfo ? applyStructArrayInfo : noopApplyStructInfo;
+  const ApplySetupInferenceStructInfoFn &applyStructValueInfoFn =
+      applyStructValueInfo ? applyStructValueInfo : noopApplyStructInfo;
+  const InferSetupInferenceStructExprPathFn &inferStructExprPathFn =
+      inferStructExprPath ? inferStructExprPath : noopInferStructExprPath;
   LocalMap bodyLocals = localsBase;
   bool sawValue = false;
   LocalInfo::ValueKind lastKind = LocalInfo::ValueKind::Unknown;
@@ -491,15 +540,15 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
       }
       LocalInfo info;
       info.index = 0;
-      info.isMutable = isBindingMutable(bodyExpr);
+      info.isMutable = isBindingMutableFn(bodyExpr);
       const StatementBindingTypeInfo typeInfo =
           inferStatementBindingTypeInfo(bodyExpr,
                                         bodyExpr.args.front(),
                                         bodyLocals,
-                                        hasExplicitBindingTypeTransform,
-                                        bindingKind,
-                                        bindingValueKind,
-                                        inferExprKind,
+                                        hasExplicitBindingTypeTransformFn,
+                                        bindingKindFn,
+                                        bindingValueKindFn,
+                                        inferExprKindFn,
                                         resolveDefinitionCall,
                                         semanticProgram,
                                         semanticIndex);
@@ -516,10 +565,10 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
           info.valueKind = LocalInfo::ValueKind::Int32;
         }
       }
-      applyStructArrayInfo(bodyExpr, info);
-      applyStructValueInfo(bodyExpr, info);
+      applyStructArrayInfoFn(bodyExpr, info);
+      applyStructValueInfoFn(bodyExpr, info);
       if (info.structTypeName.empty() && info.kind == LocalInfo::Kind::Value) {
-        std::string inferredStruct = inferStructExprPath(bodyExpr.args.front(), bodyLocals);
+        std::string inferredStruct = inferStructExprPathFn(bodyExpr.args.front(), bodyLocals);
         if (!inferredStruct.empty()) {
           info.structTypeName = inferredStruct;
         }
@@ -534,7 +583,7 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
       if (bodyExpr.args.size() != 1) {
         return LocalInfo::ValueKind::Unknown;
       }
-      LocalInfo::ValueKind returnKind = inferExprKind(bodyExpr.args.front(), bodyLocals);
+      LocalInfo::ValueKind returnKind = inferExprKindFn(bodyExpr.args.front(), bodyLocals);
       if (returnKind == LocalInfo::ValueKind::Unknown) {
         std::string builtinComparison;
         if (getBuiltinComparisonName(bodyExpr.args.front(), builtinComparison)) {
@@ -544,7 +593,7 @@ LocalInfo::ValueKind inferBodyValueKindWithLocalsScaffolding(
       return returnKind;
     }
     sawValue = true;
-    lastKind = inferExprKind(bodyExpr, bodyLocals);
+    lastKind = inferExprKindFn(bodyExpr, bodyLocals);
     if (lastKind == LocalInfo::ValueKind::Unknown) {
       std::string builtinComparison;
       if (getBuiltinComparisonName(bodyExpr, builtinComparison)) {
