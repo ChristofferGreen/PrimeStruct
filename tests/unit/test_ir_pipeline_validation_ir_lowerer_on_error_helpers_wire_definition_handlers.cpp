@@ -87,6 +87,21 @@ TEST_CASE("ir lowerer on_error helpers wire definition handlers from call adapte
   CHECK_FALSE(onErrorByDef.at("/handler").has_value());
 }
 
+TEST_CASE("ir lowerer on_error helpers reject missing resolution adapters") {
+  std::vector<primec::Transform> transforms;
+  primec::Transform onError;
+  onError.name = "on_error";
+  onError.templateArgs = {"FileError", "handler"};
+  transforms.push_back(onError);
+
+  std::optional<primec::ir_lowerer::OnErrorHandler> handler;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::parseOnErrorTransform(
+      transforms, "", "/main", {}, {}, handler, error));
+  CHECK(error == "internal error: missing on_error resolution adapters on /main");
+  CHECK_FALSE(handler.has_value());
+}
+
 TEST_CASE("ir lowerer on_error helpers prefer semantic-product metadata") {
   primec::Program program;
 

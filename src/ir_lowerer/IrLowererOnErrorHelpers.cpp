@@ -88,6 +88,10 @@ bool parseOnErrorTransform(const std::vector<Transform> &transforms,
     if (transform.name != "on_error") {
       continue;
     }
+    if (!resolveExprPath || !definitionExists) {
+      error = "internal error: missing on_error resolution adapters on " + context;
+      return false;
+    }
     if (out.has_value()) {
       error = "duplicate on_error transform on " + context;
       return false;
