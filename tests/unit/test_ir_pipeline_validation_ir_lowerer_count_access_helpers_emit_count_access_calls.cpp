@@ -871,11 +871,11 @@ TEST_CASE("ir lowerer template type parse helper splits template type names") {
   CHECK(arg == " map<string, i64> , FileError ");
 
   CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("Result<i64", base, arg));
-  CHECK(base == "Result<i64");
+  CHECK(base.empty());
   CHECK(arg.empty());
 
   CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("i64", base, arg));
-  CHECK(base == "i64");
+  CHECK(base.empty());
   CHECK(arg.empty());
 
   CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("", base, arg));
