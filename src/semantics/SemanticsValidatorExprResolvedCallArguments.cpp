@@ -392,6 +392,95 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     }
   }
 
+  auto mapConstructorArgumentMatchesExactType =
+      [&](const Expr &arg, const std::string &expectedTypeText,
+          std::string &actualTypeTextOut) -> bool {
+    actualTypeTextOut.clear();
+    const std::string normalizedExpected =
+        normalizeBindingTypeName(expectedTypeText);
+    if (normalizedExpected.empty()) {
+      return true;
+    }
+
+    if (context.argumentValidationContext->dispatchResolvers != nullptr &&
+        isStringExprForArgumentValidation(
+            arg, *context.argumentValidationContext->dispatchResolvers)) {
+      actualTypeTextOut = "string";
+      return normalizedExpected == "string";
+    }
+
+    const ReturnKind expectedKind = returnKindForTypeName(normalizedExpected);
+    if (expectedKind != ReturnKind::Unknown) {
+      const ReturnKind actualKind = inferExprReturnKind(arg, params, locals);
+      if (actualKind != ReturnKind::Unknown) {
+        actualTypeTextOut = typeNameForReturnKind(actualKind);
+        return actualKind == expectedKind;
+      }
+    }
+
+    std::string inferredTypeText;
+    if (inferQueryExprTypeText(arg, params, locals, inferredTypeText) &&
+        !inferredTypeText.empty()) {
+      actualTypeTextOut = inferredTypeText;
+      return normalizeBindingTypeName(inferredTypeText) == normalizedExpected;
+    }
+
+    const std::string actualStructPath =
+        inferStructReturnPath(arg, params, locals);
+    if (!actualStructPath.empty()) {
+      actualTypeTextOut = actualStructPath;
+      const std::string expectedStructPath = resolveStructTypePath(
+          expectedTypeText, expr.namespacePrefix, structNames_);
+      if (!expectedStructPath.empty()) {
+        return actualStructPath == expectedStructPath;
+      }
+      return normalizeBindingTypeName(actualStructPath) == normalizedExpected;
+    }
+
+    return true;
+  };
+
+  auto validateExplicitCanonicalMapConstructorArguments = [&]() -> bool {
+    if (context.resolvedDefinition == nullptr ||
+        !isCanonicalMapConstructorResolvedPath(resolved) ||
+        expr.templateArgs.size() != 2 || orderedArgs.empty() ||
+        !packedArgs.empty() || orderedArgs.size() != expr.args.size() ||
+        orderedArgs.size() % 2 != 0) {
+      return true;
+    }
+
+    for (size_t argIndex = 0; argIndex < orderedArgs.size(); ++argIndex) {
+      const Expr *arg = orderedArgs[argIndex];
+      if (arg == nullptr || arg->isSpread) {
+        continue;
+      }
+      const std::string &expectedTypeText = expr.templateArgs[argIndex % 2];
+      std::string actualTypeText;
+      if (mapConstructorArgumentMatchesExactType(*arg, expectedTypeText,
+                                                 actualTypeText)) {
+        continue;
+      }
+
+      const std::string paramName =
+          argIndex < calleeParams.size() && !calleeParams[argIndex].name.empty()
+              ? calleeParams[argIndex].name
+              : (argIndex % 2 == 0 ? "key" : "value");
+      std::string message = "argument type mismatch for " +
+                            *context.diagnosticResolved + " parameter " +
+                            paramName + ": expected " + expectedTypeText;
+      if (!actualTypeText.empty()) {
+        message += " got " + actualTypeText;
+      }
+      return failResolvedCallArgumentDiagnostic(std::move(message));
+    }
+
+    return true;
+  };
+
+  if (!validateExplicitCanonicalMapConstructorArguments()) {
+    return false;
+  }
+
   if (context.resolvedDefinition != nullptr &&
       isCanonicalMapConstructorResolvedPath(resolved) &&
       !orderedArgs.empty()) {
