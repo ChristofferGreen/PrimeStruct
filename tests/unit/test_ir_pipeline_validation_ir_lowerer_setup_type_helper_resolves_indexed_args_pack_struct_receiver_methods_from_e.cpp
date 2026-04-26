@@ -208,7 +208,7 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper falls back from synthetic direct-call probes to receiver resolution") {
+TEST_CASE("ir lowerer setup type helper rejects synthetic direct-call probes for method resolution") {
   primec::Definition canonicalMapCountDef;
   canonicalMapCountDef.fullPath = "/std/collections/map/count";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
@@ -264,8 +264,8 @@ TEST_CASE("ir lowerer setup type helper falls back from synthetic direct-call pr
       &semanticProgram,
       defMap,
       error);
-  CHECK(resolved == &canonicalMapCountDef);
-  CHECK(error.empty());
+  CHECK(resolved == nullptr);
+  CHECK(error == "missing semantic-product method-call target: count");
 }
 
 TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets without lowered definitions") {
