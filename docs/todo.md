@@ -56,6 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
+- TODO-4157
 - TODO-4164
 - TODO-4166
 - TODO-4174
@@ -67,7 +68,8 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4157,
+  TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
   TODO-4175
@@ -76,24 +78,25 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4164
-2. TODO-4166
-3. TODO-4174
-4. TODO-4173
-5. TODO-4176
-6. TODO-4175
-7. TODO-4179
-8. TODO-4177
-9. TODO-4178
-10. TODO-4180
-11. TODO-4182
-12. TODO-4181
+1. TODO-4157
+2. TODO-4164
+3. TODO-4166
+4. TODO-4174
+5. TODO-4173
+6. TODO-4176
+7. TODO-4175
+8. TODO-4179
+9. TODO-4177
+10. TODO-4178
+11. TODO-4180
+12. TODO-4182
+13. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4164 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4157, TODO-4164 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -122,7 +125,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | none |
-| Lowerer/source-composition contract coverage | none |
+| Lowerer/source-composition contract coverage | TODO-4157 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -435,6 +438,28 @@ Task template:
     - Invalid mixed result states disappear from the touched pipeline surface.
   - stop_rule: Stop once one compile-pipeline result surface uses explicit
     variants end-to-end; do not rewrite every caller in one slice.
+
+- [ ] TODO-4157: Retire temporary semantic-product adapter code
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4147, TODO-4148, TODO-4150
+  - scope: Delete the lowerer semantic-product adapter source-line/source-column
+    compatibility fallback for direct-call and method-call target lookup once
+    all production lowering paths carry stable semantic-node identities.
+  - acceptance:
+    - The call-target source-position fallback disappears from the touched
+      production path.
+    - The touched lowerer or compile-pipeline flow still works through
+      published semantic-product facts only.
+    - Full release validation remains green, including collection helper
+      shadow/conformance coverage that currently exercises copied call
+      expressions.
+  - stop_rule: Stop after this one adapter seam is retired end-to-end; do not
+    attempt a repo-wide compatibility cleanup in one slice.
+  - notes: Reopened after the 2026-04-26 full release gate showed the earlier
+    retirement broke collection helper routing in copied call expressions that
+    still lack stable semantic ids.
 
 - [ ] TODO-4164: Remove AST-side semantic re-derivation caches after boundary cutover
   - owner: ai

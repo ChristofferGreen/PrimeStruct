@@ -5321,7 +5321,9 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     without semantic identity do not resolve through the retired adapter seam.
     Removed `TODO-4157` from the live queue, promoted `TODO-4160` and
     `TODO-4163` to Ready Now, and deferred release reruns to CI per the lite
-    workflow.
+    workflow. Stabilization note: the 2026-04-26 full release gate later
+    exposed copied-call-expression regressions in collection helper routing, so
+    the source-position fallback was restored and `TODO-4157` was reopened.
 
 - [x] TODO-4158: Introduce a narrow lowerer syntax and provenance view
   - owner: ai

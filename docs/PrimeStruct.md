@@ -398,7 +398,8 @@ Temporary migration adapter contract:
   callable-summary/type-metadata effect-layout surfaces. The published graph-backed local/query/`try(...)`/`on_error`
   facts are currently inspection-surface facts, not lowerer-adapter inputs; `on_error` bound-arg expressions remain
   syntax-owned and are still parsed from transforms when lowering needs executable handler arguments. Call-target
-  adapter lookup no longer matches direct or method call facts by source line/column when semantic identity is missing.
+  adapter lookup still retains a source line/column fallback for direct and method call facts when semantic identity is
+  missing; TODO-4157 tracks retiring that fallback once release coverage proves all consumers carry stable semantic ids.
 - Removal criteria:
   - `CompilePipelineOutput` publishes the semantic product on the success path.
   - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.

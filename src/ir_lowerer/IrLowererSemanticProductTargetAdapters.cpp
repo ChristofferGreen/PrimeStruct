@@ -365,6 +365,24 @@ std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticP
       return resolvePathId(*pathId);
     }
   }
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.sourceLine <= 0 ||
+      expr.sourceColumn <= 0) {
+    return {};
+  }
+  const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
+  for (const auto *entry : directCallTargets) {
+    if (entry == nullptr || entry->resolvedPathId == InvalidSymbolId) {
+      continue;
+    }
+    if (entry->callName != expr.name || entry->sourceLine != expr.sourceLine ||
+        entry->sourceColumn != expr.sourceColumn) {
+      continue;
+    }
+    const std::string resolvedPath = resolvePathId(entry->resolvedPathId);
+    if (!resolvedPath.empty()) {
+      return resolvedPath;
+    }
+  }
   return {};
 }
 
@@ -381,6 +399,20 @@ std::optional<StdlibSurfaceId> findSemanticProductDirectCallStdlibSurfaceId(
   if (expr.semanticNodeId != 0) {
     return semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
         *semanticProgram, expr.semanticNodeId);
+  }
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() || expr.sourceLine <= 0 ||
+      expr.sourceColumn <= 0) {
+    return std::nullopt;
+  }
+  const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
+  for (const auto *entry : directCallTargets) {
+    if (entry == nullptr) {
+      continue;
+    }
+    if (entry->callName == expr.name && entry->sourceLine == expr.sourceLine &&
+        entry->sourceColumn == expr.sourceColumn && entry->stdlibSurfaceId.has_value()) {
+      return entry->stdlibSurfaceId;
+    }
   }
   return std::nullopt;
 }
@@ -413,6 +445,24 @@ std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticP
       return resolvePathId(*pathId);
     }
   }
+  if (!expr.isMethodCall || expr.name.empty() || expr.sourceLine <= 0 ||
+      expr.sourceColumn <= 0) {
+    return {};
+  }
+  const auto methodCallTargets = semanticProgramMethodCallTargetView(*semanticProgram);
+  for (const auto *entry : methodCallTargets) {
+    if (entry == nullptr || entry->resolvedPathId == InvalidSymbolId) {
+      continue;
+    }
+    if (entry->methodName != expr.name || entry->sourceLine != expr.sourceLine ||
+        entry->sourceColumn != expr.sourceColumn) {
+      continue;
+    }
+    const std::string resolvedPath = resolvePathId(entry->resolvedPathId);
+    if (!resolvedPath.empty()) {
+      return resolvedPath;
+    }
+  }
   return {};
 }
 
@@ -429,6 +479,21 @@ std::optional<StdlibSurfaceId> findSemanticProductMethodCallStdlibSurfaceId(
   if (expr.semanticNodeId != 0) {
     return semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
         *semanticProgram, expr.semanticNodeId);
+  }
+  if (!expr.isMethodCall || expr.name.empty() || expr.sourceLine <= 0 ||
+      expr.sourceColumn <= 0) {
+    return std::nullopt;
+  }
+  const auto methodCallTargets = semanticProgramMethodCallTargetView(*semanticProgram);
+  for (const auto *entry : methodCallTargets) {
+    if (entry == nullptr) {
+      continue;
+    }
+    if (entry->methodName == expr.name && entry->sourceLine == expr.sourceLine &&
+        entry->sourceColumn == expr.sourceColumn &&
+        entry->stdlibSurfaceId.has_value()) {
+      return entry->stdlibSurfaceId;
+    }
   }
   return std::nullopt;
 }

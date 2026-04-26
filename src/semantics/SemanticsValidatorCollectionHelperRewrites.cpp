@@ -636,6 +636,36 @@ bool SemanticsValidator::explicitCanonicalExperimentalMapBorrowedHelperPath(
     }
     return explicitCallPathForCandidate(candidate);
   }();
+  auto hasDefinitionFamilyPath = [&](const std::string &path) {
+    if (defMap_.count(path) > 0 || paramsByDef_.count(path) > 0) {
+      return true;
+    }
+    const std::string templatedPrefix = path + "<";
+    const std::string specializedPrefix = path + "__t";
+    const std::string overloadPrefix = path + "__ov";
+    for (const auto &def : program_.definitions) {
+      if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
+          def.fullPath.rfind(specializedPrefix, 0) == 0 ||
+          def.fullPath.rfind(overloadPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    for (const auto &[candidatePath, params] : paramsByDef_) {
+      (void)params;
+      if (candidatePath == path || candidatePath.rfind(templatedPrefix, 0) == 0 ||
+          candidatePath.rfind(specializedPrefix, 0) == 0 ||
+          candidatePath.rfind(overloadPrefix, 0) == 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (hasDefinitionFamilyPath(resolvedOrExplicitPath) ||
+      hasDeclaredDefinitionPath(resolvedOrExplicitPath) ||
+      hasImportedDefinitionPath(resolvedOrExplicitPath) ||
+      defMap_.count(resolvedOrExplicitPath) > 0) {
+    return false;
+  }
   if (!canonicalExperimentalMapHelperPath(resolvedOrExplicitPath, resolvedPathOut, helperName)) {
     return false;
   }
