@@ -56,30 +56,30 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4148
 - TODO-4168
 - TODO-4170
 - TODO-4153
 - TODO-4172
+- TODO-4158
 
 ### Immediate Next 10 (After Ready Now)
 
 - TODO-4150
 - TODO-4155
 - TODO-4157
-- TODO-4158
 - TODO-4162
 - TODO-4165
 - TODO-4159
 - TODO-4160
 - TODO-4161
 - TODO-4163
+- TODO-4164
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4148,
-  TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158,
-  TODO-4159, TODO-4160, TODO-4161, TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4170,
+  TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4159,
+  TODO-4160, TODO-4161, TODO-4164
 - Test API cleanup and contract-probe migration: TODO-4153, TODO-4172
 - Semantics orchestration cleanup: TODO-4168
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
@@ -91,39 +91,38 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4148
-2. TODO-4168
-3. TODO-4170
-4. TODO-4150
-5. TODO-4153
-6. TODO-4172
-7. TODO-4155
-8. TODO-4157
-9. TODO-4158
-10. TODO-4162
-11. TODO-4165
-12. TODO-4159
-13. TODO-4160
-14. TODO-4161
-15. TODO-4163
-16. TODO-4164
-17. TODO-4166
-18. TODO-4174
-19. TODO-4173
-20. TODO-4176
-21. TODO-4175
-22. TODO-4179
-23. TODO-4177
-24. TODO-4178
-25. TODO-4180
-26. TODO-4182
-27. TODO-4181
+1. TODO-4168
+2. TODO-4170
+3. TODO-4150
+4. TODO-4153
+5. TODO-4172
+6. TODO-4155
+7. TODO-4157
+8. TODO-4158
+9. TODO-4162
+10. TODO-4165
+11. TODO-4159
+12. TODO-4160
+13. TODO-4161
+14. TODO-4163
+15. TODO-4164
+16. TODO-4166
+17. TODO-4174
+18. TODO-4173
+19. TODO-4176
+20. TODO-4175
+21. TODO-4179
+22. TODO-4177
+23. TODO-4178
+24. TODO-4180
+25. TODO-4182
+26. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4148, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4155, TODO-4162, TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -152,7 +151,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4170, TODO-4155, TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4148, TODO-4150, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
+| Lowerer/source-composition contract coverage | TODO-4150, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -789,21 +788,3 @@ Task template:
       specialization predicates.
   - stop_rule: Keep this item as a coordination tracker only; implement work
     through child leaves rather than reopening the old broad slice.
-
-- [ ] TODO-4148: Cut method-target resolution over to published semantic-product facts
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - depends_on: TODO-4147
-  - scope: Remove lowerer-side method target rediscovery from
-    `IrLowererSetupTypeMethodCallResolution.cpp` and related helpers when
-    semantics already published the receiver and method target choice.
-  - acceptance:
-    - The touched method-target resolution helpers no longer include private
-      semantics helper headers.
-    - Focused release coverage for method-call helper routing and shadow
-      precedence passes through semantic-product-owned target lookups.
-    - User-facing behavior and diagnostics remain unchanged for the touched
-      method-call cases.
-  - stop_rule: Stop once method-target selection in lowering is driven by
-    published call-target facts rather than helper-path reconstruction.

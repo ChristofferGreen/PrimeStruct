@@ -868,9 +868,12 @@ ResolveExprPathFn makeResolveCallPathFromScope(
     const std::unordered_map<std::string, std::string> &importAliases,
     const SemanticProgram *semanticProgram) {
   return [defMap, importAliases, semanticProgram](const Expr &expr) {
-    if (const std::string chosenPath = findSemanticProductBridgePathChoice(semanticProgram, expr);
-        !chosenPath.empty()) {
-      return chosenPath;
+    if (!expr.isMethodCall) {
+      if (const std::string chosenPath =
+              findSemanticProductBridgePathChoice(semanticProgram, expr);
+          !chosenPath.empty()) {
+        return chosenPath;
+      }
     }
     if (semanticProgram != nullptr && expr.kind == Expr::Kind::Call) {
       if (expr.isMethodCall) {
@@ -879,7 +882,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
             !resolvedPath.empty()) {
           return resolvedPath;
         }
-        return resolveCallPathFromScope(expr, defMap, importAliases);
+        return resolveCallPathWithoutSemanticFallbackProbes(expr);
       }
       if (const std::string resolvedPath =
               findSemanticProductDirectCallTarget(semanticProgram, expr);

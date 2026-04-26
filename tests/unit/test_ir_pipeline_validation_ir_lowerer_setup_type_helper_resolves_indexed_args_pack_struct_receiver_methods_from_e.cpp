@@ -126,6 +126,34 @@ TEST_CASE("ir lowerer setup type helper requires semantic-product method targets
   locals.emplace("values", valuesLocal);
 
   primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "push",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 17,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "push"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/soa_vector/push"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "soa_vector",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 17,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "soa_vector"),
+      .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "push"),
+      .chosenPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/soa_vector/push"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+  });
   std::string error;
   const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
       methodCall,

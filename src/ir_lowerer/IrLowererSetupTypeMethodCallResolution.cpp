@@ -1,8 +1,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include <functional>
+#include <string_view>
 #include <utility>
 
 #include "IrLowererCallHelpers.h"
@@ -45,6 +44,12 @@ std::string extractMethodLeafName(const std::string &methodPath) {
   return methodPath.substr(slash + 1);
 }
 
+bool isExperimentalSoaVectorSpecializedStructPath(std::string_view path) {
+  return path.starts_with("/std/collections/experimental_soa_vector/SoaVector__") ||
+         path.starts_with("std/collections/experimental_soa_vector/SoaVector__") ||
+         path.starts_with("SoaVector__");
+}
+
 std::string resolveSpecializedExperimentalSoaVectorStructPath(
     const std::string &typeText) {
   std::string normalized = trimTemplateTypeText(typeText);
@@ -52,7 +57,7 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
     if (!normalized.empty() && normalized.front() != '/') {
       normalized.insert(normalized.begin(), '/');
     }
-    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+    if (isExperimentalSoaVectorSpecializedStructPath(normalized)) {
       return normalized;
     }
 
@@ -344,69 +349,37 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     }
     const std::string resolvedPath =
         findSemanticProductMethodCallTarget(semanticProgram, callExpr);
-    const std::string directResolvedPath =
-        findSemanticProductDirectCallTarget(semanticProgram, callExpr);
     if (resolvedPath.empty()) {
-      const std::string bridgeResolvedPath =
-          findSemanticProductBridgePathChoice(semanticProgram, callExpr);
-      const std::string preferredFallbackResolvedPath =
-          !bridgeResolvedPath.empty() ? bridgeResolvedPath : directResolvedPath;
-      if (!preferredFallbackResolvedPath.empty()) {
-        if (const Definition *resolvedDef =
-                resolveLoweredDefinitionPath(preferredFallbackResolvedPath);
-            resolvedDef != nullptr) {
-          return resolvedDef;
-        }
-        errorOut.clear();
-      } else {
-        errorOut = "missing semantic-product method-call target: " +
-                   describeMethodCallExpr(callExpr);
-        return nullptr;
-      }
-    } else {
-      const bool
-          routesExplicitVectorCountMethodThroughMapMethodTarget =
-              requestsExplicitVectorCountMethod &&
-              (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
-               normalizeCollectionHelperPath(resolvedPath) ==
-                   "/std/collections/map/count");
-      const std::string explicitVectorCountBridgePath =
-          routesExplicitVectorCountMethodThroughMapMethodTarget
-              ? findSemanticProductBridgePathChoice(semanticProgram, callExpr)
-              : std::string{};
-      const std::string preferredResolvedPath =
-          !explicitVectorCountBridgePath.empty()
-              ? explicitVectorCountBridgePath
-              : resolvedPath;
-      if (const Definition *resolvedDef =
-              resolveLoweredDefinitionPath(preferredResolvedPath);
-          resolvedDef != nullptr) {
-        return resolvedDef;
-      }
-      if (requestsExplicitVectorCountMethod) {
-        if (!directResolvedPath.empty() &&
-            directResolvedPath != preferredResolvedPath) {
-          if (const Definition *directResolvedDef =
-                  resolveLoweredDefinitionPath(directResolvedPath);
-              directResolvedDef != nullptr) {
-            return directResolvedDef;
-          }
-        }
-        if (const Definition *explicitMethodDef =
-                resolveLoweredDefinitionPath(explicitMethodPath);
-            explicitMethodDef != nullptr) {
-          return explicitMethodDef;
-        }
-      }
-      if (preferredResolvedPath.rfind("/file/", 0) == 0) {
-        errorOut.clear();
-        return nullptr;
-      }
-      errorOut =
-          "semantic-product method-call target missing lowered definition: " +
-          preferredResolvedPath;
+      errorOut = "missing semantic-product method-call target: " +
+                 describeMethodCallExpr(callExpr);
       return nullptr;
     }
+    const bool routesExplicitVectorCountMethodThroughMapMethodTarget =
+        requestsExplicitVectorCountMethod &&
+        (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
+         normalizeCollectionHelperPath(resolvedPath) ==
+             "/std/collections/map/count");
+    const std::string explicitVectorCountBridgePath =
+        routesExplicitVectorCountMethodThroughMapMethodTarget
+            ? findSemanticProductBridgePathChoice(semanticProgram, callExpr)
+            : std::string{};
+    const std::string preferredResolvedPath =
+        !explicitVectorCountBridgePath.empty()
+            ? explicitVectorCountBridgePath
+            : resolvedPath;
+    if (const Definition *resolvedDef =
+            resolveLoweredDefinitionPath(preferredResolvedPath);
+        resolvedDef != nullptr) {
+      return resolvedDef;
+    }
+    if (preferredResolvedPath.rfind("/file/", 0) == 0) {
+      errorOut.clear();
+      return nullptr;
+    }
+    errorOut =
+        "semantic-product method-call target missing lowered definition: " +
+        preferredResolvedPath;
+    return nullptr;
   }
 
   std::string accessName;

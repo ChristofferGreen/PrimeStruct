@@ -1146,12 +1146,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irMethodResolution.find("semantic-product method-call target missing lowered definition: ") !=
         std::string::npos);
   CHECK(irMethodResolution.find(
-            "const bool\n"
-            "          routesExplicitVectorCountMethodThroughMapMethodTarget =\n"
-            "              requestsExplicitVectorCountMethod &&\n"
-            "              (normalizeCollectionHelperPath(resolvedPath) == \"/map/count\" ||\n"
-            "               normalizeCollectionHelperPath(resolvedPath) ==\n"
-                    "                   \"/std/collections/map/count\");") !=
+            "    const bool routesExplicitVectorCountMethodThroughMapMethodTarget =\n"
+            "        requestsExplicitVectorCountMethod &&\n"
+            "        (normalizeCollectionHelperPath(resolvedPath) == \"/map/count\" ||\n"
+            "         normalizeCollectionHelperPath(resolvedPath) ==\n"
+            "             \"/std/collections/map/count\");") !=
         std::string::npos);
   CHECK(irMethodResolution.find(
             "      const std::string preferredResolvedPath =\n"
@@ -1170,40 +1169,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
             "            buildReceiverMethodTargetPath(normalizedTargetPath,\n"
             "                                          explicitMethodPath);") !=
         std::string::npos);
-  CHECK(irMethodResolution.find(
-            "      if (requestsExplicitVectorCountMethod) {\n"
-            "        if (!directResolvedPath.empty() &&\n"
-            "            directResolvedPath != preferredResolvedPath) {\n"
-            "          if (const Definition *directResolvedDef =\n"
-            "                  resolveLoweredDefinitionPath(directResolvedPath);\n"
-            "              directResolvedDef != nullptr) {\n"
-            "            return directResolvedDef;\n"
-            "          }\n"
-            "        }\n"
-            "        if (const Definition *explicitMethodDef =\n"
-            "                resolveLoweredDefinitionPath(explicitMethodPath);\n"
-            "            explicitMethodDef != nullptr) {\n"
-            "          return explicitMethodDef;\n"
-            "        }\n"
-            "      }") !=
-        std::string::npos);
-  CHECK(irMethodResolution.find(
-            "    const std::string directResolvedPath =\n"
-            "        findSemanticProductDirectCallTarget(semanticProgram, callExpr);") !=
-        std::string::npos);
-  CHECK(irMethodResolution.find(
-            "      const std::string bridgeResolvedPath =\n"
-            "          findSemanticProductBridgePathChoice(semanticProgram, callExpr);\n"
-            "      const std::string preferredFallbackResolvedPath =\n"
-            "          !bridgeResolvedPath.empty() ? bridgeResolvedPath : directResolvedPath;\n"
-            "      if (!preferredFallbackResolvedPath.empty()) {\n"
-            "        if (const Definition *resolvedDef =\n"
-            "                resolveLoweredDefinitionPath(preferredFallbackResolvedPath);\n"
-            "            resolvedDef != nullptr) {\n"
-            "          return resolvedDef;\n"
-            "        }\n"
-            "        errorOut.clear();") !=
-        std::string::npos);
+  CHECK(irMethodResolution.find("directResolvedPath") == std::string::npos);
+  CHECK(irMethodResolution.find("preferredFallbackResolvedPath") == std::string::npos);
   CHECK(irMethodResolution.find(
             "              matchesGeneratedDefinitionFamilyPath(candidatePath, path)) {") !=
         std::string::npos);

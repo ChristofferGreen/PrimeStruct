@@ -1393,20 +1393,38 @@ TEST_CASE("ir lowerer call helpers keep rooted rewritten expr names when semanti
   CHECK(resolveExprPath(rewrittenExpr) == "/operator/add");
 }
 
-TEST_CASE("ir lowerer call helpers fall back to scope resolution when semantic-product method-call targets are missing") {
+TEST_CASE("ir lowerer call helpers keep source-shaped method paths when semantic-product targets are missing") {
   const std::unordered_map<std::string, const primec::Definition *> defMap = {};
-  const std::unordered_map<std::string, std::string> importAliases = {};
+  const std::unordered_map<std::string, std::string> importAliases = {
+      {"contains", "/std/collections/map/contains"},
+  };
 
   primec::Expr methodExpr;
   methodExpr.kind = primec::Expr::Kind::Call;
   methodExpr.isMethodCall = true;
+  methodExpr.namespacePrefix = "main";
   methodExpr.name = "contains";
   methodExpr.semanticNodeId = 44;
 
   primec::SemanticProgram semanticProgram;
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "map",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 44,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "map"),
+      .helperNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "contains"),
+      .chosenPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/map/contains"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
   auto resolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
-  CHECK(resolveExprPath(methodExpr) == "/contains");
+  CHECK(resolveExprPath(methodExpr) == "/main/contains");
 
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",

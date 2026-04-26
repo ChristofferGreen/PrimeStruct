@@ -4966,3 +4966,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     public semantic-product call-target entries, removed `TODO-4171` from the
     live queue, promoted `TODO-4172` to Ready Now, and deferred release reruns
     to CI per the lite workflow.
+
+- [x] TODO-4148: Cut method-target resolution over to published semantic-product facts
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4147
+  - scope: Remove lowerer-side method target rediscovery from
+    `IrLowererSetupTypeMethodCallResolution.cpp` and related helpers when
+    semantics already published the receiver and method target choice.
+  - acceptance:
+    - The touched method-target resolution helpers no longer include private
+      semantics helper headers.
+    - Focused release coverage for method-call helper routing and shadow
+      precedence passes through semantic-product-owned target lookups.
+    - User-facing behavior and diagnostics remain unchanged for the touched
+      method-call cases.
+  - stop_rule: Stop once method-target selection in lowering is driven by
+    published call-target facts rather than helper-path reconstruction.
+  - finished_at: 2026-04-26
+  - evidence: Removed method-call direct-target and bridge-path fallback
+    rescue from lowerer setup-type method resolution when a semantic program
+    is present, and kept explicit vector-count bridge routing tied to a
+    published method-call target. The call-path resolver now preserves the
+    source-shaped method path instead of using scope/import fallback when the
+    semantic-product method target is missing. Removed the private
+    `SemanticsHelpers.h` include and include-layer allowlist entry for the
+    touched method-call resolver, added coverage pinning direct/bridge facts
+    cannot stand in for method-call targets, removed `TODO-4148` from the live
+    queue, promoted `TODO-4158` to Ready Now, and deferred release reruns to
+    CI per the lite workflow.
