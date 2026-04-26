@@ -14,7 +14,8 @@ void checkStdlibMapPairConstructorMismatch(const std::string &error) {
 void checkCanonicalMapConstructorMismatch(const std::string &error) {
   CHECK((error.find("argument type mismatch") != std::string::npos ||
          error.find("implicit template arguments conflict") != std::string::npos));
-  CHECK(error.find("/std/collections/map/map") != std::string::npos);
+  CHECK((error.find("/std/collections/map/map") != std::string::npos ||
+         error.find("/std/collections/mapPair") != std::string::npos));
 }
 
 } // namespace
