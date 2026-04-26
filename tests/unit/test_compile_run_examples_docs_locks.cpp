@@ -2,7 +2,35 @@
 
 #include "test_compile_run_examples_helpers.h"
 
+#include <algorithm>
+#include <vector>
+
 TEST_SUITE_BEGIN("primestruct.compile.run.examples");
+
+static std::filesystem::path resolveUnitTestsPath() {
+  std::filesystem::path testsPath = std::filesystem::path("..") / "tests" / "unit";
+  if (!std::filesystem::exists(testsPath)) {
+    testsPath = std::filesystem::current_path() / "tests" / "unit";
+  }
+  return testsPath;
+}
+
+static std::vector<std::filesystem::path> filesWithRetainedDoctestSkips(
+    const std::filesystem::path &testsPath) {
+  std::vector<std::filesystem::path> paths;
+  for (const auto &entry : std::filesystem::recursive_directory_iterator(testsPath)) {
+    if (!entry.is_regular_file() ||
+        entry.path().filename() == "test_compile_run_examples_docs_locks.cpp") {
+      continue;
+    }
+    const std::string source = readFile(entry.path().string());
+    if (source.find("doctest::skip(true)") != std::string::npos) {
+      paths.push_back(entry.path());
+    }
+  }
+  std::sort(paths.begin(), paths.end());
+  return paths;
+}
 
 TEST_CASE("contributor doctest guardrails stay source locked") {
   std::filesystem::path agentsPath = std::filesystem::path("..") / "AGENTS.md";
@@ -19,6 +47,17 @@ TEST_CASE("contributor doctest guardrails stay source locked") {
   CHECK(agents.find("multiple subcases takes more than 5 seconds") != std::string::npos);
   CHECK(agents.find("single-focus doctest still takes more than 5 seconds") != std::string::npos);
   CHECK(agents.find("optimize it or add a brief justification") != std::string::npos);
+}
+
+TEST_CASE("skipped doctest debt stays absent from unit shards") {
+  const std::filesystem::path testsPath = resolveUnitTestsPath();
+  REQUIRE(std::filesystem::exists(testsPath));
+
+  const auto skippedFiles = filesWithRetainedDoctestSkips(testsPath);
+  for (const auto &path : skippedFiles) {
+    INFO("Retained doctest::skip(true) must map to an active TODO: " << path.string());
+  }
+  CHECK(skippedFiles.empty());
 }
 
 TEST_CASE("spinning cube native-window status avoids inactive TODO pointers") {
@@ -844,6 +883,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todoFinished.find("✓ TODO-4104: Restore skipped doctest debt tracking in the active queue.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4106: Re-enable or prune skipped collection compatibility suites.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4197: Lock skipped doctest debt policy.") !=
         std::string::npos);
 
   CHECK(vmMath.find("TEST_CASE(\"runs vm with qualified math names\")") != std::string::npos);

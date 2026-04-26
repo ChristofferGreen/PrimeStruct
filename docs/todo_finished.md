@@ -6,6 +6,12 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4197: Lock skipped doctest debt policy. Completed:
+  `tests/unit/test_compile_run_examples_docs_locks.cpp` now scans unit test
+  shards outside its own source-lock literals and fails if any retained
+  `doctest::skip(true)` coverage lands without first creating an active TODO.
+  This broadens the skipped-debt guardrail from the historical VM/docs shards
+  to the unit test tree covered by the current `docs/todo.md` policy.
 - ✓ TODO-4196: Align Result payload docs. Completed:
   `docs/PrimeStruct.md` no longer says native executable
   `Result<Buffer<T>, GfxError>` unpacking remains follow-up work while the
