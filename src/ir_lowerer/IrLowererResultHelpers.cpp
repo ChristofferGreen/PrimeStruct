@@ -77,10 +77,10 @@ bool applySemanticQueryFactResultInfo(const Expr &expr,
                                       const SemanticProgram *semanticProgram,
                                       const SemanticProductIndex *semanticIndex,
                                       ResultExprInfo &out) {
-  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
-  const auto *queryFact = findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr);
+  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
   if (queryFact == nullptr || !queryFact->hasResultType) {
     return false;
   }
@@ -798,32 +798,29 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
   }
   if (expr.kind == Expr::Kind::Call && semanticProgram != nullptr &&
-      semanticIndex != nullptr) {
-    const auto *queryFact = findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr);
+      semanticIndex != nullptr && expr.semanticNodeId != 0) {
+    const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
     if (queryFact == nullptr) {
-      if (expr.semanticNodeId != 0) {
-        assignSemanticResultError(
-            errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
-        return false;
-      }
-    } else {
-      if (!queryFact->hasResultType) {
-        return false;
-      }
-      out.isResult = true;
-      out.hasValue = queryFact->resultTypeHasValue;
-      out.errorType = queryFact->resultErrorType;
-      if (!out.hasValue) {
-        return true;
-      }
-      if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
-        assignSemanticResultError(
-            errorOut,
-            "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
-        return false;
-      }
+      assignSemanticResultError(
+          errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
+      return false;
+    }
+    if (!queryFact->hasResultType) {
+      return false;
+    }
+    out.isResult = true;
+    out.hasValue = queryFact->resultTypeHasValue;
+    out.errorType = queryFact->resultErrorType;
+    if (!out.hasValue) {
       return true;
     }
+    if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
+      assignSemanticResultError(
+          errorOut,
+          "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
+      return false;
+    }
+    return true;
   }
   return resolveResultExprInfo(
       expr, lookupLocal, resolveMethod, resolveDefinitionCallFn, lookupDefinitionResult, out);

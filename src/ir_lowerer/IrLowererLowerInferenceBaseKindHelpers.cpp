@@ -45,10 +45,10 @@ bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
                                               const SemanticProductIndex *semanticIndex,
                                               LocalInfo::ValueKind &kindOut) {
   kindOut = LocalInfo::ValueKind::Unknown;
-  if (semanticProgram == nullptr || semanticIndex == nullptr) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
-  const auto *queryFact = findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr);
+  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
   if (queryFact == nullptr) {
     return false;
   }
