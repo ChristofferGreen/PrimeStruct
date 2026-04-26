@@ -370,10 +370,12 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
   CHECK(dynamicCapacityEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 3);
+  REQUIRE(instructions.size() == 4);
   CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
   CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
