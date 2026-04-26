@@ -846,6 +846,17 @@
   CHECK(semanticsExprVectorHelpersSource.find(
             "preferredSoaHelperTargetForCollectionType(") !=
         std::string::npos);
+  const size_t samePathVectorMutatorBranch =
+      semanticsExprVectorHelpersSource.find(
+          "if ((resolvedType == \"/vector\" || normalizedTypeName == \"vector\") &&\n"
+          "        (normalizedHelperName == \"push\" || normalizedHelperName == \"reserve\") &&");
+  const size_t genericVectorCompatibilityBranch =
+      semanticsExprVectorHelpersSource.find(
+          "if (resolvedType == \"/vector\" &&\n"
+          "        isVectorCompatibilityHelperName(normalizedHelperName))");
+  CHECK(samePathVectorMutatorBranch != std::string::npos);
+  CHECK(genericVectorCompatibilityBranch != std::string::npos);
+  CHECK(samePathVectorMutatorBranch < genericVectorCompatibilityBranch);
   CHECK(semanticsExprVectorHelpersSource.find("auto preferredSoaMutatorHelperTarget =") ==
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find("auto hasVisibleSoaMutatorShadow =") ==

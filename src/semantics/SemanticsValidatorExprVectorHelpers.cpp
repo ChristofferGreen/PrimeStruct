@@ -497,11 +497,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       resolvedOut = preferredBareMapHelperTarget(normalizedHelperName);
       return true;
     }
-    if (resolvedType == "/vector" &&
-        isVectorCompatibilityHelperName(normalizedHelperName)) {
-      resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
-      return true;
-    }
     if ((resolvedType == "/vector" || normalizedTypeName == "vector") &&
         (normalizedHelperName == "push" || normalizedHelperName == "reserve") &&
         usesSamePathSoaHelperTargetForCollectionType(normalizedHelperName,
@@ -509,6 +504,11 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedHelperName,
                                                     "/vector");
+      return true;
+    }
+    if (resolvedType == "/vector" &&
+        isVectorCompatibilityHelperName(normalizedHelperName)) {
+      resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
       return true;
     }
     if ((resolvedType == "/soa_vector" || normalizedTypeName == "soa_vector") &&
