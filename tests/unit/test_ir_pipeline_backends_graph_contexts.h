@@ -1871,7 +1871,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(resultHelpersHeader.find("std::string *errorOut = nullptr") != std::string::npos);
   CHECK(resultHelpersHeader.find("bool validateSemanticProductResultMetadataCompleteness(") !=
         std::string::npos);
-  CHECK(resultHelpersSource.find("findSemanticProductQueryFactBySemanticId(*semanticIndex, expr)") !=
+  CHECK(resultHelpersSource.find("findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr)") !=
         std::string::npos);
   CHECK(resultHelpersSource.find("missing semantic-product query fact: ") != std::string::npos);
   CHECK(resultHelpersSource.find("missing semantic-product callable result metadata: ") !=

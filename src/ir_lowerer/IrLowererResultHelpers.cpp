@@ -77,10 +77,10 @@ bool applySemanticQueryFactResultInfo(const Expr &expr,
                                       const SemanticProgram *semanticProgram,
                                       const SemanticProductIndex *semanticIndex,
                                       ResultExprInfo &out) {
-  if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
+  if (semanticProgram == nullptr || semanticIndex == nullptr) {
     return false;
   }
-  const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+  const auto *queryFact = findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr);
   if (queryFact == nullptr || !queryFact->hasResultType) {
     return false;
   }
@@ -319,6 +319,22 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
                                      const SemanticProductIndex *semanticIndex,
                                      std::string *errorOut) {
   out = ResultExprInfo{};
+  const ResolveMethodCallWithLocalsFn noopResolveMethodCall =
+      [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
+  const ResolveCallDefinitionFn noopResolveDefinitionCall =
+      [](const Expr &) -> const Definition * { return nullptr; };
+  const LookupReturnInfoFn noopLookupReturnInfo =
+      [](const std::string &, ReturnInfo &) { return false; };
+  const InferExprKindWithLocalsFn noopInferExprKind =
+      [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; };
+  const ResolveMethodCallWithLocalsFn &resolveMethodCallFn =
+      resolveMethodCall ? resolveMethodCall : noopResolveMethodCall;
+  const ResolveCallDefinitionFn &resolveDefinitionCallFn =
+      resolveDefinitionCall ? resolveDefinitionCall : noopResolveDefinitionCall;
+  const LookupReturnInfoFn &lookupReturnInfoFn =
+      lookupReturnInfo ? lookupReturnInfo : noopLookupReturnInfo;
+  const InferExprKindWithLocalsFn &inferExprKindFn =
+      inferExprKind ? inferExprKind : noopInferExprKind;
   auto isIndexedArgsPackFileHandleReceiver = [&](const Expr &receiverExpr) {
     std::string accessName;
     if (receiverExpr.kind != Expr::Kind::Call || !getBuiltinArrayAccessName(receiverExpr, accessName) ||
@@ -381,11 +397,11 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     return local;
   };
   auto resolveMethod = [&](const Expr &callExpr) -> const Definition * {
-    return resolveMethodCall(callExpr, localsIn);
+    return resolveMethodCallFn(callExpr, localsIn);
   };
   auto lookupDefinitionResult = [&](const std::string &path, ResultExprInfo &resultOut) -> bool {
     ReturnInfo info;
-    if (!lookupReturnInfo(path, info) || !info.isResult) {
+    if (!lookupReturnInfoFn(path, info) || !info.isResult) {
       return false;
     }
     resultOut.isResult = true;
@@ -400,7 +416,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   };
   auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
     targetInfoOut = {};
-    const Definition *callee = resolveDefinitionCall(targetExpr);
+    const Definition *callee = resolveDefinitionCallFn(targetExpr);
     if (callee == nullptr) {
       return false;
     }
@@ -486,14 +502,14 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   if (isIfCall(expr) && expr.args.size() == 3) {
     auto resolveBranchResultInfo = [&](const Expr &branchExpr, ResultExprInfo &branchOut) {
-      if (isInlineBodyValueEnvelope(branchExpr, resolveDefinitionCall)) {
+      if (isInlineBodyValueEnvelope(branchExpr, resolveDefinitionCallFn)) {
         return resolveBodyResultExprInfo(
             branchExpr.bodyArguments,
             localsIn,
-            resolveMethodCall,
-            resolveDefinitionCall,
-            lookupReturnInfo,
-            inferExprKind,
+            resolveMethodCallFn,
+            resolveDefinitionCallFn,
+            lookupReturnInfoFn,
+            inferExprKindFn,
             branchOut,
             semanticProgram,
             semanticIndex,
@@ -502,10 +518,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       return resolveResultExprInfoFromLocals(
           branchExpr,
           localsIn,
-          resolveMethodCall,
-          resolveDefinitionCall,
-          lookupReturnInfo,
-          inferExprKind,
+          resolveMethodCallFn,
+          resolveDefinitionCallFn,
+          lookupReturnInfoFn,
+          inferExprKindFn,
           branchOut,
           semanticProgram,
           semanticIndex,
@@ -519,14 +535,14 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
     return mergeControlFlowResultInfos(thenResultInfo, elseResultInfo, out);
   }
-  if (isInlineBodyBlockEnvelope(expr, resolveDefinitionCall)) {
+  if (isInlineBodyBlockEnvelope(expr, resolveDefinitionCallFn)) {
     return resolveBodyResultExprInfo(
         expr.bodyArguments,
         localsIn,
-        resolveMethodCall,
-        resolveDefinitionCall,
-        lookupReturnInfo,
-        inferExprKind,
+        resolveMethodCallFn,
+        resolveDefinitionCallFn,
+        lookupReturnInfoFn,
+        inferExprKindFn,
         out,
         semanticProgram,
         semanticIndex,
@@ -538,7 +554,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.hasValue = (expr.args.size() > 1);
     if (out.hasValue && expr.args.size() == 2) {
       applyDirectResultValueMetadata(
-          expr.args[1], localsIn, resolveDefinitionCall, inferExprKind, semanticProgram, semanticIndex, out);
+          expr.args[1], localsIn, resolveDefinitionCallFn, inferExprKindFn, semanticProgram, semanticIndex, out);
     }
     return true;
   }
@@ -546,10 +562,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     ResultExprInfo sourceResultInfo;
     if (!resolveResultExprInfoFromLocals(expr.args[1],
                                          localsIn,
-                                         resolveMethodCall,
-                                         resolveDefinitionCall,
-                                         lookupReturnInfo,
-                                         inferExprKind,
+                                         resolveMethodCallFn,
+                                         resolveDefinitionCallFn,
+                                         lookupReturnInfoFn,
+                                         inferExprKindFn,
                                          sourceResultInfo,
                                          semanticProgram,
                                          semanticIndex,
@@ -567,10 +583,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     if (!resolveResultLambdaValueExprForMetadata(
             expr.args[2],
             lambdaLocals,
-            resolveMethodCall,
-            resolveDefinitionCall,
-            lookupReturnInfo,
-            inferExprKind,
+            resolveMethodCallFn,
+            resolveDefinitionCallFn,
+            lookupReturnInfoFn,
+            inferExprKindFn,
             mappedValueExpr,
             semanticProgram,
             semanticIndex,
@@ -581,7 +597,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = true;
     applyDirectResultValueMetadata(
-        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProgram, semanticIndex, out);
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCallFn, inferExprKindFn, semanticProgram, semanticIndex, out);
     if (out.valueCollectionKind == LocalInfo::Kind::Value &&
         out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
         out.valueStructType.empty() &&
@@ -595,10 +611,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     ResultExprInfo sourceResultInfo;
     if (!resolveResultExprInfoFromLocals(expr.args[1],
                                          localsIn,
-                                         resolveMethodCall,
-                                         resolveDefinitionCall,
-                                         lookupReturnInfo,
-                                         inferExprKind,
+                                         resolveMethodCallFn,
+                                         resolveDefinitionCallFn,
+                                         lookupReturnInfoFn,
+                                         inferExprKindFn,
                                          sourceResultInfo,
                                          semanticProgram,
                                          semanticIndex,
@@ -616,10 +632,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     if (!resolveResultLambdaValueExprForMetadata(
             expr.args[2],
             lambdaLocals,
-            resolveMethodCall,
-            resolveDefinitionCall,
-            lookupReturnInfo,
-            inferExprKind,
+            resolveMethodCallFn,
+            resolveDefinitionCallFn,
+            lookupReturnInfoFn,
+            inferExprKindFn,
             chainedResultExpr,
             semanticProgram,
             semanticIndex,
@@ -630,10 +646,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     ResultExprInfo chainedResultInfo;
     if (!resolveResultExprInfoFromLocals(*chainedResultExpr,
                                          lambdaLocals,
-                                         resolveMethodCall,
-                                         resolveDefinitionCall,
-                                         lookupReturnInfo,
-                                         inferExprKind,
+                                         resolveMethodCallFn,
+                                         resolveDefinitionCallFn,
+                                         lookupReturnInfoFn,
+                                         inferExprKindFn,
                                          chainedResultInfo,
                                          semanticProgram,
                                          semanticIndex,
@@ -662,20 +678,20 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     ResultExprInfo rightResultInfo;
     if (!resolveResultExprInfoFromLocals(expr.args[1],
                                          localsIn,
-                                         resolveMethodCall,
-                                         resolveDefinitionCall,
-                                         lookupReturnInfo,
-                                         inferExprKind,
+                                         resolveMethodCallFn,
+                                         resolveDefinitionCallFn,
+                                         lookupReturnInfoFn,
+                                         inferExprKindFn,
                                          leftResultInfo,
                                          semanticProgram,
                                          semanticIndex,
                                          errorOut) ||
         !resolveResultExprInfoFromLocals(expr.args[2],
                                          localsIn,
-                                         resolveMethodCall,
-                                         resolveDefinitionCall,
-                                         lookupReturnInfo,
-                                         inferExprKind,
+                                         resolveMethodCallFn,
+                                         resolveDefinitionCallFn,
+                                         lookupReturnInfoFn,
+                                         inferExprKindFn,
                                          rightResultInfo,
                                          semanticProgram,
                                          semanticIndex,
@@ -703,10 +719,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     if (!resolveResultLambdaValueExprForMetadata(
             expr.args[3],
             lambdaLocals,
-            resolveMethodCall,
-            resolveDefinitionCall,
-            lookupReturnInfo,
-            inferExprKind,
+            resolveMethodCallFn,
+            resolveDefinitionCallFn,
+            lookupReturnInfoFn,
+            inferExprKindFn,
             mappedValueExpr,
             semanticProgram,
             semanticIndex,
@@ -717,7 +733,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.isResult = true;
     out.hasValue = true;
     applyDirectResultValueMetadata(
-        *mappedValueExpr, lambdaLocals, resolveDefinitionCall, inferExprKind, semanticProgram, semanticIndex, out);
+        *mappedValueExpr, lambdaLocals, resolveDefinitionCallFn, inferExprKindFn, semanticProgram, semanticIndex, out);
     if (out.valueCollectionKind == LocalInfo::Kind::Value &&
         out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
         out.valueStructType.empty() &&
@@ -745,7 +761,7 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     if (expr.args.front().kind == Expr::Kind::Call) {
       const Expr &receiverExpr = expr.args.front();
       const Definition *receiverDef = receiverExpr.isMethodCall ? resolveMethod(receiverExpr)
-                                                                : resolveDefinitionCall(receiverExpr);
+                                                                : resolveDefinitionCallFn(receiverExpr);
       if (receiverDef != nullptr) {
         std::string collectionName;
         std::vector<std::string> collectionArgs;
@@ -761,9 +777,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     bool methodResolved = false;
     if (resolveMethodCallReturnKind(expr,
                                     localsIn,
-                                    resolveMethodCall,
-                                    resolveDefinitionCall,
-                                    lookupReturnInfo,
+                                    resolveMethodCallFn,
+                                    resolveDefinitionCallFn,
+                                    lookupReturnInfoFn,
                                     false,
                                     builtinTryAtKind,
                                     &methodResolved) &&
@@ -782,32 +798,35 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
   }
   if (expr.kind == Expr::Kind::Call && semanticProgram != nullptr &&
-      semanticIndex != nullptr && expr.semanticNodeId != 0) {
-    const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
+      semanticIndex != nullptr) {
+    const auto *queryFact = findSemanticProductQueryFact(semanticProgram, *semanticIndex, expr);
     if (queryFact == nullptr) {
-      assignSemanticResultError(
-          errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
-      return false;
-    }
-    if (!queryFact->hasResultType) {
-      return false;
-    }
-    out.isResult = true;
-    out.hasValue = queryFact->resultTypeHasValue;
-    out.errorType = queryFact->resultErrorType;
-    if (!out.hasValue) {
+      if (expr.semanticNodeId != 0) {
+        assignSemanticResultError(
+            errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
+        return false;
+      }
+    } else {
+      if (!queryFact->hasResultType) {
+        return false;
+      }
+      out.isResult = true;
+      out.hasValue = queryFact->resultTypeHasValue;
+      out.errorType = queryFact->resultErrorType;
+      if (!out.hasValue) {
+        return true;
+      }
+      if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
+        assignSemanticResultError(
+            errorOut,
+            "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
+        return false;
+      }
       return true;
     }
-    if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
-      assignSemanticResultError(
-          errorOut,
-          "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
-      return false;
-    }
-    return true;
   }
   return resolveResultExprInfo(
-      expr, lookupLocal, resolveMethod, resolveDefinitionCall, lookupDefinitionResult, out);
+      expr, lookupLocal, resolveMethod, resolveDefinitionCallFn, lookupDefinitionResult, out);
 }
 
 bool resolveResultExprInfoFromLocals(const Expr &expr,
