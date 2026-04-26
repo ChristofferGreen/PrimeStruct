@@ -125,6 +125,11 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     return UnsupportedNativeCallResult::NotHandled;
   }
   if (!expr.isMethodCall && (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
+    if (expr.name == "/count" && expr.namespacePrefix.empty() &&
+        expr.args.size() == 1 && expr.args.front().kind != Expr::Kind::Call &&
+        !isVectorTarget(expr.args.front(), localsIn)) {
+      return UnsupportedNativeCallResult::NotHandled;
+    }
     std::string targetName = "<none>";
     if (!expr.args.empty()) {
       if (!expr.args.front().name.empty()) {

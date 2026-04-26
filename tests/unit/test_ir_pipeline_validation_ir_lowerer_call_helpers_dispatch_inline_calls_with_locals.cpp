@@ -736,6 +736,20 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
             error) == Result::Error);
   CHECK(error == "count requires array, vector, map, or string target (target=<none>)");
 
+  primec::Expr scalarReceiver;
+  scalarReceiver.kind = primec::Expr::Kind::Literal;
+  scalarReceiver.intWidth = 32;
+  scalarReceiver.literalValue = 3;
+  callExpr.name = "/count";
+  callExpr.args = {scalarReceiver};
+  error.clear();
+  CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            callExpr,
+            [](const primec::Expr &, std::string &) { return false; },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  callExpr.args.clear();
+
   callExpr.name = "capacity";
   error.clear();
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
