@@ -1124,6 +1124,19 @@ TEST_CASE("ir lowerer call helpers resolve direct definition calls only") {
   CHECK(primec::ir_lowerer::resolveDefinitionCall(bindingCall, defMap, resolver) == nullptr);
 }
 
+TEST_CASE("ir lowerer call helpers reject missing definition path resolver") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/callee", &callee}};
+
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = "callee";
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(
+            directCall, defMap, primec::ir_lowerer::ResolveExprPathFn{}) == nullptr);
+}
+
 TEST_CASE("ir lowerer call helpers build definition call resolver") {
   primec::Definition callee;
   callee.fullPath = "/callee";

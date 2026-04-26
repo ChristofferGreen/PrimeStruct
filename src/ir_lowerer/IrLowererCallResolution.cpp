@@ -519,7 +519,8 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
                                         const std::unordered_map<std::string, const Definition *> &defMap,
                                         const ResolveExprPathFn &resolveExprPath,
                                         const SemanticProgram *semanticProgram) {
-  if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isMethodCall) {
+  if (callExpr.kind != Expr::Kind::Call || callExpr.isBinding || callExpr.isMethodCall ||
+      !resolveExprPath) {
     return nullptr;
   }
   const std::string resolved = resolveExprPath(callExpr);
