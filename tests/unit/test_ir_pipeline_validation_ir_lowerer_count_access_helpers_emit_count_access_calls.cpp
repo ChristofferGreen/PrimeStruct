@@ -865,6 +865,23 @@ TEST_CASE("ir lowerer template type parse helper splits nested template args") {
   CHECK_FALSE(primec::ir_lowerer::splitTemplateArgs("i32>", args));
 }
 
+TEST_CASE("ir lowerer template type parse helper splits template type names") {
+  std::string base;
+  std::string arg;
+
+  REQUIRE(primec::ir_lowerer::splitTemplateTypeName("Result< map<string, i64> , FileError >", base, arg));
+  CHECK(base == "Result");
+  CHECK(arg == " map<string, i64> , FileError ");
+
+  CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("Result<i64", base, arg));
+  CHECK(base == "Result<i64");
+  CHECK(arg.empty());
+
+  CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("i64", base, arg));
+  CHECK(base == "i64");
+  CHECK(arg.empty());
+}
+
 TEST_CASE("ir lowerer template type parse helper parses Result return type names") {
   bool hasValue = false;
   primec::ir_lowerer::LocalInfo::ValueKind valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;

@@ -2988,6 +2988,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
   }
+  if (normalizedTypeName == "vector" &&
+      normalizedMethodName != "count" &&
+      normalizedMethodName != "capacity" &&
+      normalizedMethodName != "at" &&
+      normalizedMethodName != "at_unsafe") {
+    const std::string legacyVectorMethodTarget = "/vector/" + normalizedMethodName;
+    if (hasDeclaredDefinitionPath(legacyVectorMethodTarget)) {
+      resolvedOut = legacyVectorMethodTarget;
+      return true;
+    }
+  }
   const bool isConcreteExperimentalSoaReceiver =
       resolvedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
   const bool isCanonicalSoaWrapperMethod =
