@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4159: Move lowerer import-alias handling to a frontend-owned
+  syntax helper. Completed: `include/primec/FrontendSyntax.h` and
+  `src/FrontendSyntax.cpp` now own wildcard import detection, syntax
+  import-alias map construction, and alias target normalization. Production
+  lowerer setup now calls `primec::buildSyntaxImportAliases(...)` from
+  `IrLowererLowerImportsStructsSetup.cpp`, while the remaining lowerer helper
+  entry points are thin compatibility wrappers. Focused coverage now exercises
+  the frontend syntax helper directly and source-locks the lowerer-to-frontend
+  delegation boundary.
 - ✓ TODO-4165: Add debugger and source-map provenance parity coverage.
   Completed: `tests/unit/test_ir_pipeline_serialization_control_flow_metadata.h`
   now lowers a real PrimeStruct program with a published semantic product,

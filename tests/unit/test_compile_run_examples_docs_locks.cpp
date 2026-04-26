@@ -280,7 +280,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("- TODO-4162") == std::string::npos);
   CHECK(todo.find("- TODO-4165") == std::string::npos);
-  CHECK(todo.find("- TODO-4159") != std::string::npos);
+  CHECK(todo.find("- TODO-4159") == std::string::npos);
+  CHECK(todo.find("- TODO-4160") != std::string::npos);
   CHECK(todo.find("- TODO-4164") != std::string::npos);
   CHECK(todo.find("- TODO-4174") != std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4161\n- TODO-4173\n- TODO-4176") !=
@@ -289,7 +290,7 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("- Release-gate stability and test-suite audit follow-up:") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4159\n2. TODO-4160") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4160\n2. TODO-4161") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4158") == std::string::npos);
   CHECK(todo.find("- TODO-4169") == std::string::npos);

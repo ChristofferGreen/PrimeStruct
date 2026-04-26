@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4159
 - TODO-4160
 - TODO-4163
 - TODO-4164
@@ -71,8 +70,8 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4159,
-  TODO-4160, TODO-4161, TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4160,
+  TODO-4161, TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4163,
   TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -82,22 +81,21 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4159
-2. TODO-4160
-3. TODO-4161
-4. TODO-4163
-5. TODO-4164
-6. TODO-4166
-7. TODO-4174
-8. TODO-4173
-9. TODO-4176
-10. TODO-4175
-11. TODO-4179
-12. TODO-4177
-13. TODO-4178
-14. TODO-4180
-15. TODO-4182
-16. TODO-4181
+1. TODO-4160
+2. TODO-4161
+3. TODO-4163
+4. TODO-4164
+5. TODO-4166
+6. TODO-4174
+7. TODO-4173
+8. TODO-4176
+9. TODO-4175
+10. TODO-4179
+11. TODO-4177
+12. TODO-4178
+13. TODO-4180
+14. TODO-4182
+15. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -132,7 +130,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4159 |
+| Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -516,21 +514,3 @@ Task template:
   - stop_rule: Stop once one meaningful slice of the semantic-product API is
     decomposed; do not attempt a repo-wide header taxonomy rewrite in one
     slice.
-
-- [ ] TODO-4159: Move lowerer import-alias handling to a frontend-owned syntax helper
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - scope: Move the touched import-alias expansion or shorthand-resolution
-    logic out of lowerer-specific setup into a frontend-owned syntax helper so
-    lowering stops owning syntax convenience behavior.
-  - acceptance:
-    - The touched lowerer files no longer own the moved import-alias handling
-      logic.
-    - The replacement helper surface is owned outside lowerer-specific setup
-      and outside private semantics internals.
-    - Release coverage for the touched alias-driven lowering paths remains
-      unchanged.
-  - stop_rule: Stop once one canonical import-alias helper surface is
-    introduced and production lowering uses it; do not broaden into unrelated
-    import resolver redesign.

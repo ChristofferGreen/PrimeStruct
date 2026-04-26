@@ -69,6 +69,7 @@ set(PRIMESTRUCT_SUPPORT_SOURCES
 
 set(PRIMESTRUCT_FRONTEND_SOURCES
   src/AstPrinter.cpp
+  src/FrontendSyntax.cpp
   src/ImportResolver.cpp
   src/ImportResolverHelpers.cpp
   src/Lexer.cpp

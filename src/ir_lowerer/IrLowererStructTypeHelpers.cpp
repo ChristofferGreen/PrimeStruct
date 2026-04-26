@@ -7,22 +7,13 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/FrontendSyntax.h"
 
 #include <sstream>
 
 namespace primec::ir_lowerer {
 
 namespace {
-
-std::string normalizeMapImportAliasPath(const std::string &path) {
-  if (path.empty() || path.front() == '/') {
-    return path;
-  }
-  if (path.rfind("map/", 0) == 0 || path.rfind("std/collections/map/", 0) == 0) {
-    return "/" + path;
-  }
-  return path;
-}
 
 bool isStructLikeSemanticProductCategory(const std::string &category) {
   return category == "struct" || category == "pod" || category == "handle" || category == "gpu_lane";
@@ -203,15 +194,7 @@ ResolveStructTypeNameFn makeResolveStructTypePathFromScope(
 }
 
 bool isWildcardImportPath(const std::string &path, std::string &prefixOut) {
-  if (path.size() >= 2 && path.compare(path.size() - 2, 2, "/*") == 0) {
-    prefixOut = path.substr(0, path.size() - 2);
-    return true;
-  }
-  if (path.find('/', 1) == std::string::npos) {
-    prefixOut = path;
-    return true;
-  }
-  return false;
+  return primec::isSyntaxWildcardImportPath(path, prefixOut);
 }
 
 void buildDefinitionMapAndStructNames(
@@ -300,37 +283,7 @@ std::unordered_map<std::string, std::string> buildImportAliasesFromProgram(
     const std::vector<std::string> &imports,
     const std::vector<Definition> &definitions,
     const std::unordered_map<std::string, const Definition *> &defMap) {
-  std::unordered_map<std::string, std::string> importAliases;
-  for (const auto &importPath : imports) {
-    if (importPath.empty() || importPath[0] != '/') {
-      continue;
-    }
-    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-      std::string prefix = importPath.substr(0, importPath.size() - 2);
-      const std::string scopedPrefix = prefix + "/";
-      for (const auto &def : definitions) {
-        if (def.fullPath.rfind(scopedPrefix, 0) != 0) {
-          continue;
-        }
-        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
-        if (remainder.empty() || remainder.find('/') != std::string::npos) {
-          continue;
-        }
-        importAliases.emplace(remainder, def.fullPath);
-      }
-      continue;
-    }
-    auto defIt = defMap.find(importPath);
-    if (defIt == defMap.end()) {
-      continue;
-    }
-    const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
-    if (remainder.empty()) {
-      continue;
-    }
-    importAliases.emplace(remainder, importPath);
-  }
-  return importAliases;
+  return primec::buildSyntaxImportAliases(imports, definitions, defMap);
 }
 
 bool resolveStructTypePathFromScope(
@@ -367,7 +320,7 @@ bool resolveStructTypePathFromScope(
   }
   auto importIt = importAliases.find(typeName);
   if (importIt != importAliases.end()) {
-    const std::string normalizedAlias = normalizeMapImportAliasPath(importIt->second);
+    const std::string normalizedAlias = primec::normalizeSyntaxImportAliasTargetPath(importIt->second);
     if (structNames.count(normalizedAlias) > 0) {
       resolvedOut = normalizedAlias;
       return true;
@@ -395,7 +348,7 @@ std::string resolveStructTypePathCandidateFromScope(
   }
   auto importIt = importAliases.find(typeName);
   if (importIt != importAliases.end()) {
-    return normalizeMapImportAliasPath(importIt->second);
+    return primec::normalizeSyntaxImportAliasTargetPath(importIt->second);
   }
   return resolved;
 }
@@ -434,7 +387,7 @@ std::string resolveStructLayoutExprPathFromScope(
     }
     auto importIt = importAliases.find(expr.name);
     if (importIt != importAliases.end()) {
-      return normalizeMapImportAliasPath(importIt->second);
+      return primec::normalizeSyntaxImportAliasTargetPath(importIt->second);
     }
     return expr.namespacePrefix + "/" + expr.name;
   }
@@ -444,7 +397,7 @@ std::string resolveStructLayoutExprPathFromScope(
   }
   auto importIt = importAliases.find(expr.name);
   if (importIt != importAliases.end()) {
-    return normalizeMapImportAliasPath(importIt->second);
+    return primec::normalizeSyntaxImportAliasTargetPath(importIt->second);
   }
   return root;
 }

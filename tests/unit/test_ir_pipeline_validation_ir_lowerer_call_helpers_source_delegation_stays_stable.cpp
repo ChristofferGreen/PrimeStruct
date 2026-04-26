@@ -3771,4 +3771,57 @@ TEST_CASE("ir lowerer call helpers detect tail execution candidates from stateme
   CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
 }
 
+TEST_CASE("lowerer import aliases are delegated to frontend syntax helpers") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path frontendSyntaxHeaderPath =
+      repoRoot / "include" / "primec" / "FrontendSyntax.h";
+  const std::filesystem::path frontendSyntaxSourcePath = repoRoot / "src" / "FrontendSyntax.cpp";
+  const std::filesystem::path lowerImportsStructsSetupSourcePath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerImportsStructsSetup.cpp";
+  const std::filesystem::path structTypeHelpersSourcePath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererStructTypeHelpers.cpp";
+  const std::filesystem::path cmakePath = repoRoot / "CMakeLists.txt";
+
+  REQUIRE(std::filesystem::exists(frontendSyntaxHeaderPath));
+  REQUIRE(std::filesystem::exists(frontendSyntaxSourcePath));
+  REQUIRE(std::filesystem::exists(lowerImportsStructsSetupSourcePath));
+  REQUIRE(std::filesystem::exists(structTypeHelpersSourcePath));
+  REQUIRE(std::filesystem::exists(cmakePath));
+
+  const std::string frontendSyntaxHeader = readText(frontendSyntaxHeaderPath);
+  const std::string frontendSyntaxSource = readText(frontendSyntaxSourcePath);
+  const std::string lowerImportsStructsSetupSource = readText(lowerImportsStructsSetupSourcePath);
+  const std::string structTypeHelpersSource = readText(structTypeHelpersSourcePath);
+  const std::string cmake = readText(cmakePath);
+
+  CHECK(frontendSyntaxHeader.find("buildSyntaxImportAliases(") != std::string::npos);
+  CHECK(frontendSyntaxHeader.find("normalizeSyntaxImportAliasTargetPath(") != std::string::npos);
+  CHECK(frontendSyntaxSource.find("std::unordered_map<std::string, std::string> buildSyntaxImportAliases(") !=
+        std::string::npos);
+  CHECK(frontendSyntaxSource.find("isSyntaxWildcardImportPath(importPath, wildcardPrefix)") !=
+        std::string::npos);
+  CHECK(cmake.find("src/FrontendSyntax.cpp") != std::string::npos);
+  CHECK(lowerImportsStructsSetupSource.find("#include \"primec/FrontendSyntax.h\"") !=
+        std::string::npos);
+  CHECK(lowerImportsStructsSetupSource.find("primec::buildSyntaxImportAliases(") !=
+        std::string::npos);
+  CHECK(lowerImportsStructsSetupSource.find(
+            "buildImportAliasesFromProgram(program.imports, program.definitions, defMapOut)") ==
+        std::string::npos);
+  CHECK(structTypeHelpersSource.find("return primec::buildSyntaxImportAliases(") !=
+        std::string::npos);
+  CHECK(structTypeHelpersSource.find("normalizeMapImportAliasPath(") == std::string::npos);
+}
+
 TEST_SUITE_END();

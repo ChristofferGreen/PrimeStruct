@@ -1,4 +1,5 @@
 #include "test_ir_pipeline_validation_helpers.h"
+#include "primec/FrontendSyntax.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
@@ -173,13 +174,16 @@ TEST_CASE("ir lowerer call helpers classify struct definitions") {
   CHECK_FALSE(primec::ir_lowerer::isStructDefinition(mixedDef));
 }
 
-TEST_CASE("ir lowerer struct type helpers build setup import aliases") {
+TEST_CASE("frontend syntax helpers build setup import aliases") {
   std::string prefix;
-  CHECK(primec::ir_lowerer::isWildcardImportPath("/pkg/*", prefix));
+  CHECK(primec::isSyntaxWildcardImportPath("/pkg/*", prefix));
   CHECK(prefix == "/pkg");
-  CHECK(primec::ir_lowerer::isWildcardImportPath("/single", prefix));
+  CHECK(primec::isSyntaxWildcardImportPath("/single", prefix));
   CHECK(prefix == "/single");
-  CHECK_FALSE(primec::ir_lowerer::isWildcardImportPath("/pkg/nested", prefix));
+  CHECK_FALSE(primec::isSyntaxWildcardImportPath("/pkg/nested", prefix));
+  CHECK(primec::normalizeSyntaxImportAliasTargetPath("map/at") == "/map/at");
+  CHECK(primec::normalizeSyntaxImportAliasTargetPath("std/collections/map/count") ==
+        "/std/collections/map/count");
 
   primec::Definition foo;
   foo.fullPath = "/pkg/foo";
@@ -202,8 +206,7 @@ TEST_CASE("ir lowerer struct type helpers build setup import aliases") {
       "relative",
       "/pkg/bar",
   };
-  const auto aliases =
-      primec::ir_lowerer::buildImportAliasesFromProgram(imports, definitions, defMap);
+  const auto aliases = primec::buildSyntaxImportAliases(imports, definitions, defMap);
   CHECK(aliases.size() == 3);
   CHECK(aliases.at("foo") == "/pkg/foo");
   CHECK(aliases.at("bar") == "/pkg/bar");

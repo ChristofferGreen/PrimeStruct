@@ -4,6 +4,7 @@
 
 #include "IrLowererStructLayoutHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
+#include "primec/FrontendSyntax.h"
 
 namespace primec::ir_lowerer {
 
@@ -22,7 +23,7 @@ bool runLowerImportsStructsSetup(
   structFieldInfoByNameOut.clear();
 
   buildDefinitionMapAndStructNames(program.definitions, defMapOut, structNamesOut, semanticProgram);
-  importAliasesOut = buildImportAliasesFromProgram(program.imports, program.definitions, defMapOut);
+  importAliasesOut = primec::buildSyntaxImportAliases(program.imports, program.definitions, defMapOut);
 
   auto resolveStructTypePath = [&](const std::string &typeName, const std::string &namespacePrefix) -> std::string {
     return resolveStructTypePathCandidateFromScope(typeName, namespacePrefix, structNamesOut, importAliasesOut);
