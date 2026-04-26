@@ -357,7 +357,7 @@ TEST_CASE("ir lowerer setup type helper rejects direct vector access helper rout
   CHECK(aliasAtUnsafeResolveCalls == 0);
 }
 
-TEST_CASE("ir lowerer setup type helper skips explicit map helper call routing") {
+TEST_CASE("ir lowerer setup type helper keeps explicit map access return kinds same-path") {
   primec::Definition countDef;
   countDef.fullPath = "/map/count";
   primec::Definition atDef;
@@ -432,7 +432,7 @@ TEST_CASE("ir lowerer setup type helper skips explicit map helper call routing")
   aliasAtCall.name = "/map/at";
   aliasAtCall.args = {receiverExpr, keyExpr};
   int aliasAtResolveCalls = 0;
-  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasAtCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -447,8 +447,8 @@ TEST_CASE("ir lowerer setup type helper skips explicit map helper call routing")
       false,
       kindOut,
       &methodResolved));
-  CHECK_FALSE(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(aliasAtResolveCalls == 0);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
@@ -458,7 +458,7 @@ TEST_CASE("ir lowerer setup type helper skips explicit map helper call routing")
   aliasAtUnsafeCall.name = "/map/at_unsafe";
   aliasAtUnsafeCall.args = {keyExpr, receiverExpr};
   int aliasAtUnsafeResolveCalls = 0;
-  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasAtUnsafeCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -477,8 +477,8 @@ TEST_CASE("ir lowerer setup type helper skips explicit map helper call routing")
       false,
       kindOut,
       &methodResolved));
-  CHECK_FALSE(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(aliasAtUnsafeResolveCalls == 0);
 }
 

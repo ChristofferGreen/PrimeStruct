@@ -578,8 +578,13 @@ bool resolveCountMethodCallReturnKind(const Expr &callExpr,
   const bool preferDeclaredAccessReturnKind =
       isAccessCall && isExplicitMapHelperFallbackPath(callExpr);
   if (preferDeclaredAccessReturnKind) {
-    for (const auto &candidatePath : collectionHelperPathCandidates(scopedCallPath)) {
-      if (resolveReturnInfoKindForPath(candidatePath, getReturnInfo, requireArrayReturn, kindOut)) {
+    std::vector<std::string> candidatePaths = {scopedCallPath};
+    if (scopedCallPath != resolveExprPath(callExpr)) {
+      candidatePaths.push_back(resolveExprPath(callExpr));
+    }
+    for (const auto &candidatePath : candidatePaths) {
+      if (resolveReturnInfoKindForPath(
+              candidatePath, getReturnInfo, requireArrayReturn, kindOut)) {
         if (methodResolvedOut != nullptr) {
           *methodResolvedOut = true;
         }
