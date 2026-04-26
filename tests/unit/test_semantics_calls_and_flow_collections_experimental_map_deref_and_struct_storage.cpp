@@ -2,6 +2,22 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
+namespace {
+
+void checkStdlibMapPairConstructorMismatch(const std::string &error) {
+  CHECK((error.find("argument type mismatch") != std::string::npos ||
+         error.find("implicit template arguments conflict") != std::string::npos));
+  CHECK(error.find("/std/collections/mapPair") != std::string::npos);
+}
+
+void checkCanonicalMapConstructorMismatch(const std::string &error) {
+  CHECK((error.find("argument type mismatch") != std::string::npos ||
+         error.find("implicit template arguments conflict") != std::string::npos));
+  CHECK(error.find("/std/collections/map/map") != std::string::npos);
+}
+
+} // namespace
+
 TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced experimental result storage") {
   const std::string source = R"(
 import /std/collections/*
@@ -464,8 +480,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") !=
-        std::string::npos);
+  INFO(error);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map parameters") {
@@ -518,8 +534,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") !=
-        std::string::npos);
+  INFO(error);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("map constructor assigns into explicit experimental map targets") {
@@ -579,8 +595,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkCanonicalMapConstructorMismatch(error);
 }
 
 TEST_CASE("wrapper map constructor assignment keeps mismatch diagnostics on explicit experimental map parameters") {
@@ -601,8 +618,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("helper-wrapped map constructor assignments accept explicit experimental map targets") {

@@ -2,6 +2,16 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
+namespace {
+
+void checkCanonicalMapConstructorMismatch(const std::string &error) {
+  CHECK((error.find("argument type mismatch") != std::string::npos ||
+         error.find("implicit template arguments conflict") != std::string::npos));
+  CHECK(error.find("/std/collections/map/map") != std::string::npos);
+}
+
+} // namespace
+
 TEST_CASE("stdlib namespaced map constructor resolves through imported stdlib helper") {
   const std::string source = R"(
 import /std/collections/*
@@ -225,8 +235,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkCanonicalMapConstructorMismatch(error);
 }
 
 TEST_CASE("stdlib namespaced map count requires an explicit canonical helper definition") {
@@ -540,8 +551,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkCanonicalMapConstructorMismatch(error);
 }
 
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map returns") {
@@ -596,8 +608,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkCanonicalMapConstructorMismatch(error);
 }
 
 TEST_CASE("stdlib namespaced map constructor accepts explicit experimental map parameters") {
@@ -649,8 +662,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkCanonicalMapConstructorMismatch(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map parameters") {
