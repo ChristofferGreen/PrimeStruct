@@ -218,7 +218,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
 }
 
-TEST_CASE("rejects native canonical vector unsafe access count shadow with entry indexing diagnostics") {
+TEST_CASE("rejects native canonical vector unsafe access count shadow with expression-call diagnostics") {
   const std::string source = R"(
 [return<int>]
 /string/count([string] values) {
@@ -248,7 +248,7 @@ main() {
   CHECK(runCommand(compileCmd) == 2);
   const std::string diagnostics = readFile(errPath);
   CHECK(diagnostics.find("native backend only supports") != std::string::npos);
-  CHECK(diagnostics.find("entry argument indexing") != std::string::npos);
+  CHECK(diagnostics.find("call=/count") != std::string::npos);
 }
 
 TEST_CASE("rejects native canonical vector method access builtin string count shadow") {
