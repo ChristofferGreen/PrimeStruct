@@ -56,28 +56,25 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4176
+- TODO-4179
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4175
+- TODO-4177
 
 ### Priority Lanes (Current)
 
-- User-authored AST transform hooks: TODO-4176, TODO-4175
 - `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
   TODO-4178, TODO-4180, TODO-4182, TODO-4181
 
 ### Execution Queue (Recommended)
 
-1. TODO-4176
-2. TODO-4175
-3. TODO-4179
-4. TODO-4177
-5. TODO-4178
-6. TODO-4180
-7. TODO-4182
-8. TODO-4181
+1. TODO-4179
+2. TODO-4177
+3. TODO-4178
+4. TODO-4180
+5. TODO-4182
+6. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -85,7 +82,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | none |
-| Compile-time macro hooks and AST transform ownership | TODO-4176, TODO-4175 |
+| Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
@@ -108,8 +105,8 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| AST transform hook conformance | TODO-4176 |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
+| AST transform hook conformance | none |
+| CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
@@ -323,45 +320,3 @@ Task template:
   - stop_rule: Stop after one coherent borrowed-view maturity slice is stable
     on the canonical path; do not attempt every future SoA borrow feature at
     once.
-
-- [ ] TODO-4176: Add a checked-in `.prime` example for user-authored AST transforms
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Compile-time macro hooks
-  - depends_on: TODO-4173
-  - scope: Add one checked-in `.prime` AST-transform module plus one consumer
-    `.prime` source that imports it, attaches `[trace_calls, ...]`, and serves
-    as the canonical example surface for docs and release validation.
-  - acceptance:
-    - The repo contains one `.prime` file that declares a user-authored AST
-      transform with the approved declaration contract.
-    - The repo contains one `.prime` file that imports that transform and uses
-      it through the bare `[trace_calls, ...]` attachment syntax on a
-      definition.
-    - The touched docs or release validation reference that checked-in example
-      instead of only inline pseudo-snippets.
-  - stop_rule: Stop after one end-to-end example module pair is checked in and
-    wired into docs or validation; do not broaden this slice into multiple
-    derives, text transforms, or stdlib packaging work.
-
-- [ ] TODO-4175: Track user-authored AST transform hooks
-  - owner: human
-  - created_at: 2026-04-25
-  - phase: Compile-time macro hooks
-  - depends_on: TODO-4174, TODO-4173, TODO-4176
-  - scope: Track the first user-authored AST transform lane so definitions can
-    attach visible transform symbols like `[trace_calls, effects(...), int]`,
-    resolve them through normal imports, and keep the docs/spec/examples aligned
-    with the chosen `[ast]` marker or signature-inference contract.
-  - acceptance:
-    - TODO-4174, TODO-4173, and TODO-4176 land with one documented
-      AST-transform surface that resolves normal local or imported symbols from
-      the transform list.
-    - `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`, and
-      `docs/CodeExamples.md` describe the same attachment syntax and declaration
-      contract for user-authored AST transforms.
-    - The tracked lane stays limited to AST transforms on definitions; text
-      rewriting and broader CT-eval expansion remain out of scope.
-  - stop_rule: Stop after the first definition-attached AST transform lane is
-    documented and validated; do not fold text transforms, struct/type derives,
-    or general CT-eval work into this tracker.

@@ -54,6 +54,10 @@ From `build-debug/`:
 - `examples/3.Surface/raytracer.prime`: simple ray tracer (reflective spheres + checkerboard) emitting PPM.
 - `examples/3.Surface/soa_vector_ecs_draft.prime`: draft ECS-style `soa_vector` update loop with deferred structural mutation notes (semantic/example-only until SoA lowering/runtime support lands).
 
+### 4.Transforms
+- `examples/4.Transforms/trace_calls_transform.prime`: user-authored `FunctionAst` transform hook module.
+- `examples/4.Transforms/trace_calls_consumer.prime`: imports the hook module and attaches `[trace_calls return<int>]`.
+
 ### borrow_checker_negative
 - `examples/borrow_checker_negative/`: intentionally non-compiling borrow-checker examples.
 - Each `.prime` file has a matching `.expected.txt` with required diagnostics JSON fragments.

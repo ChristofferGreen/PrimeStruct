@@ -1,0 +1,7 @@
+import<"./trace_calls_transform.prime">
+import /ast_hooks
+
+[trace_calls return<int>]
+main() {
+  return(1i32)
+}

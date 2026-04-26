@@ -38,6 +38,34 @@ TEST_CASE("compiles web examples to IR") {
                         spinningCubeBackendsSupportArrayReturns());
 }
 
+TEST_CASE("checked-in ast transform example runs in VM") {
+  std::filesystem::path consumerPath =
+      std::filesystem::path("..") / "examples" / "4.Transforms" / "trace_calls_consumer.prime";
+  std::filesystem::path hookPath =
+      std::filesystem::path("..") / "examples" / "4.Transforms" / "trace_calls_transform.prime";
+  if (!std::filesystem::exists(consumerPath)) {
+    consumerPath =
+        std::filesystem::current_path() / "examples" / "4.Transforms" / "trace_calls_consumer.prime";
+  }
+  if (!std::filesystem::exists(hookPath)) {
+    hookPath =
+        std::filesystem::current_path() / "examples" / "4.Transforms" / "trace_calls_transform.prime";
+  }
+  REQUIRE(std::filesystem::exists(consumerPath));
+  REQUIRE(std::filesystem::exists(hookPath));
+
+  const std::string hookSource = readFile(hookPath.string());
+  const std::string consumerSource = readFile(consumerPath.string());
+  CHECK(hookSource.find("[public ast return<FunctionAst>]") != std::string::npos);
+  CHECK(hookSource.find("trace_calls([FunctionAst] fn)") != std::string::npos);
+  CHECK(consumerSource.find("import<\"./trace_calls_transform.prime\">") != std::string::npos);
+  CHECK(consumerSource.find("import /ast_hooks") != std::string::npos);
+  CHECK(consumerSource.find("[trace_calls return<int>]") != std::string::npos);
+
+  const std::string runCmd = "./primec --emit=vm " + quoteShellArg(consumerPath.string()) + " --entry /main";
+  CHECK(runCommand(runCmd) == 42);
+}
+
 TEST_CASE("collection docs snippets stay code-examples style and executable") {
   auto resolveDocPath = [](const std::string &name) -> std::filesystem::path {
     std::filesystem::path path = std::filesystem::path("..") / "docs" / name;

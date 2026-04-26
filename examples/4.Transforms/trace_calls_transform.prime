@@ -1,0 +1,6 @@
+namespace ast_hooks {
+  [public ast return<FunctionAst>]
+  trace_calls([FunctionAst] fn) {
+    return(replace_body_with_return_i32(fn, 42i32))
+  }
+}

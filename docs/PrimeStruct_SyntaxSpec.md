@@ -79,7 +79,9 @@ main() {
 Imported hooks must be `public`. A definition attaches a visible hook by bare name, slash path, or an imported alias;
 resolution records the hook's full path on the transform metadata, rejects ambiguous imports and private imported hooks,
 and rejects `text(hook_name)` because AST hooks are semantic-phase metadata. Executable hooks are compile-time only and
-are removed from the runtime program after the touched definition is rewritten.
+are removed from the runtime program after the touched definition is rewritten. The canonical checked-in module pair is
+`examples/4.Transforms/trace_calls_transform.prime` plus
+`examples/4.Transforms/trace_calls_consumer.prime`.
 
 The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ... } else { ... }`,
 indexing `value[index]`, collection method forms like `value.push(x)`), then rewrites them into a small canonical core

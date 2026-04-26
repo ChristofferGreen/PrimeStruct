@@ -6,6 +6,25 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4175: Track user-authored AST transform hooks. Completed: the first
+  definition-attached AST transform lane is now fully represented by the
+  resolved metadata slice, the executable `FunctionAst` rewrite slice, and the
+  checked-in module/consumer example slice. `docs/PrimeStruct.md`,
+  `docs/PrimeStruct_SyntaxSpec.md`, and `docs/CodeExamples.md` now describe
+  the same `[ast]` declaration contract, bare `[trace_calls ...]` attachment
+  syntax, import visibility rules, and narrow executable helper surface while
+  keeping text transforms, broader derives, and general CT-eval expansion out
+  of scope.
+- ✓ TODO-4176: Add a checked-in `.prime` example for user-authored AST
+  transforms. Completed: `examples/4.Transforms/trace_calls_transform.prime`
+  now declares the public executable `[ast return<FunctionAst>]` hook module,
+  and `examples/4.Transforms/trace_calls_consumer.prime` imports that module,
+  imports `/ast_hooks`, and attaches `[trace_calls return<int>]` to `/main`.
+  Compile-run example coverage now source-locks the two files and runs the
+  consumer through the VM path expecting the transformed return value. The
+  example README plus the PrimeStruct, syntax-spec, and code-examples docs now
+  point at the checked-in module pair instead of relying only on inline
+  snippets.
 - ✓ TODO-4173: Execute user-authored AST transform hooks in the semantic
   pipeline. Completed: semantic transform preprocessing now accepts executable
   `[ast return<FunctionAst>] hook([FunctionAst] fn)` declarations, evaluates

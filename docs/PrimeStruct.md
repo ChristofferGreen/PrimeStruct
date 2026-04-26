@@ -1484,7 +1484,8 @@ module {
   imported hooks, and rejects `text(hook_name)` because AST hooks are semantic-phase metadata. Executable v1 hooks are
   compile-time only: the semantic pipeline evaluates the single supported `FunctionAst` result helper,
   `replace_body_with_return_i32`, rewrites the touched definition body before downstream validation/lowering, and removes
-  hook definitions from the runtime program.
+  hook definitions from the runtime program. The checked-in example module and consumer live under
+  `examples/4.Transforms/`.
 
 ### Example function syntax
 ```

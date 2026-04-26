@@ -73,7 +73,8 @@ into the one below it:
 
 The `examples/` tree follows the same naming, so `examples/0.Concrete/` shows
 the fully explicit form and `examples/3.Surface/` shows the intended user-facing
-surface.
+surface, while `examples/4.Transforms/` shows checked transform modules and
+consumers without defining a new language level.
 
 ## Feature Snapshot
 
@@ -291,6 +292,7 @@ If you want the default debug build instead:
 For more runnable samples, start in:
 - [`examples/0.Concrete/`](examples/0.Concrete/)
 - [`examples/3.Surface/`](examples/3.Surface/)
+- [`examples/4.Transforms/`](examples/4.Transforms/)
 
 Inspect the pipeline stages directly:
 
