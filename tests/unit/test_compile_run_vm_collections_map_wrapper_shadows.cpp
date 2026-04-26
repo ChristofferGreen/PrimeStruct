@@ -589,7 +589,7 @@ main() {
   CHECK(runCommand(runCmd) == 65);
 }
 
-TEST_CASE("keeps builtin array access on vm user array at call shadow") {
+TEST_CASE("runs vm with user array at call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at([array<i32>] values, [i32] index) {
@@ -625,7 +625,7 @@ main() {
   CHECK(runCommand(runCmd) == 63);
 }
 
-TEST_CASE("keeps builtin array access on vm user array at_unsafe call shadow") {
+TEST_CASE("runs vm with user array at_unsafe call shadow") {
   const std::string source = R"(
 [return<int>]
 /array/at_unsafe([array<i32>] values, [i32] index) {

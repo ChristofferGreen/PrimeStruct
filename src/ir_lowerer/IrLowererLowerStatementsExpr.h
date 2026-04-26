@@ -86,6 +86,14 @@
           }
           return helperPath;
         };
+        auto isDirectCollectionHelperPath = [](const std::string &path) {
+          return path.rfind("/array/", 0) == 0 ||
+                 path.rfind("/map/", 0) == 0 ||
+                 path.rfind("/std/collections/vector/", 0) == 0 ||
+                 path.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+                 path.rfind("/std/collections/map/", 0) == 0 ||
+                 path.rfind("/std/collections/experimental_map/", 0) == 0;
+        };
         auto hasMapEntryCtorArgs = [](const Expr &callExpr) {
           auto isMapEntryCallExpr = [](const Expr &candidate) {
             if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
@@ -356,21 +364,12 @@
               isSoaWrapperHelperFamilyPath(rawPath)) {
             directCallee = findDirectSoaWrapperDefinition(expr, rawPath);
           }
-          if (directCallee == nullptr &&
-              (rawPath.rfind("/map/", 0) == 0 ||
-               rawPath.rfind("/std/collections/vector/", 0) == 0 ||
-               rawPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-               rawPath.rfind("/std/collections/map/", 0) == 0 ||
-               rawPath.rfind("/std/collections/experimental_map/", 0) == 0)) {
+          const std::string resolvedExprPath = resolveExprPath(expr);
+          if (directCallee == nullptr && isDirectCollectionHelperPath(rawPath)) {
             directCallee = findDirectHelperDefinition(rawPath);
           }
-          if (directCallee == nullptr &&
-              (rawPath.rfind("/map/", 0) == 0 ||
-               rawPath.rfind("/std/collections/vector/", 0) == 0 ||
-               rawPath.rfind("/std/collections/experimental_vector/", 0) == 0 ||
-               rawPath.rfind("/std/collections/map/", 0) == 0 ||
-               rawPath.rfind("/std/collections/experimental_map/", 0) == 0)) {
-            directCallee = findDirectHelperDefinition(resolveExprPath(expr));
+          if (directCallee == nullptr && isDirectCollectionHelperPath(resolvedExprPath)) {
+            directCallee = findDirectHelperDefinition(resolvedExprPath);
           }
           if (directCallee != nullptr) {
             if (ir_lowerer::isStructDefinition(*directCallee)) {
@@ -395,6 +394,15 @@
             }
             if (isBuiltinMapInsertFamilyPath(rawPath) ||
                 isBuiltinMapInsertFamilyPath(directCallee->fullPath)) {
+              if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+                return false;
+              }
+              return true;
+            }
+            if ((rawPath.rfind("/array/", 0) == 0 ||
+                 resolvedExprPath.rfind("/array/", 0) == 0 ||
+                 directCallee->fullPath.rfind("/array/", 0) == 0) &&
+                isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
               }
