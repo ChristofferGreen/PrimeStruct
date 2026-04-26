@@ -484,9 +484,19 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Representative wildcard canonical helper/conversion tests now run") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("No active TODO currently\n    tracks their cleanup") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("add a concrete SoA cleanup TODO before changing") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("No active TODO currently tracks the remaining compiler-owned") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("SoA promotion tasks still track receiver ownership") ==
         std::string::npos);
   CHECK(primeStructDoc.find("tie that state to a follow-up TODO") == std::string::npos);
+  CHECK(primeStructDoc.find("are now tracked as separate cleanup follow-ups") ==
+        std::string::npos);
+  CHECK(primeStructDoc.find("remaining compiler-owned builtin semantics are now tracked") ==
+        std::string::npos);
 
   CHECK(todo.find("### SoA Maturity Track Summary") != std::string::npos);
   CHECK(todo.find("`soa_vector<T>` remains an incubating public extension") !=
@@ -515,6 +525,8 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todoFinished.find("TODO-4185: Align SoA compatibility follow-up docs") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4186: Align SoA TODO summary wording") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4194: Align SoA compiler-cleanup docs") !=
         std::string::npos);
 
   CHECK(syntaxSpecDoc.find("The current public spellings are") !=

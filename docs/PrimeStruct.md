@@ -3329,10 +3329,9 @@ bad_use_after_take() {
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method
     `to_aos` forms now also materialize the canonical `/std/collections/soa_vector/to_aos__...`
     helper path and run through that same bridged substrate on native instead of trapping. These compiler-owned
-    `soa_vector` paths are
-    not the intended end-state and are now tracked as separate cleanup follow-ups for the remaining semantics
-    method/builtin fallbacks, IR-lowerer special cases, and emitter/backend special cases while the generic
-    SoA substrate and stdlib `.prime` implementation finish replacing them.
+    `soa_vector` paths are compatibility scaffolding rather than the intended end-state. No active TODO currently
+    tracks their cleanup, so add a concrete SoA cleanup TODO before changing the remaining semantics
+    method/builtin fallbacks, IR-lowerer special cases, or emitter/backend special cases.
   - **Compile-time schema substrate status:** the minimum field-schema introspection needed for a `.prime`
     `soa_vector<T>` implementation already exists through compile-time reflection metadata queries:
     `meta.field_count<T>()`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
@@ -3477,11 +3476,9 @@ after rewrite. The no-shadow path still keeps that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin
 `to_aos requires soa_vector target` diagnostic, while struct-vector literal/runtime limits remain
 tracked separately from that helper-routing boundary.
-The remaining compiler-owned builtin semantics are now tracked as explicit follow-ups for root
-`get`, root `ref`, root `to_aos`, and field-view diagnostics
-instead of one mixed fallback bucket, the remaining lowering cleanup is now tracked as explicit
-helper-call, conversion, and field-view follow-ups, with helper-call cleanup itself staged as
-direct-call versus wildcard-imported follow-ups. Dedicated inline-dispatch builtin
+No active TODO currently tracks the remaining compiler-owned builtin semantics or lowering cleanup; add a concrete
+SoA cleanup TODO before changing root `get`, root `ref`, root `to_aos`, field-view diagnostics, helper-call,
+conversion, field-view, direct-call, or wildcard-import fallback seams. Dedicated inline-dispatch builtin
 `soa_vector` count/get/ref
 helper bridging is now gone as well, so those helper shapes flow through the shared
 definition-resolution plus count/access fallback path instead of a one-off SoA branch. Root

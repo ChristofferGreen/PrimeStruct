@@ -5,6 +5,14 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (April 27, 2026)**
+- ✓ TODO-4194: Align SoA compiler-cleanup docs. Completed:
+  `docs/PrimeStruct.md` no longer says remaining compiler-owned SoA
+  semantics, lowerer, or backend fallback cleanup is tracked as active
+  follow-up work while the active queue is empty. The SoA maturity docs now
+  require a concrete cleanup TODO before changing those fallback seams, and
+  source-lock coverage rejects the stale tracked-follow-up wording.
+
 **Todo Completion (April 26, 2026)**
 - ✓ TODO-4193: Align coding guidelines TODO docs. Completed:
   `docs/Coding_Guidelines.md` no longer calls `soa_vector<T>` planned or
