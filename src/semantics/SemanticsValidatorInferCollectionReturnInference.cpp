@@ -630,7 +630,7 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
             (candidate.isMethodCall && candidate.name == *soaAccessHelper) ||
             isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
                                              *soaAccessHelper)));
-      if (!(hasVisibleSoaHelperTargetForCurrentImports(*soaAccessHelper) &&
+      if (!(hasDeclaredDefinitionPath("/soa_vector/" + *soaAccessHelper) &&
             oldSurfaceCallShape)) {
         std::string elemType;
         if (builtinCollectionDispatchResolvers.resolveSoaVectorTarget(candidate.args.front(), elemType)) {
