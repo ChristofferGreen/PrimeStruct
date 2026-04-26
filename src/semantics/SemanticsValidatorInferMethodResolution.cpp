@@ -933,15 +933,15 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
-        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
-            receiver, params, locals, resolveDirectReceiver, elemType)) {
-      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
-      return true;
-    }
-    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
+      return true;
+    }
+    if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
+      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "get" || normalizedMethodName == "get_ref") &&
@@ -978,15 +978,15 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       return true;
     }
     if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
-        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
-            receiver, params, locals, resolveDirectReceiver, elemType)) {
-      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
-      return true;
-    }
-    if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
         resolveSoaVectorTarget(receiver, elemType)) {
       resolvedOut =
           preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/soa_vector");
+      return true;
+    }
+    if ((normalizedMethodName == "ref" || normalizedMethodName == "ref_ref") &&
+        this->resolveSoaVectorOrExperimentalBorrowedReceiver(
+            receiver, params, locals, resolveDirectReceiver, elemType)) {
+      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
       return true;
     }
     if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
