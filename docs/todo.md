@@ -57,7 +57,6 @@ Task template:
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
 - TODO-4146
-- TODO-4145
 - TODO-4147
 - TODO-4151
 - TODO-4152
@@ -80,7 +79,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Release-gate stability and test-suite audit follow-up: TODO-4145, TODO-4146
+- Release-gate stability and test-suite audit follow-up: TODO-4146
 - Semantic-product authority and lowerer boundary enforcement: TODO-4147,
   TODO-4169, TODO-4151, TODO-4148, TODO-4170, TODO-4150, TODO-4155,
   TODO-4157, TODO-4158, TODO-4159, TODO-4160, TODO-4161, TODO-4164
@@ -96,41 +95,40 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4145
-2. TODO-4146
-3. TODO-4147
-4. TODO-4151
-5. TODO-4152
-6. TODO-4167
-7. TODO-4169
-8. TODO-4171
-9. TODO-4148
-10. TODO-4168
-11. TODO-4170
-12. TODO-4150
-13. TODO-4153
-14. TODO-4172
-15. TODO-4155
-16. TODO-4157
-17. TODO-4158
-18. TODO-4162
-19. TODO-4165
-20. TODO-4159
-21. TODO-4160
-22. TODO-4161
-23. TODO-4163
-24. TODO-4164
-25. TODO-4166
-26. TODO-4174
-27. TODO-4173
-28. TODO-4176
-29. TODO-4175
-30. TODO-4179
-31. TODO-4177
-32. TODO-4178
-33. TODO-4180
-34. TODO-4182
-35. TODO-4181
+1. TODO-4146
+2. TODO-4147
+3. TODO-4151
+4. TODO-4152
+5. TODO-4167
+6. TODO-4169
+7. TODO-4171
+8. TODO-4148
+9. TODO-4168
+10. TODO-4170
+11. TODO-4150
+12. TODO-4153
+13. TODO-4172
+14. TODO-4155
+15. TODO-4157
+16. TODO-4158
+17. TODO-4162
+18. TODO-4165
+19. TODO-4159
+20. TODO-4160
+21. TODO-4161
+22. TODO-4163
+23. TODO-4164
+24. TODO-4166
+25. TODO-4174
+26. TODO-4173
+27. TODO-4176
+28. TODO-4175
+29. TODO-4179
+30. TODO-4177
+31. TODO-4178
+32. TODO-4180
+33. TODO-4182
+34. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -154,7 +152,7 @@ Task template:
 | Debugger/source-map provenance parity | TODO-4165 |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | TODO-4145, TODO-4146 |
+| Test-suite audit follow-up and release-gate stability | TODO-4146 |
 
 ### Validation Coverage Snapshot
 
@@ -176,7 +174,7 @@ Task template:
 | Debugger/source-map provenance parity | TODO-4165 |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | TODO-4145, TODO-4146 |
+| Release benchmark/example suite stability and doctest governance | TODO-4146 |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -944,25 +942,3 @@ Task template:
   - stop_rule: Limit work to serialization tests, shard registration, and the
     smallest helper/runtime changes needed to reduce the hotspot; do not
     broaden into unrelated backend refactors.
-
-- [ ] TODO-4145: Reconcile stale wrapper-helper audit expectations
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Test-suite audit follow-up and release-gate stability
-  - scope: Audit the pre-existing release failures in
-    `tests/unit/test_semantics_calls_and_flow_collections_wrapper_temporary_templated_vector_methods.cpp`
-    and `tests/unit/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp`,
-    then rewrite or split the stale vector/map helper expectations so the
-    files assert the current external contract instead of outdated diagnostics.
-  - acceptance:
-    - Focused release reruns for both touched source files pass from
-      `build-release/`, or any remaining blocker is narrowed into a smaller
-      explicit follow-up TODO with the stale expectations removed.
-    - Duplicate or stale assertions around namespaced vector/map helper routing
-      are removed, renamed, or rewritten to match the currently observed
-      semantics and C++ emitter behavior.
-    - Any queue/docs-lock coverage affected by the audit stays synchronized
-      with `docs/todo.md`.
-  - stop_rule: Keep the slice limited to those two audit families plus minimal
-    shared helper or docs-lock adjustments needed to make the release-facing
-    contract explicit.

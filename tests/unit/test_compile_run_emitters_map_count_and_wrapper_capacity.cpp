@@ -6,6 +6,16 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.emitters.cpp");
 
+namespace {
+
+void checkFileContains(const std::string &path, const char *fragment) {
+  const std::string contents = readFile(path);
+  INFO(contents);
+  CHECK(contents.find(fragment) != std::string::npos);
+}
+
+} // namespace
+
 TEST_CASE("C++ emitter compiles canonical direct-call map count string receivers") {
   const std::string source = R"(
 [return<int>]
@@ -44,7 +54,7 @@ main() {
   CHECK(runCommand(compileCmd) == 0);
   CHECK(readFile(errPath).empty());
   CHECK(runCommand(exePath + " > /dev/null 2> " + runtimeErrPath) == 1);
-  CHECK(readFile(runtimeErrPath).find("invalid string index in IR") != std::string::npos);
+  checkFileContains(runtimeErrPath, "invalid string index in IR");
 }
 
 TEST_CASE("C++ emitter keeps canonical diagnostics on direct-call map count receivers") {
@@ -75,7 +85,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  checkFileContains(errPath, "unknown method: /i32/count");
 }
 
 TEST_CASE("rejects stdlib namespaced vector capacity on map target in C++ emitter") {
@@ -94,7 +104,8 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/capacity") != std::string::npos);
+  checkFileContains(errPath,
+                    "unknown call target: /std/collections/vector/capacity");
 }
 
 TEST_CASE("C++ emitter rejects user wrapper count/capacity shadow precedence on map count first") {
@@ -141,8 +152,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/map/count") !=
-        std::string::npos);
+  checkFileContains(errPath, "unknown call target: /std/collections/map/count");
 }
 
 TEST_CASE("rejects user wrapper temporary count capacity shadow value mismatch in C++ emitter") {
@@ -193,7 +203,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
+  checkFileContains(errPath, "binding initializer type mismatch");
 }
 
 TEST_CASE("C++ emitter rejects wrapper count/capacity builtin fallback on map count first") {

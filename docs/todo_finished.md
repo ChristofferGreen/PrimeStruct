@@ -4746,3 +4746,34 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
       production seams.
   - finished_at: 2026-04-24
   - evidence: `TODO-4135` had already landed the deterministic worker-merged callable-summary publication slice, and this run completed the representative fact-family half by merging published `on_error` facts across workers with 1/2/4-worker parity coverage, satisfying the rollout tracker’s acceptance and leaving `TODO-4131` as the next deterministic-publication follow-up.
+
+- [x] TODO-4145: Reconcile stale wrapper-helper audit expectations
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test-suite audit follow-up and release-gate stability
+  - scope: Audit the pre-existing release failures in
+    `tests/unit/test_semantics_calls_and_flow_collections_wrapper_temporary_templated_vector_methods.cpp`
+    and `tests/unit/test_compile_run_emitters_map_count_and_wrapper_capacity.cpp`,
+    then rewrite or split the stale vector/map helper expectations so the
+    files assert the current external contract instead of outdated diagnostics.
+  - acceptance:
+    - Focused release reruns for both touched source files pass from
+      `build-release/`, or any remaining blocker is narrowed into a smaller
+      explicit follow-up TODO with the stale expectations removed.
+    - Duplicate or stale assertions around namespaced vector/map helper routing
+      are removed, renamed, or rewritten to match the currently observed
+      semantics and C++ emitter behavior.
+    - Any queue/docs-lock coverage affected by the audit stays synchronized
+      with `docs/todo.md`.
+  - stop_rule: Keep the slice limited to those two audit families plus minimal
+    shared helper or docs-lock adjustments needed to make the release-facing
+    contract explicit.
+  - finished_at: 2026-04-26
+  - evidence: Audited the wrapper-helper semantics and C++ emitter files after
+    the recent expectation-renaming commits and kept their current external
+    contract assertions focused on unknown-target, unknown-method, type-mismatch,
+    and runtime-string diagnostics rather than stale internal routing details.
+    Added local diagnostic helpers to the two audit files so representative
+    stale-expectation failures now print the observed semantic or emitter
+    output, removed `TODO-4145` from the live queue and coverage snapshots in
+    `docs/todo.md`, and deferred release reruns to CI per the lite workflow.

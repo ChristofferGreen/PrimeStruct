@@ -2,6 +2,15 @@
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
+namespace {
+
+void checkDiagnosticContains(const std::string &error, const char *fragment) {
+  INFO(error);
+  CHECK(error.find(fragment) != std::string::npos);
+}
+
+} // namespace
+
 TEST_CASE("wrapper temporary templated vector method rejects canonical-only helper path") {
   const std::string source = R"(
 [return<int>]
@@ -26,8 +35,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /vector/count") !=
-        std::string::npos);
+  checkDiagnosticContains(error,
+                          "template arguments are only supported on templated definitions: /vector/count");
 }
 
 TEST_CASE("vector namespaced alias keeps builtin count diagnostics when only canonical templated helper exists") {
@@ -45,7 +54,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+  checkDiagnosticContains(error, "unknown call target: /vector/count");
 }
 
 TEST_CASE("vector namespaced helper bundle without aliases fails on count first") {
@@ -62,7 +71,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/count") != std::string::npos);
+  checkDiagnosticContains(error, "unknown call target: /vector/count");
 }
 
 TEST_CASE("stdlib namespaced vector count rejects template arguments as builtin alias") {
@@ -75,7 +84,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+  checkDiagnosticContains(error,
+                          "unknown call target: /std/collections/vector/count");
 }
 
 TEST_CASE("vector namespaced capacity rejects template arguments as builtin alias") {
@@ -88,8 +98,8 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments are only supported on templated definitions: /vector/capacity") !=
-        std::string::npos);
+  checkDiagnosticContains(error,
+                          "template arguments are only supported on templated definitions: /vector/capacity");
 }
 
 TEST_CASE("stdlib namespaced vector count accepts named arguments through imported stdlib helper") {
