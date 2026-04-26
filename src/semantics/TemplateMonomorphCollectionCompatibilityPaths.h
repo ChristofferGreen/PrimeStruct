@@ -243,6 +243,18 @@ bool shouldPreserveCompatibilityTemplatePath(const std::string &path, const Cont
          ctx.templateDefs.count(path) == 0;
 }
 
+bool shouldPreserveExplicitRootedVectorTemplatePath(const std::string &path, const Context &ctx) {
+  constexpr std::string_view rootedVectorPrefix = "/vector/";
+  if (path.rfind(rootedVectorPrefix, 0) != 0) {
+    return false;
+  }
+  if (ctx.sourceDefs.count(path) == 0 || ctx.templateDefs.count(path) > 0) {
+    return false;
+  }
+  const std::string helper = path.substr(rootedVectorPrefix.size());
+  return isRemovedVectorCompatibilityHelper(helper);
+}
+
 bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Context &ctx) {
   constexpr std::string_view canonicalMapPrefix = "/std/collections/map/";
   if (path.rfind(canonicalMapPrefix, 0) != 0) {
