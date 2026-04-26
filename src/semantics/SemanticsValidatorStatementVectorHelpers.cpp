@@ -440,12 +440,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
          stmt.args.front().kind == Expr::Kind::FloatLiteral || stmt.args.front().kind == Expr::Kind::StringLiteral ||
          (stmt.args.front().kind == Expr::Kind::Name && !isBuiltinVectorReceiver(stmt.args.front())));
     if (tryResolveReceiverIndex(0)) {
-      return preferredBareVectorHelperTarget(vectorHelper);
+      return "/std/collections/vector/" + vectorHelper;
     }
     if (probePositionalReorderedReceiver) {
       for (size_t i = 1; i < stmt.args.size(); ++i) {
         if (tryResolveReceiverIndex(i)) {
-          return preferredBareVectorHelperTarget(vectorHelper);
+          return "/std/collections/vector/" + vectorHelper;
         }
       }
     }

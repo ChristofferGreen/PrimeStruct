@@ -1541,6 +1541,9 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                    !hasImportedDefinitionPath(resolvedOut);
     return true;
   };
+  auto canonicalVectorHelperTarget = [](std::string_view helperName) {
+    return "/std/collections/vector/" + std::string(helperName);
+  };
   auto preferredMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
     std::string keyType;
     std::string valueType;
@@ -1868,7 +1871,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
             preferredSoaHelperTargetForCollectionType(normalizedMethodName, "/vector"));
       }
       if (normalizedMethodName == "count" && collectionTypePath == "/vector") {
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
       }
       if (collectionTypePath == "/soa_vector") {
         return setCollectionMethodTarget(
@@ -1898,7 +1901,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       }
     }
     if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
     if ((normalizedMethodName == "empty" || normalizedMethodName == "is_valid" ||
          normalizedMethodName == "readback" || normalizedMethodName == "load" ||
@@ -1923,7 +1926,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget("/array/" + normalizedMethodName);
       }
       if (collectionTypePath == "/vector") {
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
       }
       if (collectionTypePath == "/string") {
         return setCollectionMethodTarget("/string/" + normalizedMethodName);
@@ -2088,7 +2091,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       if (base == "vector" &&
           (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
            normalizedMethodName == "at" || normalizedMethodName == "at_unsafe")) {
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
       }
       if (base == "array" &&
           (normalizedMethodName == "count" || normalizedMethodName == "at" ||
@@ -2221,11 +2224,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     if (normalizedMethodName == "count" &&
         resolveVectorTarget(receiver, elemType)) {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }
     if (normalizedMethodName == "count" &&
         resolveExperimentalVectorValueTarget(receiver, elemType)) {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref") &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
@@ -2287,10 +2290,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   }
   if (normalizedMethodName == "capacity") {
     if (resolveVectorTarget(receiver, elemType)) {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
     if (resolveExperimentalVectorValueTarget(receiver, elemType)) {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
   }
   if (isValueSurfaceAccessMethodName(normalizedMethodName)) {
@@ -2298,10 +2301,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget("/array/" + normalizedMethodName);
     }
     if (resolveVectorTarget(receiver, elemType)) {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
     if (resolveExperimentalVectorValueTarget(receiver, elemType)) {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
     if (resolveArrayTarget(receiver, elemType)) {
       return setCollectionMethodTarget("/array/" + normalizedMethodName);
@@ -2690,12 +2693,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                                         "/vector"));
         }
         if (normalizedMethodName == "count") {
-          return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
+          return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
         }
         if (normalizedMethodName == "capacity") {
-          return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+          return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
         }
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
       }
       if (extractExperimentalSoaVectorElementType(receiverBinding, experimentalElemType) &&
           resolveCollectionMethodFromTypePath("/soa_vector")) {
@@ -2715,12 +2718,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (resolveCallCollectionTypePath(receiver, params, locals, receiverCollectionTypePath) &&
         receiverCollectionTypePath == "/vector") {
       if (normalizedMethodName == "count") {
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
       }
       if (normalizedMethodName == "capacity") {
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
       }
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
   }
   if (receiver.kind == Expr::Kind::Call) {
@@ -2830,12 +2833,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     std::string experimentalElemType;
     if (extractExperimentalVectorElementType(receiverBinding, experimentalElemType)) {
       if (normalizedMethodName == "count") {
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
       }
       if (normalizedMethodName == "capacity") {
-        return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+        return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
       }
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
     }
   }
   if (normalizedMethodName == "to_soa" &&
@@ -2986,12 +2989,12 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
       resolvedType.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
     if (normalizedMethodName == "count") {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget("count"));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("count"));
     }
     if (normalizedMethodName == "capacity") {
-      return setCollectionMethodTarget(preferredBareVectorHelperTarget("capacity"));
+      return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
-    return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
+    return setCollectionMethodTarget(canonicalVectorHelperTarget(normalizedMethodName));
   }
   if (normalizedCollectionTypePath == "/vector" &&
       normalizedMethodName != "count" &&
