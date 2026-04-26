@@ -567,7 +567,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector push alias requires mutable vector binding") {
+TEST_CASE("vector push alias requires same-path helper before mutability") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -578,10 +578,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("vector push alias requires heap_alloc effect") {
+TEST_CASE("vector push alias requires same-path helper before effects") {
   const std::string source = R"(
 [return<int>]
 main() {
@@ -592,7 +592,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("push requires heap_alloc effect") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("push on array reports vector binding before effect requirement") {

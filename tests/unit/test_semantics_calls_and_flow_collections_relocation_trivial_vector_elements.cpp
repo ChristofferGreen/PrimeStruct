@@ -665,7 +665,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector pop alias requires mutable vector binding") {
+TEST_CASE("vector pop alias requires same-path helper before mutability") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 main() {
@@ -676,7 +676,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("pop requires mutable vector binding") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/pop") != std::string::npos);
 }
 
 TEST_CASE("bare vector pop validates through imported stdlib helper") {
