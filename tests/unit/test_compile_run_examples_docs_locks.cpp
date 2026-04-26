@@ -182,6 +182,40 @@ TEST_CASE("graphics UI docs avoid inactive follow-up pointers") {
         std::string::npos);
 }
 
+TEST_CASE("coding guidelines avoid inactive surface status pointers") {
+  std::filesystem::path codingGuidelinesPath = std::filesystem::path("..") / "docs" / "Coding_Guidelines.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(codingGuidelinesPath)) {
+    codingGuidelinesPath = std::filesystem::current_path() / "docs" / "Coding_Guidelines.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(codingGuidelinesPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string codingGuidelines = readFile(codingGuidelinesPath.string());
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(codingGuidelines.find("incubating `soa_vector<T>` as") != std::string::npos);
+  CHECK(codingGuidelines.find("No active TODO currently tracks broader backend") !=
+        std::string::npos);
+  CHECK(codingGuidelines.find("add a concrete gfx conformance TODO before changing") !=
+        std::string::npos);
+  CHECK(codingGuidelines.find("planned `soa_vector<T>`") == std::string::npos);
+  CHECK(codingGuidelines.find("broader backend conformance remains staged") ==
+        std::string::npos);
+  CHECK(todo.find("TODO-4193") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4193: Align coding guidelines TODO docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib style boundary docs stay source locked") {
   std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";

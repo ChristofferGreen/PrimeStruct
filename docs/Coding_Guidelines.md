@@ -29,7 +29,7 @@ semantics after canonicalization.
   demonstrating canonical post-transform forms.
 - Keep examples aligned with the ownership model documented in `docs/PrimeStruct.md`:
   treat `array<T>`, `string`, `Pointer<T>`, and `Reference<T>` as language-core;
-  treat `Maybe<T>`, `vector<T>`, `map<K, V>`, and planned `soa_vector<T>` as
+  treat `Maybe<T>`, `vector<T>`, `map<K, V>`, and incubating `soa_vector<T>` as
   stdlib-facing surfaces; and treat `Result<T, Error>`, `File<Mode>`, `Buffer<T>`,
   plus `/std/gfx/*` as hybrid surfaces with minimal builtin substrate.
 - Prefer unsuffixed numeric literals in surface examples (`1280`, `0.0166667`).
@@ -91,7 +91,9 @@ semantics after canonicalization.
   a shared helper, the Metal snapshot/parity helper modes now also bind to a
   shared spinning-cube simulation reference helper, the browser launcher now
   delegates to a shared browser launch helper, the browser runtime shell now
-  lives in a shared JS helper, and broader backend conformance remains staged.
+  lives in a shared JS helper. No active TODO currently tracks broader backend
+  conformance; add a concrete gfx conformance TODO before changing that
+  runtime/backend seam.
 - Status snapshot phrases kept contiguous for doc-lock checks:
   Current `/std/gfx/experimental/*` status: the constructor-shaped `Window(...)` and `Device()` entry points now rewrite
   through substrate-backed helpers there, the fallible `create_swapchain(...)`, `create_mesh(...)`, and `frame()`

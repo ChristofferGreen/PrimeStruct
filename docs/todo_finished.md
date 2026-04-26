@@ -6,6 +6,12 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4193: Align coding guidelines TODO docs. Completed:
+  `docs/Coding_Guidelines.md` no longer calls `soa_vector<T>` planned or
+  says broader gfx backend conformance remains staged while the active queue
+  is empty. The guidance now matches the incubating SoA status and requires a
+  concrete gfx conformance TODO before changing that runtime/backend seam.
+  Source-lock coverage rejects the stale status wording.
 - ✓ TODO-4192: Align vector conformance TODO docs. Completed:
   `docs/PrimeStruct.md` no longer says full dynamic vector semantics are
   tracked in `docs/todo.md` while the active queue is empty. The conformance
