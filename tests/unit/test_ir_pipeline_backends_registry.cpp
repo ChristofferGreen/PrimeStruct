@@ -393,7 +393,7 @@ TEST_CASE("ir preparation helper reports lowering-stage failure for unresolved e
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
-TEST_CASE("semantic-product direct-call coverage conformance accepts missing targets without published coverage") {
+TEST_CASE("semantic-product direct-call coverage conformance rejects missing targets for published definitions") {
   primec::Program program;
 
   primec::Definition callee;
@@ -429,9 +429,9 @@ TEST_CASE("semantic-product direct-call coverage conformance accepts missing tar
 
   std::string error;
 
-  CHECK(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
       program, &semanticProgram, error));
-  CHECK(error.empty());
+  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
 }
 
 TEST_CASE("semantic-product direct-call coverage conformance rejects missing semantic ids") {
