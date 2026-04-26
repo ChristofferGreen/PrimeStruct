@@ -276,6 +276,39 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
 }
 
+TEST_CASE("arg-pack docs do not point at inactive TODO slices") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(primeStructDoc.find("backend/runtime materialization remains partial") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("should get a new explicit TODO before further implementation") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("follow-up arg-pack TODO slice below") ==
+        std::string::npos);
+  CHECK(todo.find("arg-pack") == std::string::npos);
+  CHECK(todo.find("TODO-4183") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4183: Remove stale arg-pack TODO wording") !=
+        std::string::npos);
+}
+
 TEST_CASE("canonical soa_vector example stays source locked") {
   std::filesystem::path examplePath =
       std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs.prime";

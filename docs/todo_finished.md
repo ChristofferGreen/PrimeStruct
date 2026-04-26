@@ -6,6 +6,11 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4183: Remove stale arg-pack TODO wording. Completed:
+  `docs/PrimeStruct.md` no longer claims backend/runtime arg-pack
+  materialization is tracked by a follow-up TODO slice while `docs/todo.md`
+  has no active arg-pack TODO. Focused source-lock coverage now rejects the
+  stale phrase and keeps the docs aligned with the empty active queue.
 - ✓ TODO-4181: Track `soa_vector` promotion out of experimental. Completed:
   the first promotion pass is closed with `soa_vector<T>` classified as an
   incubating canonical experiment rather than a fully promoted vector/map peer.

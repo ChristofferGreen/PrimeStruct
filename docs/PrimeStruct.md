@@ -1199,8 +1199,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     in bare identifier spelling. Call semantics now bind trailing positional arguments into that trailing pack, infer
     omitted pack element types homogeneously across packed values, reject named arguments targeting the variadic
     parameter directly, and allow a final `[spread] values` argument to forward an existing `args<T>` pack into another
-    trailing variadic slot with the same omitted-pack inference path; the read-only body API is now available and
-    backend/runtime materialization remains tracked by the follow-up arg-pack TODO slice below.
+    trailing variadic slot with the same omitted-pack inference path. The read-only body API is now available, while
+    backend/runtime materialization remains partial and should get a new explicit TODO before further implementation
+    work starts.
   - After monomorphisation, bottom-level form contains no templates. Example:
     - Surface:
       ```text
