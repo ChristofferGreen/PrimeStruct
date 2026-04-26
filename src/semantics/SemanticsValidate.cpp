@@ -1195,6 +1195,9 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
   if (receiver.kind != Expr::Kind::Call || receiver.isBinding) {
     return true;
   }
+  if (!receiver.isMethodCall) {
+    return true;
+  }
   auto appendMethodReceiverCandidatePath =
       [&](const Expr &callExpr, std::vector<std::string> &candidatePaths) {
         if (!callExpr.isMethodCall || callExpr.args.empty() ||
