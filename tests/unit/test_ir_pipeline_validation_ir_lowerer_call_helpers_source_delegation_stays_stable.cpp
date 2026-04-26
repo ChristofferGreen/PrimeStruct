@@ -375,13 +375,13 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/push") == std::string::npos);
   CHECK(inlineDispatchSource.find("std/collections/soa_vector/reserve") == std::string::npos);
   CHECK(inlineParamHelpersSource.find(
-            "semantics::isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
+            "soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
         std::string::npos);
   CHECK(inlineParamHelpersSource.find(
             "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
-            "semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)") !=
+            "soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)") !=
         std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
             "normalizedReceiverStruct.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) != 0") ==
@@ -396,19 +396,19 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "auto canonicalizeLegacySoaRefHelperPath = [](const std::string &path)") ==
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "semantics::canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath)") !=
+            "soa_paths::canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "const std::string canonicalPath =") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "semantics::canonicalizeLegacySoaRefHelperPath(path)") !=
+            "soa_paths::canonicalizeLegacySoaRefHelperPath(path)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "semantics::isExperimentalSoaRefLikeHelperPath(canonicalPath)") !=
+            "soa_paths::isExperimentalSoaRefLikeHelperPath(canonicalPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "semantics::isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
+            "soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
@@ -420,7 +420,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "canonicalPath.rfind(\"/std/collections/experimental_soa_vector/soaVectorRef\", 0) == 0") ==
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "semantics::isCanonicalSoaRefLikeHelperPath(canonicalPath)") !=
+            "soa_paths::isCanonicalSoaRefLikeHelperPath(canonicalPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "path.rfind(\"/std/collections/soa_vector/ref\", 0) == 0") ==
@@ -443,7 +443,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "const std::string canonicalMethodPath =") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
-            "semantics::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, \"ref\")") !=
+            "soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, \"ref\")") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
             "methodPath.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=

@@ -1311,7 +1311,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product callable summaries") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary path id");
+  CHECK(error == "missing semantic-product callable summary: /main");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -2723,14 +2723,16 @@ main() {
   CHECK(output.failure.stage == primec::CompilePipelineErrorStage::Semantic);
   CHECK_FALSE(output.failure.message.empty());
   CHECK(output.failure.message == error);
-  CHECK(output.failure.diagnosticInfo.records.empty());
+  REQUIRE_FALSE(output.failure.diagnosticInfo.records.empty());
+  CHECK(output.failure.diagnosticInfo.records.front().message == error);
   REQUIRE(output.hasSemanticProgram);
   CHECK(output.semanticProgram.entryPath == "/main");
   CHECK(std::find(output.semanticProgram.imports.begin(),
                   output.semanticProgram.imports.end(),
                   "/std/gfx/experimental/*") != output.semanticProgram.imports.end());
   CHECK(diagnosticInfo.message == output.failure.diagnosticInfo.message);
-  CHECK(diagnosticInfo.records.empty());
+  REQUIRE_FALSE(diagnosticInfo.records.empty());
+  CHECK(diagnosticInfo.records.front().message == error);
 }
 
 TEST_CASE("compile pipeline skips semantic product for ast-semantic dumps") {
