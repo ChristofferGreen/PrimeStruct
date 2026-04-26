@@ -479,11 +479,11 @@ main() {
   CHECK(runCommand(exePath) == 1);
 }
 
-TEST_CASE("wildcard-imported canonical soa_vector helpers lower in C++ emitter") {
+TEST_CASE("wildcard-imported canonical soa_vector helpers run without experimental imports in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -492,20 +492,20 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [auto mut] values{soaVectorNew<Particle>()}
   reserve(values, 2i32)
   push(values, Particle(4i32))
   push(values, Particle(9i32))
   [Particle] first{get(values, 0i32)}
   [Reference<Particle>] second{ref(values, 1i32)}
-  [vector<Particle>] unpacked{to_aos(values)}
+  [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
   return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
 }
 )";
   const std::string srcPath =
-      writeTemp("compile_wildcard_canonical_soa_vector_helpers_experimental_wrapper_exe.prime", source);
+      writeTemp("compile_wildcard_canonical_soa_vector_helpers_exe.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_wildcard_canonical_soa_vector_helpers_experimental_wrapper_exe")
+      (testScratchPath("") / "primec_wildcard_canonical_soa_vector_helpers_exe")
           .string();
 
   const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";

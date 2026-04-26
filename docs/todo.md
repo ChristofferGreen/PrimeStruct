@@ -56,25 +56,24 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4179
+- TODO-4177
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4177
+- TODO-4178
 
 ### Priority Lanes (Current)
 
-- `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
-  TODO-4178, TODO-4180, TODO-4182, TODO-4181
+- `soa_vector` promotion and de-experimentalization: TODO-4177, TODO-4178,
+  TODO-4180, TODO-4182, TODO-4181
 
 ### Execution Queue (Recommended)
 
-1. TODO-4179
-2. TODO-4177
-3. TODO-4178
-4. TODO-4180
-5. TODO-4182
-6. TODO-4181
+1. TODO-4177
+2. TODO-4178
+3. TODO-4180
+4. TODO-4182
+5. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -86,8 +85,8 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4179, TODO-4180, TODO-4182 |
-| SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4179, TODO-4180, TODO-4182 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4180, TODO-4182 |
+| SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -180,9 +179,10 @@ Task template:
 - Promotion requires borrowed-view/lifetime rules, backend/runtime parity, and
   retirement of direct experimental implementation imports before `soa_vector`
   can be treated as a promoted public contract.
-- Active promotion lane should keep the canonical public wrapper authoritative
-  first, then migrate conversions/examples/tests, and only then reclassify the
-  experimental namespaces as compatibility-only or removable seams.
+- Active promotion lane now has the canonical public helper wrapper
+  authoritative for ordinary construction/read/ref/mutator/conversion helper
+  names; remaining work should stabilize borrowed views, add backend parity,
+  move receiver contracts off experimental type names, and migrate examples.
 
 ### Skipped Doctest Debt Summary
 
@@ -258,29 +258,6 @@ Task template:
   - stop_rule: Stop once the canonical conversion receiver contract is
     authoritative for the touched flows; do not delete every experimental shim
     in one slice.
-
-- [ ] TODO-4179: Make `/std/collections/soa_vector/*` the full public helper authority
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: `soa_vector` promotion
-  - depends_on: TODO-4170
-  - scope: Expand the canonical `soa_vector` wrapper layer so ordinary public
-    count/get/ref/push/reserve/conversion flows route through
-    `/std/collections/soa_vector/*` and
-    `/std/collections/soa_vector_conversions/*` instead of exposing the
-    experimental implementation modules as peer public APIs.
-  - acceptance:
-    - The touched canonical wrapper and conversion modules own the public helper
-      names needed for ordinary `soa_vector` use without requiring direct
-      experimental imports.
-    - The touched docs classify `experimental_soa_vector` and
-      `experimental_soa_vector_conversions` as internal or compatibility seams
-      rather than ordinary public APIs.
-    - The touched public wrapper surface stays aligned with the documented
-      canonical `soa_vector` helper contract.
-  - stop_rule: Stop after the canonical wrapper surface is authoritative for
-    the touched helper families; do not complete full promotion, borrow
-    semantics, and example migration in one slice.
 
 - [ ] TODO-4178: Add canonical `soa_vector` backend and runtime parity coverage
   - owner: ai

@@ -1171,6 +1171,8 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   REQUIRE(soaMetadata != nullptr);
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorCountRef") ==
         "count_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorFieldView") ==
+        "field_view");
   CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorToAos") ==
         "to_aos");
 }

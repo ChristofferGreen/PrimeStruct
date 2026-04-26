@@ -1059,8 +1059,14 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_vector.prime";
   std::filesystem::path experimentalMapStdlibPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_map.prime";
+  std::filesystem::path soaWrapperPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector.prime";
   std::filesystem::path soaConversionsPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
+  std::filesystem::path experimentalSoaVectorPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
+  std::filesystem::path experimentalSoaConversionsPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_soa_vector_conversions.prime";
   if (!std::filesystem::exists(codeExamplesPath)) {
     codeExamplesPath = std::filesystem::current_path() / "docs" / "CodeExamples.md";
   }
@@ -1081,9 +1087,22 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
     experimentalMapStdlibPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_map.prime";
   }
+  if (!std::filesystem::exists(soaWrapperPath)) {
+    soaWrapperPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa_vector.prime";
+  }
   if (!std::filesystem::exists(soaConversionsPath)) {
     soaConversionsPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
+  }
+  if (!std::filesystem::exists(experimentalSoaVectorPath)) {
+    experimentalSoaVectorPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
+  }
+  if (!std::filesystem::exists(experimentalSoaConversionsPath)) {
+    experimentalSoaConversionsPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" /
+        "experimental_soa_vector_conversions.prime";
   }
   REQUIRE(std::filesystem::exists(codeExamplesPath));
   REQUIRE(std::filesystem::exists(maybeStdlibPath));
@@ -1091,7 +1110,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(mapStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalVectorStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
+  REQUIRE(std::filesystem::exists(soaWrapperPath));
   REQUIRE(std::filesystem::exists(soaConversionsPath));
+  REQUIRE(std::filesystem::exists(experimentalSoaVectorPath));
+  REQUIRE(std::filesystem::exists(experimentalSoaConversionsPath));
 
   const std::string codeExamples = readFile(codeExamplesPath.string());
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
@@ -1099,7 +1121,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string mapStdlib = readFile(mapStdlibPath.string());
   const std::string experimentalVectorStdlib = readFile(experimentalVectorStdlibPath.string());
   const std::string experimentalMapStdlib = readFile(experimentalMapStdlibPath.string());
+  const std::string soaWrapper = readFile(soaWrapperPath.string());
   const std::string soaConversions = readFile(soaConversionsPath.string());
+  const std::string experimentalSoaVector = readFile(experimentalSoaVectorPath.string());
+  const std::string experimentalSoaConversions = readFile(experimentalSoaConversionsPath.string());
 
   CHECK(codeExamples.find("Internal implementation, bridge, or substrate-oriented code:") !=
         std::string::npos);
@@ -1163,6 +1188,27 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(experimentalMapStdlib.find("return(mapCount<K, V>(this))") == std::string::npos);
 
+  CHECK(soaWrapper.find(
+            "// Canonical public wrapper layer over the internal experimental_soa_vector implementation module.") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorNew<T>()") != std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorSingle<T>([T] value)") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorFromAos<T>([vector<T>] values)") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorCount<T>([SoaVector<T>] values)") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorFieldView<Struct, Field>(") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorPush<T>([SoaVector<T> mut] values, [T] value)") !=
+        std::string::npos);
+
+  CHECK(soaConversions.find("// Canonical conversion wrappers for public soa_vector helpers.") !=
+        std::string::npos);
+  CHECK(soaConversions.find("/std/collections/soa_vector_conversions/soaVectorToAos<T>(") !=
+        std::string::npos);
+  CHECK(soaConversions.find("/std/collections/soa_vector_conversions/soaVectorToAosRef<T>(") !=
+        std::string::npos);
   CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count<T>(values)}") !=
         std::string::npos);
   CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count_ref<T>(values)}") !=
@@ -1175,6 +1221,15 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaConversions.find("[mut] out{vector<T>()}") == std::string::npos);
   CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
+  CHECK(experimentalSoaVector.find(
+            "// Internal implementation module behind canonical /std/collections/soa_vector/*.") !=
+        std::string::npos);
+  CHECK(experimentalSoaVector.find(
+            "// Direct imports remain only for targeted compatibility or conformance coverage.") !=
+        std::string::npos);
+  CHECK(experimentalSoaConversions.find(
+            "// Internal conversion module behind canonical /std/collections/soa_vector_conversions/*.") !=
+        std::string::npos);
 }
 
 TEST_CASE("ppm image workflows keep explicit read locals") {

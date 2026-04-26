@@ -2671,8 +2671,8 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Incubating SoA-facing namespace; not canonical public API yet, but still intentionally public enough to support the separate SoA maturity track. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
-| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Incubating conversion namespace paired with the SoA surface; keep public-facing only while the SoA surface remains an explicit incubating extension. | Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes. |
+| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports remain only for targeted compatibility or conformance coverage. | SoA promotion tasks still track receiver ownership, borrowed-view rules, backend parity, and example migration before the compatibility seam can be retired. |
+| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Internal conversion module behind canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/*` conversion helpers; direct imports remain only for targeted compatibility or conformance coverage. | SoA promotion tasks still track receiver ownership and example migration before the compatibility seam can be retired. |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
@@ -2693,6 +2693,10 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
 - **Current user-facing experiment surface:** `/std/collections/soa_vector/*`
   and `/std/collections/soa_vector_conversions/*` are the canonical spellings
   to use when docs or examples need to demonstrate the current SoA feature set.
+  The canonical wrapper now owns the ordinary constructor, count/get/ref,
+  reserve/push, field-view, and AoS conversion helper names; ordinary public
+  examples should not import the experimental implementation modules for those
+  helper flows.
 - **Compatibility-only namespaces:** `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain bridge
   seams behind that canonical experiment surface. They may stay importable while
@@ -3274,7 +3278,11 @@ bad_use_after_take() {
     template-arity checks, and deterministic element-field envelope diagnostics such as `soa_vector field envelope is
     unsupported on /Type/field/...: ...` for disallowed direct or nested fields). Builtin `count`/`get`/`ref` validation
     and current lowering behavior remain temporary scaffolding while the language grows the substrate needed for a real
-    stdlib-owned implementation. Today, explicit AoS/SoA conversion helpers validate in both call and method form
+    stdlib-owned implementation. The canonical `/std/collections/soa_vector/*`
+    wrapper now owns public constructor/read/ref/mutator helper names and
+    forwards to the implementation module, while
+    `/std/collections/soa_vector_conversions/*` owns the public conversion helper
+    names. Today, explicit AoS/SoA conversion helpers validate in both call and method form
     (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`, `vector<T>.to_soa()`, `soa_vector<T>.to_aos()`), method-form/call-form field-view names now route through the shared
     `/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<Struct, Field>` (or a same-path user helper
     when visible), returning `SoaFieldView` values that can be bound, passed, or returned instead of stopping on a

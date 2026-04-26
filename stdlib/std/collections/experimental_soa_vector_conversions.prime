@@ -1,3 +1,5 @@
+// Internal conversion module behind canonical /std/collections/soa_vector_conversions/*.
+// Direct imports remain only for targeted compatibility or conformance coverage.
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
 

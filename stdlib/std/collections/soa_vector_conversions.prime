@@ -1,8 +1,10 @@
+// Canonical conversion wrappers for public soa_vector helpers.
 import /std/collections/*
 import /std/collections/experimental_soa_vector/*
 
 [public effects(heap_alloc), return<vector<T>>]
-/std/collections/soa_vector/to_aos<T>([/std/collections/experimental_soa_vector/SoaVector<T>] values) {
+/std/collections/soa_vector_conversions/soaVectorToAos<T>(
+    [/std/collections/experimental_soa_vector/SoaVector<T>] values) {
   valueCount{/std/collections/soa_vector/count<T>(values)}
   [vector<T> mut] out{vector<T>()}
   [mut] index{0i32}
@@ -15,7 +17,7 @@ import /std/collections/experimental_soa_vector/*
 }
 
 [public effects(heap_alloc), return<vector<T>>]
-/std/collections/soa_vector/to_aos_ref<T>(
+/std/collections/soa_vector_conversions/soaVectorToAosRef<T>(
     [Reference</std/collections/experimental_soa_vector/SoaVector<T>>] values) {
   valueCount{/std/collections/soa_vector/count_ref<T>(values)}
   [vector<T> mut] out{vector<T>()}
@@ -26,4 +28,15 @@ import /std/collections/experimental_soa_vector/*
     increment(index)
   })
   return(out)
+}
+
+[public effects(heap_alloc), return<vector<T>>]
+/std/collections/soa_vector/to_aos<T>([/std/collections/experimental_soa_vector/SoaVector<T>] values) {
+  return(/std/collections/soa_vector_conversions/soaVectorToAos<T>(values))
+}
+
+[public effects(heap_alloc), return<vector<T>>]
+/std/collections/soa_vector/to_aos_ref<T>(
+    [Reference</std/collections/experimental_soa_vector/SoaVector<T>>] values) {
+  return(/std/collections/soa_vector_conversions/soaVectorToAosRef<T>(values))
 }

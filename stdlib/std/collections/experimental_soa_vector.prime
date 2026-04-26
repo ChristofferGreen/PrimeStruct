@@ -1,3 +1,5 @@
+// Internal implementation module behind canonical /std/collections/soa_vector/*.
+// Direct imports remain only for targeted compatibility or conformance coverage.
 import /std/collections/internal_soa_storage/*
 
 namespace std {

@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4179: Make `/std/collections/soa_vector/*` the full public helper
+  authority. Completed: the canonical `soa_vector` wrapper now owns public
+  constructor, count/get/ref, reserve/push, field-view, and AoS conversion
+  helper names for ordinary SoA flows, while
+  `/std/collections/soa_vector_conversions/*` exposes canonical conversion
+  helper names. Focused compile-run coverage now exercises wildcard canonical
+  SoA helper imports without direct experimental imports, source-lock coverage
+  pins the canonical wrapper/conversion comments and helper names, and the docs
+  classify `experimental_soa_vector` plus
+  `experimental_soa_vector_conversions` as implementation/compatibility seams.
 - ✓ TODO-4175: Track user-authored AST transform hooks. Completed: the first
   definition-attached AST transform lane is now fully represented by the
   resolved metadata slice, the executable `FunctionAst` rewrite slice, and the

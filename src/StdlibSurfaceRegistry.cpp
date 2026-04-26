@@ -358,6 +358,7 @@ constexpr auto CollectionsSoaVectorCompatibilitySpellings = std::to_array<std::s
     "/std/collections/experimental_soa_vector/soaVectorGetRef",
     "/std/collections/experimental_soa_vector/soaVectorRef",
     "/std/collections/experimental_soa_vector/soaVectorRefRef",
+    "/std/collections/experimental_soa_vector/soaVectorFieldView",
     "/std/collections/experimental_soa_vector/soaVectorReserve",
     "/std/collections/experimental_soa_vector/soaVectorPush",
     "/std/collections/experimental_soa_vector_conversions/soaVectorToAos",
@@ -373,14 +374,27 @@ constexpr auto CollectionsSoaVectorLoweringSpellings = std::to_array<std::string
     "/std/collections/soa_vector/ref_ref",
     "/std/collections/soa_vector/reserve",
     "/std/collections/soa_vector/push",
+    "/std/collections/soa_vector/soaVectorCount",
+    "/std/collections/soa_vector/soaVectorCountRef",
+    "/std/collections/soa_vector/soaVectorGet",
+    "/std/collections/soa_vector/soaVectorGetRef",
+    "/std/collections/soa_vector/soaVectorRef",
+    "/std/collections/soa_vector/soaVectorRefRef",
+    "/std/collections/soa_vector/soaVectorFieldView",
+    "/std/collections/soa_vector/soaVectorReserve",
+    "/std/collections/soa_vector/soaVectorPush",
     "/std/collections/soa_vector/to_aos",
     "/std/collections/soa_vector/to_aos_ref",
+    "/std/collections/soa_vector_conversions/soaVectorToAos",
+    "/std/collections/soa_vector_conversions/soaVectorToAosRef",
 });
 
 constexpr auto CollectionsSoaVectorConstructorMembers = std::to_array<std::string_view>({
     "soa_vector",
     "SoaVector",
     "soaVectorNew",
+    "soaVectorSingle",
+    "soaVectorFromAos",
 });
 
 constexpr auto CollectionsSoaVectorConstructorImportAliases = std::to_array<std::string_view>({
@@ -392,12 +406,19 @@ constexpr auto CollectionsSoaVectorConstructorImportAliases = std::to_array<std:
 constexpr auto CollectionsSoaVectorConstructorCompatibilitySpellings = std::to_array<std::string_view>({
     "/std/collections/experimental_soa_vector/SoaVector",
     "/std/collections/experimental_soa_vector/soaVectorNew",
+    "/std/collections/experimental_soa_vector/soaVectorSingle",
+    "/std/collections/experimental_soa_vector/soaVectorFromAos",
 });
 
 constexpr auto CollectionsSoaVectorConstructorLoweringSpellings = std::to_array<std::string_view>({
     "/std/collections/soa_vector/soa_vector",
+    "/std/collections/soa_vector/soaVectorNew",
+    "/std/collections/soa_vector/soaVectorSingle",
+    "/std/collections/soa_vector/soaVectorFromAos",
     "/std/collections/experimental_soa_vector/SoaVector",
     "/std/collections/experimental_soa_vector/soaVectorNew",
+    "/std/collections/experimental_soa_vector/soaVectorSingle",
+    "/std/collections/experimental_soa_vector/soaVectorFromAos",
 });
 
 constexpr auto CollectionsContainerErrorMembers = std::to_array<std::string_view>({
@@ -806,6 +827,9 @@ std::string_view resolveCollectionsSoaVectorHelperMemberName(std::string_view me
   }
   if (memberName == "soaVectorRefRef") {
     return "ref_ref";
+  }
+  if (memberName == "soaVectorFieldView") {
+    return "field_view";
   }
   if (memberName == "soaVectorReserve") {
     return "reserve";
