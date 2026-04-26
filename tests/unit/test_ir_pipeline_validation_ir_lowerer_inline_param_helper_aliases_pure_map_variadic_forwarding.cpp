@@ -493,12 +493,12 @@ TEST_CASE(
           return false;
         }
         layout.structPath = structPath;
-        layout.totalSlots = 4;
+        layout.totalSlots = 6;
         layout.fields.clear();
         primec::ir_lowerer::StructSlotFieldInfo storageField;
         storageField.name = "storage";
-        storageField.slotOffset = 0;
-        storageField.slotCount = 4;
+        storageField.slotOffset = 1;
+        storageField.slotCount = 5;
         layout.fields.push_back(storageField);
         return true;
       };
@@ -678,12 +678,12 @@ TEST_CASE("ir lowerer inline param helper bridges builtin soa for canonical coun
           return false;
         }
         layout.structPath = structPath;
-        layout.totalSlots = 4;
+        layout.totalSlots = 6;
         layout.fields.clear();
         primec::ir_lowerer::StructSlotFieldInfo storageField;
         storageField.name = "storage";
-        storageField.slotOffset = 0;
-        storageField.slotCount = 4;
+        storageField.slotOffset = 1;
+        storageField.slotCount = 5;
         layout.fields.push_back(storageField);
         return true;
       };
