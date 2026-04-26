@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4164: Remove AST-side semantic re-derivation caches after boundary
+  cutover. Completed: `IrLowererLowerEntrySetup.cpp` now validates
+  `result-control.on-error` completeness directly from published callable
+  summaries and `onErrorFacts` lookup helpers instead of rebuilding an
+  `OnErrorByDefinition` map from raw AST transforms. Existing on_error
+  diagnostics are preserved, graph-context source-lock coverage now pins the
+  semantic-product-only validation seam, and `docs/PrimeStruct.md` records the
+  narrowed syntax-owned bound-argument boundary.
 - ✓ TODO-4157: Retire temporary semantic-product adapter code. Completed:
   `IrLowererSemanticProductTargetAdapters.cpp` no longer falls back from
   missing direct-call or method-call semantic-node identities to

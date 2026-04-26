@@ -9,7 +9,6 @@
 #include "IrLowererGpuEffects.h"
 #include "IrLowererLowerEffects.h"
 #include "IrLowererNativeEffects.h"
-#include "IrLowererOnErrorHelpers.h"
 #include "IrLowererResultHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererVmEffects.h"
@@ -69,15 +68,48 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
   if (context.semanticProgram == nullptr) {
     return true;
   }
-  const ResolveExprPathFn unusedResolveExprPath;
-  const DefinitionExistsFn unusedDefinitionExists;
-  OnErrorByDefinition ignoredOnErrorByDefinition;
-  return buildOnErrorByDefinition(context.program,
-                                  context.semanticProgram,
-                                  unusedResolveExprPath,
-                                  unusedDefinitionExists,
-                                  ignoredOnErrorByDefinition,
-                                  error);
+  const auto callableSummaries =
+      semanticProgramCallableSummaryView(*context.semanticProgram);
+  for (const auto *summary : callableSummaries) {
+    if (summary == nullptr) {
+      continue;
+    }
+    const std::string_view callablePath =
+        semanticProgramCallableSummaryFullPath(*context.semanticProgram, *summary);
+    if (summary->fullPathId == InvalidSymbolId || callablePath.empty()) {
+      error = "missing semantic-product callable summary path id";
+      return false;
+    }
+    if (!summary->hasOnError) {
+      continue;
+    }
+    const SemanticProgramOnErrorFact *onErrorFact = nullptr;
+    if (summary->semanticNodeId != 0) {
+      onErrorFact = semanticProgramLookupPublishedOnErrorFactByDefinitionSemanticId(
+          *context.semanticProgram, summary->semanticNodeId);
+    }
+    if (onErrorFact == nullptr) {
+      onErrorFact = semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
+          *context.semanticProgram, summary->fullPathId);
+    }
+    if (onErrorFact == nullptr) {
+      error = "missing semantic-product on_error fact: " + std::string(callablePath);
+      return false;
+    }
+    const std::string_view handlerPath =
+        semanticProgramOnErrorFactHandlerPath(*context.semanticProgram, *onErrorFact);
+    if (onErrorFact->handlerPathId == InvalidSymbolId || handlerPath.empty()) {
+      error = "missing semantic-product on_error handler path id: " +
+              std::string(callablePath);
+      return false;
+    }
+    if (onErrorFact->boundArgTexts.size() != onErrorFact->boundArgCount) {
+      error = "semantic-product on_error bound arg mismatch on " +
+              std::string(callablePath);
+      return false;
+    }
+  }
+  return true;
 }
 
 const std::array<SemanticProductCompletenessCheck, 5> kSemanticProductCompletenessMatrix = {{

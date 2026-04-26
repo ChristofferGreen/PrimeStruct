@@ -396,10 +396,10 @@ Temporary migration adapter contract:
 - Current status: the adapter now feeds lowering entry/setup with semantic-product direct-call targets,
   receiver/method-call targets, helper-routing choices, source-owned binding/result facts, and the current
   callable-summary/type-metadata effect-layout surfaces. The published graph-backed local/query/`try(...)`/`on_error`
-  facts are currently inspection-surface facts, not lowerer-adapter inputs; `on_error` bound-arg expressions remain
-  syntax-owned and are still parsed from transforms when lowering needs executable handler arguments. Call-target
-  adapter lookup still retains a source line/column fallback for direct and method call facts when semantic identity is
-  missing; TODO-4157 tracks retiring that fallback once release coverage proves all consumers carry stable semantic ids.
+  facts are now used by lowerer setup where they carry lowering-facing meaning; executable `on_error` bound-arg
+  expressions remain syntax-owned and are still parsed from published argument text when lowering needs handler
+  arguments. Call-target adapter lookup now requires stable semantic-node identities for direct and method call facts
+  instead of source line/column compatibility scans.
 - Removal criteria:
   - `CompilePipelineOutput` publishes the semantic product on the success path.
   - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.
@@ -475,7 +475,7 @@ Planned lowerer entrypoint cutover:
   - top-level lowerer entry/effect validation now prefers semantic-product callable summaries, while nested expression-transform checks remain syntax-owned
   - native-backend software-numeric and runtime-reflection rejection are pinned as syntax-owned backend policy scans over spelled expression surfaces rather than semantic-product facts
   - import/layout setup now treats its remaining `Definition*` map as an explicitly AST-owned provenance/body inventory for field statements, namespace prefixes, and recursive layout traversal; the import-alias table is pinned as a syntax-owned shorthand layer derived from spelled `import` directives plus wildcard expansion; top-level struct layout enumeration already prefers semantic-product type inventories, so the only live raw-`Program` seam left there is AST-owned field/provenance traversal inside layout computation
-  - helper/local setup now prefers semantic-product `on_error`, callable, binding, and return facts wherever lowering-facing meaning exists; callable-definition lowering enumerates semantic-product definitions and keeps the AST only as the executable body/provenance source, while statement-call lowering remains intentionally syntax-owned because it walks spelled statement bodies directly and the math-import probe remains syntax-owned import shorthand during uninitialized setup
+  - helper/local setup now prefers semantic-product `on_error`, callable, binding, and return facts wherever lowering-facing meaning exists; entry completeness validation checks `on_error` coverage from published callable summaries and `onErrorFacts` instead of rebuilding a handler map from raw AST transforms; callable-definition lowering enumerates semantic-product definitions and keeps the AST only as the executable body/provenance source, while statement-call lowering remains intentionally syntax-owned because it walks spelled statement bodies directly and the math-import probe remains syntax-owned import shorthand during uninitialized setup
   - source-map finalization consumes a narrow `FunctionSyntaxProvenance` map for fallback function line/column data rather than the full `Definition*` inventory
   - no raw-`Program` lowerer entry remains; the old public compatibility overload used by tests/helpers is retired
 - The entrypoint boundary should make ownership explicit:

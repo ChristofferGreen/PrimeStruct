@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4164
 - TODO-4166
 - TODO-4174
 
@@ -67,7 +66,6 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
   TODO-4175
@@ -76,24 +74,23 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4164
-2. TODO-4166
-3. TODO-4174
-4. TODO-4173
-5. TODO-4176
-6. TODO-4175
-7. TODO-4179
-8. TODO-4177
-9. TODO-4178
-10. TODO-4180
-11. TODO-4182
-12. TODO-4181
+1. TODO-4166
+2. TODO-4174
+3. TODO-4173
+4. TODO-4176
+5. TODO-4175
+6. TODO-4179
+7. TODO-4177
+8. TODO-4178
+9. TODO-4180
+10. TODO-4182
+11. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4164 |
+| Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -435,20 +432,3 @@ Task template:
     - Invalid mixed result states disappear from the touched pipeline surface.
   - stop_rule: Stop once one compile-pipeline result surface uses explicit
     variants end-to-end; do not rewrite every caller in one slice.
-
-- [ ] TODO-4164: Remove AST-side semantic re-derivation caches after boundary cutover
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - scope: Delete one touched AST-side semantic fallback or cache that
-    re-derives facts already available through the published semantic-product
-    boundary.
-  - acceptance:
-    - One real AST-side semantic re-derivation seam is removed from the
-      touched production path.
-    - The touched lowerer or compile-pipeline flow reads published
-      semantic-product data instead of recomputing equivalent facts.
-    - Release diagnostics and lowering behavior remain unchanged for the
-      touched coverage.
-  - stop_rule: Stop once one real re-derivation seam is deleted end-to-end; do
-    not attempt a repo-wide cache purge in one slice.
