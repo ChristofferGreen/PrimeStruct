@@ -13,6 +13,7 @@ using count_access_detail::isDereferencedCollectionCountTarget;
 using count_access_detail::isExplicitArrayCountName;
 using count_access_detail::isMapBuiltinName;
 using count_access_detail::resolveMapHelperAliasName;
+using count_access_detail::resolveVectorHelperAliasName;
 using count_access_detail::isVectorBuiltinName;
 using count_access_detail::isVectorCountTarget;
 
@@ -49,6 +50,23 @@ bool isExplicitVectorCountMethodCall(const Expr &expr) {
          scopedPath == "vector/count" ||
          scopedPath == "/std/collections/vector/count" ||
          scopedPath == "std/collections/vector/count";
+}
+
+bool isExplicitPublishedVectorCountCall(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+    return false;
+  }
+  std::string helperName;
+  if (!resolveVectorHelperAliasName(expr, helperName) ||
+      helperName != "count") {
+    return false;
+  }
+  std::string scopedPath = resolveScopedCallPath(expr);
+  if (!scopedPath.empty() && scopedPath.front() == '/') {
+    scopedPath.erase(scopedPath.begin());
+  }
+  return scopedPath.rfind("std/collections/vector/", 0) == 0 ||
+         scopedPath.rfind("std/collections/experimental_vector/", 0) == 0;
 }
 
 bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
@@ -235,6 +253,10 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
     return false;
   }
   if (isExplicitVectorCountMethodCall(expr)) {
+    return false;
+  }
+  if (isExplicitPublishedVectorCountCall(expr) &&
+      isVectorCountTarget(expr.args.front(), localsIn)) {
     return false;
   }
   if (isExplicitRemovedCountLikeAliasCall(expr, "count")) {
@@ -610,6 +632,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       !(isDynamicVectorCapacityTargetFn &&
         isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn));
   if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
+      (isExplicitPublishedVectorCountCall(expr) &&
+       expr.args.size() == 1 &&
+       ((isDynamicVectorCountTargetFn &&
+         isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) ||
+        isVectorCountTarget(expr.args.front(), localsIn))) ||
       blocksBareVectorCapacityCall || blocksLocalVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
   }
