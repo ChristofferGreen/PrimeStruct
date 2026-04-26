@@ -548,6 +548,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;
   }
+  if (isExplicitPublishedVectorCountCall(expr) &&
+      expr.args.size() == 1 &&
+      !isNamedArgumentCollectionTemporary(expr.args.front(), "vector")) {
+    return CountAccessCallEmitResult::NotHandled;
+  }
   const bool namedArgVectorTemporaryCountTarget =
       (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
       expr.args.size() == 1 &&
