@@ -2815,6 +2815,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   }
   const std::string normalizedTypeName = normalizeBindingTypeName(typeName);
+  const std::string normalizedCollectionTypePath =
+      normalizeCollectionTypePath(normalizedTypeName);
   std::string normalizedBaseTypeName = normalizedTypeName;
   if (!normalizedBaseTypeName.empty() && normalizedBaseTypeName.front() == '/') {
     normalizedBaseTypeName.erase(normalizedBaseTypeName.begin());
@@ -2988,7 +2990,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
   }
-  if (normalizedTypeName == "vector" &&
+  if (normalizedCollectionTypePath == "/vector" &&
       normalizedMethodName != "count" &&
       normalizedMethodName != "capacity" &&
       normalizedMethodName != "at" &&
