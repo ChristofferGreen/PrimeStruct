@@ -5,6 +5,19 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (April 26, 2026)**
+- ✓ TODO-4162: Split compile-pipeline benchmark knobs from the production
+  pipeline entrypoint. Completed: `include/primec/CompilePipeline.h` now
+  exposes explicit `CompilePipelineRunConfig` and
+  `CompilePipelineBenchmarkConfig` surfaces, the existing `Options` overload is
+  a compatibility wrapper that converts CLI benchmark flags through a dedicated
+  helper path, and the main compile-pipeline implementation consumes the
+  run-config boundary instead of directly deciding semantic-product and
+  benchmark validation behavior from `Options`. Source-lock coverage in
+  `tests/unit/test_compile_run_benchmark_harness.cpp` now pins the new
+  run-config split while keeping benchmark validation and production
+  validation paths visible.
+
 **Todo Cleanup (April 25, 2026)**
 - ✓ TODO-4144: Replace remaining private parameter and struct-field source
   locks with public semantic-product probes. Completed: the last

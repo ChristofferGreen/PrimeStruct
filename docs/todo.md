@@ -56,18 +56,17 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4162
 - TODO-4165
 - TODO-4159
 - TODO-4160
 - TODO-4163
 - TODO-4164
+- TODO-4166
 - TODO-4174
 
 ### Immediate Next 10 (After Ready Now)
 
 - TODO-4161
-- TODO-4166
 - TODO-4173
 - TODO-4176
 
@@ -75,8 +74,8 @@ Task template:
 
 - Semantic-product authority and lowerer boundary enforcement: TODO-4159,
   TODO-4160, TODO-4161, TODO-4164
-- Compile-pipeline boundary hardening and provenance parity: TODO-4162,
-  TODO-4163, TODO-4165, TODO-4166
+- Compile-pipeline boundary hardening and provenance parity: TODO-4163,
+  TODO-4165, TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
   TODO-4175
 - `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
@@ -84,31 +83,30 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4162
-2. TODO-4165
-3. TODO-4159
-4. TODO-4160
-5. TODO-4161
-6. TODO-4163
-7. TODO-4164
-8. TODO-4166
-9. TODO-4174
-10. TODO-4173
-11. TODO-4176
-12. TODO-4175
-13. TODO-4179
-14. TODO-4177
-15. TODO-4178
-16. TODO-4180
-17. TODO-4182
-18. TODO-4181
+1. TODO-4165
+2. TODO-4159
+3. TODO-4160
+4. TODO-4161
+5. TODO-4163
+6. TODO-4164
+7. TODO-4166
+8. TODO-4174
+9. TODO-4173
+10. TODO-4176
+11. TODO-4175
+12. TODO-4179
+13. TODO-4177
+14. TODO-4178
+15. TODO-4180
+16. TODO-4182
+17. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4164 |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4162, TODO-4166 |
+| Compile-pipeline stage and publication-boundary contracts | TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
@@ -134,7 +132,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4161, TODO-4163 |
 | AST transform hook conformance | TODO-4173, TODO-4176 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
-| Compile-pipeline stage handoff conformance | TODO-4162, TODO-4166 |
+| Compile-pipeline stage handoff conformance | TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4163 |
 | Lowerer/source-composition contract coverage | TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
@@ -499,24 +497,6 @@ Task template:
   - stop_rule: Stop once one representative full semantic-product dump path
     has worker-count parity coverage; do not build a massive worker-count
     matrix in one slice.
-
-- [ ] TODO-4162: Split compile-pipeline benchmark knobs from the production pipeline entrypoint
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Compile-pipeline boundary hardening
-  - scope: Move the touched benchmark collector and worker-count plumbing out
-    of the main compile-pipeline entrypoint into a narrower config or helper
-    surface so production stage handoff stays explicit.
-  - acceptance:
-    - The main compile-pipeline entrypoint no longer directly owns the touched
-      benchmark-only knob set.
-    - Benchmark collection still works through a dedicated config or helper
-      path.
-    - Non-benchmark compile-pipeline behavior remains unchanged for the
-      touched entrypoints.
-  - stop_rule: Stop once one production compile-pipeline entrypoint no longer
-    co-owns the touched benchmark knobs; do not refactor all pipeline config
-    in one slice.
 
 - [ ] TODO-4161: Add semantic-product contract-version compatibility coverage
   - owner: ai

@@ -87,19 +87,105 @@ bool isKnownSemanticCollectorFamily(std::string_view name) {
          SemanticCollectorFamilies.end();
 }
 
-CompilePipelineSemanticProductDecision decideSemanticProductDecision(DumpStage dumpStage, const Options &options) {
-  if (options.benchmarkForceSemanticProduct.has_value()) {
-    return *options.benchmarkForceSemanticProduct
+bool compilePipelineBenchmarkConfigRequested(const Options &options) {
+  return options.benchmarkForceSemanticProduct.has_value() ||
+         options.benchmarkSemanticNoFactEmission ||
+         options.benchmarkSemanticFactFamiliesSpecified ||
+         options.benchmarkSemanticTwoChunkDefinitionValidation ||
+         options.benchmarkSemanticDefinitionValidationWorkerCount.has_value() ||
+         options.benchmarkSemanticPhaseCounters ||
+         options.benchmarkSemanticAllocationCounters ||
+         options.benchmarkSemanticRssCheckpoints ||
+         options.benchmarkSemanticDisableMethodTargetMemoization ||
+         options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow ||
+         options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow ||
+         options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr;
+}
+
+CompilePipelineBenchmarkConfig makeCompilePipelineBenchmarkConfigFromOptions(const Options &options) {
+  CompilePipelineBenchmarkConfig config;
+  config.forceSemanticProduct = options.benchmarkForceSemanticProduct;
+  config.semanticNoFactEmission = options.benchmarkSemanticNoFactEmission;
+  config.semanticFactFamiliesSpecified = options.benchmarkSemanticFactFamiliesSpecified;
+  config.semanticFactFamilies = options.benchmarkSemanticFactFamilies;
+  config.semanticTwoChunkDefinitionValidation = options.benchmarkSemanticTwoChunkDefinitionValidation;
+  config.semanticDefinitionValidationWorkerCount =
+      options.benchmarkSemanticDefinitionValidationWorkerCount;
+  config.semanticPhaseCounters = options.benchmarkSemanticPhaseCounters;
+  config.semanticAllocationCounters = options.benchmarkSemanticAllocationCounters;
+  config.semanticRssCheckpoints = options.benchmarkSemanticRssCheckpoints;
+  config.semanticDisableMethodTargetMemoization =
+      options.benchmarkSemanticDisableMethodTargetMemoization;
+  config.semanticGraphLocalAutoLegacyKeyShadow =
+      options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow;
+  config.semanticGraphLocalAutoLegacySideChannelShadow =
+      options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow;
+  config.semanticDisableGraphLocalAutoDependencyScratchPmr =
+      options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr;
+  return config;
+}
+
+CompilePipelineRunConfig makeCompilePipelineRunConfigFromOptions(
+    const Options &options,
+    CompilePipelineBenchmarkConfig &benchmarkConfigStorage) {
+  CompilePipelineRunConfig runConfig;
+  runConfig.skipSemanticProductForNonConsumingPath =
+      options.skipSemanticProductForNonConsumingPath;
+  if (compilePipelineBenchmarkConfigRequested(options)) {
+    benchmarkConfigStorage = makeCompilePipelineBenchmarkConfigFromOptions(options);
+    runConfig.benchmark = &benchmarkConfigStorage;
+  }
+  return runConfig;
+}
+
+CompilePipelineSemanticProductDecision decideSemanticProductDecision(
+    DumpStage dumpStage,
+    const CompilePipelineRunConfig &runConfig) {
+  const CompilePipelineBenchmarkConfig *benchmarkConfig = runConfig.benchmark;
+  if (benchmarkConfig != nullptr && benchmarkConfig->forceSemanticProduct.has_value()) {
+    return *benchmarkConfig->forceSemanticProduct
                ? CompilePipelineSemanticProductDecision::ForcedOnForBenchmark
                : CompilePipelineSemanticProductDecision::ForcedOffForBenchmark;
   }
   if (dumpStage == DumpStage::AstSemantic) {
     return CompilePipelineSemanticProductDecision::SkipForAstSemanticDump;
   }
-  if (options.skipSemanticProductForNonConsumingPath) {
+  if (runConfig.skipSemanticProductForNonConsumingPath) {
     return CompilePipelineSemanticProductDecision::SkipForNonConsumingPath;
   }
   return CompilePipelineSemanticProductDecision::RequireForConsumingPath;
+}
+
+uint32_t semanticDefinitionValidationWorkerCount(
+    const CompilePipelineBenchmarkConfig *benchmarkConfig) {
+  if (benchmarkConfig == nullptr) {
+    return 1;
+  }
+  if (benchmarkConfig->semanticDefinitionValidationWorkerCount.has_value()) {
+    return *benchmarkConfig->semanticDefinitionValidationWorkerCount;
+  }
+  if (benchmarkConfig->semanticTwoChunkDefinitionValidation) {
+    return 2;
+  }
+  return 1;
+}
+
+bool semanticBenchmarkCountersRequested(const CompilePipelineBenchmarkConfig *benchmarkConfig) {
+  return benchmarkConfig != nullptr &&
+         (benchmarkConfig->semanticPhaseCounters ||
+          benchmarkConfig->semanticAllocationCounters ||
+          benchmarkConfig->semanticRssCheckpoints);
+}
+
+bool semanticBenchmarkValidationConfigRequested(
+    const CompilePipelineBenchmarkConfig *benchmarkConfig,
+    uint32_t definitionValidationWorkerCount) {
+  return benchmarkConfig != nullptr &&
+         (definitionValidationWorkerCount != 1 ||
+          benchmarkConfig->semanticDisableMethodTargetMemoization ||
+          benchmarkConfig->semanticGraphLocalAutoLegacyKeyShadow ||
+          benchmarkConfig->semanticGraphLocalAutoLegacySideChannelShadow ||
+          benchmarkConfig->semanticDisableGraphLocalAutoDependencyScratchPmr);
 }
 
 bool semanticProductDecisionRequestsBuild(CompilePipelineSemanticProductDecision decision) {
@@ -800,6 +886,18 @@ bool runCompilePipeline(const Options &options,
                         CompilePipelineErrorStage &errorStage,
                         std::string &error,
                         CompilePipelineDiagnosticInfo *diagnosticInfo) {
+  CompilePipelineBenchmarkConfig benchmarkConfig;
+  const CompilePipelineRunConfig runConfig =
+      makeCompilePipelineRunConfigFromOptions(options, benchmarkConfig);
+  return runCompilePipeline(options, runConfig, output, errorStage, error, diagnosticInfo);
+}
+
+bool runCompilePipeline(const Options &options,
+                        const CompilePipelineRunConfig &runConfig,
+                        CompilePipelineOutput &output,
+                        CompilePipelineErrorStage &errorStage,
+                        std::string &error,
+                        CompilePipelineDiagnosticInfo *diagnosticInfo) {
   errorStage = CompilePipelineErrorStage::None;
   output = {};
   error.clear();
@@ -906,14 +1004,17 @@ bool runCompilePipeline(const Options &options,
   SemanticDiagnosticInfo semanticDiagnosticInfo;
   SemanticProgram semanticProgram;
   const CompilePipelineSemanticProductDecision semanticProductDecision =
-      decideSemanticProductDecision(dumpStage, options);
+      decideSemanticProductDecision(dumpStage, runConfig);
   const bool needsSemanticProduct = semanticProductDecisionRequestsBuild(semanticProductDecision);
+  const CompilePipelineBenchmarkConfig *benchmarkConfig = runConfig.benchmark;
   SemanticProductBuildConfig semanticProductBuildConfig;
   const SemanticProductBuildConfig *semanticProductBuildConfigPtr = nullptr;
-  if (options.benchmarkSemanticNoFactEmission || options.benchmarkSemanticFactFamiliesSpecified) {
-    semanticProductBuildConfig.disableAllCollectors = options.benchmarkSemanticNoFactEmission;
-    semanticProductBuildConfig.collectorAllowlistSpecified = options.benchmarkSemanticFactFamiliesSpecified;
-    semanticProductBuildConfig.collectorAllowlist = options.benchmarkSemanticFactFamilies;
+  if (benchmarkConfig != nullptr &&
+      (benchmarkConfig->semanticNoFactEmission || benchmarkConfig->semanticFactFamiliesSpecified)) {
+    semanticProductBuildConfig.disableAllCollectors = benchmarkConfig->semanticNoFactEmission;
+    semanticProductBuildConfig.collectorAllowlistSpecified =
+        benchmarkConfig->semanticFactFamiliesSpecified;
+    semanticProductBuildConfig.collectorAllowlist = benchmarkConfig->semanticFactFamilies;
     for (const auto &collectorFamily : semanticProductBuildConfig.collectorAllowlist) {
       if (!isKnownSemanticCollectorFamily(collectorFamily)) {
         error = "unknown benchmark semantic collector family: " + collectorFamily;
@@ -923,26 +1024,16 @@ bool runCompilePipeline(const Options &options,
     }
     semanticProductBuildConfigPtr = &semanticProductBuildConfig;
   }
-  uint32_t benchmarkSemanticDefinitionValidationWorkerCount = 1;
-  if (options.benchmarkSemanticDefinitionValidationWorkerCount.has_value()) {
-    benchmarkSemanticDefinitionValidationWorkerCount =
-        *options.benchmarkSemanticDefinitionValidationWorkerCount;
-  } else if (options.benchmarkSemanticTwoChunkDefinitionValidation) {
-    benchmarkSemanticDefinitionValidationWorkerCount = 2;
-  }
+  const uint32_t benchmarkSemanticDefinitionValidationWorkerCount =
+      semanticDefinitionValidationWorkerCount(benchmarkConfig);
   SemanticPhaseCounters benchmarkSemanticPhaseCounters;
   const bool benchmarkSemanticCountersRequested =
-      options.benchmarkSemanticPhaseCounters ||
-      options.benchmarkSemanticAllocationCounters ||
-      options.benchmarkSemanticRssCheckpoints;
+      semanticBenchmarkCountersRequested(benchmarkConfig);
   SemanticPhaseCounters *benchmarkSemanticPhaseCountersPtr =
       benchmarkSemanticCountersRequested ? &benchmarkSemanticPhaseCounters : nullptr;
   const bool benchmarkSemanticConfigRequested =
-      benchmarkSemanticDefinitionValidationWorkerCount != 1 ||
-      options.benchmarkSemanticDisableMethodTargetMemoization ||
-      options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow ||
-      options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow ||
-      options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr;
+      semanticBenchmarkValidationConfigRequested(benchmarkConfig,
+                                                benchmarkSemanticDefinitionValidationWorkerCount);
   output.semanticProductDecision = semanticProductDecision;
   output.semanticProductRequested = needsSemanticProduct;
   bool semanticValidationOk = false;
@@ -950,18 +1041,18 @@ bool runCompilePipeline(const Options &options,
     SemanticValidationBenchmarkConfig benchmarkConfig;
     benchmarkConfig.definitionValidationWorkerCount = benchmarkSemanticDefinitionValidationWorkerCount;
     benchmarkConfig.disableMethodTargetMemoization =
-        options.benchmarkSemanticDisableMethodTargetMemoization;
+        runConfig.benchmark->semanticDisableMethodTargetMemoization;
     benchmarkConfig.graphLocalAutoLegacyKeyShadow =
-        options.benchmarkSemanticGraphLocalAutoLegacyKeyShadow;
+        runConfig.benchmark->semanticGraphLocalAutoLegacyKeyShadow;
     benchmarkConfig.graphLocalAutoLegacySideChannelShadow =
-        options.benchmarkSemanticGraphLocalAutoLegacySideChannelShadow;
+        runConfig.benchmark->semanticGraphLocalAutoLegacySideChannelShadow;
     benchmarkConfig.disableGraphLocalAutoDependencyScratchPmr =
-        options.benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr;
+        runConfig.benchmark->semanticDisableGraphLocalAutoDependencyScratchPmr;
 
     SemanticValidationBenchmarkObserver benchmarkObserver;
     benchmarkObserver.phaseCounters = benchmarkSemanticPhaseCountersPtr;
-    benchmarkObserver.allocationCountersEnabled = options.benchmarkSemanticAllocationCounters;
-    benchmarkObserver.rssCheckpointsEnabled = options.benchmarkSemanticRssCheckpoints;
+    benchmarkObserver.allocationCountersEnabled = runConfig.benchmark->semanticAllocationCounters;
+    benchmarkObserver.rssCheckpointsEnabled = runConfig.benchmark->semanticRssCheckpoints;
 
     semanticValidationOk = validateSemanticsForBenchmark(output.program,
                                                          options.entryPath,

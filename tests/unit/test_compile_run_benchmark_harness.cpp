@@ -3647,6 +3647,8 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
       repoRoot / "src" / "semantics" / "SemanticsValidationPublicationOrchestration.cpp";
   const std::filesystem::path semanticsValidatePath =
       repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
+  const std::filesystem::path pipelineHeaderPath =
+      repoRoot / "include" / "primec" / "CompilePipeline.h";
   const std::filesystem::path pipelinePath = repoRoot / "src" / "CompilePipeline.cpp";
   const std::string semanticsHeader = readFile(semanticsHeaderPath.string());
   const std::string semanticsBenchmarkHeader = readFile(semanticsBenchmarkHeaderPath.string());
@@ -3657,6 +3659,7 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   const std::string publicationOrchestrationSource =
       readFile(publicationOrchestrationSourcePath.string());
   const std::string semanticsValidateText = readFile(semanticsValidatePath.string());
+  const std::string pipelineHeader = readFile(pipelineHeaderPath.string());
   const std::string pipelineText = readFile(pipelinePath.string());
 
   REQUIRE_FALSE(semanticsHeader.empty());
@@ -3666,6 +3669,7 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   REQUIRE_FALSE(publicationOrchestrationHeader.empty());
   REQUIRE_FALSE(publicationOrchestrationSource.empty());
   REQUIRE_FALSE(semanticsValidateText.empty());
+  REQUIRE_FALSE(pipelineHeader.empty());
   REQUIRE_FALSE(pipelineText.empty());
 
   CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkConfig") == std::string::npos);
@@ -3714,8 +3718,21 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   CHECK(semanticsValidateText.find("semanticProgramFactCountForValidationPublication(") ==
         std::string::npos);
 
-  CHECK(pipelineText.find("SemanticValidationBenchmarkConfig benchmarkConfig;") != std::string::npos);
-  CHECK(pipelineText.find("SemanticValidationBenchmarkObserver benchmarkObserver;") != std::string::npos);
+  CHECK(pipelineHeader.find("struct CompilePipelineBenchmarkConfig") != std::string::npos);
+  CHECK(pipelineHeader.find("struct CompilePipelineRunConfig") != std::string::npos);
+  CHECK(pipelineHeader.find("const CompilePipelineRunConfig &runConfig") != std::string::npos);
+  CHECK(pipelineText.find("makeCompilePipelineRunConfigFromOptions(") != std::string::npos);
+  CHECK(pipelineText.find("decideSemanticProductDecision(dumpStage, runConfig)") !=
+        std::string::npos);
+  CHECK(pipelineText.find("decideSemanticProductDecision(dumpStage, options)") ==
+        std::string::npos);
+  CHECK(pipelineText.find("semanticBenchmarkCountersRequested(benchmarkConfig)") !=
+        std::string::npos);
+  CHECK(pipelineText.find("semanticBenchmarkValidationConfigRequested(") != std::string::npos);
+  CHECK(pipelineText.find("SemanticValidationBenchmarkConfig benchmarkConfig;") !=
+        std::string::npos);
+  CHECK(pipelineText.find("SemanticValidationBenchmarkObserver benchmarkObserver;") !=
+        std::string::npos);
   CHECK(pipelineText.find("validateSemanticsForBenchmark(") != std::string::npos);
   CHECK(pipelineText.find("semanticValidationOk = semantics.validate(") != std::string::npos);
 }
