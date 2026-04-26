@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4189: Align vector dynamic-storage docs. Completed:
+  `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` no longer say
+  vector dynamic-storage migration or full runtime parity is tracked in
+  `docs/todo.md` while the active queue is empty. The docs now preserve the
+  fixed-capacity VM/native implementation status and require a concrete
+  dynamic-storage migration TODO before changing that runtime contract.
+  Source-lock coverage rejects the stale active-TODO pointer.
 - ✓ TODO-4188: Align spinning-cube roadmap docs. Completed:
   `examples/web/spinning_cube/README.md` no longer points readers to the
   archived `Native Windowed Spinning Cube (Roadmap)` section in `docs/todo.md`

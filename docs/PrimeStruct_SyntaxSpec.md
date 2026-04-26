@@ -795,8 +795,9 @@ Current ownership contract:
   survivor-motion paths are both wired. There is no corresponding builtin `soa_vector` indexed-removal surface yet.
 - `push` / `reserve` require relocation-trivial element types.
 
-Implementation status note: VM/native currently still implement vectors as fixed-capacity locals; full dynamic
-vector runtime parity is tracked in `docs/todo.md`.
+Implementation status note: VM/native currently still implement vectors as fixed-capacity locals. No active TODO
+currently tracks full dynamic vector runtime parity, so add a concrete dynamic-storage migration TODO before changing
+that runtime contract.
 
 ### 8.3 Maps
 

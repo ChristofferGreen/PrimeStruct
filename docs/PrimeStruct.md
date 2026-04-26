@@ -4150,8 +4150,8 @@ read-only path.
   lowering.
 - **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with count metadata plus contiguous element
   slots. Vectors are specified as dynamic contiguous storage (heap-backed semantics), but VM/native currently implement
-  vectors as inline fixed-capacity locals; migration to dynamic storage is tracked in `docs/todo.md`. No reference
-  counting is performed.
+  vectors as inline fixed-capacity locals. No active TODO currently tracks migration to dynamic storage; add a concrete
+  dynamic-storage migration TODO before changing that runtime contract. No reference counting is performed.
 - **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM
   runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native

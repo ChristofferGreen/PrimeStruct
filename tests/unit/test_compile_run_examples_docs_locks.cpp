@@ -55,6 +55,50 @@ TEST_CASE("spinning cube native-window status avoids inactive TODO pointers") {
         std::string::npos);
 }
 
+TEST_CASE("vector dynamic-storage docs avoid inactive TODO pointers") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path syntaxSpecPath = std::filesystem::path("..") / "docs" / "PrimeStruct_SyntaxSpec.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(syntaxSpecPath)) {
+    syntaxSpecPath = std::filesystem::current_path() / "docs" / "PrimeStruct_SyntaxSpec.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(primeStructDoc.find("No active TODO currently tracks migration to dynamic storage") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("dynamic-storage migration TODO before changing that runtime contract") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("No active TODO\ncurrently tracks full dynamic vector runtime parity") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("concrete dynamic-storage migration TODO before changing") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("migration to dynamic storage is tracked in `docs/todo.md`") ==
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("vector runtime parity is tracked in `docs/todo.md`") ==
+        std::string::npos);
+  CHECK(todo.find("TODO-4189") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4189: Align vector dynamic-storage docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib style boundary docs stay source locked") {
   std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
