@@ -147,8 +147,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+  CHECK(readFile(errPath).find("push is only supported as a statement") !=
         std::string::npos);
 }
 
@@ -174,7 +173,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /vector/push") != std::string::npos);
 }
 
-TEST_CASE("rejects vm named vector push expression receiver precedence during lowering") {
+TEST_CASE("rejects vm named vector push expression receiver precedence during semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -201,12 +200,11 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+  CHECK(readFile(errPath).find("push is only supported as a statement") !=
         std::string::npos);
 }
 
-TEST_CASE("rejects vm auto-inferred named vector push expression receiver precedence during lowering") {
+TEST_CASE("rejects vm auto-inferred named vector push expression receiver precedence during semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -234,8 +232,7 @@ main() {
   const std::string runCmd =
       "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find(
-            "vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
+  CHECK(readFile(errPath).find("push is only supported as a statement") !=
         std::string::npos);
 }
 

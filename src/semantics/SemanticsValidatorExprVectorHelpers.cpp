@@ -710,6 +710,12 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
       hasNamedArgs;
+  auto isBareVectorMutatorExpressionReceiver = [&](const Expr &receiverCandidate) {
+    return !expr.isMethodCall &&
+           expr.namespacePrefix.empty() &&
+           expr.name == vectorHelper &&
+           classifyReceiverFamily(receiverCandidate) == "vector";
+  };
   if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
       !hasVisibleDefinitionPath(resolved) &&
       !isStdNamespacedVectorCanonicalCountCapacityNamedArgException) {
@@ -752,6 +758,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   }();
   size_t resolvedReceiverIndex = 0;
   bool resolvedReceiver = false;
+  bool failedReceiverProbe = false;
   if ((!isStdNamespacedVectorCanonicalCompatibilityDirectCallSite ||
        isStdNamespacedVectorCanonicalCountCapacityNamedArgException) &&
       !expr.args.empty()) {
@@ -760,6 +767,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         return false;
       }
       const Expr &receiverCandidate = expr.args[receiverIndex];
+      if (isBareVectorMutatorExpressionReceiver(receiverCandidate)) {
+        failedReceiverProbe = true;
+        return failVectorHelperDiagnostic(
+            vectorHelper + " is only supported as a statement");
+      }
       std::string methodTarget;
       if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
         if (!expr.isMethodCall) {
@@ -833,6 +845,9 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       return tryResolveRemainingReceivers(1);
     };
     tryResolveReorderedReceiver();
+  }
+  if (failedReceiverProbe) {
+    return false;
   }
 
   if (resolvedVectorHelperDefinitionMissing) {

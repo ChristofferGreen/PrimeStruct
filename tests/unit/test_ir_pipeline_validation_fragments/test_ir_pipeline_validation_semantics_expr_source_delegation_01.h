@@ -1189,7 +1189,7 @@
             "const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
-            "const bool resolvedVectorHelperDefinitionMissing =") !=
+            "bool resolvedVectorHelperDefinitionMissing =") !=
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "size_t namedValuesReceiverIndex = expr.args.size();") !=
@@ -1299,6 +1299,30 @@
         std::string::npos);
   CHECK(semanticsExprVectorHelpersSource.find(
             "const bool isStdNamespacedVectorCanonicalHelperCall =") ==
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "auto isBareVectorMutatorExpressionReceiver = [&](const Expr &receiverCandidate) {\n"
+            "    return !expr.isMethodCall &&\n"
+            "           expr.namespacePrefix.empty() &&\n"
+            "           expr.name == vectorHelper &&\n"
+            "           classifyReceiverFamily(receiverCandidate) == \"vector\";\n"
+            "  };") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool failedReceiverProbe = false;") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "if (isBareVectorMutatorExpressionReceiver(receiverCandidate)) {\n"
+            "        failedReceiverProbe = true;\n"
+            "        return failVectorHelperDiagnostic(\n"
+            "            vectorHelper + \" is only supported as a statement\");\n"
+            "      }") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "if (failedReceiverProbe) {\n"
+            "    return false;\n"
+            "  }\n\n"
+            "  if (resolvedVectorHelperDefinitionMissing) {") !=
         std::string::npos);
   const auto vectorHelpersHasNamedArgsPos = semanticsExprVectorHelpersSource.find(
       "const bool hasNamedArgs = hasNamedArguments(expr.argNames);");

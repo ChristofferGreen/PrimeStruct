@@ -488,7 +488,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("vector helper call-form expression uses user-defined method target") {
+TEST_CASE("vector helper call-form expression rejects user-defined method target") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -502,11 +502,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper call-form expression user shadow accepts positional reordered arguments") {
+TEST_CASE("vector helper call-form expression user shadow rejects positional reordered arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -520,11 +520,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper call-form expression user shadow accepts bool positional reordered arguments") {
+TEST_CASE("vector helper call-form expression user shadow rejects bool positional reordered arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<bool>]
 /vector/push([vector<i32> mut] values, [bool] value) {
@@ -538,8 +538,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("vector helper call-form expression stays statement-only without user helper") {
@@ -581,7 +581,7 @@ main() {
   CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper call-form expression user shadow accepts named arguments") {
+TEST_CASE("vector helper call-form expression user shadow rejects named arguments") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -595,11 +595,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper call-form expression user shadow keeps duplicate named diagnostics") {
+TEST_CASE("vector helper call-form expression user shadow rejects duplicate named receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [i32] value) {
@@ -614,10 +614,10 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("duplicate named argument: values") != std::string::npos);
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper call-form expression prefers labeled named receiver") {
+TEST_CASE("vector helper call-form expression rejects labeled named receiver") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -637,11 +637,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
-TEST_CASE("vector helper call-form expression infers auto binding from labeled receiver helper") {
+TEST_CASE("vector helper call-form expression rejects auto binding from labeled receiver helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/push([vector<i32> mut] values, [string] value) {
@@ -662,8 +662,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push is only supported as a statement") != std::string::npos);
 }
 
 TEST_CASE("vector stdlib namespaced helper auto inference follows alias precedence") {
