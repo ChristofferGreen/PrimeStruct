@@ -4938,3 +4938,31 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     classification, added semantic-product and lowerer adapter coverage,
     removed `TODO-4169` from the live queue, promoted `TODO-4170` to Ready Now,
     and deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4171: Migrate infer-source-delegation semantics source-lock suite to public inspection surfaces
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - scope: Retire the infer-source-delegation semantics source-lock suite that
+    reads `SemanticsValidatorPrivate*.h` fragments directly, replacing it with
+    `ast-semantic`, `semantic-product`, type-graph, or dedicated public
+    testing-helper assertions.
+  - acceptance:
+    - The infer-source-delegation suite no longer reads private
+      `src/semantics/` fragments directly.
+    - The migrated coverage still catches infer delegation regressions through
+      public inspection surfaces.
+    - The touched tests remain deterministic and runnable from
+      `build-release/`.
+  - stop_rule: Stop once the infer-source-delegation suite preserves
+    behavioral signal without pinning private fragment placement; do not fold
+    graph-pilot or unrelated source-lock suites into the same slice.
+  - finished_at: 2026-04-26
+  - evidence: Removed the infer-source-delegation source-lock read of
+    `SemanticsValidatorPrivateExprInference.h` and replaced the private
+    declaration-string assertions with semantic-product checks over published
+    stdlib helper routing. The migrated coverage now verifies FileError,
+    ContainerError, GfxError, and canonical map helper surface IDs through
+    public semantic-product call-target entries, removed `TODO-4171` from the
+    live queue, promoted `TODO-4172` to Ready Now, and deferred release reruns
+    to CI per the lite workflow.

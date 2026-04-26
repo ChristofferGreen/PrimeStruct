@@ -1,5 +1,7 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
+#include "primec/StdlibSurfaceRegistry.h"
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("semantics validator infer source delegation stays stable") {
@@ -1936,8 +1938,6 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
       std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
                                                              : std::filesystem::path("..");
 
-  const std::filesystem::path helperHeaderPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorPrivateExprInference.h";
   const std::filesystem::path helperSourcePath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolutionHelpers.cpp";
   const std::filesystem::path buildCallResolutionPath =
@@ -1958,7 +1958,6 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
       repoRoot / "stdlib" / "std" / "collections" / "soa_vector.prime";
   const std::filesystem::path experimentalSoaVectorStdlibPath =
       repoRoot / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
-  REQUIRE(std::filesystem::exists(helperHeaderPath));
   REQUIRE(std::filesystem::exists(helperSourcePath));
   REQUIRE(std::filesystem::exists(buildCallResolutionPath));
   REQUIRE(std::filesystem::exists(resultHelpersPath));
@@ -1969,7 +1968,6 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   REQUIRE(std::filesystem::exists(soaVectorStdlibPath));
   REQUIRE(std::filesystem::exists(experimentalSoaVectorStdlibPath));
 
-  const std::string helperHeaderSource = readText(helperHeaderPath);
   const std::string helperSource = readText(helperSourcePath);
   const std::string buildCallResolutionSource = readText(buildCallResolutionPath);
   const std::string resultHelpersSource = readText(resultHelpersPath);
@@ -1982,14 +1980,80 @@ TEST_CASE("semantics validator stdlib bridge helper routing stays stable") {
   const std::string soaVectorStdlibSource = readText(soaVectorStdlibPath);
   const std::string experimentalSoaVectorStdlibSource = readText(experimentalSoaVectorStdlibPath);
 
-  CHECK(helperHeaderSource.find("std::string preferredFileHelperTarget(") !=
-        std::string::npos);
-  CHECK(helperHeaderSource.find(
-            "std::string preferredCanonicalExperimentalMapHelperTarget(") !=
-        std::string::npos);
-  CHECK(helperHeaderSource.find(
-            "bool shouldBuiltinValidateCurrentMapWrapperHelper(") !=
-        std::string::npos);
+  const std::string routingSource = R"(
+import /std/file/*
+import /std/collections/*
+import /std/gfx/*
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [FileError] fileErr{FileError.eof()}
+  [Result<FileError>] fileStatus{FileError.status(fileErr)}
+  [ContainerError] containerErr{ContainerError.missingKey()}
+  [Result<ContainerError>] containerStatus{containerErr.status()}
+  [GfxError] gfxErr{deviceCreateFailed()}
+  [Result<GfxError>] gfxStatus{gfxErr.status()}
+  [map<string, i32>] values{map<string, i32>("left"raw_utf8, 4i32)}
+  [Result<i32, ContainerError>] found{values.tryAt("left"raw_utf8)}
+  return(plus(count(Result.why(fileStatus)),
+      plus(count(Result.why(containerStatus)), count(Result.why(gfxStatus)))))
+}
+)";
+  primec::Program routingProgram;
+  primec::SemanticProgram routingSemanticProgram;
+  std::string routingError;
+  REQUIRE(parseAndValidate(routingSource,
+                           routingProgram,
+                           routingSemanticProgram,
+                           routingError,
+                           {"io_out", "io_err"}));
+  CHECK(routingError.empty());
+
+  const auto *fileDirectEntry = findSemanticInferEntry(
+      primec::semanticProgramDirectCallTargetView(routingSemanticProgram),
+      [&routingSemanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.callName == "status" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(routingSemanticProgram, entry) ==
+                   "/std/file/FileError/status";
+      });
+  REQUIRE(fileDirectEntry != nullptr);
+  REQUIRE(fileDirectEntry->stdlibSurfaceId.has_value());
+  CHECK(*fileDirectEntry->stdlibSurfaceId == primec::StdlibSurfaceId::FileErrorHelpers);
+
+  const auto *containerMethodEntry = findSemanticInferEntry(
+      primec::semanticProgramMethodCallTargetView(routingSemanticProgram),
+      [&routingSemanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "status" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(routingSemanticProgram, entry) ==
+                   "/std/collections/ContainerError/status";
+      });
+  REQUIRE(containerMethodEntry != nullptr);
+  REQUIRE(containerMethodEntry->stdlibSurfaceId.has_value());
+  CHECK(*containerMethodEntry->stdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsContainerErrorHelpers);
+
+  const auto *gfxMethodEntry = findSemanticInferEntry(
+      primec::semanticProgramMethodCallTargetView(routingSemanticProgram),
+      [&routingSemanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "status" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(routingSemanticProgram, entry) ==
+                   "/std/gfx/GfxError/status";
+      });
+  REQUIRE(gfxMethodEntry != nullptr);
+  REQUIRE(gfxMethodEntry->stdlibSurfaceId.has_value());
+  CHECK(*gfxMethodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::GfxErrorHelpers);
+
+  const auto *mapMethodEntry = findSemanticInferEntry(
+      primec::semanticProgramMethodCallTargetView(routingSemanticProgram),
+      [&routingSemanticProgram](const primec::SemanticProgramMethodCallTarget &entry) {
+        return entry.scopePath == "/main" && entry.methodName == "tryAt" &&
+               primec::semanticProgramMethodCallTargetResolvedPath(routingSemanticProgram, entry) ==
+                   "/std/collections/map/tryAt";
+      });
+  REQUIRE(mapMethodEntry != nullptr);
+  REQUIRE(mapMethodEntry->stdlibSurfaceId.has_value());
+  CHECK(*mapMethodEntry->stdlibSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+
   CHECK(helperSource.find("#include \"primec/StdlibSurfaceRegistry.h\"") !=
         std::string::npos);
   CHECK(helperSource.find("StdlibSurfaceId::FileHelpers") != std::string::npos);

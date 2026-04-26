@@ -56,16 +56,15 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4171
 - TODO-4148
 - TODO-4168
 - TODO-4170
 - TODO-4153
+- TODO-4172
 
 ### Immediate Next 10 (After Ready Now)
 
 - TODO-4150
-- TODO-4172
 - TODO-4155
 - TODO-4157
 - TODO-4158
@@ -74,14 +73,14 @@ Task template:
 - TODO-4159
 - TODO-4160
 - TODO-4161
+- TODO-4163
 
 ### Priority Lanes (Current)
 
 - Semantic-product authority and lowerer boundary enforcement: TODO-4148,
   TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158,
   TODO-4159, TODO-4160, TODO-4161, TODO-4164
-- Test API cleanup and contract-probe migration: TODO-4171, TODO-4153,
-  TODO-4172
+- Test API cleanup and contract-probe migration: TODO-4153, TODO-4172
 - Semantics orchestration cleanup: TODO-4168
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
@@ -92,34 +91,33 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4171
-2. TODO-4148
-3. TODO-4168
-4. TODO-4170
-5. TODO-4150
-6. TODO-4153
-7. TODO-4172
-8. TODO-4155
-9. TODO-4157
-10. TODO-4158
-11. TODO-4162
-12. TODO-4165
-13. TODO-4159
-14. TODO-4160
-15. TODO-4161
-16. TODO-4163
-17. TODO-4164
-18. TODO-4166
-19. TODO-4174
-20. TODO-4173
-21. TODO-4176
-22. TODO-4175
-23. TODO-4179
-24. TODO-4177
-25. TODO-4178
-26. TODO-4180
-27. TODO-4182
-28. TODO-4181
+1. TODO-4148
+2. TODO-4168
+3. TODO-4170
+4. TODO-4150
+5. TODO-4153
+6. TODO-4172
+7. TODO-4155
+8. TODO-4157
+9. TODO-4158
+10. TODO-4162
+11. TODO-4165
+12. TODO-4159
+13. TODO-4160
+14. TODO-4161
+15. TODO-4163
+16. TODO-4164
+17. TODO-4166
+18. TODO-4174
+19. TODO-4173
+20. TODO-4176
+21. TODO-4175
+22. TODO-4179
+23. TODO-4177
+24. TODO-4178
+25. TODO-4180
+26. TODO-4182
+27. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -159,7 +157,7 @@ Task template:
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
 | Focused backend rerun ergonomics and suite partitioning | none |
-| Architecture contract probe migration | TODO-4171, TODO-4172 |
+| Architecture contract probe migration | TODO-4172 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | TODO-4165 |
@@ -649,25 +647,6 @@ Task template:
   - stop_rule: Stop once the touched graph-pilot or architecture suite
     preserves behavioral signal without pinning private fragment placement; do
     not broaden into unrelated semantics coverage reshaping.
-
-- [ ] TODO-4171: Migrate infer-source-delegation semantics source-lock suite to public inspection surfaces
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Test API cleanup
-  - scope: Retire the infer-source-delegation semantics source-lock suite that
-    reads `SemanticsValidatorPrivate*.h` fragments directly, replacing it with
-    `ast-semantic`, `semantic-product`, type-graph, or dedicated public
-    testing-helper assertions.
-  - acceptance:
-    - The infer-source-delegation suite no longer reads private
-      `src/semantics/` fragments directly.
-    - The migrated coverage still catches infer delegation regressions through
-      public inspection surfaces.
-    - The touched tests remain deterministic and runnable from
-      `build-release/`.
-  - stop_rule: Stop once the infer-source-delegation suite preserves
-    behavioral signal without pinning private fragment placement; do not fold
-    graph-pilot or unrelated source-lock suites into the same slice.
 
 - [ ] TODO-4170: Publish `soa_vector` specialization facts needed by the lowerer
   - owner: ai
