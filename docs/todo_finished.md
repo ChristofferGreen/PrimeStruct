@@ -5134,6 +5134,57 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     Removed `TODO-4153` from the live queue and lowerer/source-composition
     snapshot, and deferred release reruns to CI per the lite workflow.
 
+- [x] TODO-4172: Migrate graph-pilot and architecture source-lock suites to public inspection surfaces
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - depends_on: TODO-4171
+  - scope: Retire the remaining semantics source-lock suites that read private
+    `src/semantics/` fragments for graph-pilot or architecture checks,
+    replacing them with semantic-product, type-graph, or dedicated public
+    testing-helper assertions.
+  - acceptance:
+    - At least one graph-pilot or architecture source-lock suite no longer
+      reads private `src/semantics/` fragments directly.
+    - The migrated coverage still catches the touched architecture/delegation
+      regressions through public inspection surfaces.
+    - The touched tests remain deterministic and runnable from
+      `build-release/`.
+  - stop_rule: Stop once the touched graph-pilot or architecture suite
+    preserves behavioral signal without pinning private fragment placement; do
+    not broaden into unrelated semantics coverage reshaping.
+  - finished_at: 2026-04-26
+  - evidence: Replaced the graph-context architecture query-projection
+    source-lock test that read private `src/semantics/` snapshot and
+    validation files with a public semantic-product contract probe. The new
+    coverage compiles a small `try(lookup())` program, then verifies query and
+    try facts through semantic-product views plus published semantic-id and
+    composite-key lookup APIs instead of pinning private snapshot helpers.
+    Removed `TODO-4172` from the live queue and architecture coverage
+    snapshot, and deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4154: Track semantics source-lock migration to public inspection surfaces
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - depends_on: TODO-4171, TODO-4172
+  - scope: Track retirement of semantics source-lock suites that read private
+    `src/semantics/` fragments directly in favor of public inspection surfaces.
+  - acceptance:
+    - TODO-4171 and TODO-4172 land with deterministic coverage still runnable
+      from `build-release/`.
+    - The touched semantics source-lock suites preserve delegation and
+      architecture signal through public inspection surfaces.
+  - stop_rule: Keep this item as a coordination tracker only; implement work
+    through child leaves rather than reopening the broad migration slice.
+  - finished_at: 2026-04-26
+  - evidence: Closed the tracking item after TODO-4171 migrated the infer
+    source-delegation semantics lock and TODO-4172 migrated the graph-context
+    architecture query-projection lock to public semantic-product inspection.
+    The active test API cleanup lane no longer carries a semantics
+    source-lock migration tracker, and release reruns remain deferred to CI
+    per the lite workflow.
+
 - [x] TODO-4148: Cut method-target resolution over to published semantic-product facts
   - owner: ai
   - created_at: 2026-04-25

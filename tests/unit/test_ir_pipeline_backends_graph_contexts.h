@@ -3181,70 +3181,80 @@ TEST_CASE("semantic product on_error facts use handlerPathId without handlerPath
         std::string::npos);
 }
 
-TEST_CASE("semantic snapshot query projections reuse semantic-product fact caches") {
-  const std::filesystem::path cwd = std::filesystem::current_path();
-  std::filesystem::path headerPath = cwd / "src" / "semantics" / "SemanticsValidator.h";
-  const std::filesystem::path root =
-      std::filesystem::exists(cwd / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp")
-          ? cwd
-          : cwd.parent_path();
-  if (!std::filesystem::exists(headerPath)) {
-    headerPath = root / "src" / "semantics" / "SemanticsValidator.h";
+TEST_CASE("semantic product query projections expose stable public lookup keys") {
+  const std::string source = R"(
+[return<void>]
+unexpectedError([i32] err) {
+}
+
+[return<Result<int, i32>>]
+lookup() {
+  return(Result.ok(4i32))
+}
+
+[return<i32> effects(heap_alloc) on_error<i32, /unexpectedError>]
+main() {
+  [auto] selected{try(lookup())}
+  return(selected)
+}
+)";
+
+  primec::testing::CompilePipelineBackendConformance conformance;
+  std::string error;
+  REQUIRE(primec::testing::runCompilePipelineBackendConformanceForTesting(
+      source, "/main", "native", conformance, error));
+  CHECK(error.empty());
+  REQUIRE(conformance.output.hasSemanticProgram);
+  const primec::SemanticProgram &semanticProgram =
+      conformance.output.semanticProgram;
+
+  const primec::SemanticProgramQueryFact *queryFact = nullptr;
+  for (const auto *entry : primec::semanticProgramQueryFactView(semanticProgram)) {
+    if (entry != nullptr && entry->scopePath == "/main" &&
+        primec::semanticProgramQueryFactResolvedPath(semanticProgram, *entry) ==
+            "/lookup") {
+      queryFact = entry;
+      break;
+    }
   }
-  REQUIRE(std::filesystem::exists(headerPath));
-  const std::string semanticsHeader = readTextFile(headerPath);
-  const std::string graphLocalAutoHeader =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidatorGraphLocalAuto.h");
-  const std::string semanticsSnapshots =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
-  const std::string semanticsSnapshotLocals =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshotLocals.cpp");
-  const std::string semanticsValidate =
-      readTextFile(root / "src" / "semantics" / "SemanticsValidate.cpp");
+  REQUIRE(queryFact != nullptr);
+  CHECK(queryFact->callName == "lookup");
+  CHECK(queryFact->bindingTypeText == "Result<int, i32>");
+  CHECK(queryFact->hasResultType);
+  CHECK(queryFact->resultTypeHasValue);
+  CHECK(queryFact->resultValueType == "int");
+  CHECK(queryFact->resultErrorType == "i32");
+  REQUIRE(queryFact->semanticNodeId != 0);
+  REQUIRE(queryFact->resolvedPathId != primec::InvalidSymbolId);
+  REQUIRE(queryFact->callNameId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramLookupPublishedQueryFactBySemanticId(
+            semanticProgram, queryFact->semanticNodeId) == queryFact);
+  CHECK(primec::semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(
+            semanticProgram, queryFact->resolvedPathId, queryFact->callNameId) ==
+        queryFact);
 
-  const std::size_t queryFactStart =
-      semanticsSnapshots.find("SemanticsValidator::queryFactSnapshotForSemanticProduct() {");
-  const std::size_t tryFactStart =
-      semanticsSnapshots.find("SemanticsValidator::tryFactSnapshotForSemanticProduct()");
-  const std::size_t queryCacheHelperStart =
-      semanticsSnapshotLocals.find("SemanticsValidator::ensureQuerySnapshotFactCaches() {");
-  REQUIRE(queryFactStart != std::string::npos);
-  REQUIRE(tryFactStart != std::string::npos);
-  REQUIRE(queryCacheHelperStart != std::string::npos);
-  REQUIRE(graphLocalAutoHeader.find("struct GraphLocalAutoKey {") != std::string::npos);
-  REQUIRE(queryFactStart < tryFactStart);
-
-  const std::string queryFactBody = semanticsSnapshots.substr(queryFactStart, tryFactStart - queryFactStart);
-  CHECK(queryFactBody.find("ensureQuerySnapshotFactCaches();") != std::string::npos);
-  CHECK(queryFactBody.find("return std::exchange(queryFactSnapshotCache_, {});") != std::string::npos);
-
-  const std::string queryCacheHelperBody = semanticsSnapshotLocals.substr(queryCacheHelperStart);
-  CHECK(queryCacheHelperBody.find("forEachInferredQuerySnapshot(") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("queryFactSnapshotCache_.push_back(") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("std::stable_sort(queryFactSnapshotCache_.begin(),") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("if (left.scopePath != right.scopePath)") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("if (left.sourceLine != right.sourceLine)") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("if (left.sourceColumn != right.sourceColumn)") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("if (left.callName != right.callName)") != std::string::npos);
-  CHECK(queryCacheHelperBody.find("return left.resolvedPath < right.resolvedPath;") != std::string::npos);
-
-  CHECK(semanticsHeader.find("queryCallTypeSnapshotForTesting") == std::string::npos);
-  CHECK(semanticsHeader.find("queryBindingSnapshotForTesting") == std::string::npos);
-  CHECK(semanticsHeader.find("queryResultTypeSnapshotForTesting") == std::string::npos);
-  CHECK(semanticsHeader.find("queryReceiverBindingSnapshotForTesting") == std::string::npos);
-  CHECK(semanticsHeader.find("struct QueryCallTypeSnapshotEntry {") == std::string::npos);
-  CHECK(semanticsHeader.find("struct QueryBindingSnapshotEntry {") == std::string::npos);
-  CHECK(semanticsHeader.find("struct QueryResultTypeSnapshotEntry {") == std::string::npos);
-  CHECK(semanticsHeader.find("struct QueryReceiverBindingSnapshotEntry {") == std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryFactSnapshotForSemanticProduct()") != std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryCallTypeSnapshotForTesting()") == std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryBindingSnapshotForTesting()") == std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryResultTypeSnapshotForTesting()") == std::string::npos);
-  CHECK(semanticsValidate.find("validator.queryReceiverBindingSnapshotForTesting()") == std::string::npos);
-  CHECK(semanticsValidate.find("if (entry.typeText.empty()) {") != std::string::npos);
-  CHECK(semanticsValidate.find("if (entry.binding.typeName.empty()) {") != std::string::npos);
-  CHECK(semanticsValidate.find("if (!entry.hasResultType) {") != std::string::npos);
-  CHECK(semanticsValidate.find("if (entry.receiverBinding.typeName.empty()) {") != std::string::npos);
+  const primec::SemanticProgramTryFact *tryFact = nullptr;
+  for (const auto *entry : primec::semanticProgramTryFactView(semanticProgram)) {
+    if (entry != nullptr && entry->scopePath == "/main" &&
+        primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *entry) ==
+            "/lookup") {
+      tryFact = entry;
+      break;
+    }
+  }
+  REQUIRE(tryFact != nullptr);
+  CHECK(tryFact->valueType == "int");
+  CHECK(tryFact->errorType == "i32");
+  CHECK(tryFact->onErrorHandlerPath == "/unexpectedError");
+  REQUIRE(tryFact->semanticNodeId != 0);
+  REQUIRE(tryFact->operandResolvedPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramLookupPublishedTryFactBySemanticId(
+            semanticProgram, tryFact->semanticNodeId) == tryFact);
+  CHECK(primec::semanticProgramLookupPublishedTryFactByOperandPathAndSource(
+            semanticProgram,
+            tryFact->operandResolvedPathId,
+            tryFact->sourceLine,
+            tryFact->sourceColumn) == tryFact);
 }
 
 TEST_CASE("semantic snapshot shared traversal keeps call and try ordering keys") {

@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4172
 - TODO-4155
 - TODO-4158
 - TODO-4162
@@ -80,7 +79,6 @@ Task template:
 - Semantic-product authority and lowerer boundary enforcement: TODO-4155,
   TODO-4157, TODO-4158, TODO-4159,
   TODO-4160, TODO-4161, TODO-4164
-- Test API cleanup and contract-probe migration: TODO-4172
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -90,28 +88,27 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4172
-2. TODO-4155
-3. TODO-4157
-4. TODO-4158
-5. TODO-4162
-6. TODO-4165
-7. TODO-4159
-8. TODO-4160
-9. TODO-4161
-10. TODO-4163
-11. TODO-4164
-12. TODO-4166
-13. TODO-4174
-14. TODO-4173
-15. TODO-4176
-16. TODO-4175
-17. TODO-4179
-18. TODO-4177
-19. TODO-4178
-20. TODO-4180
-21. TODO-4182
-22. TODO-4181
+1. TODO-4155
+2. TODO-4157
+3. TODO-4158
+4. TODO-4162
+5. TODO-4165
+6. TODO-4159
+7. TODO-4160
+8. TODO-4161
+9. TODO-4163
+10. TODO-4164
+11. TODO-4166
+12. TODO-4174
+13. TODO-4173
+14. TODO-4176
+15. TODO-4175
+16. TODO-4179
+17. TODO-4177
+18. TODO-4178
+19. TODO-4180
+20. TODO-4182
+21. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -151,7 +148,7 @@ Task template:
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
 | Focused backend rerun ergonomics and suite partitioning | none |
-| Architecture contract probe migration | TODO-4172 |
+| Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | TODO-4165 |
@@ -622,26 +619,6 @@ Task template:
   - stop_rule: Stop once one real adapter seam is retired end-to-end; do not
     attempt a repo-wide compatibility cleanup in one slice.
 
-- [ ] TODO-4172: Migrate graph-pilot and architecture source-lock suites to public inspection surfaces
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Test API cleanup
-  - depends_on: TODO-4171
-  - scope: Retire the remaining semantics source-lock suites that read private
-    `src/semantics/` fragments for graph-pilot or architecture checks,
-    replacing them with semantic-product, type-graph, or dedicated public
-    testing-helper assertions.
-  - acceptance:
-    - At least one graph-pilot or architecture source-lock suite no longer
-      reads private `src/semantics/` fragments directly.
-    - The migrated coverage still catches the touched architecture/delegation
-      regressions through public inspection surfaces.
-    - The touched tests remain deterministic and runnable from
-      `build-release/`.
-  - stop_rule: Stop once the touched graph-pilot or architecture suite
-    preserves behavioral signal without pinning private fragment placement; do
-    not broaden into unrelated semantics coverage reshaping.
-
 - [ ] TODO-4155: Add semantic-product-authority conformance coverage across entrypoints
   - owner: ai
   - created_at: 2026-04-25
@@ -660,18 +637,3 @@ Task template:
   - stop_rule: Stop once the semantic-product boundary is covered as a contract
     at the compile/runtime entrypoints; do not broaden into unrelated backend
     feature additions.
-
-- [ ] TODO-4154: Track semantics source-lock migration to public inspection surfaces
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Test API cleanup
-  - depends_on: TODO-4171, TODO-4172
-  - scope: Track retirement of semantics source-lock suites that read private
-    `src/semantics/` fragments directly in favor of public inspection surfaces.
-  - acceptance:
-    - TODO-4171 and TODO-4172 land with deterministic coverage still runnable
-      from `build-release/`.
-    - The touched semantics source-lock suites preserve delegation and
-      architecture signal through public inspection surfaces.
-  - stop_rule: Keep this item as a coordination tracker only; implement work
-    through child leaves rather than reopening the broad migration slice.
