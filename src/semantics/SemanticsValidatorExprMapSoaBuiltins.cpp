@@ -505,24 +505,29 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
                                         helperName);
     }
     std::string elemType;
-      const bool oldSurfaceCallShape =
-          (helperName == "get" &&
-           (isSimpleCallName(expr, "get") ||
-            (expr.isMethodCall && expr.name == "get") ||
-            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get"))) ||
-          (helperName == "get_ref" &&
-           (isSimpleCallName(expr, "get_ref") ||
-            (expr.isMethodCall && expr.name == "get_ref") ||
-            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
-                                             "get_ref"))) ||
-          (helperName == "ref" &&
-           (isSimpleCallName(expr, "ref") ||
-            (expr.isMethodCall && expr.name == "ref") ||
-            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref"))) ||
-          (helperName == "ref_ref" &&
-           (isSimpleCallName(expr, "ref_ref") ||
-            (expr.isMethodCall && expr.name == "ref_ref") ||
-            isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref")));
+    const bool oldSurfaceCallShape =
+        (helperName == "get" &&
+         (isSimpleCallName(expr, "get") ||
+          (expr.isMethodCall && expr.name == "get") ||
+          isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "get"))) ||
+        (helperName == "get_ref" &&
+         (isSimpleCallName(expr, "get_ref") ||
+          (expr.isMethodCall && expr.name == "get_ref") ||
+          isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical,
+                                           "get_ref"))) ||
+        (helperName == "ref" &&
+         (isSimpleCallName(expr, "ref") ||
+          (expr.isMethodCall && expr.name == "ref") ||
+          isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref"))) ||
+        (helperName == "ref_ref" &&
+         (isSimpleCallName(expr, "ref_ref") ||
+          (expr.isMethodCall && expr.name == "ref_ref") ||
+          isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref")));
+    if (oldSurfaceCallShape &&
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
+      handledOut = false;
+      return true;
+    }
     if (!this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             expr.args.front(),
             params,

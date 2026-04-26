@@ -787,6 +787,9 @@
             "soaUnavailableMethodDiagnostic(resolved)") !=
         std::string::npos);
   CHECK(semanticsExprMapSoaBuiltinsSource.find(
+            "hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" + helperName)") !=
+        std::string::npos);
+  CHECK(semanticsExprMapSoaBuiltinsSource.find(
             "soaFieldViewPendingDiagnostic(soaFieldViewName)") ==
         std::string::npos);
   CHECK(semanticsExprResultFileSource.find(
