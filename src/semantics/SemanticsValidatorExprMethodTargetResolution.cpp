@@ -2837,15 +2837,17 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       return setCollectionMethodTarget(preferredBareVectorHelperTarget(normalizedMethodName));
     }
   }
-  if (normalizedMethodName == "to_soa" && normalizedTypeName == "vector") {
+  if (normalizedMethodName == "to_soa" &&
+      normalizedCollectionTypePath == "/vector") {
     return setCollectionMethodTarget("/to_soa");
   }
   if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
-      (normalizedTypeName == "soa_vector" || normalizedTypeName == "vector")) {
+      (normalizedCollectionTypePath == "/soa_vector" ||
+       normalizedCollectionTypePath == "/vector")) {
     return setCollectionMethodTarget(
         preferredSoaHelperTargetForCollectionType(
             normalizedMethodName,
-            normalizedTypeName == "soa_vector" ? "/soa_vector" : "/vector"));
+            normalizedCollectionTypePath == "/soa_vector" ? "/soa_vector" : "/vector"));
   }
   if (isMapCollectionTypeName(normalizeBindingTypeName(typeName)) &&
       (normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
