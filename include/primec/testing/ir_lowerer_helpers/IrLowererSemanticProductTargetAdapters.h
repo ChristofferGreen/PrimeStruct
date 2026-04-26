@@ -24,6 +24,7 @@ struct SemanticProductIndex {
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByOperandPathAndSource;
+  std::unordered_map<uint64_t, const SemanticProgramCollectionSpecialization *> collectionSpecializationsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
 
@@ -70,12 +71,15 @@ const SemanticProgramCallableSummary *findSemanticProductCallableSummary(
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
     const SemanticProductIndex &semanticIndex,
     const Definition &definition);
-const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
-                                                                const Definition &definition);
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Definition &definition);
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,
     const Definition &definition);
+const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
+                                                                const Definition &definition);
 const SemanticProgramReturnFact *findSemanticProductReturnFactBySemanticId(
     const SemanticProductIndex &semanticIndex,
     const Definition &definition);
@@ -88,14 +92,20 @@ const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticPro
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(
     const SemanticProductIndex &semanticIndex,
     const Expr &expr);
-const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
-                                                                    const Expr &expr);
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,
     const Expr &expr);
+const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,
+                                                                    const Expr &expr);
 const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
     const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
+const SemanticProgramQueryFact *findSemanticProductQueryFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
     const Expr &expr);
 const SemanticProgramQueryFact *findSemanticProductQueryFact(
     const SemanticProgram *semanticProgram,
@@ -105,6 +115,9 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProdu
                                                             const Expr &expr);
 const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(
     const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
+const SemanticProgramTryFact *findSemanticProductTryFactBySemanticId(
+    const SemanticProductTargetAdapter &adapter,
     const Expr &expr);
 const SemanticProgramTryFact *findSemanticProductTryFact(
     const SemanticProgram *semanticProgram,
@@ -116,5 +129,11 @@ const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticP
                                                                 const Expr &expr);
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Expr &expr);
+const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
+const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
 
 } // namespace primec::ir_lowerer

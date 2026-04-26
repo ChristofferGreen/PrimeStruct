@@ -634,6 +634,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
       (isExplicitPublishedVectorCountCall(expr) &&
        expr.args.size() == 1 &&
+       expr.args.front().kind != Expr::Kind::Call &&
        ((isDynamicVectorCountTargetFn &&
          isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) ||
         isVectorCountTarget(expr.args.front(), localsIn))) ||
@@ -665,7 +666,8 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     }
   }
 
-  if (isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+  if (expr.namespacePrefix.empty() &&
+      isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
     if (!emitExpr(expr.args.front(), localsIn)) {
       return CountAccessCallEmitResult::Error;

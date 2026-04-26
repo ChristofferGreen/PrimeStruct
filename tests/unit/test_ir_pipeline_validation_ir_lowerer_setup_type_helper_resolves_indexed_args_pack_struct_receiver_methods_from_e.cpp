@@ -286,7 +286,7 @@ TEST_CASE("ir lowerer setup type helper keeps semantic direct user collection fa
 
   primec::Expr receiverExpr;
   receiverExpr.kind = primec::Expr::Kind::Literal;
-  receiverExpr.intValue = 3;
+  receiverExpr.literalValue = 3;
   receiverExpr.intWidth = 32;
 
   primec::Expr methodCall;
@@ -376,7 +376,7 @@ TEST_CASE("ir lowerer setup type helper keeps semantic direct user collection fa
 
   primec::Expr indexExpr;
   indexExpr.kind = primec::Expr::Kind::Literal;
-  indexExpr.intValue = 0;
+  indexExpr.literalValue = 0;
   indexExpr.intWidth = 32;
 
   auto expectDirectAccessFallback =
