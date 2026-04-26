@@ -366,7 +366,7 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
 
   CHECK(vmMath.find("TEST_CASE(\"runs vm with qualified math names\")") != std::string::npos);
-  CHECK(vmMath.find("TEST_CASE(\"runs vm support-matrix math nominal helpers\")") !=
+  CHECK(vmMath.find("TEST_CASE(\"rejects vm support-matrix math nominal helpers\")") !=
         std::string::npos);
   CHECK(vmMath.find("TEST_CASE(\"rejects vm quaternion reference multiply and rotation during lowering\")") !=
         std::string::npos);

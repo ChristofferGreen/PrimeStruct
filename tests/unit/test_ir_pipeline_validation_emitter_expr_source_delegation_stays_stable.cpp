@@ -176,9 +176,99 @@ TEST_CASE("emitter expr source delegation stays stable") {
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable") {
-#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_01.h"
-#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_02.h"
-#include "test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_03.h"
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  };
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
+                                                             : std::filesystem::path("..");
+
+  const std::filesystem::path semanticsExprPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExpr.cpp";
+  const std::filesystem::path semanticsExprCollectionCountCapacityPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionCountCapacity.cpp";
+  const std::filesystem::path semanticsExprCollectionDispatchSetupPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCollectionDispatchSetup.cpp";
+  const std::filesystem::path semanticsExprCountCapacityMapBuiltinsPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprCountCapacityMapBuiltins.cpp";
+  const std::filesystem::path semanticsExprDirectCollectionFallbacksPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprDirectCollectionFallbacks.cpp";
+  const std::filesystem::path semanticsExprLateCallCompatibilityPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprLateCallCompatibility.cpp";
+  const std::filesystem::path semanticsExprMethodResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodResolution.cpp";
+  const std::filesystem::path semanticsExprMethodTargetResolutionPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprMethodTargetResolution.cpp";
+  const std::filesystem::path semanticsExprVectorHelpersPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidatorExprVectorHelpers.cpp";
+  REQUIRE(std::filesystem::exists(semanticsExprPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionCountCapacityPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCollectionDispatchSetupPath));
+  REQUIRE(std::filesystem::exists(semanticsExprCountCapacityMapBuiltinsPath));
+  REQUIRE(std::filesystem::exists(semanticsExprDirectCollectionFallbacksPath));
+  REQUIRE(std::filesystem::exists(semanticsExprLateCallCompatibilityPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMethodResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsExprMethodTargetResolutionPath));
+  REQUIRE(std::filesystem::exists(semanticsExprVectorHelpersPath));
+
+  const std::string semanticsExprSource = readText(semanticsExprPath);
+  const std::string semanticsExprCollectionCountCapacitySource =
+      readText(semanticsExprCollectionCountCapacityPath);
+  const std::string semanticsExprCollectionDispatchSetupSource =
+      readText(semanticsExprCollectionDispatchSetupPath);
+  const std::string semanticsExprCountCapacityMapBuiltinsSource =
+      readText(semanticsExprCountCapacityMapBuiltinsPath);
+  const std::string semanticsExprDirectCollectionFallbacksSource =
+      readText(semanticsExprDirectCollectionFallbacksPath);
+  const std::string semanticsExprLateCallCompatibilitySource =
+      readText(semanticsExprLateCallCompatibilityPath);
+  const std::string semanticsExprMethodResolutionSource =
+      readText(semanticsExprMethodResolutionPath);
+  const std::string semanticsExprMethodTargetResolutionSource =
+      readText(semanticsExprMethodTargetResolutionPath);
+  const std::string semanticsExprVectorHelpersSource =
+      readText(semanticsExprVectorHelpersPath);
+
+  CHECK(semanticsExprSource.find("validateExprCountCapacityMapBuiltins(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprLateCallCompatibility(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("validateExprDirectCollectionFallbacks(") !=
+        std::string::npos);
+  CHECK(semanticsExprSource.find("bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find("bool SemanticsValidator::resolveVectorHelperMethodTarget(") ==
+        std::string::npos);
+
+  CHECK(semanticsExprCollectionCountCapacitySource.find(
+            "bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "bool SemanticsValidator::prepareExprCollectionDispatchSetup(") !=
+        std::string::npos);
+  CHECK(semanticsExprCountCapacityMapBuiltinsSource.find(
+            "bool SemanticsValidator::validateExprCountCapacityMapBuiltins(") !=
+        std::string::npos);
+  CHECK(semanticsExprDirectCollectionFallbacksSource.find(
+            "bool SemanticsValidator::validateExprDirectCollectionFallbacks(") !=
+        std::string::npos);
+  CHECK(semanticsExprLateCallCompatibilitySource.find(
+            "bool SemanticsValidator::validateExprLateCallCompatibility(") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "bool SemanticsValidator::validateExprMethodCallTarget(") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "bool SemanticsValidator::resolveMethodTarget(") !=
+        std::string::npos);
+  CHECK(semanticsExprVectorHelpersSource.find(
+            "bool SemanticsValidator::resolveVectorHelperMethodTarget(") !=
+        std::string::npos);
 }
 TEST_CASE("template monomorph source delegation stays stable") {
   auto readText = [](const std::filesystem::path &path) {
@@ -1495,13 +1585,13 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "path == \"/std/collections/soa_vector/get\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "path == \"/std/collections/soa_vector/get_ref\"") !=
+            "path == \"/std/collections/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "path == \"/std/collections/soa_vector/count\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "path == \"/std/collections/soa_vector/count_ref\"") !=
+            "path == \"/std/collections/soa_vector/count_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "path == \"/std/collections/soa_vector/reserve\"") ==

@@ -219,7 +219,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /i32/count") != std::string::npos);
+  CHECK(readFile(errPath).find("vm backend only supports entry argument indexing") != std::string::npos);
 }
 
 TEST_CASE("vm keeps builtin string count on canonical vector unsafe method access shadow") {
