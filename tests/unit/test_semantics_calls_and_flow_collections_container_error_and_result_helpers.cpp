@@ -5269,6 +5269,40 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("builtin soa_vector method-like helper-return read helpers reject primitive metadata first") {
+  const std::string source = R"(
+Holder() {}
+
+[effects(heap_alloc), return<soa_vector<i32>>]
+/Holder/cloneValues([Holder] self) {
+  [soa_vector<i32>, mut] values{soa_vector<i32>()}
+  values.push(7i32)
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Holder] holder{Holder()}
+  [i32] countBare{count(holder.cloneValues())}
+  [i32] countMethod{holder.cloneValues().count()}
+  [i32] getBare{get(holder.cloneValues(), 0i32)}
+  [i32] getMethod{holder.cloneValues().get(0i32)}
+  [Reference<i32>] refBare{ref(holder.cloneValues(), 0i32)}
+  [Reference<i32>] refMethod{holder.cloneValues().ref(0i32)}
+  return(plus(countBare,
+              plus(countMethod,
+                   plus(getBare,
+                        plus(getMethod,
+                             plus(dereference(refBare),
+                                  dereference(refMethod)))))))
+}
+  )";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("meta.field_count requires struct type argument: i32") !=
+        std::string::npos);
+}
+
 TEST_CASE("builtin soa_vector method-like helper-return read helpers reject non-reflect Particle metadata first") {
   const std::string source = R"(
 Particle() {
