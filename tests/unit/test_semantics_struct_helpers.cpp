@@ -131,14 +131,14 @@ Counter() {
 
   [return<i32>]
   doubled() {
-    return(this.value * 2i32)
+    return(multiply(this.value, 2i32))
   }
 }
 
 [return<i32>]
 main() {
   [Counter] counter{Counter()}
-  return(counter.doubled() + Counter.default_step())
+  return(plus(counter.doubled(), Counter.default_step()))
 }
 )";
   std::string error;
@@ -152,7 +152,7 @@ TEST_CASE("generic struct helper resolves local templated root helper with impli
 VecLike<T>() {
   [return<void>]
   check() {
-    vectorCheckShape<T>(this)
+    /vectorCheckShape<T>(this)
   }
 }
 
