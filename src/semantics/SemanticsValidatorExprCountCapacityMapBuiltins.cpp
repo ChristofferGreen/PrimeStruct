@@ -354,7 +354,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
           isLegacyOrCanonicalSoaHelperPath(logicalSoaCountCanonical, "count_ref")
               ? "count_ref"
               : "count";
-      if (isExplicitOldSurfaceSoaCountCall() &&
+      const bool explicitOldSurfaceSoaCountCall =
+          isExplicitOldSurfaceSoaCountCall();
+      const bool hasDeclaredSamePathSoaCountHelper =
+          hasDeclaredDefinitionPath("/soa_vector/" + soaCountHelperName);
+      if (explicitOldSurfaceSoaCountCall &&
           !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
                                                     soaCountHelperName)) {
         return failCountCapacityMapBuiltin(
@@ -370,8 +374,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
             isLegacyOrCanonicalSoaHelperPath(
                 logicalSoaCountCanonical,
                 soaCountHelperName);
-        if (oldSurfaceCallShape &&
-            hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)) {
+        if ((explicitOldSurfaceSoaCountCall &&
+             hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)) ||
+            (!explicitOldSurfaceSoaCountCall && oldSurfaceCallShape &&
+             hasDeclaredSamePathSoaCountHelper)) {
           handledOut = false;
           return true;
         }

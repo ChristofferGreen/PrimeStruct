@@ -1802,7 +1802,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
-            "hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)") !=
+            "hasDeclaredDefinitionPath(\"/soa_vector/\" + soaCountHelperName)") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find("auto hasVisibleSamePathSoaCountHelper =") ==
         std::string::npos);
