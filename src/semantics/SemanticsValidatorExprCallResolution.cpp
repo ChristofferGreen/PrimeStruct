@@ -470,6 +470,19 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
     if (!preferredMethodLikeSamePathSoaHelperCandidate.empty()) {
       return preferredMethodLikeSamePathSoaHelperCandidate;
     }
+    const auto preferredDirectToAosSamePathHelperCandidate = [&]() -> std::string {
+      if (expr.isMethodCall || !expr.templateArgs.empty()) {
+        return {};
+      }
+      if ((candidatePath == "/to_aos" || candidatePath == "/to_aos_ref") &&
+          hasDefinitionFamilyPath(candidatePath)) {
+        return candidatePath;
+      }
+      return {};
+    }();
+    if (!preferredDirectToAosSamePathHelperCandidate.empty()) {
+      return preferredDirectToAosSamePathHelperCandidate;
+    }
     const std::string samePathSoaCandidateBase =
         canonicalSamePathSoaHelperBase(candidatePath);
     if (!samePathSoaCandidateBase.empty() &&

@@ -5230,6 +5230,7 @@ main() {
 }
 )";
   std::string error;
+  INFO(error);
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
 }
