@@ -239,6 +239,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
              (hasDeclaredDefinitionPath(preferredVectorAccessTarget) ||
               hasImportedDefinitionPath(preferredVectorAccessTarget));
     };
+    auto canonicalVectorAccessHelperTarget = [&]() {
+      return "/std/collections/vector/" + accessHelperName;
+    };
+    auto hasVisibleCanonicalVectorAccessHelper = [&]() {
+      const std::string canonicalTarget = canonicalVectorAccessHelperTarget();
+      return hasDeclaredDefinitionPath(canonicalTarget) ||
+             hasImportedDefinitionPath(canonicalTarget);
+    };
     auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
       std::string elemType;
       return context.resolveVectorTarget(candidate, elemType) ||
@@ -286,8 +294,22 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           usesBuiltinVectorSurfaceMethodSemantics &&
           (context.resolveVectorTarget(receiverCandidate, ignoredVectorElemType) ||
            context.resolveSoaVectorTarget(receiverCandidate, ignoredVectorElemType));
+      const bool receiverIsBuiltinVectorAccessTarget =
+          isValueSurfaceAccessHelperName(accessHelperName) &&
+          context.resolveVectorTarget(receiverCandidate, ignoredVectorElemType);
+      if (receiverIsBuiltinVectorAccessTarget) {
+        methodResolved = canonicalVectorAccessHelperTarget();
+        if (!hasVisibleCanonicalVectorAccessHelper()) {
+          (void)failCollectionAccessTargetDiagnostic(
+              "unknown call target: " + methodResolved);
+          failedReceiverProbe = true;
+          return true;
+        }
+        resolvedVectorAccessMethod = true;
+      }
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
+          !receiverIsBuiltinVectorAccessTarget &&
           (!receiverSupportsBuiltinVectorSurfaceSemantics ||
            hasVisiblePreferredVectorAccessHelper()) &&
           resolveVectorHelperMethodTarget(params, locals, receiverCandidate,
@@ -398,8 +420,20 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           usesBuiltinVectorSurfaceMethodSemantics &&
           (context.resolveVectorTarget(expr.args.front(), ignoredVectorElemType) ||
            context.resolveSoaVectorTarget(expr.args.front(), ignoredVectorElemType));
+      const bool receiverIsBuiltinVectorAccessTarget =
+          isValueSurfaceAccessHelperName(accessHelperName) &&
+          context.resolveVectorTarget(expr.args.front(), ignoredVectorElemType);
+      if (receiverIsBuiltinVectorAccessTarget) {
+        methodResolved = canonicalVectorAccessHelperTarget();
+        if (!hasVisibleCanonicalVectorAccessHelper()) {
+          return failCollectionAccessTargetDiagnostic(
+              "unknown call target: " + methodResolved);
+        }
+        resolvedVectorAccessMethod = true;
+      }
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
+          !receiverIsBuiltinVectorAccessTarget &&
           (!receiverSupportsBuiltinVectorSurfaceSemantics ||
            hasVisiblePreferredVectorAccessHelper()) &&
           resolveVectorHelperMethodTarget(params, locals, expr.args.front(),

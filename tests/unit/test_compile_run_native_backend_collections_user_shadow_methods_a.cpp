@@ -235,7 +235,7 @@ main() {
   CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native user vector at call shadow") {
+TEST_CASE("rejects native user vector at call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -249,12 +249,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_at_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_vector_at_call_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_vector_at_call_shadow.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 68);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs canonical vector discard helpers with owned elements in native backend") {
@@ -348,7 +350,7 @@ TEST_CASE("runs native indexed vector removals with ownership semantics") {
   expectVectorIndexedRemovalOwnershipConformance("native");
 }
 
-TEST_CASE("compiles and runs native named vector at expression receiver precedence") {
+TEST_CASE("rejects native named vector at expression receiver precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [string] index) {
@@ -369,16 +371,18 @@ main() {
 )";
   const std::string srcPath =
       writeTemp("compile_native_user_vector_at_named_receiver_precedence.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_vector_at_named_receiver_precedence_exe")
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_vector_at_named_receiver_precedence.err")
           .string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 86);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector at method shadow") {
+TEST_CASE("rejects native user vector at method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -392,12 +396,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_at_method_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_vector_at_method_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_vector_at_method_shadow.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 69);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user string at_unsafe call shadow") {
@@ -444,7 +450,7 @@ main() {
   CHECK(runCommand(exePath) == 72);
 }
 
-TEST_CASE("compiles and runs native user vector at_unsafe call shadow") {
+TEST_CASE("rejects native user vector at_unsafe call shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -458,15 +464,17 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_at_unsafe_call_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_vector_at_unsafe_call_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_vector_at_unsafe_call_shadow.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 81);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at_unsafe") !=
+        std::string::npos);
 }
 
-TEST_CASE("compiles and runs native user vector at_unsafe method shadow") {
+TEST_CASE("rejects native user vector at_unsafe method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -480,12 +488,14 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_at_unsafe_method_shadow.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_user_vector_at_unsafe_method_shadow_exe").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_native_user_vector_at_unsafe_method_shadow.err").string();
 
-  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
-  CHECK(runCommand(compileCmd) == 0);
-  CHECK(runCommand(exePath) == 82);
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") !=
+        std::string::npos);
 }
 
 TEST_CASE("compiles and runs native user string at call shadow") {

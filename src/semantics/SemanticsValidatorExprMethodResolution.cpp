@@ -27,7 +27,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
 
   auto failMethodResolutionDiagnostic = [&](std::string message) -> bool {
     return failExprDiagnostic(expr, std::move(message));
-  };
+      };
   const auto isValueSurfaceAccessMethodName = [](std::string_view helperName) {
     return helperName == "at" || helperName == "at_unsafe";
   };
@@ -132,8 +132,9 @@ bool SemanticsValidator::validateExprMethodCallTarget(
                 methodTarget.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) &&
                (hasImportedDefinitionPath(canonicalVectorCompatibilityMethodTarget) ||
                 defMap_.count(canonicalVectorCompatibilityMethodTarget) > 0);
-      };
+  };
   std::string vectorMethodTarget;
+  bool resolvedCanonicalVectorCompatibilityMethod = false;
   if (isVectorCompatibilityMethod &&
       expr.namespacePrefix != "vector" &&
       expr.namespacePrefix != "/vector" &&
@@ -141,14 +142,16 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.namespacePrefix != "/std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
-    if (expr.name == "count" || expr.name == "capacity") {
+    if (expr.name == "count" || expr.name == "capacity" ||
+        expr.name == "at" || expr.name == "at_unsafe") {
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
         resolved = "/std/collections/vector/" + expr.name;
-        isBuiltinMethod = true;
+        isBuiltinMethod = expr.name == "count" || expr.name == "capacity";
+        resolvedCanonicalVectorCompatibilityMethod = true;
       }
     }
-    if (!isBuiltinMethod) {
+    if (!isBuiltinMethod && !resolvedCanonicalVectorCompatibilityMethod) {
       if (!hasImportedDefinitionPath(vectorMethodTarget) &&
           defMap_.count(vectorMethodTarget) == 0 &&
           shouldRewriteExperimentalVectorCompatibilityMethodTargetToCanonical(vectorMethodTarget)) {

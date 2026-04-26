@@ -92,7 +92,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm user vector at call shadow during lowering") {
+TEST_CASE("rejects vm user vector at call shadow during semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -141,7 +141,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("keeps builtin vector access on vm user vector at method shadow") {
+TEST_CASE("rejects vm user vector at method shadow during semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -155,11 +155,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_method_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_method_shadow_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm with user string at_unsafe call shadow") {
+TEST_CASE("keeps vm builtin string at_unsafe call over user shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at_unsafe([string] values, [i32] index) {
@@ -174,10 +178,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_unsafe_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 71);
+  CHECK(runCommand(runCmd) == 98);
 }
 
-TEST_CASE("runs vm with user string at_unsafe method shadow") {
+TEST_CASE("keeps vm builtin string at_unsafe method over user shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at_unsafe([string] values, [i32] index) {
@@ -192,10 +196,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_unsafe_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 72);
+  CHECK(runCommand(runCmd) == 98);
 }
 
-TEST_CASE("rejects vm user vector at_unsafe call shadow during lowering") {
+TEST_CASE("rejects vm user vector at_unsafe call shadow during semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -217,7 +221,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects vm user vector at_unsafe method shadow during lowering") {
+TEST_CASE("rejects vm user vector at_unsafe method shadow during semantics") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -231,11 +235,15 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_unsafe_method_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_unsafe_method_shadow_err.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") !=
+        std::string::npos);
 }
 
-TEST_CASE("runs vm with user string at call shadow") {
+TEST_CASE("keeps vm builtin string at call over user shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at([string] values, [i32] index) {
@@ -250,10 +258,10 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_call_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 83);
+  CHECK(runCommand(runCmd) == 98);
 }
 
-TEST_CASE("runs vm with user string at method shadow") {
+TEST_CASE("keeps vm builtin string at method over user shadow") {
   const std::string source = R"(
 [return<int>]
 /string/at([string] values, [i32] index) {
@@ -268,7 +276,7 @@ main() {
 )";
   const std::string srcPath = writeTemp("vm_user_string_at_method_shadow.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 84);
+  CHECK(runCommand(runCmd) == 98);
 }
 
 TEST_CASE("rejects vm vector push helper during lowering") {

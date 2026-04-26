@@ -954,13 +954,21 @@
             "          defMap_.count(vectorMethodTarget) == 0 &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (expr.name == \"count\" || expr.name == \"capacity\") {\n"
+            "bool resolvedCanonicalVectorCompatibilityMethod = false;") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (expr.name == \"count\" || expr.name == \"capacity\" ||\n"
+            "        expr.name == \"at\" || expr.name == \"at_unsafe\") {\n"
             "      std::string elemType;\n"
             "      if (resolveVectorTarget(expr.args.front(), elemType)) {\n"
             "        resolved = \"/std/collections/vector/\" + expr.name;\n"
-            "        isBuiltinMethod = true;\n"
+            "        isBuiltinMethod = expr.name == \"count\" || expr.name == \"capacity\";\n"
+            "        resolvedCanonicalVectorCompatibilityMethod = true;\n"
             "      }\n"
             "    }") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodResolutionSource.find(
+            "if (!isBuiltinMethod && !resolvedCanonicalVectorCompatibilityMethod) {") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "const bool isVectorCompatibilityMethod =\n"
@@ -1457,6 +1465,12 @@
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "metadata->canonicalPath) + \"/\" +\n"
             "                        std::string(helperName),") !=
+        std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "if (helperName == \"at\" || helperName == \"at_unsafe\") {\n"
+            "    return canonicalCollectionHelperPath(\n"
+            "        StdlibSurfaceId::CollectionsVectorHelpers, helperName);\n"
+            "  }") !=
         std::string::npos);
   CHECK(semanticsCollectionCompatibilityInternalSource.find(
             "return metadata != nullptr &&\n"
@@ -5880,6 +5894,35 @@
             "             (hasDeclaredDefinitionPath(preferredVectorAccessTarget) ||\n"
             "              hasImportedDefinitionPath(preferredVectorAccessTarget));\n"
             "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "auto canonicalVectorAccessHelperTarget = [&]() {\n"
+            "      return \"/std/collections/vector/\" + accessHelperName;\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "auto hasVisibleCanonicalVectorAccessHelper = [&]() {\n"
+            "      const std::string canonicalTarget = canonicalVectorAccessHelperTarget();\n"
+            "      return hasDeclaredDefinitionPath(canonicalTarget) ||\n"
+            "             hasImportedDefinitionPath(canonicalTarget);\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "const bool receiverIsBuiltinVectorAccessTarget =\n"
+            "          isValueSurfaceAccessHelperName(accessHelperName) &&\n"
+            "          context.resolveVectorTarget(receiverCandidate, ignoredVectorElemType);") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "if (receiverIsBuiltinVectorAccessTarget) {\n"
+            "        methodResolved = canonicalVectorAccessHelperTarget();\n"
+            "        if (!hasVisibleCanonicalVectorAccessHelper()) {\n"
+            "          (void)failCollectionAccessTargetDiagnostic(\n"
+            "              \"unknown call target: \" + methodResolved);\n"
+            "          failedReceiverProbe = true;\n"
+            "          return true;\n"
+            "        }\n"
+            "        resolvedVectorAccessMethod = true;\n"
+            "      }") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
             "(!receiverSupportsBuiltinVectorSurfaceSemantics ||\n"
