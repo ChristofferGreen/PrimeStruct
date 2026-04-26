@@ -304,7 +304,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
+  CHECK(error.find("block arguments require a definition target: /count") != std::string::npos);
 }
 
 TEST_CASE("stdlib namespaced method expression body-arg canonical-fallback helper keeps rooted borrow diagnostic") {
@@ -368,7 +368,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("block arguments require a definition target: /count") != std::string::npos);
+  CHECK(error.find("unknown call target: /vector/borrow") != std::string::npos);
 }
 
 TEST_CASE("map method expression body-arg infers canonical helper on referenced wrapper receiver") {
