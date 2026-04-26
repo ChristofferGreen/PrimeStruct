@@ -11,6 +11,20 @@
   std::vector<std::string> stringTable;
   std::unordered_set<std::string> loweredCallTargets;
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> instructionSourceRangesByFunction;
+  std::unordered_map<std::string, FunctionSyntaxProvenance> functionSyntaxProvenanceByName;
+  functionSyntaxProvenanceByName.reserve(defMap.size());
+  for (const auto &[path, definition] : defMap) {
+    FunctionSyntaxProvenance provenance;
+    if (definition != nullptr) {
+      if (definition->sourceLine > 0) {
+        provenance.line = static_cast<uint32_t>(definition->sourceLine);
+      }
+      if (definition->sourceColumn > 0) {
+        provenance.column = static_cast<uint32_t>(definition->sourceColumn);
+      }
+    }
+    functionSyntaxProvenanceByName.insert_or_assign(path, provenance);
+  }
   auto appendInstructionSourceRange = [&](const std::string &functionName,
                                           const Expr &expr,
                                           size_t beginIndex,

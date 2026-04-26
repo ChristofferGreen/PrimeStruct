@@ -116,6 +116,7 @@ bool IrLowerer::lower(const Program &program,
   auto &stringTable = setupStage.stringTable;
   auto &loweredCallTargets = setupStage.loweredCallTargets;
   auto &instructionSourceRangesByFunction = setupStage.instructionSourceRangesByFunction;
+  auto &functionSyntaxProvenanceByName = setupStage.functionSyntaxProvenanceByName;
   auto &fileScopeStack = setupStage.fileScopeStack;
   auto &currentOnError = setupStage.currentOnError;
   auto &currentReturnResult = setupStage.currentReturnResult;
@@ -215,6 +216,7 @@ bool IrLowerer::lower(const Program &program,
               .stringTable = &stringTable,
               .loweredCallTargets = &loweredCallTargets,
               .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
+              .functionSyntaxProvenanceByName = &functionSyntaxProvenanceByName,
               .currentOnError = &currentOnError,
               .currentReturnResult = &currentReturnResult,
               .sawReturn = &sawReturn,

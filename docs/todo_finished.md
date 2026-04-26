@@ -5270,3 +5270,30 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     Removed `TODO-4157` from the live queue, promoted `TODO-4160` and
     `TODO-4163` to Ready Now, and deferred release reruns to CI per the lite
     workflow.
+
+- [x] TODO-4158: Introduce a narrow lowerer syntax and provenance view
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4147, TODO-4148
+  - scope: Replace one touched lowerer seam that currently receives broad AST
+    ownership (`Program`, wide `Definition*` reach-through, or equivalent)
+    with a syntax-owned body and provenance view that exposes only the data
+    lowering still needs.
+  - acceptance:
+    - One touched lowering path consumes the narrow syntax and provenance view
+      instead of broad AST ownership.
+    - The touched diagnostics and provenance behavior remain unchanged.
+    - The new view is owned outside private semantics internals.
+  - stop_rule: Stop once one production lowering seam uses the narrow syntax
+    and provenance view; do not migrate every lowerer entrypoint in one slice.
+  - finished_at: 2026-04-26
+  - evidence: Replaced the source-map finalization step's broad `Definition*`
+    map input with a narrow `FunctionSyntaxProvenance` map carrying only
+    function fallback line and column data. Lower setup now extracts that
+    provenance from the AST-owned definition inventory once, statement-call
+    lowering passes the narrow view onward, and focused source-map coverage
+    now builds the step from provenance-only data. Removed `TODO-4158` from
+    the live queue, promoted newly unblocked `TODO-4165`, `TODO-4159`, and
+    `TODO-4164` to Ready Now, and deferred release reruns to CI per the lite
+    workflow.

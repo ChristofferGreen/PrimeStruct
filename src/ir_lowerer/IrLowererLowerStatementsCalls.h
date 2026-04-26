@@ -155,7 +155,7 @@
 
   if (!ir_lowerer::runLowerStatementsSourceMapStep(
           {
-              .defMap = &defMap,
+              .functionSyntaxProvenanceByName = &functionSyntaxProvenanceByName,
               .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
               .stringTable = &stringTable,
               .outModule = &out,

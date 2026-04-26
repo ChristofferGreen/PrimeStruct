@@ -56,26 +56,25 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4158
 - TODO-4162
+- TODO-4165
+- TODO-4159
 - TODO-4160
 - TODO-4163
+- TODO-4164
 - TODO-4174
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4165
-- TODO-4159
 - TODO-4161
-- TODO-4164
 - TODO-4166
 - TODO-4173
 - TODO-4176
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4158,
-  TODO-4159, TODO-4160, TODO-4161, TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4159,
+  TODO-4160, TODO-4161, TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -85,31 +84,30 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4158
-2. TODO-4162
-3. TODO-4165
-4. TODO-4159
-5. TODO-4160
-6. TODO-4161
-7. TODO-4163
-8. TODO-4164
-9. TODO-4166
-10. TODO-4174
-11. TODO-4173
-12. TODO-4176
-13. TODO-4175
-14. TODO-4179
-15. TODO-4177
-16. TODO-4178
-17. TODO-4180
-18. TODO-4182
-19. TODO-4181
+1. TODO-4162
+2. TODO-4165
+3. TODO-4159
+4. TODO-4160
+5. TODO-4161
+6. TODO-4163
+7. TODO-4164
+8. TODO-4166
+9. TODO-4174
+10. TODO-4173
+11. TODO-4176
+12. TODO-4175
+13. TODO-4179
+14. TODO-4177
+15. TODO-4178
+16. TODO-4180
+17. TODO-4182
+18. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4158, TODO-4164 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4164 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4162, TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -138,7 +136,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4162, TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4158, TODO-4159 |
+| Lowerer/source-composition contract coverage | TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -456,7 +454,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Compile-pipeline boundary hardening
-  - depends_on: TODO-4158
   - scope: Add release coverage proving debugger-facing and source-map
     provenance stay stable when lowering consumes published semantic-product
     identities plus syntax-owned provenance.
@@ -473,7 +470,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Semantic-product authority
-  - depends_on: TODO-4158
   - scope: Delete one touched AST-side semantic fallback or cache that
     re-derives facts already available through the published semantic-product
     boundary.
@@ -563,7 +559,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Semantic-product authority
-  - depends_on: TODO-4158
   - scope: Move the touched import-alias expansion or shorthand-resolution
     logic out of lowerer-specific setup into a frontend-owned syntax helper so
     lowering stops owning syntax convenience behavior.
@@ -577,20 +572,3 @@ Task template:
   - stop_rule: Stop once one canonical import-alias helper surface is
     introduced and production lowering uses it; do not broaden into unrelated
     import resolver redesign.
-
-- [ ] TODO-4158: Introduce a narrow lowerer syntax and provenance view
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - depends_on: TODO-4147, TODO-4148
-  - scope: Replace one touched lowerer seam that currently receives broad AST
-    ownership (`Program`, wide `Definition*` reach-through, or equivalent)
-    with a syntax-owned body and provenance view that exposes only the data
-    lowering still needs.
-  - acceptance:
-    - One touched lowering path consumes the narrow syntax and provenance view
-      instead of broad AST ownership.
-    - The touched diagnostics and provenance behavior remain unchanged.
-    - The new view is owned outside private semantics internals.
-  - stop_rule: Stop once one production lowering seam uses the narrow syntax
-    and provenance view; do not migrate every lowerer entrypoint in one slice.

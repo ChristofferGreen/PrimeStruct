@@ -47,6 +47,20 @@ bool runLowerSetupStage(const LowerSetupStageInput &input,
     return false;
   }
 
+  stateOut.functionSyntaxProvenanceByName.reserve(stateOut.defMap.size());
+  for (const auto &[path, definition] : stateOut.defMap) {
+    FunctionSyntaxProvenance provenance;
+    if (definition != nullptr) {
+      if (definition->sourceLine > 0) {
+        provenance.line = static_cast<uint32_t>(definition->sourceLine);
+      }
+      if (definition->sourceColumn > 0) {
+        provenance.column = static_cast<uint32_t>(definition->sourceColumn);
+      }
+    }
+    stateOut.functionSyntaxProvenanceByName.insert_or_assign(path, provenance);
+  }
+
   stateOut.function.name = *input.entryPath;
   stateOut.function.metadata.effectMask = entryEffectMask;
   stateOut.function.metadata.capabilityMask = entryCapabilityMask;

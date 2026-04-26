@@ -421,6 +421,8 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   const std::string setupHeaderSource = readText(setupHeaderPath);
   CHECK(setupHeaderSource.find("struct LowerSetupStageInput {") != std::string::npos);
   CHECK(setupHeaderSource.find("struct LowerSetupStageState {") != std::string::npos);
+  CHECK(setupHeaderSource.find("FunctionSyntaxProvenance") != std::string::npos);
+  CHECK(setupHeaderSource.find("functionSyntaxProvenanceByName") != std::string::npos);
   CHECK(setupHeaderSource.find("SetupLocalsOrchestration setupLocalsOrchestration{};") !=
         std::string::npos);
   CHECK(setupHeaderSource.find("LowerInferenceSetupBootstrapState inferenceSetupBootstrap{};") !=
@@ -509,6 +511,9 @@ TEST_CASE("ir lowerer lower orchestrator stage order stays stable") {
   CHECK(statementsCallsHeaderSource.find("struct LowerStatementsCallsStageInput {") !=
         std::string::npos);
   CHECK(statementsCallsHeaderSource.find("InstructionSourceRange") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("FunctionSyntaxProvenance") != std::string::npos);
+  CHECK(statementsCallsHeaderSource.find("functionSyntaxProvenanceByName") !=
+        std::string::npos);
   CHECK(statementsCallsHeaderSource.find("std::function<void()> resetDefinitionLoweringState;") !=
         std::string::npos);
   CHECK(statementsCallsHeaderSource.find("bool runLowerStatementsCallsStage(") !=

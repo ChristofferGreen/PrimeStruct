@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "primec/Ast.h"
 #include "primec/Ir.h"
 
 namespace primec::ir_lowerer {
@@ -19,8 +18,13 @@ struct InstructionSourceRange {
   IrSourceMapProvenance provenance = IrSourceMapProvenance::CanonicalAst;
 };
 
+struct FunctionSyntaxProvenance {
+  uint32_t line = 0;
+  uint32_t column = 0;
+};
+
 struct LowerStatementsSourceMapStepInput {
-  const std::unordered_map<std::string, const Definition *> *defMap = nullptr;
+  const std::unordered_map<std::string, FunctionSyntaxProvenance> *functionSyntaxProvenanceByName = nullptr;
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> *instructionSourceRangesByFunction = nullptr;
   std::vector<std::string> *stringTable = nullptr;
   IrModule *outModule = nullptr;

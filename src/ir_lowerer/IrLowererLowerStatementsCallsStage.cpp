@@ -13,6 +13,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
       input.defaultEffects == nullptr || input.entryDefaultEffects == nullptr || input.defMap == nullptr ||
       input.structNames == nullptr || input.onErrorByDef == nullptr || input.stringTable == nullptr ||
       input.loweredCallTargets == nullptr || input.instructionSourceRangesByFunction == nullptr ||
+      input.functionSyntaxProvenanceByName == nullptr ||
       input.currentOnError == nullptr || input.currentReturnResult == nullptr ||
       input.sawReturn == nullptr || input.nextLocal == nullptr || input.onErrorTempCounter == nullptr ||
       input.entryResultInfo == nullptr || input.function == nullptr || input.locals == nullptr ||
@@ -88,7 +89,7 @@ bool runLowerStatementsCallsStage(const LowerStatementsCallsStageInput &input,
 
   return runLowerStatementsSourceMapStep(
       {
-          .defMap = input.defMap,
+          .functionSyntaxProvenanceByName = input.functionSyntaxProvenanceByName,
           .instructionSourceRangesByFunction = input.instructionSourceRangesByFunction,
           .stringTable = input.stringTable,
           .outModule = input.outModule,

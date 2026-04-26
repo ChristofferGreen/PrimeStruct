@@ -1841,7 +1841,11 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
 
   const auto lowerStatementsSourceMapStepHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsSourceMapStep.h");
-  CHECK(lowerStatementsSourceMapStepHeader.find("struct Definition;") != std::string::npos);
+  CHECK(lowerStatementsSourceMapStepHeader.find("struct Definition;") == std::string::npos);
+  CHECK(lowerStatementsSourceMapStepHeader.find("struct FunctionSyntaxProvenance") !=
+        std::string::npos);
+  CHECK(lowerStatementsSourceMapStepHeader.find("functionSyntaxProvenanceByName") !=
+        std::string::npos);
 
   const auto lowerStatementsCallsStageHeader =
       readFile("include/primec/testing/ir_lowerer_helpers/IrLowererLowerStatementsCallsStage.h");

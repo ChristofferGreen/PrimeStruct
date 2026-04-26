@@ -27,6 +27,7 @@ struct LowerStatementsCallsStageInput {
   std::unordered_set<std::string> *loweredCallTargets = nullptr;
   std::unordered_map<std::string, std::vector<InstructionSourceRange>> *instructionSourceRangesByFunction =
       nullptr;
+  const std::unordered_map<std::string, FunctionSyntaxProvenance> *functionSyntaxProvenanceByName = nullptr;
   std::optional<OnErrorHandler> *currentOnError = nullptr;
   std::optional<ResultReturnInfo> *currentReturnResult = nullptr;
   bool *sawReturn = nullptr;

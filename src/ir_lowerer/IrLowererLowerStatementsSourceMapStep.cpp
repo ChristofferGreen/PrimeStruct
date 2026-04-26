@@ -8,8 +8,8 @@ namespace primec::ir_lowerer {
 
 bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &input,
                                      std::string &errorOut) {
-  if (input.defMap == nullptr) {
-    errorOut = "native backend missing statements source-map step dependency: defMap";
+  if (input.functionSyntaxProvenanceByName == nullptr) {
+    errorOut = "native backend missing statements source-map step dependency: functionSyntaxProvenanceByName";
     return false;
   }
   if (input.instructionSourceRangesByFunction == nullptr) {
@@ -52,14 +52,10 @@ bool runLowerStatementsSourceMapStep(const LowerStatementsSourceMapStepInput &in
   for (auto &loweredFunction : input.outModule->functions) {
     uint32_t fallbackSourceLine = 0;
     uint32_t fallbackSourceColumn = 0;
-    auto defIt = input.defMap->find(loweredFunction.name);
-    if (defIt != input.defMap->end() && defIt->second != nullptr) {
-      if (defIt->second->sourceLine > 0) {
-        fallbackSourceLine = static_cast<uint32_t>(defIt->second->sourceLine);
-      }
-      if (defIt->second->sourceColumn > 0) {
-        fallbackSourceColumn = static_cast<uint32_t>(defIt->second->sourceColumn);
-      }
+    auto provenanceIt = input.functionSyntaxProvenanceByName->find(loweredFunction.name);
+    if (provenanceIt != input.functionSyntaxProvenanceByName->end()) {
+      fallbackSourceLine = provenanceIt->second.line;
+      fallbackSourceColumn = provenanceIt->second.column;
     }
     const auto sourceRangesIt = input.instructionSourceRangesByFunction->find(loweredFunction.name);
     const std::vector<InstructionSourceRange> *sourceRanges =

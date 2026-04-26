@@ -278,18 +278,20 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
 
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4155") != std::string::npos);
-  CHECK(todo.find("- TODO-4158") != std::string::npos);
   CHECK(todo.find("- TODO-4162") != std::string::npos);
+  CHECK(todo.find("- TODO-4165") != std::string::npos);
+  CHECK(todo.find("- TODO-4159") != std::string::npos);
+  CHECK(todo.find("- TODO-4164") != std::string::npos);
   CHECK(todo.find("- TODO-4174") != std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4157\n- TODO-4165\n- TODO-4159") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4161\n- TODO-4166\n- TODO-4173") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
   CHECK(todo.find("- Release-gate stability and test-suite audit follow-up:") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4155\n2. TODO-4157") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4162\n2. TODO-4165") !=
         std::string::npos);
+  CHECK(todo.find("- TODO-4158") == std::string::npos);
   CHECK(todo.find("- TODO-4169") == std::string::npos);
   CHECK(todo.find("- TODO-4167") == std::string::npos);
   CHECK(todo.find("- TODO-4152") == std::string::npos);
@@ -305,7 +307,7 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("| Architecture contract probe migration | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Semantic-product publication by module and fact family | TODO-4155 |") !=
+  CHECK(todo.find("| Semantic-product publication by module and fact family | none |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
@@ -352,6 +354,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todoFinished.find("✓ TODO-4132: Add `==` support for reflected `Equal` helpers.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4122: Publish indexed graph-backed facts for lowering.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("- [x] TODO-4158: Introduce a narrow lowerer syntax and provenance view") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4133: Let `generate(...)` imply reflection enablement.") !=
         std::string::npos);

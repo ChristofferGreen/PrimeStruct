@@ -329,19 +329,12 @@ TEST_CASE("ir lowerer statements function-table step validates dependencies") {
 }
 
 TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata") {
-  primec::Definition mainDef;
-  mainDef.fullPath = "/main";
-  mainDef.sourceLine = 12;
-  mainDef.sourceColumn = 4;
-
-  primec::Definition helperDef;
-  helperDef.fullPath = "/helper";
-  helperDef.sourceLine = 25;
-  helperDef.sourceColumn = 3;
-
-  std::unordered_map<std::string, const primec::Definition *> defMap;
-  defMap.emplace(mainDef.fullPath, &mainDef);
-  defMap.emplace(helperDef.fullPath, &helperDef);
+  std::unordered_map<std::string, primec::ir_lowerer::FunctionSyntaxProvenance>
+      functionSyntaxProvenanceByName;
+  functionSyntaxProvenanceByName.emplace(
+      "/main", primec::ir_lowerer::FunctionSyntaxProvenance{.line = 12, .column = 4});
+  functionSyntaxProvenanceByName.emplace(
+      "/helper", primec::ir_lowerer::FunctionSyntaxProvenance{.line = 25, .column = 3});
 
   std::unordered_map<std::string, std::vector<primec::ir_lowerer::InstructionSourceRange>>
       instructionSourceRangesByFunction;
@@ -388,7 +381,7 @@ TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata"
   std::string error;
   CHECK(primec::ir_lowerer::runLowerStatementsSourceMapStep(
       {
-          .defMap = &defMap,
+          .functionSyntaxProvenanceByName = &functionSyntaxProvenanceByName,
           .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
           .stringTable = &stringTable,
           .outModule = &module,
@@ -431,7 +424,8 @@ TEST_CASE("ir lowerer statements source-map step finalizes instruction metadata"
 }
 
 TEST_CASE("ir lowerer statements source-map step validates dependencies") {
-  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_map<std::string, primec::ir_lowerer::FunctionSyntaxProvenance>
+      functionSyntaxProvenanceByName;
   std::unordered_map<std::string, std::vector<primec::ir_lowerer::InstructionSourceRange>>
       instructionSourceRangesByFunction;
   std::vector<std::string> stringTable;
@@ -440,17 +434,18 @@ TEST_CASE("ir lowerer statements source-map step validates dependencies") {
 
   CHECK_FALSE(primec::ir_lowerer::runLowerStatementsSourceMapStep(
       {
-          .defMap = nullptr,
+          .functionSyntaxProvenanceByName = nullptr,
           .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
           .stringTable = &stringTable,
           .outModule = &module,
       },
       error));
-  CHECK(error == "native backend missing statements source-map step dependency: defMap");
+  CHECK(error ==
+        "native backend missing statements source-map step dependency: functionSyntaxProvenanceByName");
 
   CHECK_FALSE(primec::ir_lowerer::runLowerStatementsSourceMapStep(
       {
-          .defMap = &defMap,
+          .functionSyntaxProvenanceByName = &functionSyntaxProvenanceByName,
           .instructionSourceRangesByFunction = &instructionSourceRangesByFunction,
           .stringTable = &stringTable,
           .outModule = nullptr,
