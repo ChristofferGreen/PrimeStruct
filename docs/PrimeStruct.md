@@ -1469,12 +1469,18 @@ module {
 - **Applicability limits (v1):**
   - **Definitions/executions only:** `return<T>`, `effects(...)`, `capabilities(...)`, `text(...)`, `semantic(...)`,
     `single_type_to_return`.
-  - **Definitions only:** `compute`, `workgroup_size(x, y, z)`, `unsafe`.
+  - **Definitions only:** `compute`, `workgroup_size(x, y, z)`, `unsafe`, `ast`.
   - **Struct/tag only (definitions):** `struct`, `pod`, `handle`, `gpu_lane`, `align_bytes(n)`, `align_kbytes(n)`.
   - **Definitions/bindings:** access/visibility markers (`public`, `private`). `static` is valid on bindings and struct
     helpers (disables implicit `this` on helpers).
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
   - Any transform outside its allowed scope is a compile-time error with a diagnostic naming the enclosing path.
+- **User-authored AST hooks (metadata-only v1):** declare a hook with `[ast return<void>] hook_name() { ... }`.
+  Imported hooks must also be `public`; private hooks remain visible only to local definitions in the same expanded
+  source. A definition attaches the hook by spelling `[hook_name return<T>]` or `semantic(hook_name)` in its transform
+  list. Resolution records the hook's full path on the transform metadata, rejects ambiguous imports, rejects private
+  imported hooks, and rejects `text(hook_name)` because AST hooks are semantic-phase metadata in this slice. Hook
+  execution and a real `FunctionAst` input/output API are reserved for the later execution slice.
 
 ### Example function syntax
 ```

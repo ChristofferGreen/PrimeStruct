@@ -41,9 +41,30 @@ Transforms operate in two phases:
 - **Text transforms:** token-level rewrites that run before AST construction. They apply to the entire envelope
   (transform list, templates, parameters, and body) for the definition/execution they are attached to.
 - **Semantic transforms:** AST-level annotations/validation that run after parsing.
+- **Definition AST-transform hooks:** user-authored hook definitions may be marked with `[ast]` and referenced from
+  another definition's transform list. The current metadata-only contract resolves and records the hook path but does
+  not execute the hook.
 Use `text(...)` and `semantic(...)` inside the transform list to force phase placement. Unqualified transforms are
 auto-deduced by name; ambiguous names are errors. Text transforms may append additional text transforms to the same
 node, which run after the current transform.
+
+User-authored AST hooks use this metadata-only declaration form for now:
+
+```
+[ast return<void>]
+trace_calls() {
+}
+
+[trace_calls return<int>]
+main() {
+  return(1i32)
+}
+```
+
+Imported hooks must be `public`. A definition attaches a visible hook by bare name, slash path, or an imported alias;
+resolution records the hook's full path on the transform metadata, rejects ambiguous imports and private imported hooks,
+and rejects `text(hook_name)` because AST hooks are semantic-phase metadata in this slice. Hook execution and a real
+`FunctionAst` input/output API are reserved for the later execution slice.
 
 The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ... } else { ... }`,
 indexing `value[index]`, collection method forms like `value.push(x)`), then rewrites them into a small canonical core

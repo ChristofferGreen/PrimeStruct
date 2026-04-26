@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4174: Resolve user-authored AST transform symbols from normal
+  imports. Completed: semantic transform preprocessing now recognizes
+  `[ast return<void>]` hook definitions, resolves definition-attached hook
+  names through local declarations and normal public imports, annotates the
+  attached `Transform` with `isAstTransformHook` plus `resolvedPath`, and keeps
+  the hook in the semantic phase for the later execution slice. Focused
+  semantic coverage now proves local and imported public resolution, private
+  imported rejection, unsupported hook signatures, text-phase misuse, and
+  ambiguous imported hook diagnostics. `docs/PrimeStruct.md`,
+  `docs/PrimeStruct_SyntaxSpec.md`, and `docs/CodeExamples.md` document the
+  marker-based metadata-only contract.
 - ✓ TODO-4166: Refactor compile-pipeline results into explicit success and
   failure variants. Completed: `include/primec/CompilePipeline.h` now exposes
   `CompilePipelineResult` as explicit success/failure variants, with failure

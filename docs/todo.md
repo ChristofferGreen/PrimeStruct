@@ -56,32 +56,29 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4174
+- TODO-4173
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4173
 - TODO-4176
 
 ### Priority Lanes (Current)
 
-- User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
-  TODO-4175
+- User-authored AST transform hooks: TODO-4173, TODO-4176, TODO-4175
 - `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
   TODO-4178, TODO-4180, TODO-4182, TODO-4181
 
 ### Execution Queue (Recommended)
 
-1. TODO-4174
-2. TODO-4173
-3. TODO-4176
-4. TODO-4175
-5. TODO-4179
-6. TODO-4177
-7. TODO-4178
-8. TODO-4180
-9. TODO-4182
-10. TODO-4181
+1. TODO-4173
+2. TODO-4176
+3. TODO-4175
+4. TODO-4179
+5. TODO-4177
+6. TODO-4178
+7. TODO-4180
+8. TODO-4182
+9. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -89,7 +86,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | none |
-| Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
+| Compile-time macro hooks and AST transform ownership | TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
@@ -369,27 +366,6 @@ Task template:
   - stop_rule: Stop after the first definition-attached AST transform lane is
     documented and validated; do not fold text transforms, struct/type derives,
     or general CT-eval work into this tracker.
-
-- [ ] TODO-4174: Resolve user-authored AST transform symbols from normal imports
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Compile-time macro hooks
-  - depends_on: TODO-4168
-  - scope: Teach transform-list validation to accept visible symbols marked
-    `[ast]` or carrying the approved AST-transform signature, attach them to
-    definition nodes, reject ambiguous or non-transform symbols
-    deterministically, and document the chosen declaration rule.
-  - acceptance:
-    - A definition-attached transform like `[trace_calls, effects(...), int]`
-      can resolve to a visible local or imported AST-transform symbol under one
-      documented declaration contract.
-    - Non-visible, wrong-signature, or phase-mismatched symbols fail with
-      deterministic diagnostics.
-    - The touched docs/spec show the approved declaration rule without relying
-      on built-in-only transform names for the attached definition surface.
-  - stop_rule: Stop once definition-level AST-transform symbol resolution works
-    for one input/output contract; do not execute transforms yet or add text
-    hooks in this slice.
 
 - [ ] TODO-4173: Execute user-authored AST transform hooks in the semantic pipeline
   - owner: ai

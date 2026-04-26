@@ -84,6 +84,23 @@ Mixed-directory rule:
   it does not, choose a non-mutating name.
 - Prefer examples that compile and run unchanged under the current toolchain.
 
+## AST Transform Hook Declarations
+
+User-authored AST transform hooks are currently metadata-only. Declare the hook
+with `[ast return<void>]` and attach it by name to a later definition; hook
+execution and the `FunctionAst` data API are intentionally deferred.
+
+```prime
+[ast return<void>]
+trace_calls() {
+}
+
+[trace_calls return<int>]
+main() {
+  return(1i32)
+}
+```
+
 ## Verified Simple Examples
 
 These examples were validated against the current release toolchain in both VM

@@ -14,6 +14,8 @@ struct Transform {
   std::vector<std::string> templateArgs = {};
   std::vector<std::string> arguments = {};
   TransformPhase phase = TransformPhase::Auto;
+  std::string resolvedPath;
+  bool isAstTransformHook = false;
 };
 
 struct Expr {

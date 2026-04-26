@@ -1,5 +1,7 @@
 #include "test_semantics_helpers.h"
 
+#include <algorithm>
+
 
 TEST_SUITE_BEGIN("primestruct.semantics.imports");
 
@@ -40,6 +42,147 @@ main() {
   std::string error;
   CHECK(validateProgram(source, "/main", error));
   CHECK(error.empty());
+}
+
+TEST_CASE("definition ast transform hook resolves local symbol metadata") {
+  const std::string source = R"(
+[ast return<void>]
+trace_calls() {
+}
+
+[trace_calls int]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  primec::Program program;
+  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
+  CHECK(error.empty());
+
+  const auto mainIt = std::find_if(program.definitions.begin(), program.definitions.end(),
+                                  [](const primec::Definition &def) {
+                                    return def.fullPath == "/main";
+                                  });
+  REQUIRE(mainIt != program.definitions.end());
+  REQUIRE_FALSE(mainIt->transforms.empty());
+  CHECK(mainIt->transforms.front().name == "trace_calls");
+  CHECK(mainIt->transforms.front().isAstTransformHook);
+  CHECK(mainIt->transforms.front().resolvedPath == "/trace_calls");
+  CHECK(mainIt->transforms.front().phase == primec::TransformPhase::Semantic);
+}
+
+TEST_CASE("definition ast transform hook resolves imported public symbol metadata") {
+  const std::string source = R"(
+import /tools
+
+namespace tools {
+  [public ast return<void>]
+  trace_calls() {
+  }
+}
+
+[trace_calls return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  primec::Program program;
+  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
+  CHECK(error.empty());
+
+  const auto mainIt = std::find_if(program.definitions.begin(), program.definitions.end(),
+                                  [](const primec::Definition &def) {
+                                    return def.fullPath == "/main";
+                                  });
+  REQUIRE(mainIt != program.definitions.end());
+  REQUIRE_FALSE(mainIt->transforms.empty());
+  CHECK(mainIt->transforms.front().isAstTransformHook);
+  CHECK(mainIt->transforms.front().resolvedPath == "/tools/trace_calls");
+}
+
+TEST_CASE("definition ast transform hook rejects imported private symbol") {
+  const std::string source = R"(
+import /tools
+
+namespace tools {
+  [private ast return<void>]
+  trace_calls() {
+  }
+}
+
+[trace_calls return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ast transform hook is not visible on /main: trace_calls") != std::string::npos);
+}
+
+TEST_CASE("definition ast transform hook rejects unsupported signature") {
+  const std::string source = R"(
+[ast return<int>]
+trace_calls() {
+  return(1i32)
+}
+
+[trace_calls return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ast transform hook must use return<void>: /trace_calls") != std::string::npos);
+}
+
+TEST_CASE("definition ast transform hook rejects text phase attachment") {
+  const std::string source = R"(
+[ast return<void>]
+trace_calls() {
+}
+
+[text(trace_calls) return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("text(...) group requires text transforms on /main: trace_calls") !=
+        std::string::npos);
+}
+
+TEST_CASE("definition ast transform hook rejects ambiguous imported symbols") {
+  const std::string source = R"(
+import /a
+import /b
+
+namespace a {
+  [public ast return<void>]
+  trace_calls() {
+  }
+}
+
+namespace b {
+  [public ast return<void>]
+  trace_calls() {
+  }
+}
+
+[trace_calls return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ambiguous ast transform hook on /main: trace_calls") != std::string::npos);
+  CHECK(error.find("/a/trace_calls") != std::string::npos);
+  CHECK(error.find("/b/trace_calls") != std::string::npos);
 }
 
 TEST_CASE("import resolves struct types and constructors") {

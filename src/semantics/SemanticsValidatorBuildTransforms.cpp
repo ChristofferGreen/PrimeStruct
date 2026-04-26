@@ -21,6 +21,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawVisibility = false;
   bool isPublic = false;
   bool sawStatic = false;
+  bool sawAst = false;
   bool sawReflect = false;
   bool sawGenerate = false;
   const bool collectTransformDiagnostics = transformDiagnosticRecords != nullptr && collectDiagnostics_ && diagnosticInfo_ != nullptr;
@@ -211,6 +212,26 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       }
       if (!transform.arguments.empty()) {
         if (addTransformDiagnostic("unsafe does not accept arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+    } else if (transform.name == "ast") {
+      if (sawAst) {
+        if (addTransformDiagnostic("duplicate ast transform on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      sawAst = true;
+      if (!transform.templateArgs.empty()) {
+        if (addTransformDiagnostic("ast transform does not accept template arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      if (!transform.arguments.empty()) {
+        if (addTransformDiagnostic("ast transform does not accept arguments on " + def.fullPath)) {
           return false;
         }
         break;

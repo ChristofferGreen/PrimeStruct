@@ -8,6 +8,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -22,12 +23,15 @@ bool isNonTypeTransformName(const std::string &name) {
          name == "unsafe" || name == "pod" || name == "handle" || name == "gpu_lane" || name == "no_padding" ||
          name == "platform_independent_padding" || name == "public" || name == "private" ||
          name == "static" || name == "single_type_to_return" || name == "stack" || name == "heap" ||
-         name == "buffer" || name == "reflect" || name == "generate" || name == "Additive" ||
+         name == "buffer" || name == "ast" || name == "reflect" || name == "generate" || name == "Additive" ||
          name == "Multiplicative" || name == "Comparable" || name == "Indexable";
 }
 
 bool isSingleTypeReturnCandidate(const Transform &transform) {
   if (!transform.arguments.empty()) {
+    return false;
+  }
+  if (transform.isAstTransformHook) {
     return false;
   }
   if (isNonTypeTransformName(transform.name)) {
@@ -161,6 +165,251 @@ bool validateTransformListContext(const std::vector<Transform> &transforms,
         error = "single_type_to_return is only valid on definitions: " + context;
         return false;
       }
+      if (transform.name == "ast") {
+        error = "ast transform is only valid on definitions: " + context;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {
+  for (const auto &transform : transforms) {
+    if (transform.name == name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool hasPublicVisibility(const Definition &def) {
+  return hasTransformNamed(def.transforms, "public");
+}
+
+const Transform *findTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {
+  for (const auto &transform : transforms) {
+    if (transform.name == name) {
+      return &transform;
+    }
+  }
+  return nullptr;
+}
+
+bool astTransformHookHasSupportedSignature(const Definition &def, std::string &error) {
+  const Transform *astMarker = findTransformNamed(def.transforms, "ast");
+  if (astMarker == nullptr) {
+    return false;
+  }
+  if (!astMarker->templateArgs.empty() || !astMarker->arguments.empty()) {
+    error = "ast transform marker does not accept arguments on " + def.fullPath;
+    return false;
+  }
+  if (!def.templateArgs.empty()) {
+    error = "ast transform hook must not be templated: " + def.fullPath;
+    return false;
+  }
+  if (!def.parameters.empty()) {
+    error = "ast transform hook must not declare parameters: " + def.fullPath;
+    return false;
+  }
+  const Transform *returnTransform = findTransformNamed(def.transforms, "return");
+  if (returnTransform == nullptr ||
+      returnTransform->templateArgs.size() != 1 ||
+      returnTransform->templateArgs.front() != "void" ||
+      !returnTransform->arguments.empty()) {
+    error = "ast transform hook must use return<void>: " + def.fullPath;
+    return false;
+  }
+  return true;
+}
+
+std::string importAliasNameForPath(const std::string &path) {
+  const size_t slash = path.find_last_of('/');
+  if (slash == std::string::npos) {
+    return path;
+  }
+  return path.substr(slash + 1);
+}
+
+struct AstTransformResolutionIndex {
+  std::unordered_map<std::string, const Definition *> definitionsByPath;
+  std::unordered_map<std::string, std::vector<std::string>> visibleHookAliases;
+  std::unordered_map<std::string, std::vector<std::string>> hiddenHookAliases;
+};
+
+void addAstTransformAlias(std::unordered_map<std::string, std::vector<std::string>> &aliases,
+                          const std::string &alias,
+                          const std::string &path) {
+  auto &paths = aliases[alias];
+  if (std::find(paths.begin(), paths.end(), path) == paths.end()) {
+    paths.push_back(path);
+    std::sort(paths.begin(), paths.end());
+  }
+}
+
+AstTransformResolutionIndex buildAstTransformResolutionIndex(const Program &program) {
+  AstTransformResolutionIndex index;
+  for (const auto &def : program.definitions) {
+    index.definitionsByPath.emplace(def.fullPath, &def);
+  }
+
+  auto addImportedAliases = [&](const std::string &importPath) {
+    if (importPath.empty() || importPath.front() != '/') {
+      return;
+    }
+    bool isWildcard = false;
+    std::string prefix;
+    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+      isWildcard = true;
+      prefix = importPath.substr(0, importPath.size() - 2);
+    } else if (importPath.find('/', 1) == std::string::npos) {
+      isWildcard = true;
+      prefix = importPath;
+    }
+    if (isWildcard) {
+      const std::string scopedPrefix = prefix + "/";
+      for (const auto &def : program.definitions) {
+        if (!hasTransformNamed(def.transforms, "ast") ||
+            def.fullPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        auto &targetAliases =
+            hasPublicVisibility(def) ? index.visibleHookAliases : index.hiddenHookAliases;
+        addAstTransformAlias(targetAliases, remainder, def.fullPath);
+      }
+      return;
+    }
+    const auto defIt = index.definitionsByPath.find(importPath);
+    if (defIt == index.definitionsByPath.end() || defIt->second == nullptr ||
+        !hasTransformNamed(defIt->second->transforms, "ast")) {
+      return;
+    }
+    auto &targetAliases =
+        hasPublicVisibility(*defIt->second) ? index.visibleHookAliases : index.hiddenHookAliases;
+    addAstTransformAlias(targetAliases, importAliasNameForPath(importPath), importPath);
+  };
+
+  const auto &importPaths = program.sourceImports.empty() ? program.imports : program.sourceImports;
+  for (const auto &importPath : importPaths) {
+    addImportedAliases(importPath);
+  }
+  return index;
+}
+
+void addLocalAstTransformAlias(const AstTransformResolutionIndex &index,
+                               std::unordered_map<std::string, std::vector<std::string>> &aliases,
+                               const std::string &alias,
+                               const std::string &path) {
+  const auto defIt = index.definitionsByPath.find(path);
+  if (defIt == index.definitionsByPath.end() || defIt->second == nullptr ||
+      !hasTransformNamed(defIt->second->transforms, "ast")) {
+    return;
+  }
+  addAstTransformAlias(aliases, alias, path);
+}
+
+std::unordered_map<std::string, std::vector<std::string>> collectVisibleAstTransformCandidates(
+    const AstTransformResolutionIndex &index,
+    const Definition &def) {
+  std::unordered_map<std::string, std::vector<std::string>> aliases = index.visibleHookAliases;
+  for (const auto &[path, candidateDef] : index.definitionsByPath) {
+    if (candidateDef == nullptr || !hasTransformNamed(candidateDef->transforms, "ast")) {
+      continue;
+    }
+    if (candidateDef->namespacePrefix == def.namespacePrefix) {
+      addAstTransformAlias(aliases, candidateDef->name, path);
+    }
+  }
+  if (!def.namespacePrefix.empty()) {
+    for (const auto &[path, candidateDef] : index.definitionsByPath) {
+      if (candidateDef == nullptr || !hasTransformNamed(candidateDef->transforms, "ast")) {
+        continue;
+      }
+      if (candidateDef->fullPath.rfind(def.namespacePrefix + "/", 0) == 0) {
+        addAstTransformAlias(aliases, candidateDef->name, path);
+      }
+    }
+  }
+  for (const auto &[path, candidateDef] : index.definitionsByPath) {
+    if (candidateDef == nullptr || !hasTransformNamed(candidateDef->transforms, "ast")) {
+      continue;
+    }
+    if (candidateDef->namespacePrefix.empty()) {
+      addAstTransformAlias(aliases, candidateDef->name, path);
+    }
+  }
+  return aliases;
+}
+
+bool resolveDefinitionAstTransformHooks(Program &program, std::string &error) {
+  const AstTransformResolutionIndex index = buildAstTransformResolutionIndex(program);
+
+  for (const auto &def : program.definitions) {
+    if (!hasTransformNamed(def.transforms, "ast")) {
+      continue;
+    }
+    std::string signatureError;
+    if (!astTransformHookHasSupportedSignature(def, signatureError)) {
+      error = signatureError;
+      return false;
+    }
+  }
+
+  for (auto &def : program.definitions) {
+    std::unordered_map<std::string, std::vector<std::string>> visibleAliases =
+        collectVisibleAstTransformCandidates(index, def);
+    for (auto &transform : def.transforms) {
+      transform.isAstTransformHook = false;
+      transform.resolvedPath.clear();
+      if (transform.name == "ast") {
+        continue;
+      }
+
+      std::vector<std::string> candidates;
+      if (!transform.name.empty() && transform.name.front() == '/') {
+        addLocalAstTransformAlias(index, visibleAliases, transform.name, transform.name);
+      }
+      const auto visibleIt = visibleAliases.find(transform.name);
+      if (visibleIt != visibleAliases.end()) {
+        candidates = visibleIt->second;
+      }
+      if (candidates.empty()) {
+        const auto hiddenIt = index.hiddenHookAliases.find(transform.name);
+        if (hiddenIt != index.hiddenHookAliases.end() && !hiddenIt->second.empty()) {
+          error = "ast transform hook is not visible on " + def.fullPath + ": " + transform.name;
+          return false;
+        }
+        continue;
+      }
+      if (candidates.size() > 1) {
+        error = "ambiguous ast transform hook on " + def.fullPath + ": " + transform.name;
+        for (const auto &candidate : candidates) {
+          error += " " + candidate;
+        }
+        return false;
+      }
+      if (transform.phase == TransformPhase::Text) {
+        error = "ast transform hook cannot appear in text(...) group on " + def.fullPath + ": " +
+                transform.name;
+        return false;
+      }
+      const auto candidateDefIt = index.definitionsByPath.find(candidates.front());
+      if (candidateDefIt == index.definitionsByPath.end() || candidateDefIt->second == nullptr) {
+        continue;
+      }
+      std::string signatureError;
+      if (!astTransformHookHasSupportedSignature(*candidateDefIt->second, signatureError)) {
+        error = signatureError;
+        return false;
+      }
+      transform.resolvedPath = candidates.front();
+      transform.isAstTransformHook = true;
+      transform.phase = TransformPhase::Semantic;
     }
   }
   return true;
@@ -559,6 +808,9 @@ bool applySemanticTransforms(Program &program,
     if (!rewriteSharedScopeStatements(exec.bodyArguments, error)) {
       return false;
     }
+  }
+  if (!resolveDefinitionAstTransformHooks(program, error)) {
+    return false;
   }
   for (auto &def : program.definitions) {
     if (!applySingleTypeToReturn(def.transforms, forceSingleTypeToReturn, def.fullPath, error)) {
