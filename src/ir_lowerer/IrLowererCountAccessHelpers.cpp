@@ -376,11 +376,10 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
     return false;
   }
   const std::string scopedExprPath = resolveScopedCallPath(expr);
-  const bool isBareOrCanonicalVectorCapacityCall =
+  const bool isBareVectorCapacityCall =
       expr.kind == Expr::Kind::Call && !expr.isMethodCall &&
-      (scopedExprPath == "capacity" || scopedExprPath == "/std/collections/vector/capacity" ||
-       scopedExprPath == "std/collections/vector/capacity");
-  if (isBareOrCanonicalVectorCapacityCall &&
+      scopedExprPath == "capacity";
+  if (isBareVectorCapacityCall &&
       isVectorCountTarget(target, localsIn)) {
     return false;
   }
