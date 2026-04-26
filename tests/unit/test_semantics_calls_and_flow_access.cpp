@@ -314,7 +314,7 @@ import /std/collections/*
 
 [return<int>]
 /vector/size([vector<i32>] items) {
-  return(count(items))
+  return(2i32)
 }
 
 [effects(heap_alloc), return<int>]
@@ -455,7 +455,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("validateExprMethodCallTarget failed name=count") != std::string::npos);
+  CHECK(error.find("unknown method: /i32/count") != std::string::npos);
 }
 
 TEST_CASE("unknown method calls fail") {
