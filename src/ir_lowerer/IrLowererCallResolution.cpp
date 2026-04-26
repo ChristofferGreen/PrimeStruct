@@ -31,17 +31,30 @@ bool resolvesToPublishedDefinitionFamilyTarget(const SemanticProgram *semanticPr
   if (semanticProgram == nullptr || resolvedPath.empty()) {
     return false;
   }
-  if (semanticProgramLookupPublishedDefinition(*semanticProgram, resolvedPath) != nullptr) {
-    return true;
-  }
   const std::string templatedPrefix = resolvedPath + "<";
   const std::string specializedPrefix = resolvedPath + "__t";
   const std::string overloadPrefix = resolvedPath + "__ov";
-  for (const auto &entry : semanticProgram->definitions) {
-    if (entry.fullPath == resolvedPath ||
-        entry.fullPath.rfind(templatedPrefix, 0) == 0 ||
-        entry.fullPath.rfind(specializedPrefix, 0) == 0 ||
-        entry.fullPath.rfind(overloadPrefix, 0) == 0) {
+  auto asStringView = [](const std::string &value) {
+    return std::string_view(value.data(), value.size());
+  };
+  auto matchesResolvedFamily = [&](std::string_view publishedPath) {
+    return publishedPath == asStringView(resolvedPath) ||
+           publishedPath.starts_with(asStringView(templatedPrefix)) ||
+           publishedPath.starts_with(asStringView(specializedPrefix)) ||
+           publishedPath.starts_with(asStringView(overloadPrefix));
+  };
+  for (const auto &[pathId, definitionIndex] :
+       semanticProgram->publishedRoutingLookups.definitionIndicesByPathId) {
+    if (definitionIndex >= semanticProgram->definitions.size()) {
+      continue;
+    }
+    const auto &entry = semanticProgram->definitions[definitionIndex];
+    if (matchesResolvedFamily(asStringView(entry.fullPath))) {
+      return true;
+    }
+    const std::string_view publishedPath =
+        semanticProgramResolveCallTargetString(*semanticProgram, pathId);
+    if (!publishedPath.empty() && matchesResolvedFamily(publishedPath)) {
       return true;
     }
   }
