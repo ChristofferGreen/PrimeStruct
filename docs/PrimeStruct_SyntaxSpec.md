@@ -824,7 +824,10 @@ receivers through one shared grow/copy/repoint plus write-back path instead of t
 `soa_vector<T>` is a distinct structure-of-arrays container and is not interchangeable with
 `vector<T>`. The language must not perform implicit AoS/SoA rewriting. The target implementation
 model is a stdlib `.prime` container on top of generic SoA substrate; `soa_vector` should not
-remain a permanent compiler-owned collection.
+remain a permanent compiler-owned collection. The current public spellings are
+the canonical `/std/collections/soa_vector/*` and
+`/std/collections/soa_vector_conversions/*` surfaces; the experimental SoA
+namespaces remain compatibility seams rather than ordinary public imports.
 
 Draft surface shape:
 - `soa_vector<T>()`
@@ -1181,6 +1184,8 @@ stdlib `.prime` implementation replace them.
 Canonical example source: `examples/3.Surface/soa_vector_ecs.prime` imports
 `/std/collections/soa_vector/*` and
 `/std/collections/soa_vector_conversions/*` for the supported wrapper flow.
+That wrapper flow is the supported public shape while `soa_vector<T>` remains an
+incubating canonical experiment rather than a fully promoted vector/map peer.
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 

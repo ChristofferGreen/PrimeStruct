@@ -202,21 +202,29 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
 
 TEST_CASE("soa maturity track docs stay source locked") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path syntaxSpecPath = std::filesystem::path("..") / "docs" / "PrimeStruct_SyntaxSpec.md";
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(syntaxSpecPath)) {
+    syntaxSpecPath = std::filesystem::current_path() / "docs" / "PrimeStruct_SyntaxSpec.md";
   }
   if (!std::filesystem::exists(todoPath)) {
     todoPath = std::filesystem::current_path() / "docs" / "todo.md";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(todoPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
 
   CHECK(primeStructDoc.find("### SoA Maturity Track") != std::string::npos);
   CHECK(primeStructDoc.find("`soa_vector<T>` remains an incubating public extension") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("The first promotion pass is complete") !=
         std::string::npos);
   CHECK(primeStructDoc.find("**Current user-facing experiment surface:** `/std/collections/soa_vector/*`") !=
         std::string::npos);
@@ -234,6 +242,10 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") != std::string::npos);
   CHECK(primeStructDoc.find("contract after the remaining compatibility-only seams are retired") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("generic SoA substrate cleanup is complete") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Ordinary public code should not import either experimental SoA namespace") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("Representative wildcard canonical helper/conversion tests now run") !=
         std::string::npos);
 
@@ -243,9 +255,25 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/soa_vector/*` and") != std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
+  CHECK(todo.find("First promotion pass complete") != std::string::npos);
+  CHECK(todo.find("code no longer needs `experimental_soa_vector`") !=
+        std::string::npos);
+  CHECK(todo.find("`soa_vector<T>` remains an incubating canonical experiment") !=
+        std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
   CHECK(todo.find("TODO-4103") == std::string::npos);
   CHECK(todo.find("TODO-4059") == std::string::npos);
+  CHECK(todo.find("TODO-4181") == std::string::npos);
+  CHECK(todo.find("TODO-4182") == std::string::npos);
+
+  CHECK(syntaxSpecDoc.find("The current public spellings are") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("/std/collections/soa_vector_conversions/*") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("namespaces remain compatibility seams") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("incubating canonical experiment") !=
+        std::string::npos);
 }
 
 TEST_CASE("canonical soa_vector example stays source locked") {
@@ -333,22 +361,23 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
 
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
+  CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n- none") !=
+        std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- none") !=
+        std::string::npos);
+  CHECK(todo.find("### Priority Lanes (Current)\n\n- none") !=
+        std::string::npos);
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n- none") !=
+        std::string::npos);
   CHECK(todo.find("- TODO-4162") == std::string::npos);
   CHECK(todo.find("- TODO-4165") == std::string::npos);
   CHECK(todo.find("- TODO-4159") == std::string::npos);
   CHECK(todo.find("- TODO-4160") == std::string::npos);
   CHECK(todo.find("- TODO-4161") == std::string::npos);
   CHECK(todo.find("- TODO-4163") == std::string::npos);
-  CHECK(todo.find("- TODO-4157") != std::string::npos);
-  CHECK(todo.find("- TODO-4164") != std::string::npos);
-  CHECK(todo.find("- TODO-4174") != std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4173\n- TODO-4176") !=
-        std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
   CHECK(todo.find("- Release-gate stability and test-suite audit follow-up:") ==
-        std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4157\n2. TODO-4164\n3. TODO-4166") !=
         std::string::npos);
   CHECK(todo.find("- TODO-4158") == std::string::npos);
   CHECK(todo.find("- TODO-4169") == std::string::npos);
@@ -361,6 +390,14 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | none |") !=
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
+        std::string::npos);
+  CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
+        std::string::npos);
+  CHECK(todo.find("| SoA maturity and `soa_vector` promotion | none |") !=
+        std::string::npos);
+  CHECK(todo.find("| De-experimentalization surface and namespace parity | none |") !=
+        std::string::npos);
+  CHECK(todo.find("| `soa_vector` maturity and canonical surface parity | none |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);
@@ -401,7 +438,6 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("- [ ] TODO-4112:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4114:") == std::string::npos);
   CHECK(todo.find("- [ ] TODO-4116:") == std::string::npos);
-
   CHECK(todoFinished.find("✓ TODO-4142: Retire brittle architecture source locks after contract") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4123: Split validator core from publication and benchmark shadows.") !=

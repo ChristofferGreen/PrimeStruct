@@ -6,6 +6,18 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4181: Track `soa_vector` promotion out of experimental. Completed:
+  the first promotion pass is closed with `soa_vector<T>` classified as an
+  incubating canonical experiment rather than a fully promoted vector/map peer.
+  The canonical `/std/collections/soa_vector/*` and
+  `/std/collections/soa_vector_conversions/*` surfaces now own ordinary public
+  construction, read/ref, mutator, field-view, conversion, and example flows;
+  ordinary public code no longer needs direct
+  `/std/collections/experimental_soa_vector/*` or
+  `/std/collections/experimental_soa_vector_conversions/*` imports. Remaining
+  experimental namespaces stay documented as compatibility seams until future
+  compatibility deletion or generic SoA substrate cleanup is explicitly
+  tracked.
 - ✓ TODO-4182: Promote the `soa_vector` draft example and migrate canonical
   imports. Completed: `examples/3.Surface/soa_vector_ecs_draft.prime` was
   promoted to `examples/3.Surface/soa_vector_ecs.prime`, rewritten to import

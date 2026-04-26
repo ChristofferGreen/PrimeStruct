@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4181
+- none
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -64,11 +64,11 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- `soa_vector` promotion and de-experimentalization: TODO-4181
+- none
 
 ### Execution Queue (Recommended)
 
-1. TODO-4181
+- none
 
 ### PrimeStruct Coverage Snapshot
 
@@ -80,8 +80,8 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4181 |
-| SoA maturity and `soa_vector` promotion | TODO-4181 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | none |
+| SoA maturity and `soa_vector` promotion | none |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -105,8 +105,8 @@ Task template:
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
-| De-experimentalization surface and namespace parity | TODO-4181 |
-| `soa_vector` maturity and canonical surface parity | TODO-4181 |
+| De-experimentalization surface and namespace parity | none |
+| `soa_vector` maturity and canonical surface parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
@@ -174,13 +174,16 @@ Task template:
 - Promotion requires borrowed-view/lifetime rules, backend/runtime parity, and
   retirement of direct experimental implementation imports before `soa_vector`
   can be treated as a promoted public contract.
-- Active promotion lane now has the canonical public helper wrapper
+- First promotion pass complete: the canonical public helper wrapper is
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
-  C++/VM/native helper/conversion parity coverage, with conversion receiver
-  contracts spelled through canonical `SoaVector<T>` surfaces. The checked-in
-  ECS example now uses canonical wrapper/conversion imports; remaining work
-  should reconcile the final promotion status and compatibility seams.
+  C++/VM/native helper/conversion parity coverage. Conversion receiver
+  contracts are spelled through canonical `SoaVector<T>` surfaces, the checked-in
+  ECS example uses canonical wrapper/conversion imports, and ordinary public
+  code no longer needs `experimental_soa_vector` or
+  `experimental_soa_vector_conversions` imports. `soa_vector<T>` remains an
+  incubating canonical experiment until the remaining compatibility seams and
+  generic SoA substrate cleanup are explicitly retired or accepted.
 
 ### Skipped Doctest Debt Summary
 
@@ -191,25 +194,3 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4181: Track `soa_vector` promotion out of experimental
-  - owner: human
-  - created_at: 2026-04-25
-  - phase: `soa_vector` promotion
-  - depends_on: TODO-4180, TODO-4182
-  - scope: Track the first full `soa_vector` promotion lane so the canonical
-    `/std/collections/soa_vector/*` surface becomes authoritative, the
-    experimental namespaces become compatibility-only or removable seams, and
-    docs/spec/examples all describe the same maturity status.
-  - acceptance:
-    - TODO-4179, TODO-4177, TODO-4178, TODO-4180, and TODO-4182 land with one
-      coherent canonical `soa_vector` public contract.
-    - `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`, `docs/todo.md`,
-      and the checked-in example corpus classify `soa_vector` consistently as
-      promoted or still compatibility-gated with explicit remaining blockers.
-    - The promotion lane no longer requires ordinary public code to import
-      `experimental_soa_vector` or
-      `experimental_soa_vector_conversions`.
-  - stop_rule: Stop after the first coherent public promotion pass is
-    documented and validated; do not fold broader SoA storage redesign or new
-    container families into this tracker.

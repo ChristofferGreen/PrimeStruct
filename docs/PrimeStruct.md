@@ -2689,7 +2689,10 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
 
 - **Current status:** `soa_vector<T>` remains an incubating public extension,
   not a fully promoted public contract on the same maturity level as
-  `vector<T>` and `map<K, V>`.
+  `vector<T>` and `map<K, V>`. The first promotion pass is complete: ordinary
+  public code should use the canonical SoA namespaces below instead of direct
+  experimental imports, while compatibility seams remain internal/bridge
+  concerns.
 - **Current user-facing experiment surface:** `/std/collections/soa_vector/*`
   and `/std/collections/soa_vector_conversions/*` are the canonical spellings
   to use when docs or examples need to demonstrate the current SoA feature set.
@@ -2710,8 +2713,9 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
   stays implementation-facing storage/layout plumbing rather than public API.
 - **Promotion gate:** SoA should only move from incubating to promoted public
   contract after the remaining compatibility-only seams are retired or
-  explicitly accepted. Until then, docs should call `soa_vector<T>` incubating
-  explicitly instead of implying it has already graduated with vector/map.
+  explicitly accepted and the generic SoA substrate cleanup is complete. Until
+  then, docs should call `soa_vector<T>` incubating explicitly instead of
+  implying it has already graduated with vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -3341,6 +3345,8 @@ bad_use_after_take() {
     while `/std/collections/experimental_soa_vector/*` and
     `/std/collections/experimental_soa_vector_conversions/*` remain compatibility-only bridge seams
     behind that canonical experiment surface.
+    Ordinary public code should not import either experimental SoA namespace for
+    construction, read/ref, mutator, field-view, or conversion flows.
     The wrapper now stores real `.prime` `SoaColumn<T>` state rather than the old builtin header-only
     `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
     `meta.field_count<T>()` so non-SoA-safe element types fail early. Today the first real single-column
