@@ -63,7 +63,7 @@ TEST_CASE("ir lowerer setup type helper rejects canonical map access fallback to
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
-TEST_CASE("ir lowerer setup type helper rejects canonical-only fallback for explicit map helper aliases") {
+TEST_CASE("ir lowerer setup type helper resolves explicit map access aliases through canonical defs") {
   primec::Definition canonicalCountDef;
   canonicalCountDef.fullPath = "/std/collections/map/count";
   primec::Definition canonicalAtDef;
@@ -139,7 +139,7 @@ TEST_CASE("ir lowerer setup type helper rejects canonical-only fallback for expl
   aliasAtCall.args = {receiverExpr, keyExpr};
 
   int aliasAtResolveCalls = 0;
-  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasAtCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -154,9 +154,9 @@ TEST_CASE("ir lowerer setup type helper rejects canonical-only fallback for expl
       false,
       kindOut,
       &methodResolved));
-  CHECK_FALSE(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(aliasAtResolveCalls == 0);
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(aliasAtResolveCalls == 1);
 
   kindOut = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
   methodResolved = false;
@@ -166,7 +166,7 @@ TEST_CASE("ir lowerer setup type helper rejects canonical-only fallback for expl
   aliasAtUnsafeCall.args = {receiverExpr, keyExpr};
 
   int aliasAtUnsafeResolveCalls = 0;
-  CHECK_FALSE(primec::ir_lowerer::resolveCountMethodCallReturnKind(
+  CHECK(primec::ir_lowerer::resolveCountMethodCallReturnKind(
       aliasAtUnsafeCall,
       {},
       [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
@@ -181,9 +181,9 @@ TEST_CASE("ir lowerer setup type helper rejects canonical-only fallback for expl
       false,
       kindOut,
       &methodResolved));
-  CHECK_FALSE(methodResolved);
-  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
-  CHECK(aliasAtUnsafeResolveCalls == 0);
+  CHECK(methodResolved);
+  CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(aliasAtUnsafeResolveCalls == 1);
 }
 
 TEST_CASE("ir lowerer setup type helper resolves reordered positional access call method return kinds") {
