@@ -540,6 +540,9 @@
             "auto failLateMapAccessKeyMismatch = [&](const std::string &helperName,") !=
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
+            "isExplicitMapContainsOrTryAtAlias") !=
+        std::string::npos);
+  CHECK(semanticsExprLateMapAccessBuiltinsSource.find(
             "return failExprDiagnostic(expr, std::move(message));") !=
         std::string::npos);
   CHECK(semanticsExprLateMapAccessBuiltinsSource.find(

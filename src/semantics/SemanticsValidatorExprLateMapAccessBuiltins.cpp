@@ -163,10 +163,16 @@ bool SemanticsValidator::validateExprLateMapAccessBuiltins(
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
 
-  if (!expr.isMethodCall &&
-      (explicitPath == "/map/tryAt" || explicitPath == "/map/tryAt_ref") &&
-      !hasExplicitDeclaredCallPath(explicitPath)) {
-    return failLateMapAccessBuiltinDiagnostic("unknown call target: " + explicitPath);
+  const bool isExplicitMapContainsOrTryAtAlias =
+      explicitPath == "/map/contains" || explicitPath == "/map/contains_ref" ||
+      explicitPath == "/map/tryAt" || explicitPath == "/map/tryAt_ref";
+  if (!expr.isMethodCall && isExplicitMapContainsOrTryAtAlias) {
+    if (!hasExplicitDeclaredCallPath(explicitPath)) {
+      return failLateMapAccessBuiltinDiagnostic("unknown call target: " +
+                                               explicitPath);
+    }
+    handledOut = false;
+    return true;
   }
 
   std::string builtinName;
