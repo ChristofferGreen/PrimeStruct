@@ -2191,9 +2191,21 @@ main() {
   CHECK(collectionCompatibilityInternalSource.find(
             "matchesDirectMapConstructorPath(\"/mapSingle\")") ==
         std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "resolvedPath.rfind(std::string(basePath) + \"__\", 0) == 0;") !=
+        std::string::npos);
+  CHECK(collectionCompatibilityInternalSource.find(
+            "resolvedPath.rfind(std::string(basePath) + \"__t\", 0) == 0;") ==
+        std::string::npos);
 
   CHECK(collectionCompatibilitySource.find(
             "preferredPublishedCollectionLoweringPath(") !=
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "const size_t suffix = canonicalPath.find(\"__\");") !=
+        std::string::npos);
+  CHECK(collectionCompatibilitySource.find(
+            "const size_t suffix = canonicalPath.find(\"__t\");") ==
         std::string::npos);
   CHECK(collectionCompatibilitySource.find(
             "resolveCanonicalCompatibilityMapHelperNameFromResolvedPath(") !=

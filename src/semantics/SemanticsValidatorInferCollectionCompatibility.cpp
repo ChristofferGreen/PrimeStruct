@@ -130,7 +130,7 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
 
 bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) const {
   std::string canonicalPath = path;
-  const size_t suffix = canonicalPath.find("__t");
+  const size_t suffix = canonicalPath.find("__");
   if (suffix != std::string::npos) {
     canonicalPath.erase(suffix);
   }
@@ -168,7 +168,7 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
 
 bool SemanticsValidator::hasDefinitionPath(const std::string &path) const {
   std::string canonicalPath = path;
-  const size_t suffix = canonicalPath.find("__t");
+  const size_t suffix = canonicalPath.find("__");
   if (suffix != std::string::npos) {
     canonicalPath.erase(suffix);
   }

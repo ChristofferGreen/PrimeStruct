@@ -28,7 +28,7 @@ enum class RemovedCollectionHelperFamily {
 [[maybe_unused]] bool matchesResolvedPath(std::string_view resolvedPath,
                                           std::string_view basePath) {
   return resolvedPath == basePath ||
-         resolvedPath.rfind(std::string(basePath) + "__t", 0) == 0;
+         resolvedPath.rfind(std::string(basePath) + "__", 0) == 0;
 }
 
 [[maybe_unused]] std::string_view trimLeadingSlash(std::string_view text) {
