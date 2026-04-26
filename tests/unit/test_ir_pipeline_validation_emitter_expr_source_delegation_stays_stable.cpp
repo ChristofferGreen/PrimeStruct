@@ -208,7 +208,9 @@ TEST_CASE("emitter expr contract covers control routing without source locks") {
     CHECK(builtinAccessName == "at_unsafe");
 
     primec::Expr localAt = callExpr("at");
-    CHECK_FALSE(primec::emitter::getBuiltinArrayAccessNameLocal(localAt, builtinAccessName));
+    builtinAccessName.clear();
+    CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(localAt, builtinAccessName));
+    CHECK(builtinAccessName == "at");
 
     for (const char *memoryName : {
              "alloc", "free", "realloc", "at", "at_unsafe", "reinterpret"}) {
