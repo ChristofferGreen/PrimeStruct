@@ -268,6 +268,107 @@ TEST_CASE("ir lowerer setup type helper rejects synthetic direct-call probes for
   CHECK(error == "missing semantic-product method-call target: count");
 }
 
+TEST_CASE("ir lowerer setup type helper keeps semantic direct user count fallbacks") {
+  primec::Definition i32CountDef;
+  i32CountDef.fullPath = "/i32/count";
+  primec::Definition arrayCapacityDef;
+  arrayCapacityDef.fullPath = "/array/capacity";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {i32CountDef.fullPath, &i32CountDef},
+      {arrayCapacityDef.fullPath, &arrayCapacityDef},
+  };
+
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Literal;
+  receiverExpr.intValue = 3;
+  receiverExpr.intWidth = 32;
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "count";
+  methodCall.isMethodCall = true;
+  methodCall.semanticNodeId = 61;
+  methodCall.args.push_back(receiverExpr);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "count",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 61,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/i32/count"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+
+  std::string error;
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticProgram,
+      defMap,
+      error);
+  CHECK(resolved == &i32CountDef);
+  CHECK(error.empty());
+
+  primec::Expr valuesReceiverExpr;
+  valuesReceiverExpr.kind = primec::Expr::Kind::Name;
+  valuesReceiverExpr.name = "values";
+
+  primec::Expr capacityMethodCall;
+  capacityMethodCall.kind = primec::Expr::Kind::Call;
+  capacityMethodCall.name = "capacity";
+  capacityMethodCall.isMethodCall = true;
+  capacityMethodCall.semanticNodeId = 62;
+  capacityMethodCall.args.push_back(valuesReceiverExpr);
+
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "capacity",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 62,
+      .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "capacity"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/array/capacity"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+
+  error.clear();
+  resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      capacityMethodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticProgram,
+      defMap,
+      error);
+  CHECK(resolved == &arrayCapacityDef);
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets without lowered definitions") {
   const std::unordered_map<std::string, const primec::Definition *> defMap = {};
 

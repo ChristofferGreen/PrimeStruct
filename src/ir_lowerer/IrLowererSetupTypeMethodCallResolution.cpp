@@ -151,6 +151,19 @@ bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
   return hasTerminalLeafOrGeneratedSuffix(leafPos + leafPath.size());
 }
 
+bool blocksSyntheticCountFallbackDirectTarget(const std::string &targetPath) {
+  const std::string normalized = normalizeCollectionHelperPath(targetPath);
+  return normalized.rfind("/vector/", 0) == 0 ||
+         normalized.rfind("/std/collections/vector/", 0) == 0 ||
+         normalized.rfind("/map/", 0) == 0 ||
+         normalized.rfind("/std/collections/map/", 0) == 0 ||
+         normalized.rfind("/soa_vector/", 0) == 0 ||
+         normalized.rfind("/std/collections/soa_vector/", 0) == 0 ||
+         normalized.rfind("/std/collections/experimental_vector/", 0) == 0 ||
+         normalized.rfind("/std/collections/experimental_map/", 0) == 0 ||
+         normalized.rfind("/std/collections/experimental_soa_vector/", 0) == 0;
+}
+
 std::string buildReceiverMethodTargetPath(const std::string &receiverPath,
                                           const std::string &explicitMethodPath) {
   if (receiverPath.empty()) {
@@ -350,6 +363,24 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     const std::string resolvedPath =
         findSemanticProductMethodCallTarget(semanticProgram, callExpr);
     if (resolvedPath.empty()) {
+      const std::string directCallTarget =
+          findSemanticProductDirectCallTarget(semanticProgram, callExpr);
+      const bool directTargetKeepsSyntheticCountFallback =
+          !directCallTarget.empty() &&
+          (isSimpleCallName(callExpr, "count") ||
+           isSimpleCallName(callExpr, "capacity")) &&
+          !blocksSyntheticCountFallbackDirectTarget(directCallTarget);
+      if (directTargetKeepsSyntheticCountFallback) {
+        if (const Definition *resolvedDef =
+                resolveLoweredDefinitionPath(directCallTarget);
+            resolvedDef != nullptr) {
+          return resolvedDef;
+        }
+        errorOut =
+            "semantic-product method-call target missing lowered definition: " +
+            directCallTarget;
+        return nullptr;
+      }
       errorOut = "missing semantic-product method-call target: " +
                  describeMethodCallExpr(callExpr);
       return nullptr;
