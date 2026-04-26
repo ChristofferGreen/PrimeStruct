@@ -801,15 +801,6 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
     collectDirectCallExprs(exec.fullPath, exec.bodyArguments);
   }
 
-  auto withPreservedError = [&](const std::function<bool()> &fn) {
-    const std::string previousError = error_;
-    error_.clear();
-    const bool ok = fn();
-    error_.clear();
-    error_ = previousError;
-    return ok;
-  };
-
   forEachLocalAwareSnapshotCall([&](const Definition &def,
                                     const std::vector<ParameterInfo> &defParams,
                                     const Expr &expr,
@@ -818,46 +809,19 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
       return;
     }
 
-    std::string resolvedPath;
-    bool builtin = false;
-    if (!resolveMethodTarget(defParams,
-                             activeLocals,
-                             expr.namespacePrefix,
-                             expr.args.front(),
-                             expr.name,
-                             resolvedPath,
-                             builtin) ||
-        resolvedPath.empty()) {
-      resolvedPath = preferredCollectionHelperResolvedPath(expr);
-      if (resolvedPath.empty()) {
-        resolvedPath = resolveCalleePath(expr);
-      }
-      if (resolvedPath.empty()) {
-        return;
-      }
-    }
-    const std::string concreteResolvedPath =
-        resolveExprConcreteCallPath(defParams, activeLocals, expr, resolvedPath);
-    if (!concreteResolvedPath.empty()) {
-      resolvedPath = concreteResolvedPath;
-    }
-
-    BindingInfo receiverBinding;
-    if (!(withPreservedError([&]() {
-            return inferBindingTypeFromInitializer(
-                expr.args.front(), defParams, activeLocals, receiverBinding);
-          }) &&
-          !receiverBinding.typeName.empty())) {
-      receiverBinding = {};
+    QuerySnapshotData queryData;
+    if (!inferQuerySnapshotData(defParams, activeLocals, expr, queryData) ||
+        queryData.resolvedPath.empty()) {
+      return;
     }
 
     collectedMethodCallTargets_.push_back(CollectedMethodCallTargetEntry{
         def.fullPath,
         expr.name,
-        std::move(resolvedPath),
+        std::move(queryData.resolvedPath),
         expr.sourceLine,
         expr.sourceColumn,
-        std::move(receiverBinding),
+        std::move(queryData.receiverBinding),
         expr.semanticNodeId,
     });
   });

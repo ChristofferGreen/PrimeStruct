@@ -2961,6 +2961,11 @@ TEST_CASE("semantic snapshot shared traversal keeps direct and bridge ordering k
             "          }") !=
         std::string::npos);
   CHECK(collectBody.find("collectedDirectCallTargets_.push_back(") != std::string::npos);
+  CHECK(collectBody.find("QuerySnapshotData queryData;") != std::string::npos);
+  CHECK(collectBody.find("inferQuerySnapshotData(defParams, activeLocals, expr, queryData)") !=
+        std::string::npos);
+  CHECK(collectBody.find("std::move(queryData.receiverBinding)") != std::string::npos);
+  CHECK(collectBody.find("resolveMethodTarget(defParams,") == std::string::npos);
   CHECK(collectBody.find("collectedBridgePathChoices_.push_back(") != std::string::npos);
   CHECK(collectBody.find("std::stable_sort(collectedDirectCallTargets_.begin(),") != std::string::npos);
   CHECK(collectBody.find("std::stable_sort(collectedBridgePathChoices_.begin(),") != std::string::npos);
@@ -3761,10 +3766,14 @@ TEST_CASE("semantic snapshot traversal inventory avoids inactive next-candidate 
 
   const std::string inventory = readTextFile(inventoryPath);
   CHECK(inventory.find("`P2-11` implemented") != std::string::npos);
+  CHECK(inventory.find("`TODO-4201` implemented") != std::string::npos);
+  CHECK(inventory.find("method-call target publication now derives resolved-path and receiver") !=
+        std::string::npos);
   CHECK(inventory.find("No active TODO currently targets additional semantic snapshot traversal merges.") !=
         std::string::npos);
   CHECK(inventory.find("Add a concrete traversal-churn TODO with acceptance and parity coverage") !=
         std::string::npos);
   CHECK(inventory.find("## Next Pair Candidate") == std::string::npos);
   CHECK(inventory.find("Likely next merge candidate") == std::string::npos);
+  CHECK(inventory.find("The historical next candidate was") == std::string::npos);
 }

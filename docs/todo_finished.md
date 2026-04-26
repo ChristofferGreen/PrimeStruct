@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4201: Share method target query snapshot inference. Completed:
+  method-call target semantic-product collection now reuses
+  `inferQuerySnapshotData(...)` for resolved-path and receiver-binding facts
+  instead of repeating a separate method-target plus receiver-binding
+  inference branch. `docs/semantic_snapshot_traversal_inventory.md` records
+  the reopened traversal-churn slice as completed, and graph-context
+  source-lock coverage guards the shared query-snapshot path.
 - ✓ TODO-4200: Align SymbolId migration inventory docs. Completed:
   `docs/semantic_symbol_id_migration_inventory.md` now describes the
   hot-path semantic-product SymbolId migration as landed history instead of

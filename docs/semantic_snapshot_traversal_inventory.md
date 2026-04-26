@@ -94,16 +94,18 @@ output-order parity checks in `P2-03`.
   - guard coverage:
     `semantic snapshot shared traversal keeps callable summary and on_error
     ordering keys` in `tests/unit/test_ir_pipeline_backends_graph_contexts.h`.
+- `TODO-4201` implemented in
+  `src/semantics/SemanticsValidatorSnapshots.cpp`:
+  - method-call target publication now derives resolved-path and receiver
+    binding data from `inferQuerySnapshotData(...)` instead of repeating a
+    separate method-target plus receiver-binding inference branch.
+  - guard coverage:
+    `semantic snapshot shared traversal keeps direct and bridge ordering keys`
+    in `tests/unit/test_ir_pipeline_backends_graph_contexts.h`.
 
 ## Inactive Follow-Up Status
 
 No active TODO currently targets additional semantic snapshot traversal merges.
 Add a concrete traversal-churn TODO with acceptance and parity coverage before
-implementing another shared traversal. The historical next candidate was:
-
-- `methodCallTargetSnapshotForSemanticProduct`
-- `queryReceiverBindingSnapshotForTesting`
-
-Both run `forEachLocalAwareSnapshotCall(...)` and perform receiver-binding
-inference on overlapping call-site traversals, but they are not active work
-until a new TODO explicitly reopens that lane.
+implementing another shared traversal. No specific next merge candidate is
+active until a new TODO explicitly reopens the traversal-churn lane.
