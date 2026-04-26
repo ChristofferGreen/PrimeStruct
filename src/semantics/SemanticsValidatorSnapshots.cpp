@@ -123,6 +123,10 @@ collectionBridgeChoiceFromResolvedPath(const std::string &resolvedPath) {
     case StdlibSurfaceId::CollectionsMapConstructors:
       collectionFamily = "map";
       break;
+    case StdlibSurfaceId::CollectionsSoaVectorHelpers:
+    case StdlibSurfaceId::CollectionsSoaVectorConstructors:
+      collectionFamily = "soa_vector";
+      break;
     default:
       return std::nullopt;
   }

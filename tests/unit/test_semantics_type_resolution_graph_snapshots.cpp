@@ -889,7 +889,9 @@ main() {
                        .find("/std/collections/soa_vector/push") == 0;
       });
   REQUIRE(pushBridgeEntry != nullptr);
-  CHECK_FALSE(pushBridgeEntry->stdlibSurfaceId.has_value());
+  REQUIRE(pushBridgeEntry->stdlibSurfaceId.has_value());
+  CHECK(*pushBridgeEntry->stdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
 
   const auto *countBridgeEntry = findSemanticEntry(
       primec::semanticProgramBridgePathChoiceView(semanticProgram),
@@ -900,7 +902,14 @@ main() {
                        .find("/std/collections/soa_vector/count") == 0;
       });
   REQUIRE(countBridgeEntry != nullptr);
-  CHECK_FALSE(countBridgeEntry->stdlibSurfaceId.has_value());
+  REQUIRE(countBridgeEntry->stdlibSurfaceId.has_value());
+  CHECK(*countBridgeEntry->stdlibSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  const auto countBridgeSurfaceId =
+      primec::semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
+          semanticProgram, countBridgeEntry->semanticNodeId);
+  REQUIRE(countBridgeSurfaceId.has_value());
+  CHECK(*countBridgeSurfaceId == primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
 }
 
 TEST_CASE("semantic product method-call targets stay separated by receiver type") {
@@ -3521,15 +3530,22 @@ main() {
   CHECK_FALSE(localAutoEntry->initializerMethodCallStdlibSurfaceId.has_value());
 }
 
-TEST_CASE("semantic product publishes vector and map collection specializations") {
+TEST_CASE("semantic product publishes vector map and soa_vector collection specializations") {
   const std::string source = R"(
 import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
 
 [effects(heap_alloc), return<i32>]
 main() {
   [vector<i32>] values{vector<i32>(1i32)}
   [map<i32, i64> mut] pairs{map<i32, i64>(1i32, 7i64)}
   [Reference<map<i32, i64>>] pairsRef{location(pairs)}
+  [soa_vector<Particle>] particles{soa_vector<Particle>()}
+  [Reference<soa_vector<Particle>>] particleRefs{location(particles)}
   return(count(values))
 }
 )";
@@ -3575,6 +3591,24 @@ main() {
   CHECK(*mapEntry->constructorSurfaceId ==
         primec::StdlibSurfaceId::CollectionsMapConstructors);
 
+  const auto *soaEntry = findSemanticEntry(
+      primec::semanticProgramCollectionSpecializationView(semanticProgram),
+      [](const primec::SemanticProgramCollectionSpecialization &entry) {
+        return entry.scopePath == "/main" && entry.name == "particleRefs";
+      });
+  REQUIRE(soaEntry != nullptr);
+  CHECK(soaEntry->collectionFamily == "soa_vector");
+  CHECK(soaEntry->elementTypeText == "Particle");
+  CHECK(soaEntry->valueTypeText == "Particle");
+  CHECK(soaEntry->isReference);
+  CHECK_FALSE(soaEntry->isPointer);
+  REQUIRE(soaEntry->helperSurfaceId.has_value());
+  CHECK(*soaEntry->helperSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  REQUIRE(soaEntry->constructorSurfaceId.has_value());
+  CHECK(*soaEntry->constructorSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsSoaVectorConstructors);
+
   const auto *lookupEntry =
       primec::semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
           semanticProgram, mapEntry->semanticNodeId);
@@ -3585,6 +3619,8 @@ main() {
   const std::string formatted = primec::formatSemanticProgram(semanticProgram);
   CHECK(formatted.find("collection_specializations[") != std::string::npos);
   CHECK(formatted.find("helper_surface_id=\"collections.map_helpers\"") != std::string::npos);
+  CHECK(formatted.find("helper_surface_id=\"collections.soa_vector_helpers\"") !=
+        std::string::npos);
 }
 
 TEST_CASE("semantic product keeps exact-import vector and map bridge parity") {

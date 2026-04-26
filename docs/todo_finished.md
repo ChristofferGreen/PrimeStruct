@@ -4994,6 +4994,61 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     removed `TODO-4169` from the live queue, promoted `TODO-4170` to Ready Now,
     and deferred release reruns to CI per the lite workflow.
 
+- [x] TODO-4170: Publish `soa_vector` specialization facts needed by the lowerer
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4169
+  - scope: Add explicit semantic-product facts for `soa_vector` collection
+    specialization and canonical helper-family routing that lowerer currently
+    infers from type text and private semantics helpers.
+  - acceptance:
+    - The semantic product publishes the touched `soa_vector`
+      specialization and helper-routing facts in deterministic order.
+    - Touched lowerer collection setup helpers can consume the published
+      `soa_vector` facts without private semantics specialization predicates.
+    - Focused release coverage for `soa_vector` helper lowering passes through
+      the new published surface.
+  - stop_rule: Stop once the lowerer can classify the touched `soa_vector`
+    flows from published facts; do not fold in broader vector/map ownership or
+    runtime redesign work.
+  - finished_at: 2026-04-26
+  - evidence: Extended the published `collection_specializations` semantic
+    product family to classify `soa_vector<T>`,
+    `Reference<soa_vector<T>>`, `Pointer<soa_vector<T>>`, and imported
+    `SoaVector<T>` binding sites with deterministic helper and constructor
+    surface IDs. Added `collections.soa_vector_helpers` and
+    `collections.soa_vector_constructors` stdlib surface metadata, updated
+    bridge-choice publication to tag canonical and compatibility SoA helper
+    routes, and taught lowerer binding-type adapters to consume published SoA
+    specialization facts for reference/pointer vector metadata. Updated
+    semantic-product, stdlib-surface, and lowerer adapter coverage, removed
+    `TODO-4170` from the live queue, promoted `TODO-4150` to Ready Now, and
+    deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4149: Track collection specialization fact publication for the lowerer
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4169, TODO-4170
+  - scope: Track publication of collection specialization facts that lowerer
+    currently infers from type text and private semantics helpers.
+  - acceptance:
+    - TODO-4169 and TODO-4170 land with deterministic semantic-product
+      publication for the touched collection fact families.
+    - The touched lowerer collection setup helpers can consume the published
+      vector/map and `soa_vector` facts without private semantics
+      specialization predicates.
+  - stop_rule: Keep this item as a coordination tracker only; implement work
+    through child leaves rather than reopening the old broad slice.
+  - finished_at: 2026-04-26
+  - evidence: Closed the coordination tracker after TODO-4169 published
+    vector/map specialization facts and TODO-4170 published `soa_vector`
+    specialization plus helper/constructor surface facts. Lowerer binding-type
+    adapters now prefer the published collection specialization facts for the
+    touched vector, map, and SoA collection flows, and release reruns remain
+    deferred to CI per the lite workflow.
+
 - [x] TODO-4171: Migrate infer-source-delegation semantics source-lock suite to public inspection surfaces
   - owner: ai
   - created_at: 2026-04-25

@@ -231,6 +231,8 @@ enum class RemovedCollectionHelperFamily {
       return "/std/collections/vector/" + std::string(helperName);
     case StdlibSurfaceId::CollectionsMapHelpers:
       return "/std/collections/map/" + std::string(helperName);
+    case StdlibSurfaceId::CollectionsSoaVectorHelpers:
+      return "/std/collections/soa_vector/" + std::string(helperName);
     default:
       return "";
   }

@@ -213,6 +213,22 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"mapOct\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapOct\"") != std::string::npos);
 
+  CHECK(source.find("StdlibSurfaceId::CollectionsSoaVectorHelpers") != std::string::npos);
+  CHECK(source.find("\"collections.soa_vector_helpers\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/soa_vector\"") != std::string::npos);
+  CHECK(source.find("\"soaVectorGetRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_soa_vector/soaVectorPush\"") !=
+        std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_soa_vector_conversions/soaVectorToAos\"") !=
+        std::string::npos);
+
+  CHECK(source.find("StdlibSurfaceId::CollectionsSoaVectorConstructors") !=
+        std::string::npos);
+  CHECK(source.find("\"collections.soa_vector_constructors\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/soa_vector/soa_vector\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/experimental_soa_vector/soaVectorNew\"") !=
+        std::string::npos);
+
   CHECK(source.find("StdlibSurfaceId::CollectionsContainerErrorHelpers") != std::string::npos);
   CHECK(source.find("\"collections.container_error\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/ContainerError\"") != std::string::npos);

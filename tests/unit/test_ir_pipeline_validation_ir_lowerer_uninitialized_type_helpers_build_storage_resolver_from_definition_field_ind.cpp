@@ -675,6 +675,50 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
   CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  semanticProgram.collectionSpecializations.push_back(
+      primec::SemanticProgramCollectionSpecialization{
+          .scopePath = "/main",
+          .siteKind = "temporary",
+          .name = "borrowParticles",
+          .collectionFamily = "soa_vector",
+          .bindingTypeText = "Reference<soa_vector<Particle>>",
+          .elementTypeText = "Particle",
+          .keyTypeText = "",
+          .valueTypeText = "Particle",
+          .isReference = true,
+          .isPointer = false,
+          .sourceLine = 24,
+          .sourceColumn = 11,
+          .semanticNodeId = 120,
+          .provenanceHandle = 0,
+          .helperSurfaceId = primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+          .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsSoaVectorConstructors,
+      });
+  semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.emplace(120, 1);
+
+  adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+
+  primec::Expr tempSoaRefCall;
+  tempSoaRefCall.kind = primec::Expr::Kind::Call;
+  tempSoaRefCall.name = "borrowParticles";
+  tempSoaRefCall.semanticNodeId = 120;
+  tempSoaRefCall.sourceLine = 24;
+  tempSoaRefCall.sourceColumn = 11;
+
+  CHECK(adapters.bindingKind(tempSoaRefCall) == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(adapters.bindingValueKind(tempSoaRefCall, primec::ir_lowerer::LocalInfo::Kind::Reference) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+
+  primec::ir_lowerer::LocalInfo soaInfo;
+  soaInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  soaInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  adapters.setReferenceArrayInfo(tempSoaRefCall, soaInfo);
+  CHECK(soaInfo.referenceToVector);
+  CHECK(soaInfo.isSoaVector);
+  CHECK(soaInfo.structTypeName.rfind(
+            "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+  CHECK(soaInfo.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
 }
 
 TEST_CASE("ir lowerer binding type helpers stop using transform fallback for semantic expr ids") {

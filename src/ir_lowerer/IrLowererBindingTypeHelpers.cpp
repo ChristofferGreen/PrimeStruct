@@ -81,7 +81,8 @@ LocalInfo::Kind bindingKindFromCollectionSpecialization(
   if (collectionFact.isPointer) {
     return LocalInfo::Kind::Pointer;
   }
-  if (collectionFact.collectionFamily == "vector") {
+  if (collectionFact.collectionFamily == "vector" ||
+      collectionFact.collectionFamily == "soa_vector") {
     return LocalInfo::Kind::Vector;
   }
   if (collectionFact.collectionFamily == "map") {
@@ -92,7 +93,8 @@ LocalInfo::Kind bindingKindFromCollectionSpecialization(
 
 LocalInfo::ValueKind bindingValueKindFromCollectionSpecialization(
     const SemanticProgramCollectionSpecialization &collectionFact) {
-  if (collectionFact.collectionFamily == "vector") {
+  if (collectionFact.collectionFamily == "vector" ||
+      collectionFact.collectionFamily == "soa_vector") {
     return valueKindFromTypeName(collectionFact.elementTypeText);
   }
   if (collectionFact.collectionFamily == "map") {
@@ -111,19 +113,26 @@ void setReferenceCollectionInfoFromSpecialization(
       (info.kind == LocalInfo::Kind::Pointer && !collectionFact.isPointer)) {
     return;
   }
-  if (collectionFact.collectionFamily == "vector") {
+  if (collectionFact.collectionFamily == "vector" ||
+      collectionFact.collectionFamily == "soa_vector") {
     if (info.kind == LocalInfo::Kind::Reference) {
       info.referenceToVector = true;
     } else {
       info.pointerToVector = true;
     }
+    info.isSoaVector = collectionFact.collectionFamily == "soa_vector";
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
       info.valueKind = valueKindFromTypeName(collectionFact.elementTypeText);
     }
     if (info.structTypeName.empty() &&
         valueKindFromTypeName(collectionFact.elementTypeText) == LocalInfo::ValueKind::Unknown) {
-      info.structTypeName =
-          specializedExperimentalVectorStructPathForElementType(collectionFact.elementTypeText);
+      if (info.isSoaVector) {
+        info.structTypeName = specializedExperimentalSoaVectorStructPathForElementType(
+            collectionFact.elementTypeText);
+      } else {
+        info.structTypeName =
+            specializedExperimentalVectorStructPathForElementType(collectionFact.elementTypeText);
+      }
     }
     return;
   }

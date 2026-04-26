@@ -1131,6 +1131,14 @@ TEST_CASE("ir lowerer stdlib surface metadata recognizes experimental map loweri
   CHECK(atUnsafeMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *atUnsafeMetadata, "/std/collections/experimental_map/mapAtUnsafe") == "at_unsafe");
+
+  const auto *soaGetRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/experimental_soa_vector/soaVectorGetRef");
+  REQUIRE(soaGetRefMetadata != nullptr);
+  CHECK(soaGetRefMetadata->id == primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *soaGetRefMetadata,
+            "/std/collections/experimental_soa_vector/soaVectorGetRef") == "get_ref");
 }
 
 TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
@@ -1157,6 +1165,14 @@ TEST_CASE("stdlib surface metadata resolves collection helper member tokens") {
   CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "Insert") == "insert");
   CHECK(primec::resolveStdlibSurfaceMemberName(*mapMetadata, "MapInsertRef") ==
         "insert_ref");
+
+  const auto *soaMetadata =
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsSoaVectorHelpers);
+  REQUIRE(soaMetadata != nullptr);
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorCountRef") ==
+        "count_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*soaMetadata, "soaVectorToAos") ==
+        "to_aos");
 }
 
 TEST_CASE("stdlib surface metadata classifies collection helper categories") {
@@ -1164,6 +1180,8 @@ TEST_CASE("stdlib surface metadata classifies collection helper categories") {
       primec::StdlibSurfaceId::CollectionsVectorHelpers, "capacity"));
   CHECK(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsMapHelpers, "tryAt_ref"));
+  CHECK(primec::isStdlibSurfaceMemberName(
+      primec::StdlibSurfaceId::CollectionsSoaVectorHelpers, "ref_ref"));
   CHECK_FALSE(primec::isStdlibSurfaceMemberName(
       primec::StdlibSurfaceId::CollectionsVectorHelpers, "insert"));
 

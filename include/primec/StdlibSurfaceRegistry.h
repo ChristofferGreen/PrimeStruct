@@ -24,6 +24,8 @@ enum class StdlibSurfaceId {
   CollectionsVectorConstructors,
   CollectionsMapHelpers,
   CollectionsMapConstructors,
+  CollectionsSoaVectorHelpers,
+  CollectionsSoaVectorConstructors,
   CollectionsContainerErrorHelpers,
   GfxBufferHelpers,
   GfxErrorHelpers,

@@ -99,7 +99,8 @@ bool isBridgeHelperName(std::string_view collectionFamily, std::string_view help
 bool isPublishedCollectionBridgeStdlibSurfaceId(std::optional<StdlibSurfaceId> surfaceId) {
   return surfaceId.has_value() &&
          (*surfaceId == StdlibSurfaceId::CollectionsVectorHelpers ||
-          *surfaceId == StdlibSurfaceId::CollectionsMapHelpers);
+          *surfaceId == StdlibSurfaceId::CollectionsMapHelpers ||
+          *surfaceId == StdlibSurfaceId::CollectionsSoaVectorHelpers);
 }
 
 bool isPublishedCollectionBridgeCall(const SemanticProgram *semanticProgram, const Expr &expr) {

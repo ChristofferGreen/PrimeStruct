@@ -460,6 +460,13 @@ std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
       typeName == "/std/collections/experimental_map/Map") {
     return "map";
   }
+  if (typeName == "/soa_vector" || typeName == "std/collections/soa_vector" ||
+      typeName == "/std/collections/soa_vector" || typeName == "SoaVector" ||
+      typeName == "/SoaVector" ||
+      typeName == "std/collections/experimental_soa_vector/SoaVector" ||
+      typeName == "/std/collections/experimental_soa_vector/SoaVector") {
+    return "soa_vector";
+  }
   return typeName;
 }
 
@@ -490,6 +497,16 @@ bool classifyCollectionSpecialization(std::string typeText,
         return false;
       }
       draftOut.collectionFamily = "vector";
+      draftOut.elementTypeText = normalizeBindingTypeName(args.front());
+      draftOut.valueTypeText = draftOut.elementTypeText;
+      return true;
+    }
+    if (base == "soa_vector") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      draftOut.collectionFamily = "soa_vector";
       draftOut.elementTypeText = normalizeBindingTypeName(args.front());
       draftOut.valueTypeText = draftOut.elementTypeText;
       return true;
@@ -535,6 +552,9 @@ void publishCollectionSpecializationForBinding(
   if (entry.collectionFamily == "vector") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsVectorHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsVectorConstructors;
+  } else if (entry.collectionFamily == "soa_vector") {
+    entry.helperSurfaceId = StdlibSurfaceId::CollectionsSoaVectorHelpers;
+    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsSoaVectorConstructors;
   } else if (entry.collectionFamily == "map") {
     entry.helperSurfaceId = StdlibSurfaceId::CollectionsMapHelpers;
     entry.constructorSurfaceId = StdlibSurfaceId::CollectionsMapConstructors;
