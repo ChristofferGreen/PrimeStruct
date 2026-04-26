@@ -414,6 +414,8 @@ TEST_CASE("semantic-product direct-call coverage conformance accepts missing tar
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   addVoidCallableSummary(semanticProgram, 81);
+  const auto calleePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
   semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
       .name = "callee",
       .fullPath = "/callee",
@@ -422,6 +424,8 @@ TEST_CASE("semantic-product direct-call coverage conformance accepts missing tar
       .sourceColumn = 1,
       .semanticNodeId = 82,
   });
+  semanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
+      calleePathId, 0);
 
   std::string error;
 
