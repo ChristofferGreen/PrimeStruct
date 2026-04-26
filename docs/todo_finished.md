@@ -5107,6 +5107,33 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     live queue, promoted `TODO-4172` to Ready Now, and deferred release reruns
     to CI per the lite workflow.
 
+- [x] TODO-4153: Migrate emitter-expr lowerer source-lock tests to contract-level assertions
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - depends_on: TODO-4152
+  - scope: Replace the emitter-expr lowerer source-lock suite that asserts
+    exact file names, includes, or source strings with tests over
+    semantic-product dumps, IR dumps, and backend-observable behavior.
+  - acceptance:
+    - The emitter-expr lowerer source-lock suite is rewritten to assert
+      contract output instead of `readText(...)` against `src/`.
+    - The migrated coverage still catches emitter-expr helper-routing or
+      lowering behavior regressions.
+    - The touched tests no longer break on file moves that preserve behavior.
+  - stop_rule: Stop once the emitter-expr source-lock suite is retired in
+    favor of contract assertions; do not attempt a repo-wide lowerer lock
+    purge in one slice.
+  - finished_at: 2026-04-26
+  - evidence: Replaced the emitter-expression source-lock test that read
+    private emitter files and exact include/source strings with behavior-level
+    contract assertions over public emitter control and helper APIs. The
+    migrated coverage now checks name/literal/field/call/method routing,
+    block/if wrapper routing, builtin collection access name normalization,
+    and memory intrinsic recognition without pinning private file placement.
+    Removed `TODO-4153` from the live queue and lowerer/source-composition
+    snapshot, and deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4148: Cut method-target resolution over to published semantic-product facts
   - owner: ai
   - created_at: 2026-04-25

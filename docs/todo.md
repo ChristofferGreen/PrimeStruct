@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4153
 - TODO-4172
 - TODO-4155
 - TODO-4158
@@ -81,7 +80,7 @@ Task template:
 - Semantic-product authority and lowerer boundary enforcement: TODO-4155,
   TODO-4157, TODO-4158, TODO-4159,
   TODO-4160, TODO-4161, TODO-4164
-- Test API cleanup and contract-probe migration: TODO-4153, TODO-4172
+- Test API cleanup and contract-probe migration: TODO-4172
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -91,29 +90,28 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4153
-2. TODO-4172
-3. TODO-4155
-4. TODO-4157
-5. TODO-4158
-6. TODO-4162
-7. TODO-4165
-8. TODO-4159
-9. TODO-4160
-10. TODO-4161
-11. TODO-4163
-12. TODO-4164
-13. TODO-4166
-14. TODO-4174
-15. TODO-4173
-16. TODO-4176
-17. TODO-4175
-18. TODO-4179
-19. TODO-4177
-20. TODO-4178
-21. TODO-4180
-22. TODO-4182
-23. TODO-4181
+1. TODO-4172
+2. TODO-4155
+3. TODO-4157
+4. TODO-4158
+5. TODO-4162
+6. TODO-4165
+7. TODO-4159
+8. TODO-4160
+9. TODO-4161
+10. TODO-4163
+11. TODO-4164
+12. TODO-4166
+13. TODO-4174
+14. TODO-4173
+15. TODO-4176
+16. TODO-4175
+17. TODO-4179
+18. TODO-4177
+19. TODO-4178
+20. TODO-4180
+21. TODO-4182
+22. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -148,7 +146,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4155, TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
+| Lowerer/source-composition contract coverage | TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -677,21 +675,3 @@ Task template:
       architecture signal through public inspection surfaces.
   - stop_rule: Keep this item as a coordination tracker only; implement work
     through child leaves rather than reopening the broad migration slice.
-
-- [ ] TODO-4153: Migrate emitter-expr lowerer source-lock tests to contract-level assertions
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Test API cleanup
-  - depends_on: TODO-4152
-  - scope: Replace the emitter-expr lowerer source-lock suite that asserts
-    exact file names, includes, or source strings with tests over
-    semantic-product dumps, IR dumps, and backend-observable behavior.
-  - acceptance:
-    - The emitter-expr lowerer source-lock suite is rewritten to assert
-      contract output instead of `readText(...)` against `src/`.
-    - The migrated coverage still catches emitter-expr helper-routing or
-      lowering behavior regressions.
-    - The touched tests no longer break on file moves that preserve behavior.
-  - stop_rule: Stop once the emitter-expr source-lock suite is retired in
-    favor of contract assertions; do not attempt a repo-wide lowerer lock
-    purge in one slice.

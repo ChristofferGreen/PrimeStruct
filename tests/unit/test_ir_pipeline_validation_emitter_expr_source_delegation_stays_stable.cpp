@@ -2,177 +2,227 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
-TEST_CASE("emitter expr source delegation stays stable") {
-  auto readText = [](const std::filesystem::path &path) {
-    std::ifstream file(path);
-    CHECK(file.is_open());
-    if (!file.is_open()) {
-      return std::string{};
-    }
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+TEST_CASE("emitter expr contract covers control routing without source locks") {
+  auto nameExpr = [](std::string name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Name;
+    expr.name = name;
+    return expr;
   };
-  const std::filesystem::path repoRoot =
-      std::filesystem::exists(std::filesystem::path("src")) ? std::filesystem::path(".")
-                                                             : std::filesystem::path("..");
+  auto callExpr = [](std::string name) {
+    primec::Expr expr;
+    expr.kind = primec::Expr::Kind::Call;
+    expr.name = name;
+    return expr;
+  };
 
-  const std::filesystem::path emitterExprControlHeaderPath = repoRoot / "src" / "emitter" / "EmitterExprControl.h";
-  REQUIRE(std::filesystem::exists(emitterExprControlHeaderPath));
-  const std::string emitterExprControlHeaderSource = readText(emitterExprControlHeaderPath);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlNameStep(") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBoolLiteralStep(expr)") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockEarlyReturnStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingAutoStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingExplicitStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingFallbackStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingQualifiersStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockStatementStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockBindingPreludeStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockFinalValueStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBuiltinBlockPreludeStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlBodyWrapperStep(") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFieldAccessStep(") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlCallPathStep(") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlCountRewriteStep(") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIntegerLiteralStep(expr)") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlFloatLiteralStep(expr)") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlStringLiteralStep(expr)") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlMethodPathStep(") != std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingAutoStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingExplicitStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingFallbackStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchValueStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBranchEmitStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingPreludeStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockBindingQualifiersStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockStatementStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockFinalValueStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEarlyReturnStep(") ==
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfTernaryFallbackStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfTernaryStep(") !=
-        std::string::npos);
-  CHECK(emitterExprControlHeaderSource.find("runEmitterExprControlIfBlockEnvelopeStep(candidateExpr)") !=
-        std::string::npos);
+  SUBCASE("expression control steps publish emitted expression behavior") {
+    primec::Emitter::BindingInfo localInfo;
+    localInfo.typeName = "f64";
+    const std::unordered_map<std::string, primec::Emitter::BindingInfo> localTypes = {
+        {"e", localInfo},
+    };
+    const auto localResolved = primec::emitter::runEmitterExprControlNameStep(
+        nameExpr("e"),
+        localTypes,
+        true);
+    REQUIRE(localResolved.has_value());
+    CHECK(*localResolved == "e");
 
-  const std::filesystem::path emitterExprPath = repoRoot / "src" / "emitter" / "EmitterExpr.cpp";
-  REQUIRE(std::filesystem::exists(emitterExprPath));
-  const std::string emitterExprSource = readText(emitterExprPath);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlNameStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockEarlyReturnStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingAutoStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingExplicitStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingFallbackStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingQualifiersStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockStatementStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockBindingPreludeStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockFinalValueStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBoolLiteralStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBuiltinBlockPreludeStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlBodyWrapperStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlCallPathStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlCountRewriteStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlFieldAccessStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIntegerLiteralStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlFloatLiteralStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingAutoStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingExplicitStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingFallbackStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchPreludeStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyReturnStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyBindingStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyHandlersStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchEmitStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchValueStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchBodyStatementStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBranchWrapperStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingPreludeStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockBindingQualifiersStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockStatementStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockFinalValueStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfBlockEarlyReturnStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfTernaryFallbackStep.h\"") !=
-        std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfTernaryStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlMethodPathStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlStringLiteralStep.h\"") != std::string::npos);
-  CHECK(emitterExprSource.find("#include \"EmitterExprControlIfEnvelopeStep.h\"") != std::string::npos);
+    const auto mathConstant = primec::emitter::runEmitterExprControlNameStep(
+        nameExpr("pi"),
+        {},
+        true);
+    REQUIRE(mathConstant.has_value());
+    CHECK(*mathConstant == "ps_const_pi");
 
-  const std::filesystem::path emitterExprCollectionAccessAtCallsPath =
-      repoRoot / "src" / "emitter" / "EmitterExprCollectionAccessAtCalls.h";
-  const std::filesystem::path emitterExprCallsPath =
-      repoRoot / "src" / "emitter" / "EmitterExprCalls.h";
-  REQUIRE(std::filesystem::exists(emitterExprCollectionAccessAtCallsPath));
-  REQUIRE(std::filesystem::exists(emitterExprCallsPath));
-  const std::string emitterExprCollectionAccessAtCallsSource = readText(emitterExprCollectionAccessAtCallsPath);
-  const std::string emitterExprCallsSource = readText(emitterExprCallsPath);
-  CHECK(emitterExprCollectionAccessAtCallsSource.find("getBuiltinArrayAccessNameLocal(expr, builtinAccessName)") !=
-        std::string::npos);
-  CHECK(emitterExprCollectionAccessAtCallsSource.find("builtinAccessName == \"at\"") != std::string::npos);
-  CHECK(emitterExprCollectionAccessAtCallsSource.find("builtinAccessName == \"at_unsafe\"") !=
-        std::string::npos);
-  CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at\")") == std::string::npos);
-  CHECK(emitterExprCollectionAccessAtCallsSource.find("isSimpleCallName(expr, \"at_unsafe\")") ==
-        std::string::npos);
-  CHECK(emitterExprCallsSource.find("getBuiltinMemoryName(expr, memoryName)") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("ps_heap_alloc<") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("ps_heap_realloc(") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("ps_heap_at(") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("ps_heap_at_unsafe(") != std::string::npos);
-  CHECK(emitterExprCallsSource.find("ps_heap_reinterpret<") != std::string::npos);
+    primec::Expr intExpr;
+    intExpr.kind = primec::Expr::Kind::Literal;
+    intExpr.intWidth = 32;
+    intExpr.literalValue = 42;
+    const auto intValue = primec::emitter::runEmitterExprControlIntegerLiteralStep(intExpr);
+    REQUIRE(intValue.has_value());
+    CHECK(*intValue == "42");
 
-  const std::filesystem::path emitterExprPackedArgsPath =
-      repoRoot / "src" / "emitter" / "EmitterExprPackedArgs.h";
-  REQUIRE(std::filesystem::exists(emitterExprPackedArgsPath));
-  const std::string emitterExprPackedArgsSource = readText(emitterExprPackedArgsPath);
-  CHECK(emitterExprPackedArgsSource.find("std::string normalizedName = resolveExprPath(accessExpr);") !=
-        std::string::npos);
-  CHECK(emitterExprPackedArgsSource.find("std::string normalizedName = accessExpr.name;") ==
-        std::string::npos);
+    primec::Expr boolExpr;
+    boolExpr.kind = primec::Expr::Kind::BoolLiteral;
+    boolExpr.boolValue = true;
+    const auto boolValue = primec::emitter::runEmitterExprControlBoolLiteralStep(boolExpr);
+    REQUIRE(boolValue.has_value());
+    CHECK(*boolValue == "true");
+
+    primec::Expr stringExpr;
+    stringExpr.kind = primec::Expr::Kind::StringLiteral;
+    stringExpr.stringValue = "\"hello\"utf8";
+    const auto stringValue = primec::emitter::runEmitterExprControlStringLiteralStep(stringExpr);
+    REQUIRE(stringValue.has_value());
+    CHECK(*stringValue == "std::string_view(\"hello\")");
+
+    primec::Expr fieldAccess = callExpr("count");
+    fieldAccess.isFieldAccess = true;
+    fieldAccess.args = {nameExpr("buffer")};
+    const auto fieldValue = primec::emitter::runEmitterExprControlFieldAccessStep(
+        fieldAccess,
+        [](const primec::Expr &receiver) {
+          CHECK(receiver.name == "buffer");
+          return std::string("buffer");
+        },
+        {});
+    REQUIRE(fieldValue.has_value());
+    CHECK(*fieldValue == "buffer.count");
+
+    primec::Expr constructorCall = callExpr("Vec3");
+    const auto aliasPath = primec::emitter::runEmitterExprControlCallPathStep(
+        constructorCall,
+        "Vec3",
+        {},
+        {{"Vec3", "/pkg/Vec3"}});
+    REQUIRE(aliasPath.has_value());
+    CHECK(*aliasPath == "/pkg/Vec3");
+
+    primec::Expr methodCall = callExpr("count");
+    methodCall.isMethodCall = true;
+    bool resolverCalled = false;
+    const auto methodPath = primec::emitter::runEmitterExprControlMethodPathStep(
+        methodCall,
+        {},
+        {},
+        {},
+        {},
+        [&](std::string &pathOut) {
+          resolverCalled = true;
+          pathOut = "/std/collections/vector/count";
+          return true;
+        });
+    REQUIRE(methodPath.has_value());
+    CHECK(*methodPath == "/std/collections/vector/count");
+    CHECK(resolverCalled);
+  }
+
+  SUBCASE("block and if control helpers publish wrapper and statement behavior") {
+    primec::Expr value = nameExpr("value");
+
+    primec::Expr block = callExpr("block");
+    block.hasBodyArguments = true;
+    block.bodyArguments = {value};
+    const auto blockPrelude = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+        block,
+        {},
+        [](const primec::Expr &expr, const std::unordered_map<std::string, std::string> &) {
+          return expr.name == "block";
+        },
+        [](const std::vector<std::optional<std::string>> &argNames) {
+          return !argNames.empty();
+        });
+    CHECK(blockPrelude.matched);
+    CHECK_FALSE(blockPrelude.earlyReturnExpr.has_value());
+
+    primec::Expr invalidBlock = block;
+    invalidBlock.args = {value};
+    const auto invalidBlockPrelude = primec::emitter::runEmitterExprControlBuiltinBlockPreludeStep(
+        invalidBlock,
+        {},
+        [](const primec::Expr &expr, const std::unordered_map<std::string, std::string> &) {
+          return expr.name == "block";
+        },
+        {});
+    CHECK(invalidBlockPrelude.matched);
+    REQUIRE(invalidBlockPrelude.earlyReturnExpr.has_value());
+    CHECK(*invalidBlockPrelude.earlyReturnExpr == "0");
+
+    primec::Expr returnCall = callExpr("return");
+    returnCall.args = {value};
+    const auto earlyReturn = primec::emitter::runEmitterExprControlBuiltinBlockEarlyReturnStep(
+        returnCall,
+        false,
+        [](const primec::Expr &expr) { return expr.name == "return"; },
+        [](const primec::Expr &expr) { return expr.name; });
+    CHECK(earlyReturn.handled);
+    CHECK(earlyReturn.emittedStatement == "return value; ");
+
+    const auto finalValue = primec::emitter::runEmitterExprControlBuiltinBlockFinalValueStep(
+        value,
+        true,
+        [](const primec::Expr &) { return false; },
+        [](const primec::Expr &expr) { return expr.name; });
+    CHECK(finalValue.handled);
+    CHECK(finalValue.emittedStatement == "return value; ");
+
+    const auto statement = primec::emitter::runEmitterExprControlBuiltinBlockStatementStep(
+        value,
+        [](const primec::Expr &expr) { return expr.name; });
+    CHECK(statement.handled);
+    CHECK(statement.emittedStatement == "(void)value; ");
+
+    primec::Expr callWithBody = callExpr("compute");
+    callWithBody.hasBodyArguments = true;
+    callWithBody.bodyArguments = {value};
+    const auto bodyWrapper = primec::emitter::runEmitterExprControlBodyWrapperStep(
+        callWithBody,
+        {},
+        [](const primec::Expr &, const std::unordered_map<std::string, std::string> &) {
+          return false;
+        },
+        [](const primec::Expr &expr) { return expr.name; });
+    REQUIRE(bodyWrapper.has_value());
+    CHECK(*bodyWrapper ==
+          "([&]() { auto ps_call_value = compute; (void)block; return ps_call_value; }())");
+
+    CHECK(primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(block));
+    const auto branchPrelude = primec::emitter::runEmitterExprControlIfBranchPreludeStep(
+        value,
+        [](const primec::Expr &) { return false; },
+        [](const primec::Expr &expr) { return expr.name; });
+    CHECK(branchPrelude.handled);
+    CHECK(branchPrelude.emittedExpr == "value");
+
+    const auto branchValue = primec::emitter::runEmitterExprControlIfBranchValueStep(
+        block,
+        [](const primec::Expr &expr) {
+          return primec::emitter::runEmitterExprControlIfBlockEnvelopeStep(expr);
+        },
+        [](const primec::Expr &expr) { return expr.name; },
+        [](const primec::Expr &stmt, bool isLast) {
+          primec::emitter::EmitterExprControlIfBranchBodyEmitResult result;
+          result.handled = true;
+          result.emittedStatement =
+              isLast ? "return " + stmt.name + "; " : "(void)" + stmt.name + "; ";
+          return result;
+        });
+    CHECK(branchValue.handled);
+    CHECK(branchValue.emittedExpr == "([&]() { return value; }())");
+  }
+
+  SUBCASE("builtin helper routing uses normalized expression paths") {
+    primec::Expr vectorAt = callExpr("at");
+    vectorAt.namespacePrefix = "/std/collections/vector";
+    std::string builtinAccessName;
+    CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(vectorAt, builtinAccessName));
+    CHECK(builtinAccessName == "at");
+    CHECK(primec::emitter::resolveExprPath(vectorAt) == "/std/collections/vector/at");
+
+    primec::Expr vectorAtUnsafe = callExpr("at_unsafe");
+    vectorAtUnsafe.namespacePrefix = "/std/collections/vector";
+    builtinAccessName.clear();
+    CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(vectorAtUnsafe, builtinAccessName));
+    CHECK(builtinAccessName == "at_unsafe");
+
+    primec::Expr localAt = callExpr("at");
+    CHECK_FALSE(primec::emitter::getBuiltinArrayAccessNameLocal(localAt, builtinAccessName));
+
+    for (const char *memoryName : {
+             "alloc", "free", "realloc", "at", "at_unsafe", "reinterpret"}) {
+      primec::Expr memoryCall = callExpr(memoryName);
+      memoryCall.namespacePrefix = "/std/intrinsics/memory";
+      std::string resolvedMemoryName;
+      CHECK(primec::emitter::getBuiltinMemoryName(memoryCall, resolvedMemoryName));
+      CHECK(resolvedMemoryName == memoryName);
+    }
+
+    primec::Expr unrelatedMemory = callExpr("alloc");
+    std::string resolvedMemoryName;
+    CHECK_FALSE(primec::emitter::getBuiltinMemoryName(unrelatedMemory, resolvedMemoryName));
+  }
 }
 
 TEST_CASE("semantics validator expr source delegation stays stable") {
