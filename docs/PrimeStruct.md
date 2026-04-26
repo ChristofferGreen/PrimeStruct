@@ -2027,8 +2027,8 @@ for(
     values.
   - String indexing in **`VM/native (limited)`** requires string literals or bindings backed by literals.
   - `vector<T>` is specified as a C++-style dynamic contiguous sequence (`push`/`reserve` may grow capacity). VM/native
-    currently still enforce fixed-capacity growth limits; migration to full dynamic semantics is tracked in
-    `docs/todo.md`.
+    currently still enforce fixed-capacity growth limits. No active TODO currently tracks full dynamic vector
+    semantics; add a concrete dynamic-storage migration TODO before changing that runtime contract.
   - Stdlib collection helpers now share `ContainerError` for deterministic error payloads: `containerMissingKey()`
     (`1`), `containerIndexOutOfBounds()` (`2`), `containerEmpty()` (`3`), and `containerCapacityExceeded()` (`4`).
     `containerErrorStatus(err)` packs a status-only `Result<ContainerError>`, `containerErrorResult<T>(err)` packs a

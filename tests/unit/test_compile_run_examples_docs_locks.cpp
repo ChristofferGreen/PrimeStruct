@@ -84,6 +84,8 @@ TEST_CASE("vector dynamic-storage docs avoid inactive TODO pointers") {
 
   CHECK(primeStructDoc.find("No active TODO currently tracks migration to dynamic storage") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("No active TODO currently tracks full dynamic vector") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("dynamic-storage migration TODO before changing that runtime contract") !=
         std::string::npos);
   CHECK(syntaxSpecDoc.find("No active TODO\ncurrently tracks full dynamic vector runtime parity") !=
@@ -92,10 +94,15 @@ TEST_CASE("vector dynamic-storage docs avoid inactive TODO pointers") {
         std::string::npos);
   CHECK(primeStructDoc.find("migration to dynamic storage is tracked in `docs/todo.md`") ==
         std::string::npos);
+  CHECK(primeStructDoc.find("migration to full dynamic semantics is tracked in") ==
+        std::string::npos);
   CHECK(syntaxSpecDoc.find("vector runtime parity is tracked in `docs/todo.md`") ==
         std::string::npos);
   CHECK(todo.find("TODO-4189") == std::string::npos);
+  CHECK(todo.find("TODO-4192") == std::string::npos);
   CHECK(todoFinished.find("TODO-4189: Align vector dynamic-storage docs") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4192: Align vector conformance TODO docs") !=
         std::string::npos);
 }
 

@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4192: Align vector conformance TODO docs. Completed:
+  `docs/PrimeStruct.md` no longer says full dynamic vector semantics are
+  tracked in `docs/todo.md` while the active queue is empty. The conformance
+  note now matches the VM/native memory note by preserving the fixed-capacity
+  implementation status and requiring a concrete dynamic-storage migration
+  TODO before changing that runtime contract. Source-lock coverage rejects the
+  stale active-TODO pointer.
 - ✓ TODO-4191: Align graphics UI follow-up docs. Completed:
   `docs/PrimeStruct.md` no longer describes broader graphics backend/runtime
   package-path cleanup or UI platform/runtime event-stream consumption as
