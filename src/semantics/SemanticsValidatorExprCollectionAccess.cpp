@@ -229,6 +229,16 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     const bool usesBuiltinVectorSurfaceMethodSemantics =
         accessHelperName == "count" || accessHelperName == "capacity" ||
         accessHelperName == "at" || accessHelperName == "at_unsafe";
+    auto hasVisiblePreferredVectorAccessHelper = [&]() {
+      if (!isValueSurfaceAccessHelperName(accessHelperName)) {
+        return false;
+      }
+      const std::string preferredVectorAccessTarget =
+          preferredBareVectorHelperTarget(accessHelperName);
+      return preferredVectorAccessTarget.rfind("/vector/", 0) == 0 &&
+             (hasDeclaredDefinitionPath(preferredVectorAccessTarget) ||
+              hasImportedDefinitionPath(preferredVectorAccessTarget));
+    };
     auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
       std::string elemType;
       return context.resolveVectorTarget(candidate, elemType) ||
@@ -278,7 +288,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
            context.resolveSoaVectorTarget(receiverCandidate, ignoredVectorElemType));
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
-          !receiverSupportsBuiltinVectorSurfaceSemantics &&
+          (!receiverSupportsBuiltinVectorSurfaceSemantics ||
+           hasVisiblePreferredVectorAccessHelper()) &&
           resolveVectorHelperMethodTarget(params, locals, receiverCandidate,
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
@@ -389,7 +400,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
            context.resolveSoaVectorTarget(expr.args.front(), ignoredVectorElemType));
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
-          !receiverSupportsBuiltinVectorSurfaceSemantics &&
+          (!receiverSupportsBuiltinVectorSurfaceSemantics ||
+           hasVisiblePreferredVectorAccessHelper()) &&
           resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&

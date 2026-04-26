@@ -2633,6 +2633,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
                                         vectorMethodTarget)) {
       const bool isVectorFamilyTarget =
           vectorMethodTarget.rfind("/soa_vector/", 0) == 0 ||
+          vectorMethodTarget.rfind("/vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/std/collections/vector/", 0) == 0 ||
           vectorMethodTarget.rfind("/std/collections/experimental_vector/", 0) == 0;
       if (!isVectorFamilyTarget) {

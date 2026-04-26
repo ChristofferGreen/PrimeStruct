@@ -5837,6 +5837,22 @@
             "auto tryResolveReceiverIndex = [&](size_t receiverIndex)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionAccessSource.find(
+            "auto hasVisiblePreferredVectorAccessHelper = [&]() {\n"
+            "      if (!isValueSurfaceAccessHelperName(accessHelperName)) {\n"
+            "        return false;\n"
+            "      }\n"
+            "      const std::string preferredVectorAccessTarget =\n"
+            "          preferredBareVectorHelperTarget(accessHelperName);\n"
+            "      return preferredVectorAccessTarget.rfind(\"/vector/\", 0) == 0 &&\n"
+            "             (hasDeclaredDefinitionPath(preferredVectorAccessTarget) ||\n"
+            "              hasImportedDefinitionPath(preferredVectorAccessTarget));\n"
+            "    };") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
+            "(!receiverSupportsBuiltinVectorSurfaceSemantics ||\n"
+            "           hasVisiblePreferredVectorAccessHelper()) &&") !=
+        std::string::npos);
+  CHECK(semanticsExprCollectionAccessSource.find(
             "for (size_t receiverIndex : receiverIndices) {\n"
             "      const Expr &receiverCandidate = expr.args[receiverIndex];\n"
             "      std::string methodTarget;\n"
@@ -5935,6 +5951,9 @@
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "  if (receiver.kind == Expr::Kind::Call && !receiver.isBinding) {") !=
+        std::string::npos);
+  CHECK(semanticsExprMethodTargetResolutionSource.find(
+            "vectorMethodTarget.rfind(\"/vector/\", 0) == 0 ||") !=
         std::string::npos);
   CHECK(semanticsExprCallResolutionSource.find(
             "    const auto preferredMethodLikeSamePathSoaHelperCandidate = [&]() -> std::string {\n"
