@@ -113,15 +113,15 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
           return false;
         }
         const size_t lastSlash = resolved.find_last_of('/');
-        const size_t instantiationPos =
-            resolved.find("__t",
+        const size_t generatedSuffix =
+            resolved.find("__",
                           lastSlash == std::string::npos ? 0 : lastSlash + 1);
-        if (instantiationPos == std::string::npos) {
+        if (generatedSuffix == std::string::npos) {
           return false;
         }
         const std::string helperName =
             resolved.substr(lastSlash == std::string::npos ? 0 : lastSlash + 1,
-                            instantiationPos - lastSlash - 1);
+                            generatedSuffix - lastSlash - 1);
         return isCountOrCapacityHelperName(helperName);
       };
   const auto canonicalizeDirectExperimentalSoaWrapperCountHelperCall =
