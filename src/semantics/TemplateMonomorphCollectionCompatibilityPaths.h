@@ -143,6 +143,17 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
     }
     return path;
   }
+  if (path.rfind("/vector/", 0) == 0) {
+    const std::string suffix = path.substr(std::string("/vector/").size());
+    if (isRemovedVectorCompatibilityHelper(suffix)) {
+      const std::string stdlibPath = "/std/collections/vector/" + suffix;
+      if (ctx.sourceDefs.count(stdlibPath) > 0 &&
+          ctx.templateDefs.count(stdlibPath) > 0) {
+        return stdlibPath;
+      }
+    }
+    return path;
+  }
   if (path.rfind("/map/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/map/").size());
     if (!isRemovedMapCompatibilityHelper(suffix)) {
