@@ -6,6 +6,12 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4184: Align arg-pack remaining-gap docs. Completed:
+  `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` no longer
+  describe arg-pack backend/runtime gaps as generic follow-up work while the
+  active TODO queue is empty. The docs now point future arg-pack work at
+  concrete reproduced unsupported kinds or regressions, and source-lock
+  coverage rejects the stale generic follow-up wording.
 - ✓ TODO-4183: Remove stale arg-pack TODO wording. Completed:
   `docs/PrimeStruct.md` no longer claims backend/runtime arg-pack
   materialization is tracked by a follow-up TODO slice while `docs/todo.md`

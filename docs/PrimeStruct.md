@@ -1266,8 +1266,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
     indexed downstream `tryAt(...)` payload-kind inference for `auto` bindings, and `Pointer<map<K, V>>` packs preserve
     indexed downstream `contains()` / `at()` / `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar
     `Reference<T>` packs now preserve indexed downstream `dereference(...)`, and struct `Pointer<T>` plus struct
-    `Reference<T>` packs now preserve indexed downstream field/helper access; other unsupported non-string pack elements
-    remain follow-up work.
+    `Reference<T>` packs now preserve indexed downstream field/helper access. Any newly discovered unsupported
+    non-string pack element should get a concrete TODO only after a reproducible semantics, lowering, or backend
+    failure is identified.
     Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>`
     arg-packs now preserves `write*()` / `flush()` receivers plus `readByte(...)` `?` inference across direct calls
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
@@ -3136,8 +3137,8 @@ bad_use_after_take() {
     indexed downstream `tryAt(...)` payload-kind inference for `auto` bindings, and `Pointer<map<K, V>>` packs with
     indexed downstream `contains()` / `at()` / `at_unsafe()` lookup access. Scalar `Pointer<T>` plus scalar
     `Reference<T>` packs with indexed downstream `dereference(...)`, and struct `Pointer<T>` plus struct `Reference<T>`
-    packs with indexed downstream field/helper access. Borrowed/pointer `Result` packs and the remaining unsupported
-    non-string packs stay follow-up work.
+    packs with indexed downstream field/helper access. Newly discovered unsupported non-string pack gaps should be
+    tracked as concrete TODOs only when backed by a reproducible semantics, lowering, or backend failure.
     Latest checkpoint: canonical free-builtin `at([values] values, [index] i)` on wrapped borrowed/pointer `File<Mode>`
     arg-packs now preserves `write*()` / `flush()` receivers plus `readByte(...)` `?` inference across direct calls
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing

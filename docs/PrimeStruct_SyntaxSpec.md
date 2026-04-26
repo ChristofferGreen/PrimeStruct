@@ -425,8 +425,9 @@ Notes:
 ## 4A. Draft Variadic Pack Proposal (Parser/Semantics Implemented)
 
 This appendix records the canonical model for variadic user-defined calls. Parser/canonicalization, call-binding
-semantics, spread-aware binding into trailing packs, and the read-only body API are now implemented; backend/runtime
-materialization remains follow-up work beyond the stable grammar above.
+semantics, spread-aware binding into trailing packs, and the read-only body API are now implemented. Backend/runtime
+materialization is partial; add a concrete TODO only for a newly reproduced unsupported element kind or runtime
+materialization regression.
 
 ### 4A.1 Surface forms
 

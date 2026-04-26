@@ -278,10 +278,14 @@ TEST_CASE("soa maturity track docs stay source locked") {
 
 TEST_CASE("arg-pack docs do not point at inactive TODO slices") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path syntaxSpecPath = std::filesystem::path("..") / "docs" / "PrimeStruct_SyntaxSpec.md";
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(syntaxSpecPath)) {
+    syntaxSpecPath = std::filesystem::current_path() / "docs" / "PrimeStruct_SyntaxSpec.md";
   }
   if (!std::filesystem::exists(todoPath)) {
     todoPath = std::filesystem::current_path() / "docs" / "todo.md";
@@ -290,10 +294,12 @@ TEST_CASE("arg-pack docs do not point at inactive TODO slices") {
     todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
   }
   REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(todoPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readFile(todoFinishedPath.string());
 
@@ -301,11 +307,28 @@ TEST_CASE("arg-pack docs do not point at inactive TODO slices") {
         std::string::npos);
   CHECK(primeStructDoc.find("should get a new explicit TODO before further implementation") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("newly discovered unsupported non-string pack gaps") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("concrete TODOs only when backed by a reproducible") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("Backend/runtime materialization is partial") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("newly reproduced unsupported element kind") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("follow-up arg-pack TODO slice below") ==
+        std::string::npos);
+  CHECK(primeStructDoc.find("Borrowed/pointer `Result` packs and the remaining unsupported") ==
+        std::string::npos);
+  CHECK(primeStructDoc.find("remaining unsupported\n    non-string packs stay follow-up work") ==
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("materialization remains follow-up work beyond") ==
         std::string::npos);
   CHECK(todo.find("arg-pack") == std::string::npos);
   CHECK(todo.find("TODO-4183") == std::string::npos);
+  CHECK(todo.find("TODO-4184") == std::string::npos);
   CHECK(todoFinished.find("TODO-4183: Remove stale arg-pack TODO wording") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4184: Align arg-pack remaining-gap docs") !=
         std::string::npos);
 }
 
