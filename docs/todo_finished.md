@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4165: Add debugger and source-map provenance parity coverage.
+  Completed: `tests/unit/test_ir_pipeline_serialization_control_flow_metadata.h`
+  now lowers a real PrimeStruct program with a published semantic product,
+  resolves a canonical source breakpoint from the generated instruction source
+  map, and proves `VmDebugAdapter::stackTrace(...)` reports the same function,
+  instruction pointer, debug id, line, column, and provenance. The assertion
+  carries readable expected/actual provenance strings so regressions expose a
+  compact source-map diff.
 - ✓ TODO-4162: Split compile-pipeline benchmark knobs from the production
   pipeline entrypoint. Completed: `include/primec/CompilePipeline.h` now
   exposes explicit `CompilePipelineRunConfig` and

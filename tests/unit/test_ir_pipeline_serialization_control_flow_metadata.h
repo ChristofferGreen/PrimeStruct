@@ -480,6 +480,144 @@ main() {
   CHECK(sourceIt->second->provenance == primec::IrSourceMapProvenance::SyntheticIr);
 }
 
+TEST_CASE("vm debug adapter preserves lowered source map provenance") {
+  const std::string source = R"(
+[return<int>]
+helper([int] x) {
+  return(plus(x, 2i32))
+}
+
+[return<int>]
+main() {
+  [int] base{4i32}
+  [int] result{helper(base)}
+  return(result)
+}
+)";
+
+  auto provenanceName = [](primec::IrSourceMapProvenance provenance) {
+    switch (provenance) {
+      case primec::IrSourceMapProvenance::CanonicalAst:
+        return "canonical_ast";
+      case primec::IrSourceMapProvenance::SyntheticIr:
+        return "synthetic_ir";
+      case primec::IrSourceMapProvenance::Unknown:
+        break;
+    }
+    return "unknown";
+  };
+  auto formatSourcePoint = [&](uint32_t debugId,
+                               uint32_t line,
+                               uint32_t column,
+                               primec::IrSourceMapProvenance provenance) {
+    std::ostringstream out;
+    out << "debug_id=" << debugId << " source=" << line << ":" << column
+        << " provenance=" << provenanceName(provenance);
+    return out.str();
+  };
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::SemanticProgramDefinition *mainSemanticDefinition = nullptr;
+  for (const auto &definition : semanticProgram.definitions) {
+    if (definition.fullPath == "/main") {
+      mainSemanticDefinition = &definition;
+      break;
+    }
+  }
+  REQUIRE(mainSemanticDefinition != nullptr);
+  CHECK(mainSemanticDefinition->semanticNodeId != 0u);
+  CHECK(mainSemanticDefinition->provenanceHandle != 0u);
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  std::unordered_map<uint32_t, const primec::IrInstructionSourceMapEntry *> sourceMapByDebugId;
+  for (const auto &entry : module.instructionSourceMap) {
+    CHECK(sourceMapByDebugId.emplace(entry.debugId, &entry).second);
+  }
+
+  size_t mainFunctionIndex = module.functions.size();
+  for (size_t functionIndex = 0; functionIndex < module.functions.size(); ++functionIndex) {
+    if (module.functions[functionIndex].name == "/main") {
+      mainFunctionIndex = functionIndex;
+      break;
+    }
+  }
+  REQUIRE(mainFunctionIndex < module.functions.size());
+
+  std::vector<primec::VmResolvedSourceBreakpoint> expectedBreakpoints;
+  primec::VmResolvedSourceBreakpoint expectedBreakpoint;
+  bool selectedBreakpoint = false;
+  const auto &mainFunction = module.functions[mainFunctionIndex];
+  for (const auto &instruction : mainFunction.instructions) {
+    auto sourceIt = sourceMapByDebugId.find(instruction.debugId);
+    if (sourceIt == sourceMapByDebugId.end()) {
+      continue;
+    }
+    const primec::IrInstructionSourceMapEntry &entry = *sourceIt->second;
+    if (entry.provenance != primec::IrSourceMapProvenance::CanonicalAst || entry.line == 0u ||
+        entry.column == 0u || entry.line <= static_cast<uint32_t>(mainSemanticDefinition->sourceLine)) {
+      continue;
+    }
+    expectedBreakpoints.clear();
+    error.clear();
+    REQUIRE(primec::resolveSourceBreakpoints(
+        module, entry.line, entry.column, expectedBreakpoints, error));
+    CHECK(error.empty());
+    if (!expectedBreakpoints.empty() && expectedBreakpoints.front().functionIndex == mainFunctionIndex) {
+      expectedBreakpoint = expectedBreakpoints.front();
+      selectedBreakpoint = true;
+      break;
+    }
+  }
+  REQUIRE(selectedBreakpoint);
+  const std::string expectedSource =
+      formatSourcePoint(expectedBreakpoint.debugId,
+                        expectedBreakpoint.line,
+                        expectedBreakpoint.column,
+                        expectedBreakpoint.provenance);
+
+  primec::VmDebugAdapter adapter;
+  REQUIRE(adapter.launch(module, error));
+  CHECK(error.empty());
+
+  std::vector<primec::VmDebugAdapterBreakpointResult> breakpointResults;
+  REQUIRE(adapter.setSourceBreakpoints(
+      {{expectedBreakpoint.line, expectedBreakpoint.column}}, breakpointResults, error));
+  CHECK(error.empty());
+  REQUIRE(breakpointResults.size() == 1);
+  CHECK(breakpointResults.front().verified);
+  CHECK(breakpointResults.front().resolvedCount == expectedBreakpoints.size());
+
+  primec::VmDebugAdapterStopEvent stopEvent;
+  REQUIRE(adapter.continueExecution(stopEvent, error));
+  CHECK(error.empty());
+  CHECK(stopEvent.reason == primec::VmDebugStopReason::Breakpoint);
+
+  std::vector<primec::VmDebugAdapterStackFrame> frames;
+  REQUIRE(adapter.stackTrace(1, frames, error));
+  CHECK(error.empty());
+  REQUIRE(!frames.empty());
+  const primec::VmDebugAdapterStackFrame &frame = frames.front();
+  const std::string actualSource =
+      formatSourcePoint(frame.debugId, frame.line, frame.column, frame.provenance);
+  INFO("expected source-map provenance: " << expectedSource);
+  INFO("debug adapter frame provenance: " << actualSource);
+  CHECK(frame.functionIndex == expectedBreakpoint.functionIndex);
+  CHECK(frame.instructionPointer == expectedBreakpoint.instructionPointer);
+  CHECK(frame.debugId == expectedBreakpoint.debugId);
+  CHECK(frame.line == expectedBreakpoint.line);
+  CHECK(frame.column == expectedBreakpoint.column);
+  CHECK(frame.provenance == expectedBreakpoint.provenance);
+}
+
 TEST_CASE("ir leaves tail metadata unset for builtin return") {
   const std::string source = R"(
 [return<int>]

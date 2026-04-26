@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4165
 - TODO-4159
 - TODO-4160
 - TODO-4163
@@ -75,7 +74,7 @@ Task template:
 - Semantic-product authority and lowerer boundary enforcement: TODO-4159,
   TODO-4160, TODO-4161, TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4163,
-  TODO-4165, TODO-4166
+  TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
   TODO-4175
 - `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
@@ -83,23 +82,22 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4165
-2. TODO-4159
-3. TODO-4160
-4. TODO-4161
-5. TODO-4163
-6. TODO-4164
-7. TODO-4166
-8. TODO-4174
-9. TODO-4173
-10. TODO-4176
-11. TODO-4175
-12. TODO-4179
-13. TODO-4177
-14. TODO-4178
-15. TODO-4180
-16. TODO-4182
-17. TODO-4181
+1. TODO-4159
+2. TODO-4160
+3. TODO-4161
+4. TODO-4163
+5. TODO-4164
+6. TODO-4166
+7. TODO-4174
+8. TODO-4173
+9. TODO-4176
+10. TODO-4175
+11. TODO-4179
+12. TODO-4177
+13. TODO-4178
+14. TODO-4180
+15. TODO-4182
+16. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -120,7 +118,7 @@ Task template:
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
-| Debugger/source-map provenance parity | TODO-4165 |
+| Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
@@ -142,7 +140,7 @@ Task template:
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
-| Debugger/source-map provenance parity | TODO-4165 |
+| Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
@@ -447,22 +445,6 @@ Task template:
     - Invalid mixed result states disappear from the touched pipeline surface.
   - stop_rule: Stop once one compile-pipeline result surface uses explicit
     variants end-to-end; do not rewrite every caller in one slice.
-
-- [ ] TODO-4165: Add debugger and source-map provenance parity coverage
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Compile-pipeline boundary hardening
-  - scope: Add release coverage proving debugger-facing and source-map
-    provenance stay stable when lowering consumes published semantic-product
-    identities plus syntax-owned provenance.
-  - acceptance:
-    - The touched tests assert matching debugger or source-map provenance for a
-      representative compile or runtime entrypoint.
-    - Failures surface readable provenance diffs for the touched coverage.
-    - The touched coverage remains deterministic and runnable from
-      `build-release/`.
-  - stop_rule: Stop once one representative debugger or source-map provenance
-    path has parity coverage; do not broaden into runtime or debugger redesign.
 
 - [ ] TODO-4164: Remove AST-side semantic re-derivation caches after boundary cutover
   - owner: ai
