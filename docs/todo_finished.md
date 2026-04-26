@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4190: Align semantic-product Group 12 docs. Completed:
+  `docs/PrimeStruct.md` no longer says Group 12 entrypoint retirement,
+  provenance/ownership coverage, backend conformance, compatibility caller
+  migration, or semantic-product dump/report changes are remaining live work
+  while the active queue is empty. The docs now require a concrete TODO before
+  changing those semantic-product seams, and source-lock coverage rejects the
+  stale live-work wording.
 - ✓ TODO-4189: Align vector dynamic-storage docs. Completed:
   `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` no longer say
   vector dynamic-storage migration or full runtime parity is tracked in

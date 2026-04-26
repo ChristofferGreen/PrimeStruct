@@ -432,16 +432,16 @@ Compile-pipeline publication contract:
   query, `try(...)`, and `on_error` facts are also published now.
 - The first semantic-product builder slice, second graph-backed builder slice, CLI/runtime plumbing cutover,
   temporary migration adapter, and deterministic semantic-product dump/formatter are therefore all complete. The
-  remaining live Group 12 work is now entrypoint retirement, provenance/ownership coverage, backend conformance, and
-  later cleanup/removal passes.
+  active queue no longer tracks Group 12 entrypoint retirement, provenance/ownership coverage, backend conformance, or
+  cleanup/removal passes; add a concrete TODO before changing any of those seams.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather
   than rebuilding semantic facts ad hoc from the raw `Program`.
 - That success-path handoff is now live for `primec` compile/emit entrypoints, `primevm`, backend registry dispatch,
   and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. The `primevm` result boundary now also uses
-  explicit success/failure variants; remaining CLI/runtime plumbing work is limited to migrating the remaining
-  compatibility callers and semantic-product dump/report surfaces, not the success-path lowering handoff.
+  explicit success/failure variants. No active TODO currently targets compatibility caller migration or
+  semantic-product dump/report surface changes; add a concrete TODO before changing those CLI/runtime seams.
 
 CLI/runtime plumbing contract:
 - `primec` and `primevm` should receive the semantic product only through compile-pipeline success artifacts, not
@@ -624,9 +624,8 @@ Planned semantic-product unit/golden suite:
 - Current status: the exact semantic-product formatter golden now pins resolved call/helper targets,
   binding/result facts, effect/capability plus struct/layout metadata, and the explicit
   `provenance_handle=<id> source="line:column"` provenance surface carried by lowering-facing
-  semantic-product facts. The remaining live
-  Group 12 coverage work is now pipeline-facing/backend conformance rather than narrow formatter
-  coverage.
+  semantic-product facts. No active TODO currently tracks pipeline-facing/backend semantic-product conformance beyond
+  the formatter golden; add a concrete TODO before expanding that coverage lane.
 - Keep one narrow golden corpus focused on exported lowering facts rather than full pipeline behavior.
 - Prefer small representative programs that pin one fact family at a time:
   - resolved call/helper targets

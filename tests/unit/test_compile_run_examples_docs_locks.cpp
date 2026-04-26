@@ -99,6 +99,45 @@ TEST_CASE("vector dynamic-storage docs avoid inactive TODO pointers") {
         std::string::npos);
 }
 
+TEST_CASE("semantic-product docs avoid inactive Group 12 pointers") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(primeStructDoc.find("active queue no longer tracks Group 12 entrypoint retirement") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("add a concrete TODO before changing any of those seams") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("No active TODO currently targets compatibility caller migration") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("semantic-product dump/report surface changes") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("No active TODO currently tracks pipeline-facing/backend semantic-product") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("remaining live Group 12 work is now") == std::string::npos);
+  CHECK(primeStructDoc.find("remaining CLI/runtime plumbing work is limited") == std::string::npos);
+  CHECK(primeStructDoc.find("remaining live\n  Group 12 coverage work") == std::string::npos);
+  CHECK(todo.find("TODO-4190") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4190: Align semantic-product Group 12 docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib style boundary docs stay source locked") {
   std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
