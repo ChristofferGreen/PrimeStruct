@@ -729,10 +729,11 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical soa_vector to_aos helper validates on experimental wrapper bindings") {
+TEST_CASE("canonical soa_vector to_aos helper validates on canonical wrapper bindings") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa_vector/*
+import /std/collections/soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -741,7 +742,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{soaVectorSingle<Particle>(Particle(7i32))}
+  [auto] values{soaVectorSingle<Particle>(Particle(7i32))}
   [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
   return(count(unpacked))
 }
@@ -751,9 +752,10 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical soa_vector count helper validates inside generic helper on fully qualified experimental wrapper parameter") {
+TEST_CASE("canonical soa_vector count helper validates inside generic helper on canonical wrapper parameter") {
   const std::string source = R"(
-import /std/collections/experimental_soa_vector/*
+import /std/collections/*
+import /std/collections/soa_vector/*
 
 [struct reflect]
 Particle() {
@@ -761,7 +763,7 @@ Particle() {
 }
 
 [return<int>]
-/helper<T>([/std/collections/experimental_soa_vector/SoaVector<T>] values) {
+/helper<T>([SoaVector<T>] values) {
   return(/std/collections/soa_vector/count<T>(values))
 }
 
@@ -780,7 +782,7 @@ TEST_CASE("wildcard-imported canonical soa_vector helpers infer receiver-matched
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -789,7 +791,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [auto mut] values{soaVectorNew<Particle>()}
   reserve(values, 2i32)
   push(values, Particle(4i32))
   push(values, Particle(9i32))

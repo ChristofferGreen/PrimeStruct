@@ -56,22 +56,20 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4180
+- TODO-4182
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4182
+- TODO-4181
 
 ### Priority Lanes (Current)
 
-- `soa_vector` promotion and de-experimentalization: TODO-4180, TODO-4182,
-  TODO-4181
+- `soa_vector` promotion and de-experimentalization: TODO-4182, TODO-4181
 
 ### Execution Queue (Recommended)
 
-1. TODO-4180
-2. TODO-4182
-3. TODO-4181
+1. TODO-4182
+2. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -83,8 +81,8 @@ Task template:
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4180, TODO-4182 |
-| SoA maturity and `soa_vector` promotion | TODO-4180, TODO-4182 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4182 |
+| SoA maturity and `soa_vector` promotion | TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -109,7 +107,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4182 |
-| `soa_vector` maturity and canonical surface parity | TODO-4180, TODO-4182 |
+| `soa_vector` maturity and canonical surface parity | TODO-4182 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
@@ -180,8 +178,9 @@ Task template:
 - Active promotion lane now has the canonical public helper wrapper
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
-  C++/VM/native helper/conversion parity coverage. Remaining work should move
-  receiver contracts off experimental type names and migrate examples.
+  C++/VM/native helper/conversion parity coverage, with conversion receiver
+  contracts spelled through canonical `SoaVector<T>` surfaces. Remaining work
+  should migrate examples.
 
 ### Skipped Doctest Debt Summary
 
@@ -236,24 +235,3 @@ Task template:
   - stop_rule: Stop after the first coherent public promotion pass is
     documented and validated; do not fold broader SoA storage redesign or new
     container families into this tracker.
-
-- [ ] TODO-4180: Move canonical `soa_vector` conversions off experimental receiver types
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: `soa_vector` promotion
-  - depends_on: TODO-4179
-  - scope: Move `to_aos` and related conversion helpers onto canonical
-    `/std/collections/soa_vector/*`-owned receiver and helper contracts so the
-    public conversion surface no longer names
-    `/std/collections/experimental_soa_vector/SoaVector<T>` directly.
-  - acceptance:
-    - The touched conversion `.prime` surface accepts canonical `soa_vector`
-      receiver types and helper paths without requiring experimental receiver
-      names in ordinary public code.
-    - The touched docs/spec explain conversion usage in canonical namespace
-      terms.
-    - Remaining experimental conversion seams, if any, are limited to
-      compatibility forwarding instead of defining the public receiver contract.
-  - stop_rule: Stop once the canonical conversion receiver contract is
-    authoritative for the touched flows; do not delete every experimental shim
-    in one slice.

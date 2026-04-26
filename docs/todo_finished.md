@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4180: Move canonical `soa_vector` conversions off experimental
+  receiver types. Completed: canonical
+  `stdlib/std/collections/soa_vector_conversions.prime` now imports the
+  canonical wrapper surface, exposes `soaVectorToAos<T>()`,
+  `soaVectorToAosRef<T>()`, `/std/collections/soa_vector/to_aos<T>()`, and
+  `/std/collections/soa_vector/to_aos_ref<T>()` with `SoaVector<T>` /
+  `Reference<SoaVector<T>>` receiver spellings, and keeps the loop bodies on
+  canonical `/std/collections/soa_vector/count|get` helper paths. Focused
+  semantics, dump, and source-lock coverage now exercise ordinary canonical
+  imports without direct experimental receiver names, while the experimental
+  conversion module remains a compatibility seam.
 - ✓ TODO-4178: Add canonical `soa_vector` backend and runtime parity
   coverage. Completed: the representative wildcard canonical helper slice now
   runs across the C++ emitter, VM, and native backend without importing

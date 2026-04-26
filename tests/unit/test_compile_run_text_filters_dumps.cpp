@@ -1635,7 +1635,8 @@ main() {
 TEST_CASE("dump ast-semantic canonical soa_vector to_aos helper body uses canonical count/get loop") {
   const std::string source = R"(
 import /std/collections/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa_vector/*
+import /std/collections/soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1644,7 +1645,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle>] values{soa_vector<Particle>(Particle(7i32))}
+  [auto] values{soaVectorSingle<Particle>(Particle(7i32))}
   [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos<Particle>(values)}
   return(count(unpacked))
 }
@@ -1673,6 +1674,8 @@ main() {
 TEST_CASE("dump ast-semantic canonical soa_vector to_aos_ref helper body uses canonical count_ref/get_ref loop") {
   const std::string source = R"(
 import /std/collections/*
+import /std/collections/soa_vector/*
+import /std/collections/soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -1681,7 +1684,7 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [auto mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
   [vector<Particle>] unpacked{/std/collections/soa_vector/to_aos_ref<Particle>(location(values))}
   return(count(unpacked))

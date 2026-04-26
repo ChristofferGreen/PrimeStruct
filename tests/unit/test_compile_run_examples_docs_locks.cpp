@@ -222,7 +222,11 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("`/std/collections/soa_vector_conversions/*` are the canonical spellings") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("The canonical conversion helpers now use `SoaVector<T>`") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("**Current canonical SoA experiment surface:** public docs/examples should now use") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("canonical `SoaVector<T>` / `Reference<SoaVector<T>>` receiver spellings") !=
         std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") != std::string::npos);
@@ -1205,9 +1209,14 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
 
   CHECK(soaConversions.find("// Canonical conversion wrappers for public soa_vector helpers.") !=
         std::string::npos);
+  CHECK(soaConversions.find("import /std/collections/soa_vector/*") !=
+        std::string::npos);
   CHECK(soaConversions.find("/std/collections/soa_vector_conversions/soaVectorToAos<T>(") !=
         std::string::npos);
   CHECK(soaConversions.find("/std/collections/soa_vector_conversions/soaVectorToAosRef<T>(") !=
+        std::string::npos);
+  CHECK(soaConversions.find("    [SoaVector<T>] values) {") != std::string::npos);
+  CHECK(soaConversions.find("    [Reference<SoaVector<T>>] values) {") !=
         std::string::npos);
   CHECK(soaConversions.find("valueCount{/std/collections/soa_vector/count<T>(values)}") !=
         std::string::npos);
@@ -1221,6 +1230,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(soaConversions.find("[mut] out{vector<T>()}") == std::string::npos);
   CHECK(soaConversions.find("[i32 mut] index{0i32}") == std::string::npos);
+  CHECK(soaConversions.find("/std/collections/experimental_soa_vector/SoaVector<T>") ==
+        std::string::npos);
   CHECK(experimentalSoaVector.find(
             "// Internal implementation module behind canonical /std/collections/soa_vector/*.") !=
         std::string::npos);

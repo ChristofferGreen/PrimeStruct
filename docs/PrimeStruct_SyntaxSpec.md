@@ -861,7 +861,10 @@ field-view call-argument/return escapes remain deterministic `field-view escapes
 `count(...)` on `soa_vector` through the native count path for current SoA bindings
 while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
-across C++/native/VM, and valid root bare/method/old-explicit `count`/`get`/`ref` plus bare/direct/method `to_aos`
+across C++/native/VM; canonical conversion helpers use `SoaVector<T>` and
+`Reference<SoaVector<T>>` receiver spellings while routing through canonical
+`/std/collections/soa_vector/*` helper paths. Valid root bare/method/old-explicit
+`count`/`get`/`ref` plus bare/direct/method `to_aos`
 calls on builtin `soa_vector<T>` bindings now rewrite onto that same canonical helper path unless a visible
 old-surface user helper shadows them. Imported root bare/direct/method builtin `to_aos` forms now also clear
 semantics on that same canonical helper path instead of resolving directly against the experimental wrapper

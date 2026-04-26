@@ -2696,9 +2696,11 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
   The canonical wrapper now owns the ordinary constructor, count/get/ref,
   reserve/push, field-view, and AoS conversion helper names; ordinary public
   examples should not import the experimental implementation modules for those
-  helper flows. Representative wildcard canonical helper/conversion tests now
-  run across C++ emitter, VM, and native without direct experimental SoA
-  imports in the test source.
+  helper flows. The canonical conversion helpers now use `SoaVector<T>` and
+  `Reference<SoaVector<T>>` receiver spellings while routing through canonical
+  `/std/collections/soa_vector/*` helper paths. Representative wildcard
+  canonical helper/conversion tests now run across C++ emitter, VM, and native
+  without direct experimental SoA imports in the test source.
 - **Compatibility-only namespaces:** `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain bridge
   seams behind that canonical experiment surface. They may stay importable while
@@ -2707,8 +2709,8 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
 - **Internal substrate namespace:** `/std/collections/internal_soa_storage/*`
   stays implementation-facing storage/layout plumbing rather than public API.
 - **Promotion gate:** SoA should only move from incubating to promoted public
-  contract after the remaining direct experimental receiver contracts and
-  example imports are retired. Until then, docs should call `soa_vector<T>`
+  contract after the remaining example imports and compatibility-only seams are
+  retired or explicitly accepted. Until then, docs should call `soa_vector<T>`
   incubating explicitly instead of implying it has already graduated with
   vector/map.
 
@@ -3336,6 +3338,7 @@ bad_use_after_take() {
     `soaVectorReserve<T>()`, and `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`,
     `.get(i)`, `.reserve(...)`, and `.push(...)`. The explicit AoS conversion surface now lives in
     the canonical `/std/collections/soa_vector_conversions/*` module with `soaVectorToAos<T>()`,
+    canonical `SoaVector<T>` / `Reference<SoaVector<T>>` receiver spellings,
     while `/std/collections/experimental_soa_vector/*` and
     `/std/collections/experimental_soa_vector_conversions/*` remain compatibility-only bridge seams
     behind that canonical experiment surface.
