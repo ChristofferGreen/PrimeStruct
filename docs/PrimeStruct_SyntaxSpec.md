@@ -1178,8 +1178,9 @@ heap materialized and copied into SoA storage-compatible contiguous memory
 instead of emitting the former direct unsupported diagnostic boundary.
 These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
 stdlib `.prime` implementation replace them.
-Draft example source: `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA runtime support
-lands).
+Canonical example source: `examples/3.Surface/soa_vector_ecs.prime` imports
+`/std/collections/soa_vector/*` and
+`/std/collections/soa_vector_conversions/*` for the supported wrapper flow.
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 

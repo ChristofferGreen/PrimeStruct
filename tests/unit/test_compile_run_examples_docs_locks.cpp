@@ -228,11 +228,13 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("canonical `SoaVector<T>` / `Reference<SoaVector<T>>` receiver spellings") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("`examples/3.Surface/soa_vector_ecs.prime`") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") != std::string::npos);
-  CHECK(primeStructDoc.find("Incubation boundary locked; add a new promotion/retreat task only if the maturity decision changes.") !=
+  CHECK(primeStructDoc.find("contract after the remaining compatibility-only seams are retired") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("borrowed-view/lifetime rules, backend/runtime parity") !=
+  CHECK(primeStructDoc.find("Representative wildcard canonical helper/conversion tests now run") !=
         std::string::npos);
 
   CHECK(todo.find("### SoA Maturity Track Summary") != std::string::npos);
@@ -244,6 +246,55 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
   CHECK(todo.find("TODO-4103") == std::string::npos);
   CHECK(todo.find("TODO-4059") == std::string::npos);
+}
+
+TEST_CASE("canonical soa_vector example stays source locked") {
+  std::filesystem::path examplePath =
+      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs.prime";
+  std::filesystem::path oldExamplePath =
+      std::filesystem::path("..") / "examples" / "3.Surface" / "soa_vector_ecs_draft.prime";
+  std::filesystem::path examplesReadmePath = std::filesystem::path("..") / "examples" / "README.md";
+  std::filesystem::path exampleSweepPath =
+      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_bindings_and_examples.cpp";
+  if (!std::filesystem::exists(examplePath)) {
+    examplePath = std::filesystem::current_path() / "examples" / "3.Surface" / "soa_vector_ecs.prime";
+  }
+  if (!std::filesystem::exists(oldExamplePath)) {
+    oldExamplePath =
+        std::filesystem::current_path() / "examples" / "3.Surface" / "soa_vector_ecs_draft.prime";
+  }
+  if (!std::filesystem::exists(examplesReadmePath)) {
+    examplesReadmePath = std::filesystem::current_path() / "examples" / "README.md";
+  }
+  if (!std::filesystem::exists(exampleSweepPath)) {
+    exampleSweepPath = std::filesystem::current_path() / "tests" / "unit" /
+                       "test_compile_run_bindings_and_examples.cpp";
+  }
+  REQUIRE(std::filesystem::exists(examplePath));
+  CHECK(!std::filesystem::exists(oldExamplePath));
+  REQUIRE(std::filesystem::exists(examplesReadmePath));
+  REQUIRE(std::filesystem::exists(exampleSweepPath));
+
+  const std::string example = readFile(examplePath.string());
+  const std::string examplesReadme = readFile(examplesReadmePath.string());
+  const std::string exampleSweep = readFile(exampleSweepPath.string());
+
+  CHECK(example.find("import /std/collections/soa_vector/*") != std::string::npos);
+  CHECK(example.find("import /std/collections/soa_vector_conversions/*") !=
+        std::string::npos);
+  CHECK(example.find("[struct reflect]") != std::string::npos);
+  CHECK(example.find("[auto mut] particles{soaVectorNew<Particle>()}") !=
+        std::string::npos);
+  CHECK(example.find("particles.reserve(plus(particles.count(), spawnQueue.count()))") !=
+        std::string::npos);
+  CHECK(example.find("soaVectorNew<Particle>()") != std::string::npos);
+  CHECK(example.find("soaVectorToAos<Particle>(particles)") != std::string::npos);
+  CHECK(example.find("experimental_soa_vector") == std::string::npos);
+  CHECK(example.find("soa_vector_ecs_draft") == std::string::npos);
+  CHECK(examplesReadme.find("examples/3.Surface/soa_vector_ecs.prime") !=
+        std::string::npos);
+  CHECK(examplesReadme.find("soa_vector_ecs_draft.prime") == std::string::npos);
+  CHECK(exampleSweep.find("soa_vector_ecs_draft.prime") == std::string::npos);
 }
 
 TEST_CASE("skipped doctest debt queue stays source locked") {

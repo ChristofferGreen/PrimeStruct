@@ -2709,10 +2709,9 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
 - **Internal substrate namespace:** `/std/collections/internal_soa_storage/*`
   stays implementation-facing storage/layout plumbing rather than public API.
 - **Promotion gate:** SoA should only move from incubating to promoted public
-  contract after the remaining example imports and compatibility-only seams are
-  retired or explicitly accepted. Until then, docs should call `soa_vector<T>`
-  incubating explicitly instead of implying it has already graduated with
-  vector/map.
+  contract after the remaining compatibility-only seams are retired or
+  explicitly accepted. Until then, docs should call `soa_vector<T>` incubating
+  explicitly instead of implying it has already graduated with vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -3270,13 +3269,13 @@ bad_use_after_take() {
       borrow past the end of the owner scope is rejected.
     - Preferred update pattern is two-phase: run a stable-size update pass first, then apply deferred structural
       changes.
-    - Example (surface draft): `while(less_than(i, count(particles))) { get(particles, i) ... }` followed by
-      `reserve(particles, plus(count(particles), count(to_soa(spawnQueue))))`.
+    - Example (canonical surface): `while(less_than(i, particles.count())) { particles.get(i) ... }`
+      followed by `particles.reserve(plus(particles.count(), spawnQueue.count()))`.
   - SoA eligibility (v1 draft): `T` must be a struct with SoA-safe fields (fixed-size,
     non-pointer/reference/string/template envelopes unless explicitly allowed by backend policy).
   - AoS/SoA conversions are explicit only (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`); no implicit interop.
-  - Draft example source lives at `examples/3.Surface/soa_vector_ecs_draft.prime` (semantic/example-only until SoA
-    runtime support lands).
+  - Canonical example source lives at `examples/3.Surface/soa_vector_ecs.prime` and imports
+    `/std/collections/soa_vector/*` plus `/std/collections/soa_vector_conversions/*`.
   - **Current implementation status:** `soa_vector<T>` surface parsing is recognized, and semantic validation now
     accepts `soa_vector` bindings/literals/returns when type constraints hold (`soa_vector` struct element requirement,
     template-arity checks, and deterministic element-field envelope diagnostics such as `soa_vector field envelope is

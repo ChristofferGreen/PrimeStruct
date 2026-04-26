@@ -1,0 +1,31 @@
+import /std/collections/*
+import /std/collections/soa_vector/*
+import /std/collections/soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{0i32}
+  [i32] y{0i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] particles{soaVectorNew<Particle>()}
+  particles.push(Particle(3i32, 4i32))
+  particles.push(Particle(5i32, 6i32))
+
+  [vector<Particle> mut] spawnQueue{vector<Particle>()}
+  spawnQueue.push(Particle(8i32, 9i32))
+
+  [i32 mut] totalX{0i32}
+  [i32 mut] i{0i32}
+  while(less_than(i, particles.count())) {
+    [Particle] current{particles.get(i)}
+    assign(totalX, plus(totalX, current.x))
+    assign(i, plus(i, 1i32))
+  }
+
+  particles.reserve(plus(particles.count(), spawnQueue.count()))
+  [vector<Particle>] packed{soaVectorToAos<Particle>(particles)}
+  return(plus(totalX, packed.count()))
+}

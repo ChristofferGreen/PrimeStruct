@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4182: Promote the `soa_vector` draft example and migrate canonical
+  imports. Completed: `examples/3.Surface/soa_vector_ecs_draft.prime` was
+  promoted to `examples/3.Surface/soa_vector_ecs.prime`, rewritten to import
+  `/std/collections/soa_vector/*` and
+  `/std/collections/soa_vector_conversions/*`, and updated to use canonical
+  wrapper construction, mutation, reserve, and AoS conversion helpers without
+  direct experimental imports. The surface example sweep no longer excludes the
+  SoA ECS example, focused source-lock coverage now pins the canonical example
+  path/imports and rejects the old draft path, and docs/readme references now
+  point at the supported canonical example.
 - ✓ TODO-4180: Move canonical `soa_vector` conversions off experimental
   receiver types. Completed: canonical
   `stdlib/std/collections/soa_vector_conversions.prime` now imports the

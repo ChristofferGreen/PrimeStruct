@@ -88,7 +88,7 @@ TEST_CASE("collection docs snippets stay code-examples style and executable") {
 
   const std::vector<std::string> requiredPrimeStructSnippets = {
       "value.push(item)", "value.at(index)", "value[index]", "value.count()",
-      "to_soa(spawnQueue)",
+      "particles.reserve(plus(particles.count(), spawnQueue.count()))",
       "Preferred update pattern is two-phase"};
   const std::vector<std::string> requiredSyntaxSpecSnippets = {
       "value.push(item)", "value.at(index)", "value[index]"};
