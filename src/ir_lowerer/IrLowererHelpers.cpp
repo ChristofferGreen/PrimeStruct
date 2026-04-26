@@ -404,8 +404,12 @@ bool lowerMatchToIf(const Expr &expr, Expr &out, std::string &error) {
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg) {
   base.clear();
   arg.clear();
+  if (text.empty()) {
+    return false;
+  }
   const size_t open = text.find('<');
   if (open == std::string::npos || open == 0 || text.back() != '>') {
+    base = text;
     return false;
   }
   base = text.substr(0, open);
@@ -428,6 +432,8 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
       depth--;
     }
   }
+  base = text;
+  arg.clear();
   return false;
 }
 

@@ -880,6 +880,10 @@ TEST_CASE("ir lowerer template type parse helper splits template type names") {
   CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("i64", base, arg));
   CHECK(base == "i64");
   CHECK(arg.empty());
+
+  CHECK_FALSE(primec::ir_lowerer::splitTemplateTypeName("", base, arg));
+  CHECK(base.empty());
+  CHECK(arg.empty());
 }
 
 TEST_CASE("ir lowerer template type parse helper parses Result return type names") {
