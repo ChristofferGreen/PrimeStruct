@@ -156,6 +156,7 @@ VecLike<T>() {
   }
 }
 
+[return<void>]
 /vectorCheckShape<T>([Reference<VecLike<T>>] values) {
 }
 
