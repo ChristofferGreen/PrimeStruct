@@ -31,6 +31,33 @@ const primec::Expr *findBindingStatementByName(const primec::Definition &definit
 
 } // namespace
 
+TEST_CASE("ir lowerer statement binding helper tolerates missing parameter callbacks") {
+  primec::Expr param;
+  param.name = "value";
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 9;
+  std::string error;
+  CHECK(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      primec::ir_lowerer::IsBindingMutableFn{},
+      primec::ir_lowerer::HasExplicitBindingTypeTransformFn{},
+      primec::ir_lowerer::BindingKindFn{},
+      primec::ir_lowerer::BindingValueKindFn{},
+      primec::ir_lowerer::InferBindingExprKindFn{},
+      primec::ir_lowerer::IsFileErrorBindingFn{},
+      primec::ir_lowerer::SetReferenceArrayInfoForBindingFn{},
+      primec::ir_lowerer::ApplyStructBindingInfoFn{},
+      primec::ir_lowerer::ApplyStructBindingInfoFn{},
+      primec::ir_lowerer::IsStringBindingFn{},
+      info,
+      error));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+}
+
 TEST_CASE("ir lowerer statement binding helper classifies variadic struct reference parameters") {
   primec::Expr param;
   param.name = "values";

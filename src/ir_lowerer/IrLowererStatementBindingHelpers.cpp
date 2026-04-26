@@ -1062,22 +1062,69 @@ bool inferCallParameterLocalInfo(const Expr &param,
                                  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
                                  const SemanticProgram *semanticProgram,
                                  const SemanticProductIndex *semanticIndex) {
-  infoOut.isMutable = isBindingMutable(param);
+  const IsBindingMutableFn noopIsBindingMutable = [](const Expr &) { return false; };
+  const HasExplicitBindingTypeTransformFn noopHasExplicitBindingTypeTransform =
+      [](const Expr &) { return false; };
+  const BindingKindFn noopBindingKind = [](const Expr &) { return LocalInfo::Kind::Value; };
+  const BindingValueKindFn noopBindingValueKind =
+      [](const Expr &, LocalInfo::Kind) { return LocalInfo::ValueKind::Unknown; };
+  const InferBindingExprKindFn noopInferExprKind =
+      [](const Expr &, const LocalMap &) { return LocalInfo::ValueKind::Unknown; };
+  const IsFileErrorBindingFn noopIsFileErrorBinding = [](const Expr &) { return false; };
+  const SetReferenceArrayInfoForBindingFn noopSetReferenceArrayInfo =
+      [](const Expr &, LocalInfo &) {};
+  const ApplyStructBindingInfoFn noopApplyStructInfo = [](const Expr &, LocalInfo &) {};
+  const IsStringBindingFn noopIsStringBinding = [](const Expr &) { return false; };
+  const std::function<const Definition *(const Expr &, const LocalMap &)> noopResolveMethodCall =
+      [](const Expr &, const LocalMap &) -> const Definition * { return nullptr; };
+  const std::function<const Definition *(const Expr &)> noopResolveDefinitionCall =
+      [](const Expr &) -> const Definition * { return nullptr; };
+  const std::function<bool(const std::string &, ReturnInfo &)> noopGetReturnInfo =
+      [](const std::string &, ReturnInfo &) { return false; };
+  const IsBindingMutableFn &isBindingMutableFn =
+      isBindingMutable ? isBindingMutable : noopIsBindingMutable;
+  const HasExplicitBindingTypeTransformFn &hasExplicitBindingTypeTransformFn =
+      hasExplicitBindingTypeTransform ? hasExplicitBindingTypeTransform
+                                      : noopHasExplicitBindingTypeTransform;
+  const BindingKindFn &bindingKindFn = bindingKind ? bindingKind : noopBindingKind;
+  const BindingValueKindFn &bindingValueKindFn =
+      bindingValueKind ? bindingValueKind : noopBindingValueKind;
+  const InferBindingExprKindFn &inferExprKindFn =
+      inferExprKind ? inferExprKind : noopInferExprKind;
+  const IsFileErrorBindingFn &isFileErrorBindingFn =
+      isFileErrorBinding ? isFileErrorBinding : noopIsFileErrorBinding;
+  const SetReferenceArrayInfoForBindingFn &setReferenceArrayInfoFn =
+      setReferenceArrayInfo ? setReferenceArrayInfo : noopSetReferenceArrayInfo;
+  const ApplyStructBindingInfoFn &applyStructArrayInfoFn =
+      applyStructArrayInfo ? applyStructArrayInfo : noopApplyStructInfo;
+  const ApplyStructBindingInfoFn &applyStructValueInfoFn =
+      applyStructValueInfo ? applyStructValueInfo : noopApplyStructInfo;
+  const IsStringBindingFn &isStringBindingFn =
+      isStringBinding ? isStringBinding : noopIsStringBinding;
+  const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinitionFn =
+      resolveMethodCallDefinition ? resolveMethodCallDefinition : noopResolveMethodCall;
+  const std::function<const Definition *(const Expr &)> &resolveDefinitionCallFn =
+      resolveDefinitionCall ? resolveDefinitionCall : noopResolveDefinitionCall;
+  const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfoFn =
+      getReturnInfo ? getReturnInfo : noopGetReturnInfo;
+
+  infoOut.isMutable = isBindingMutableFn(param);
   infoOut.isSoaVector = hasSoaVectorTypeTransform(param);
   infoOut.usesBuiltinCollectionLayout = exprUsesRawBuiltinSoaVectorLayout(param);
   infoOut.isArgsPack = isArgsPackBinding(param);
-  infoOut.kind = bindingKind(param);
-  if (hasExplicitBindingTypeTransform(param)) {
-    infoOut.valueKind = bindingValueKind(param, infoOut.kind);
+  infoOut.kind = bindingKindFn(param);
+  if (hasExplicitBindingTypeTransformFn(param)) {
+    infoOut.valueKind = bindingValueKindFn(param, infoOut.kind);
   } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value &&
              isPointerMemoryIntrinsicCall(param.args.front())) {
     infoOut.kind = LocalInfo::Kind::Pointer;
-    infoOut.valueKind = inferPointerMemoryIntrinsicValueKind(param.args.front(), localsForKindInference, inferExprKind);
+    infoOut.valueKind =
+        inferPointerMemoryIntrinsicValueKind(param.args.front(), localsForKindInference, inferExprKindFn);
     infoOut.structTypeName = inferPointerMemoryIntrinsicStructType(param.args.front(), localsForKindInference);
     infoOut.targetsUninitializedStorage =
         inferPointerMemoryIntrinsicTargetsUninitializedStorage(param.args.front(), localsForKindInference);
   } else if (param.args.size() == 1 && infoOut.kind == LocalInfo::Kind::Value) {
-    infoOut.valueKind = inferExprKind(param.args.front(), localsForKindInference);
+    infoOut.valueKind = inferExprKindFn(param.args.front(), localsForKindInference);
     if (infoOut.valueKind == LocalInfo::ValueKind::Unknown) {
       std::string builtinComparison;
       if (getBuiltinComparisonName(param.args.front(), builtinComparison)) {
@@ -1090,10 +1137,10 @@ bool inferCallParameterLocalInfo(const Expr &param,
     if (inferCallParameterDefaultResultInfo(
             param.args.front(),
             localsForKindInference,
-            inferExprKind,
-            resolveMethodCallDefinition,
-            resolveDefinitionCall,
-            getReturnInfo,
+            inferExprKindFn,
+            resolveMethodCallDefinitionFn,
+            resolveDefinitionCallFn,
+            getReturnInfoFn,
             inferredResultInfo,
             semanticProgram,
             semanticIndex) &&
@@ -1109,12 +1156,12 @@ bool inferCallParameterLocalInfo(const Expr &param,
       infoOut.valueKind = infoOut.resultHasValue ? LocalInfo::ValueKind::Int64 : LocalInfo::ValueKind::Int32;
     }
   } else {
-    infoOut.valueKind = bindingValueKind(param, infoOut.kind);
+    infoOut.valueKind = bindingValueKindFn(param, infoOut.kind);
   }
 
   StatementBindingTypeInfo semanticBindingTypeInfo;
   if (populateBindingTypeInfoFromSemanticBindingFact(
-          param, resolveDefinitionCall, semanticIndex, semanticBindingTypeInfo)) {
+          param, resolveDefinitionCallFn, semanticIndex, semanticBindingTypeInfo)) {
     infoOut.kind = semanticBindingTypeInfo.kind;
     infoOut.valueKind = semanticBindingTypeInfo.valueKind;
     infoOut.mapKeyKind = semanticBindingTypeInfo.mapKeyKind;
@@ -1176,7 +1223,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
             infoOut.resultValueKind == LocalInfo::ValueKind::Unknown &&
             resolveSpecializedExperimentalMapTypeKinds(
                 transform.templateArgs.front(),
-                resolveDefinitionCall,
+                resolveDefinitionCallFn,
                 infoOut.resultValueMapKeyKind,
                 infoOut.resultValueKind)) {
           infoOut.resultValueCollectionKind = LocalInfo::Kind::Map;
@@ -1300,16 +1347,16 @@ bool inferCallParameterLocalInfo(const Expr &param,
     }
     if (hasElementTypeText) {
       applyArgsPackElementMetadata(elementTypeText, infoOut);
-      applyArgsPackElementStructMetadata(param, elementTypeText, applyStructArrayInfo, applyStructValueInfo, infoOut);
+      applyArgsPackElementStructMetadata(
+          param, elementTypeText, applyStructArrayInfoFn, applyStructValueInfoFn, infoOut);
     }
   }
 
   if (infoOut.errorTypeName == "GfxError" && infoOut.errorHelperNamespacePath.empty() && param.args.size() == 1) {
     const Expr &initExpr = param.args.front();
     const Definition *initDef =
-        initExpr.isMethodCall ? (resolveMethodCallDefinition ? resolveMethodCallDefinition(initExpr, localsForKindInference)
-                                                             : nullptr)
-                              : (resolveDefinitionCall ? resolveDefinitionCall(initExpr) : nullptr);
+        initExpr.isMethodCall ? resolveMethodCallDefinitionFn(initExpr, localsForKindInference)
+                              : resolveDefinitionCallFn(initExpr);
     if (initDef != nullptr) {
       if (initDef->fullPath.rfind("/std/gfx/experimental/", 0) == 0) {
         infoOut.errorHelperNamespacePath = "/std/gfx/experimental/GfxError";
@@ -1320,7 +1367,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
     }
   }
 
-  infoOut.isFileError = infoOut.isFileError || isFileErrorBinding(param);
+  infoOut.isFileError = infoOut.isFileError || isFileErrorBindingFn(param);
   auto applySpecializedWrappedMapBindingInfo = [&](const Expr &bindingExpr, LocalInfo &bindingInfo) {
     if ((bindingInfo.kind != LocalInfo::Kind::Reference &&
          bindingInfo.kind != LocalInfo::Kind::Pointer) ||
@@ -1337,7 +1384,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
       LocalInfo::ValueKind keyKind = LocalInfo::ValueKind::Unknown;
       LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
       if (!resolveSpecializedExperimentalMapTypeKindsForBindingType(
-              targetType, resolveDefinitionCall, keyKind, valueKind)) {
+              targetType, resolveDefinitionCallFn, keyKind, valueKind)) {
         continue;
       }
       if (bindingInfo.kind == LocalInfo::Kind::Reference) {
@@ -1355,10 +1402,10 @@ bool inferCallParameterLocalInfo(const Expr &param,
       return;
     }
   };
-  setReferenceArrayInfo(param, infoOut);
+  setReferenceArrayInfoFn(param, infoOut);
   applySpecializedWrappedMapBindingInfo(param, infoOut);
-  applyStructArrayInfo(param, infoOut);
-  applyStructValueInfo(param, infoOut);
+  applyStructArrayInfoFn(param, infoOut);
+  applyStructValueInfoFn(param, infoOut);
   if (infoOut.isFileHandle) {
     infoOut.structTypeName.clear();
     infoOut.valueKind = LocalInfo::ValueKind::Int64;
@@ -1401,7 +1448,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
     error = "variadic args<T> does not support string pointers or references";
     return false;
   }
-  if (!isStringBinding(param)) {
+  if (!isStringBindingFn(param)) {
     return true;
   }
   if (infoOut.kind != LocalInfo::Kind::Value && infoOut.kind != LocalInfo::Kind::Map) {
