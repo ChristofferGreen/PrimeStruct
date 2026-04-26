@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4196: Align Result payload docs. Completed:
+  `docs/PrimeStruct.md` no longer says native executable
+  `Result<Buffer<T>, GfxError>` unpacking remains follow-up work while the
+  current VM/native restriction section and native backend coverage already
+  describe that explicitly typed path as supported. The docs now preserve the
+  supported Buffer result contract and require a concrete Result payload TODO
+  before widening unsupported IR-backed payload kinds. Source-lock coverage
+  rejects the stale inactive-follow-up wording.
 - ✓ TODO-4195: Align reflection metadata docs. Completed:
   `docs/PrimeStruct.md` no longer says reserved compile-time metadata query
   execution semantics are implemented in follow-up roadmap items while the

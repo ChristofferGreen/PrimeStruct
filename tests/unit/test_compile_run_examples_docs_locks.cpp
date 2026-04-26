@@ -170,6 +170,33 @@ TEST_CASE("reflection metadata docs avoid inactive roadmap pointers") {
         std::string::npos);
 }
 
+TEST_CASE("result payload docs avoid inactive follow-up pointers") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(primeStructDoc.find("Native executable `Result<Buffer<T>, GfxError>` values preserve") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("add a concrete Result payload TODO before widening") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("remains follow-up work on IR-backed paths") ==
+        std::string::npos);
+  CHECK(primeStructDoc.find("unsupported wider payloads stay follow-up work") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4196: Align Result payload docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("graphics UI docs avoid inactive follow-up pointers") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";

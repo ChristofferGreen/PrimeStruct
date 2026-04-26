@@ -2199,11 +2199,11 @@ for(
     `File<Mode>` handles, and `Buffer<T>` handles on VM plus native codegen when downstream `try(...)` consumers
     stay explicitly typed. Direct `Result.ok(...)` plus downstream `try(...)` also preserve `array<T>` /
     `vector<T>` handles whose element kinds fit the current collection contract, and `map<K, V>` handles whose
-    key/value kinds fit that same map contract. Full native executable `Result<Buffer<T>, GfxError>` unpacking
-    remains follow-up work on IR-backed paths.
+    key/value kinds fit that same map contract. Native executable `Result<Buffer<T>, GfxError>` values preserve
+    `try(...)`, `Result.error(...)`, and success/error `Result.why(...)` on that same explicitly typed path.
     Downstream `try(...)` preserves those direct handle/error-struct payloads, rebuilds single-slot struct payloads,
-    and keeps multi-slot struct payloads on that same pointer-backed struct path on VM/native, while other remaining
-    unsupported wider payloads stay follow-up work.
+    and keeps multi-slot struct payloads on that same pointer-backed struct path on VM/native. Other wider payloads
+    remain unsupported; add a concrete Result payload TODO before widening that IR-backed payload contract.
     Value-carrying
     container helpers such as `mapTryAt` can now return string values when the underlying container path supports
     them.
