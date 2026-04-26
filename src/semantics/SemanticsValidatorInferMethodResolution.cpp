@@ -323,7 +323,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
         return true;
       }
       if (collectionTypePath == "/vector" && normalizedMethodName == "count") {
-        resolvedOut = preferredBareVectorHelperTarget("count");
+        resolvedOut = "/std/collections/vector/count";
         return true;
       }
       if (collectionTypePath == "/soa_vector") {
@@ -347,7 +347,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
     }
     if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
-      resolvedOut = preferredBareVectorHelperTarget("capacity");
+      resolvedOut = "/std/collections/vector/capacity";
       return true;
     }
     if ((normalizedMethodName == "empty" || normalizedMethodName == "is_valid" ||
@@ -851,7 +851,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
       if (normalizedMethodName == "count" &&
           resolveVectorTarget(receiver, elemType)) {
-        resolvedOut = preferredBareVectorHelperTarget("count");
+        resolvedOut = "/std/collections/vector/count";
         return true;
       }
       if (resolveSoaVectorTarget(receiver, elemType)) {
@@ -873,7 +873,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
       }
     }
     if (normalizedMethodName == "capacity" && resolveVectorTarget(receiver, elemType)) {
-      resolvedOut = preferredBareVectorHelperTarget("capacity");
+      resolvedOut = "/std/collections/vector/capacity";
       return true;
     }
     if ((normalizedMethodName == "count" || normalizedMethodName == "count_ref" ||
