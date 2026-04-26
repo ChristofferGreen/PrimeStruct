@@ -255,6 +255,27 @@ bool shouldPreserveExplicitRootedVectorTemplatePath(const std::string &path, con
   return isRemovedVectorCompatibilityHelper(helper);
 }
 
+bool isExplicitRootedVectorFallbackReference(const Expr &expr, const std::string &path) {
+  constexpr std::string_view rootedVectorPrefix = "/vector/";
+  if (path.rfind(rootedVectorPrefix, 0) != 0) {
+    return false;
+  }
+  const std::string helper = path.substr(rootedVectorPrefix.size());
+  if (!isRemovedVectorCompatibilityHelper(helper)) {
+    return false;
+  }
+  std::string normalizedName = expr.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  std::string normalizedPrefix = expr.namespacePrefix;
+  if (!normalizedPrefix.empty() && normalizedPrefix.front() == '/') {
+    normalizedPrefix.erase(normalizedPrefix.begin());
+  }
+  return normalizedName.rfind("vector/", 0) == 0 ||
+         normalizedPrefix == "vector";
+}
+
 bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Context &ctx) {
   constexpr std::string_view canonicalMapPrefix = "/std/collections/map/";
   if (path.rfind(canonicalMapPrefix, 0) != 0) {

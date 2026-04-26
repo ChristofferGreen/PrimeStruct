@@ -679,6 +679,9 @@ std::string preferVectorStdlibImplicitTemplatePath(const Expr &expr,
       isCanonicalSoaRefLikeHelperPath(pathCanonical)) {
     return path;
   }
+  if (isExplicitRootedVectorFallbackReference(expr, path)) {
+    return path;
+  }
   const bool preserveCompatibilityTemplatePath = isCollectionCompatibilityTemplateFallbackPath(path);
   const bool preserveCanonicalMapTemplatePath = shouldPreserveCanonicalMapTemplatePath(path, ctx);
   const bool acceptsCallShape = definitionAcceptsCallShape(defIt->second, expr);
