@@ -461,6 +461,28 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
   return nullptr;
 }
 
+const SemanticProgramCollectionSpecialization *
+semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId) {
+  if (semanticNodeId == 0) {
+    return nullptr;
+  }
+  if (const auto it =
+          semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.find(
+              semanticNodeId);
+      it != semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.end()) {
+    return lookupPublishedSemanticEntryByIndex(semanticProgram.collectionSpecializations,
+                                               it->second);
+  }
+  for (const auto &entry : semanticProgram.collectionSpecializations) {
+    if (entry.semanticNodeId == semanticNodeId) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
 const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactBySemanticId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId) {
@@ -865,6 +887,34 @@ semanticProgramBindingFactView(const SemanticProgram &semanticProgram) {
   return entries;
 }
 
+std::vector<const SemanticProgramCollectionSpecialization *>
+semanticProgramCollectionSpecializationView(const SemanticProgram &semanticProgram) {
+  std::vector<const SemanticProgramCollectionSpecialization *> entries;
+  if (!semanticProgram.moduleResolvedArtifacts.empty()) {
+    size_t moduleEntryCount = 0;
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      moduleEntryCount += module.collectionSpecializationIndices.size();
+    }
+    entries.reserve(moduleEntryCount);
+    for (const auto &module : semanticProgram.moduleResolvedArtifacts) {
+      for (const std::size_t entryIndex : module.collectionSpecializationIndices) {
+        if (entryIndex < semanticProgram.collectionSpecializations.size()) {
+          entries.push_back(&semanticProgram.collectionSpecializations[entryIndex]);
+        }
+      }
+    }
+    if (!entries.empty() || semanticProgram.collectionSpecializations.empty()) {
+      return entries;
+    }
+  }
+
+  entries.reserve(semanticProgram.collectionSpecializations.size());
+  for (const auto &entry : semanticProgram.collectionSpecializations) {
+    entries.push_back(&entry);
+  }
+  return entries;
+}
+
 std::vector<const SemanticProgramReturnFact *>
 semanticProgramReturnFactView(const SemanticProgram &semanticProgram) {
   std::vector<const SemanticProgramReturnFact *> entries;
@@ -1210,6 +1260,54 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(entry.fieldName) + " field_index=" +
                                   std::to_string(entry.fieldIndex) + " binding_type_text=" +
                                   quoteSemanticString(entry.bindingTypeText) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
+                                  quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
+  }
+  const auto collectionSpecializations = semanticProgramCollectionSpecializationView(semanticProgram);
+  for (size_t i = 0; i < collectionSpecializations.size(); ++i) {
+    const auto &entry = *collectionSpecializations[i];
+    const auto specializationText = [&](SymbolId id, const std::string &fallback) -> std::string_view {
+      const std::string_view resolved = semanticProgramResolveCallTargetString(semanticProgram, id);
+      return resolved.empty() ? std::string_view(fallback) : resolved;
+    };
+    appendSemanticIndexedLine(out,
+                              "collection_specializations",
+                              i,
+                              "scope_path=" +
+                                  quoteSemanticString(specializationText(entry.scopePathId, entry.scopePath)) +
+                                  " site_kind=" +
+                                  quoteSemanticString(specializationText(entry.siteKindId, entry.siteKind)) +
+                                  " name=" +
+                                  quoteSemanticString(specializationText(entry.nameId, entry.name)) +
+                                  " collection_family=" +
+                                  quoteSemanticString(specializationText(entry.collectionFamilyId,
+                                                                         entry.collectionFamily)) +
+                                  " binding_type_text=" +
+                                  quoteSemanticString(specializationText(entry.bindingTypeTextId,
+                                                                         entry.bindingTypeText)) +
+                                  " element_type_text=" +
+                                  quoteSemanticString(specializationText(entry.elementTypeTextId,
+                                                                         entry.elementTypeText)) +
+                                  " key_type_text=" +
+                                  quoteSemanticString(specializationText(entry.keyTypeTextId,
+                                                                         entry.keyTypeText)) +
+                                  " value_type_text=" +
+                                  quoteSemanticString(specializationText(entry.valueTypeTextId,
+                                                                         entry.valueTypeText)) +
+                                  " is_reference=" +
+                                  formatSemanticBool(entry.isReference) + " is_pointer=" +
+                                  formatSemanticBool(entry.isPointer) +
+                                  (entry.helperSurfaceId.has_value()
+                                       ? " helper_surface_id=" +
+                                             quoteSemanticString(
+                                                 formatSemanticStdlibSurfaceId(*entry.helperSurfaceId))
+                                       : "") +
+                                  (entry.constructorSurfaceId.has_value()
+                                       ? " constructor_surface_id=" +
+                                             quoteSemanticString(formatSemanticStdlibSurfaceId(
+                                                 *entry.constructorSurfaceId))
+                                       : "") +
+                                  " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

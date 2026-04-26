@@ -158,6 +158,33 @@ struct SemanticProgramStructFieldMetadata {
   uint64_t provenanceHandle = 0;
 };
 
+struct SemanticProgramCollectionSpecialization {
+  std::string scopePath;
+  std::string siteKind;
+  std::string name;
+  std::string collectionFamily;
+  std::string bindingTypeText;
+  std::string elementTypeText;
+  std::string keyTypeText;
+  std::string valueTypeText;
+  bool isReference = false;
+  bool isPointer = false;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
+  SymbolId scopePathId = InvalidSymbolId;
+  SymbolId siteKindId = InvalidSymbolId;
+  SymbolId nameId = InvalidSymbolId;
+  SymbolId collectionFamilyId = InvalidSymbolId;
+  SymbolId bindingTypeTextId = InvalidSymbolId;
+  SymbolId elementTypeTextId = InvalidSymbolId;
+  SymbolId keyTypeTextId = InvalidSymbolId;
+  SymbolId valueTypeTextId = InvalidSymbolId;
+  std::optional<StdlibSurfaceId> helperSurfaceId;
+  std::optional<StdlibSurfaceId> constructorSurfaceId;
+};
+
 struct SemanticProgramBindingFact {
   std::string scopePath;
   std::string siteKind;
@@ -337,6 +364,7 @@ struct SemanticProgramModuleResolvedArtifacts {
   std::vector<std::size_t> callableSummaryIndices;
   std::vector<std::size_t> bindingFactIndices;
   std::vector<std::size_t> returnFactIndices;
+  std::vector<std::size_t> collectionSpecializationIndices;
   std::vector<std::size_t> localAutoFactIndices;
   std::vector<std::size_t> queryFactIndices;
   std::vector<std::size_t> tryFactIndices;
@@ -353,6 +381,7 @@ struct SemanticProgramPublishedRoutingLookups {
   std::unordered_map<uint64_t, StdlibSurfaceId> methodCallStdlibSurfaceIdsByExpr;
   std::unordered_map<uint64_t, StdlibSurfaceId> bridgePathChoiceStdlibSurfaceIdsByExpr;
   std::unordered_map<SymbolId, std::size_t> callableSummaryIndicesByPathId;
+  std::unordered_map<uint64_t, std::size_t> collectionSpecializationIndicesByExpr;
   std::unordered_map<uint64_t, std::size_t> onErrorFactIndicesByDefinitionId;
   std::unordered_map<SymbolId, std::size_t> onErrorFactIndicesByDefinitionPathId;
   std::unordered_map<uint64_t, std::size_t> localAutoFactIndicesByExpr;
@@ -389,6 +418,7 @@ struct SemanticProgram {
   std::vector<SemanticProgramCallableSummary> callableSummaries;
   std::vector<SemanticProgramTypeMetadata> typeMetadata;
   std::vector<SemanticProgramStructFieldMetadata> structFieldMetadata;
+  std::vector<SemanticProgramCollectionSpecialization> collectionSpecializations;
   std::vector<SemanticProgramBindingFact> bindingFacts;
   std::vector<SemanticProgramReturnFact> returnFacts;
   std::vector<SemanticProgramLocalAutoFact> localAutoFacts;
@@ -413,6 +443,8 @@ semanticProgramStructTypeMetadataView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramStructFieldMetadata *>
 semanticProgramStructFieldMetadataView(const SemanticProgram &semanticProgram,
                                        std::string_view structPath);
+std::vector<const SemanticProgramCollectionSpecialization *>
+semanticProgramCollectionSpecializationView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramBindingFact *>
 semanticProgramBindingFactView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramReturnFact *>
@@ -484,6 +516,10 @@ const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDef
 const SemanticProgramOnErrorFact *semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
     const SemanticProgram &semanticProgram,
     SymbolId definitionPathId);
+const SemanticProgramCollectionSpecialization *
+semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
+    const SemanticProgram &semanticProgram,
+    uint64_t semanticNodeId);
 const SemanticProgramLocalAutoFact *semanticProgramLookupPublishedLocalAutoFactBySemanticId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId);

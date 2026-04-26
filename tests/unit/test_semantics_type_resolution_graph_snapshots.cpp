@@ -3521,6 +3521,72 @@ main() {
   CHECK_FALSE(localAutoEntry->initializerMethodCallStdlibSurfaceId.has_value());
 }
 
+TEST_CASE("semantic product publishes vector and map collection specializations") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32)}
+  [map<i32, i64> mut] pairs{map<i32, i64>(1i32, 7i64)}
+  [Reference<map<i32, i64>>] pairsRef{location(pairs)}
+  return(count(values))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(
+      semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false,
+                         &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *vectorEntry = findSemanticEntry(
+      primec::semanticProgramCollectionSpecializationView(semanticProgram),
+      [](const primec::SemanticProgramCollectionSpecialization &entry) {
+        return entry.scopePath == "/main" && entry.name == "values";
+      });
+  REQUIRE(vectorEntry != nullptr);
+  CHECK(vectorEntry->collectionFamily == "vector");
+  CHECK(vectorEntry->elementTypeText == "i32");
+  REQUIRE(vectorEntry->helperSurfaceId.has_value());
+  CHECK(*vectorEntry->helperSurfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  REQUIRE(vectorEntry->constructorSurfaceId.has_value());
+  CHECK(*vectorEntry->constructorSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsVectorConstructors);
+
+  const auto *mapEntry = findSemanticEntry(
+      primec::semanticProgramCollectionSpecializationView(semanticProgram),
+      [](const primec::SemanticProgramCollectionSpecialization &entry) {
+        return entry.scopePath == "/main" && entry.name == "pairsRef";
+      });
+  REQUIRE(mapEntry != nullptr);
+  CHECK(mapEntry->collectionFamily == "map");
+  CHECK(mapEntry->keyTypeText == "i32");
+  CHECK(mapEntry->valueTypeText == "i64");
+  CHECK(mapEntry->isReference);
+  CHECK_FALSE(mapEntry->isPointer);
+  REQUIRE(mapEntry->helperSurfaceId.has_value());
+  CHECK(*mapEntry->helperSurfaceId == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  REQUIRE(mapEntry->constructorSurfaceId.has_value());
+  CHECK(*mapEntry->constructorSurfaceId ==
+        primec::StdlibSurfaceId::CollectionsMapConstructors);
+
+  const auto *lookupEntry =
+      primec::semanticProgramLookupPublishedCollectionSpecializationBySemanticId(
+          semanticProgram, mapEntry->semanticNodeId);
+  REQUIRE(lookupEntry != nullptr);
+  CHECK(lookupEntry->keyTypeText == "i32");
+  CHECK(lookupEntry->valueTypeText == "i64");
+
+  const std::string formatted = primec::formatSemanticProgram(semanticProgram);
+  CHECK(formatted.find("collection_specializations[") != std::string::npos);
+  CHECK(formatted.find("helper_surface_id=\"collections.map_helpers\"") != std::string::npos);
+}
+
 TEST_CASE("semantic product keeps exact-import vector and map bridge parity") {
   const std::string source = R"(
 import /std/collections/vector

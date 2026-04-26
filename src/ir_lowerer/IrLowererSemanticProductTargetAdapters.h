@@ -24,6 +24,7 @@ struct SemanticProductIndex {
   std::unordered_map<uint64_t, const SemanticProgramQueryFact *> queryFactsByResolvedPathAndCallNameId;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramTryFact *> tryFactsByOperandPathAndSource;
+  std::unordered_map<uint64_t, const SemanticProgramCollectionSpecialization *> collectionSpecializationsByExpr;
   std::unordered_map<uint64_t, const SemanticProgramBindingFact *> bindingFactsByExpr;
 };
 
@@ -128,5 +129,11 @@ const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticP
                                                                 const Expr &expr);
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Expr &expr);
+const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr);
+const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr);
 
 } // namespace primec::ir_lowerer

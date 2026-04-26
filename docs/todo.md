@@ -56,15 +56,14 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4169
 - TODO-4171
 - TODO-4148
 - TODO-4168
+- TODO-4170
 - TODO-4153
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4170
 - TODO-4150
 - TODO-4172
 - TODO-4155
@@ -74,11 +73,12 @@ Task template:
 - TODO-4165
 - TODO-4159
 - TODO-4160
+- TODO-4161
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4169,
-  TODO-4148, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158,
+- Semantic-product authority and lowerer boundary enforcement: TODO-4148,
+  TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158,
   TODO-4159, TODO-4160, TODO-4161, TODO-4164
 - Test API cleanup and contract-probe migration: TODO-4171, TODO-4153,
   TODO-4172
@@ -92,41 +92,40 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4169
-2. TODO-4171
-3. TODO-4148
-4. TODO-4168
-5. TODO-4170
-6. TODO-4150
-7. TODO-4153
-8. TODO-4172
-9. TODO-4155
-10. TODO-4157
-11. TODO-4158
-12. TODO-4162
-13. TODO-4165
-14. TODO-4159
-15. TODO-4160
-16. TODO-4161
-17. TODO-4163
-18. TODO-4164
-19. TODO-4166
-20. TODO-4174
-21. TODO-4173
-22. TODO-4176
-23. TODO-4175
-24. TODO-4179
-25. TODO-4177
-26. TODO-4178
-27. TODO-4180
-28. TODO-4182
-29. TODO-4181
+1. TODO-4171
+2. TODO-4148
+3. TODO-4168
+4. TODO-4170
+5. TODO-4150
+6. TODO-4153
+7. TODO-4172
+8. TODO-4155
+9. TODO-4157
+10. TODO-4158
+11. TODO-4162
+12. TODO-4165
+13. TODO-4159
+14. TODO-4160
+15. TODO-4161
+16. TODO-4163
+17. TODO-4164
+18. TODO-4166
+19. TODO-4174
+20. TODO-4173
+21. TODO-4176
+22. TODO-4175
+23. TODO-4179
+24. TODO-4177
+25. TODO-4178
+26. TODO-4180
+27. TODO-4182
+28. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4148, TODO-4169, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4148, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4155, TODO-4162, TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -135,7 +134,7 @@ Task template:
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4179, TODO-4180, TODO-4182 |
 | SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4179, TODO-4180, TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | TODO-4168 |
-| Semantic-product publication by module and fact family | TODO-4169, TODO-4170, TODO-4155 |
+| Semantic-product publication by module and fact family | TODO-4170, TODO-4155 |
 | Semantic-product public API factoring and versioning | TODO-4160, TODO-4161, TODO-4163 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
@@ -154,7 +153,7 @@ Task template:
 | AST transform hook conformance | TODO-4173, TODO-4176 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
-| Semantic-product publication parity and deterministic ordering | TODO-4169, TODO-4170, TODO-4155, TODO-4163 |
+| Semantic-product publication parity and deterministic ordering | TODO-4170, TODO-4155, TODO-4163 |
 | Lowerer/source-composition contract coverage | TODO-4148, TODO-4150, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
@@ -688,24 +687,6 @@ Task template:
   - stop_rule: Stop once the lowerer can classify the touched `soa_vector`
     flows from published facts; do not fold in broader vector/map ownership or
     runtime redesign work.
-
-- [ ] TODO-4169: Publish vector and map specialization facts needed by the lowerer
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - scope: Add explicit semantic-product facts for vector/map collection
-    specialization and canonical helper-family routing that lowerer currently
-    infers from type text and private semantics helpers.
-  - acceptance:
-    - The semantic product publishes the touched vector/map specialization and
-      helper-routing facts in deterministic order.
-    - Touched lowerer collection setup helpers can consume the published
-      vector/map facts without private semantics specialization predicates.
-    - Focused release coverage for vector/map helper lowering passes through
-      the new published surface.
-  - stop_rule: Stop once the lowerer can classify the touched vector/map
-    families from published facts; do not fold in `soa_vector` maturity work
-    or unrelated stdlib ownership changes.
 
 - [ ] TODO-4168: Extract semantic-product publication orchestration from `Semantics::validate(...)`
   - owner: ai

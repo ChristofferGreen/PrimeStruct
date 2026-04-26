@@ -138,6 +138,10 @@ bool validateModuleResolvedArtifactIdentity(const SemanticProgram &semanticProgr
                                moduleKey,
                                module.returnFactIndices,
                                semanticProgram.returnFacts.size()) ||
+        !validateFamilyIndices("type-shape.collection-specialization",
+                               moduleKey,
+                               module.collectionSpecializationIndices,
+                               semanticProgram.collectionSpecializations.size()) ||
         !validateFamilyIndices("type-shape.local-auto",
                                moduleKey,
                                module.localAutoFactIndices,

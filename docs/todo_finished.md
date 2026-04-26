@@ -4911,3 +4911,30 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     and benchmark plumbing tests, removed `TODO-4167` from the live queue,
     promoted `TODO-4168` to Ready Now, and deferred release reruns to CI per
     the lite workflow.
+
+- [x] TODO-4169: Publish vector and map specialization facts needed by the lowerer
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - scope: Add explicit semantic-product facts for vector/map collection
+    specialization and canonical helper-family routing that lowerer currently
+    infers from type text and private semantics helpers.
+  - acceptance:
+    - The semantic product publishes the touched vector/map specialization and
+      helper-routing facts in deterministic order.
+    - Touched lowerer collection setup helpers can consume the published
+      vector/map facts without private semantics specialization predicates.
+    - Focused release coverage for vector/map helper lowering passes through
+      the new published surface.
+  - stop_rule: Stop once the lowerer can classify the touched vector/map
+    families from published facts; do not fold in `soa_vector` maturity work
+    or unrelated stdlib ownership changes.
+  - finished_at: 2026-04-26
+  - evidence: Added the `collection_specializations` semantic-product family
+    for vector/map binding sites, including deterministic module-indexed views,
+    lookup indexes, formatter output, and canonical helper/constructor surface
+    IDs. Updated lowerer binding-type adapters to prefer the published
+    collection specialization facts for vector/map kind and key/value
+    classification, added semantic-product and lowerer adapter coverage,
+    removed `TODO-4169` from the live queue, promoted `TODO-4170` to Ready Now,
+    and deferred release reruns to CI per the lite workflow.

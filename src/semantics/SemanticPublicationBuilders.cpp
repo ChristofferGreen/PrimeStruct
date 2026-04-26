@@ -437,6 +437,132 @@ struct SemanticPublicationBuilderState {
   }
 };
 
+struct CollectionSpecializationDraft {
+  std::string collectionFamily;
+  std::string elementTypeText;
+  std::string keyTypeText;
+  std::string valueTypeText;
+  bool isReference = false;
+  bool isPointer = false;
+};
+
+std::string normalizeCollectionSpecializationTypeName(std::string typeName) {
+  typeName = normalizeBindingTypeName(typeName);
+  if (typeName == "/vector" || typeName == "std/collections/vector" ||
+      typeName == "/std/collections/vector" || typeName == "Vector" ||
+      typeName == "std/collections/experimental_vector/Vector" ||
+      typeName == "/std/collections/experimental_vector/Vector") {
+    return "vector";
+  }
+  if (typeName == "/map" || typeName == "std/collections/map" ||
+      typeName == "/std/collections/map" || typeName == "Map" ||
+      typeName == "/Map" || typeName == "std/collections/experimental_map/Map" ||
+      typeName == "/std/collections/experimental_map/Map") {
+    return "map";
+  }
+  return typeName;
+}
+
+bool classifyCollectionSpecialization(std::string typeText,
+                                      CollectionSpecializationDraft &draftOut) {
+  draftOut = {};
+  typeText = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(typeText, base, argText)) {
+      return false;
+    }
+    base = normalizeCollectionSpecializationTypeName(base);
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      draftOut.isReference = draftOut.isReference || base == "Reference";
+      draftOut.isPointer = draftOut.isPointer || base == "Pointer";
+      typeText = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    if (base == "vector") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      draftOut.collectionFamily = "vector";
+      draftOut.elementTypeText = normalizeBindingTypeName(args.front());
+      draftOut.valueTypeText = draftOut.elementTypeText;
+      return true;
+    }
+    if (base == "map") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 2) {
+        return false;
+      }
+      draftOut.collectionFamily = "map";
+      draftOut.keyTypeText = normalizeBindingTypeName(args.front());
+      draftOut.valueTypeText = normalizeBindingTypeName(args.back());
+      return true;
+    }
+    return false;
+  }
+}
+
+void publishCollectionSpecializationForBinding(
+    SemanticPublicationBuilderState &state,
+    const SemanticProgramBindingFact &bindingEntry,
+    std::string_view moduleScopePath) {
+  CollectionSpecializationDraft draft;
+  if (!classifyCollectionSpecialization(bindingEntry.bindingTypeText, draft)) {
+    return;
+  }
+
+  SemanticProgramCollectionSpecialization entry;
+  entry.scopePath = bindingEntry.scopePath;
+  entry.siteKind = bindingEntry.siteKind;
+  entry.name = bindingEntry.name;
+  entry.collectionFamily = draft.collectionFamily;
+  entry.bindingTypeText = bindingEntry.bindingTypeText;
+  entry.elementTypeText = draft.elementTypeText;
+  entry.keyTypeText = draft.keyTypeText;
+  entry.valueTypeText = draft.valueTypeText;
+  entry.isReference = draft.isReference;
+  entry.isPointer = draft.isPointer;
+  entry.sourceLine = bindingEntry.sourceLine;
+  entry.sourceColumn = bindingEntry.sourceColumn;
+  entry.semanticNodeId = bindingEntry.semanticNodeId;
+  entry.provenanceHandle = bindingEntry.provenanceHandle;
+  if (entry.collectionFamily == "vector") {
+    entry.helperSurfaceId = StdlibSurfaceId::CollectionsVectorHelpers;
+    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsVectorConstructors;
+  } else if (entry.collectionFamily == "map") {
+    entry.helperSurfaceId = StdlibSurfaceId::CollectionsMapHelpers;
+    entry.constructorSurfaceId = StdlibSurfaceId::CollectionsMapConstructors;
+  }
+
+  entry.scopePathId = semanticProgramInternCallTargetString(state.semanticProgram, entry.scopePath);
+  entry.siteKindId = semanticProgramInternCallTargetString(state.semanticProgram, entry.siteKind);
+  entry.nameId = semanticProgramInternCallTargetString(state.semanticProgram, entry.name);
+  entry.collectionFamilyId =
+      semanticProgramInternCallTargetString(state.semanticProgram, entry.collectionFamily);
+  entry.bindingTypeTextId =
+      semanticProgramInternCallTargetString(state.semanticProgram, entry.bindingTypeText);
+  entry.elementTypeTextId =
+      semanticProgramInternCallTargetString(state.semanticProgram, entry.elementTypeText);
+  entry.keyTypeTextId = semanticProgramInternCallTargetString(state.semanticProgram, entry.keyTypeText);
+  entry.valueTypeTextId =
+      semanticProgramInternCallTargetString(state.semanticProgram, entry.valueTypeText);
+
+  state.semanticProgram.collectionSpecializations.push_back(std::move(entry));
+  const std::size_t entryIndex = state.semanticProgram.collectionSpecializations.size() - 1;
+  state.ensureModuleResolvedArtifacts(moduleScopePath).collectionSpecializationIndices.push_back(entryIndex);
+  if (state.semanticProgram.collectionSpecializations.back().semanticNodeId != 0) {
+    state.semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr
+        .insert_or_assign(state.semanticProgram.collectionSpecializations.back().semanticNodeId,
+                          entryIndex);
+  }
+}
+
 void initializeSemanticProgramPublicationShell(SemanticPublicationBuilderState &state) {
   state.semanticProgram.entryPath = state.entryPath;
   state.semanticProgram.sourceImports = state.program.sourceImports;
@@ -896,6 +1022,11 @@ void publishBindingFacts(
     return;
   }
   state.semanticProgram.bindingFacts.reserve(bindingFacts.size());
+  state.semanticProgram.collectionSpecializations.reserve(
+      state.semanticProgram.collectionSpecializations.size() + bindingFacts.size());
+  state.semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.reserve(
+      state.semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.size() +
+      bindingFacts.size());
   for (auto &snapshotEntry : bindingFacts) {
     SemanticProgramBindingFact entry;
     entry.scopePath = std::move(snapshotEntry.scopePath);
@@ -922,11 +1053,12 @@ void publishBindingFacts(
         semanticProgramInternCallTargetString(state.semanticProgram, entry.bindingTypeText);
     entry.referenceRootId =
         semanticProgramInternCallTargetString(state.semanticProgram, entry.referenceRoot);
-    const std::string_view moduleScopePath =
+    const std::string moduleScopePath =
         entry.scopePathId != InvalidSymbolId
-            ? semanticProgramResolveCallTargetString(state.semanticProgram, entry.scopePathId)
-            : std::string_view(entry.scopePath);
+            ? std::string(semanticProgramResolveCallTargetString(state.semanticProgram, entry.scopePathId))
+            : entry.scopePath;
     auto &module = state.ensureModuleResolvedArtifacts(moduleScopePath);
+    publishCollectionSpecializationForBinding(state, entry, moduleScopePath);
     releaseInternedField(entry.scopePath, entry.scopePathId);
     releaseInternedField(entry.siteKind, entry.siteKindId);
     releaseInternedField(entry.name, entry.nameId);

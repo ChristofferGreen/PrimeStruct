@@ -631,6 +631,52 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic product temporary fac
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
 }
 
+TEST_CASE("ir lowerer binding type helpers prefer semantic collection specialization facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.collectionSpecializations.push_back(
+      primec::SemanticProgramCollectionSpecialization{
+          .scopePath = "/main",
+          .siteKind = "temporary",
+          .name = "makePairs",
+          .collectionFamily = "map",
+          .bindingTypeText = "Reference<map<i32, i64>>",
+          .elementTypeText = "",
+          .keyTypeText = "i32",
+          .valueTypeText = "i64",
+          .isReference = true,
+          .isPointer = false,
+          .sourceLine = 18,
+          .sourceColumn = 11,
+          .semanticNodeId = 119,
+          .provenanceHandle = 0,
+          .helperSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+          .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsMapConstructors,
+      });
+  semanticProgram.publishedRoutingLookups.collectionSpecializationIndicesByExpr.emplace(119, 0);
+
+  auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
+
+  primec::Expr tempMapCall;
+  tempMapCall.kind = primec::Expr::Kind::Call;
+  tempMapCall.name = "makePairs";
+  tempMapCall.semanticNodeId = 119;
+  tempMapCall.sourceLine = 18;
+  tempMapCall.sourceColumn = 11;
+
+  CHECK(adapters.bindingKind(tempMapCall) == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(adapters.bindingValueKind(tempMapCall, primec::ir_lowerer::LocalInfo::Kind::Reference) ==
+        primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  info.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  adapters.setReferenceArrayInfo(tempMapCall, info);
+  CHECK(info.referenceToMap);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
+}
+
 TEST_CASE("ir lowerer binding type helpers stop using transform fallback for semantic expr ids") {
   primec::SemanticProgram semanticProgram;
   auto adapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);

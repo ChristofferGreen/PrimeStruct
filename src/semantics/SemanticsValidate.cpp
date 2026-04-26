@@ -188,6 +188,7 @@ uint64_t semanticProgramFactCount(const SemanticProgram &semanticProgram) {
       semanticProgram.callableSummaries.size() +
       semanticProgram.typeMetadata.size() +
       semanticProgram.structFieldMetadata.size() +
+      semanticProgram.collectionSpecializations.size() +
       semanticProgram.bindingFacts.size() +
       semanticProgram.returnFacts.size() +
       semanticProgram.localAutoFacts.size() +

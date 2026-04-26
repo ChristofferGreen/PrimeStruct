@@ -271,6 +271,8 @@ Proposed semantic-product contract:
   - resolved definition signatures and canonical full paths
   - resolved call targets and helper-vs-canonical path choices
   - binding/type facts for parameters, locals, temporaries, and return values
+  - collection specialization facts for vector/map binding sites, including
+    canonical helper and constructor family routing
   - effect/capability facts needed by IR preparation
   - struct/enum/layout metadata needed by lowering and backend setup
   - graph-backed local `auto`, query, `try(...)`, and `on_error` inference facts
@@ -503,7 +505,10 @@ Planned lowerer entry-setup handoff:
 Planned lowerer type/binding handoff:
 - Current status: lowerer parameter/local setup, helper-parameter setup, temporary call
   binding setup, helper-result binding setup, lowered entry-count setup, and entry
-  return/result setup now prefer published semantic-product binding and return facts. The
+  return/result setup now prefer published semantic-product binding and return facts.
+  Vector/map collection binding setup now also prefers published
+  semantic-product specialization facts for kind, element, key/value, and
+  helper-family classification. The
   remaining lowerer-generated synthetic locals and raw IR temporaries stay outside the
   semantic-product surface because they have no stable source-owned semantic identity.
 - After entry setup is cut over, lowering should consume binding metadata from the semantic product instead of
@@ -598,7 +603,8 @@ Current inspection-surface relationship:
 Current semantic-product dump contract:
 - One deterministic module/program view per compile pipeline success, positioned after `ast-semantic` and before `ir`.
 - The dump should expose lowering-facing facts directly: resolved call targets, binding/result types, effects or
-  capability summaries, struct/layout metadata, and stable provenance handles back to AST-owned spans/ids.
+  capability summaries, vector/map collection specializations, struct/layout metadata, and stable provenance handles
+  back to AST-owned spans/ids.
 - The dump should not duplicate full syntax trees. Raw source text, token order, and syntax-only transforms stay in
   `pre_ast` / `ast` / `ast-semantic`.
 - Ordering must be stable across runs: modules, definitions, bindings, and diagnostics should be emitted in one
@@ -619,6 +625,7 @@ Planned semantic-product unit/golden suite:
 - Prefer small representative programs that pin one fact family at a time:
   - resolved call/helper targets
   - binding/result type facts
+  - vector/map collection specialization facts
   - effect/capability summaries
   - struct/layout metadata
   - provenance handles back to AST-owned ids/spans

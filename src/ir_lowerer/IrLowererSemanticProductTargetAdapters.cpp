@@ -133,6 +133,7 @@ struct SemanticProductIndexBuilder {
     buildLocalAutoIndex(index);
     buildQueryIndex(index);
     buildTryIndex(index);
+    buildCollectionSpecializationIndex(index);
     buildBindingIndex(index);
     return index;
   }
@@ -280,6 +281,23 @@ struct SemanticProductIndexBuilder {
     for (const auto *entry : bindingFacts) {
       if (entry->semanticNodeId != 0) {
         index.bindingFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+      }
+    }
+  }
+
+  void buildCollectionSpecializationIndex(SemanticProductIndex &index) const {
+    if (!semanticProgram->publishedRoutingLookups.collectionSpecializationIndicesByExpr.empty()) {
+      populateSemanticFactIndex(
+          index.collectionSpecializationsByExpr,
+          semanticProgram->publishedRoutingLookups.collectionSpecializationIndicesByExpr,
+          semanticProgram->collectionSpecializations);
+      return;
+    }
+    const auto collectionSpecializations = semanticProgramCollectionSpecializationView(*semanticProgram);
+    index.collectionSpecializationsByExpr.reserve(collectionSpecializations.size());
+    for (const auto *entry : collectionSpecializations) {
+      if (entry->semanticNodeId != 0) {
+        index.collectionSpecializationsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
     }
   }
@@ -756,6 +774,18 @@ const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticP
 const SemanticProgramBindingFact *findSemanticProductBindingFact(const SemanticProductTargetAdapter &adapter,
                                                                 const Expr &expr) {
   return findSemanticProductBindingFact(adapter.semanticIndex, expr);
+}
+
+const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
+    const SemanticProductIndex &semanticIndex,
+    const Expr &expr) {
+  return findExpressionScopedSemanticFact(semanticIndex.collectionSpecializationsByExpr, expr);
+}
+
+const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
+    const SemanticProductTargetAdapter &adapter,
+    const Expr &expr) {
+  return findSemanticProductCollectionSpecialization(adapter.semanticIndex, expr);
 }
 
 } // namespace primec::ir_lowerer

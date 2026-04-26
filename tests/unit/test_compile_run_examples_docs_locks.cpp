@@ -278,18 +278,20 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
 
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4169") != std::string::npos);
+  CHECK(todo.find("- TODO-4171") != std::string::npos);
   CHECK(todo.find("- TODO-4148") != std::string::npos);
   CHECK(todo.find("- TODO-4168") != std::string::npos);
+  CHECK(todo.find("- TODO-4170") != std::string::npos);
   CHECK(todo.find("- TODO-4153") != std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4170\n- TODO-4150\n- TODO-4172") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4150\n- TODO-4172\n- TODO-4155") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
   CHECK(todo.find("- Release-gate stability and test-suite audit follow-up:") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4169\n2. TODO-4171") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4171\n2. TODO-4148") !=
         std::string::npos);
+  CHECK(todo.find("- TODO-4169") == std::string::npos);
   CHECK(todo.find("- TODO-4167") == std::string::npos);
   CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
@@ -303,6 +305,8 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | TODO-4168 |") !=
         std::string::npos);
   CHECK(todo.find("| Architecture contract probe migration | TODO-4171, TODO-4172 |") !=
+        std::string::npos);
+  CHECK(todo.find("| Semantic-product publication by module and fact family | TODO-4170, TODO-4155 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
