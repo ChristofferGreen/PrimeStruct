@@ -148,8 +148,9 @@ build and layout solidify.
   compatibility umbrella.
 - **Include-layer guardrails:** `ctest` now runs `scripts/check_include_layers.py`. Public headers
   must not include `src/` or `tests/` files, production sources must not include `tests/`, and any
-  remaining direct `tests -> src/` includes must be listed narrowly in
-  `scripts/include_layer_allowlist.txt` until a stable testing API replaces them.
+  remaining direct `tests -> src/` includes or `src/ir_lowerer -> src/semantics` private includes
+  must be listed narrowly in `scripts/include_layer_allowlist.txt` until a stable testing, public,
+  or shared API replaces them.
 - **Testing helper APIs:** when a test needs stable access to parser/text-filter helper logic, add
   declarations under `include/primec/testing/` and move tests to that header before allowlisting a
   new `tests -> src/` include.

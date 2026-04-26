@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import posixpath
 import re
 import sys
 from pathlib import Path
@@ -19,7 +20,7 @@ def parse_args() -> argparse.Namespace:
         "--allowlist",
         type=Path,
         default=Path(__file__).resolve().with_name("include_layer_allowlist.txt"),
-        help="allowlist for direct tests -> src includes",
+        help="allowlist for private include-layer dependencies",
     )
     return parser.parse_args()
 
@@ -62,6 +63,14 @@ def matches_allowlist(include_path: str, allow_target: str) -> bool:
     return include_path == allow_target
 
 
+def resolve_repo_include_path(rel_path: str, include_path: str) -> str:
+    if include_path.startswith("."):
+        return posixpath.normpath(posixpath.join(posixpath.dirname(rel_path), include_path))
+    if include_path.startswith("semantics/"):
+        return posixpath.normpath(posixpath.join("src", include_path))
+    return include_path
+
+
 def main() -> int:
     args = parse_args()
     root = args.root.resolve()
@@ -71,29 +80,43 @@ def main() -> int:
     violations: list[str] = []
 
     for rel_path, lineno, include_path in iter_includes(root):
+        repo_include_path = resolve_repo_include_path(rel_path, include_path)
         if rel_path.startswith("include/primec/"):
-            if include_path.startswith("src/"):
+            if repo_include_path.startswith("src/"):
                 violations.append(
                     f"{rel_path}:{lineno}: public headers must not include private src headers: {include_path}"
                 )
-            if include_path.startswith("tests/"):
+            if repo_include_path.startswith("tests/"):
                 violations.append(
                     f"{rel_path}:{lineno}: production headers must not include test headers: {include_path}"
                 )
             continue
 
         if rel_path.startswith("src/"):
-            if include_path.startswith("tests/"):
+            if repo_include_path.startswith("tests/"):
                 violations.append(
                     f"{rel_path}:{lineno}: production sources must not include test headers: {include_path}"
                 )
+            if rel_path.startswith("src/ir_lowerer/") and repo_include_path.startswith("src/semantics/"):
+                matched = False
+                for entry in allowlist:
+                    allow_source, allow_target = entry
+                    if rel_path == allow_source and matches_allowlist(repo_include_path, allow_target):
+                        used_allowlist.add(entry)
+                        matched = True
+                        break
+                if not matched:
+                    violations.append(
+                        f"{rel_path}:{lineno}: lowerer sources must not include private semantics headers: "
+                        f"{include_path}"
+                    )
             continue
 
-        if rel_path.startswith("tests/") and include_path.startswith("src/"):
+        if rel_path.startswith("tests/") and repo_include_path.startswith("src/"):
             matched = False
             for entry in allowlist:
                 allow_source, allow_target = entry
-                if rel_path == allow_source and matches_allowlist(include_path, allow_target):
+                if rel_path == allow_source and matches_allowlist(repo_include_path, allow_target):
                     used_allowlist.add(entry)
                     matched = True
                     break
@@ -117,7 +140,7 @@ def main() -> int:
 
     print(
         "Include-layer check passed. "
-        f"{len(used_allowlist)} allowlisted direct tests -> src dependencies remain."
+        f"{len(used_allowlist)} allowlisted private include-layer dependencies remain."
     )
     return 0
 

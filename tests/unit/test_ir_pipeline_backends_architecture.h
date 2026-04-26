@@ -541,9 +541,19 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(script.find("public headers must not include private src headers") != std::string::npos);
   CHECK(script.find("production sources must not include test headers") != std::string::npos);
   CHECK(script.find("direct tests -> src include is not allowlisted") != std::string::npos);
+  CHECK(script.find("lowerer sources must not include private semantics headers") !=
+        std::string::npos);
+  CHECK(script.find("resolve_repo_include_path") != std::string::npos);
+  CHECK(script.find("allowlisted private include-layer dependencies remain") !=
+        std::string::npos);
   CHECK(script.find("stale allowlist entry should be removed") != std::string::npos);
 
   const std::string allowlist = readTextFile(allowlistPath);
+  CHECK(allowlist.find("# Existing lowerer -> private semantics helper dependencies.") !=
+        std::string::npos);
+  CHECK(allowlist.find("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp -> src/semantics/SemanticsHelpers.h") !=
+        std::string::npos);
+  CHECK(allowlist.find("src/ir_lowerer/ -> src/semantics/") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/emitter/") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/semantics/SemanticsValidatorExprCaptureSplitStep.h") ==

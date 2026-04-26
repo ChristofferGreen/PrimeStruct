@@ -1,3 +1,14 @@
-# Existing direct tests -> src/private-header dependencies.
-# Keep entries narrow and remove them when a stable testing API replaces them.
+# Existing private include-layer dependencies.
+# Keep entries narrow and remove them when a stable public or shared API replaces them.
 # A target ending with "/" allows the source file to include any header under that prefix.
+
+# Existing lowerer -> private semantics helper dependencies.
+src/ir_lowerer/IrLowererBindingTypeHelpers.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererInlineParamHelpers.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererSetupTypeMethodTargetHelpers.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererStatementBindingTypeMetadata.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererStructReturnPathHelpers.cpp -> src/semantics/SemanticsHelpers.h
+src/ir_lowerer/IrLowererUninitializedStructInference.cpp -> src/semantics/SemanticsHelpers.h

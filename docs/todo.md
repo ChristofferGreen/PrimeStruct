@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4151
 - TODO-4152
 - TODO-4167
 - TODO-4169
@@ -79,8 +78,8 @@ Task template:
 ### Priority Lanes (Current)
 
 - Semantic-product authority and lowerer boundary enforcement: TODO-4169,
-  TODO-4151, TODO-4148, TODO-4170, TODO-4150, TODO-4155, TODO-4157,
-  TODO-4158, TODO-4159, TODO-4160, TODO-4161, TODO-4164
+  TODO-4148, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158,
+  TODO-4159, TODO-4160, TODO-4161, TODO-4164
 - Test API cleanup and contract-probe migration: TODO-4152, TODO-4171,
   TODO-4153, TODO-4172
 - Semantics orchestration cleanup: TODO-4167, TODO-4168
@@ -93,38 +92,37 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4151
-2. TODO-4152
-3. TODO-4167
-4. TODO-4169
-5. TODO-4171
-6. TODO-4148
-7. TODO-4168
-8. TODO-4170
-9. TODO-4150
-10. TODO-4153
-11. TODO-4172
-12. TODO-4155
-13. TODO-4157
-14. TODO-4158
-15. TODO-4162
-16. TODO-4165
-17. TODO-4159
-18. TODO-4160
-19. TODO-4161
-20. TODO-4163
-21. TODO-4164
-22. TODO-4166
-23. TODO-4174
-24. TODO-4173
-25. TODO-4176
-26. TODO-4175
-27. TODO-4179
-28. TODO-4177
-29. TODO-4178
-30. TODO-4180
-31. TODO-4182
-32. TODO-4181
+1. TODO-4152
+2. TODO-4167
+3. TODO-4169
+4. TODO-4171
+5. TODO-4148
+6. TODO-4168
+7. TODO-4170
+8. TODO-4150
+9. TODO-4153
+10. TODO-4172
+11. TODO-4155
+12. TODO-4157
+13. TODO-4158
+14. TODO-4162
+15. TODO-4165
+16. TODO-4159
+17. TODO-4160
+18. TODO-4161
+19. TODO-4163
+20. TODO-4164
+21. TODO-4166
+22. TODO-4174
+23. TODO-4173
+24. TODO-4176
+25. TODO-4175
+26. TODO-4179
+27. TODO-4177
+28. TODO-4178
+29. TODO-4180
+30. TODO-4182
+31. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -831,22 +829,6 @@ Task template:
       internal layout mirrors.
   - stop_rule: Stop once focused testing helpers exist and at least one real
     shard uses them; do not refactor every lowerer test in the same change.
-
-- [ ] TODO-4151: Add an include-layer guardrail for lowerer to private semantics includes
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Boundary enforcement
-  - scope: Extend include-layer checking so new direct includes from
-    `src/ir_lowerer/` into private `src/semantics/` files fail validation,
-    with any temporary exceptions documented narrowly.
-  - acceptance:
-    - The include-layer script rejects new `ir_lowerer -> src/semantics`
-      private-header dependencies.
-    - The release gate runs the new guardrail alongside the existing include
-      layer check.
-    - Any temporary migration allowlist is explicit, narrow, and removable.
-  - stop_rule: Stop once the boundary is enforced automatically for new code;
-    do not expand the script into unrelated style or layering policy work.
 
 - [ ] TODO-4150: Remove remaining lowerer binding-type reach-through into semantics helpers
   - owner: ai

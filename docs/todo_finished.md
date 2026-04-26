@@ -4832,3 +4832,28 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     recursive components, source-locked the lowerer boundary, promoted
     `TODO-4148` into Ready Now, and deferred release reruns to CI per the lite
     workflow.
+
+- [x] TODO-4151: Add an include-layer guardrail for lowerer to private semantics includes
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Boundary enforcement
+  - scope: Extend include-layer checking so new direct includes from
+    `src/ir_lowerer/` into private `src/semantics/` files fail validation,
+    with any temporary exceptions documented narrowly.
+  - acceptance:
+    - The include-layer script rejects new `ir_lowerer -> src/semantics`
+      private-header dependencies.
+    - The release gate runs the new guardrail alongside the existing include
+      layer check.
+    - Any temporary migration allowlist is explicit, narrow, and removable.
+  - stop_rule: Stop once the boundary is enforced automatically for new code;
+    do not expand the script into unrelated style or layering policy work.
+  - finished_at: 2026-04-26
+  - evidence: Extended `scripts/check_include_layers.py` so it normalizes
+    relative includes and rejects unallowlisted `src/ir_lowerer/` includes into
+    private `src/semantics/` headers. Documented the nine current
+    `SemanticsHelpers.h` migration exceptions as exact source-target entries in
+    `scripts/include_layer_allowlist.txt`, source-locked the new guardrail and
+    narrow allowlist in `tests/unit/test_ir_pipeline_backends_architecture.h`,
+    updated contributor guidance in `AGENTS.md`, removed `TODO-4151` from the
+    live queue, and deferred release reruns to CI per the lite workflow.
