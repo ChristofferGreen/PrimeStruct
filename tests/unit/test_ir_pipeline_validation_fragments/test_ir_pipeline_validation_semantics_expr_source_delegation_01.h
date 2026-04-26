@@ -954,10 +954,10 @@
             "          defMap_.count(vectorMethodTarget) == 0 &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (expr.name == \"count\") {\n"
+            "if (expr.name == \"count\" || expr.name == \"capacity\") {\n"
             "      std::string elemType;\n"
             "      if (resolveVectorTarget(expr.args.front(), elemType)) {\n"
-            "        resolved = \"/std/collections/vector/count\";\n"
+            "        resolved = \"/std/collections/vector/\" + expr.name;\n"
             "        isBuiltinMethod = true;\n"
             "      }\n"
             "    }") !=

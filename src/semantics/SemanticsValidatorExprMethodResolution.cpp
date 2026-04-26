@@ -141,10 +141,10 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.namespacePrefix != "/std/collections/vector" &&
       resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
                                       vectorMethodTarget)) {
-    if (expr.name == "count") {
+    if (expr.name == "count" || expr.name == "capacity") {
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
-        resolved = "/std/collections/vector/count";
+        resolved = "/std/collections/vector/" + expr.name;
         isBuiltinMethod = true;
       }
     }
