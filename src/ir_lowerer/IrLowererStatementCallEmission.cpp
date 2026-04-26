@@ -317,6 +317,9 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     if (!isMethodInsertStem) {
       return false;
     }
+    if (resolveMethodCallDefinition(stmt, localsIn) != nullptr) {
+      return false;
+    }
   } else {
     std::string helperName;
     if ((!resolveMapHelperAliasName(stmt, helperName) || helperName != "insert") &&
