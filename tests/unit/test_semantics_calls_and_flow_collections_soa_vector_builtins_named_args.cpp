@@ -759,7 +759,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("binding initializer type mismatch") != std::string::npos);
+  CHECK(error.find("meta.field_count requires reflect-enabled struct type argument: /Particle") !=
+        std::string::npos);
 }
 
 TEST_CASE("vector-target old-explicit push and reserve keep same-path soa helpers") {
