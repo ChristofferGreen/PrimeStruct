@@ -120,13 +120,10 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Emitted);
-  CHECK(capacityEmitExprCalls == 1);
+            error) == Result::NotHandled);
+  CHECK(capacityEmitExprCalls == 0);
   CHECK(error.empty());
-  REQUIRE(instructions.size() == 3);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[2].op == primec::IrOpcode::LoadIndirect);
+  CHECK(instructions.empty());
 
   instructions.clear();
   error.clear();
@@ -142,7 +139,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) { return false; },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
+            error) == Result::NotHandled);
   CHECK(error.empty());
   CHECK(instructions.empty());
 
@@ -634,11 +631,12 @@ TEST_CASE("ir lowerer count access helpers normalize parser-shaped canonical map
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
-  CHECK(error == "debug: dynamic count target /std/collections/map/at inferred kind=" +
-                     std::to_string(static_cast<int>(Kind::Int32)));
-  CHECK(emitExprCalls == 0);
-  CHECK(instructions.empty());
+            error) == Result::Emitted);
+  CHECK(error.empty());
+  CHECK(emitExprCalls == 1);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -663,9 +661,8 @@ TEST_CASE("ir lowerer count access helpers normalize parser-shaped canonical map
               return true;
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::Error);
-  CHECK(error == "debug: unresolved count target kind for /std/collections/map/at (kind=" +
-                     std::to_string(static_cast<int>(Kind::Int32)) + ")");
+            error) == Result::NotHandled);
+  CHECK(error.empty());
   CHECK(emitExprCalls == 0);
   CHECK(instructions.empty());
 }
