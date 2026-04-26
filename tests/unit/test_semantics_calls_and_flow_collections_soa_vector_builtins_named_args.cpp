@@ -974,8 +974,8 @@ TEST_CASE("soa_vector builtin field views call argument escapes fail through inf
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("x(values)", "unknown method: /std/collections/soa_vector/field_view/x");
-  checkReject("values.x()", "unknown method: /std/collections/soa_vector/field_view/x");
+  checkReject("x(values)", "field-view escapes via argument to");
+  checkReject("values.x()", "field-view escapes via argument to");
 }
 
 TEST_CASE("soa_vector builtin field views return escapes fail through inference") {
@@ -999,8 +999,8 @@ TEST_CASE("soa_vector builtin field views return escapes fail through inference"
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("x(values)", "unknown method: /std/collections/soa_vector/field_view/x");
-  checkReject("values.x()", "unknown method: /std/collections/soa_vector/field_view/x");
+  checkReject("x(values)", "field-view escapes via return");
+  checkReject("values.x()", "field-view escapes via return");
 }
 
 TEST_CASE("soa_vector field-view helper still accepts call and return escapes through same-path helper") {
