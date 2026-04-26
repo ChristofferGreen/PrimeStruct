@@ -4,6 +4,7 @@
 #include "SemanticsValidateTransformsInternal.h"
 #include "primec/TransformRegistry.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <optional>
@@ -209,18 +210,138 @@ bool astTransformHookHasSupportedSignature(const Definition &def, std::string &e
     error = "ast transform hook must not be templated: " + def.fullPath;
     return false;
   }
-  if (!def.parameters.empty()) {
-    error = "ast transform hook must not declare parameters: " + def.fullPath;
-    return false;
-  }
   const Transform *returnTransform = findTransformNamed(def.transforms, "return");
-  if (returnTransform == nullptr ||
-      returnTransform->templateArgs.size() != 1 ||
-      returnTransform->templateArgs.front() != "void" ||
+  if (returnTransform == nullptr || returnTransform->templateArgs.size() != 1 ||
       !returnTransform->arguments.empty()) {
-    error = "ast transform hook must use return<void>: " + def.fullPath;
+    error = "ast transform hook must use return<void> or return<FunctionAst>: " + def.fullPath;
     return false;
   }
+  const std::string &returnType = returnTransform->templateArgs.front();
+  if (returnType == "void") {
+    if (!def.parameters.empty()) {
+      error = "ast transform hook with return<void> must not declare parameters: " + def.fullPath;
+      return false;
+    }
+    return true;
+  }
+  if (returnType != "FunctionAst") {
+    error = "ast transform hook must use return<void> or return<FunctionAst>: " + def.fullPath;
+    return false;
+  }
+  if (def.parameters.size() != 1) {
+    error = "ast transform hook with return<FunctionAst> must declare one FunctionAst parameter: " +
+            def.fullPath;
+    return false;
+  }
+  const Expr &param = def.parameters.front();
+  if (!param.isBinding || param.name.empty() || param.transforms.size() != 1) {
+    error = "ast transform hook with return<FunctionAst> must declare one FunctionAst parameter: " +
+            def.fullPath;
+    return false;
+  }
+  const Transform &paramType = param.transforms.front();
+  if (paramType.name != "FunctionAst" || !paramType.templateArgs.empty() ||
+      !paramType.arguments.empty()) {
+    error = "ast transform hook with return<FunctionAst> must declare one FunctionAst parameter: " +
+            def.fullPath;
+    return false;
+  }
+  return true;
+}
+
+bool isExecutableAstTransformHook(const Definition &def) {
+  const Transform *returnTransform = findTransformNamed(def.transforms, "return");
+  return returnTransform != nullptr &&
+         returnTransform->templateArgs.size() == 1 &&
+         returnTransform->templateArgs.front() == "FunctionAst" &&
+         def.parameters.size() == 1;
+}
+
+Expr makeReturnCallForExpr(const Definition &def, Expr returnValue) {
+  Expr returnCall;
+  returnCall.kind = Expr::Kind::Call;
+  returnCall.name = "return";
+  returnCall.namespacePrefix = def.namespacePrefix;
+  returnCall.sourceLine = def.sourceLine;
+  returnCall.sourceColumn = def.sourceColumn;
+  returnCall.args.push_back(std::move(returnValue));
+  returnCall.argNames.push_back(std::nullopt);
+  return returnCall;
+}
+
+bool applyExecutableAstTransformHook(const Definition &hookDef,
+                                     Definition &targetDef,
+                                     std::string &error) {
+  if (!hookDef.returnExpr.has_value()) {
+    error = "ast transform hook did not return FunctionAst on " + targetDef.fullPath +
+            " via " + hookDef.fullPath;
+    return false;
+  }
+
+  const Expr &result = *hookDef.returnExpr;
+  const std::string &paramName = hookDef.parameters.front().name;
+  if (result.kind != Expr::Kind::Call ||
+      result.name != "replace_body_with_return_i32" ||
+      result.args.size() != 2 ||
+      !result.templateArgs.empty() ||
+      result.hasBodyArguments ||
+      !result.bodyArguments.empty() ||
+      result.args[0].kind != Expr::Kind::Name ||
+      result.args[0].name != paramName ||
+      result.args[1].kind != Expr::Kind::Literal ||
+      result.args[1].intWidth != 32 ||
+      result.args[1].isUnsigned) {
+    error = "ast transform hook returned unsupported FunctionAst shape on " +
+            targetDef.fullPath + " via " + hookDef.fullPath;
+    return false;
+  }
+
+  Expr returnValue = result.args[1];
+  returnValue.namespacePrefix = targetDef.namespacePrefix;
+  targetDef.returnExpr = returnValue;
+  targetDef.statements.clear();
+  targetDef.statements.push_back(makeReturnCallForExpr(targetDef, std::move(returnValue)));
+  targetDef.hasReturnStatement = true;
+  return true;
+}
+
+bool executeDefinitionAstTransformHooks(Program &program, std::string &error) {
+  std::unordered_map<std::string, const Definition *> definitionsByPath;
+  for (const auto &def : program.definitions) {
+    definitionsByPath.emplace(def.fullPath, &def);
+  }
+
+  for (auto &def : program.definitions) {
+    if (hasTransformNamed(def.transforms, "ast")) {
+      continue;
+    }
+    for (const auto &transform : def.transforms) {
+      if (!transform.isAstTransformHook || transform.resolvedPath.empty()) {
+        continue;
+      }
+      const auto hookIt = definitionsByPath.find(transform.resolvedPath);
+      if (hookIt == definitionsByPath.end() || hookIt->second == nullptr) {
+        error = "resolved ast transform hook is missing on " + def.fullPath + ": " +
+                transform.resolvedPath;
+        return false;
+      }
+      const Definition &hookDef = *hookIt->second;
+      if (!isExecutableAstTransformHook(hookDef)) {
+        continue;
+      }
+      if (!applyExecutableAstTransformHook(hookDef, def, error)) {
+        return false;
+      }
+    }
+  }
+
+  program.definitions.erase(
+      std::remove_if(program.definitions.begin(),
+                     program.definitions.end(),
+                     [](const Definition &def) {
+                       return hasTransformNamed(def.transforms, "ast");
+                     }),
+      program.definitions.end());
   return true;
 }
 
@@ -810,6 +931,9 @@ bool applySemanticTransforms(Program &program,
     }
   }
   if (!resolveDefinitionAstTransformHooks(program, error)) {
+    return false;
+  }
+  if (!executeDefinitionAstTransformHooks(program, error)) {
     return false;
   }
   for (auto &def : program.definitions) {

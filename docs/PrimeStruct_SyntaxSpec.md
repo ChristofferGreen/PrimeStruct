@@ -42,13 +42,13 @@ Transforms operate in two phases:
   (transform list, templates, parameters, and body) for the definition/execution they are attached to.
 - **Semantic transforms:** AST-level annotations/validation that run after parsing.
 - **Definition AST-transform hooks:** user-authored hook definitions may be marked with `[ast]` and referenced from
-  another definition's transform list. The current metadata-only contract resolves and records the hook path but does
-  not execute the hook.
+  another definition's transform list. Metadata-only hooks resolve and record the hook path; executable
+  `FunctionAst` hooks may rewrite the attached definition through the narrow v1 helper surface.
 Use `text(...)` and `semantic(...)` inside the transform list to force phase placement. Unqualified transforms are
 auto-deduced by name; ambiguous names are errors. Text transforms may append additional text transforms to the same
 node, which run after the current transform.
 
-User-authored AST hooks use this metadata-only declaration form for now:
+User-authored AST hooks may use a metadata-only declaration:
 
 ```
 [ast return<void>]
@@ -61,10 +61,25 @@ main() {
 }
 ```
 
+Executable v1 hooks use one `FunctionAst` input and return a replacement `FunctionAst` through the checked helper
+`replace_body_with_return_i32`:
+
+```
+[ast return<FunctionAst>]
+make_seven([FunctionAst] fn) {
+  return(replace_body_with_return_i32(fn, 7i32))
+}
+
+[make_seven return<int>]
+main() {
+  return(1i32)
+}
+```
+
 Imported hooks must be `public`. A definition attaches a visible hook by bare name, slash path, or an imported alias;
 resolution records the hook's full path on the transform metadata, rejects ambiguous imports and private imported hooks,
-and rejects `text(hook_name)` because AST hooks are semantic-phase metadata in this slice. Hook execution and a real
-`FunctionAst` input/output API are reserved for the later execution slice.
+and rejects `text(hook_name)` because AST hooks are semantic-phase metadata. Executable hooks are compile-time only and
+are removed from the runtime program after the touched definition is rewritten.
 
 The parser accepts convenient surface forms (operator/infix sugar, `if(...) { ... } else { ... }`,
 indexing `value[index]`, collection method forms like `value.push(x)`), then rewrites them into a small canonical core

@@ -56,29 +56,28 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4173
+- TODO-4176
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4176
+- TODO-4175
 
 ### Priority Lanes (Current)
 
-- User-authored AST transform hooks: TODO-4173, TODO-4176, TODO-4175
+- User-authored AST transform hooks: TODO-4176, TODO-4175
 - `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
   TODO-4178, TODO-4180, TODO-4182, TODO-4181
 
 ### Execution Queue (Recommended)
 
-1. TODO-4173
-2. TODO-4176
-3. TODO-4175
-4. TODO-4179
-5. TODO-4177
-6. TODO-4178
-7. TODO-4180
-8. TODO-4182
-9. TODO-4181
+1. TODO-4176
+2. TODO-4175
+3. TODO-4179
+4. TODO-4177
+5. TODO-4178
+6. TODO-4180
+7. TODO-4182
+8. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -86,7 +85,7 @@ Task template:
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | none |
-| Compile-time macro hooks and AST transform ownership | TODO-4173, TODO-4176 |
+| Compile-time macro hooks and AST transform ownership | TODO-4176, TODO-4175 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
@@ -109,7 +108,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | none |
-| AST transform hook conformance | TODO-4173, TODO-4176 |
+| AST transform hook conformance | TODO-4176 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
@@ -366,24 +365,3 @@ Task template:
   - stop_rule: Stop after the first definition-attached AST transform lane is
     documented and validated; do not fold text transforms, struct/type derives,
     or general CT-eval work into this tracker.
-
-- [ ] TODO-4173: Execute user-authored AST transform hooks in the semantic pipeline
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Compile-time macro hooks
-  - depends_on: TODO-4174
-  - scope: Run resolved AST-transform symbols through the compile-time VM /
-    CT-eval path on a narrow `FunctionAst`-style API, replace the touched
-    definition AST before the downstream semantic/lowering path, and add
-    release conformance coverage for success and failure cases.
-  - acceptance:
-    - One local or imported AST transform rewrites a definition deterministically
-      before the downstream semantic and lowering pipeline runs.
-    - The touched compile-pipeline coverage proves stable transformed output or
-      deterministic diagnostics when the transform fails or returns the wrong
-      shape.
-    - Release tests cover both a successful rewrite and at least one
-      wrong-result or transform-failure case.
-  - stop_rule: Stop after one definition-to-definition AST transform contract
-    works end-to-end; do not add text transforms, execution hooks, or broad
-    mutable AST editing APIs in this slice.

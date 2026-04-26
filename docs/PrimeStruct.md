@@ -1475,12 +1475,16 @@ module {
     helpers (disables implicit `this` on helpers).
   - **Reserved/rejected in v1:** `stack`, `heap`, `buffer` placement transforms (diagnostic).
   - Any transform outside its allowed scope is a compile-time error with a diagnostic naming the enclosing path.
-- **User-authored AST hooks (metadata-only v1):** declare a hook with `[ast return<void>] hook_name() { ... }`.
+- **User-authored AST hooks (narrow executable v1):** declare metadata-only hooks with
+  `[ast return<void>] hook_name() { ... }`, or executable definition rewrites with
+  `[ast return<FunctionAst>] hook_name([FunctionAst] fn) { return(replace_body_with_return_i32(fn, 7i32)) }`.
   Imported hooks must also be `public`; private hooks remain visible only to local definitions in the same expanded
   source. A definition attaches the hook by spelling `[hook_name return<T>]` or `semantic(hook_name)` in its transform
   list. Resolution records the hook's full path on the transform metadata, rejects ambiguous imports, rejects private
-  imported hooks, and rejects `text(hook_name)` because AST hooks are semantic-phase metadata in this slice. Hook
-  execution and a real `FunctionAst` input/output API are reserved for the later execution slice.
+  imported hooks, and rejects `text(hook_name)` because AST hooks are semantic-phase metadata. Executable v1 hooks are
+  compile-time only: the semantic pipeline evaluates the single supported `FunctionAst` result helper,
+  `replace_body_with_return_i32`, rewrites the touched definition body before downstream validation/lowering, and removes
+  hook definitions from the runtime program.
 
 ### Example function syntax
 ```

@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4173: Execute user-authored AST transform hooks in the semantic
+  pipeline. Completed: semantic transform preprocessing now accepts executable
+  `[ast return<FunctionAst>] hook([FunctionAst] fn)` declarations, evaluates
+  the narrow `replace_body_with_return_i32(fn, value)` result contract for
+  local or imported public hooks, rewrites the touched definition before
+  downstream semantic validation, removes compile-time hook definitions from
+  the runtime program, and reports deterministic diagnostics for unsupported
+  `FunctionAst` result shapes. Focused semantic coverage proves local and
+  imported rewrites plus wrong-result rejection, and the docs now describe the
+  executable v1 surface alongside metadata-only hooks.
 - ✓ TODO-4174: Resolve user-authored AST transform symbols from normal
   imports. Completed: semantic transform preprocessing now recognizes
   `[ast return<void>]` hook definitions, resolves definition-attached hook

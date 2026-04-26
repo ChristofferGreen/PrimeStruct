@@ -86,16 +86,18 @@ Mixed-directory rule:
 
 ## AST Transform Hook Declarations
 
-User-authored AST transform hooks are currently metadata-only. Declare the hook
-with `[ast return<void>]` and attach it by name to a later definition; hook
-execution and the `FunctionAst` data API are intentionally deferred.
+User-authored AST transform hooks can be metadata-only with `[ast return<void>]`,
+or executable with one `FunctionAst` input and a narrow checked rewrite helper.
+Executable hooks are compile-time only and are removed from the runtime program
+after rewriting the touched definition.
 
 ```prime
-[ast return<void>]
-trace_calls() {
+[ast return<FunctionAst>]
+make_seven([FunctionAst] fn) {
+  return(replace_body_with_return_i32(fn, 7i32))
 }
 
-[trace_calls return<int>]
+[make_seven return<int>]
 main() {
   return(1i32)
 }

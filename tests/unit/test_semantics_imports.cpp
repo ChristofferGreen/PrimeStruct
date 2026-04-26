@@ -102,6 +102,89 @@ main() {
   CHECK(mainIt->transforms.front().resolvedPath == "/tools/trace_calls");
 }
 
+TEST_CASE("definition ast transform hook rewrites local definition body") {
+  const std::string source = R"(
+[ast return<FunctionAst>]
+make_seven([FunctionAst] fn) {
+  return(replace_body_with_return_i32(fn, 7i32))
+}
+
+[make_seven return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  primec::Program program;
+  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
+  CHECK(error.empty());
+
+  const auto mainIt = std::find_if(program.definitions.begin(), program.definitions.end(),
+                                  [](const primec::Definition &def) {
+                                    return def.fullPath == "/main";
+                                  });
+  REQUIRE(mainIt != program.definitions.end());
+  REQUIRE(mainIt->returnExpr.has_value());
+  CHECK(mainIt->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(mainIt->returnExpr->literalValue == 7);
+  REQUIRE_FALSE(mainIt->statements.empty());
+  CHECK(mainIt->statements.front().kind == primec::Expr::Kind::Call);
+  CHECK(mainIt->statements.front().name == "return");
+  CHECK(std::none_of(program.definitions.begin(), program.definitions.end(),
+                    [](const primec::Definition &def) {
+                      return def.fullPath == "/make_seven";
+                    }));
+}
+
+TEST_CASE("definition ast transform hook rewrites imported public definition body") {
+  const std::string source = R"(
+import /tools
+
+namespace tools {
+  [public ast return<FunctionAst>]
+  make_nine([FunctionAst] fn) {
+    return(replace_body_with_return_i32(fn, 9i32))
+  }
+}
+
+[make_nine return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  primec::Program program;
+  REQUIRE(validateProgramCapturingProgram(source, "/main", error, program));
+  CHECK(error.empty());
+
+  const auto mainIt = std::find_if(program.definitions.begin(), program.definitions.end(),
+                                  [](const primec::Definition &def) {
+                                    return def.fullPath == "/main";
+                                  });
+  REQUIRE(mainIt != program.definitions.end());
+  REQUIRE(mainIt->returnExpr.has_value());
+  CHECK(mainIt->returnExpr->kind == primec::Expr::Kind::Literal);
+  CHECK(mainIt->returnExpr->literalValue == 9);
+}
+
+TEST_CASE("definition ast transform hook rejects unsupported FunctionAst result") {
+  const std::string source = R"(
+[ast return<FunctionAst>]
+identity([FunctionAst] fn) {
+  return(fn)
+}
+
+[identity return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ast transform hook returned unsupported FunctionAst shape on /main via /identity") !=
+        std::string::npos);
+}
+
 TEST_CASE("definition ast transform hook rejects imported private symbol") {
   const std::string source = R"(
 import /tools
@@ -136,7 +219,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("ast transform hook must use return<void>: /trace_calls") != std::string::npos);
+  CHECK(error.find("ast transform hook must use return<void> or return<FunctionAst>: /trace_calls") !=
+        std::string::npos);
 }
 
 TEST_CASE("definition ast transform hook rejects text phase attachment") {
