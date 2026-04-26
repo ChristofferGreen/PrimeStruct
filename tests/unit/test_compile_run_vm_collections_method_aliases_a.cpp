@@ -204,7 +204,7 @@ main() {
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("rejects vm vector alias access auto wrapper canonical struct-return forwarding") {
+TEST_CASE("rejects vm vector alias access auto wrapper primitive receiver diagnostics") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -244,7 +244,7 @@ main() {
           .string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /vector/at") != std::string::npos);
+  CHECK(readFile(errPath).find("unknown method: /i32/tag") != std::string::npos);
 }
 
 TEST_CASE("rejects vm vector alias access auto wrapper canonical diagnostics forwarding") {
