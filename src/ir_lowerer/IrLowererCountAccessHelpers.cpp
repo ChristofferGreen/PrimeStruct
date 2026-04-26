@@ -506,7 +506,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     return expr.kind == Expr::Kind::Call &&
            !expr.isMethodCall &&
            expr.namespacePrefix.empty() &&
-           isSimpleCallName(expr, std::string(helperName).c_str()) &&
+           expr.name == std::string(helperName) &&
            expr.args.size() == 1;
   };
   const auto shouldDeferBareSimpleCountLikeCall = [&](std::string_view helperName) {
