@@ -461,6 +461,68 @@ TEST_CASE("ir lowerer call helpers dispatch inline calls with locals") {
   CHECK(explicitVectorCountLocalResolveDefinitionCalls == 1);
   CHECK(explicitVectorCountLocalEmitCalls == 1);
 
+  primec::ir_lowerer::LocalInfo vectorInfo;
+  vectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Vector;
+  locals.emplace("values", vectorInfo);
+  primec::Expr vectorReceiver;
+  vectorReceiver.kind = primec::Expr::Kind::Name;
+  vectorReceiver.name = "values";
+  primec::Definition vectorCountCallee;
+  vectorCountCallee.fullPath = "/vector/count";
+  primec::Expr vectorCountMethodCall;
+  vectorCountMethodCall.kind = primec::Expr::Kind::Call;
+  vectorCountMethodCall.name = "count";
+  vectorCountMethodCall.isMethodCall = true;
+  vectorCountMethodCall.args.push_back(vectorReceiver);
+  int vectorCountMethodResolveCalls = 0;
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            vectorCountMethodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              ++vectorCountMethodResolveCalls;
+              return &vectorCountCallee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::NotHandled);
+  CHECK(vectorCountMethodResolveCalls == 1);
+  CHECK(error == "stale");
+
+  primec::Definition vectorCapacityCallee;
+  vectorCapacityCallee.fullPath = "/vector/capacity";
+  primec::Expr vectorCapacityMethodCall = vectorCountMethodCall;
+  vectorCapacityMethodCall.name = "capacity";
+  error = "stale";
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            vectorCapacityMethodCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &vectorCapacityCallee;
+            },
+            [&](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &, const primec::Definition &, const primec::ir_lowerer::LocalMap &) {
+              CHECK(false);
+              return false;
+            },
+            error) == Result::Error);
+  CHECK(error.find("name=capacity") != std::string::npos);
+
   primec::Expr canonicalPushCall;
   canonicalPushCall.kind = primec::Expr::Kind::Call;
   canonicalPushCall.name = "/std/collections/vector/push";

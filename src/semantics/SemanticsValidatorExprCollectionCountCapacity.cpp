@@ -604,12 +604,18 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      methodResolved == bareMapCountTargetPath &&
                      lacksVisibleBareCountDefinition &&
                      lacksVisibleStdlibMapCountDefinition) ||
+                    (isDirectNamedCountReceiverCall &&
+                     methodResolved == "/vector/count" &&
+                     !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+                     !hasImportedDefinitionPath("/std/collections/vector/count")) ||
                     (isBuiltinMethod &&
                      methodResolved == stdlibMapCountTargetPath &&
                      lacksVisibleStdlibMapCountDefinition &&
                      !context.shouldBuiltinValidateBareMapCountCall);
                 if (failsCountUnknownTargetValidation) {
-                  return failUnknownCallTarget(stdlibMapCountTargetPath);
+                  return failUnknownCallTarget(methodResolved == "/vector/count"
+                                                   ? "/std/collections/vector/count"
+                                                   : stdlibMapCountTargetPath);
                 }
                 if (!failInvisibleResolvedMethodTarget(methodResolved,
                                                       isBuiltinMethod)) {
@@ -712,6 +718,14 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                 }
                 if (!failRemovedRootedVectorDirectCall()) {
                   return false;
+                }
+                if (!expr.isMethodCall && expr.args.size() == 1 &&
+                    receiver.kind == Expr::Kind::Name &&
+                    methodResolved == "/vector/capacity" &&
+                    !hasDeclaredDefinitionPath("/std/collections/vector/capacity") &&
+                    !hasImportedDefinitionPath("/std/collections/vector/capacity")) {
+                  return failUnknownCallTarget(
+                      "/std/collections/vector/capacity");
                 }
                 promoteUnknownCapacityMethodToBuiltinValidation(
                     receiver, methodResolved, isBuiltinMethod);

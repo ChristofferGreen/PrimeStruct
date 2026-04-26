@@ -1,5 +1,6 @@
 #include "IrLowererCallHelpers.h"
 
+#include <string>
 #include <string_view>
 
 #include "IrLowererHelpers.h"
@@ -849,6 +850,22 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   const auto vectorMutatorCallFormResult = tryEmitVectorMutatorCallFormExpr();
   if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
     return vectorMutatorCallFormResult;
+  }
+  if (expr.isMethodCall && expr.args.size() == 1 &&
+      (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity")) &&
+      isVectorTarget(expr.args.front(), localsIn)) {
+    const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn);
+    if (callee != nullptr && callee->fullPath == "/vector/count") {
+      return InlineCallDispatchResult::NotHandled;
+    }
+    if (callee != nullptr && callee->fullPath == "/vector/capacity") {
+      error =
+          "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
+          expr.name + ", name=" + expr.name +
+          ", args=" + std::to_string(expr.args.size()) +
+          ", method=true)";
+      return InlineCallDispatchResult::Error;
+    }
   }
   const auto inlineResult = tryEmitInlineCallWithCountFallbacksImpl(
       expr,
