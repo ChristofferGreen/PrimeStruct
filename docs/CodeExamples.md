@@ -221,15 +221,15 @@ Counter {
   }
 
   [public static int]
-  default_step() {
+  defaultStep() {
     return(2)
   }
 }
 
 [int]
-use_counter() {
+useCounter() {
   counter{Counter([value] 5)}
-  return(counter.doubled() + Counter.default_step())
+  return(counter.doubled() + Counter.defaultStep())
 }
 ```
 

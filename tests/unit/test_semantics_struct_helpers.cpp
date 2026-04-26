@@ -125,7 +125,7 @@ Counter() {
   [i32] value{5i32}
 
   [static return<i32>]
-  default_step() {
+  defaultStep() {
     return(2i32)
   }
 
@@ -138,7 +138,7 @@ Counter() {
 [return<i32>]
 main() {
   [Counter] counter{Counter()}
-  return(plus(counter.doubled(), Counter.default_step()))
+  return(plus(counter.doubled(), Counter.defaultStep()))
 }
 )";
   std::string error;

@@ -1087,9 +1087,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(codeExamples.find("Intentionally canonical or substrate-oriented code:") == std::string::npos);
   CHECK(codeExamples.find("[mut] current{start}") != std::string::npos);
   CHECK(codeExamples.find("limit{5}") != std::string::npos);
-  CHECK(codeExamples.find("return(counter.doubled() + Counter.default_step())") !=
+  CHECK(codeExamples.find("return(counter.doubled() + Counter.defaultStep())") !=
         std::string::npos);
-  CHECK(codeExamples.find("return(counter.doubled() + /Counter/default_step())") ==
+  CHECK(codeExamples.find("return(counter.doubled() + /Counter/defaultStep())") ==
         std::string::npos);
   CHECK(codeExamples.find("preferred type-qualified dot-call form for static\nhelpers together.") !=
         std::string::npos);

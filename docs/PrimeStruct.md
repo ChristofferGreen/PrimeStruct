@@ -1529,7 +1529,7 @@ or a semicolon if you intended to index.
   helpers with implicit `this`, the receiver becomes the hidden `this`
   parameter. Static helpers reject value-receiver method-call sugar
   (`value.helper()`), but accept type-qualified dot calls such as
-  `Counter.default_step()` as a surface form for the same direct helper path.
+  `Counter.defaultStep()` as a surface form for the same direct helper path.
   For collections, method syntax is the preferred surface style
   (`value.count()`, `value.at(i)`, `value.push(x)`), while helper calls remain
   canonical (`count(value)`, `at(value, i)`, `push(value, x)`). Vector helper
