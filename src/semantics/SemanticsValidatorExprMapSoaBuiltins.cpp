@@ -483,28 +483,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
        isExperimentalSoaBorrowedHelperPath(resolvedNoTemplate)) &&
       soaAccessHelperName.has_value()) {
     handledOut = true;
-    if (hasNamedArguments(expr.argNames) &&
-        !(context.isNamedArgsPackMethodAccessCall != nullptr &&
-          context.isNamedArgsPackMethodAccessCall(expr)) &&
-        !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
-          context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
-      return failMapSoaBuiltinDiagnostic(
-          "named arguments not supported for builtin calls");
-    }
     const std::string &helperName = *soaAccessHelperName;
-    if (!expr.templateArgs.empty()) {
-      return failMapSoaBuiltinDiagnostic(helperName +
-                                        " does not accept template arguments");
-    }
-    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
-      return failMapSoaBuiltinDiagnostic(helperName +
-                                        " does not accept block arguments");
-    }
-    if (expr.args.size() != 2) {
-      return failMapSoaBuiltinDiagnostic("argument count mismatch for builtin " +
-                                        helperName);
-    }
-    std::string elemType;
     const bool oldSurfaceCallShape =
         (helperName == "get" &&
          (isSimpleCallName(expr, "get") ||
@@ -523,7 +502,40 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
          (isSimpleCallName(expr, "ref_ref") ||
           (expr.isMethodCall && expr.name == "ref_ref") ||
           isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref")));
-    if (oldSurfaceCallShape &&
+    const bool explicitOldSurfaceAccessCall =
+        isExplicitOldSurfaceSoaAccessCall(helperName);
+    const bool hasDeclaredSamePathHelper =
+        hasDeclaredDefinitionPath("/soa_vector/" + helperName);
+    if (oldSurfaceCallShape && hasDeclaredSamePathHelper) {
+      handledOut = false;
+      return true;
+    }
+    if (hasNamedArguments(expr.argNames) &&
+        !(context.isNamedArgsPackMethodAccessCall != nullptr &&
+          context.isNamedArgsPackMethodAccessCall(expr)) &&
+        !(context.isNamedArgsPackWrappedFileBuiltinAccessCall != nullptr &&
+          context.isNamedArgsPackWrappedFileBuiltinAccessCall(expr))) {
+      if (explicitOldSurfaceAccessCall) {
+        return failMapSoaBuiltinDiagnostic(
+            soaUnavailableMethodDiagnostic("/soa_vector/" + helperName));
+      }
+      return failMapSoaBuiltinDiagnostic(
+          "named arguments not supported for builtin calls");
+    }
+    if (!expr.templateArgs.empty()) {
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept template arguments");
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " does not accept block arguments");
+    }
+    if (expr.args.size() != 2) {
+      return failMapSoaBuiltinDiagnostic("argument count mismatch for builtin " +
+                                        helperName);
+    }
+    std::string elemType;
+    if (explicitOldSurfaceAccessCall &&
         hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {
       handledOut = false;
       return true;
@@ -534,7 +546,7 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
             locals,
             context.resolveSoaVectorTarget,
             elemType)) {
-      if (oldSurfaceCallShape &&
+      if (explicitOldSurfaceAccessCall &&
           hasVisibleSoaHelperTargetForCurrentImports(helperName)) {
         handledOut = false;
         return true;

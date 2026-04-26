@@ -1591,6 +1591,15 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         exprMapSoaBuiltinsSource.find(
             "hasVisibleSoaHelperTargetForCurrentImports(helperName)") !=
             std::string::npos));
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "const bool explicitOldSurfaceAccessCall =") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "const bool hasDeclaredSamePathHelper =") !=
+        std::string::npos);
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "oldSurfaceCallShape && hasDeclaredSamePathHelper") !=
+        std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find("auto hasVisibleSamePathSoaAccessHelper =") ==
         std::string::npos);
   CHECK(exprMapSoaBuiltinsSource.find(
