@@ -137,7 +137,8 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
            isLegacyOrCanonicalSoaHelperPath(resolvedPathCanonical,
                                             *soaAccessHelper));
       if (oldSurfaceCallShape &&
-          hasDeclaredDefinitionPath("/soa_vector/" + *soaAccessHelper)) {
+          hasVisibleDefinitionPathForCurrentImports("/soa_vector/" +
+                                                    *soaAccessHelper)) {
         return false;
       }
       if (expr.isMethodCall) {

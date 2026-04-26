@@ -504,9 +504,9 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
           isLegacyOrCanonicalSoaHelperPath(resolvedSoaCanonical, "ref_ref")));
     const bool explicitOldSurfaceAccessCall =
         isExplicitOldSurfaceSoaAccessCall(helperName);
-    const bool hasDeclaredSamePathHelper =
-        hasDeclaredDefinitionPath("/soa_vector/" + helperName);
-    if (oldSurfaceCallShape && hasDeclaredSamePathHelper) {
+    const bool hasVisibleSamePathHelper =
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName);
+    if (oldSurfaceCallShape && hasVisibleSamePathHelper) {
       handledOut = false;
       return true;
     }
