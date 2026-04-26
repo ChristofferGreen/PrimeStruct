@@ -910,6 +910,9 @@
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find(
             "std::string SemanticsValidator::preferredBareVectorHelperTarget") != std::string::npos);
+  CHECK(semanticsCollectionHelperRewritesSource.find(
+            "const std::string samePath = \"/vector/\" + std::string(helperName);") !=
+        std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareMapHelperCall") !=
         std::string::npos);
   CHECK(semanticsCollectionHelperRewritesSource.find("bool SemanticsValidator::tryRewriteBareVectorHelperCall") !=
