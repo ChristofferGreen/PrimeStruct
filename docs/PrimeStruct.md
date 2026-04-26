@@ -1816,7 +1816,8 @@ or a semicolon if you intended to index.
 - **Reserved compile-time metadata query names:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`,
   `meta.field_count<T>`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, `meta.field_visibility<T>(i)`,
   `meta.has_transform<T>(name)`, and `meta.has_trait<T>(traitName)` / `meta.has_trait<T, Elem>(Indexable)`. Query
-  execution semantics are implemented in follow-up roadmap items.
+  execution semantics now evaluate at compile time for the listed primitives; add a concrete reflection TODO before
+  changing that metadata-query contract.
 - **Current primitive status:** `meta.type_name<T>`, `meta.type_kind<T>`, `meta.is_struct<T>`, `meta.field_count<T>`,
   `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, `meta.field_visibility<T>(i)`, `meta.has_transform<T>(name)`, and
   `meta.has_trait<...>(...)` evaluate at compile time in semantics. Reflection diagnostics for non-reflect

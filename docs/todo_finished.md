@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4195: Align reflection metadata docs. Completed:
+  `docs/PrimeStruct.md` no longer says reserved compile-time metadata query
+  execution semantics are implemented in follow-up roadmap items while the
+  active queue is empty. The reflection docs now state that listed primitive
+  queries evaluate at compile time and require a concrete reflection TODO
+  before changing that metadata-query contract. Source-lock coverage rejects
+  the stale inactive-roadmap wording.
 - ✓ TODO-4194: Align SoA compiler-cleanup docs. Completed:
   `docs/PrimeStruct.md` no longer says remaining compiler-owned SoA
   semantics, lowerer, or backend fallback cleanup is tracked as active

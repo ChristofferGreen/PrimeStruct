@@ -145,6 +145,31 @@ TEST_CASE("semantic-product docs avoid inactive Group 12 pointers") {
         std::string::npos);
 }
 
+TEST_CASE("reflection metadata docs avoid inactive roadmap pointers") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(primeStructDoc.find("execution semantics now evaluate at compile time") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("add a concrete reflection TODO before") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Query execution semantics are implemented in follow-up roadmap items") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4195: Align reflection metadata docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("graphics UI docs avoid inactive follow-up pointers") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
