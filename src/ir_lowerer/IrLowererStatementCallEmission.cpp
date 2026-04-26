@@ -317,9 +317,6 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     if (!isMethodInsertStem) {
       return false;
     }
-    if (resolveMethodCallDefinition(stmt, localsIn) != nullptr) {
-      return false;
-    }
   } else {
     std::string helperName;
     if ((!resolveMapHelperAliasName(stmt, helperName) || helperName != "insert") &&
@@ -1105,6 +1102,21 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const auto targetInfo = resolveArrayVectorAccessTargetInfo(callExpr.args[receiverIndex], localsIn);
     return targetInfo.isVectorTarget;
   };
+  auto isBuiltinVectorReceiverExpr = [&](const Expr &candidate) {
+    const auto targetInfo = resolveArrayVectorAccessTargetInfo(candidate, localsIn);
+    if (targetInfo.isVectorTarget) {
+      return true;
+    }
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto localIt = localsIn.find(candidate.name);
+    return localIt != localsIn.end() &&
+           (localIt->second.kind == LocalInfo::Kind::Vector ||
+            localIt->second.structTypeName == "/std/collections/experimental_vector/Vector" ||
+            localIt->second.structTypeName.rfind(
+                "/std/collections/experimental_vector/Vector__", 0) == 0);
+  };
   auto rewriteBareVectorMethodMutatorToDirectCall = [&](const Expr &callExpr, Expr &rewrittenExpr) {
     if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
         !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
@@ -1120,8 +1132,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     if (callExpr.args.size() != expectedArgCount) {
       return false;
     }
-    const auto targetInfo = resolveArrayVectorAccessTargetInfo(callExpr.args.front(), localsIn);
-    if (!targetInfo.isVectorTarget) {
+    if (!isBuiltinVectorReceiverExpr(callExpr.args.front())) {
       return false;
     }
     rewrittenExpr = callExpr;
@@ -1137,10 +1148,12 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     directStmt = rewrittenMapInsertStmt;
   }
   bool rewrittenExplicitVectorMutatorToBuiltinCall = false;
+  bool rewrittenBareVectorMutatorToBuiltinCall = false;
   Expr rewrittenBareVectorMethodStmt;
   if (!explicitVectorMutatorHelperCall &&
       rewriteBareVectorMethodMutatorToDirectCall(stmt, rewrittenBareVectorMethodStmt)) {
     directStmt = rewrittenBareVectorMethodStmt;
+    rewrittenBareVectorMutatorToBuiltinCall = true;
   }
   if (explicitVectorMutatorHelperCall && explicitVectorHelperUsesBuiltinVectorReceiver(directStmt)) {
     std::string helperName;
@@ -1163,6 +1176,12 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     }
   }
   if (rewrittenExplicitVectorMutatorToBuiltinCall) {
+    if (!emitExpr(directStmt, localsIn)) {
+      return DirectCallStatementEmitResult::Error;
+    }
+    return DirectCallStatementEmitResult::Emitted;
+  }
+  if (rewrittenBareVectorMutatorToBuiltinCall) {
     if (!emitExpr(directStmt, localsIn)) {
       return DirectCallStatementEmitResult::Error;
     }

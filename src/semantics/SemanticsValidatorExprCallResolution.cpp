@@ -355,6 +355,79 @@ std::string SemanticsValidator::resolveExprConcreteCallPath(
 
   const bool hasTemplateOverloads = hasOverloadFamily(candidatePath);
   const bool isTypeNamespaceCall = isTypeNamespaceMethodCall(params, locals, expr, candidatePath);
+  if (!expr.isMethodCall && expr.namespacePrefix.empty() &&
+      expr.name.find('/') == std::string::npos && expr.args.size() == 1 &&
+      !hasNamedArguments(expr.argNames) && expr.templateArgs.empty() &&
+      !expr.hasBodyArguments && expr.bodyArguments.empty()) {
+    auto primitiveReceiverTypeName = [&](const Expr &receiver) -> std::string {
+      if (receiver.kind == Expr::Kind::Literal) {
+        return "i32";
+      }
+      if (receiver.kind == Expr::Kind::BoolLiteral) {
+        return "bool";
+      }
+      if (receiver.kind == Expr::Kind::FloatLiteral) {
+        return "f64";
+      }
+      if (receiver.kind != Expr::Kind::Name) {
+        return {};
+      }
+      const BindingInfo *binding = findParamBinding(params, receiver.name);
+      if (binding == nullptr) {
+        const auto localIt = locals.find(receiver.name);
+        if (localIt != locals.end()) {
+          binding = &localIt->second;
+        }
+      }
+      if (binding == nullptr || !binding->typeTemplateArg.empty()) {
+        return {};
+      }
+      const std::string normalizedType =
+          normalizeBindingTypeName(binding->typeName);
+      if (normalizedType == "i32" || normalizedType == "i64" ||
+          normalizedType == "u64" || normalizedType == "bool" ||
+          normalizedType == "f32" || normalizedType == "f64" ||
+          normalizedType == "integer" || normalizedType == "decimal" ||
+          normalizedType == "complex") {
+        return normalizedType;
+      }
+      return {};
+    };
+    const std::string receiverTypeName =
+        primitiveReceiverTypeName(expr.args.front());
+    if (!receiverTypeName.empty()) {
+      const std::string methodStylePath = "/" + receiverTypeName + "/" + expr.name;
+      if (hasDefinitionFamilyPath(methodStylePath)) {
+        return methodStylePath;
+      }
+    }
+    const BindingInfo *collectionBinding = nullptr;
+    if (expr.args.front().kind == Expr::Kind::Name) {
+      collectionBinding = findParamBinding(params, expr.args.front().name);
+      if (collectionBinding == nullptr) {
+        const auto localIt = locals.find(expr.args.front().name);
+        if (localIt != locals.end()) {
+          collectionBinding = &localIt->second;
+        }
+      }
+    }
+    if (collectionBinding != nullptr) {
+      std::string collectionTypeText = collectionBinding->typeName;
+      if (!collectionBinding->typeTemplateArg.empty()) {
+        collectionTypeText += "<" + collectionBinding->typeTemplateArg + ">";
+      }
+      const std::string collectionPath =
+          inferMethodCollectionTypePathFromTypeText(collectionTypeText);
+      if ((collectionPath == "/array" || collectionPath == "/string") &&
+          (expr.name == "count" || expr.name == "capacity" ||
+           expr.name == "at" || expr.name == "at_unsafe")) {
+        const std::string collectionHelperPath = collectionPath + "/" + expr.name;
+        if (hasDefinitionFamilyPath(collectionHelperPath)) {
+          return collectionHelperPath;
+        }
+      }
+    }
+  }
   const bool hasExplicitReceiverBinding =
       expr.isMethodCall && !expr.args.empty() &&
       expr.args.front().kind == Expr::Kind::Name &&

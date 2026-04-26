@@ -12,6 +12,8 @@ bool isBuiltinCollectionHelperName(std::string_view helperName) {
          helperName == "tryAt" || helperName == "tryAt_ref" || helperName == "at" ||
          helperName == "at_ref" || helperName == "at_unsafe" ||
          helperName == "at_unsafe_ref" || helperName == "insert" ||
+         helperName == "get" || helperName == "get_ref" ||
+         helperName == "ref" || helperName == "ref_ref" ||
          helperName == "insert_ref" || helperName == "push" || helperName == "pop" ||
          helperName == "reserve" || helperName == "clear" || helperName == "remove_at" ||
          helperName == "remove_swap" || helperName == "to_soa" ||
@@ -96,6 +98,8 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
         isSimpleCallName(expr, "tryAt") || isSimpleCallName(expr, "tryAt_ref") ||
         isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_ref") ||
         isSimpleCallName(expr, "at_unsafe") || isSimpleCallName(expr, "at_unsafe_ref") ||
+        isSimpleCallName(expr, "get") || isSimpleCallName(expr, "get_ref") ||
+        isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref") ||
         isSimpleCallName(expr, "insert") || isSimpleCallName(expr, "insert_ref") ||
         isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
         isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
@@ -427,7 +431,25 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
           return;
         }
         const std::string resolved = resolveCalleePath(expr);
-        if (defMap_.count(resolved) == 0) {
+        if (!hasDefinitionPath(resolved)) {
+          if (resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+              expr.args.size() != 1) {
+            appendDefinitionRecord(
+                expr,
+                hasNamedArguments(expr.argNames)
+                    ? "named arguments not supported for builtin calls"
+                    : "argument count mismatch for builtin count");
+            return;
+          }
+          if (resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+              expr.args.size() != 1) {
+            appendDefinitionRecord(
+                expr,
+                hasNamedArguments(expr.argNames)
+                    ? "named arguments not supported for builtin calls"
+                    : "argument count mismatch for builtin capacity");
+            return;
+          }
           appendDefinitionRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
         } else {
           collectResolvedCallArgumentDiagnostic(expr, resolved);

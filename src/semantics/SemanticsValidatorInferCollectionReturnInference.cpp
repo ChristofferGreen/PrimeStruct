@@ -27,8 +27,13 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
     return false;
   }
   base = normalizeBindingTypeName(base);
-  if (base == "soa_vector" && !argText.empty()) {
-    elemTypeOut = argText;
+  if ((base == "soa_vector" || isExperimentalSoaVectorTypePath(base)) &&
+      !argText.empty()) {
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      return false;
+    }
+    elemTypeOut = args.front();
     return true;
   }
   if ((base != "Reference" && base != "Pointer") || argText.empty()) {
@@ -40,10 +45,16 @@ bool extractBuiltinSoaVectorElementTypeFromTypeTextForQueryInference(
     return false;
   }
   wrappedBase = normalizeBindingTypeName(wrappedBase);
-  if (wrappedBase != "soa_vector" || wrappedArgText.empty()) {
+  if ((wrappedBase != "soa_vector" && !isExperimentalSoaVectorTypePath(wrappedBase)) ||
+      wrappedArgText.empty()) {
     return false;
   }
-  elemTypeOut = wrappedArgText;
+  std::vector<std::string> wrappedArgs;
+  if (!splitTopLevelTemplateArgs(wrappedArgText, wrappedArgs) ||
+      wrappedArgs.size() != 1) {
+    return false;
+  }
+  elemTypeOut = wrappedArgs.front();
   return true;
 }
 

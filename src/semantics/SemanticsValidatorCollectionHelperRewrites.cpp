@@ -203,6 +203,10 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
 
 std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view helperName) const {
   if (helperName == "at" || helperName == "at_unsafe") {
+    const std::string samePath = "/vector/" + std::string(helperName);
+    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+      return samePath;
+    }
     return canonicalCollectionHelperPath(
         StdlibSurfaceId::CollectionsVectorHelpers, helperName);
   }

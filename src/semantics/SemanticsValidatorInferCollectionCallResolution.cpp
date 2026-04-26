@@ -65,6 +65,9 @@ bool SemanticsValidator::resolveCallCollectionTypePath(const Expr &target,
     if ((base == "array" || base == "vector" || base == "soa_vector") && args.size() == 1) {
       return "/" + base;
     }
+    if (isExperimentalSoaVectorTypePath(base) && args.size() == 1) {
+      return "/soa_vector";
+    }
     if (base == "Buffer" && args.size() == 1) {
       return "/Buffer";
     }
@@ -218,6 +221,7 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     if (base == expectedBase ||
         (expectedBase == "vector" &&
          (base == "Vector" || base == "std/collections/experimental_vector/Vector")) ||
+        (expectedBase == "soa_vector" && isExperimentalSoaVectorTypePath(base)) ||
         (expectedBase == "map" && isMapCollectionTypeName(base))) {
       return splitTopLevelTemplateArgs(arg, argsOut);
     }
@@ -237,6 +241,13 @@ bool SemanticsValidator::resolveCallCollectionTemplateArgs(const Expr &target,
     if (expectedBase == "vector") {
       std::string elemType;
       if (extractExperimentalVectorElementType(binding, elemType)) {
+        argsOut = {elemType};
+        return true;
+      }
+    }
+    if (expectedBase == "soa_vector") {
+      std::string elemType;
+      if (extractExperimentalSoaVectorElementType(binding, elemType)) {
         argsOut = {elemType};
         return true;
       }

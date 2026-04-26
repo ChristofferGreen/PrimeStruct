@@ -576,52 +576,84 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
     const Expr &candidate,
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals) const {
-  auto assignBindingTypeFromText = [](const std::string &typeText,
-                                      BindingInfo &bindingOut) -> bool {
-    const std::string normalizedType = normalizeBindingTypeName(typeText);
-    if (normalizedType.empty()) {
-      return false;
-    }
-    std::string base;
-    std::string argText;
-    if (splitTemplateTypeName(normalizedType, base, argText)) {
-      bindingOut.typeName = normalizeBindingTypeName(base);
-      bindingOut.typeTemplateArg = argText;
-      return true;
-    }
-    bindingOut.typeName = normalizedType;
-    bindingOut.typeTemplateArg.clear();
-    return true;
-  };
-  auto isExperimentalSoaLikeExpr = [&](const Expr &expr) {
-    auto bindingIsExperimentalSoaLike = [&](const BindingInfo &binding) {
-      std::string elemType;
-      return extractExperimentalSoaVectorElementType(binding, elemType);
-    };
-    if (expr.kind == Expr::Kind::Name) {
-      if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
-        return bindingIsExperimentalSoaLike(*paramBinding);
-      }
-      auto localIt = locals.find(expr.name);
-      return localIt != locals.end() &&
-             bindingIsExperimentalSoaLike(localIt->second);
-    }
-    BindingInfo inferredBinding;
-    if (const_cast<SemanticsValidator *>(this)->inferBindingTypeFromInitializer(
-            expr, params, locals, inferredBinding)) {
-      return bindingIsExperimentalSoaLike(inferredBinding);
-    }
-    std::string inferredTypeText;
-    return const_cast<SemanticsValidator *>(this)->inferQueryExprTypeText(
-               expr, params, locals, inferredTypeText) &&
-           assignBindingTypeFromText(inferredTypeText, inferredBinding) &&
-           bindingIsExperimentalSoaLike(inferredBinding);
-  };
-
   std::string fieldName;
   if (isBuiltinSoaFieldViewExpr(candidate, params, locals, &fieldName)) {
     return soaFieldViewHelperPath(fieldName);
   }
+  if (splitSoaFieldViewHelperPath(candidate.name, &fieldName)) {
+    return soaFieldViewHelperPath(fieldName);
+  }
+  auto fallbackSoaFieldViewName = [&]() -> std::optional<std::string> {
+    if (candidate.kind != Expr::Kind::Call || candidate.isBinding ||
+        candidate.hasBodyArguments || !candidate.bodyArguments.empty() ||
+        !candidate.templateArgs.empty() || hasNamedArguments(candidate.argNames)) {
+      return std::nullopt;
+    }
+    std::string normalizedName = candidate.name;
+    if (!normalizedName.empty() && normalizedName.front() == '/') {
+      normalizedName.erase(normalizedName.begin());
+    }
+    if (normalizedName.empty() || normalizedName.find('/') != std::string::npos ||
+        normalizedName == "count" || normalizedName == "count_ref" ||
+        normalizedName == "get" || normalizedName == "get_ref" ||
+        normalizedName == "ref" || normalizedName == "ref_ref" ||
+        normalizedName == "to_soa" || normalizedName == "to_aos" ||
+        normalizedName == "to_aos_ref" ||
+        normalizedName == "location" || normalizedName == "dereference") {
+      return std::nullopt;
+    }
+    if (hasVisibleSoaHelperTargetForCurrentImports(normalizedName)) {
+      return std::nullopt;
+    }
+    const Expr *receiver = nullptr;
+    if (candidate.isMethodCall) {
+      if (candidate.args.empty()) {
+        return std::nullopt;
+      }
+      receiver = &candidate.args.front();
+    } else {
+      if (!candidate.namespacePrefix.empty() || candidate.args.size() != 1) {
+        return std::nullopt;
+      }
+      receiver = &candidate.args.front();
+    }
+    if (receiver == nullptr || receiver->kind != Expr::Kind::Name) {
+      return std::nullopt;
+    }
+    const BindingInfo *binding = findParamBinding(params, receiver->name);
+    if (binding == nullptr) {
+      auto localIt = locals.find(receiver->name);
+      if (localIt != locals.end()) {
+        binding = &localIt->second;
+      }
+    }
+    if (binding == nullptr ||
+        normalizeBindingTypeName(binding->typeName) != "soa_vector" ||
+        binding->typeTemplateArg.empty()) {
+      return std::nullopt;
+    }
+    return normalizedName;
+  }();
+  if (fallbackSoaFieldViewName.has_value()) {
+    return soaFieldViewHelperPath(*fallbackSoaFieldViewName);
+  }
+  auto isExperimentalSoaLikeExpr = [&](const Expr &expr) {
+    std::string typeText;
+    if (!const_cast<SemanticsValidator *>(this)->inferQueryExprTypeText(
+            expr, params, locals, typeText)) {
+      BindingInfo inferredBinding;
+      if (!const_cast<SemanticsValidator *>(this)->inferBindingTypeFromInitializer(
+              expr, params, locals, inferredBinding)) {
+        return false;
+      }
+      typeText = inferredBinding.typeTemplateArg.empty()
+                     ? inferredBinding.typeName
+                     : inferredBinding.typeName + "<" +
+                           inferredBinding.typeTemplateArg + ">";
+    }
+    return typeText.find("SoaVector") != std::string::npos ||
+           typeText.find("experimental_soa_vector") != std::string::npos;
+  };
   const auto soaAccessHelper =
       builtinSoaAccessHelperName(candidate, params, locals);
   if (soaAccessHelper.has_value() &&

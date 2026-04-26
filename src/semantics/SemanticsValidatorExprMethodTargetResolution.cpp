@@ -1900,6 +1900,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         return setCollectionMethodTarget(preferredBufferMethodTarget("count"));
       }
     }
+    if (normalizedMethodName == "capacity" && collectionTypePath == "/array" &&
+        (hasDeclaredDefinitionPath("/array/capacity") ||
+         hasImportedDefinitionPath("/array/capacity"))) {
+      return setCollectionMethodTarget("/array/capacity");
+    }
     if (normalizedMethodName == "capacity" && collectionTypePath == "/vector") {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }
@@ -2289,6 +2294,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
   }
   if (normalizedMethodName == "capacity") {
+    if (resolveArrayTarget(receiver, elemType) &&
+        (hasDeclaredDefinitionPath("/array/capacity") ||
+         hasImportedDefinitionPath("/array/capacity"))) {
+      return setCollectionMethodTarget("/array/capacity");
+    }
     if (resolveVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(canonicalVectorHelperTarget("capacity"));
     }

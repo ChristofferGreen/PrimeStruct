@@ -630,8 +630,8 @@ SemanticsValidator::BuiltinCollectionDispatchResolvers SemanticsValidator::makeB
         std::vector<std::string> args;
         if (resolveCallCollectionTemplateArgs(target, "soa_vector", params, locals, args) && args.size() == 1) {
           elemType = args.front();
+          return true;
         }
-        return true;
       }
       if (((!target.isMethodCall && isSimpleCallName(target, "to_soa")) ||
            resolveCalleePath(target) == "/to_soa") &&

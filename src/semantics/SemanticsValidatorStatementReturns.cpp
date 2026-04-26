@@ -260,6 +260,10 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     };
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(returnExpr, params, locals)) {
+      std::string pendingFieldName;
+      if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName)) {
+        return failReturnEscapeDiagnostic("field-view escapes via return");
+      }
       return failReturnDiagnostic(
           soaUnavailableMethodDiagnostic(*pendingPath));
     }
@@ -313,10 +317,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
     }
     if (isBuiltinSoaFieldViewExpr(returnExpr, params, locals, nullptr) &&
         !returnExpr.args.empty()) {
-      const Expr &fieldViewReceiver = returnExpr.args.front();
-      if (fieldViewReceiver.kind != Expr::Kind::Name) {
-        return failReturnEscapeDiagnostic("field-view escapes via return");
-      }
+      return failReturnEscapeDiagnostic("field-view escapes via return");
     }
     auto isStandaloneBorrowStorageExpr = [&](const Expr &candidate) {
       if (candidate.kind == Expr::Kind::Name) {

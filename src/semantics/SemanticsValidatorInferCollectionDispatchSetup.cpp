@@ -152,9 +152,15 @@ void SemanticsValidator::prepareInferCollectionDispatchSetup(
   setupOut.isStdNamespacedVectorAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
       resolveCalleePath(expr).rfind("/std/collections/vector/at", 0) == 0;
+  const bool isStdlibVectorAccessWrapperDefinition =
+      currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
+      currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0 ||
+      currentValidationState_.context.definitionPath.rfind("/std/ui/", 0) == 0;
   const bool hasStdNamespacedVectorAccessDefinition =
       setupOut.isStdNamespacedVectorAccessSpelling &&
-      hasImportedDefinitionPath(resolveCalleePath(expr));
+      (hasImportedDefinitionPath(resolveCalleePath(expr)) ||
+       hasDeclaredDefinitionPath(resolveCalleePath(expr)) ||
+       isStdlibVectorAccessWrapperDefinition);
   setupOut.isStdNamespacedMapAccessSpelling =
       setupOut.hasBuiltinAccessSpelling && !expr.isMethodCall &&
       isStdNamespacedCanonicalMapAccessPath(resolveCalleePath(expr));

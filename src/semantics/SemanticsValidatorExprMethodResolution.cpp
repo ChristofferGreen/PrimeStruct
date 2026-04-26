@@ -40,6 +40,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   const auto &resolveVectorTarget = dispatchResolvers.resolveVectorTarget;
   const auto &resolveMapTargetWithTypes = dispatchResolvers.resolveMapTarget;
   const auto &resolveExperimentalMapTarget = dispatchResolvers.resolveExperimentalMapTarget;
+  const std::string normalizedMethodName =
+      normalizeCollectionMethodName(expr.name);
   auto resolveMapTarget = [&](const Expr &target) -> bool {
     std::string keyType;
     std::string valueType;
@@ -52,30 +54,30 @@ bool SemanticsValidator::validateExprMethodCallTarget(
            returnsMapCollectionType(inferredTypeText);
   };
   const bool isVectorCompatibilityMethod =
-      isVectorCompatibilityHelperName(expr.name);
+      isVectorCompatibilityHelperName(normalizedMethodName);
   if (expr.namespacePrefix.empty() &&
       !expr.args.empty() &&
       isVectorCompatibilityMethod) {
     std::string elemType;
     const bool isVectorReceiver = resolveVectorTarget(expr.args.front(), elemType);
     const std::string canonicalVectorHelperPath =
-        "/std/collections/vector/" + expr.name;
+        "/std/collections/vector/" + normalizedMethodName;
     if (isVectorReceiver &&
-        (hasDefinitionPath(canonicalVectorHelperPath) ||
+        (hasDefinitionFamilyPath(canonicalVectorHelperPath) ||
          hasImportedDefinitionPath(canonicalVectorHelperPath))) {
-      if (expr.name == "count" && expr.args.size() != 1) {
+      if (normalizedMethodName == "count" && expr.args.size() != 1) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin count");
       }
-      if (expr.name == "capacity" && expr.args.size() != 1) {
+      if (normalizedMethodName == "capacity" && expr.args.size() != 1) {
         return failMethodResolutionDiagnostic("argument count mismatch for builtin capacity");
       }
-      if ((expr.name == "at" || expr.name == "at_unsafe") &&
+      if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
           expr.args.size() == 2) {
         const ReturnKind indexKind = inferExprReturnKind(expr.args[1], params, locals);
         if (indexKind != ReturnKind::Int &&
             indexKind != ReturnKind::Int64 &&
             indexKind != ReturnKind::UInt64) {
-          return failMethodResolutionDiagnostic(expr.name + " requires integer index");
+          return failMethodResolutionDiagnostic(normalizedMethodName + " requires integer index");
         }
       }
     }
@@ -140,15 +142,26 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       expr.namespacePrefix != "/vector" &&
       expr.namespacePrefix != "std/collections/vector" &&
       expr.namespacePrefix != "/std/collections/vector" &&
-      resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
+      resolveVectorHelperMethodTarget(params, locals, expr.args.front(), normalizedMethodName,
                                       vectorMethodTarget)) {
-    if (expr.name == "count" || expr.name == "capacity" ||
-        expr.name == "at" || expr.name == "at_unsafe") {
+    if (normalizedMethodName == "count" || normalizedMethodName == "capacity" ||
+        normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") {
       std::string elemType;
       if (resolveVectorTarget(expr.args.front(), elemType)) {
-        resolved = "/std/collections/vector/" + expr.name;
-        isBuiltinMethod = expr.name == "count" || expr.name == "capacity";
-        resolvedCanonicalVectorCompatibilityMethod = true;
+        const std::string preferredVectorMethodTarget =
+            preferredBareVectorHelperTarget(normalizedMethodName);
+        if ((normalizedMethodName == "at" || normalizedMethodName == "at_unsafe") &&
+            preferredVectorMethodTarget.rfind("/vector/", 0) == 0 &&
+            (hasDeclaredDefinitionPath(preferredVectorMethodTarget) ||
+             hasImportedDefinitionPath(preferredVectorMethodTarget))) {
+          resolved = preferredVectorMethodTarget;
+          isBuiltinMethod = false;
+        } else {
+          resolved = "/std/collections/vector/" + normalizedMethodName;
+          isBuiltinMethod = normalizedMethodName == "count" ||
+                            normalizedMethodName == "capacity";
+          resolvedCanonicalVectorCompatibilityMethod = true;
+        }
       }
     }
     if (!isBuiltinMethod && !resolvedCanonicalVectorCompatibilityMethod) {
@@ -173,8 +186,19 @@ bool SemanticsValidator::validateExprMethodCallTarget(
     }
   } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), expr.name, resolved,
                                   isBuiltinMethod)) {
+    std::string collectionMethodTarget;
+    const bool resolvedVisibleCollectionMethod =
+        (expr.name == "get" || expr.name == "get_ref" ||
+         expr.name == "ref" || expr.name == "ref_ref" ||
+         expr.name == "to_aos" || expr.name == "to_aos_ref") &&
+        resolveVectorHelperMethodTarget(params, locals, expr.args.front(), expr.name,
+                                        collectionMethodTarget) &&
+        hasImportedDefinitionPath(collectionMethodTarget);
     bool promotedCapacityToBuiltinValidation = false;
-    if (isVectorBuiltinName(expr, "capacity") &&
+    if (resolvedVisibleCollectionMethod) {
+      resolved = collectionMethodTarget;
+      isBuiltinMethod = false;
+    } else if (isVectorBuiltinName(expr, "capacity") &&
         isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
                                                      "capacity")) {
       context.promoteCapacityToBuiltinValidation(expr.args.front(), resolved,
@@ -225,7 +249,8 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       }
       return true;
     };
-    if (promotedCapacityToBuiltinValidation) {
+    if (resolvedVisibleCollectionMethod) {
+    } else if (promotedCapacityToBuiltinValidation) {
     } else if (resolveInferredMapMethodFallback()) {
     } else if (hasBlockArgs &&
                resolvePointerLikeMethodTarget(params, locals, expr.args.front(), expr.name, resolved)) {
@@ -321,6 +346,34 @@ bool SemanticsValidator::validateExprMethodCallTarget(
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
       isVectorBuiltinName(expr, "capacity")) {
     context.promoteCapacityToBuiltinValidation(expr.args.front(), resolved, isBuiltinMethod, true);
+  }
+  if (!isBuiltinMethod &&
+      resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+      expr.args.size() != 1) {
+    if (hasNamedArguments(expr.argNames)) {
+      return failMethodResolutionDiagnostic(
+          "named arguments not supported for builtin calls");
+    }
+    return failMethodResolutionDiagnostic(
+        "argument count mismatch for builtin count");
+  }
+  if (!isBuiltinMethod &&
+      resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+      expr.args.size() != 1) {
+    if (hasNamedArguments(expr.argNames)) {
+      return failMethodResolutionDiagnostic(
+          "named arguments not supported for builtin calls");
+    }
+    return failMethodResolutionDiagnostic(
+        "argument count mismatch for builtin capacity");
+  }
+  if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end()) {
+    const std::string canonicalSoaGetPath =
+        canonicalizeLegacySoaGetHelperPath(resolved);
+    if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
+        isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
+      isBuiltinMethod = true;
+    }
   }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
       !hasImportedDefinitionPath(resolved) && !hasBlockArgs) {

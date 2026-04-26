@@ -244,8 +244,13 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     };
     auto hasVisibleCanonicalVectorAccessHelper = [&]() {
       const std::string canonicalTarget = canonicalVectorAccessHelperTarget();
+      const bool isStdlibVectorAccessWrapperDefinition =
+          currentValidationState_.context.definitionPath.rfind("/std/collections/", 0) == 0 ||
+          currentValidationState_.context.definitionPath.rfind("/std/image/", 0) == 0 ||
+          currentValidationState_.context.definitionPath.rfind("/std/ui/", 0) == 0;
       return hasDeclaredDefinitionPath(canonicalTarget) ||
-             hasImportedDefinitionPath(canonicalTarget);
+             hasImportedDefinitionPath(canonicalTarget) ||
+             isStdlibVectorAccessWrapperDefinition;
     };
     auto isCollectionAccessReceiverExpr = [&](const Expr &candidate) -> bool {
       std::string elemType;
@@ -297,35 +302,46 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       const bool receiverIsBuiltinVectorAccessTarget =
           isValueSurfaceAccessHelperName(accessHelperName) &&
           context.resolveVectorTarget(receiverCandidate, ignoredVectorElemType);
+      const bool receiverHasVisibleCanonicalVectorAccessHelper =
+          receiverIsBuiltinVectorAccessTarget &&
+          hasVisibleCanonicalVectorAccessHelper();
       if (receiverIsBuiltinVectorAccessTarget) {
         methodResolved = canonicalVectorAccessHelperTarget();
-        if (!hasVisibleCanonicalVectorAccessHelper()) {
+        if (receiverHasVisibleCanonicalVectorAccessHelper) {
+          resolvedVectorAccessMethod = true;
+        } else if (!hasVisiblePreferredVectorAccessHelper()) {
           (void)failCollectionAccessTargetDiagnostic(
               "unknown call target: " + methodResolved);
           failedReceiverProbe = true;
           return true;
         }
-        resolvedVectorAccessMethod = true;
       }
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
-          !receiverIsBuiltinVectorAccessTarget &&
+          (!receiverIsBuiltinVectorAccessTarget ||
+           !receiverHasVisibleCanonicalVectorAccessHelper) &&
           (!receiverSupportsBuiltinVectorSurfaceSemantics ||
-           hasVisiblePreferredVectorAccessHelper()) &&
+           hasVisiblePreferredVectorAccessHelper() ||
+           (receiverIsBuiltinVectorAccessTarget &&
+            !receiverHasVisibleCanonicalVectorAccessHelper)) &&
           resolveVectorHelperMethodTarget(params, locals, receiverCandidate,
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+            !hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
           const std::string canonicalVectorMethodTarget =
               "/std/collections/vector/" + accessHelperName;
-          if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+          if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
+              hasDefinitionPath(canonicalVectorMethodTarget) ||
+              hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
               hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
             methodResolved = canonicalVectorMethodTarget;
           }
         }
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        if (hasDeclaredDefinitionPath(methodResolved) ||
+        if (hasDefinitionPath(methodResolved) ||
+            hasDeclaredDefinitionPath(methodResolved) ||
             hasImportedDefinitionPath(methodResolved)) {
           isBuiltinMethod = false;
           resolvedVectorAccessMethod = true;
@@ -340,11 +356,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       }
       if (!isBuiltinMethod &&
           methodResolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
+          !hasDefinitionPath(methodResolved) &&
           !hasDeclaredDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
         const std::string canonicalVectorMethodTarget =
             "/std/collections/vector/" + accessHelperName;
-        if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+        if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
+            hasDefinitionPath(canonicalVectorMethodTarget) ||
+            hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
             hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
           methodResolved = canonicalVectorMethodTarget;
         }
@@ -357,7 +376,8 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         methodResolved = "/map/" + accessHelperName;
         isBuiltinMethod = false;
       }
-      if (!isBuiltinMethod &&
+      if (!isBuiltinMethod && !resolvedVectorAccessMethod &&
+          !hasDefinitionPath(methodResolved) &&
           !hasDeclaredDefinitionPath(methodResolved) &&
           !hasImportedDefinitionPath(methodResolved)) {
         (void)failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
@@ -423,33 +443,44 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       const bool receiverIsBuiltinVectorAccessTarget =
           isValueSurfaceAccessHelperName(accessHelperName) &&
           context.resolveVectorTarget(expr.args.front(), ignoredVectorElemType);
+      const bool receiverHasVisibleCanonicalVectorAccessHelper =
+          receiverIsBuiltinVectorAccessTarget &&
+          hasVisibleCanonicalVectorAccessHelper();
       if (receiverIsBuiltinVectorAccessTarget) {
         methodResolved = canonicalVectorAccessHelperTarget();
-        if (!hasVisibleCanonicalVectorAccessHelper()) {
+        if (receiverHasVisibleCanonicalVectorAccessHelper) {
+          resolvedVectorAccessMethod = true;
+        } else if (!hasVisiblePreferredVectorAccessHelper()) {
           return failCollectionAccessTargetDiagnostic(
               "unknown call target: " + methodResolved);
         }
-        resolvedVectorAccessMethod = true;
       }
       if (!preservesExplicitRemovedArrayAccessMethod &&
           isValueSurfaceAccessHelperName(accessHelperName) &&
-          !receiverIsBuiltinVectorAccessTarget &&
+          (!receiverIsBuiltinVectorAccessTarget ||
+           !receiverHasVisibleCanonicalVectorAccessHelper) &&
           (!receiverSupportsBuiltinVectorSurfaceSemantics ||
-           hasVisiblePreferredVectorAccessHelper()) &&
+           hasVisiblePreferredVectorAccessHelper() ||
+           (receiverIsBuiltinVectorAccessTarget &&
+            !receiverHasVisibleCanonicalVectorAccessHelper)) &&
           resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
                                           accessHelperName, methodResolved)) {
         if (methodResolved.rfind("/std/collections/experimental_vector/", 0) == 0 &&
+            !hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
           const std::string canonicalVectorMethodTarget =
               "/std/collections/vector/" + accessHelperName;
-          if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+          if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
+              hasDefinitionPath(canonicalVectorMethodTarget) ||
+              hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
               hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
             methodResolved = canonicalVectorMethodTarget;
           }
         }
         methodResolved = preferVectorStdlibHelperPath(methodResolved);
-        if (hasDeclaredDefinitionPath(methodResolved) ||
+        if (hasDefinitionPath(methodResolved) ||
+            hasDeclaredDefinitionPath(methodResolved) ||
             hasImportedDefinitionPath(methodResolved)) {
           isBuiltinMethod = false;
           resolvedVectorAccessMethod = true;
@@ -460,11 +491,14 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
                               methodResolved, isBuiltinMethod)) {
         if (!isBuiltinMethod &&
             methodResolved.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 &&
+            !hasDefinitionPath(methodResolved) &&
             !hasDeclaredDefinitionPath(methodResolved) &&
             !hasImportedDefinitionPath(methodResolved)) {
           const std::string canonicalVectorMethodTarget =
               "/std/collections/vector/" + accessHelperName;
-          if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+          if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
+              hasDefinitionPath(canonicalVectorMethodTarget) ||
+              hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
               hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
             methodResolved = canonicalVectorMethodTarget;
           }
@@ -492,7 +526,9 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
             usedMethodTarget = true;
             hasMethodReceiverIndex = true;
             methodReceiverIndex = 0;
-            if (!hasDeclaredDefinitionPath(methodResolved) &&
+            if (!resolvedVectorAccessMethod &&
+                !hasDefinitionPath(methodResolved) &&
+                !hasDeclaredDefinitionPath(methodResolved) &&
                 !hasImportedDefinitionPath(methodResolved)) {
               return failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
             }
@@ -533,7 +569,9 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           if (receiverStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
             const std::string canonicalVectorMethodTarget =
                 "/std/collections/vector/" + accessHelperName;
-            if (hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
+            if (hasDefinitionFamilyPath(canonicalVectorMethodTarget) ||
+                hasDefinitionPath(canonicalVectorMethodTarget) ||
+                hasDeclaredDefinitionPath(canonicalVectorMethodTarget) ||
                 hasImportedDefinitionPath(canonicalVectorMethodTarget)) {
               usedMethodTarget = true;
               hasMethodReceiverIndex = true;
@@ -574,7 +612,19 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         }
       }
       std::string elemType;
-      if (!context.resolveSoaVectorTarget(receiverCandidate, elemType)) {
+      if (!resolveDirectSoaReceiver(receiverCandidate, elemType)) {
+        const std::string canonicalGetPath =
+            canonicalizeLegacySoaGetHelperPath(expr.name);
+        if (receiverCandidate.kind == Expr::Kind::Call &&
+            (isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get") ||
+             isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get_ref"))) {
+          usedMethodTarget = true;
+          resolved = canonicalGetPath;
+          resolvedMethod = false;
+          hasMethodReceiverIndex = true;
+          methodReceiverIndex = receiverIndex;
+          return true;
+        }
         return false;
       }
       usedMethodTarget = true;
@@ -587,6 +637,21 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         return true;
       }
       if (!isBuiltinMethod && defMap_.find(methodResolved) == defMap_.end()) {
+        const std::string canonicalGetPath =
+            canonicalizeLegacySoaGetHelperPath(methodResolved);
+        const std::string canonicalRefPath =
+            canonicalizeLegacySoaRefHelperPath(methodResolved);
+        const bool isCanonicalSoaAccessHelper =
+            isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get") ||
+            isLegacyOrCanonicalSoaHelperPath(canonicalGetPath, "get_ref") ||
+            isCanonicalSoaRefLikeHelperPath(canonicalRefPath);
+        if (isCanonicalSoaAccessHelper) {
+          resolved = methodResolved;
+          resolvedMethod = false;
+          hasMethodReceiverIndex = true;
+          methodReceiverIndex = receiverIndex;
+          return true;
+        }
         (void)failCollectionAccessTargetDiagnostic("unknown method: " + methodResolved);
         failedReceiverProbe = true;
         return true;

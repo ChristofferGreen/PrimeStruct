@@ -36,7 +36,8 @@
                 continue;
               }
               if (matchesGeneratedLeafDefinition(candidatePath, "__t", 3) ||
-                  matchesGeneratedLeafDefinition(candidatePath, "__ov", 4)) {
+                  matchesGeneratedLeafDefinition(candidatePath, "__ov", 4) ||
+                  matchesGeneratedLeafDefinition(candidatePath, "<", 1)) {
                 return def;
               }
             }
@@ -590,6 +591,46 @@
             },
             [&](const Expr &targetCallExpr, ir_lowerer::MapAccessTargetInfo &targetInfoOut) {
               targetInfoOut = {};
+              auto tryPopulateMapFromSemanticQueryFact = [&]() {
+                if (semanticProgram == nullptr) {
+                  return false;
+                }
+                const SemanticProductIndex semanticIndex =
+                    ir_lowerer::buildSemanticProductIndex(semanticProgram);
+                const auto *queryFact =
+                    ir_lowerer::findSemanticProductQueryFact(semanticProgram, semanticIndex, targetCallExpr);
+                if (queryFact == nullptr) {
+                  return false;
+                }
+                std::string bindingType = ir_lowerer::trimTemplateTypeText(queryFact->bindingTypeText);
+                if (bindingType.empty()) {
+                  bindingType = ir_lowerer::trimTemplateTypeText(queryFact->queryTypeText);
+                }
+                std::string base;
+                std::string argText;
+                if (!splitTemplateTypeName(bindingType, base, argText) ||
+                    ir_lowerer::normalizeCollectionBindingTypeName(
+                        ir_lowerer::trimTemplateTypeText(base)) != "map") {
+                  return false;
+                }
+                std::vector<std::string> args;
+                if (!splitTemplateArgs(argText, args) || args.size() != 2) {
+                  return false;
+                }
+                targetInfoOut.mapKeyKind =
+                    ir_lowerer::valueKindFromTypeName(ir_lowerer::trimTemplateTypeText(args.front()));
+                targetInfoOut.mapValueKind =
+                    ir_lowerer::valueKindFromTypeName(ir_lowerer::trimTemplateTypeText(args.back()));
+                if (targetInfoOut.mapKeyKind == ir_lowerer::LocalInfo::ValueKind::Unknown ||
+                    targetInfoOut.mapValueKind == ir_lowerer::LocalInfo::ValueKind::Unknown) {
+                  return false;
+                }
+                targetInfoOut.isMapTarget = true;
+                return true;
+              };
+              if (tryPopulateMapFromSemanticQueryFact()) {
+                return true;
+              }
               auto inferExperimentalMapStructPathFromTypeTexts =
                   [](const std::string &keyTypeText, const std::string &valueTypeText) {
                     std::string canonicalArgs;
@@ -759,6 +800,21 @@
                   targetInfoOut.elemKind = elemKind;
                   targetInfoOut.structTypeName = bindingType;
                   return true;
+                }
+                std::string base;
+                std::string argText;
+                if (splitTemplateTypeName(bindingType, base, argText) &&
+                    ir_lowerer::normalizeCollectionBindingTypeName(
+                        ir_lowerer::trimTemplateTypeText(base)) == "vector") {
+                  std::vector<std::string> args;
+                  if (!splitTemplateArgs(argText, args) || args.size() != 1) {
+                    return false;
+                  }
+                  targetInfoOut.isArrayOrVectorTarget = true;
+                  targetInfoOut.isVectorTarget = true;
+                  targetInfoOut.elemKind =
+                      ir_lowerer::valueKindFromTypeName(ir_lowerer::trimTemplateTypeText(args.front()));
+                  return targetInfoOut.elemKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
                 }
                 if (bindingType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0) {
                   targetInfoOut.isArrayOrVectorTarget = true;

@@ -1184,6 +1184,9 @@ bool validateBuiltinSoaHelperReturnMetadataExpr(
   if (helperName.empty()) {
     return true;
   }
+  if (helperName == "ref" || helperName == "ref_ref") {
+    return true;
+  }
   const bool helperArityMatches =
       (helperName == "count" || helperName == "count_ref") ? expr.args.size() == 1
                                                            : expr.args.size() == 2;

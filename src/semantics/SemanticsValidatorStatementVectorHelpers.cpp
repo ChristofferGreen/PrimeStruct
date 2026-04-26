@@ -34,6 +34,11 @@ bool isSoaMutatorName(std::string_view helperName) {
   return helperName == "push" || helperName == "reserve";
 }
 
+bool isSoaAccessName(std::string_view helperName) {
+  return helperName == "get" || helperName == "get_ref" ||
+         helperName == "ref" || helperName == "ref_ref";
+}
+
 std::string explicitOldSoaMutatorPath(const Expr &candidate) {
   if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
     return "";
@@ -49,6 +54,27 @@ std::string explicitOldSoaMutatorPath(const Expr &candidate) {
   }
   const std::string_view helperName = std::string_view(normalizedName).substr(kOldExplicitPrefix.size());
   if (!isSoaMutatorName(helperName)) {
+    return "";
+  }
+  return "/soa_vector/" + std::string(helperName);
+}
+
+std::string explicitOldSoaAccessPath(const Expr &candidate) {
+  if (candidate.kind != Expr::Kind::Call || candidate.name.empty()) {
+    return "";
+  }
+  const std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
+  const std::string normalizedPrefix = std::string(trimLeadingSlash(candidate.namespacePrefix));
+  if (normalizedPrefix == "soa_vector" && isSoaAccessName(normalizedName)) {
+    return "/soa_vector/" + normalizedName;
+  }
+  constexpr std::string_view kOldExplicitPrefix = "soa_vector/";
+  if (normalizedName.rfind(kOldExplicitPrefix, 0) != 0) {
+    return "";
+  }
+  const std::string_view helperName =
+      std::string_view(normalizedName).substr(kOldExplicitPrefix.size());
+  if (!isSoaAccessName(helperName)) {
     return "";
   }
   return "/soa_vector/" + std::string(helperName);
@@ -452,6 +478,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     return "";
   }();
   const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback = false;
+  if (!bareBuiltinVectorMutatorPreferredPath.empty()) {
+    vectorHelperResolved = bareBuiltinVectorMutatorPreferredPath;
+  }
   const bool isUserMethodTarget =
       stmt.isMethodCall && defMap_.find(vectorHelperResolved) != defMap_.end() &&
       vectorHelperResolved.rfind("/std/collections/vector/", 0) != 0 &&
@@ -469,6 +498,27 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       }
     }
     return validateExpr(params, locals, stmt, enclosingStatements, statementIndex);
+  }
+  const std::string oldExplicitSoaAccessPath = explicitOldSoaAccessPath(stmt);
+  const bool hasVisibleOldExplicitSoaAccessHelper =
+      !oldExplicitSoaAccessPath.empty() &&
+      (hasDeclaredDefinitionPath(oldExplicitSoaAccessPath) ||
+       hasImportedDefinitionPath(oldExplicitSoaAccessPath));
+  if (!oldExplicitSoaAccessPath.empty() && !hasVisibleOldExplicitSoaAccessHelper) {
+    if (hasNamedStatementArgs) {
+      return failStatementDiagnostic(
+          soaUnavailableMethodDiagnostic(oldExplicitSoaAccessPath));
+    }
+    if (!stmt.templateArgs.empty()) {
+      return failStatementDiagnostic(vectorHelper + " does not accept template arguments");
+    }
+    if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
+      return failStatementDiagnostic(vectorHelper + " does not accept block arguments");
+    }
+    if (stmt.args.size() != 2) {
+      return failStatementDiagnostic("argument count mismatch for builtin " + vectorHelper);
+    }
+    return true;
   }
   const std::string oldExplicitSoaPath = explicitOldSoaMutatorPath(stmt);
   const std::string oldExplicitSoaCanonicalPath =
@@ -546,8 +596,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool shouldProbeVectorHelperReceiver =
       !(isStdNamespacedCanonicalBuiltinHelperCall && !hasResolvedVectorHelperDefinition &&
         !shouldAllowStdNamespacedVectorHelperCompatibilityFallback) &&
-      (!hasResolvedVectorHelperDefinition || isNamespacedVectorHelperCall) &&
-      !(isStdNamespacedCanonicalBuiltinHelperCall && hasResolvedVectorHelperDefinition);
+      (!hasResolvedVectorHelperDefinition || isNamespacedVectorHelperCall);
   if (shouldProbeVectorHelperReceiver && !stmt.args.empty()) {
     auto isVectorHelperReceiverName = [&](const Expr &candidate) -> bool {
       if (candidate.kind != Expr::Kind::Name) {
@@ -596,7 +645,6 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       }
     } else {
       const bool probePositionalReorderedReceiver =
-          !isStdNamespacedCanonicalBuiltinHelperCall &&
           stmt.args.size() > 1 &&
           (stmt.args.front().kind == Expr::Kind::Literal || stmt.args.front().kind == Expr::Kind::BoolLiteral ||
            stmt.args.front().kind == Expr::Kind::FloatLiteral ||
@@ -616,8 +664,17 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   const bool hasVisibleResolvedVectorHelper =
       hasDeclaredResolvedVectorHelper || hasImportedResolvedVectorHelper ||
       hasResolvedVectorHelperDefinition;
+  const bool isResolvedStdNamespacedVectorMutatorHelper =
+      vectorHelperResolved == "/std/collections/vector/push" ||
+      vectorHelperResolved == "/std/collections/vector/pop" ||
+      vectorHelperResolved == "/std/collections/vector/reserve" ||
+      vectorHelperResolved == "/std/collections/vector/clear" ||
+      vectorHelperResolved == "/std/collections/vector/remove_at" ||
+      vectorHelperResolved == "/std/collections/vector/remove_swap";
   const bool canonicalBuiltinCompatibilityHelper =
-      isStdNamespacedCanonicalBuiltinHelperCall && hasVisibleResolvedVectorHelper;
+      (isStdNamespacedCanonicalBuiltinHelperCall ||
+       isResolvedStdNamespacedVectorMutatorHelper) &&
+      hasVisibleResolvedVectorHelper;
   const bool canonicalCompatibilityAllowsSoaVectorTarget =
       vectorHelperIsPush || vectorHelperIsReserve;
   bool shouldUseCanonicalBuiltinCompatibilityFallback = false;
@@ -692,13 +749,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
   }
   const bool isCanonicalStdVectorMutatorMethodCall =
-      stmt.isMethodCall &&
-      (vectorHelperResolved == "/std/collections/vector/push" ||
-       vectorHelperResolved == "/std/collections/vector/pop" ||
-       vectorHelperResolved == "/std/collections/vector/reserve" ||
-       vectorHelperResolved == "/std/collections/vector/clear" ||
-       vectorHelperResolved == "/std/collections/vector/remove_at" ||
-       vectorHelperResolved == "/std/collections/vector/remove_swap");
+      stmt.isMethodCall && isResolvedStdNamespacedVectorMutatorHelper;
   const bool isResolvedExperimentalVectorHelper =
       vectorHelperResolved.rfind("/std/collections/experimental_vector/", 0) == 0;
   const bool isResolvedSoaHelper =
@@ -717,6 +768,7 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   if (!isBareCanonicalIndexedRemovalExperimentalVectorBridgeCall &&
       !shouldUseCanonicalBuiltinCompatibilityFallback &&
+      bareBuiltinVectorMutatorPreferredPath.empty() &&
       hasVisibleResolvedVectorHelper) {
     const size_t receiverIndex = hasResolvedReceiverIndex ? resolvedReceiverIndex : 0;
     if (receiverIndex < stmt.args.size() && vectorHelperNeedsStandaloneSoaBorrowCheck) {
@@ -744,8 +796,8 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
         }
       }
     }
-    if (!isStdNamespacedCanonicalBuiltinHelperCall &&
-        hasResolvedReceiverIndex && resolvedReceiverIndex > 0 && resolvedReceiverIndex < helperCall.args.size()) {
+    if (hasResolvedReceiverIndex && resolvedReceiverIndex > 0 &&
+        resolvedReceiverIndex < helperCall.args.size()) {
       std::swap(helperCall.args[0], helperCall.args[resolvedReceiverIndex]);
       if (helperCall.argNames.size() < helperCall.args.size()) {
         helperCall.argNames.resize(helperCall.args.size());
@@ -828,6 +880,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   }
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     return failStatementDiagnostic(vectorHelper + " does not accept block arguments");
+  }
+  if (!bareBuiltinVectorMutatorPreferredPath.empty() &&
+      !shouldUseCanonicalBuiltinCompatibilityFallback && !stmt.args.empty()) {
+    return failExprDiagnostic(stmt.args.front(),
+                              vectorHelper +
+                                  " requires mutable vector binding");
   }
   auto failIfStandaloneSoaGrowthBorrowed = [&](const BindingInfo &binding, const Expr &receiverExpr) -> bool {
     if (!isSoaGrowthBinding(binding)) {

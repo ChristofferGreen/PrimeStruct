@@ -188,6 +188,27 @@ bool SemanticsValidator::validateExprLateUnknownTargetFallbacks(
     }
   }
 
+  if (expr.isMethodCall &&
+      !requestsExplicitVectorCompatibilityMethod &&
+      (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||
+       normalizedMethodName == "ref" || normalizedMethodName == "ref_ref" ||
+       normalizedMethodName == "to_aos" ||
+       normalizedMethodName == "to_aos_ref") &&
+      !expr.args.empty()) {
+    std::string collectionMethodTarget;
+    if (resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
+                                        normalizedMethodName,
+                                        collectionMethodTarget) &&
+        hasVisibleDefinitionPathForCurrentImports(collectionMethodTarget)) {
+      Expr rewrittenCollectionMethodCall = expr;
+      rewrittenCollectionMethodCall.isMethodCall = false;
+      rewrittenCollectionMethodCall.namespacePrefix.clear();
+      rewrittenCollectionMethodCall.name = collectionMethodTarget;
+      handledOut = true;
+      return validateExpr(params, locals, rewrittenCollectionMethodCall);
+    }
+  }
+
   if (!expr.isMethodCall && expr.args.size() == 2 &&
       expr.name.find('/') == std::string::npos &&
       (normalizedMethodName == "get" || normalizedMethodName == "get_ref" ||

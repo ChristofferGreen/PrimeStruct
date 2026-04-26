@@ -141,6 +141,18 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   }
 
   const Expr &initializer = stmt.args.front();
+  if (initializer.kind == Expr::Kind::Call && !initializer.isMethodCall) {
+    const bool explicitOldGetRef =
+        initializer.name == "/soa_vector/get_ref" ||
+        initializer.name == "soa_vector/get_ref" ||
+        ((initializer.namespacePrefix == "/soa_vector" ||
+          initializer.namespacePrefix == "soa_vector") &&
+         initializer.name == "get_ref");
+    if (explicitOldGetRef &&
+        !hasVisibleDefinitionPathForCurrentImports("/soa_vector/get_ref")) {
+      return failBindingDiagnostic("get_ref is only supported as a statement");
+    }
+  }
   auto isEmptyBuiltinBlockInitializer = [&](const Expr &candidate) -> bool {
     if (!candidate.hasBodyArguments || !candidate.bodyArguments.empty()) {
       return false;

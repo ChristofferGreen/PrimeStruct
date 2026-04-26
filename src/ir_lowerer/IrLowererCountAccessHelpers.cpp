@@ -394,8 +394,7 @@ bool isVectorCapacityCall(const Expr &expr, const LocalMap &localsIn) {
   };
 
   if (target.kind == Expr::Kind::Name) {
-    auto it = localsIn.find(target.name);
-    return it != localsIn.end() && isSupportedVectorTarget(it->second, false);
+    return false;
   }
   if (target.kind == Expr::Kind::Call) {
     if (isSimpleCallName(target, "dereference") && target.args.size() == 1) {
@@ -550,7 +549,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   }
   if (isExplicitPublishedVectorCountCall(expr) &&
       expr.args.size() == 1 &&
-      !isNamedArgumentCollectionTemporary(expr.args.front(), "vector")) {
+      expr.args.front().kind == Expr::Kind::Name &&
+      !isNamedArgumentCollectionTemporary(expr.args.front(), "vector") &&
+      isVectorCountTarget(expr.args.front(), localsIn)) {
     return CountAccessCallEmitResult::NotHandled;
   }
   const bool namedArgVectorTemporaryCountTarget =

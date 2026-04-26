@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 
 #include <optional>
 #include <string>
@@ -529,6 +530,16 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
     const ReturnKind actualKind = inferExprReturnKind(arg, params, locals);
     if (actualKind == ReturnKind::Array && isBuiltinCollectionLiteralExpr(arg)) {
       return true;
+    }
+    const bool mapConstructorCall =
+        isResolvedMapConstructorPath(diagnosticResolved) ||
+        isResolvedMapConstructorPath(resolved);
+    if (mapConstructorCall && actualKind == ReturnKind::Bool &&
+        expectedKind != ReturnKind::Bool) {
+      return failArgumentValidation(
+          arg,
+          "argument type mismatch for " + diagnosticResolved + " parameter " + param.name +
+              ": expected " + typeNameForReturnKind(expectedKind) + " got bool");
     }
     if (isSoftwareNumericParamCompatible(expectedKind, actualKind)) {
       return true;

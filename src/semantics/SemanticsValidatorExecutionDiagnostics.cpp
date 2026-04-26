@@ -424,6 +424,24 @@ void SemanticsValidator::collectExecutionIntraBodyCallDiagnostics(
         }
         const std::string resolved = resolveCalleePath(expr);
         if (defMap_.count(resolved) == 0) {
+          if (resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+              expr.args.size() != 1) {
+            appendExecutionRecord(
+                expr,
+                hasNamedArguments(expr.argNames)
+                    ? "named arguments not supported for builtin calls"
+                    : "argument count mismatch for builtin count");
+            return;
+          }
+          if (resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+              expr.args.size() != 1) {
+            appendExecutionRecord(
+                expr,
+                hasNamedArguments(expr.argNames)
+                    ? "named arguments not supported for builtin calls"
+                    : "argument count mismatch for builtin capacity");
+            return;
+          }
           appendExecutionRecord(expr, "unknown call target: " + formatUnknownCallTarget(expr));
         } else {
           collectResolvedCallArgumentDiagnostic(expr, resolved);

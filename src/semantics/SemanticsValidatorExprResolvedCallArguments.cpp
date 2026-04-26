@@ -282,6 +282,13 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   };
   auto checkStandaloneSoaRefEscapes = [&](const Expr &arg,
                                           const ParameterInfo &param) -> bool {
+    if (const auto pendingPath =
+            builtinSoaDirectPendingHelperPath(arg, params, locals)) {
+      if (pendingPath->find("/std/collections/soa_vector/ref") == 0) {
+        return failResolvedCallArgumentDiagnostic(
+            soaUnavailableMethodDiagnostic(*pendingPath));
+      }
+    }
     if (!isReferenceEscapeCandidate(arg, param)) {
       return true;
     }
@@ -290,6 +297,14 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
   };
   auto checkStandaloneSoaFieldViewEscapes = [&](const Expr &arg,
                                                 const ParameterInfo &param) -> bool {
+    if (const auto pendingPath =
+            builtinSoaDirectPendingHelperPath(arg, params, locals)) {
+      std::string pendingFieldName;
+      if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName)) {
+        return failResolvedCallArgumentDiagnostic(
+            "field-view escapes via argument to " + resolved);
+      }
+    }
     const std::string expectedTypeText =
         param.binding.typeTemplateArg.empty()
             ? param.binding.typeName
@@ -301,7 +316,7 @@ bool SemanticsValidator::validateExprResolvedCallArguments(
     if (!isStandaloneSoaFieldViewCall(arg, receiverExpr)) {
       return true;
     }
-    if (receiverExpr == nullptr || receiverExpr->kind == Expr::Kind::Name) {
+    if (receiverExpr == nullptr) {
       return true;
     }
     return failResolvedCallArgumentDiagnostic(

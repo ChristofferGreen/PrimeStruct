@@ -772,7 +772,7 @@
             } else {
               return std::nullopt;
             }
-          } else if (collectionName == "vector") {
+          } else if (collectionName == "vector" && !resolvedCollectionFromDef) {
             return std::nullopt;
           } else {
             if (collectionArgs.size() != 1) {

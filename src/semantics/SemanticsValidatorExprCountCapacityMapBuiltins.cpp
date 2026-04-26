@@ -293,7 +293,7 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       it == defMap_.end();
   const auto tryValidateVectorCountBuiltinPath = [&]() -> std::optional<bool> {
     if (resolvedMethod &&
-        logicalResolvedMethod == "/std/collections/vector/count") {
+        logicalResolvedMethod.rfind("/std/collections/vector/count", 0) == 0) {
       return validateVectorCountBuiltinPath(false);
     }
     if (shouldValidateVectorCountBuiltinFallback) {

@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "MapConstructorHelpers.h"
 
 #include <array>
 #include <functional>
@@ -983,6 +984,101 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           return false;
         }
       }
+    }
+    auto validateAssignedMapConstructorValue = [&]() -> bool {
+      if (!targetIsName || expr.args[1].kind != Expr::Kind::Call ||
+          expr.args[1].args.empty() || expr.args[1].args.size() % 2 != 0) {
+        return true;
+      }
+      const std::string rhsPath = resolveCalleePath(expr.args[1]);
+      std::string constructorPath = rhsPath;
+      if (!isResolvedMapConstructorPath(constructorPath)) {
+        constructorPath = metadataBackedExperimentalMapConstructorRewritePath(
+            rhsPath, expr.args[1].args.size());
+      }
+      if (constructorPath.empty() ||
+          !isResolvedMapConstructorPath(constructorPath)) {
+        return true;
+      }
+      const BindingInfo *targetBinding = findNamedBinding(target.name);
+      if (targetBinding == nullptr) {
+        return true;
+      }
+      std::string keyType;
+      std::string valueType;
+      if (!extractMapKeyValueTypes(*targetBinding, keyType, valueType)) {
+        return true;
+      }
+      const std::array<std::string, 2> expectedTypes = {keyType, valueType};
+      auto argumentMatchesExpectedType =
+          [&](const Expr &arg, const std::string &expectedType,
+              std::string &actualTypeOut) {
+            actualTypeOut.clear();
+            const std::string normalizedExpected =
+                normalizeBindingTypeName(expectedType);
+            if (normalizedExpected.empty()) {
+              return true;
+            }
+            const std::string primitiveType =
+                inferPrimitiveBindingTypeFromInitializer(arg);
+            if (!primitiveType.empty()) {
+              actualTypeOut = primitiveType;
+              return normalizeBindingTypeName(primitiveType) ==
+                     normalizedExpected;
+            }
+            const ReturnKind expectedKind =
+                returnKindForTypeName(normalizedExpected);
+            if (expectedKind != ReturnKind::Unknown) {
+              const ReturnKind actualKind =
+                  inferExprReturnKind(arg, params, locals);
+              if (actualKind != ReturnKind::Unknown) {
+                actualTypeOut = typeNameForReturnKind(actualKind);
+                return actualKind == expectedKind;
+              }
+            }
+            std::string inferredTypeText;
+            if (inferQueryExprTypeText(arg, params, locals,
+                                       inferredTypeText) &&
+                !inferredTypeText.empty()) {
+              actualTypeOut = inferredTypeText;
+              return normalizeBindingTypeName(inferredTypeText) ==
+                     normalizedExpected;
+            }
+            const std::string actualStructPath =
+                inferStructReturnPath(arg, params, locals);
+            if (!actualStructPath.empty()) {
+              actualTypeOut = actualStructPath;
+              const std::string expectedStructPath = resolveStructTypePath(
+                  expectedType, expr.namespacePrefix, structNames_);
+              if (!expectedStructPath.empty()) {
+                return actualStructPath == expectedStructPath;
+              }
+              return normalizeBindingTypeName(actualStructPath) ==
+                     normalizedExpected;
+            }
+            return true;
+          };
+      for (size_t argIndex = 0; argIndex < expr.args[1].args.size();
+           ++argIndex) {
+        const std::string &expectedType = expectedTypes[argIndex % 2];
+        std::string actualType;
+        if (argumentMatchesExpectedType(expr.args[1].args[argIndex],
+                                        expectedType, actualType)) {
+          continue;
+        }
+        std::string message = "argument type mismatch for " + constructorPath +
+                              " parameter " +
+                              (argIndex % 2 == 0 ? "key" : "value") +
+                              ": expected " + expectedType;
+        if (!actualType.empty()) {
+          message += " got " + actualType;
+        }
+        return failMutationBorrowDiagnostic(std::move(message));
+      }
+      return true;
+    };
+    if (!validateAssignedMapConstructorValue()) {
+      return false;
     }
     if (!validateExpr(params, locals, expr.args[1])) {
       return false;

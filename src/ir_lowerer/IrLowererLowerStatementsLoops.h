@@ -373,6 +373,24 @@
             return emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
           },
           [&](const Expr &candidate) {
+            if (candidate.isMethodCall && candidate.namespacePrefix.empty() &&
+                !candidate.args.empty() &&
+                (candidate.name == "push" || candidate.name == "pop" ||
+                 candidate.name == "reserve" || candidate.name == "clear" ||
+                 candidate.name == "remove_at" ||
+                 candidate.name == "remove_swap") &&
+                candidate.args.front().kind == Expr::Kind::Name) {
+              auto localIt = localsIn.find(candidate.args.front().name);
+              if (localIt != localsIn.end() && !localIt->second.isSoaVector &&
+                  (localIt->second.kind == LocalInfo::Kind::Vector ||
+                   localIt->second.structTypeName ==
+                       "/std/collections/experimental_vector/Vector" ||
+                   localIt->second.structTypeName.rfind(
+                       "/std/collections/experimental_vector/Vector__", 0) ==
+                       0)) {
+                return false;
+              }
+            }
             if (candidate.isMethodCall && !isArrayCountCall(candidate, localsIn) &&
                 !isStringCountCall(candidate, localsIn) && !isVectorCapacityCall(candidate, localsIn)) {
               return resolveMethodCallDefinition(candidate, localsIn) != nullptr;

@@ -349,6 +349,22 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     }
     return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   };
+  auto tryResolveVectorReceiverSamePathSoaHelper =
+      [&](std::string_view helperName) -> bool {
+    if (!(helperName == "count" || helperName == "count_ref" ||
+          helperName == "get" || helperName == "get_ref" ||
+          helperName == "ref" || helperName == "ref_ref" ||
+          helperName == "to_aos" || helperName == "to_aos_ref" ||
+          helperName == "push" || helperName == "reserve")) {
+      return false;
+    }
+    if (!usesSamePathSoaHelperTargetForCollectionType(helperName, "/vector")) {
+      return false;
+    }
+    resolvedOut = preferredSoaHelperTargetForCollectionType(helperName,
+                                                            "/vector");
+    return true;
+  };
   std::string experimentalElemType;
   if (resolveExperimentalVectorReceiver(receiver, experimentalElemType)) {
     if ((normalizedHelperName == "at" || normalizedHelperName == "at_unsafe") &&
@@ -389,16 +405,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
        normalizedHelperName == "push" || normalizedHelperName == "reserve")) {
     std::string collectionTypePath;
     if (resolveCallCollectionTypePath(receiver, params, locals, collectionTypePath)) {
-      if (collectionTypePath == "/vector" &&
-          (normalizedHelperName == "push" || normalizedHelperName == "reserve") &&
-          usesSamePathSoaHelperTargetForCollectionType(normalizedHelperName,
-                                                       "/vector")) {
-        resolvedOut =
-            preferredSoaHelperTargetForCollectionType(normalizedHelperName,
-                                                      "/vector");
-        return true;
-      }
       if (collectionTypePath == "/vector") {
+        if (tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
+          return true;
+        }
         resolvedOut = preferredBareVectorHelperTarget(normalizedHelperName);
         return true;
       }
@@ -486,6 +496,10 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
     if (resolvedType.empty()) {
       return false;
     }
+    if (resolvedType == "/vector" &&
+        tryResolveVectorReceiverSamePathSoaHelper(normalizedHelperName)) {
+      return true;
+    }
     if ((resolvedType == "/map" || isMapCollectionTypeName(normalizedTypeName)) &&
         (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
          normalizedHelperName == "size" ||
@@ -495,15 +509,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
          normalizedHelperName == "at_unsafe" || normalizedHelperName == "at_unsafe_ref" ||
          normalizedHelperName == "insert" || normalizedHelperName == "insert_ref")) {
       resolvedOut = preferredBareMapHelperTarget(normalizedHelperName);
-      return true;
-    }
-    if ((resolvedType == "/vector" || normalizedTypeName == "vector") &&
-        (normalizedHelperName == "push" || normalizedHelperName == "reserve") &&
-        usesSamePathSoaHelperTargetForCollectionType(normalizedHelperName,
-                                                     "/vector")) {
-      resolvedOut =
-          preferredSoaHelperTargetForCollectionType(normalizedHelperName,
-                                                    "/vector");
       return true;
     }
     if (resolvedType == "/vector" &&
@@ -534,15 +539,6 @@ bool SemanticsValidator::resolveVectorHelperMethodTarget(
       resolvedType = inferStructReturnPath(receiver, params, locals);
     }
     if (!resolvedType.empty()) {
-      if ((resolvedType == "/vector" || normalizeBindingTypeName(resolvedType) == "vector") &&
-          (normalizedHelperName == "push" || normalizedHelperName == "reserve") &&
-          usesSamePathSoaHelperTargetForCollectionType(normalizedHelperName,
-                                                       "/vector")) {
-        resolvedOut =
-            preferredSoaHelperTargetForCollectionType(normalizedHelperName,
-                                                      "/vector");
-        return true;
-      }
       if (resolvedType == "/soa_vector" &&
           (normalizedHelperName == "count" || normalizedHelperName == "count_ref" ||
            normalizedHelperName == "get" || normalizedHelperName == "get_ref" ||
@@ -702,10 +698,49 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   std::string namespacedCollection;
   std::string namespacedHelper;
   getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper);
+  auto diagnosticCallTarget = [&]() {
+    if (!expr.name.empty() && expr.name.front() == '/') {
+      return expr.name;
+    }
+    if (!expr.namespacePrefix.empty()) {
+      std::string prefix = expr.namespacePrefix;
+      if (!prefix.empty() && prefix.front() != '/') {
+        prefix.insert(prefix.begin(), '/');
+      }
+      return prefix + "/" + expr.name;
+    }
+    return resolved;
+  };
   const bool hasNamedArgs = hasNamedArguments(expr.argNames);
   const bool isStdNamespacedVectorCanonicalCompatibilityDirectCallSite =
       isStdNamespacedVectorCanonicalCompatibilityDirectCall(
           expr, resolved, namespacedCollection, namespacedHelper);
+  if (expr.isMethodCall && !expr.args.empty() &&
+      (vectorHelper == "count" || vectorHelper == "capacity")) {
+    std::string methodTarget;
+    const bool resolvedVectorMethod =
+        resolveVectorHelperMethodTarget(params, locals, expr.args.front(),
+                                        vectorHelper, methodTarget);
+    const bool targetsCanonicalVectorCount =
+        vectorHelper == "count" &&
+        ((resolved.rfind("/std/collections/vector/count", 0) == 0) ||
+         (resolvedVectorMethod &&
+          methodTarget.rfind("/std/collections/vector/count", 0) == 0));
+    const bool targetsCanonicalVectorCapacity =
+        vectorHelper == "capacity" &&
+        ((resolved.rfind("/std/collections/vector/capacity", 0) == 0) ||
+         (resolvedVectorMethod &&
+          methodTarget.rfind("/std/collections/vector/capacity", 0) == 0));
+    if ((targetsCanonicalVectorCount || targetsCanonicalVectorCapacity) &&
+        expr.args.size() != 1) {
+      if (hasNamedArgs) {
+        return failVectorHelperDiagnostic(
+            "named arguments not supported for builtin calls");
+      }
+      return failVectorHelperDiagnostic(
+          "argument count mismatch for builtin " + vectorHelper);
+    }
+  }
   const bool isStdNamespacedVectorCanonicalCountCapacityNamedArgException =
       isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
       (namespacedHelper == "count" || namespacedHelper == "capacity") &&
@@ -719,7 +754,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
   if (isStdNamespacedVectorCanonicalCompatibilityDirectCallSite &&
       !hasVisibleDefinitionPath(resolved) &&
       !isStdNamespacedVectorCanonicalCountCapacityNamedArgException) {
-    return failVectorHelperDiagnostic("unknown call target: " + resolved);
+    return failVectorHelperDiagnostic("unknown call target: " + diagnosticCallTarget());
   }
   if (isStdNamespacedVectorCanonicalCompatibilityMethodCall(
           expr, resolved, namespacedCollection, namespacedHelper)) {
@@ -736,7 +771,7 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
             defMap_.count(resolved) > 0 &&
                 hasReceiverCompatibleVisibleDefinitionPath(resolved, receiverExpr),
             isStdNamespacedVectorCanonicalCountCapacityNamedArgException)) {
-      return failVectorHelperDiagnostic("unknown call target: " + resolved);
+      return failVectorHelperDiagnostic("unknown call target: " + diagnosticCallTarget());
     }
   }
 
@@ -767,11 +802,8 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
         return false;
       }
       const Expr &receiverCandidate = expr.args[receiverIndex];
-      if (isBareVectorMutatorExpressionReceiver(receiverCandidate)) {
-        failedReceiverProbe = true;
-        return failVectorHelperDiagnostic(
-            vectorHelper + " is only supported as a statement");
-      }
+      const bool isBareMutatorExpressionReceiver =
+          isBareVectorMutatorExpressionReceiver(receiverCandidate);
       std::string methodTarget;
       if (resolveVectorHelperMethodTarget(params, locals, receiverCandidate, vectorHelper, methodTarget)) {
         if (!expr.isMethodCall) {
@@ -780,6 +812,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       }
       if (!hasVisibleDefinitionPath(methodTarget)) {
         return false;
+      }
+      if (isBareMutatorExpressionReceiver) {
+        failedReceiverProbe = true;
+        return failVectorHelperDiagnostic(
+            vectorHelper + " is only supported as a statement");
       }
       resolved = methodTarget;
       resolvedVectorHelperDefinitionMissing =
@@ -880,6 +917,11 @@ bool SemanticsValidator::resolveExprVectorHelperCall(const std::vector<Parameter
       }
       return failVectorHelperDiagnostic(vectorHelper + " is only supported as a statement");
     }
+    return true;
+  }
+
+  if (expr.isMethodCall &&
+      (vectorHelper == "at" || vectorHelper == "at_unsafe")) {
     return true;
   }
 

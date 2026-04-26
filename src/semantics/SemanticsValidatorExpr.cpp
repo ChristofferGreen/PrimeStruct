@@ -87,6 +87,84 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isBinding) {
       return failExprRootDiagnostic("binding not allowed in expression context");
     }
+    if (expr.isMethodCall &&
+        (expr.name == "count" || expr.name == "get" ||
+         expr.name == "get_ref" || expr.name == "ref") &&
+        hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + expr.name)) {
+      for (const Expr &arg : expr.args) {
+        if (!validateExpr(params, locals, arg, enclosingStatements,
+                          statementIndex)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (!expr.isMethodCall && !expr.isFieldAccess && expr.args.size() == 2 &&
+        expr.args.front().kind == Expr::Kind::Call) {
+      const std::string canonicalSoaGetPath =
+          canonicalizeLegacySoaGetHelperPath(expr.name);
+      std::string soaGetHelper;
+      if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get")) {
+        soaGetHelper = "get";
+      } else if (isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref")) {
+        soaGetHelper = "get_ref";
+      }
+      const bool usesCanonicalSoaGetSurface =
+          expr.name.rfind("/std/collections/soa_vector/", 0) == 0 ||
+          expr.namespacePrefix == "std/collections/soa_vector" ||
+          expr.namespacePrefix == "/std/collections/soa_vector";
+      if (!soaGetHelper.empty() && usesCanonicalSoaGetSurface) {
+        std::string receiverTypeText;
+        const bool receiverIsExperimentalSoa =
+            inferQueryExprTypeText(expr.args.front(), params, locals,
+                                   receiverTypeText) &&
+            (receiverTypeText.find("SoaVector") != std::string::npos ||
+             receiverTypeText.find("experimental_soa_vector") !=
+                 std::string::npos);
+        if (!receiverIsExperimentalSoa) {
+          return failExprRootDiagnostic(
+              soaUnavailableMethodDiagnostic("/std/collections/soa_vector/" +
+                                             soaGetHelper));
+        }
+        if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+          return failExprRootDiagnostic(soaGetHelper +
+                                        " does not accept block arguments");
+        }
+        if (!expr.templateArgs.empty()) {
+          return failExprRootDiagnostic(soaGetHelper +
+                                        " does not accept template arguments");
+        }
+        const Expr &indexExpr = expr.args[1];
+        if (indexExpr.kind == Expr::Kind::BoolLiteral ||
+            indexExpr.kind == Expr::Kind::FloatLiteral ||
+            indexExpr.kind == Expr::Kind::StringLiteral) {
+          return failExprRootDiagnostic(soaGetHelper +
+                                        " requires integer index");
+        }
+        return validateExpr(params, locals, expr.args.front(),
+                            enclosingStatements, statementIndex) &&
+               validateExpr(params, locals, expr.args[1],
+                            enclosingStatements, statementIndex);
+      }
+    }
+    if (expr.isFieldAccess && expr.args.size() == 1 &&
+        expr.args.front().kind == Expr::Kind::Call) {
+      const auto elementAccessHelper =
+          builtinSoaAccessHelperName(expr.args.front(), params, locals);
+      if (elementAccessHelper.has_value() &&
+          (*elementAccessHelper == "get" ||
+           *elementAccessHelper == "get_ref" ||
+           *elementAccessHelper == "ref" ||
+           *elementAccessHelper == "ref_ref")) {
+        for (const Expr &arg : expr.args.front().args) {
+          if (!validateExpr(params, locals, arg, enclosingStatements,
+                            statementIndex)) {
+            return false;
+          }
+        }
+        return true;
+      }
+    }
     auto pendingFieldViewNameFromRewrittenHelper = [&]() -> std::optional<std::string> {
       if (expr.kind != Expr::Kind::Call || expr.args.size() < 2 ||
           expr.args[1].kind != Expr::Kind::Literal) {
@@ -195,6 +273,23 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (!hasNamedArguments(expr.argNames)) {
       if (const auto pendingFieldName =
               pendingFieldViewNameFromRewrittenHelper()) {
+        if (!expr.args.empty() && expr.args.front().kind == Expr::Kind::Call) {
+          const auto elementAccessHelper =
+              builtinSoaAccessHelperName(expr.args.front(), params, locals);
+          if (elementAccessHelper.has_value() &&
+              (*elementAccessHelper == "get" ||
+               *elementAccessHelper == "get_ref" ||
+               *elementAccessHelper == "ref" ||
+               *elementAccessHelper == "ref_ref")) {
+            for (const Expr &arg : expr.args.front().args) {
+              if (!validateExpr(params, locals, arg, enclosingStatements,
+                                statementIndex)) {
+                return false;
+              }
+            }
+            return true;
+          }
+        }
         return failExprRootDiagnostic(soaUnavailableMethodDiagnostic(
             soaFieldViewHelperPath(*pendingFieldName)));
       }
@@ -381,6 +476,139 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     bool hasVectorHelperCallResolution = false;
     std::string vectorHelperCallResolvedPath;
     size_t vectorHelperCallReceiverIndex = 0;
+    if (expr.isMethodCall && !expr.args.empty() &&
+        (normalizeCollectionMethodName(expr.name) == "count" ||
+         normalizeCollectionMethodName(expr.name) == "capacity" ||
+         normalizeCollectionMethodName(expr.name) == "at" ||
+         normalizeCollectionMethodName(expr.name) == "at_unsafe")) {
+      std::string receiverTypeText;
+      const bool receiverIsVector =
+          inferQueryExprTypeText(expr.args.front(), params, locals,
+                                 receiverTypeText) &&
+          inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
+              "/vector";
+      if (receiverIsVector) {
+        const std::string helperName = normalizeCollectionMethodName(expr.name);
+        const bool explicitArrayNamespace =
+            expr.namespacePrefix == "array" ||
+            expr.namespacePrefix == "/array" ||
+            expr.name.rfind("/array/", 0) == 0;
+        const bool explicitVectorNamespace =
+            expr.namespacePrefix == "vector" ||
+            expr.namespacePrefix == "/vector" ||
+            expr.name.rfind("/vector/", 0) == 0;
+        if (explicitArrayNamespace) {
+          return failExprRootDiagnostic("unknown method: /array/" + helperName);
+        }
+        if (explicitVectorNamespace) {
+          const std::string samePath = "/vector/" + helperName;
+          if (!hasDeclaredDefinitionPath(samePath) &&
+              !hasImportedDefinitionPath(samePath)) {
+            return failExprRootDiagnostic("unknown method: " + samePath);
+          }
+        } else if (expr.namespacePrefix.empty() && helperName != "capacity") {
+          const std::string samePath = "/vector/" + helperName;
+          if (hasDeclaredDefinitionPath(samePath)) {
+            return failExprRootDiagnostic(
+                "unknown method: /std/collections/vector/" + helperName);
+          }
+        }
+        if ((helperName == "at" || helperName == "at_unsafe") &&
+            expr.args.size() == 2) {
+          const ReturnKind indexKind =
+              inferExprReturnKind(expr.args[1], params, locals);
+          if (indexKind != ReturnKind::Int &&
+              indexKind != ReturnKind::Int64 &&
+              indexKind != ReturnKind::UInt64) {
+            return failExprRootDiagnostic(helperName +
+                                          " requires integer index");
+          }
+        }
+      }
+    }
+    if (!expr.isMethodCall && expr.namespacePrefix.empty() &&
+        expr.name.find('/') == std::string::npos &&
+        (normalizeCollectionMethodName(expr.name) == "count" ||
+         normalizeCollectionMethodName(expr.name) == "capacity" ||
+         normalizeCollectionMethodName(expr.name) == "at" ||
+         normalizeCollectionMethodName(expr.name) == "at_unsafe") &&
+        hasDeclaredDefinitionPath("/vector/" +
+                                  normalizeCollectionMethodName(expr.name))) {
+      const std::string helperName = normalizeCollectionMethodName(expr.name);
+      size_t receiverIndex = 0;
+      for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
+        if (expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
+          receiverIndex = i;
+          break;
+        }
+      }
+      if (receiverIndex < expr.args.size()) {
+        std::string receiverTypeText;
+        if (inferQueryExprTypeText(expr.args[receiverIndex], params, locals,
+                                   receiverTypeText) &&
+            inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
+                "/vector") {
+          return failExprRootDiagnostic(
+              "unknown call target: /std/collections/vector/" + helperName);
+        }
+      }
+    }
+    if (!expr.isMethodCall &&
+        (expr.namespacePrefix == "vector" ||
+         expr.namespacePrefix == "/vector" ||
+         expr.name.rfind("/vector/", 0) == 0)) {
+      const std::string helperName = normalizeCollectionMethodName(expr.name);
+      if (helperName == "count" || helperName == "capacity" ||
+          helperName == "at" || helperName == "at_unsafe") {
+        const std::string samePath = "/vector/" + helperName;
+        auto paramsIt = paramsByDef_.find(samePath);
+        if (paramsIt != paramsByDef_.end()) {
+          const auto &helperParams = paramsIt->second;
+          for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
+            if (!expr.argNames[i].has_value()) {
+              continue;
+            }
+            const std::string &argName = *expr.argNames[i];
+            const bool matched = std::any_of(
+                helperParams.begin(), helperParams.end(),
+                [&](const ParameterInfo &param) { return param.name == argName; });
+            if (!matched) {
+              return failExprRootDiagnostic("unknown named argument: " + argName);
+            }
+          }
+          if (expr.args.size() != helperParams.size()) {
+            return failExprRootDiagnostic("argument count mismatch for " +
+                                          samePath);
+          }
+          for (size_t i = 0; i < expr.args.size() && i < helperParams.size(); ++i) {
+            const std::string expectedType =
+                normalizeBindingTypeName(helperParams[i].binding.typeName);
+            const ReturnKind actualKind =
+                inferExprReturnKind(expr.args[i], params, locals);
+            const bool typeMatches =
+                (expectedType == "i32" && actualKind == ReturnKind::Int) ||
+                (expectedType == "i64" && actualKind == ReturnKind::Int64) ||
+                (expectedType == "u64" && actualKind == ReturnKind::UInt64) ||
+                (expectedType == "bool" && actualKind == ReturnKind::Bool) ||
+                (expectedType == "string" && actualKind == ReturnKind::String) ||
+                expectedType == "vector" ||
+                expectedType == "array";
+            if (!typeMatches) {
+              return failExprRootDiagnostic(
+                  "argument type mismatch for " + samePath +
+                  " parameter " + helperParams[i].name);
+            }
+          }
+          for (const Expr &arg : expr.args) {
+            if (!validateExpr(params, locals, arg, enclosingStatements,
+                              statementIndex)) {
+              return false;
+            }
+          }
+          return true;
+        }
+      }
+    }
     if (!resolveExprVectorHelperCall(params,
                                      locals,
                                      expr,
@@ -1075,6 +1303,44 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
     }
     if (resolvedDefinition == nullptr || calleeParamsIt == paramsByDef_.end()) {
+      if (resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+          expr.args.size() != 1) {
+        if (hasNamedArguments(expr.argNames)) {
+          return failExprRootDiagnostic(
+              "named arguments not supported for builtin calls");
+        }
+        return failExprRootDiagnostic(
+            "argument count mismatch for builtin count");
+      }
+      if (resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+          expr.args.size() != 1) {
+        if (hasNamedArguments(expr.argNames)) {
+          return failExprRootDiagnostic(
+              "named arguments not supported for builtin calls");
+        }
+        return failExprRootDiagnostic(
+            "argument count mismatch for builtin capacity");
+      }
+      if (expr.isMethodCall &&
+          resolved.rfind("/std/collections/vector/count", 0) == 0 &&
+          expr.args.size() != 1) {
+        if (hasNamedArguments(expr.argNames)) {
+          return failExprRootDiagnostic(
+              "named arguments not supported for builtin calls");
+        }
+        return failExprRootDiagnostic(
+            "argument count mismatch for builtin count");
+      }
+      if (expr.isMethodCall &&
+          resolved.rfind("/std/collections/vector/capacity", 0) == 0 &&
+          expr.args.size() != 1) {
+        if (hasNamedArguments(expr.argNames)) {
+          return failExprRootDiagnostic(
+              "named arguments not supported for builtin calls");
+        }
+        return failExprRootDiagnostic(
+            "argument count mismatch for builtin capacity");
+      }
       return failExprRootDiagnostic("unknown call target: " +
                                     formatUnknownCallTarget(expr));
     }

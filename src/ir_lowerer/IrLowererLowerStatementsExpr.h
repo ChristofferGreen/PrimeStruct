@@ -16,6 +16,7 @@
               return !candidatePath.empty() &&
                      (callee.fullPath == candidatePath ||
                       callee.fullPath.rfind(candidatePath + "__", 0) == 0 ||
+                      callee.fullPath.rfind(candidatePath + "<", 0) == 0 ||
                       normalizeCollectionHelperPath(candidatePath) ==
                           normalizeCollectionHelperPath(callee.fullPath));
             };
@@ -47,7 +48,8 @@
               continue;
             }
             if (matchesGeneratedLeafDefinition(path, "__t", 3) ||
-                matchesGeneratedLeafDefinition(path, "__ov", 4)) {
+                matchesGeneratedLeafDefinition(path, "__ov", 4) ||
+                matchesGeneratedLeafDefinition(path, "<", 1)) {
               return def;
             }
           }
@@ -423,7 +425,10 @@
                     "map" &&
                 (rawPath.rfind("/map/", 0) == 0 ||
                  rawPath.rfind("/std/collections/map/", 0) == 0 ||
-                 rawPath.rfind("/std/collections/experimental_map/", 0) == 0) &&
+                 rawPath.rfind("/std/collections/experimental_map/", 0) == 0 ||
+                 resolvedExprPath.rfind("/map/", 0) == 0 ||
+                 resolvedExprPath.rfind("/std/collections/map/", 0) == 0 ||
+                 resolvedExprPath.rfind("/std/collections/experimental_map/", 0) == 0) &&
                 isDirectHelperDefinitionFamily(expr, *directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -431,7 +436,27 @@
               return true;
             }
             std::string helperName;
-            if (resolveMapHelperAliasName(expr, helperName) &&
+            const bool hasMapHelperAlias = resolveMapHelperAliasName(expr, helperName);
+            if (!hasMapHelperAlias) {
+              const size_t leafStart = rawPath.find_last_of('/');
+              std::string helperLeaf =
+                  leafStart == std::string::npos ? rawPath : rawPath.substr(leafStart + 1);
+              const size_t generatedSuffix = helperLeaf.find("__");
+              if (generatedSuffix != std::string::npos) {
+                helperLeaf.erase(generatedSuffix);
+              }
+              if (helperLeaf == "mapCount" || helperLeaf == "mapCountRef") {
+                helperName = "count";
+              } else if (helperLeaf == "mapContains" || helperLeaf == "mapContainsRef") {
+                helperName = "contains";
+              } else if (helperLeaf == "mapTryAt" || helperLeaf == "mapTryAtRef" ||
+                         helperLeaf == "tryAt" || helperLeaf == "tryAt_ref") {
+                helperName = "tryAt";
+              } else if (helperLeaf == "mapInsert" || helperLeaf == "mapInsertRef") {
+                helperName = "insert";
+              }
+            }
+            if (!helperName.empty() &&
                 (helperName == "count" || helperName == "contains" ||
                  helperName == "tryAt" || helperName == "insert" ||
                  helperName == "insert_ref") &&
@@ -621,6 +646,35 @@
             normalizeCollectionHelperPath(resolveExprPath(expr)) == "/map/map") {
           error = "native backend does not support variadic entry map constructors";
           return false;
+        }
+        if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
+            expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call) {
+          std::string receiverCollectionName;
+          const bool isDirectVectorConstructor =
+              getBuiltinCollectionName(expr.args.front(), receiverCollectionName) &&
+              receiverCollectionName == "vector";
+          if (!isDirectVectorConstructor) {
+            if (!emitExpr(expr.args.front(), localsIn)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            return true;
+          }
+        }
+        if (!expr.isMethodCall &&
+            (resolveExprPath(expr).find("mapCount") != std::string::npos ||
+             resolveExprPath(expr).find("mapContains") != std::string::npos ||
+             resolveExprPath(expr).find("mapTryAt") != std::string::npos ||
+             resolveExprPath(expr).find("mapAt") != std::string::npos)) {
+          if (const Definition *directCallee = resolveDirectHelperDefinition(expr);
+              directCallee != nullptr) {
+            if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
+              return false;
+            }
+            return true;
+          }
         }
         error =
             "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +

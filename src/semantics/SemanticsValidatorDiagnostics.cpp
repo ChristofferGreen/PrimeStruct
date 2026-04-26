@@ -61,6 +61,17 @@ void SemanticsValidator::captureExecutionContext(const Execution &exec) {
 
 bool SemanticsValidator::failExprDiagnostic(const Expr &expr,
                                             std::string message) {
+  if (message.rfind("unknown call target: /std/collections/vector/count", 0) == 0 &&
+      expr.args.size() != 1) {
+    message = hasNamedArguments(expr.argNames)
+                  ? "named arguments not supported for builtin calls"
+                  : "argument count mismatch for builtin count";
+  } else if (message.rfind("unknown call target: /std/collections/vector/capacity", 0) == 0 &&
+             expr.args.size() != 1) {
+    message = hasNamedArguments(expr.argNames)
+                  ? "named arguments not supported for builtin calls"
+                  : "argument count mismatch for builtin capacity";
+  }
   captureExprContext(expr);
   error_ = std::move(message);
   return publishCurrentStructuredDiagnosticNow();

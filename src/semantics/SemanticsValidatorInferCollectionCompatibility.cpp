@@ -79,6 +79,10 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
         splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
       return "/" + base;
     }
+    if (isExperimentalSoaVectorTypePath(base) &&
+        splitTopLevelTemplateArgs(argText, args) && args.size() == 1) {
+      return "/soa_vector";
+    }
     if ((base == "Map" || isMapCollectionTypeName(base) || base == "/map" ||
          base == "/std/collections/map") &&
         splitTopLevelTemplateArgs(argText, args) && args.size() == 2) {
@@ -107,7 +111,10 @@ std::string SemanticsValidator::normalizeCollectionTypePath(const std::string &t
       normalizedType.rfind("std/gfx/experimental/Buffer__", 0) == 0) {
     return "/Buffer";
   }
-  if (normalizedType == "/soa_vector" || normalizedType == "soa_vector") {
+  if (normalizedType == "/soa_vector" || normalizedType == "soa_vector" ||
+      normalizedType == "SoaVector" ||
+      normalizedType == "/std/collections/experimental_soa_vector/SoaVector" ||
+      normalizedType == "std/collections/experimental_soa_vector/SoaVector") {
     return "/soa_vector";
   }
   if (normalizedType.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
@@ -172,9 +179,17 @@ bool SemanticsValidator::hasDefinitionPath(const std::string &path) const {
   if (suffix != std::string::npos) {
     canonicalPath.erase(suffix);
   }
+  const std::string templatedPrefix = canonicalPath + "<";
   for (const auto &[resolvedPath, definition] : defMap_) {
     (void)definition;
-    if (matchesResolvedPath(resolvedPath, canonicalPath)) {
+    if (matchesResolvedPath(resolvedPath, canonicalPath) ||
+        resolvedPath.rfind(templatedPrefix, 0) == 0) {
+      return true;
+    }
+  }
+  for (const auto &definition : program_.definitions) {
+    if (matchesResolvedPath(definition.fullPath, canonicalPath) ||
+        definition.fullPath.rfind(templatedPrefix, 0) == 0) {
       return true;
     }
   }

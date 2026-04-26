@@ -522,6 +522,14 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
       return failMapSoaBuiltinDiagnostic(
           "named arguments not supported for builtin calls");
     }
+    if (expr.args.size() != 2) {
+      return failMapSoaBuiltinDiagnostic("argument count mismatch for builtin " +
+                                        helperName);
+    }
+    if (!isIntegerExpr(expr.args[1])) {
+      return failMapSoaBuiltinDiagnostic(helperName +
+                                        " requires integer index");
+    }
     if (!expr.templateArgs.empty()) {
       return failMapSoaBuiltinDiagnostic(helperName +
                                         " does not accept template arguments");
@@ -529,10 +537,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
       return failMapSoaBuiltinDiagnostic(helperName +
                                         " does not accept block arguments");
-    }
-    if (expr.args.size() != 2) {
-      return failMapSoaBuiltinDiagnostic("argument count mismatch for builtin " +
-                                        helperName);
     }
     std::string elemType;
     if (explicitOldSurfaceAccessCall &&
@@ -556,10 +560,6 @@ bool SemanticsValidator::validateExprMapSoaBuiltins(
     }
     if (!validateSoaHelperReturnTemplateArgs(expr.args.front(), elemType, helperName)) {
       return false;
-    }
-    if (!isIntegerExpr(expr.args[1])) {
-      return failMapSoaBuiltinDiagnostic(helperName +
-                                        " requires integer index");
     }
     if (isExplicitOldSurfaceSoaAccessCall(helperName) &&
         !hasVisibleDefinitionPathForCurrentImports("/soa_vector/" + helperName)) {

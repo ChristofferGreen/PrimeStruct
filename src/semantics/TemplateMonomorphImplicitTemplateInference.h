@@ -245,9 +245,50 @@ bool inferImplicitTemplateArgs(const Definition &def,
           inferExprTypeTextForTemplatedVectorFallback(
               receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
     };
+    auto resolvesExperimentalSoaReceiver = [&](const Expr &receiverExpr) {
+      auto matchesExperimentalTypeText = [](std::string typeText) {
+        typeText = normalizeBindingTypeName(typeText);
+        while (!typeText.empty()) {
+          std::string base;
+          std::string argText;
+          if (!splitTemplateTypeName(typeText, base, argText) || base.empty()) {
+            return isExperimentalSoaVectorTypePath(typeText);
+          }
+          const std::string normalizedBase = normalizeBindingTypeName(base);
+          if (isExperimentalSoaVectorTypePath(normalizedBase)) {
+            return true;
+          }
+          if (normalizedBase != "Reference" && normalizedBase != "Pointer") {
+            return false;
+          }
+          std::vector<std::string> wrappedArgs;
+          if (!splitTopLevelTemplateArgs(argText, wrappedArgs) ||
+              wrappedArgs.size() != 1) {
+            return false;
+          }
+          typeText = normalizeBindingTypeName(wrappedArgs.front());
+        }
+        return false;
+      };
+      BindingInfo receiverInfo;
+      if (inferBindingTypeForMonomorph(receiverExpr,
+                                       params,
+                                       locals,
+                                       allowMathBare,
+                                       ctx,
+                                       receiverInfo) &&
+          matchesExperimentalTypeText(bindingTypeToString(receiverInfo))) {
+        return true;
+      }
+      return matchesExperimentalTypeText(
+          inferExprTypeTextForTemplatedVectorFallback(
+              receiverExpr, locals, namespacePrefix, ctx, allowMathBare));
+    };
     if (!resolvesBuiltinSoaReceiver(candidate.args.front())) {
       return {};
     }
+    const bool receiverIsExperimentalSoa =
+        resolvesExperimentalSoaReceiver(candidate.args.front());
     auto hasVisibleSoaBorrowedHelper = [&](std::string_view helperName) {
       const std::string samePath = "/soa_vector/" + std::string(helperName);
       const std::string canonicalPath =
@@ -336,6 +377,9 @@ bool inferImplicitTemplateArgs(const Definition &def,
                                     : "/std/collections/soa_vector/ref";
       if (isAnyBuiltinSoaRefRefCall ? hasVisibleSoaRefRefHelper
                                     : hasVisibleSoaRefHelper) {
+        return {};
+      }
+      if (receiverIsExperimentalSoa) {
         return {};
       }
       if (isAnyCanonicalBuiltinSoaRefCall &&
