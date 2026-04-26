@@ -2086,6 +2086,10 @@ main() {
             "metadataBackedCanonicalMapConstructorRewritePath(") !=
         std::string::npos);
   CHECK(buildCallResolutionSource.find(
+            "hasDefinitionFamilyPath(resolvedPath) &&\n"
+            "        !hasImportedDefinitionPath(resolvedPath)") !=
+        std::string::npos);
+  CHECK(buildCallResolutionSource.find(
             "auto mapConstructorHelperPath = [&](size_t argumentCount) -> std::string {") ==
         std::string::npos);
   CHECK(buildCallResolutionSource.find(

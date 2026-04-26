@@ -259,7 +259,8 @@ std::string SemanticsValidator::resolveCalleePath(const Expr &expr) const {
       return rewriteCanonicalCollectionHelperPath(resolvedPath);
     }
     if (resolvedPath == "/std/collections/map/map" &&
-        (hasDefinitionFamilyPath(resolvedPath) || hasImportedDefinitionPath(resolvedPath))) {
+        hasDefinitionFamilyPath(resolvedPath) &&
+        !hasImportedDefinitionPath(resolvedPath)) {
       return resolvedPath;
     }
     const std::string helperPath =
