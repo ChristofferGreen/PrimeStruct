@@ -381,7 +381,7 @@ TEST_CASE("ir lowerer binding type helpers classify binding kind and string/file
   REQUIRE(std::filesystem::exists(bindingTypeHelpersPath));
   const std::string bindingTypeHelpersSource = readText(bindingTypeHelpersPath);
   CHECK(bindingTypeHelpersSource.find(
-            "semantics::isExperimentalSoaVectorTypePath(name)") !=
+            "soa_paths::isExperimentalSoaVectorTypePath(name)") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find(
             "name == \"std/collections/experimental_soa_vector/SoaVector\"") !=
