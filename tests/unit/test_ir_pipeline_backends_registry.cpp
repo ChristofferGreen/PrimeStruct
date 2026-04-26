@@ -4611,4 +4611,24 @@ TEST_CASE("backend entrypoint inventory avoids inactive follow-up pointer") {
   CHECK(source.find("It exists to support Group 15 `P1-06` follow-up slicing") == std::string::npos);
 }
 
+TEST_CASE("symbol-id migration inventory avoids inactive follow-up pointer") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path inventoryPath =
+      cwd / "docs" / "semantic_symbol_id_migration_inventory.md";
+  if (!std::filesystem::exists(inventoryPath)) {
+    inventoryPath = cwd.parent_path() / "docs" / "semantic_symbol_id_migration_inventory.md";
+  }
+  REQUIRE(std::filesystem::exists(inventoryPath));
+
+  const std::string source = readTextFile(inventoryPath);
+  CHECK(source.find("completed semantic-product fact-family migration") !=
+        std::string::npos);
+  CHECK(source.find("None. The current hot-path SymbolId migration family list is fully landed.") !=
+        std::string::npos);
+  CHECK(source.find("Add a concrete SymbolId migration TODO before adding another fact family") !=
+        std::string::npos);
+  CHECK(source.find("## Remaining families and next one-leaf follow-ups") == std::string::npos);
+  CHECK(source.find("fact families that still retain") == std::string::npos);
+}
+
 TEST_SUITE_END();

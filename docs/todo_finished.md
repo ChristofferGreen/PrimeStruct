@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4200: Align SymbolId migration inventory docs. Completed:
+  `docs/semantic_symbol_id_migration_inventory.md` now describes the
+  hot-path semantic-product SymbolId migration as landed history instead of
+  tracking families that still retain string shadows or implying more
+  one-leaf follow-ups remain. The inventory now requires a fresh SymbolId
+  migration TODO before adding another fact family or reintroducing
+  transitional string shadow fields, and backend-registry source-lock coverage
+  rejects the inactive follow-up wording.
 - ✓ TODO-4199: Align snapshot traversal inventory docs. Completed:
   `docs/semantic_snapshot_traversal_inventory.md` now records the landed
   `P2-11` callable-summary/`on_error` shared traversal and no longer presents

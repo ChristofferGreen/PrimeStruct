@@ -1,10 +1,11 @@
 # Semantic SymbolId Migration Inventory
 
-This inventory tracks semantic-product fact families that still retain
-transitional string shadow fields alongside `SymbolId` fields.
+This inventory records the completed semantic-product fact-family migration from
+transitional string shadow fields to `SymbolId` fields.
 
-Goal: complete one small, code-affecting leaf per family so each slice can be
-implemented, parity-tested, and landed independently.
+Goal: preserve the landed one-leaf-per-family history so future shadow-field or
+fact-family changes start from a fresh TODO instead of reopening the completed
+hot-path migration queue implicitly.
 
 ## Completed foundations
 - Deterministic compilation-local interning and merge hooks landed (`P3-01` to
@@ -44,9 +45,11 @@ implemented, parity-tested, and landed independently.
   resolve handlers via `handlerPathId` only, and lowerer semantic-product
   validation rejects invalid on-error handler-path IDs.
 
-## Remaining families and next one-leaf follow-ups
+## Inactive Follow-Up Status
 
 None. The current hot-path SymbolId migration family list is fully landed.
+Add a concrete SymbolId migration TODO before adding another fact family to this
+inventory or reintroducing transitional string shadow fields.
 
 ## Out of scope for this queue
 - `definitions`, `executions`, `type_metadata`, and `struct_field_metadata` are
