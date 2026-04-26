@@ -1,4 +1,12 @@
-#include "test_ir_pipeline_validation_helpers.h"
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <string>
+#include <vector>
+
+#include "third_party/doctest.h"
+
+#include "primec/testing/IrLowererCountAccessContracts.h"
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 

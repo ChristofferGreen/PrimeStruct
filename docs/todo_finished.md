@@ -4857,3 +4857,29 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     narrow allowlist in `tests/unit/test_ir_pipeline_backends_architecture.h`,
     updated contributor guidance in `AGENTS.md`, removed `TODO-4151` from the
     live queue, and deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4152: Replace the lowerer testing umbrella with narrow contract helpers
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test API cleanup
+  - scope: Break up `include/primec/testing/IrLowererHelpers.h` into narrower
+    public testing helpers so lowerer validation no longer depends on one
+    umbrella that mirrors the internal file graph.
+  - acceptance:
+    - New or migrated lowerer tests can include focused testing headers without
+      pulling the full umbrella surface.
+    - At least one existing lowerer validation shard migrates off the umbrella
+      header with no coverage loss.
+    - The touched helper APIs expose contract-focused seams rather than
+      internal layout mirrors.
+  - stop_rule: Stop once focused testing helpers exist and at least one real
+    shard uses them; do not refactor every lowerer test in the same change.
+  - finished_at: 2026-04-26
+  - evidence: Added `include/primec/testing/IrLowererCountAccessContracts.h`
+    as a focused count/access lowerer contract surface over shared local state,
+    count-access classification/emission, and native tail-dispatch helpers.
+    Migrated the count-access validation shard from the validation umbrella to
+    that focused header, source-locked the narrow API and migrated shard in
+    `tests/unit/test_ir_pipeline_backends_architecture.h`, updated lowerer test
+    API guidance in `AGENTS.md`, removed `TODO-4152` from the live queue, and
+    deferred release reruns to CI per the lite workflow.

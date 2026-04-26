@@ -278,16 +278,18 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
 
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4152") != std::string::npos);
+  CHECK(todo.find("- TODO-4167") != std::string::npos);
   CHECK(todo.find("- TODO-4148") != std::string::npos);
+  CHECK(todo.find("- TODO-4153") != std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4168\n- TODO-4170\n- TODO-4150") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
   CHECK(todo.find("- Release-gate stability and test-suite audit follow-up:") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4152\n2. TODO-4167") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4167\n2. TODO-4169") !=
         std::string::npos);
+  CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
   CHECK(todo.find("- TODO-4147") == std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
@@ -296,7 +298,7 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
         std::string::npos);
   CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Architecture contract probe migration | TODO-4152, TODO-4171, TODO-4172 |") !=
+  CHECK(todo.find("| Architecture contract probe migration | TODO-4171, TODO-4172 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=

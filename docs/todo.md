@@ -56,32 +56,32 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4152
 - TODO-4167
 - TODO-4169
 - TODO-4171
 - TODO-4148
+- TODO-4153
 
 ### Immediate Next 10 (After Ready Now)
 
 - TODO-4168
 - TODO-4170
 - TODO-4150
-- TODO-4153
 - TODO-4172
 - TODO-4155
 - TODO-4157
 - TODO-4158
 - TODO-4162
 - TODO-4165
+- TODO-4159
 
 ### Priority Lanes (Current)
 
 - Semantic-product authority and lowerer boundary enforcement: TODO-4169,
   TODO-4148, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158,
   TODO-4159, TODO-4160, TODO-4161, TODO-4164
-- Test API cleanup and contract-probe migration: TODO-4152, TODO-4171,
-  TODO-4153, TODO-4172
+- Test API cleanup and contract-probe migration: TODO-4171, TODO-4153,
+  TODO-4172
 - Semantics orchestration cleanup: TODO-4167, TODO-4168
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
@@ -92,37 +92,36 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4152
-2. TODO-4167
-3. TODO-4169
-4. TODO-4171
-5. TODO-4148
-6. TODO-4168
-7. TODO-4170
-8. TODO-4150
-9. TODO-4153
-10. TODO-4172
-11. TODO-4155
-12. TODO-4157
-13. TODO-4158
-14. TODO-4162
-15. TODO-4165
-16. TODO-4159
-17. TODO-4160
-18. TODO-4161
-19. TODO-4163
-20. TODO-4164
-21. TODO-4166
-22. TODO-4174
-23. TODO-4173
-24. TODO-4176
-25. TODO-4175
-26. TODO-4179
-27. TODO-4177
-28. TODO-4178
-29. TODO-4180
-30. TODO-4182
-31. TODO-4181
+1. TODO-4167
+2. TODO-4169
+3. TODO-4171
+4. TODO-4148
+5. TODO-4168
+6. TODO-4170
+7. TODO-4150
+8. TODO-4153
+9. TODO-4172
+10. TODO-4155
+11. TODO-4157
+12. TODO-4158
+13. TODO-4162
+14. TODO-4165
+15. TODO-4159
+16. TODO-4160
+17. TODO-4161
+18. TODO-4163
+19. TODO-4164
+20. TODO-4166
+21. TODO-4174
+22. TODO-4173
+23. TODO-4176
+24. TODO-4175
+25. TODO-4179
+26. TODO-4177
+27. TODO-4178
+28. TODO-4180
+29. TODO-4182
+30. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -157,12 +156,12 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4169, TODO-4170, TODO-4155, TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4148, TODO-4150, TODO-4152, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
+| Lowerer/source-composition contract coverage | TODO-4148, TODO-4150, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
 | Focused backend rerun ergonomics and suite partitioning | none |
-| Architecture contract probe migration | TODO-4152, TODO-4171, TODO-4172 |
+| Architecture contract probe migration | TODO-4171, TODO-4172 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | TODO-4165 |
@@ -812,23 +811,6 @@ Task template:
   - stop_rule: Stop once the emitter-expr source-lock suite is retired in
     favor of contract assertions; do not attempt a repo-wide lowerer lock
     purge in one slice.
-
-- [ ] TODO-4152: Replace the lowerer testing umbrella with narrow contract helpers
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Test API cleanup
-  - scope: Break up `include/primec/testing/IrLowererHelpers.h` into narrower
-    public testing helpers so lowerer validation no longer depends on one
-    umbrella that mirrors the internal file graph.
-  - acceptance:
-    - New or migrated lowerer tests can include focused testing headers without
-      pulling the full umbrella surface.
-    - At least one existing lowerer validation shard migrates off the umbrella
-      header with no coverage loss.
-    - The touched helper APIs expose contract-focused seams rather than
-      internal layout mirrors.
-  - stop_rule: Stop once focused testing helpers exist and at least one real
-    shard uses them; do not refactor every lowerer test in the same change.
 
 - [ ] TODO-4150: Remove remaining lowerer binding-type reach-through into semantics helpers
   - owner: ai

@@ -153,7 +153,9 @@ build and layout solidify.
   or shared API replaces them.
 - **Testing helper APIs:** when a test needs stable access to parser/text-filter helper logic, add
   declarations under `include/primec/testing/` and move tests to that header before allowlisting a
-  new `tests -> src/` include.
+  new `tests -> src/` include. When adding lowerer validation tests, prefer narrow
+  `primec/testing/IrLowerer*Contracts.h` headers over the full
+  `primec/testing/IrLowererHelpers.h` umbrella whenever the shard only needs one contract family.
 - **Visibility transforms:** `public`/`private` are valid on definitions (controls import
   visibility) and bindings (field visibility). Executions still reject them.
 - **VM/native strings:** string values are represented as string-table indices; dynamic
