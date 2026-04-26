@@ -463,8 +463,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") !=
+        std::string::npos);
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map parameters") {
