@@ -27,7 +27,8 @@ TEST_CASE("to_soa and to_aos reject named arguments for builtin calls") {
 }
 
 TEST_CASE("soa_vector get/get_ref/ref/ref_ref reject named arguments for builtin calls") {
-  const auto checkNamedArgs = [](const std::string &callExpr) {
+  const auto checkReject = [](const std::string &callExpr,
+                              const std::string &expected) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -40,19 +41,24 @@ TEST_CASE("soa_vector get/get_ref/ref/ref_ref reject named arguments for builtin
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkNamedArgs("get([index] 0i32, [values] values)");
-  checkNamedArgs("get_ref([index] 0i32, [values] location(values))");
-  checkNamedArgs("location(values).get_ref([index] 0i32)");
-  checkNamedArgs("ref([index] 0i32, [values] values)");
-  checkNamedArgs("ref_ref([index] 0i32, [values] values)");
-  checkNamedArgs("values.ref_ref([index] 0i32)");
-  checkNamedArgs("/soa_vector/get([index] 0i32, [values] values)");
-  checkNamedArgs("/soa_vector/get_ref([index] 0i32, [values] location(values))");
-  checkNamedArgs("/soa_vector/ref([index] 0i32, [values] values)");
-  checkNamedArgs("/soa_vector/ref_ref([index] 0i32, [values] values)");
+  const std::string namedArgs = "named arguments not supported for builtin calls";
+  checkReject("get([index] 0i32, [values] values)", namedArgs);
+  checkReject("get_ref([index] 0i32, [values] location(values))", namedArgs);
+  checkReject("location(values).get_ref([index] 0i32)", namedArgs);
+  checkReject("ref([index] 0i32, [values] values)", namedArgs);
+  checkReject("ref_ref([index] 0i32, [values] values)", namedArgs);
+  checkReject("values.ref_ref([index] 0i32)", namedArgs);
+  checkReject("/soa_vector/get([index] 0i32, [values] values)",
+              "unknown method: /std/collections/soa_vector/get");
+  checkReject("/soa_vector/get_ref([index] 0i32, [values] location(values))",
+              "unknown method: /std/collections/soa_vector/get_ref");
+  checkReject("/soa_vector/ref([index] 0i32, [values] values)",
+              "unknown method: /std/collections/soa_vector/ref");
+  checkReject("/soa_vector/ref_ref([index] 0i32, [values] values)",
+              "unknown method: /std/collections/soa_vector/ref_ref");
 }
 
 TEST_CASE("soa_vector builtin get/get_ref/ref/ref_ref require integer indices") {
