@@ -468,11 +468,13 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       return current;
     };
 
+    bool receiverWasDereferenced = false;
     auto peelReceiverWrappers = [&](const Expr &expr) {
       const Expr *current = peelLocationWrappers(expr);
       while (current->kind == Expr::Kind::Call &&
              isSimpleCallName(*current, "dereference") &&
              current->args.size() == 1) {
+        receiverWasDereferenced = true;
         current = peelLocationWrappers(current->args.front());
       }
       return current;
@@ -554,7 +556,10 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
     // wrapped args-pack map-access forms (for example stacked
     // location/dereference around /map/at(argsPack, ...)) can flow through the
     // same typed map-target inference used by direct receivers.
-    const auto canonicalTargetInfo = resolveMapAccessTargetInfo(*canonicalReceiverExpr, localsIn);
+    auto canonicalTargetInfo = resolveMapAccessTargetInfo(*canonicalReceiverExpr, localsIn);
+    if (receiverWasDereferenced) {
+      canonicalTargetInfo.isWrappedMapTarget = false;
+    }
     if (canonicalTargetInfo.isMapTarget &&
         canonicalTargetInfo.mapKeyKind != LocalInfo::ValueKind::Unknown &&
         canonicalTargetInfo.mapValueKind != LocalInfo::ValueKind::Unknown) {
