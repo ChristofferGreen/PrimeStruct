@@ -188,6 +188,12 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("/std/collections/experimental_soa_vector/*`, and") !=
         std::string::npos);
+  CHECK(todo.find("no active\n  TODO currently targets them") != std::string::npos);
+  CHECK(todo.find("add a concrete exit, acceptance, or") != std::string::npos);
+  CHECK(todo.find("reclassification TODO before changing those seams") !=
+        std::string::npos);
+  CHECK(todo.find("until their explicit shim, rename, or maturity TODOs land") ==
+        std::string::npos);
   CHECK(todo.find("/std/collections/internal_buffer_checked/*`,") != std::string::npos);
   CHECK(todo.find("/std/collections/internal_buffer_unchecked/*`, and") != std::string::npos);
   CHECK(todo.find("/std/collections/internal_soa_storage/*` are implementation-facing") !=
@@ -273,6 +279,12 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("/std/collections/experimental_soa_vector_conversions/*` remain bridge seams") !=
         std::string::npos);
   CHECK(todo.find("First promotion pass complete") != std::string::npos);
+  CHECK(todo.find("Further promotion work requires an explicit TODO for the specific") !=
+        std::string::npos);
+  CHECK(todo.find("compatibility seam, acceptance decision, or generic SoA substrate cleanup") !=
+        std::string::npos);
+  CHECK(todo.find("Promotion requires borrowed-view/lifetime rules, backend/runtime parity") ==
+        std::string::npos);
   CHECK(todo.find("code no longer needs `experimental_soa_vector`") !=
         std::string::npos);
   CHECK(todo.find("`soa_vector<T>` remains an incubating canonical experiment") !=
@@ -283,7 +295,10 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("TODO-4181") == std::string::npos);
   CHECK(todo.find("TODO-4182") == std::string::npos);
   CHECK(todo.find("TODO-4185") == std::string::npos);
+  CHECK(todo.find("TODO-4186") == std::string::npos);
   CHECK(todoFinished.find("TODO-4185: Align SoA compatibility follow-up docs") !=
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4186: Align SoA TODO summary wording") !=
         std::string::npos);
 
   CHECK(syntaxSpecDoc.find("The current public spellings are") !=

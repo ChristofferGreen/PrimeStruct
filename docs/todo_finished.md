@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4186: Align SoA TODO summary wording. Completed:
+  `docs/todo.md` no longer says SoA experimental compatibility namespaces
+  are waiting on shim, rename, or maturity TODOs to land while the active
+  queue is empty. The summary now matches the canonical docs: no active TODO
+  targets those seams, and future promotion or seam-changing work needs a
+  concrete exit, acceptance, reclassification, or substrate-cleanup TODO.
+  Source-lock coverage now rejects the stale summary wording.
 - ✓ TODO-4185: Align SoA compatibility follow-up docs. Completed:
   `docs/PrimeStruct.md` no longer says completed SoA promotion tasks still
   track receiver ownership, borrowed-view rules, backend parity, or example

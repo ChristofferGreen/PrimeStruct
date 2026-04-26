@@ -138,8 +138,10 @@ Task template:
   `/std/collections/map/*` are the sole public vector/map collection surfaces.
 - Temporary compatibility namespaces:
   `/std/collections/experimental_soa_vector/*`, and
-  `/std/collections/experimental_soa_vector_conversions/*` stay transitional
-  until their explicit shim, rename, or maturity TODOs land.
+  `/std/collections/experimental_soa_vector_conversions/*` remain
+  compatibility seams behind the canonical SoA experiment surface; no active
+  TODO currently targets them, so add a concrete exit, acceptance, or
+  reclassification TODO before changing those seams.
 - Internal collection implementation modules:
   `/std/collections/experimental_vector/*` and
   `/std/collections/experimental_map/*` now remain implementation-owned seams
@@ -171,9 +173,10 @@ Task template:
 - Internal substrate namespace:
   `/std/collections/internal_soa_storage/*` remains implementation-facing
   SoA storage/layout plumbing.
-- Promotion requires borrowed-view/lifetime rules, backend/runtime parity, and
-  retirement of direct experimental implementation imports before `soa_vector`
-  can be treated as a promoted public contract.
+- Further promotion work requires an explicit TODO for the specific
+  compatibility seam, acceptance decision, or generic SoA substrate cleanup
+  being changed before `soa_vector` can be treated as a promoted public
+  contract.
 - First promotion pass complete: the canonical public helper wrapper is
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
