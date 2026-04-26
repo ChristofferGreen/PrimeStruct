@@ -4594,4 +4594,21 @@ TEST_CASE("semantics helper skips semantic product for non-consuming requests") 
   CHECK(source.find("applySemanticsCompilePipelineSemanticProductIntentForTesting(") != std::string::npos);
 }
 
+TEST_CASE("backend entrypoint inventory avoids inactive follow-up pointer") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path inventoryPath =
+      cwd / "docs" / "semantic_product_backend_entrypoint_inventory.md";
+  if (!std::filesystem::exists(inventoryPath)) {
+    inventoryPath = cwd.parent_path() / "docs" / "semantic_product_backend_entrypoint_inventory.md";
+  }
+  REQUIRE(std::filesystem::exists(inventoryPath));
+
+  const std::string source = readTextFile(inventoryPath);
+  CHECK(source.find("completed Group 15 non-consuming entrypoint audit") != std::string::npos);
+  CHECK(source.find("any new\nnon-consuming family needs a fresh TODO") != std::string::npos);
+  CHECK(source.find("no remaining non-consuming families with open follow-up leaves") !=
+        std::string::npos);
+  CHECK(source.find("It exists to support Group 15 `P1-06` follow-up slicing") == std::string::npos);
+}
+
 TEST_SUITE_END();

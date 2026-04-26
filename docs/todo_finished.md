@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4198: Align backend entrypoint inventory docs. Completed:
+  `docs/semantic_product_backend_entrypoint_inventory.md` no longer says it
+  exists to support `P1-06` follow-up slicing after the inventory already
+  records that the non-consuming entrypoint families have no open follow-up
+  leaves. The inventory now frames `P1-06`, `P1-06a`, `P1-06b`, and `P1-12`
+  as landed history and requires a fresh TODO before tracking a new
+  non-consuming family. Backend-registry source-lock coverage rejects the
+  inactive follow-up pointer.
 - ✓ TODO-4197: Lock skipped doctest debt policy. Completed:
   `tests/unit/test_compile_run_examples_docs_locks.cpp` now scans unit test
   shards outside its own source-lock literals and fails if any retained

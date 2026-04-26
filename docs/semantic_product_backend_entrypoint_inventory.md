@@ -7,7 +7,10 @@ This inventory tracks compile/runtime entrypoint families that either:
 - consume the semantic product and lower/emit IR, or
 - are intentionally non-consuming and should avoid semantic-product allocation.
 
-It exists to support Group 15 `P1-06` follow-up slicing.
+It records the completed Group 15 non-consuming entrypoint audit: historical
+`P1-06`, `P1-06a`, `P1-06b`, and `P1-12` slices are landed, and any new
+non-consuming family needs a fresh TODO before this inventory grows another
+follow-up section.
 
 ## Production Entrypoint Families
 
