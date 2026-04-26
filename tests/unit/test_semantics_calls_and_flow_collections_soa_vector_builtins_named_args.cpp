@@ -124,11 +124,11 @@ TEST_CASE("soa_vector conversion and access builtins reject template arguments")
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "to_soa<i32>(values)",
               "to_soa does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "to_aos<i32>(values)",
-              "meta.field_count requires struct type argument: i32");
+              "to_aos does not accept template arguments");
   checkReject("  [vector<Particle>] values{vector<Particle>()}\n", "values.to_soa<i32>()",
               "to_soa does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "values.to_aos<i32>()",
-              "meta.field_count requires struct type argument: i32");
+              "to_aos_ref does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n", "get<i32>(values, 0i32)",
               "get does not accept template arguments");
   checkReject("  [soa_vector<Particle>] values{soa_vector<Particle>()}\n",
