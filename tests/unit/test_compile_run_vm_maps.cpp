@@ -17,6 +17,8 @@ main() {
 
 TEST_CASE("runs vm with map literal count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   return(count(map<i32, i32>{1i32=2i32, 3i32=4i32}))
@@ -29,6 +31,8 @@ main() {
 
 TEST_CASE("runs vm with map count helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -42,6 +46,8 @@ main() {
 
 TEST_CASE("runs vm with map method call") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 /map/size([map<i32, i32>] items) {
   return(count(items))
@@ -78,6 +84,8 @@ main() {
 
 TEST_CASE("runs vm with map at_unsafe helper") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>{1i32=2i32, 3i32=4i32}}
@@ -153,6 +161,8 @@ main() {
 
 TEST_CASE("runs vm with map literal string binding key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [string] key{"b"raw_utf8}
@@ -167,6 +177,8 @@ main() {
 
 TEST_CASE("runs vm with string-keyed map indexing sugar") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
@@ -180,6 +192,8 @@ main() {
 
 TEST_CASE("runs vm with string-keyed map indexing binding key") {
   const std::string source = R"(
+import /std/collections/*
+
 [return<int>]
 main() {
   [map<string, i32>] values{map<string, i32>("a"raw_utf8, 1i32, "b"raw_utf8, 2i32)}
