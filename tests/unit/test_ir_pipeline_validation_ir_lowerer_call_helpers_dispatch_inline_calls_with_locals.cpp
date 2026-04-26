@@ -760,6 +760,18 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
             error) == Result::Error);
   CHECK(error == "capacity requires vector target");
 
+  primec::Expr helperReturnExpr;
+  helperReturnExpr.kind = primec::Expr::Kind::Call;
+  helperReturnExpr.name = "wrapVector";
+  callExpr.args = {helperReturnExpr};
+  error.clear();
+  CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(
+            callExpr,
+            [](const primec::Expr &, std::string &) { return false; },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  callExpr.args.clear();
+
   callExpr.name = "remove_at";
   error.clear();
   CHECK(primec::ir_lowerer::emitUnsupportedNativeCallDiagnostic(

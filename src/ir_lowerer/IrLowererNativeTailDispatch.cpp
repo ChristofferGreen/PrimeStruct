@@ -140,6 +140,10 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
       isVectorTarget(expr.args.front(), localsIn)) {
     return UnsupportedNativeCallResult::NotHandled;
   }
+  if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
+      expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call) {
+    return UnsupportedNativeCallResult::NotHandled;
+  }
   if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity")) {
     error = "capacity requires vector target";
     return UnsupportedNativeCallResult::Error;
