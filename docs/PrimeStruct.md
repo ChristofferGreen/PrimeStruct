@@ -2623,8 +2623,8 @@ bridge-oriented files may stay helper-heavy until the relevant migration or
 cleanup TODO explicitly retargets them.
 
 ### Vector/Map Bridge Contract
-This contract is the scope reference for the vector/map ownership-cutover lane
-in `docs/todo.md`. Follow-on bridge tasks should share this boundary instead of
+This contract is the scope reference for future vector/map ownership-cutover
+TODOs. Follow-on bridge tasks should share this boundary instead of
 re-defining it piecemeal.
 
 - **Bridge-owned public contract:** exact and wildcard `/std/collections`
@@ -2634,7 +2634,8 @@ re-defining it piecemeal.
   dispatch metadata.
 - **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
   `vectorCount` / `mapCount`-style lowering names remain temporary
-  compatibility seams until the later cutover TODOs delete them.
+  compatibility seams. No active TODO currently targets their deletion or
+  acceptance, so add a concrete cutover TODO before changing those seams.
 - **Internal implementation seams:** `/std/collections/experimental_vector/*`
   and `/std/collections/experimental_map/*` remain implementation-owned
   modules behind the canonical wrappers; direct imports should stay limited to

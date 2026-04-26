@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4187: Align vector-map cutover docs. Completed:
+  `docs/PrimeStruct.md` and `docs/todo.md` no longer say rooted
+  `/vector/*`, `/map/*`, lowering-name, or experimental implementation seams
+  are waiting for later cutover TODOs while the active queue is empty. The
+  bridge contract now says no active TODO targets deletion or acceptance of
+  those seams, and future seam changes need a concrete cutover TODO first.
+  Source-lock coverage rejects the stale cutover wording.
 - ✓ TODO-4186: Align SoA TODO summary wording. Completed:
   `docs/todo.md` no longer says SoA experimental compatibility namespaces
   are waiting on shim, rename, or maturity TODOs to land while the active

@@ -124,8 +124,9 @@ Task template:
   surface IDs, and lowerer dispatch metadata.
 - Migration-only seams: rooted `/vector/*` and `/map/*` spellings,
   `vectorCount` / `mapCount`-style lowering names, and
-  `/std/collections/experimental_*` implementation modules stay temporary until
-  the later cutover TODOs retire them.
+  `/std/collections/experimental_*` implementation modules stay temporary.
+  No active TODO currently targets their deletion or acceptance, so add a
+  concrete cutover TODO before changing those seams.
 - Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and
   runtime/storage redesign remain separate boundaries and should not be folded
   into the vector/map bridge tasks below.
