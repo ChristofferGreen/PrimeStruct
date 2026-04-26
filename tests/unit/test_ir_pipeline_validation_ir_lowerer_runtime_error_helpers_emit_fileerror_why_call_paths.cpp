@@ -626,7 +626,7 @@ TEST_CASE("ir lowerer setup math helper keeps current bundled binding adapter ro
   stringTransform.name = "string";
   stringExpr.transforms.push_back(stringTransform);
   CHECK(adapters.bindingTypeAdapters.isStringBinding(stringExpr));
-  CHECK(adapters.bindingTypeAdapters.isFileErrorBinding(stringExpr));
+  CHECK_FALSE(adapters.bindingTypeAdapters.isFileErrorBinding(stringExpr));
 
   primec::Expr mapExpr;
   primec::Transform mapTransform;
@@ -634,7 +634,7 @@ TEST_CASE("ir lowerer setup math helper keeps current bundled binding adapter ro
   mapTransform.templateArgs = {"bool", "f64"};
   mapExpr.transforms.push_back(mapTransform);
   CHECK(adapters.bindingTypeAdapters.bindingValueKind(mapExpr, primec::ir_lowerer::LocalInfo::Kind::Map) ==
-        primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+        primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
 TEST_CASE("ir lowerer setup math helpers keep semantic product helper-result bindings non-FileError") {
