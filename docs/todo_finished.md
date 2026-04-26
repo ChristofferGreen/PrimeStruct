@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4188: Align spinning-cube roadmap docs. Completed:
+  `examples/web/spinning_cube/README.md` no longer points readers to the
+  archived `Native Windowed Spinning Cube (Roadmap)` section in `docs/todo.md`
+  while the active queue is empty. The status now says the v1 macOS native
+  window target has landed and that any further native-window parity milestone
+  needs a concrete TODO before tracking starts. Source-lock coverage rejects
+  the stale active-roadmap pointer.
 - ✓ TODO-4187: Align vector-map cutover docs. Completed:
   `docs/PrimeStruct.md` and `docs/todo.md` no longer say rooted
   `/vector/*`, `/map/*`, lowering-name, or experimental implementation seams

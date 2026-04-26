@@ -21,6 +21,40 @@ TEST_CASE("contributor doctest guardrails stay source locked") {
   CHECK(agents.find("optimize it or add a brief justification") != std::string::npos);
 }
 
+TEST_CASE("spinning cube native-window status avoids inactive TODO pointers") {
+  std::filesystem::path readmePath =
+      std::filesystem::path("..") / "examples" / "web" / "spinning_cube" / "README.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(readmePath)) {
+    readmePath = std::filesystem::current_path() / "examples" / "web" / "spinning_cube" / "README.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(readmePath));
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string readme = readFile(readmePath.string());
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(readme.find("The archived native-window roadmap has landed its v1 macOS host target") !=
+        std::string::npos);
+  CHECK(readme.find("add\n  a concrete TODO before tracking another native-window parity milestone") !=
+        std::string::npos);
+  CHECK(readme.find("tracked in `docs/todo.md` under `Native Windowed Spinning Cube (Roadmap)`") ==
+        std::string::npos);
+  CHECK(todo.find("Native Windowed Spinning Cube (Roadmap)") == std::string::npos);
+  CHECK(todo.find("TODO-4188") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4188: Align spinning-cube roadmap docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib style boundary docs stay source locked") {
   std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";

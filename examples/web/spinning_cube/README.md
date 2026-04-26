@@ -14,7 +14,8 @@ This example is a milestone target for cross-platform backend work.
   (`/spinning_cube/index.html` + the thin `main.js` wrapper).
 - macOS now has a real native window host sample at
   `examples/native/spinning_cube/window_host.mm` (window/layer/render-loop bring-up).
-- Windowed native parity target is tracked in `docs/todo.md` under `Native Windowed Spinning Cube (Roadmap)`.
+- The archived native-window roadmap has landed its v1 macOS host target; add
+  a concrete TODO before tracking another native-window parity milestone.
 
 ## First Supported Native Window Target (v1)
 - Target: macOS + Metal window host (`examples/native/spinning_cube/window_host.mm`).
