@@ -273,6 +273,62 @@ main() {
                     }));
 }
 
+TEST_CASE("semantic-product contract rejects missing local-auto facts across entry targets") {
+  const std::string source =
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] selected{id(21i32)}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+  REQUIRE(!semanticProgram.localAutoFacts.empty());
+
+  auto clearPublishedLocalAutoFacts = [](primec::SemanticProgram &semanticProduct) {
+    semanticProduct.localAutoFacts.clear();
+    semanticProduct.publishedRoutingLookups.localAutoFactIndicesByExpr.clear();
+    semanticProduct.publishedRoutingLookups.localAutoFactIndicesByInitPathAndBindingNameId.clear();
+    for (auto &moduleArtifacts : semanticProduct.moduleResolvedArtifacts) {
+      moduleArtifacts.localAutoFactIndices.clear();
+    }
+  };
+
+  const std::vector<std::pair<std::string_view, primec::IrValidationTarget>> entryTargets = {
+      {"primevm", primec::IrValidationTarget::Vm},
+      {"primec-native", primec::IrValidationTarget::Native},
+      {"primec-generic", primec::IrValidationTarget::Any},
+  };
+
+  for (const auto &[entryLabel, validationTarget] : entryTargets) {
+    CAPTURE(entryLabel);
+    primec::Program mutatedProgram = program;
+    primec::SemanticProgram mutatedSemanticProduct = semanticProgram;
+    clearPublishedLocalAutoFacts(mutatedSemanticProduct);
+
+    primec::Options options;
+    options.entryPath = "/main";
+
+    primec::IrModule ir;
+    primec::IrPreparationFailure failure;
+    CHECK_FALSE(primec::prepareIrModule(
+        mutatedProgram, &mutatedSemanticProduct, options, validationTarget, ir, failure));
+    CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+    CHECK(failure.message ==
+          "missing semantic-product local-auto fact: /main -> local selected");
+    CHECK(failure.diagnosticInfo.message == failure.message);
+  }
+}
+
 TEST_CASE("compile pipeline freezes published semantic-product string scratch storage") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {

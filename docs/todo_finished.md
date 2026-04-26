@@ -5214,3 +5214,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     cannot stand in for method-call targets, removed `TODO-4148` from the live
     queue, promoted `TODO-4158` to Ready Now, and deferred release reruns to
     CI per the lite workflow.
+
+- [x] TODO-4155: Add semantic-product-authority conformance coverage across entrypoints
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Boundary enforcement
+  - depends_on: TODO-4147, TODO-4148, TODO-4150
+  - scope: Add release coverage proving `primec` and `primevm` consume
+    published semantic-product facts consistently across consuming entrypoints
+    and reject missing lowerer-facing facts deterministically.
+  - acceptance:
+    - Tests exercise `primec` consuming backends and `primevm` through the same
+      published semantic-product contract.
+    - Missing or invalid lowerer-facing semantic facts fail with deterministic
+      diagnostics for the touched entrypoints.
+    - Compile-pipeline handoff coverage proves stage-dependent semantic-product
+      consumption stays explicit.
+  - stop_rule: Stop once the semantic-product boundary is covered as a contract
+    at the compile/runtime entrypoints; do not broaden into unrelated backend
+    feature additions.
+  - finished_at: 2026-04-26
+  - evidence: Added backend-registry conformance that validates a
+    compile-pipeline-published semantic product, then removes the published
+    local-auto facts and proves shared `prepareIrModule` entry validation
+    rejects the missing lowerer-facing fact with the same deterministic
+    diagnostic for `primevm`, `primec` native, and generic primec IR targets.
+    Existing semantic-product backend conformance continues to cover
+    C++/VM/native success-path consumers. Removed `TODO-4155` from the live
+    queue, promoted `TODO-4157` to Ready Now, and deferred release reruns to
+    CI per the lite workflow.

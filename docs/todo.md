@@ -56,14 +56,13 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4155
+- TODO-4157
 - TODO-4158
 - TODO-4162
 - TODO-4174
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4157
 - TODO-4165
 - TODO-4159
 - TODO-4160
@@ -76,8 +75,8 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4155,
-  TODO-4157, TODO-4158, TODO-4159,
+- Semantic-product authority and lowerer boundary enforcement: TODO-4157,
+  TODO-4158, TODO-4159,
   TODO-4160, TODO-4161, TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
@@ -88,34 +87,33 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4155
-2. TODO-4157
-3. TODO-4158
-4. TODO-4162
-5. TODO-4165
-6. TODO-4159
-7. TODO-4160
-8. TODO-4161
-9. TODO-4163
-10. TODO-4164
-11. TODO-4166
-12. TODO-4174
-13. TODO-4173
-14. TODO-4176
-15. TODO-4175
-16. TODO-4179
-17. TODO-4177
-18. TODO-4178
-19. TODO-4180
-20. TODO-4182
-21. TODO-4181
+1. TODO-4157
+2. TODO-4158
+3. TODO-4162
+4. TODO-4165
+5. TODO-4159
+6. TODO-4160
+7. TODO-4161
+8. TODO-4163
+9. TODO-4164
+10. TODO-4166
+11. TODO-4174
+12. TODO-4173
+13. TODO-4176
+14. TODO-4175
+15. TODO-4179
+16. TODO-4177
+17. TODO-4178
+18. TODO-4180
+19. TODO-4182
+20. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4155, TODO-4162, TODO-4166 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4157, TODO-4158, TODO-4164 |
+| Compile-pipeline stage and publication-boundary contracts | TODO-4162, TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
@@ -123,7 +121,7 @@ Task template:
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4179, TODO-4180, TODO-4182 |
 | SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4179, TODO-4180, TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | TODO-4155 |
+| Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | TODO-4160, TODO-4161, TODO-4163 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
@@ -138,11 +136,11 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4155, TODO-4161, TODO-4163 |
+| Semantic-product-authority conformance | TODO-4161, TODO-4163 |
 | AST transform hook conformance | TODO-4173, TODO-4176 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
-| Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
-| Semantic-product publication parity and deterministic ordering | TODO-4155, TODO-4163 |
+| Compile-pipeline stage handoff conformance | TODO-4162, TODO-4166 |
+| Semantic-product publication parity and deterministic ordering | TODO-4163 |
 | Lowerer/source-composition contract coverage | TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
@@ -461,7 +459,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Compile-pipeline boundary hardening
-  - depends_on: TODO-4158, TODO-4155
+  - depends_on: TODO-4158
   - scope: Add release coverage proving debugger-facing and source-map
     provenance stay stable when lowering consumes published semantic-product
     identities plus syntax-owned provenance.
@@ -478,7 +476,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Semantic-product authority
-  - depends_on: TODO-4157, TODO-4158, TODO-4155
+  - depends_on: TODO-4157, TODO-4158
   - scope: Delete one touched AST-side semantic fallback or cache that
     re-derives facts already available through the published semantic-product
     boundary.
@@ -496,7 +494,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Compile-pipeline boundary hardening
-  - depends_on: TODO-4155
   - scope: Add release coverage comparing the formatted full semantic-product
     dump across multiple validation worker counts so deterministic publication
     regressions fail with readable diffs.
@@ -532,7 +529,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Semantic-product authority
-  - depends_on: TODO-4155, TODO-4160
+  - depends_on: TODO-4160
   - scope: Turn the touched semantic-product contract version into an enforced
     compatibility surface with coverage that fails clearly when the published
     shape changes without the required versioning update.
@@ -551,7 +548,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Semantic-product authority
-  - depends_on: TODO-4155
   - scope: Break the monolithic `include/primec/SemanticProduct.h` public API
     into smaller family-specific headers while keeping a stable umbrella
     include for existing consumers where needed.
@@ -606,7 +602,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Semantic-product authority
-  - depends_on: TODO-4147, TODO-4148, TODO-4150, TODO-4155
+  - depends_on: TODO-4147, TODO-4148, TODO-4150
   - scope: Delete one touched compatibility adapter or shim that keeps
     lowerer or compile-pipeline code working before the semantic-product
     boundary becomes fully authoritative.
@@ -618,22 +614,3 @@ Task template:
     - No touched caller falls back to the removed adapter seam.
   - stop_rule: Stop once one real adapter seam is retired end-to-end; do not
     attempt a repo-wide compatibility cleanup in one slice.
-
-- [ ] TODO-4155: Add semantic-product-authority conformance coverage across entrypoints
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Boundary enforcement
-  - depends_on: TODO-4147, TODO-4148, TODO-4150
-  - scope: Add release coverage proving `primec` and `primevm` consume
-    published semantic-product facts consistently across consuming entrypoints
-    and reject missing lowerer-facing facts deterministically.
-  - acceptance:
-    - Tests exercise `primec` consuming backends and `primevm` through the same
-      published semantic-product contract.
-    - Missing or invalid lowerer-facing semantic facts fail with deterministic
-      diagnostics for the touched entrypoints.
-    - Compile-pipeline handoff coverage proves stage-dependent semantic-product
-      consumption stays explicit.
-  - stop_rule: Stop once the semantic-product boundary is covered as a contract
-    at the compile/runtime entrypoints; do not broaden into unrelated backend
-    feature additions.
