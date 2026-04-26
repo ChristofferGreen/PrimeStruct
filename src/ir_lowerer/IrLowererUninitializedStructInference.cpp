@@ -1,7 +1,5 @@
 #include "IrLowererUninitializedTypeHelpers.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include <algorithm>
 #include <cctype>
 #include <functional>
@@ -12,6 +10,7 @@
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -101,7 +100,7 @@ std::string resolveSpecializedExperimentalSoaVectorStructPath(
     if (!normalized.empty() && normalized.front() != '/') {
       normalized.insert(normalized.begin(), '/');
     }
-    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
       return normalized;
     }
 
@@ -155,7 +154,7 @@ std::string inferExperimentalSoaElementStructPathFromReceiverStruct(
       normalizedReceiverStruct.front() != '/') {
     normalizedReceiverStruct.insert(normalizedReceiverStruct.begin(), '/');
   }
-  if (!semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)) {
+  if (!soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)) {
     return "";
   }
 
@@ -473,15 +472,15 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         }
       }
       const std::string canonicalSoaGetPath =
-          semantics::canonicalizeLegacySoaGetHelperPath(scopedCallPath);
+          soa_paths::canonicalizeLegacySoaGetHelperPath(scopedCallPath);
       const std::string canonicalSoaRefPath =
-          semantics::canonicalizeLegacySoaRefHelperPath(scopedCallPath);
+          soa_paths::canonicalizeLegacySoaRefHelperPath(scopedCallPath);
       const bool isSoaGetLikeHelper =
-          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
-          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref");
+          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get") ||
+          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, "get_ref");
       const bool isSoaRefLikeHelper =
-          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref") ||
-          semantics::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref");
+          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref") ||
+          soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, "ref_ref");
       if ((isBareOrInternalSoaHelper("get") || isBareOrInternalSoaHelper("ref") ||
            isSoaGetLikeHelper || isSoaRefLikeHelper) &&
           exprIn.args.size() == 2) {

@@ -1,7 +1,5 @@
 #include "IrLowererSetupTypeHelpers.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {

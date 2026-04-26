@@ -1,8 +1,6 @@
 #include "IrLowererInlineParamHelpers.h"
 #include "IrLowererInlinePackedArgs.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererFlowHelpers.h"
@@ -11,6 +9,7 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -38,7 +37,7 @@ bool isCanonicalBuiltinSoaBridgePath(const std::string &calleePath) {
 }
 
 bool isExperimentalSoaVectorStructPath(const std::string &structPath) {
-  return semantics::isExperimentalSoaVectorSpecializedTypePath(structPath);
+  return soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath);
 }
 
 bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,

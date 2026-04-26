@@ -11,7 +11,7 @@
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
-#include "../semantics/SemanticsHelpers.h"
+#include "primec/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -122,7 +122,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPath(const std::string &typeTe
     if (!normalizedType.empty() && normalizedType.front() != '/') {
       normalizedType.insert(normalizedType.begin(), '/');
     }
-    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedType)) {
+    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedType)) {
       structPathOut = normalizedType;
       return true;
     }
@@ -369,7 +369,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
         normalizedPointerTargetType.front() != '/') {
       normalizedPointerTargetType.insert(normalizedPointerTargetType.begin(), '/');
     }
-    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedPointerTargetType)) {
+    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedPointerTargetType)) {
       infoOut.pointerToVector = true;
       infoOut.isSoaVector = true;
       infoOut.structTypeName = normalizedPointerTargetType;
@@ -476,7 +476,7 @@ void applyArgsPackElementMetadata(const std::string &typeText, LocalInfo &infoOu
         normalizedRefTargetType.front() != '/') {
       normalizedRefTargetType.insert(normalizedRefTargetType.begin(), '/');
     }
-    if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedRefTargetType)) {
+    if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedRefTargetType)) {
       infoOut.argsPackElementKind = LocalInfo::Kind::Reference;
       infoOut.referenceToVector = true;
       infoOut.isSoaVector = true;

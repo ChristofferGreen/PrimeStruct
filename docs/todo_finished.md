@@ -5049,6 +5049,36 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     touched vector, map, and SoA collection flows, and release reruns remain
     deferred to CI per the lite workflow.
 
+- [x] TODO-4150: Remove remaining lowerer binding-type reach-through into semantics helpers
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4169, TODO-4170
+  - scope: Refactor lowerer binding and uninitialized helpers so binding-kind
+    and specialization decisions come from published semantic facts or neutral
+    shared support utilities rather than private semantics helper headers.
+  - acceptance:
+    - The touched lowerer binding/setup helpers no longer include
+      `src/semantics/SemanticsHelpers.h`.
+    - Focused release coverage for binding setup, uninitialized flows, and
+      struct-layout-sensitive lowering passes unchanged behavior through the
+      published boundary.
+    - Any replacement utility surface is owned outside private semantics.
+  - stop_rule: Stop once the touched lowerer binding/type helpers no longer
+    depend on semantics-private helper headers; do not broaden into unrelated
+    runtime or backend redesign.
+  - finished_at: 2026-04-26
+  - evidence: Added the neutral `primec/SoaPathHelpers.h` support surface for
+    SoA helper canonicalization and specialized SoA type-path predicates, then
+    switched the touched lowerer binding, inline-param, uninitialized,
+    collection-mutation, statement-binding metadata, and setup/return helper
+    files off private `src/semantics/SemanticsHelpers.h`. Cleared the
+    lowerer-to-private-semantics include allowlist, updated architecture
+    source-lock coverage to pin the shared helper surface and empty lowerer
+    exception set, removed `TODO-4150` from the live queue, promoted
+    `TODO-4155` to Ready Now, and deferred release reruns to CI per the lite
+    workflow.
+
 - [x] TODO-4171: Migrate infer-source-delegation semantics source-lock suite to public inspection surfaces
   - owner: ai
   - created_at: 2026-04-25

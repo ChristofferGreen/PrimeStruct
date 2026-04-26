@@ -1,12 +1,11 @@
 #include "IrLowererBindingTypeHelpers.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/SoaPathHelpers.h"
 
 namespace primec::ir_lowerer {
 
@@ -21,7 +20,7 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   if (!normalized.empty() && normalized.front() != '/') {
     normalized.insert(normalized.begin(), '/');
   }
-  if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
+  if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalized)) {
     structPathOut = normalized;
     return true;
   }
@@ -271,7 +270,7 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
   if (!normalizedTargetType.empty() && normalizedTargetType.front() != '/') {
     normalizedTargetType.insert(normalizedTargetType.begin(), '/');
   }
-  if (semantics::isExperimentalSoaVectorSpecializedTypePath(normalizedTargetType)) {
+  if (soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedTargetType)) {
     if (info.kind == LocalInfo::Kind::Reference) {
       info.referenceToVector = true;
     } else {
@@ -502,7 +501,7 @@ std::string normalizeCollectionBindingTypeName(const std::string &name) {
       name == "/SoaVector" ||
       name == "std/collections/experimental_soa_vector/SoaVector" ||
       name == "/std/collections/experimental_soa_vector/SoaVector" ||
-      semantics::isExperimentalSoaVectorTypePath(name)) {
+      soa_paths::isExperimentalSoaVectorTypePath(name)) {
     return "soa_vector";
   }
   if (name == "Buffer" || name == "std/gfx/Buffer" || name == "/std/gfx/Buffer" ||

@@ -1,7 +1,5 @@
 #include "IrLowererLowerInferenceSetup.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
@@ -63,7 +61,7 @@ std::vector<const Definition *> collectReturnInfoComponentDefinitions(
 bool isSemanticFileHandleTypeText(const std::string &typeText) {
   std::string base;
   std::string args;
-  return semantics::splitTemplateTypeName(trimTemplateTypeText(typeText), base, args) &&
+  return splitTemplateTypeName(trimTemplateTypeText(typeText), base, args) &&
          normalizeCollectionBindingTypeName(base) == "File";
 }
 

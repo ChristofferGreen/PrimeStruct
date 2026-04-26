@@ -1,11 +1,10 @@
 #include "IrLowererOperatorConversionsAndCallsInternal.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include "IrLowererCallHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
+#include "primec/SoaPathHelpers.h"
 
 #include <algorithm>
 #include <cstring>
@@ -20,7 +19,7 @@ bool isVectorStructPath(const std::string &structPath) {
 }
 
 bool isSpecializedExperimentalSoaVectorStructPath(const std::string &structPath) {
-  return semantics::isExperimentalSoaVectorSpecializedTypePath(structPath);
+  return soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath);
 }
 
 bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
@@ -801,16 +800,16 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
           if (const Definition *samePathCallee = context.resolveDefinitionCall(samePathCandidate);
               samePathCallee != nullptr) {
             const std::string canonicalPath =
-                semantics::canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath);
-            return semantics::isCanonicalSoaRefLikeHelperPath(canonicalPath);
+                soa_paths::canonicalizeLegacySoaRefHelperPath(samePathCallee->fullPath);
+            return soa_paths::isCanonicalSoaRefLikeHelperPath(canonicalPath);
           }
           return false;
         };
         auto matchesBuiltinRefPath = [](const std::string &path) {
           const std::string canonicalPath =
-              semantics::canonicalizeLegacySoaRefHelperPath(path);
-          return semantics::isExperimentalSoaRefLikeHelperPath(canonicalPath) ||
-                 semantics::isCanonicalSoaRefLikeHelperPath(canonicalPath);
+              soa_paths::canonicalizeLegacySoaRefHelperPath(path);
+          return soa_paths::isExperimentalSoaRefLikeHelperPath(canonicalPath) ||
+                 soa_paths::isCanonicalSoaRefLikeHelperPath(canonicalPath);
         };
         if (candidate.kind != Expr::Kind::Call || candidate.args.size() != 2 ||
             !candidate.templateArgs.empty() || candidate.hasBodyArguments ||
@@ -834,16 +833,16 @@ bool emitConversionsAndCallsCollectionAndMutationExpr(
         const bool isBareRefMethodName = normalizedMethodName == "ref";
         const std::string methodPath = "/" + normalizedMethodName;
         const std::string canonicalMethodPath =
-            semantics::canonicalizeLegacySoaRefHelperPath(methodPath);
+            soa_paths::canonicalizeLegacySoaRefHelperPath(methodPath);
         const bool isLegacyOrCanonicalRefMethodPath =
-            semantics::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
+            soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
         if (!isLegacyOrCanonicalRefMethodPath && !isBareRefMethodName) {
           return false;
         }
 
         const bool usesCanonicalStdlibMethodPath =
             methodPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
-            semantics::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
+            soa_paths::isLegacyOrCanonicalSoaHelperPath(canonicalMethodPath, "ref");
         if (!usesCanonicalStdlibMethodPath && hasVisibleLegacySamePathSoaRef(candidate)) {
           return false;
         }

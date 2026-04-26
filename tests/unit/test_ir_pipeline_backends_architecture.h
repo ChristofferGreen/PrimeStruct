@@ -512,6 +512,8 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
       cwd / "include" / "primec" / "testing" / "IrLowererCountAccessContracts.h";
   std::filesystem::path irLowererStageContractsApiPath =
       cwd / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
+  std::filesystem::path soaPathHelpersApiPath =
+      cwd / "include" / "primec" / "SoaPathHelpers.h";
   std::filesystem::path parserTestApiPath = cwd / "include" / "primec" / "testing" / "ParserHelpers.h";
   std::filesystem::path semanticsControlFlowApiPath =
       cwd / "include" / "primec" / "testing" / "SemanticsControlFlowProbes.h";
@@ -536,6 +538,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererCountAccessContracts.h";
     irLowererStageContractsApiPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "IrLowererStageContracts.h";
+    soaPathHelpersApiPath = cwd.parent_path() / "include" / "primec" / "SoaPathHelpers.h";
     parserTestApiPath = cwd.parent_path() / "include" / "primec" / "testing" / "ParserHelpers.h";
     semanticsControlFlowApiPath =
         cwd.parent_path() / "include" / "primec" / "testing" / "SemanticsControlFlowProbes.h";
@@ -557,6 +560,7 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   REQUIRE(std::filesystem::exists(irLowererTestApiPath));
   REQUIRE(std::filesystem::exists(irLowererCountAccessContractsApiPath));
   REQUIRE(std::filesystem::exists(irLowererStageContractsApiPath));
+  REQUIRE(std::filesystem::exists(soaPathHelpersApiPath));
   REQUIRE(std::filesystem::exists(parserTestApiPath));
   REQUIRE(std::filesystem::exists(semanticsControlFlowApiPath));
   REQUIRE(std::filesystem::exists(semanticsGraphTestApiPath));
@@ -581,10 +585,17 @@ TEST_CASE("include layer guardrail baseline tracks existing private test headers
   CHECK(script.find("stale allowlist entry should be removed") != std::string::npos);
 
   const std::string allowlist = readTextFile(allowlistPath);
-  CHECK(allowlist.find("# Existing lowerer -> private semantics helper dependencies.") !=
+  const std::string soaPathHelpers = readTextFile(soaPathHelpersApiPath);
+  CHECK(soaPathHelpers.find("namespace primec::soa_paths") != std::string::npos);
+  CHECK(soaPathHelpers.find("isExperimentalSoaVectorSpecializedTypePath") !=
         std::string::npos);
-  CHECK(allowlist.find("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp -> src/semantics/SemanticsHelpers.h") !=
+  CHECK(soaPathHelpers.find("canonicalizeLegacySoaRefHelperPath") !=
         std::string::npos);
+  CHECK(allowlist.find("# No current lowerer -> private semantics helper dependencies.") !=
+        std::string::npos);
+  CHECK(allowlist.find("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp -> src/semantics/SemanticsHelpers.h") ==
+        std::string::npos);
+  CHECK(allowlist.find("-> src/semantics/SemanticsHelpers.h") == std::string::npos);
   CHECK(allowlist.find("src/ir_lowerer/ -> src/semantics/") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/emitter/") == std::string::npos);
   CHECK(allowlist.find("tests/unit/test_ir_pipeline.cpp -> src/ir_lowerer/") == std::string::npos);

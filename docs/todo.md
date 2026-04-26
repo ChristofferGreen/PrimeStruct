@@ -56,16 +56,15 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4150
 - TODO-4153
 - TODO-4172
+- TODO-4155
 - TODO-4158
 - TODO-4162
 - TODO-4174
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4155
 - TODO-4157
 - TODO-4165
 - TODO-4159
@@ -75,11 +74,12 @@ Task template:
 - TODO-4164
 - TODO-4166
 - TODO-4173
+- TODO-4176
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4150,
-  TODO-4155, TODO-4157, TODO-4158, TODO-4159,
+- Semantic-product authority and lowerer boundary enforcement: TODO-4155,
+  TODO-4157, TODO-4158, TODO-4159,
   TODO-4160, TODO-4161, TODO-4164
 - Test API cleanup and contract-probe migration: TODO-4153, TODO-4172
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
@@ -91,36 +91,35 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4150
-2. TODO-4153
-3. TODO-4172
-4. TODO-4155
-5. TODO-4157
-6. TODO-4158
-7. TODO-4162
-8. TODO-4165
-9. TODO-4159
-10. TODO-4160
-11. TODO-4161
-12. TODO-4163
-13. TODO-4164
-14. TODO-4166
-15. TODO-4174
-16. TODO-4173
-17. TODO-4176
-18. TODO-4175
-19. TODO-4179
-20. TODO-4177
-21. TODO-4178
-22. TODO-4180
-23. TODO-4182
-24. TODO-4181
+1. TODO-4153
+2. TODO-4172
+3. TODO-4155
+4. TODO-4157
+5. TODO-4158
+6. TODO-4162
+7. TODO-4165
+8. TODO-4159
+9. TODO-4160
+10. TODO-4161
+11. TODO-4163
+12. TODO-4164
+13. TODO-4166
+14. TODO-4174
+15. TODO-4173
+16. TODO-4176
+17. TODO-4175
+18. TODO-4179
+19. TODO-4177
+20. TODO-4178
+21. TODO-4180
+22. TODO-4182
+23. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4155, TODO-4162, TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -149,7 +148,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4155, TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4150, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
+| Lowerer/source-composition contract coverage | TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -696,22 +695,3 @@ Task template:
   - stop_rule: Stop once the emitter-expr source-lock suite is retired in
     favor of contract assertions; do not attempt a repo-wide lowerer lock
     purge in one slice.
-
-- [ ] TODO-4150: Remove remaining lowerer binding-type reach-through into semantics helpers
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - depends_on: TODO-4169, TODO-4170
-  - scope: Refactor lowerer binding and uninitialized helpers so binding-kind
-    and specialization decisions come from published semantic facts or neutral
-    shared support utilities rather than private semantics helper headers.
-  - acceptance:
-    - The touched lowerer binding/setup helpers no longer include
-      `src/semantics/SemanticsHelpers.h`.
-    - Focused release coverage for binding setup, uninitialized flows, and
-      struct-layout-sensitive lowering passes unchanged behavior through the
-      published boundary.
-    - Any replacement utility surface is owned outside private semantics.
-  - stop_rule: Stop once the touched lowerer binding/type helpers no longer
-    depend on semantics-private helper headers; do not broaden into unrelated
-    runtime or backend redesign.

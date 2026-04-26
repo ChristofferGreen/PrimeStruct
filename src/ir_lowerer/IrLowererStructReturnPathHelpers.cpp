@@ -1,7 +1,5 @@
 #include "IrLowererStructReturnPathHelpers.h"
 
-#include "../semantics/SemanticsHelpers.h"
-
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
