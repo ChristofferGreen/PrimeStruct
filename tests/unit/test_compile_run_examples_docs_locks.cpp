@@ -278,15 +278,17 @@ TEST_CASE("skipped doctest debt queue stays source locked") {
 
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
-  CHECK(todo.find("- TODO-4147") != std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4148\n- TODO-4168\n- TODO-4170") !=
+  CHECK(todo.find("- TODO-4151") != std::string::npos);
+  CHECK(todo.find("- TODO-4148") != std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n- TODO-4168\n- TODO-4170\n- TODO-4150") !=
         std::string::npos);
   CHECK(todo.find("- Skipped doctest debt: TODO-4107") ==
         std::string::npos);
   CHECK(todo.find("- Release-gate stability and test-suite audit follow-up:") ==
         std::string::npos);
-  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4147\n2. TODO-4151") !=
+  CHECK(todo.find("### Execution Queue (Recommended)\n\n1. TODO-4151\n2. TODO-4152") !=
         std::string::npos);
+  CHECK(todo.find("- TODO-4147") == std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
   CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | none |") !=

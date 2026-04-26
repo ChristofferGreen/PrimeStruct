@@ -3,7 +3,9 @@
 #include <cstdlib>
 #include <optional>
 #include <string>
+#include <vector>
 
+#include "primec/SemanticReturnDependencyOrder.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
 #include "third_party/doctest.h"
@@ -151,6 +153,56 @@ beta() {
   CHECK(dag.nodes[0].memberNodeIds == std::vector<uint32_t>({0, 1, 2, 3}));
   CHECK(dag.topologicalComponentIds == std::vector<uint32_t>({0}));
   CHECK(dag.componentIdByNodeId == std::vector<uint32_t>({0, 0, 0, 0}));
+}
+
+TEST_CASE("return dependency order exposes lowering-ready definition components") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+mid() {
+  return(leaf())
+}
+
+[return<auto>]
+main() {
+  [auto] value{mid()}
+  return(value)
+}
+)";
+  const std::vector<primec::semantics::ReturnDependencyComponent> order =
+      primec::semantics::buildReturnDependencyOrder(parseProgram(source));
+
+  REQUIRE(order.size() == 3);
+  CHECK(order[0].definitionPaths == std::vector<std::string>({"/leaf"}));
+  CHECK_FALSE(order[0].hasCycle);
+  CHECK(order[1].definitionPaths == std::vector<std::string>({"/mid"}));
+  CHECK_FALSE(order[1].hasCycle);
+  CHECK(order[2].definitionPaths == std::vector<std::string>({"/main"}));
+  CHECK_FALSE(order[2].hasCycle);
+}
+
+TEST_CASE("return dependency order marks recursive definition components") {
+  const std::string source = R"(
+[return<auto>]
+alpha() {
+  return(beta())
+}
+
+[return<auto>]
+beta() {
+  return(alpha())
+}
+)";
+  const std::vector<primec::semantics::ReturnDependencyComponent> order =
+      primec::semantics::buildReturnDependencyOrder(parseProgram(source));
+
+  REQUIRE(order.size() == 1);
+  CHECK(order[0].definitionPaths == std::vector<std::string>({"/alpha", "/beta"}));
+  CHECK(order[0].hasCycle);
 }
 
 TEST_CASE("type resolution graph snapshot honors budget env vars") {

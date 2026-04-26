@@ -2929,6 +2929,9 @@ TEST_CASE("lower inference return info uses direct semantic return facts") {
           : cwd.parent_path();
   const std::string irLowererReturnInfoHelpers =
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererLowerInferenceReturnInfoHelpers.cpp");
+  const std::string semanticReturnDependencyOrderHeader =
+      readTextFile(root / "include" / "primec" / "SemanticReturnDependencyOrder.h");
+  const std::string cmake = readTextFile(root / "CMakeLists.txt");
 
   CHECK(irLowererReturnInfoHelpers.find("bool buildSemanticProductReturnInfo(const LowerInferenceReturnInfoSetupInput &input,\n"
                                         "                                    const SemanticProgram &semanticProgram,\n"
@@ -2943,6 +2946,20 @@ TEST_CASE("lower inference return info uses direct semantic return facts") {
   CHECK(irLowererReturnInfoHelpers.find("*input.semanticProgram,") !=
         std::string::npos);
   CHECK(irLowererReturnInfoHelpers.find("*input.semanticIndex,") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("#include \"primec/SemanticReturnDependencyOrder.h\"") !=
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("../semantics/CondensationDag.h") ==
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("../semantics/TypeResolutionGraph.h") ==
+        std::string::npos);
+  CHECK(irLowererReturnInfoHelpers.find("semantics::buildReturnDependencyOrder(*input.program)") !=
+        std::string::npos);
+  CHECK(semanticReturnDependencyOrderHeader.find("struct ReturnDependencyComponent") !=
+        std::string::npos);
+  CHECK(semanticReturnDependencyOrderHeader.find("buildReturnDependencyOrder(const Program &program)") !=
+        std::string::npos);
+  CHECK(cmake.find("src/semantics/SemanticReturnDependencyOrder.cpp") !=
         std::string::npos);
 }
 

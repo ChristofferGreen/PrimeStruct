@@ -4806,3 +4806,29 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `tests/unit/test_ir_pipeline_backends_architecture.h`, updated the TODO
     docs-lock expectations, removed `TODO-4146` from the live queue and
     coverage snapshots, and deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4147: Cut lowerer return-info setup off semantics graph internals
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - scope: Replace `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp`
+    dependencies on `CondensationDag` and `TypeResolutionGraph` with published
+    semantic-product facts or one narrow immutable adapter built by semantics.
+  - acceptance:
+    - The touched return-info lowerer helpers no longer include private graph
+      headers from `src/semantics/`.
+    - Release lowerer and backend coverage for recursive and result-returning
+      definitions still passes with unchanged user-facing diagnostics.
+    - The replacement path reads published semantic facts plus syntax-owned
+      provenance only.
+  - stop_rule: Stop once return-info lowering no longer depends on semantics
+    graph internals; do not broaden into unrelated inference migration work.
+  - finished_at: 2026-04-26
+  - evidence: Added the public `SemanticReturnDependencyOrder` adapter so
+    semantics owns the graph-to-return-component projection and the lowerer
+    consumes immutable definition-path components instead of including
+    `CondensationDag` or `TypeResolutionGraph`. Updated return-info precompute
+    fallback wiring, added semantic adapter behavior tests for ordered and
+    recursive components, source-locked the lowerer boundary, promoted
+    `TODO-4148` into Ready Now, and deferred release reruns to CI per the lite
+    workflow.

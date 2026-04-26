@@ -1,13 +1,12 @@
 #include "IrLowererLowerInferenceSetup.h"
 
-#include "../semantics/CondensationDag.h"
 #include "../semantics/SemanticsHelpers.h"
-#include "../semantics/TypeResolutionGraph.h"
 
 #include "IrLowererResultHelpers.h"
 #include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/SemanticReturnDependencyOrder.h"
 
 #include <algorithm>
 #include <limits>
@@ -45,25 +44,13 @@ void sortDefinitionsForDeterministicReturnSolve(std::vector<const Definition *> 
   });
 }
 
-bool componentHasReturnInferenceCycle(const semantics::CondensationDagNode &componentNode) {
-  return componentNode.memberNodeIds.size() > 1;
-}
-
 std::vector<const Definition *> collectReturnInfoComponentDefinitions(
-    const semantics::TypeResolutionGraph &graph,
-    const semantics::CondensationDagNode &componentNode,
+    const semantics::ReturnDependencyComponent &component,
     const std::unordered_map<std::string, const Definition *> &defMap) {
   std::vector<const Definition *> definitions;
-  definitions.reserve(componentNode.memberNodeIds.size());
-  for (uint32_t nodeId : componentNode.memberNodeIds) {
-    if (nodeId >= graph.nodes.size()) {
-      continue;
-    }
-    const semantics::TypeResolutionGraphNode &node = graph.nodes[nodeId];
-    if (node.kind != semantics::TypeResolutionNodeKind::DefinitionReturn) {
-      continue;
-    }
-    const auto defIt = defMap.find(node.resolvedPath);
+  definitions.reserve(component.definitionPaths.size());
+  for (const std::string &definitionPath : component.definitionPaths) {
+    const auto defIt = defMap.find(definitionPath);
     if (defIt == defMap.end() || defIt->second == nullptr) {
       continue;
     }
@@ -561,9 +548,9 @@ bool runLowerInferenceReturnInfoSetupImpl(const LowerInferenceReturnInfoSetupInp
   return true;
 }
 
-bool precomputeGraphReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput &input,
-                                    const LowerInferenceReturnInfoSetupInput &returnInfoSetupInput,
-                                    std::string &errorOut) {
+bool precomputeOrderedReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput &input,
+                                      const LowerInferenceReturnInfoSetupInput &returnInfoSetupInput,
+                                      std::string &errorOut) {
   if (input.program == nullptr) {
     errorOut = "native backend missing inference get-return-info setup dependency: program";
     return false;
@@ -580,14 +567,11 @@ bool precomputeGraphReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput 
   auto &returnInfoCache = *input.returnInfoCache;
   returnInfoCache.clear();
 
-  const semantics::TypeResolutionGraph graph = semantics::buildTypeResolutionGraph(*input.program);
-  const semantics::CondensationDag dag = semantics::computeTypeResolutionDependencyDag(graph);
-
-  for (auto componentIt = dag.topologicalComponentIds.rbegin(); componentIt != dag.topologicalComponentIds.rend();
-       ++componentIt) {
-    const semantics::CondensationDagNode &componentNode = dag.nodes[*componentIt];
+  const std::vector<semantics::ReturnDependencyComponent> returnDependencyOrder =
+      semantics::buildReturnDependencyOrder(*input.program);
+  for (const semantics::ReturnDependencyComponent &component : returnDependencyOrder) {
     std::vector<const Definition *> definitions =
-        collectReturnInfoComponentDefinitions(graph, componentNode, *input.defMap);
+        collectReturnInfoComponentDefinitions(component, *input.defMap);
     if (definitions.empty()) {
       continue;
     }
@@ -622,7 +606,6 @@ bool precomputeGraphReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput 
       }
     } while (changed);
 
-    const bool componentHasCycle = componentHasReturnInferenceCycle(componentNode);
     for (const Definition *definition : definitions) {
       ReturnInfo finalInfo;
       bool sawUnresolvedDependency = false;
@@ -637,7 +620,7 @@ bool precomputeGraphReturnInfoCache(const LowerInferenceGetReturnInfoSetupInput 
         return false;
       }
       if (sawUnresolvedDependency) {
-        errorOut = componentHasCycle
+        errorOut = component.hasCycle
                        ? "native backend return type inference requires explicit annotation on " + definition->fullPath
                        : "unable to infer return type on " + definition->fullPath;
         return false;
@@ -864,7 +847,7 @@ bool runLowerInferenceGetReturnInfoSetup(const LowerInferenceGetReturnInfoSetupI
       semanticProgram != nullptr && semanticIndex != nullptr;
   if (!(useSemanticProductReturnInfo
             ? precomputeSemanticProductReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut)
-            : precomputeGraphReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut))) {
+            : precomputeOrderedReturnInfoCache(precomputeInput, returnInfoSetupInput, errorOut))) {
     return false;
   }
   errorOut.clear();

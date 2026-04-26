@@ -56,16 +56,15 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4147
 - TODO-4151
 - TODO-4152
 - TODO-4167
 - TODO-4169
 - TODO-4171
+- TODO-4148
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4148
 - TODO-4168
 - TODO-4170
 - TODO-4150
@@ -75,12 +74,13 @@ Task template:
 - TODO-4157
 - TODO-4158
 - TODO-4162
+- TODO-4165
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4147,
-  TODO-4169, TODO-4151, TODO-4148, TODO-4170, TODO-4150, TODO-4155,
-  TODO-4157, TODO-4158, TODO-4159, TODO-4160, TODO-4161, TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4169,
+  TODO-4151, TODO-4148, TODO-4170, TODO-4150, TODO-4155, TODO-4157,
+  TODO-4158, TODO-4159, TODO-4160, TODO-4161, TODO-4164
 - Test API cleanup and contract-probe migration: TODO-4152, TODO-4171,
   TODO-4153, TODO-4172
 - Semantics orchestration cleanup: TODO-4167, TODO-4168
@@ -93,46 +93,45 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4147
-2. TODO-4151
-3. TODO-4152
-4. TODO-4167
-5. TODO-4169
-6. TODO-4171
-7. TODO-4148
-8. TODO-4168
-9. TODO-4170
-10. TODO-4150
-11. TODO-4153
-12. TODO-4172
-13. TODO-4155
-14. TODO-4157
-15. TODO-4158
-16. TODO-4162
-17. TODO-4165
-18. TODO-4159
-19. TODO-4160
-20. TODO-4161
-21. TODO-4163
-22. TODO-4164
-23. TODO-4166
-24. TODO-4174
-25. TODO-4173
-26. TODO-4176
-27. TODO-4175
-28. TODO-4179
-29. TODO-4177
-30. TODO-4178
-31. TODO-4180
-32. TODO-4182
-33. TODO-4181
+1. TODO-4151
+2. TODO-4152
+3. TODO-4167
+4. TODO-4169
+5. TODO-4171
+6. TODO-4148
+7. TODO-4168
+8. TODO-4170
+9. TODO-4150
+10. TODO-4153
+11. TODO-4172
+12. TODO-4155
+13. TODO-4157
+14. TODO-4158
+15. TODO-4162
+16. TODO-4165
+17. TODO-4159
+18. TODO-4160
+19. TODO-4161
+20. TODO-4163
+21. TODO-4164
+22. TODO-4166
+23. TODO-4174
+24. TODO-4173
+25. TODO-4176
+26. TODO-4175
+27. TODO-4179
+28. TODO-4177
+29. TODO-4178
+30. TODO-4180
+31. TODO-4182
+32. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4147, TODO-4148, TODO-4169, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4147, TODO-4155, TODO-4162, TODO-4166 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4148, TODO-4169, TODO-4170, TODO-4150, TODO-4155, TODO-4157, TODO-4158, TODO-4164 |
+| Compile-pipeline stage and publication-boundary contracts | TODO-4155, TODO-4162, TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
@@ -160,7 +159,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4155, TODO-4162, TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4169, TODO-4170, TODO-4155, TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4147, TODO-4148, TODO-4150, TODO-4152, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
+| Lowerer/source-composition contract coverage | TODO-4148, TODO-4150, TODO-4152, TODO-4153, TODO-4157, TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -901,20 +900,3 @@ Task template:
       method-call cases.
   - stop_rule: Stop once method-target selection in lowering is driven by
     published call-target facts rather than helper-path reconstruction.
-
-- [ ] TODO-4147: Cut lowerer return-info setup off semantics graph internals
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - scope: Replace `src/ir_lowerer/IrLowererLowerInferenceReturnInfoHelpers.cpp`
-    dependencies on `CondensationDag` and `TypeResolutionGraph` with published
-    semantic-product facts or one narrow immutable adapter built by semantics.
-  - acceptance:
-    - The touched return-info lowerer helpers no longer include private graph
-      headers from `src/semantics/`.
-    - Release lowerer and backend coverage for recursive and result-returning
-      definitions still passes with unchanged user-facing diagnostics.
-    - The replacement path reads published semantic facts plus syntax-owned
-      provenance only.
-  - stop_rule: Stop once return-info lowering no longer depends on semantics
-    graph internals; do not broaden into unrelated inference migration work.
