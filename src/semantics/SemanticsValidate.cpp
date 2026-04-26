@@ -10,16 +10,14 @@
 #include "SemanticsValidateTransforms.h"
 #include "SemanticPublicationBuilders.h"
 #include "SemanticsHelpers.h"
+#include "SemanticsValidationBenchmarkOrchestration.h"
 #include "SemanticsValidator.h"
 #include "TypeResolutionGraphPreparation.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <exception>
-#include <fstream>
 #include <functional>
-#include <iostream>
-#include <limits>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -27,14 +25,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-#if defined(__APPLE__)
-#include <mach/mach.h>
-#include <malloc/malloc.h>
-#elif defined(__linux__)
-#include <malloc.h>
-#include <unistd.h>
-#endif
 
 namespace primec {
 
@@ -172,39 +162,19 @@ bool runTypeResolutionSnapshot(
 
 namespace {
 
-thread_local bool gDisableSemanticAllocatorReliefForBenchmark = false;
-
-void relieveSemanticAllocatorPressure() {
-#if defined(__APPLE__)
-  (void)malloc_zone_pressure_relief(nullptr, 0);
-#elif defined(__linux__) && defined(__GLIBC__)
-  (void)malloc_trim(0);
-#endif
-}
-
-void maybeRelieveSemanticAllocatorPressure() {
-  if (gDisableSemanticAllocatorReliefForBenchmark) {
-    return;
-  }
-  if (std::getenv("PRIMEC_DISABLE_SEMANTIC_ALLOCATOR_RELIEF") != nullptr) {
-    return;
-  }
-  relieveSemanticAllocatorPressure();
-}
-
 SemanticProgram buildSemanticProgram(const Program &program,
                                      const std::string &entryPath,
                                      semantics::SemanticsValidator &validator,
                                      const SemanticProductBuildConfig *buildConfig) {
   auto publicationSurface =
       validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig);
-  maybeRelieveSemanticAllocatorPressure();
+  semantics::maybeRelieveSemanticAllocatorPressure();
   SemanticProgram semanticProgram = semantics::buildSemanticProgramFromPublicationSurface(
       program,
       entryPath,
       std::move(publicationSurface),
       buildConfig);
-  maybeRelieveSemanticAllocatorPressure();
+  semantics::maybeRelieveSemanticAllocatorPressure();
   return semanticProgram;
 }
 
@@ -224,88 +194,6 @@ uint64_t semanticProgramFactCount(const SemanticProgram &semanticProgram) {
       semanticProgram.queryFacts.size() +
       semanticProgram.tryFacts.size() +
       semanticProgram.onErrorFacts.size());
-}
-
-struct ProcessAllocationSample {
-  bool valid = false;
-  uint64_t allocationCount = 0;
-  uint64_t allocatedBytes = 0;
-};
-
-struct ProcessRssSample {
-  bool valid = false;
-  uint64_t residentBytes = 0;
-};
-
-ProcessAllocationSample captureProcessAllocationSample() {
-  ProcessAllocationSample sample;
-#if defined(__APPLE__)
-  malloc_statistics_t stats{};
-  malloc_zone_statistics(nullptr, &stats);
-  sample.valid = true;
-  sample.allocationCount = static_cast<uint64_t>(stats.blocks_in_use);
-  sample.allocatedBytes = static_cast<uint64_t>(stats.size_in_use);
-#elif defined(__linux__)
-  const struct mallinfo2 info = mallinfo2();
-  sample.valid = true;
-  sample.allocationCount = info.ordblks > 0 ? static_cast<uint64_t>(info.ordblks) : 0;
-  sample.allocatedBytes = info.uordblks > 0 ? static_cast<uint64_t>(info.uordblks) : 0;
-#endif
-  return sample;
-}
-
-ProcessRssSample captureProcessRssSample() {
-  ProcessRssSample sample;
-#if defined(__APPLE__)
-  mach_task_basic_info info{};
-  mach_msg_type_number_t count = MACH_TASK_BASIC_INFO_COUNT;
-  const kern_return_t status = task_info(mach_task_self(),
-                                         MACH_TASK_BASIC_INFO,
-                                         reinterpret_cast<task_info_t>(&info),
-                                         &count);
-  if (status == KERN_SUCCESS) {
-    sample.valid = true;
-    sample.residentBytes = static_cast<uint64_t>(info.resident_size);
-  }
-#elif defined(__linux__)
-  std::ifstream statm("/proc/self/statm");
-  uint64_t residentPages = 0;
-  if (statm.good()) {
-    statm.ignore(std::numeric_limits<std::streamsize>::max(), ' ');
-    if (statm >> residentPages) {
-      const long pageSize = sysconf(_SC_PAGESIZE);
-      if (pageSize > 0) {
-        sample.valid = true;
-        sample.residentBytes = residentPages * static_cast<uint64_t>(pageSize);
-      }
-    }
-  }
-#endif
-  return sample;
-}
-
-uint64_t saturatingSubtract(uint64_t after, uint64_t before) {
-  return after > before ? (after - before) : 0;
-}
-
-void populateAllocationDelta(SemanticPhaseCounterSnapshot &snapshot,
-                             const ProcessAllocationSample &before,
-                             const ProcessAllocationSample &after) {
-  if (!before.valid || !after.valid) {
-    return;
-  }
-  snapshot.allocationCount = saturatingSubtract(after.allocationCount, before.allocationCount);
-  snapshot.allocatedBytes = saturatingSubtract(after.allocatedBytes, before.allocatedBytes);
-}
-
-void populateRssCheckpoints(SemanticPhaseCounterSnapshot &snapshot,
-                            const ProcessRssSample &before,
-                            const ProcessRssSample &after) {
-  if (!before.valid || !after.valid) {
-    return;
-  }
-  snapshot.rssBeforeBytes = before.residentBytes;
-  snapshot.rssAfterBytes = after.residentBytes;
 }
 
 bool isExperimentalMapTypeText(const std::string &typeText) {
@@ -5831,26 +5719,12 @@ bool runSemanticValidation(Program &program,
                            const SemanticProductBuildConfig *semanticProductBuildConfig,
                            const SemanticValidationBenchmarkConfig *benchmarkConfig,
                            const SemanticValidationBenchmarkObserver *benchmarkObserver) {
-  const uint32_t benchmarkSemanticDefinitionValidationWorkerCount =
-      benchmarkConfig != nullptr ? benchmarkConfig->definitionValidationWorkerCount : 1;
-  SemanticPhaseCounters *benchmarkSemanticPhaseCounters =
-      benchmarkObserver != nullptr ? benchmarkObserver->phaseCounters : nullptr;
-  const bool benchmarkSemanticAllocationCountersEnabled =
-      benchmarkObserver != nullptr && benchmarkObserver->allocationCountersEnabled;
-  const bool benchmarkSemanticRssCheckpointsEnabled =
-      benchmarkObserver != nullptr && benchmarkObserver->rssCheckpointsEnabled;
-  const bool benchmarkSemanticDisableMethodTargetMemoization =
-      benchmarkConfig != nullptr && benchmarkConfig->disableMethodTargetMemoization;
-  const bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow =
-      benchmarkConfig != nullptr && benchmarkConfig->graphLocalAutoLegacyKeyShadow;
-  const bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow =
-      benchmarkConfig != nullptr && benchmarkConfig->graphLocalAutoLegacySideChannelShadow;
-  const bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr =
-      benchmarkConfig != nullptr && benchmarkConfig->disableGraphLocalAutoDependencyScratchPmr;
+  const auto benchmarkRuntime =
+      semantics::makeSemanticValidationBenchmarkRuntime(benchmarkConfig, benchmarkObserver);
 
   error.clear();
-  if (benchmarkSemanticPhaseCounters != nullptr) {
-    *benchmarkSemanticPhaseCounters = {};
+  if (benchmarkRuntime.phaseCounters != nullptr) {
+    *benchmarkRuntime.phaseCounters = {};
   }
   DiagnosticSink diagnosticSink(diagnosticInfo);
   diagnosticSink.reset();
@@ -5866,20 +5740,8 @@ bool runSemanticValidation(Program &program,
       }
     }
   } validationDiagnosticScope{diagnosticSink, error, validationSucceeded};
-  struct ScopedBenchmarkAllocatorReliefDisable {
-    explicit ScopedBenchmarkAllocatorReliefDisable(bool enabled)
-        : previous(gDisableSemanticAllocatorReliefForBenchmark) {
-      if (enabled) {
-        gDisableSemanticAllocatorReliefForBenchmark = true;
-      }
-    }
-    ~ScopedBenchmarkAllocatorReliefDisable() {
-      gDisableSemanticAllocatorReliefForBenchmark = previous;
-    }
-    bool previous = false;
-  };
-  const ScopedBenchmarkAllocatorReliefDisable scopedBenchmarkAllocatorReliefDisable(
-      benchmarkSemanticAllocationCountersEnabled || benchmarkSemanticRssCheckpointsEnabled);
+  const semantics::ScopedSemanticAllocatorReliefDisable scopedBenchmarkAllocatorReliefDisable(
+      benchmarkRuntime.usesAllocatorSampling());
   if (!semantics::applySemanticTransforms(program, semanticTransforms, error)) {
     return false;
   }
@@ -5948,32 +5810,12 @@ bool runSemanticValidation(Program &program,
   if (!semantics::rewriteConvertConstructors(program, error)) {
     return false;
   }
-  const bool benchmarkValidatorLifetime =
-      std::getenv("PRIMEC_BENCHMARK_SEMANTIC_VALIDATOR_LIFETIME") != nullptr;
-  ProcessAllocationSample validatorLifetimeAllocationBefore;
-  ProcessAllocationSample validatorLifetimeAllocationAfterRun;
-  ProcessAllocationSample validatorLifetimeAllocationAfterDestroy;
-  ProcessRssSample validatorLifetimeRssBefore;
-  ProcessRssSample validatorLifetimeRssAfterRun;
-  ProcessRssSample validatorLifetimeRssAfterDestroy;
-  if (benchmarkValidatorLifetime) {
-    validatorLifetimeAllocationBefore = captureProcessAllocationSample();
-    validatorLifetimeRssBefore = captureProcessRssSample();
-  }
+  auto validatorLifetimeBenchmark = semantics::SemanticValidatorLifetimeBenchmark::fromEnvironment();
+  validatorLifetimeBenchmark.captureBefore();
 
-  ProcessAllocationSample validationAllocationBefore;
-  ProcessAllocationSample validationAllocationAfter;
-  ProcessRssSample validationRssBefore;
-  ProcessRssSample validationRssAfter;
   semantics::SemanticsValidator::ValidationCounters validationCounters;
-  bool hasValidationAllocationAfter = false;
-  bool hasValidationRssAfter = false;
-  if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
-    validationAllocationBefore = captureProcessAllocationSample();
-  }
-  if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticRssCheckpointsEnabled) {
-    validationRssBefore = captureProcessRssSample();
-  }
+  semantics::SemanticValidationBenchmarkPhase validationBenchmark(benchmarkRuntime);
+  validationBenchmark.captureBefore();
   {
     semantics::SemanticsValidator validator(
         program,
@@ -5983,12 +5825,12 @@ bool runSemanticValidation(Program &program,
         entryDefaultEffects,
         diagnosticInfo,
         collectDiagnostics,
-        benchmarkSemanticDefinitionValidationWorkerCount,
-        benchmarkSemanticPhaseCounters != nullptr,
-        benchmarkSemanticDisableMethodTargetMemoization,
-        benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
-        benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
-        benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr);
+        benchmarkRuntime.definitionValidationWorkerCount,
+        benchmarkRuntime.hasPhaseCounters(),
+        benchmarkRuntime.disableMethodTargetMemoization,
+        benchmarkRuntime.graphLocalAutoLegacyKeyShadow,
+        benchmarkRuntime.graphLocalAutoLegacySideChannelShadow,
+        benchmarkRuntime.disableGraphLocalAutoDependencyScratchPmr);
     try {
       if (!validator.run()) {
         return false;
@@ -6003,78 +5845,41 @@ bool runSemanticValidation(Program &program,
     }
     semantics::assignSemanticNodeIds(program);
     validator.invalidatePilotRoutingSemanticCollectors();
-    maybeRelieveSemanticAllocatorPressure();
-    if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
-      validationAllocationAfter = captureProcessAllocationSample();
-      hasValidationAllocationAfter = true;
-    }
-    if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticRssCheckpointsEnabled) {
-      validationRssAfter = captureProcessRssSample();
-      hasValidationRssAfter = true;
-    }
-    if (benchmarkValidatorLifetime) {
-      validatorLifetimeAllocationAfterRun = captureProcessAllocationSample();
-      validatorLifetimeRssAfterRun = captureProcessRssSample();
-    }
+    semantics::maybeRelieveSemanticAllocatorPressure();
+    validationBenchmark.captureAfter();
+    validatorLifetimeBenchmark.captureAfterRun();
     if (semanticProgramOut != nullptr) {
-      ProcessAllocationSample semanticProductAllocationBefore;
-      ProcessRssSample semanticProductRssBefore;
-      if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticAllocationCountersEnabled) {
-        semanticProductAllocationBefore = captureProcessAllocationSample();
+      semantics::ProcessAllocationSample semanticProductAllocationBefore;
+      semantics::ProcessRssSample semanticProductRssBefore;
+      if (benchmarkRuntime.phaseCounters != nullptr && benchmarkRuntime.allocationCountersEnabled) {
+        semanticProductAllocationBefore = semantics::captureProcessAllocationSample();
       }
-      if (benchmarkSemanticPhaseCounters != nullptr && benchmarkSemanticRssCheckpointsEnabled) {
-        semanticProductRssBefore = captureProcessRssSample();
+      if (benchmarkRuntime.phaseCounters != nullptr && benchmarkRuntime.rssCheckpointsEnabled) {
+        semanticProductRssBefore = semantics::captureProcessRssSample();
       }
       *semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);
-      if (benchmarkSemanticPhaseCounters != nullptr) {
-        benchmarkSemanticPhaseCounters->semanticProductBuild.callsVisited = 1;
-        benchmarkSemanticPhaseCounters->semanticProductBuild.factsProduced =
+      if (benchmarkRuntime.phaseCounters != nullptr) {
+        benchmarkRuntime.phaseCounters->semanticProductBuild.callsVisited = 1;
+        benchmarkRuntime.phaseCounters->semanticProductBuild.factsProduced =
             semanticProgramFactCount(*semanticProgramOut);
-        if (benchmarkSemanticAllocationCountersEnabled) {
-          const ProcessAllocationSample semanticProductAllocationAfter = captureProcessAllocationSample();
-          populateAllocationDelta(benchmarkSemanticPhaseCounters->semanticProductBuild,
-                                  semanticProductAllocationBefore,
-                                  semanticProductAllocationAfter);
+        if (benchmarkRuntime.allocationCountersEnabled) {
+          const auto semanticProductAllocationAfter = semantics::captureProcessAllocationSample();
+          semantics::populateAllocationDelta(benchmarkRuntime.phaseCounters->semanticProductBuild,
+                                             semanticProductAllocationBefore,
+                                             semanticProductAllocationAfter);
         }
-        if (benchmarkSemanticRssCheckpointsEnabled) {
-          const ProcessRssSample semanticProductRssAfter = captureProcessRssSample();
-          populateRssCheckpoints(benchmarkSemanticPhaseCounters->semanticProductBuild,
-                                 semanticProductRssBefore,
-                                 semanticProductRssAfter);
+        if (benchmarkRuntime.rssCheckpointsEnabled) {
+          const auto semanticProductRssAfter = semantics::captureProcessRssSample();
+          semantics::populateRssCheckpoints(benchmarkRuntime.phaseCounters->semanticProductBuild,
+                                            semanticProductRssBefore,
+                                            semanticProductRssAfter);
         }
       }
     }
   }
 
-  if (benchmarkValidatorLifetime) {
-    validatorLifetimeAllocationAfterDestroy = captureProcessAllocationSample();
-    validatorLifetimeRssAfterDestroy = captureProcessRssSample();
-    std::cerr << "[benchmark-semantic-validator-lifetime] "
-              << "{\"schema\":\"primestruct_semantic_validator_lifetime_v1\""
-              << ",\"allocation_before_bytes\":" << validatorLifetimeAllocationBefore.allocatedBytes
-              << ",\"allocation_after_run_bytes\":" << validatorLifetimeAllocationAfterRun.allocatedBytes
-              << ",\"allocation_after_destroy_bytes\":" << validatorLifetimeAllocationAfterDestroy.allocatedBytes
-              << ",\"rss_before_bytes\":" << validatorLifetimeRssBefore.residentBytes
-              << ",\"rss_after_run_bytes\":" << validatorLifetimeRssAfterRun.residentBytes
-              << ",\"rss_after_destroy_bytes\":" << validatorLifetimeRssAfterDestroy.residentBytes
-              << "}" << std::endl;
-  }
-
-  if (benchmarkSemanticPhaseCounters != nullptr) {
-    benchmarkSemanticPhaseCounters->validation.callsVisited =
-        validationCounters.callsVisited;
-    benchmarkSemanticPhaseCounters->validation.peakLocalMapSize =
-        validationCounters.peakLocalMapSize;
-    if (benchmarkSemanticAllocationCountersEnabled && hasValidationAllocationAfter) {
-      populateAllocationDelta(benchmarkSemanticPhaseCounters->validation,
-                              validationAllocationBefore,
-                              validationAllocationAfter);
-    }
-    if (benchmarkSemanticRssCheckpointsEnabled && hasValidationRssAfter) {
-      populateRssCheckpoints(
-          benchmarkSemanticPhaseCounters->validation, validationRssBefore, validationRssAfter);
-    }
-  }
+  validatorLifetimeBenchmark.captureAfterDestroyAndReport();
+  validationBenchmark.publish(validationCounters.callsVisited, validationCounters.peakLocalMapSize);
   error.clear();
   validationSucceeded = true;
   return true;

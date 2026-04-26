@@ -3637,13 +3637,25 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   const std::filesystem::path semanticsHeaderPath = repoRoot / "include" / "primec" / "Semantics.h";
   const std::filesystem::path semanticsBenchmarkHeaderPath =
       repoRoot / "include" / "primec" / "SemanticsBenchmark.h";
+  const std::filesystem::path benchmarkOrchestrationHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidationBenchmarkOrchestration.h";
+  const std::filesystem::path benchmarkOrchestrationSourcePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidationBenchmarkOrchestration.cpp";
+  const std::filesystem::path semanticsValidatePath =
+      repoRoot / "src" / "semantics" / "SemanticsValidate.cpp";
   const std::filesystem::path pipelinePath = repoRoot / "src" / "CompilePipeline.cpp";
   const std::string semanticsHeader = readFile(semanticsHeaderPath.string());
   const std::string semanticsBenchmarkHeader = readFile(semanticsBenchmarkHeaderPath.string());
+  const std::string benchmarkOrchestrationHeader = readFile(benchmarkOrchestrationHeaderPath.string());
+  const std::string benchmarkOrchestrationSource = readFile(benchmarkOrchestrationSourcePath.string());
+  const std::string semanticsValidateText = readFile(semanticsValidatePath.string());
   const std::string pipelineText = readFile(pipelinePath.string());
 
   REQUIRE_FALSE(semanticsHeader.empty());
   REQUIRE_FALSE(semanticsBenchmarkHeader.empty());
+  REQUIRE_FALSE(benchmarkOrchestrationHeader.empty());
+  REQUIRE_FALSE(benchmarkOrchestrationSource.empty());
+  REQUIRE_FALSE(semanticsValidateText.empty());
   REQUIRE_FALSE(pipelineText.empty());
 
   CHECK(semanticsHeader.find("struct SemanticValidationBenchmarkConfig") == std::string::npos);
@@ -3669,6 +3681,17 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
   CHECK(semanticsBenchmarkHeader.find("struct SemanticValidationBenchmarkConfig") != std::string::npos);
   CHECK(semanticsBenchmarkHeader.find("struct SemanticValidationBenchmarkObserver") != std::string::npos);
   CHECK(semanticsBenchmarkHeader.find("bool validateSemanticsForBenchmark(") != std::string::npos);
+  CHECK(benchmarkOrchestrationHeader.find("SemanticValidationBenchmarkRuntime") != std::string::npos);
+  CHECK(benchmarkOrchestrationHeader.find("SemanticValidationBenchmarkPhase") != std::string::npos);
+  CHECK(benchmarkOrchestrationHeader.find("SemanticValidatorLifetimeBenchmark") != std::string::npos);
+  CHECK(benchmarkOrchestrationSource.find("makeSemanticValidationBenchmarkRuntime(") != std::string::npos);
+  CHECK(benchmarkOrchestrationSource.find("PRIMEC_BENCHMARK_SEMANTIC_VALIDATOR_LIFETIME") !=
+        std::string::npos);
+  CHECK(semanticsValidateText.find("makeSemanticValidationBenchmarkRuntime(") != std::string::npos);
+  CHECK(semanticsValidateText.find("SemanticValidationBenchmarkPhase validationBenchmark") !=
+        std::string::npos);
+  CHECK(semanticsValidateText.find("PRIMEC_BENCHMARK_SEMANTIC_VALIDATOR_LIFETIME") ==
+        std::string::npos);
 
   CHECK(pipelineText.find("SemanticValidationBenchmarkConfig benchmarkConfig;") != std::string::npos);
   CHECK(pipelineText.find("SemanticValidationBenchmarkObserver benchmarkObserver;") != std::string::npos);

@@ -4883,3 +4883,31 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     `tests/unit/test_ir_pipeline_backends_architecture.h`, updated lowerer test
     API guidance in `AGENTS.md`, removed `TODO-4152` from the live queue, and
     deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4167: Extract benchmark-only validation orchestration from `Semantics::validate(...)`
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantics orchestration cleanup
+  - scope: Refactor `src/semantics/SemanticsValidate.cpp` so benchmark-only
+    validation instrumentation lives in a separate compileable orchestration
+    unit instead of sharing one oversized production validation flow.
+  - acceptance:
+    - `Semantics::validate(...)` delegates benchmark-only validation
+      orchestration to a dedicated unit.
+    - Release validation behavior remains unchanged for the touched coverage.
+    - The touched orchestration path keeps deterministic diagnostic ordering.
+  - stop_rule: Stop once production validation no longer co-owns
+    benchmark-only plumbing in one oversized orchestration surface; do not
+    broaden into semantic-product publication or new semantic feature work.
+  - finished_at: 2026-04-26
+  - evidence: Added
+    `src/semantics/SemanticsValidationBenchmarkOrchestration.{h,cpp}` as the
+    dedicated compileable unit for benchmark runtime option extraction,
+    validation phase allocation/RSS counters, validator-lifetime benchmark
+    reporting, and allocator-relief suppression while sampled benchmark
+    counters are active. Rewired `Semantics::validate(...)` and
+    `validateSemanticsForBenchmark(...)` through that unit without changing the
+    semantic-product publication path, source-locked the new source in CMake
+    and benchmark plumbing tests, removed `TODO-4167` from the live queue,
+    promoted `TODO-4168` to Ready Now, and deferred release reruns to CI per
+    the lite workflow.

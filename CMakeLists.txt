@@ -99,6 +99,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/TypeResolutionGraph.cpp
   src/semantics/TypeResolutionGraphPreparation.cpp
   src/semantics/SemanticPublicationBuilders.cpp
+  src/semantics/SemanticsValidationBenchmarkOrchestration.cpp
   src/semantics/SemanticsValidate.cpp
   src/semantics/SemanticsValidateConvertConstructors.cpp
   src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp
