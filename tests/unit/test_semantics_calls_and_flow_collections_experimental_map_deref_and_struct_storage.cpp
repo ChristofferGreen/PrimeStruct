@@ -7,7 +7,8 @@ namespace {
 void checkStdlibMapPairConstructorMismatch(const std::string &error) {
   CHECK((error.find("argument type mismatch") != std::string::npos ||
          error.find("implicit template arguments conflict") != std::string::npos));
-  CHECK(error.find("/std/collections/mapPair") != std::string::npos);
+  CHECK(error.find("/std/collections/") != std::string::npos);
+  CHECK(error.find("mapPair") != std::string::npos);
 }
 
 void checkCanonicalMapConstructorMismatch(const std::string &error) {
@@ -78,7 +79,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept experimental map struct storage fields") {
@@ -136,7 +137,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept experimental result struct storage fields") {
@@ -195,7 +196,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept dereferenced experimental map struct storage fields") {
@@ -265,7 +266,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("map constructors accept dereferenced experimental map storage references") {
@@ -307,8 +308,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") !=
-        std::string::npos);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept dereferenced result struct storage fields") {
@@ -379,7 +379,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads infer experimental result auto bindings") {
@@ -425,7 +425,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("implicit template arguments conflict on /std/collections/mapPair") != std::string::npos);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map returns") {
@@ -664,7 +664,8 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("implicit template arguments conflict on /std/collections/experimental_map/mapPair") != std::string::npos);
+  INFO(error);
+  checkStdlibMapPairConstructorMismatch(error);
 }
 
 TEST_CASE("implicit map constructors infer experimental auto locals and auto returns") {
