@@ -56,18 +56,17 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4157
 - TODO-4158
 - TODO-4162
+- TODO-4160
+- TODO-4163
 - TODO-4174
 
 ### Immediate Next 10 (After Ready Now)
 
 - TODO-4165
 - TODO-4159
-- TODO-4160
 - TODO-4161
-- TODO-4163
 - TODO-4164
 - TODO-4166
 - TODO-4173
@@ -75,9 +74,8 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4157,
-  TODO-4158, TODO-4159,
-  TODO-4160, TODO-4161, TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4158,
+  TODO-4159, TODO-4160, TODO-4161, TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4162,
   TODO-4163, TODO-4165, TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -87,32 +85,31 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4157
-2. TODO-4158
-3. TODO-4162
-4. TODO-4165
-5. TODO-4159
-6. TODO-4160
-7. TODO-4161
-8. TODO-4163
-9. TODO-4164
-10. TODO-4166
-11. TODO-4174
-12. TODO-4173
-13. TODO-4176
-14. TODO-4175
-15. TODO-4179
-16. TODO-4177
-17. TODO-4178
-18. TODO-4180
-19. TODO-4182
-20. TODO-4181
+1. TODO-4158
+2. TODO-4162
+3. TODO-4165
+4. TODO-4159
+5. TODO-4160
+6. TODO-4161
+7. TODO-4163
+8. TODO-4164
+9. TODO-4166
+10. TODO-4174
+11. TODO-4173
+12. TODO-4176
+13. TODO-4175
+14. TODO-4179
+15. TODO-4177
+16. TODO-4178
+17. TODO-4180
+18. TODO-4182
+19. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4157, TODO-4158, TODO-4164 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4158, TODO-4164 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4162, TODO-4166 |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -141,7 +138,7 @@ Task template:
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4162, TODO-4166 |
 | Semantic-product publication parity and deterministic ordering | TODO-4163 |
-| Lowerer/source-composition contract coverage | TODO-4157, TODO-4158, TODO-4159 |
+| Lowerer/source-composition contract coverage | TODO-4158, TODO-4159 |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
@@ -476,7 +473,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: Semantic-product authority
-  - depends_on: TODO-4157, TODO-4158
+  - depends_on: TODO-4158
   - scope: Delete one touched AST-side semantic fallback or cache that
     re-derives facts already available through the published semantic-product
     boundary.
@@ -597,20 +594,3 @@ Task template:
     - The new view is owned outside private semantics internals.
   - stop_rule: Stop once one production lowering seam uses the narrow syntax
     and provenance view; do not migrate every lowerer entrypoint in one slice.
-
-- [ ] TODO-4157: Retire temporary semantic-product adapter code
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - depends_on: TODO-4147, TODO-4148, TODO-4150
-  - scope: Delete one touched compatibility adapter or shim that keeps
-    lowerer or compile-pipeline code working before the semantic-product
-    boundary becomes fully authoritative.
-  - acceptance:
-    - One real semantic-product compatibility adapter or shim disappears from
-      the touched production path.
-    - The touched lowerer or compile-pipeline flow still works through
-      published semantic-product facts only.
-    - No touched caller falls back to the removed adapter seam.
-  - stop_rule: Stop once one real adapter seam is retired end-to-end; do not
-    attempt a repo-wide compatibility cleanup in one slice.

@@ -1522,8 +1522,18 @@ TEST_CASE("ir lowerer semantic-product adapter reuses method-call path ids") {
         "/std/collections/map/contains");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter falls back to method-call source lookup") {
+TEST_CASE("ir lowerer semantic-product adapter rejects call-target source lookup") {
   primec::SemanticProgram semanticProgram;
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "status",
+      .sourceLine = 7,
+      .sourceColumn = 9,
+      .semanticNodeId = 155,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/std/file/FileError/status"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::FileErrorHelpers,
+  });
   semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
       .scopePath = "/main",
       .methodName = "at",
@@ -1542,6 +1552,18 @@ TEST_CASE("ir lowerer semantic-product adapter falls back to method-call source 
 
   const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
 
+  primec::Expr directExpr;
+  directExpr.kind = primec::Expr::Kind::Call;
+  directExpr.name = "status";
+  directExpr.sourceLine = 7;
+  directExpr.sourceColumn = 9;
+  directExpr.semanticNodeId = 0;
+
+  CHECK(primec::ir_lowerer::findSemanticProductDirectCallTarget(adapter, directExpr).empty());
+  const auto directSurfaceId =
+      primec::ir_lowerer::findSemanticProductDirectCallStdlibSurfaceId(adapter, directExpr);
+  CHECK_FALSE(directSurfaceId.has_value());
+
   primec::Expr methodExpr;
   methodExpr.kind = primec::Expr::Kind::Call;
   methodExpr.isMethodCall = true;
@@ -1550,12 +1572,10 @@ TEST_CASE("ir lowerer semantic-product adapter falls back to method-call source 
   methodExpr.sourceColumn = 15;
   methodExpr.semanticNodeId = 0;
 
-  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, methodExpr) ==
-        "/std/collections/vector/at");
+  CHECK(primec::ir_lowerer::findSemanticProductMethodCallTarget(adapter, methodExpr).empty());
   const auto surfaceId =
       primec::ir_lowerer::findSemanticProductMethodCallStdlibSurfaceId(adapter, methodExpr);
-  REQUIRE(surfaceId.has_value());
-  CHECK(*surfaceId == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK_FALSE(surfaceId.has_value());
 }
 
 TEST_CASE("ir lowerer semantic-product adapter exposes published stdlib surface ids") {

@@ -397,7 +397,8 @@ Temporary migration adapter contract:
   receiver/method-call targets, helper-routing choices, source-owned binding/result facts, and the current
   callable-summary/type-metadata effect-layout surfaces. The published graph-backed local/query/`try(...)`/`on_error`
   facts are currently inspection-surface facts, not lowerer-adapter inputs; `on_error` bound-arg expressions remain
-  syntax-owned and are still parsed from transforms when lowering needs executable handler arguments.
+  syntax-owned and are still parsed from transforms when lowering needs executable handler arguments. Call-target
+  adapter lookup no longer matches direct or method call facts by source line/column when semantic identity is missing.
 - Removal criteria:
   - `CompilePipelineOutput` publishes the semantic product on the success path.
   - `prepareIrModule` and `IrLowerer::lower` consume the semantic product directly in production codepaths.

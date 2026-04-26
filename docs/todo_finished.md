@@ -5243,3 +5243,30 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     C++/VM/native success-path consumers. Removed `TODO-4155` from the live
     queue, promoted `TODO-4157` to Ready Now, and deferred release reruns to
     CI per the lite workflow.
+
+- [x] TODO-4157: Retire temporary semantic-product adapter code
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Semantic-product authority
+  - depends_on: TODO-4147, TODO-4148, TODO-4150
+  - scope: Delete one touched compatibility adapter or shim that keeps
+    lowerer or compile-pipeline code working before the semantic-product
+    boundary becomes fully authoritative.
+  - acceptance:
+    - One real semantic-product compatibility adapter or shim disappears from
+      the touched production path.
+    - The touched lowerer or compile-pipeline flow still works through
+      published semantic-product facts only.
+    - No touched caller falls back to the removed adapter seam.
+  - stop_rule: Stop once one real adapter seam is retired end-to-end; do not
+    attempt a repo-wide compatibility cleanup in one slice.
+  - finished_at: 2026-04-26
+  - evidence: Removed the lowerer semantic-product adapter's source-line and
+    source-column fallback scans for direct-call and method-call target facts.
+    Call-target and stdlib-surface lookup now only route through
+    semantic-node identity and published semantic-product lookup APIs for the
+    touched helper path, and coverage now asserts source-shaped call facts
+    without semantic identity do not resolve through the retired adapter seam.
+    Removed `TODO-4157` from the live queue, promoted `TODO-4160` and
+    `TODO-4163` to Ready Now, and deferred release reruns to CI per the lite
+    workflow.
