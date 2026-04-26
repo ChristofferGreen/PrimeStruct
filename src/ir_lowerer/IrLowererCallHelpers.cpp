@@ -17,7 +17,7 @@ namespace primec::ir_lowerer {
 namespace {
 bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
   auto matchesPath = [&](std::string_view basePath) {
-    return path == basePath || path.rfind(std::string(basePath) + "__t", 0) == 0;
+    return path == basePath || path.rfind(std::string(basePath) + "__", 0) == 0;
   };
   return matchesPath("/std/collections/vector/count") ||
          matchesPath("/std/collections/vector/capacity") ||

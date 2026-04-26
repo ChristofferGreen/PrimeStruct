@@ -81,6 +81,30 @@
   CHECK(canonicalVectorCountResolveCalls == 1);
   CHECK(canonicalVectorCountEmitCalls == 0);
 
+  primec::Definition canonicalVectorCountOverloadCallee;
+  canonicalVectorCountOverloadCallee.fullPath =
+      "/std/collections/vector/count__ov0";
+  int canonicalVectorCountOverloadResolveCalls = 0;
+  int canonicalVectorCountOverloadEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            countCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalVectorCountOverloadResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "count");
+              return &canonicalVectorCountOverloadCallee;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++canonicalVectorCountOverloadEmitCalls;
+              return true;
+            },
+            error) == Result::NoCallee);
+  CHECK(error.empty());
+  CHECK(canonicalVectorCountOverloadResolveCalls == 1);
+  CHECK(canonicalVectorCountOverloadEmitCalls == 0);
+
   primec::Expr aliasCountCall = countCall;
   aliasCountCall.name = "/vector/count";
   int aliasCountResolveCalls = 0;
@@ -186,6 +210,30 @@
   CHECK(error.empty());
   CHECK(capacityResolveCalls == 1);
   CHECK(capacityEmitCalls == 1);
+
+  primec::Definition canonicalVectorCapacityOverloadCallee;
+  canonicalVectorCapacityOverloadCallee.fullPath =
+      "/std/collections/vector/capacity__ov0";
+  int canonicalVectorCapacityOverloadResolveCalls = 0;
+  int canonicalVectorCapacityOverloadEmitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitNonMethodCountFallback(
+            capacityCall,
+            [](const primec::Expr &) { return false; },
+            [](const primec::Expr &) { return false; },
+            [&](const primec::Expr &methodExpr) -> const primec::Definition * {
+              ++canonicalVectorCapacityOverloadResolveCalls;
+              CHECK(methodExpr.isMethodCall);
+              CHECK(methodExpr.name == "capacity");
+              return &canonicalVectorCapacityOverloadCallee;
+            },
+            [&](const primec::Expr &, const primec::Definition &) {
+              ++canonicalVectorCapacityOverloadEmitCalls;
+              return true;
+            },
+            error) == Result::NoCallee);
+  CHECK(error.empty());
+  CHECK(canonicalVectorCapacityOverloadResolveCalls == 1);
+  CHECK(canonicalVectorCapacityOverloadEmitCalls == 0);
 
   primec::Expr canonicalCapacityCall = capacityCall;
   canonicalCapacityCall.name = "/std/collections/vector/capacity";
