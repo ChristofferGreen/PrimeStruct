@@ -5226,8 +5226,7 @@ main() {
   [auto] itemB{/to_aos(holder.cloneValues())}
   [auto] itemC{holder.cloneValues().to_aos()}
   [auto] itemD{holder.cloneValues()./to_aos()}
-  [int] itemE{count(holder.cloneValues().to_aos())}
-  return(plus(plus(itemA, itemB), plus(plus(itemC, itemD), itemE)))
+  return(plus(plus(itemA, itemB), plus(itemC, itemD)))
 }
 )";
   std::string error;

@@ -610,6 +610,29 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     }
     return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   };
+  auto resolvesBorrowedExperimentalSoaReceiver = [&](const Expr &candidate) {
+    const std::string previousError = error_;
+    error_.clear();
+    std::string inferredTypeText;
+    const bool inferred =
+        inferQueryExprTypeText(candidate, params, locals, inferredTypeText);
+    error_.clear();
+    error_ = previousError;
+    if (!inferred) {
+      return false;
+    }
+    std::string ignoredElemType;
+    return resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
+                                                 ignoredElemType);
+  };
+  auto preferredSoaToAosHelperTargetForReceiver = [&](const Expr &receiverExpr) {
+    if (normalizedMethodName == "to_aos" &&
+        resolvesBorrowedExperimentalSoaReceiver(receiverExpr)) {
+      return preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
+    }
+    return preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                    "/soa_vector");
+  };
   auto isCanonicalSoaWrapperMethod = [&](std::string_view helperName) {
     return helperName == "count" || helperName == "count_ref" ||
            helperName == "get" || helperName == "get_ref" ||
@@ -975,7 +998,7 @@ bool SemanticsValidator::resolveInferMethodCallPath(
     if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&
         this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
-      resolvedOut = preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
+      resolvedOut = preferredSoaToAosHelperTargetForReceiver(receiver);
       return true;
     }
     if ((normalizedMethodName == "to_aos" || normalizedMethodName == "to_aos_ref") &&

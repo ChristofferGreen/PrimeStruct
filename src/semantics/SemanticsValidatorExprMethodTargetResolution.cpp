@@ -592,6 +592,29 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     return preferredSoaHelperTargetForCollectionType(helperName, "/soa_vector");
   };
+  auto resolvesBorrowedExperimentalSoaReceiver = [&](const Expr &candidate) {
+    const std::string previousError = error_;
+    error_.clear();
+    std::string inferredTypeText;
+    const bool inferred =
+        inferQueryExprTypeText(candidate, params, locals, inferredTypeText);
+    error_.clear();
+    error_ = previousError;
+    if (!inferred) {
+      return false;
+    }
+    std::string ignoredElemType;
+    return resolveExperimentalBorrowedSoaTypeText(inferredTypeText,
+                                                 ignoredElemType);
+  };
+  auto preferredSoaToAosHelperTargetForReceiver = [&](const Expr &receiverExpr) {
+    if (normalizedMethodName == "to_aos" &&
+        resolvesBorrowedExperimentalSoaReceiver(receiverExpr)) {
+      return preferredBorrowedSoaAccessHelperTarget(normalizedMethodName);
+    }
+    return preferredSoaHelperTargetForCollectionType(normalizedMethodName,
+                                                    "/soa_vector");
+  };
   auto resolveFieldBindingTarget = [&](const Expr &target, BindingInfo &bindingOut) -> bool {
     if (!(target.kind == Expr::Kind::Call && target.isFieldAccess && target.args.size() == 1)) {
       return false;
@@ -2332,7 +2355,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     if (this->resolveSoaVectorOrExperimentalBorrowedReceiver(
             receiver, params, locals, resolveDirectReceiver, elemType)) {
       return setCollectionMethodTarget(
-          preferredBorrowedSoaAccessHelperTarget(normalizedMethodName));
+          preferredSoaToAosHelperTargetForReceiver(receiver));
     }
     if (resolveSoaVectorTarget(receiver, elemType)) {
       return setCollectionMethodTarget(
