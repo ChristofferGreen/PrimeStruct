@@ -3748,3 +3748,23 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   CHECK(semanticsValidate.find("validator.validationContextSnapshotForTesting()") == std::string::npos);
   CHECK(semanticsValidate.find("if (entry.isExecution) {") != std::string::npos);
 }
+
+TEST_CASE("semantic snapshot traversal inventory avoids inactive next-candidate pointer") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::filesystem::path root =
+      std::filesystem::exists(cwd / "docs" / "semantic_snapshot_traversal_inventory.md")
+          ? cwd
+          : cwd.parent_path();
+  const std::filesystem::path inventoryPath =
+      root / "docs" / "semantic_snapshot_traversal_inventory.md";
+  REQUIRE(std::filesystem::exists(inventoryPath));
+
+  const std::string inventory = readTextFile(inventoryPath);
+  CHECK(inventory.find("`P2-11` implemented") != std::string::npos);
+  CHECK(inventory.find("No active TODO currently targets additional semantic snapshot traversal merges.") !=
+        std::string::npos);
+  CHECK(inventory.find("Add a concrete traversal-churn TODO with acceptance and parity coverage") !=
+        std::string::npos);
+  CHECK(inventory.find("## Next Pair Candidate") == std::string::npos);
+  CHECK(inventory.find("Likely next merge candidate") == std::string::npos);
+}

@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4199: Align snapshot traversal inventory docs. Completed:
+  `docs/semantic_snapshot_traversal_inventory.md` now records the landed
+  `P2-11` callable-summary/`on_error` shared traversal and no longer presents
+  a historical method-target/query-receiver merge as an active next candidate
+  while `docs/todo.md` has no traversal-churn leaf. The inventory now requires
+  a fresh traversal-churn TODO with acceptance and parity coverage before
+  reopening that lane, and graph-context source-lock coverage rejects the
+  inactive next-candidate wording.
 - ✓ TODO-4198: Align backend entrypoint inventory docs. Completed:
   `docs/semantic_product_backend_entrypoint_inventory.md` no longer says it
   exists to support `P1-06` follow-up slicing after the inventory already
