@@ -11,6 +11,8 @@
 
 #include "primec/StdlibSurfaceRegistry.h"
 #include "primec/SymbolInterner.h"
+#include "primec/semantic_product/DirectCallFacts.h"
+#include "primec/semantic_product/MethodCallFacts.h"
 
 namespace primec {
 
@@ -60,34 +62,6 @@ struct SemanticProgramExecution {
   int sourceColumn = 0;
   uint64_t semanticNodeId = 0;
   uint64_t provenanceHandle = 0;
-};
-
-struct SemanticProgramDirectCallTarget {
-  std::string scopePath;
-  std::string callName;
-  int sourceLine = 0;
-  int sourceColumn = 0;
-  uint64_t semanticNodeId = 0;
-  uint64_t provenanceHandle = 0;
-  SymbolId scopePathId = InvalidSymbolId;
-  SymbolId callNameId = InvalidSymbolId;
-  SymbolId resolvedPathId = InvalidSymbolId;
-  std::optional<StdlibSurfaceId> stdlibSurfaceId;
-};
-
-struct SemanticProgramMethodCallTarget {
-  std::string scopePath;
-  std::string methodName;
-  std::string receiverTypeText;
-  int sourceLine = 0;
-  int sourceColumn = 0;
-  uint64_t semanticNodeId = 0;
-  uint64_t provenanceHandle = 0;
-  SymbolId scopePathId = InvalidSymbolId;
-  SymbolId methodNameId = InvalidSymbolId;
-  SymbolId receiverTypeTextId = InvalidSymbolId;
-  SymbolId resolvedPathId = InvalidSymbolId;
-  std::optional<StdlibSurfaceId> stdlibSurfaceId;
 };
 
 struct SemanticProgramBridgePathChoice {
@@ -427,10 +401,6 @@ struct SemanticProgram {
   std::vector<SemanticProgramOnErrorFact> onErrorFacts;
 };
 
-std::vector<const SemanticProgramDirectCallTarget *>
-semanticProgramDirectCallTargetView(const SemanticProgram &semanticProgram);
-std::vector<const SemanticProgramMethodCallTarget *>
-semanticProgramMethodCallTargetView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramBridgePathChoice *>
 semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram);
 std::vector<const SemanticProgramCallableSummary *>
@@ -477,24 +447,10 @@ std::optional<SymbolId> semanticProgramLookupPublishedImportAliasTargetPathId(
 std::optional<SymbolId> semanticProgramLookupPublishedImportAliasTargetPathId(
     const SemanticProgram &semanticProgram,
     std::string_view aliasName);
-std::optional<SymbolId> semanticProgramLookupPublishedDirectCallTargetId(const SemanticProgram &semanticProgram,
-                                                                         uint64_t semanticNodeId);
-std::optional<SymbolId> semanticProgramLookupPublishedMethodCallTargetId(const SemanticProgram &semanticProgram,
-                                                                         uint64_t semanticNodeId);
 std::optional<SymbolId> semanticProgramLookupPublishedBridgePathChoiceId(const SemanticProgram &semanticProgram,
                                                                          uint64_t semanticNodeId);
-std::optional<StdlibSurfaceId> semanticProgramDirectCallTargetStdlibSurfaceId(
-    const SemanticProgramDirectCallTarget &entry);
-std::optional<StdlibSurfaceId> semanticProgramMethodCallTargetStdlibSurfaceId(
-    const SemanticProgramMethodCallTarget &entry);
 std::optional<StdlibSurfaceId> semanticProgramBridgePathChoiceStdlibSurfaceId(
     const SemanticProgramBridgePathChoice &entry);
-std::optional<StdlibSurfaceId> semanticProgramLookupPublishedDirectCallTargetStdlibSurfaceId(
-    const SemanticProgram &semanticProgram,
-    uint64_t semanticNodeId);
-std::optional<StdlibSurfaceId> semanticProgramLookupPublishedMethodCallTargetStdlibSurfaceId(
-    const SemanticProgram &semanticProgram,
-    uint64_t semanticNodeId);
 std::optional<StdlibSurfaceId> semanticProgramLookupPublishedBridgePathChoiceStdlibSurfaceId(
     const SemanticProgram &semanticProgram,
     uint64_t semanticNodeId);
@@ -542,12 +498,6 @@ const SemanticProgramTryFact *semanticProgramLookupPublishedTryFactByOperandPath
     SymbolId operandPathId,
     int sourceLine,
     int sourceColumn);
-std::string_view semanticProgramDirectCallTargetResolvedPath(
-    const SemanticProgram &semanticProgram,
-    const SemanticProgramDirectCallTarget &entry);
-std::string_view semanticProgramMethodCallTargetResolvedPath(
-    const SemanticProgram &semanticProgram,
-    const SemanticProgramMethodCallTarget &entry);
 std::string_view semanticProgramBridgePathChoiceHelperName(
     const SemanticProgram &semanticProgram,
     const SemanticProgramBridgePathChoice &entry);

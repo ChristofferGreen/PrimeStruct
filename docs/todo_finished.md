@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4160: Split `SemanticProduct.h` into family-specific public
+  surfaces. Completed: direct-call and method-call semantic-product routing
+  facts now live in dedicated public headers under
+  `include/primec/semantic_product/`, while `include/primec/SemanticProduct.h`
+  remains the stable umbrella include for existing consumers. Source-lock
+  coverage now pins the decomposed public header layout and verifies the new
+  family headers do not include private semantics internals or the umbrella
+  header back.
 - ✓ TODO-4159: Move lowerer import-alias handling to a frontend-owned
   syntax helper. Completed: `include/primec/FrontendSyntax.h` and
   `src/FrontendSyntax.cpp` now own wildcard import detection, syntax

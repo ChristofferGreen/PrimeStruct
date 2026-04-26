@@ -698,6 +698,49 @@ TEST_CASE("ir lowerer header exposes only semantic-product-aware lowering entryp
         std::string::npos);
 }
 
+TEST_CASE("semantic product routing facts have dedicated public headers") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path semanticProductPath = cwd / "include" / "primec" / "SemanticProduct.h";
+  std::filesystem::path directCallFactsPath =
+      cwd / "include" / "primec" / "semantic_product" / "DirectCallFacts.h";
+  std::filesystem::path methodCallFactsPath =
+      cwd / "include" / "primec" / "semantic_product" / "MethodCallFacts.h";
+  if (!std::filesystem::exists(semanticProductPath)) {
+    semanticProductPath = cwd.parent_path() / "include" / "primec" / "SemanticProduct.h";
+    directCallFactsPath =
+        cwd.parent_path() / "include" / "primec" / "semantic_product" / "DirectCallFacts.h";
+    methodCallFactsPath =
+        cwd.parent_path() / "include" / "primec" / "semantic_product" / "MethodCallFacts.h";
+  }
+  REQUIRE(std::filesystem::exists(semanticProductPath));
+  REQUIRE(std::filesystem::exists(directCallFactsPath));
+  REQUIRE(std::filesystem::exists(methodCallFactsPath));
+
+  const std::string semanticProduct = readTextFile(semanticProductPath);
+  const std::string directCallFacts = readTextFile(directCallFactsPath);
+  const std::string methodCallFacts = readTextFile(methodCallFactsPath);
+  CHECK(semanticProduct.find("#include \"primec/semantic_product/DirectCallFacts.h\"") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("#include \"primec/semantic_product/MethodCallFacts.h\"") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget {") == std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget {") == std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramDirectCallTarget> directCallTargets;") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("std::vector<SemanticProgramMethodCallTarget> methodCallTargets;") !=
+        std::string::npos);
+  CHECK(directCallFacts.find("#include \"primec/SemanticProduct.h\"") == std::string::npos);
+  CHECK(methodCallFacts.find("#include \"primec/SemanticProduct.h\"") == std::string::npos);
+  CHECK(directCallFacts.find("struct SemanticProgramDirectCallTarget {") != std::string::npos);
+  CHECK(methodCallFacts.find("struct SemanticProgramMethodCallTarget {") != std::string::npos);
+  CHECK(directCallFacts.find("semanticProgramDirectCallTargetView") != std::string::npos);
+  CHECK(methodCallFacts.find("semanticProgramMethodCallTargetView") != std::string::npos);
+  CHECK(directCallFacts.find("semanticProgramDirectCallTargetResolvedPath") !=
+        std::string::npos);
+  CHECK(methodCallFacts.find("semanticProgramMethodCallTargetResolvedPath") !=
+        std::string::npos);
+}
+
 #if 0
 TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::filesystem::path cwd = std::filesystem::current_path();
@@ -965,8 +1008,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string uninitializedSetupBuilders = readTextFile(uninitializedSetupBuildersPath);
   const std::string primecMain = readTextFile(primecMainPath);
   const std::string primevmMain = readTextFile(primevmMainPath);
-  CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
-  CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
+  CHECK(semanticProduct.find("#include \"primec/semantic_product/DirectCallFacts.h\"") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("#include \"primec/semantic_product/MethodCallFacts.h\"") !=
+        std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
   CHECK(semanticProduct.find("std::optional<StdlibSurfaceId> stdlibSurfaceId;") !=
         std::string::npos);
@@ -2163,6 +2208,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
 
   const std::string cmake = readRepoFile("CMakeLists.txt");
   const std::string semanticProduct = readRepoFile("include/primec/SemanticProduct.h");
+  const std::string directCallFacts =
+      readRepoFile("include/primec/semantic_product/DirectCallFacts.h");
+  const std::string methodCallFacts =
+      readRepoFile("include/primec/semantic_product/MethodCallFacts.h");
   const std::string compilePipelineHeader = readRepoFile("include/primec/CompilePipeline.h");
   const std::string semanticsHeader = readRepoFile("include/primec/Semantics.h");
   const std::string irPreparationHeader = readRepoFile("include/primec/IrPreparation.h");
@@ -2206,8 +2255,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::string primecMain = readRepoFile("src/main.cpp");
   const std::string primevmMain = readRepoFile("src/primevm_main.cpp");
 
-  CHECK(semanticProduct.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
-  CHECK(semanticProduct.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
+  CHECK(semanticProduct.find("#include \"primec/semantic_product/DirectCallFacts.h\"") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("#include \"primec/semantic_product/MethodCallFacts.h\"") !=
+        std::string::npos);
+  CHECK(directCallFacts.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
+  CHECK(methodCallFacts.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramModuleIdentity") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramModuleResolvedArtifacts") != std::string::npos);
@@ -2848,8 +2901,8 @@ TEST_CASE("semantic product method call targets use resolvedPathId without resol
       std::filesystem::exists(cwd / "include" / "primec" / "SemanticProduct.h")
           ? cwd
           : cwd.parent_path();
-  const std::string semanticProductHeader =
-      readTextFile(root / "include" / "primec" / "SemanticProduct.h");
+  const std::string methodCallFactsHeader =
+      readTextFile(root / "include" / "primec" / "semantic_product" / "MethodCallFacts.h");
   const std::string semanticProductSource =
       readTextFile(root / "src" / "SemanticProduct.cpp");
   const std::string semanticTargetAdapterSource =
@@ -2858,15 +2911,15 @@ TEST_CASE("semantic product method call targets use resolvedPathId without resol
       readTextFile(root / "src" / "ir_lowerer" / "IrLowererCallResolution.cpp");
 
   const std::size_t methodStart =
-      semanticProductHeader.find("struct SemanticProgramMethodCallTarget {");
-  const std::size_t bridgeStart =
-      semanticProductHeader.find("struct SemanticProgramBridgePathChoice {");
+      methodCallFactsHeader.find("struct SemanticProgramMethodCallTarget {");
+  const std::size_t viewStart =
+      methodCallFactsHeader.find("semanticProgramMethodCallTargetView(");
   REQUIRE(methodStart != std::string::npos);
-  REQUIRE(bridgeStart != std::string::npos);
-  REQUIRE(methodStart < bridgeStart);
+  REQUIRE(viewStart != std::string::npos);
+  REQUIRE(methodStart < viewStart);
 
   const std::string methodBody =
-      semanticProductHeader.substr(methodStart, bridgeStart - methodStart);
+      methodCallFactsHeader.substr(methodStart, viewStart - methodStart);
   CHECK(methodBody.find("SymbolId resolvedPathId = InvalidSymbolId;") !=
         std::string::npos);
   CHECK(methodBody.find("std::string resolvedPath;") == std::string::npos);

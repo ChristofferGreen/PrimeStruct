@@ -56,7 +56,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4160
+- TODO-4161
 - TODO-4163
 - TODO-4164
 - TODO-4166
@@ -64,14 +64,13 @@ Task template:
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4161
 - TODO-4173
 - TODO-4176
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4160,
-  TODO-4161, TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4161,
+  TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4163,
   TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -81,21 +80,20 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4160
-2. TODO-4161
-3. TODO-4163
-4. TODO-4164
-5. TODO-4166
-6. TODO-4174
-7. TODO-4173
-8. TODO-4176
-9. TODO-4175
-10. TODO-4179
-11. TODO-4177
-12. TODO-4178
-13. TODO-4180
-14. TODO-4182
-15. TODO-4181
+1. TODO-4161
+2. TODO-4163
+3. TODO-4164
+4. TODO-4166
+5. TODO-4174
+6. TODO-4173
+7. TODO-4176
+8. TODO-4175
+9. TODO-4179
+10. TODO-4177
+11. TODO-4178
+12. TODO-4180
+13. TODO-4182
+14. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -111,7 +109,7 @@ Task template:
 | SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4179, TODO-4180, TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
-| Semantic-product public API factoring and versioning | TODO-4160, TODO-4161, TODO-4163 |
+| Semantic-product public API factoring and versioning | TODO-4161, TODO-4163 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -496,21 +494,3 @@ Task template:
   - stop_rule: Stop once one canonical semantic-product surface enforces
     contract-version compatibility; do not broaden into general serialization
     migration policy.
-
-- [ ] TODO-4160: Split `SemanticProduct.h` into family-specific public surfaces
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - scope: Break the monolithic `include/primec/SemanticProduct.h` public API
-    into smaller family-specific headers while keeping a stable umbrella
-    include for existing consumers where needed.
-  - acceptance:
-    - At least two semantic-product fact families move to dedicated public
-      headers.
-    - `include/primec/SemanticProduct.h` becomes a smaller facade or umbrella
-      over the new family-specific surfaces.
-    - The touched consumers build through the new header layout without
-      including private semantics internals.
-  - stop_rule: Stop once one meaningful slice of the semantic-product API is
-    decomposed; do not attempt a repo-wide header taxonomy rewrite in one
-    slice.
