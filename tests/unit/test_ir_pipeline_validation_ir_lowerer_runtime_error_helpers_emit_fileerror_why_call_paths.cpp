@@ -637,7 +637,7 @@ TEST_CASE("ir lowerer setup math helper keeps current bundled binding adapter ro
         primec::ir_lowerer::LocalInfo::ValueKind::Float64);
 }
 
-TEST_CASE("ir lowerer setup math helpers keep semantic product helper-result bindings non-FileError") {
+TEST_CASE("ir lowerer setup math helpers keep semantic product FileError bindings") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
       .scopePath = "/main",
@@ -664,7 +664,7 @@ TEST_CASE("ir lowerer setup math helpers keep semantic product helper-result bin
   helperResultCall.sourceLine = 21;
   helperResultCall.sourceColumn = 4;
 
-  CHECK_FALSE(adapters.bindingTypeAdapters.isFileErrorBinding(helperResultCall));
+  CHECK(adapters.bindingTypeAdapters.isFileErrorBinding(helperResultCall));
   CHECK(adapters.bindingTypeAdapters.bindingKind(helperResultCall) ==
         primec::ir_lowerer::LocalInfo::Kind::Value);
 }
