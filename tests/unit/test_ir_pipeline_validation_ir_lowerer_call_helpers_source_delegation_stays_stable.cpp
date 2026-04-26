@@ -3654,6 +3654,19 @@ TEST_CASE("ir lowerer call helpers classify tail call candidates") {
   CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(unknownCall, defMap, resolveExprPath));
 }
 
+TEST_CASE("ir lowerer call helpers reject missing tail-call resolver") {
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/callee", &callee}};
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+
+  CHECK_FALSE(primec::ir_lowerer::isTailCallCandidate(
+      callExpr, defMap, primec::ir_lowerer::ResolveExprPathFn{}));
+}
+
 TEST_CASE("ir lowerer call helpers build tail-call and definition-exists adapters") {
   primec::Definition callee;
   callee.fullPath = "/callee";
@@ -3721,6 +3734,8 @@ TEST_CASE("ir lowerer call helpers detect tail execution candidates from stateme
   statements = {directTail};
   CHECK(primec::ir_lowerer::hasTailExecutionCandidate(statements, true, isTailCandidate));
   CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(statements, false, isTailCandidate));
+  CHECK_FALSE(primec::ir_lowerer::hasTailExecutionCandidate(
+      statements, true, primec::ir_lowerer::IsTailCallCandidateFn{}));
 
   primec::Expr returnCall;
   returnCall.kind = primec::Expr::Kind::Call;

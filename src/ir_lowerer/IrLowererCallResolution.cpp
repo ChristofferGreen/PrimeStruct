@@ -971,7 +971,7 @@ std::string resolveCallPathFromScope(
 bool isTailCallCandidate(const Expr &expr,
                          const std::unordered_map<std::string, const Definition *> &defMap,
                          const ResolveExprPathFn &resolveExprPath) {
-  if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || !resolveExprPath) {
     return false;
   }
   const std::string targetPath = resolveExprPath(expr);
@@ -981,7 +981,7 @@ bool isTailCallCandidate(const Expr &expr,
 bool hasTailExecutionCandidate(const std::vector<Expr> &statements,
                                bool definitionReturnsVoid,
                                const IsTailCallCandidateFn &isTailCallCandidateFn) {
-  if (statements.empty()) {
+  if (statements.empty() || !isTailCallCandidateFn) {
     return false;
   }
   const Expr &lastStmt = statements.back();
