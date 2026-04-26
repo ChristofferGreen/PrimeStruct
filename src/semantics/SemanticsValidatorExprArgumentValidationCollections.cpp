@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace primec::semantics {
 
@@ -32,6 +33,37 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
     return true;
   }
   return false;
+}
+
+bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
+                                                    std::string &elemTypeOut) {
+  elemTypeOut.clear();
+  std::string normalizedType = normalizeBindingTypeName(typeText);
+  while (true) {
+    std::string base;
+    std::string argText;
+    if (!splitTemplateTypeName(normalizedType, base, argText) || base.empty()) {
+      return false;
+    }
+    base = normalizeBindingTypeName(base);
+    if (base == "Reference" || base == "Pointer") {
+      std::vector<std::string> args;
+      if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+        return false;
+      }
+      normalizedType = normalizeBindingTypeName(args.front());
+      continue;
+    }
+    if (normalizeCollectionTypePath(base) != "/soa_vector" || argText.empty()) {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(argText, args) || args.size() != 1) {
+      return false;
+    }
+    elemTypeOut = args.front();
+    return true;
+  }
 }
 
 } // namespace
@@ -407,6 +439,10 @@ bool SemanticsValidator::resolveExperimentalBorrowedSoaTypeText(
       normalizedBindingType != "Pointer") {
     return false;
   }
+  if (extractBuiltinSoaVectorElementTypeFromTypeText(normalizedType,
+                                                     elemTypeOut)) {
+    return true;
+  }
   return extractExperimentalSoaVectorElementType(inferredBinding, elemTypeOut);
 }
 
@@ -429,6 +465,13 @@ bool SemanticsValidator::resolveDirectSoaVectorOrExperimentalBorrowedReceiver(
     if (normalizedType != "Reference" &&
         normalizedType != "Pointer") {
       return false;
+    }
+    if (extractBuiltinSoaVectorElementTypeFromTypeText(
+            binding.typeTemplateArg.empty()
+                ? normalizedType
+                : normalizedType + "<" + binding.typeTemplateArg + ">",
+            elemTypeOut)) {
+      return true;
     }
     return extractExperimentalSoaVectorElementType(binding, elemTypeOut);
   };
