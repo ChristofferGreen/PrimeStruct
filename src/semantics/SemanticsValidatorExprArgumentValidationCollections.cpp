@@ -35,6 +35,15 @@ bool getCanonicalMapAccessBuiltinName(const Expr &candidate,
   return false;
 }
 
+bool isBuiltinSoaVectorTypeBaseForArgumentValidation(const std::string &base) {
+  const std::string normalizedBase = normalizeBindingTypeName(base);
+  return normalizedBase == "soa_vector" ||
+         normalizedBase == "/soa_vector" ||
+         normalizedBase == "std/collections/soa_vector" ||
+         normalizedBase == "/std/collections/soa_vector" ||
+         isExperimentalSoaVectorTypePath(normalizedBase);
+}
+
 bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
                                                     std::string &elemTypeOut) {
   elemTypeOut.clear();
@@ -54,7 +63,7 @@ bool extractBuiltinSoaVectorElementTypeFromTypeText(const std::string &typeText,
       normalizedType = normalizeBindingTypeName(args.front());
       continue;
     }
-    if (normalizeCollectionTypePath(base) != "/soa_vector" || argText.empty()) {
+    if (!isBuiltinSoaVectorTypeBaseForArgumentValidation(base) || argText.empty()) {
       return false;
     }
     std::vector<std::string> args;
