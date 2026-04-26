@@ -409,10 +409,9 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
   }
   const size_t open = text.find('<');
   if (open == std::string::npos || open == 0 || text.back() != '>') {
-    base = text;
     return false;
   }
-  base = text.substr(0, open);
+  const std::string parsedBase = text.substr(0, open);
   int depth = 0;
   size_t start = open + 1;
   for (size_t i = start; i < text.size(); ++i) {
@@ -426,14 +425,13 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
         if (i + 1 != text.size()) {
           return false;
         }
+        base = parsedBase;
         arg = text.substr(start, i - start);
         return true;
       }
       depth--;
     }
   }
-  base = text;
-  arg.clear();
   return false;
 }
 
