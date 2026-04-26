@@ -856,8 +856,8 @@ element-field envelopes in literal, binding, and return validation paths). Built
 current lowering behavior are temporary scaffolding while the language grows the generic SoA substrate needed for a
 real stdlib-owned implementation. Method-form/call-form field-view names now route through the shared
 `/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<Struct, Field>` (or a same-path user helper
-when visible), returning `SoaFieldView` values that can be bound, passed, or returned, and builtin field-view
-call-argument/return escapes now validate through that same column-view substrate while current IR lowering routes
+when visible), returning `SoaFieldView` values that can be bound with a tracked borrow root; direct builtin
+field-view call-argument/return escapes remain deterministic `field-view escapes ...` diagnostics while current IR lowering routes
 `count(...)` on `soa_vector` through the native count path for current SoA bindings
 while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
@@ -1130,23 +1130,17 @@ path now remains only for standalone borrowed reads; indexed field-view writes
 already lower through the `soaVectorRef<T>(..., i).field` substrate and standalone
 method/call writes now lower through `soaFieldViewRef<T>(..., 0)` on the shared
 helper path.
-The intended next borrowed-view step is that standalone borrowed field-view values such as
-`borrowed.field()` / `field(borrowed)` become non-owning column views over the same wrapper
-storage instead of remaining on the pending-diagnostic path. That richer borrowed-view
-surface is meant to cover the same receiver families that already succeed for
-`value.field()[i]`: direct borrowed locals, explicit dereference, borrowed helper returns,
-method-like helper returns, and inline `location(...)`-wrapped borrowed receivers. Today
-that indexed field-view path is still only a per-use rewrite through
-`soaVectorGet(...)` / `soaVectorRef(...)`; `borrowed.field()` and `field(borrowed)` do not
-yet materialize a reusable standalone borrowed field-view value that can be bound, passed
-through helpers, or returned. Those attempts already funnel through the same synthetic
-`/soa_vector/field_view/<field>` helper path across direct borrowed locals, explicit
-dereference, borrowed helper returns, method-like helper returns, and inline
-`location(...)`-wrapped receivers. Those field-view values inherit the same invalidation
-contract as `ref(...)`, stay borrowed rather than materializing owning vectors, and may
-later distinguish read-only versus mutable borrowed receivers on top of the current
-`soaVectorGet(...)` / `soaVectorRef(...)` substrate. The remaining implementation work
-therefore starts with the now-completed reusable non-owning `SoaColumn<T>`
+Locally bound borrowed field-view values such as `borrowed.field()` /
+`field(borrowed)` now become non-owning column views over the same wrapper
+storage instead of remaining on the pending-diagnostic path. That borrowed-view
+surface covers the same receiver families that already succeed for
+`value.field()[i]`: direct borrowed locals, explicit dereference, borrowed helper
+returns, method-like helper returns, and inline `location(...)`-wrapped borrowed
+receivers. Bound field-view values inherit the same invalidation contract as
+`ref(...)`, stay borrowed rather than materializing owning vectors, and report
+borrowed-binding diagnostics when a live projection overlaps a later structural
+mutation. Direct pass/return escapes remain rejected until that provenance
+contract is promoted. The implementation now has the reusable non-owning `SoaColumn<T>`
 borrowed-view helper substrate plus reflected layout facts for reflect-enabled
 structs. `SoaColumn<T>` still stores contiguous whole `T` elements, and the
 current `SoaSchema*` helpers now expose validated field byte offsets and
@@ -1154,13 +1148,15 @@ whole-element stride through `SoaSchemaFieldOffset(...)` /
 `SoaSchemaElementStride()`. Existing buffer helpers now expose byte-addressable
 reinterpretation and offsetting, and the stdlib builds
 `soaColumnFieldSlotUnsafe<Struct, Field>(...)` plus the strided `SoaFieldView<T>`
-carrier on top of those reflected layout facts. Standalone field-view calls now
-route through the shared `/soa_vector/field_view/<field>` helper path onto
-`soaVectorFieldView<...>` and return a non-owning strided view. Bound, passed,
-and returned field-view values now preserve borrowed semantics by rewriting
-indexed access through `soaFieldViewRead/Ref` helpers; the remaining work is
-the later borrowed field-view lifetime/provenance rules after the invalidation
-surfaces land.
+carrier on top of those reflected layout facts. Field-view binding initializers now route through the shared
+`/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<...>` and
+return a non-owning strided view. Bound field-view values now preserve borrowed
+semantics by resolving their receiver roots through direct locals,
+`location(...)`/`dereference(...)`, and helper-return receivers;
+later structural mutation on that live root reports the same borrowed-binding
+invalidation diagnostic used by `ref(...)` carriers. Direct call-argument and
+return escapes remain rejected until the pass/return provenance contract is
+promoted.
 Standalone mutating method/call field-view writes now lower through
 `soaVectorFieldView(...)` plus `soaFieldViewRef<T>(..., 0)` dereference writes for
 direct wrapper locals, mutable borrowed locals, borrowed helper returns, method-like

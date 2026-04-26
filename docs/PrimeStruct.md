@@ -3285,8 +3285,9 @@ bad_use_after_take() {
     names. Today, explicit AoS/SoA conversion helpers validate in both call and method form
     (`to_soa(vector<T>)`, `to_aos(soa_vector<T>)`, `vector<T>.to_soa()`, `soa_vector<T>.to_aos()`), method-form/call-form field-view names now route through the shared
     `/soa_vector/field_view/<field>` helper path onto `soaVectorFieldView<Struct, Field>` (or a same-path user helper
-    when visible), returning `SoaFieldView` values that can be bound, passed, or returned instead of stopping on a
-    pending diagnostic. `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
+    when visible), returning `SoaFieldView` values that can be bound with a tracked borrow root instead of stopping on a
+    pending diagnostic; direct call-argument and return escapes remain deterministic `field-view escapes ...`
+    diagnostics. `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
     `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects direct and helper-return
     local binding persistence plus direct and helper-return call-argument/return escapes with
     `unknown method: /std/collections/soa_vector/ref`
@@ -3755,44 +3756,38 @@ read-only path.
     Standalone field-view bindings derived from location-wrapped or helper-return
     receivers are now rejected as well, keeping borrowed field views from escaping
     through local bindings.
-  - **Richer borrowed field-view contract:** the next borrowed-view slice should treat
-    standalone field-view expressions as first-class non-owning column views rather than
-    keeping `borrowed.field()` / `field(borrowed)` on the compiler-owned pending-diagnostic
-    path. The intended contract is: direct borrowed locals, explicit `dereference(...)`
+  - **Richer borrowed field-view contract:** locally bound field-view expressions are now
+    first-class non-owning column views instead of compiler-owned pending diagnostics on
+    the canonical wrapper path. Direct borrowed locals, explicit `dereference(...)`
     receivers, borrowed helper-return receivers, method-like struct-helper-return receivers,
-    and inline `location(...)`-wrapped borrowed receivers should all expose the same
-    column-view surface that the current successful `value.field()[i]` rewrite already uses.
-    Today that indexed surface is still only a per-use rewrite through
-    `soaVectorGet(...).field` / `soaVectorRef(...).field`; `borrowed.field()` /
-    `field(borrowed)` do not yet materialize a reusable standalone borrowed field-view value
-    that can be locally bound, passed through helpers, or returned. Those standalone
-    field-view values remain borrowed projections over wrapper-owned SoA storage, so they
-    inherit the same invalidation rules as `ref(...)`; read-only receivers should expose
-    read-only field-view values, while mutable borrowed receivers may later grow into
-    mutable field-view values that authorize indexed writes through that same column-view
-    substrate; and passing, returning, or locally binding a field-view value should
-    preserve borrowed-view semantics instead of silently materializing an owning vector
-    copy. The remaining implementation work is to thread that contract through the
+    and inline `location(...)`-wrapped borrowed receivers all share the column-view surface
+    used by the successful `value.field()[i]` rewrite when the result is captured in a
+    binding. Those bound field-view values remain borrowed projections over wrapper-owned
+    SoA storage, inherit the same invalidation rules as `ref(...)`, and report borrowed
+    binding diagnostics when a live projection overlaps a later structural mutation. Direct
+    pass/return escapes remain rejected until that provenance contract is promoted. The
+    remaining implementation work is to thread the broader pass/return contract through the
     existing experimental wrapper helper/indexing substrate, not to add more builtin-only
     fallback diagnostics. Today those standalone borrowed field-view attempts already all
     funnel through the same synthetic `/soa_vector/field_view/<field>` helper path across
     direct borrowed locals, explicit dereference, borrowed helper returns, method-like
-    helper returns, and inline `location(...)`-wrapped receivers. The remaining
-    implementation work therefore starts with the now-completed reusable non-owning
-    `SoaColumn<T>` borrowed-view helper substrate plus reflected layout facts for
+    helper returns, and inline `location(...)`-wrapped receivers. The implementation
+    now has the reusable non-owning `SoaColumn<T>` borrowed-view helper substrate plus reflected layout facts for
     reflect-enabled structs. `SoaColumn<T>` still stores contiguous whole `T` elements,
     and the current `SoaSchema*` reflection helpers now expose validated field byte
     offsets and whole-element stride through `SoaSchemaFieldOffset(...)` /
     `SoaSchemaElementStride()`. Existing buffer helpers now expose byte-addressable
     reinterpretation and offsetting, and the stdlib builds
     `soaColumnFieldSlotUnsafe<Struct, Field>(...)` plus the strided `SoaFieldView<T>`
-    carrier on top of those reflected layout facts. Standalone field-view calls now
-    route through the shared `/soa_vector/field_view/<field>` helper path onto
-    `soaVectorFieldView<...>` and return a non-owning strided view. Bound, passed,
-    and returned field-view values now preserve borrowed semantics by rewriting
-    indexed access through `soaFieldViewRead/Ref` helpers; the remaining work is
-    the now-enforced borrowed-view lifetime/provenance rules so standalone field-view
-    values participate in the same invalidation boundary as `ref(...)` carriers.
+    carrier on top of those reflected layout facts. Field-view binding
+    initializers now route through the shared `/soa_vector/field_view/<field>`
+    helper path onto `soaVectorFieldView<...>` and return a non-owning strided
+    view. Bound field-view values now preserve borrowed semantics by resolving
+    their receiver roots through direct locals, `location(...)`/`dereference(...)`,
+    and helper-return receivers; later structural mutation on that live root reports the
+    same borrowed-binding invalidation diagnostic used by `ref(...)` carriers.
+    Direct call-argument and return escapes remain rejected until the pass/return
+    provenance contract is promoted.
   - **Standalone mutating field-view contract:** standalone method-form and call-form
     `assign(value.field(), next)` / `assign(field(value), next)` writes now lower through
     `soaVectorFieldView(...)` plus `soaFieldViewRef<T>(..., 0)` dereference writes for the

@@ -494,7 +494,7 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
       return false;
   }
   if (candidate.isMethodCall) {
-    if (candidate.args.empty()) {
+    if (candidate.args.size() != 1) {
       return false;
     }
   } else {
@@ -607,7 +607,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
     }
     const Expr *receiver = nullptr;
     if (candidate.isMethodCall) {
-      if (candidate.args.empty()) {
+      if (candidate.args.size() != 1) {
         return std::nullopt;
       }
       receiver = &candidate.args.front();

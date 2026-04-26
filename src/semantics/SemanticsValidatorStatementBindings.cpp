@@ -277,27 +277,54 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     entryArgScope.emplace(*this, true);
   }
 
-  if (!validateExpr(params, locals, initializer)) {
+  auto isStandaloneSoaFieldViewInitializer = [&]() {
     if (const auto pendingPath =
             builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
-      return failBindingDiagnostic(
-          soaUnavailableMethodDiagnostic(*pendingPath));
+      std::string pendingFieldName;
+      if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName)) {
+        return true;
+      }
     }
-    if (error_.empty()) {
-      return failBindingDiagnostic("binding initializer validateExpr failed");
+    if (initializer.kind == Expr::Kind::Call) {
+      std::string resolvedPath = preferredCollectionHelperResolvedPath(initializer);
+      if (resolvedPath.empty()) {
+        resolvedPath = resolveCalleePath(initializer);
+      }
+      if (isExperimentalSoaFieldViewHelperPath(resolvedPath)) {
+        return true;
+      }
     }
     return false;
+  };
+
+  if (!validateExpr(params, locals, initializer)) {
+    if (isStandaloneSoaFieldViewInitializer() && !initializer.args.empty()) {
+      error_.clear();
+      if (!validateExpr(params, locals, initializer.args.front())) {
+        return false;
+      }
+    } else {
+      if (const auto pendingPath =
+              builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
+        return failBindingDiagnostic(
+            soaUnavailableMethodDiagnostic(*pendingPath));
+      }
+      if (error_.empty()) {
+        return failBindingDiagnostic("binding initializer validateExpr failed");
+      }
+      return false;
+    }
   }
   if (const auto pendingPath =
           builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
-    return failBindingDiagnostic(
-        soaUnavailableMethodDiagnostic(*pendingPath));
-  }
-  if (isBuiltinSoaFieldViewExpr(initializer, params, locals, nullptr) &&
-      !initializer.args.empty()) {
-    const Expr &fieldViewReceiver = initializer.args.front();
-    if (fieldViewReceiver.kind != Expr::Kind::Name) {
-      return failBindingDiagnostic("field-view escapes via binding");
+    std::string pendingFieldName;
+    if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName) &&
+        isBuiltinSoaFieldViewExpr(initializer, params, locals, nullptr)) {
+      // Field-view bindings are handled below so borrow roots and invalidation
+      // diagnostics remain tied to the binding lifetime.
+    } else {
+      return failBindingDiagnostic(
+          soaUnavailableMethodDiagnostic(*pendingPath));
     }
   }
 
@@ -1565,18 +1592,14 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
             return false;
           }
           if (expr.kind == Expr::Kind::Call && expr.args.size() >= 1) {
-            if (isBuiltinSoaFieldViewExpr(expr, params, locals, nullptr)) {
+            std::string resolvedFieldViewPath =
+                preferredCollectionHelperResolvedPath(expr);
+            if (resolvedFieldViewPath.empty()) {
+              resolvedFieldViewPath = resolveCalleePath(expr);
+            }
+            if (isBuiltinSoaFieldViewExpr(expr, params, locals, nullptr) ||
+                isExperimentalSoaFieldViewHelperPath(resolvedFieldViewPath)) {
               const Expr *receiverExpr = &expr.args.front();
-              if (receiverExpr->kind == Expr::Kind::Name) {
-                size_t matchedIndex = 0;
-                if (const Expr *substitutedExpr =
-                        findSubstitutedExpr(substitutions, receiverExpr->name, &matchedIndex)) {
-                  receiverExpr = substitutedExpr;
-                }
-              }
-              if (receiverExpr->kind != Expr::Kind::Name) {
-                return false;
-              }
               if (resolveReceiverRootExpr(*receiverExpr, substitutions, rootOut)) {
                 return !rootOut.empty();
               }

@@ -56,24 +56,23 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4177
+- TODO-4178
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4178
+- TODO-4180
 
 ### Priority Lanes (Current)
 
-- `soa_vector` promotion and de-experimentalization: TODO-4177, TODO-4178,
-  TODO-4180, TODO-4182, TODO-4181
+- `soa_vector` promotion and de-experimentalization: TODO-4178, TODO-4180,
+  TODO-4182, TODO-4181
 
 ### Execution Queue (Recommended)
 
-1. TODO-4177
-2. TODO-4178
-3. TODO-4180
-4. TODO-4182
-5. TODO-4181
+1. TODO-4178
+2. TODO-4180
+3. TODO-4182
+4. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -86,7 +85,7 @@ Task template:
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | none |
 | Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4180, TODO-4182 |
-| SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
+| SoA maturity and `soa_vector` promotion | TODO-4178, TODO-4180, TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -111,7 +110,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
-| `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
+| `soa_vector` maturity and canonical surface parity | TODO-4178, TODO-4180, TODO-4182 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
@@ -181,8 +180,9 @@ Task template:
   can be treated as a promoted public contract.
 - Active promotion lane now has the canonical public helper wrapper
   authoritative for ordinary construction/read/ref/mutator/conversion helper
-  names; remaining work should stabilize borrowed views, add backend parity,
-  move receiver contracts off experimental type names, and migrate examples.
+  names plus bound field-view borrow-root invalidation; remaining work should
+  add backend parity, move receiver contracts off experimental type names, and
+  migrate examples.
 
 ### Skipped Doctest Debt Summary
 
@@ -263,7 +263,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-25
   - phase: `soa_vector` promotion
-  - depends_on: TODO-4179, TODO-4177
+  - depends_on: TODO-4179
   - scope: Add focused release coverage proving the canonical
     `/std/collections/soa_vector/*` helper path reaches the same C++/VM/native
     semantics and diagnostics for the touched public flows, without depending on
@@ -277,23 +277,3 @@ Task template:
       when the canonical path is not the subject under test.
   - stop_rule: Stop after one representative canonical parity slice is covered
     end-to-end; do not migrate every historical compatibility test in one pass.
-
-- [ ] TODO-4177: Stabilize the borrowed-view and field-view contract for public `soa_vector`
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: `soa_vector` promotion
-  - depends_on: TODO-4170
-  - scope: Finish the next borrowed-view / field-view maturity slice so the
-    public `soa_vector` contract can rely on stable `ref(...)` and
-    `field_view`-style behavior, deterministic invalidation diagnostics, and
-    public wrapper semantics rather than pending or experimental-only gaps.
-  - acceptance:
-    - The touched `soa_vector` borrowed-view or field-view flows have one
-      stable documented contract on the canonical wrapper path.
-    - The touched diagnostics and validation coverage prove the invalidation /
-      lifetime rule for those borrowed flows deterministically.
-    - The touched docs/spec remove at least one current “pending” or
-      draft-only caveat from the promoted borrowed/field-view surface.
-  - stop_rule: Stop after one coherent borrowed-view maturity slice is stable
-    on the canonical path; do not attempt every future SoA borrow feature at
-    once.

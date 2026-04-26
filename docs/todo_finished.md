@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4177: Stabilize the borrowed-view and field-view contract for public
+  `soa_vector`. Completed: canonical method-form and call-form field-view
+  bindings now bypass the old pending diagnostic, infer `SoaFieldView` values
+  with tracked borrow roots, resolve roots through direct locals,
+  `location(...)`/`dereference(...)`, and helper-return receivers, and report
+  deterministic borrowed-binding invalidation when a live field-view binding
+  overlaps a later structural mutation. Focused semantic coverage proves
+  canonical binding, live-root invalidation, and helper-return root resolution,
+  while the docs/spec now describe bound field views as stable and keep
+  pass/return escapes as explicit diagnostics.
 - ✓ TODO-4179: Make `/std/collections/soa_vector/*` the full public helper
   authority. Completed: the canonical `soa_vector` wrapper now owns public
   constructor, count/get/ref, reserve/push, field-view, and AoS conversion

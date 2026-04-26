@@ -1003,6 +1003,77 @@ TEST_CASE("soa_vector builtin field views return escapes fail through inference"
   checkReject("values.x()", "field-view escapes via return");
 }
 
+TEST_CASE("soa_vector builtin field-view bindings track canonical borrow roots") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [auto] methodView{values.x()}
+  [auto] callView{x(values)}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector field-view binding blocks structural mutation while live") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<int>]
+consume<T>([T] value) {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [auto] view{values.x()}
+  values.push(Particle(2i32))
+  return(consume(view))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("borrowed binding: values") != std::string::npos);
+}
+
+TEST_CASE("soa_vector field-view bindings resolve helper-return borrow roots") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<soa_vector<Particle>>>]
+pickBorrowed([Reference<soa_vector<Particle>>] values) {
+  return(values)
+}
+
+[return<int>]
+consume<T>([T] value) {
+  return(0i32)
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle> mut] values{soa_vector<Particle>()}
+  [auto] view{pickBorrowed(location(values)).x()}
+  return(consume(view))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector field-view helper still accepts call and return escapes through same-path helper") {
   const std::string source = R"(
 Particle() {
