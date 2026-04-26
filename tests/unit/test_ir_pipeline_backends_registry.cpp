@@ -90,6 +90,51 @@ std::vector<std::string> compileDiagnosticMessages(const primec::CompilePipeline
   return messages;
 }
 
+std::size_t lineNumberForOffset(std::string_view text, std::size_t offset) {
+  std::size_t line = 1;
+  for (std::size_t i = 0; i < offset && i < text.size(); ++i) {
+    if (text[i] == '\n') {
+      ++line;
+    }
+  }
+  return line;
+}
+
+std::string lineAtOffset(std::string_view text, std::size_t offset) {
+  const std::size_t clampedOffset = std::min(offset, text.size());
+  const std::size_t lineStart = text.rfind('\n', clampedOffset);
+  const std::size_t start = lineStart == std::string_view::npos ? 0 : lineStart + 1;
+  const std::size_t lineEnd = text.find('\n', clampedOffset);
+  const std::size_t end = lineEnd == std::string_view::npos ? text.size() : lineEnd;
+  return std::string(text.substr(start, end - start));
+}
+
+std::string describeSemanticProductDumpMismatch(std::string_view expectedLabel,
+                                                std::string_view actualLabel,
+                                                std::string_view expected,
+                                                std::string_view actual) {
+  if (expected == actual) {
+    return {};
+  }
+
+  const std::size_t sharedSize = std::min(expected.size(), actual.size());
+  std::size_t mismatchOffset = 0;
+  while (mismatchOffset < sharedSize &&
+         expected[mismatchOffset] == actual[mismatchOffset]) {
+    ++mismatchOffset;
+  }
+
+  const std::size_t expectedLine = lineNumberForOffset(expected, mismatchOffset);
+  const std::size_t actualLine = lineNumberForOffset(actual, mismatchOffset);
+  return "semantic-product dump mismatch: " + std::string(expectedLabel) +
+         " vs " + std::string(actualLabel) + ", offset " +
+         std::to_string(mismatchOffset) + ", expected line " +
+         std::to_string(expectedLine) + " `" +
+         lineAtOffset(expected, mismatchOffset) + "`, actual line " +
+         std::to_string(actualLine) + " `" +
+         lineAtOffset(actual, mismatchOffset) + "`";
+}
+
 void checkOptionalRssCheckpointSnapshot(const primec::SemanticPhaseCounterSnapshot &snapshot) {
   const bool hasCheckpoints = snapshot.rssBeforeBytes > 0 || snapshot.rssAfterBytes > 0;
   if (!hasCheckpoints) {
@@ -3648,7 +3693,7 @@ TEST_CASE("compile pipeline benchmark worker-count stress keeps /std/math/* sema
   CHECK(firstRun.directCallTargetCount == secondRun.directCallTargetCount);
 }
 
-TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/* semantic-product output stable across 1,2,4 workers") {
+TEST_CASE("compile pipeline full semantic-product dump golden stays stable across 1,2,4 workers") {
   constexpr std::size_t localDefinitionCount = 64;
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {
@@ -3710,9 +3755,19 @@ TEST_CASE("compile pipeline benchmark worker-count equivalence keeps /std/math/*
   std::error_code ec;
   std::filesystem::remove(tempPath, ec);
 
-  CHECK(singleWorker.dumpOutput == twoWorkers.dumpOutput);
-  CHECK(singleWorker.dumpOutput == fourWorkers.dumpOutput);
-  CHECK(twoWorkers.dumpOutput == fourWorkers.dumpOutput);
+  CHECK_FALSE(singleWorker.dumpOutput.empty());
+  CHECK(singleWorker.dumpOutput.find("semantic_product {") != std::string::npos);
+  CHECK(singleWorker.dumpOutput.find("/std/math/abs") != std::string::npos);
+  CHECK(singleWorker.dumpOutput.find("/main") != std::string::npos);
+  const std::string singleTwoDiff = describeSemanticProductDumpMismatch(
+      "1-worker golden", "2-worker", singleWorker.dumpOutput, twoWorkers.dumpOutput);
+  const std::string singleFourDiff = describeSemanticProductDumpMismatch(
+      "1-worker golden", "4-worker", singleWorker.dumpOutput, fourWorkers.dumpOutput);
+  const std::string twoFourDiff = describeSemanticProductDumpMismatch(
+      "2-worker", "4-worker", twoWorkers.dumpOutput, fourWorkers.dumpOutput);
+  CHECK_MESSAGE(singleTwoDiff.empty(), singleTwoDiff);
+  CHECK_MESSAGE(singleFourDiff.empty(), singleFourDiff);
+  CHECK_MESSAGE(twoFourDiff.empty(), twoFourDiff);
   CHECK(singleWorker.definitionCount == twoWorkers.definitionCount);
   CHECK(singleWorker.definitionCount == fourWorkers.definitionCount);
   CHECK(twoWorkers.definitionCount == fourWorkers.definitionCount);

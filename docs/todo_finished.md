@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4163: Add worker-count parity golden coverage for the full
+  semantic-product dump. Completed: the `/std/math/*` semantic-product dump
+  worker-count parity coverage now treats the 1-worker full dump as the
+  golden output and compares it with the 2-worker and 4-worker outputs. Parity
+  failures now include a focused first-mismatch message with worker labels,
+  byte offset, line numbers, and the expected/actual dump lines so
+  deterministic publication regressions are easier to diff.
 - ✓ TODO-4161: Add semantic-product contract-version compatibility
   coverage. Completed: the split direct-call and method-call public
   semantic-product fact headers now carry explicit v1 shape markers, and
