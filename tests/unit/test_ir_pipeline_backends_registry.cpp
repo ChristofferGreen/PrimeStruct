@@ -583,7 +583,7 @@ TEST_CASE("semantic-product method-call coverage conformance rejects missing sem
   CHECK(error == "missing semantic-product method-call semantic id: /main -> count");
 }
 
-TEST_CASE("ir lowerer reports missing callable summaries before method-call resolved path id gaps") {
+TEST_CASE("method-call coverage rejects missing resolved path ids before lookup gaps") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -619,7 +619,7 @@ TEST_CASE("ir lowerer reports missing callable summaries before method-call reso
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product method-call resolved path id: /main -> count");
 }
 
 TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
@@ -660,7 +660,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   CHECK(diagnosticInfo.message == error);
 }
 
-TEST_CASE("ir lowerer reports missing callable summaries before bridge helper name id gaps") {
+TEST_CASE("bridge-path coverage rejects missing helper name ids before lookup gaps") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -704,10 +704,10 @@ TEST_CASE("ir lowerer reports missing callable summaries before bridge helper na
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
 }
 
-TEST_CASE("ir lowerer reports missing callable summaries before direct-call target gaps") {
+TEST_CASE("bridge-path coverage rejects helper name ids before direct-call target gaps") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -742,10 +742,10 @@ TEST_CASE("ir lowerer reports missing callable summaries before direct-call targ
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
 }
 
-TEST_CASE("ir lowerer reports missing callable summaries before invalid bridge helper name ids") {
+TEST_CASE("bridge-path coverage rejects invalid helper name ids before lookup gaps") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -790,7 +790,7 @@ TEST_CASE("ir lowerer reports missing callable summaries before invalid bridge h
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
 }
 
 TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
