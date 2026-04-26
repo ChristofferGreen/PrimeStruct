@@ -447,6 +447,32 @@ TEST_CASE("ir lowerer result helpers resolve definition result metadata") {
   CHECK(out.errorType == "FileError");
 }
 
+TEST_CASE("ir lowerer result helpers tolerate missing direct result metadata callbacks") {
+  primec::Expr localName;
+  localName.kind = primec::Expr::Kind::Name;
+  localName.name = "value";
+
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "make";
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfo(
+      localName,
+      primec::ir_lowerer::LookupLocalResultInfoFn{},
+      primec::ir_lowerer::ResolveCallDefinitionFn{},
+      primec::ir_lowerer::ResolveCallDefinitionFn{},
+      primec::ir_lowerer::LookupDefinitionResultInfoFn{},
+      out));
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfo(
+      callExpr,
+      primec::ir_lowerer::LookupLocalResultInfoFn{},
+      primec::ir_lowerer::ResolveCallDefinitionFn{},
+      primec::ir_lowerer::ResolveCallDefinitionFn{},
+      primec::ir_lowerer::LookupDefinitionResultInfoFn{},
+      out));
+}
+
 TEST_CASE("ir lowerer result helpers resolve from locals and return-info lookups") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localResult;

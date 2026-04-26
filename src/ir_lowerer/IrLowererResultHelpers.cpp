@@ -181,6 +181,20 @@ bool resolveResultExprInfo(const Expr &expr,
                            const LookupDefinitionResultInfoFn &lookupDefinitionResult,
                            ResultExprInfo &out) {
   out = ResultExprInfo{};
+  const LookupLocalResultInfoFn noopLookupLocal =
+      [](const std::string &) { return LocalResultInfo{}; };
+  const ResolveCallDefinitionFn noopResolveCall =
+      [](const Expr &) -> const Definition * { return nullptr; };
+  const LookupDefinitionResultInfoFn noopLookupDefinitionResult =
+      [](const std::string &, ResultExprInfo &) { return false; };
+  const LookupLocalResultInfoFn &lookupLocalFn =
+      lookupLocal ? lookupLocal : noopLookupLocal;
+  const ResolveCallDefinitionFn &resolveMethodCallFn =
+      resolveMethodCall ? resolveMethodCall : noopResolveCall;
+  const ResolveCallDefinitionFn &resolveDefinitionCallFn =
+      resolveDefinitionCall ? resolveDefinitionCall : noopResolveCall;
+  const LookupDefinitionResultInfoFn &lookupDefinitionResultFn =
+      lookupDefinitionResult ? lookupDefinitionResult : noopLookupDefinitionResult;
   auto applyDeclaredResultFromDefinition = [&](const Definition &definition) {
     for (const auto &transform : definition.transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -221,7 +235,7 @@ bool resolveResultExprInfo(const Expr &expr,
     return false;
   };
   if (expr.kind == Expr::Kind::Name) {
-    const LocalResultInfo local = lookupLocal(expr.name);
+    const LocalResultInfo local = lookupLocalFn(expr.name);
     if (local.found && local.isResult) {
       out.isResult = true;
       out.hasValue = local.resultHasValue;
@@ -270,7 +284,7 @@ bool resolveResultExprInfo(const Expr &expr,
 
   if (expr.isMethodCall && !expr.args.empty()) {
     if (expr.args.front().kind == Expr::Kind::Name) {
-      const LocalResultInfo local = lookupLocal(expr.args.front().name);
+      const LocalResultInfo local = lookupLocalFn(expr.args.front().name);
       if (local.found && local.isFileHandle) {
         if (expr.name == "write" || expr.name == "write_line" || expr.name == "write_byte" || expr.name == "read_byte" ||
             expr.name == "write_bytes" || expr.name == "flush" || expr.name == "close") {
@@ -281,10 +295,10 @@ bool resolveResultExprInfo(const Expr &expr,
         }
       }
     }
-    const Definition *callee = resolveMethodCall(expr);
+    const Definition *callee = resolveMethodCallFn(expr);
     if (callee) {
       ResultExprInfo calleeInfo;
-      if (lookupDefinitionResult(callee->fullPath, calleeInfo) && calleeInfo.isResult) {
+      if (lookupDefinitionResultFn(callee->fullPath, calleeInfo) && calleeInfo.isResult) {
         out = std::move(calleeInfo);
         return true;
       }
@@ -295,13 +309,13 @@ bool resolveResultExprInfo(const Expr &expr,
     return false;
   }
 
-  const Definition *callee = resolveDefinitionCall(expr);
+  const Definition *callee = resolveDefinitionCallFn(expr);
   if (!callee) {
     return false;
   }
 
   ResultExprInfo calleeInfo;
-  if (lookupDefinitionResult(callee->fullPath, calleeInfo) && calleeInfo.isResult) {
+  if (lookupDefinitionResultFn(callee->fullPath, calleeInfo) && calleeInfo.isResult) {
     out = std::move(calleeInfo);
     return true;
   }
