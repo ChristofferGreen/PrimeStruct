@@ -151,7 +151,7 @@ bool matchesGeneratedDefinitionFamilyPath(const std::string &candidatePath,
   return hasTerminalLeafOrGeneratedSuffix(leafPos + leafPath.size());
 }
 
-bool blocksSyntheticCountFallbackDirectTarget(const std::string &targetPath) {
+bool blocksSyntheticCollectionFallbackDirectTarget(const std::string &targetPath) {
   const std::string normalized = normalizeCollectionHelperPath(targetPath);
   return normalized.rfind("/vector/", 0) == 0 ||
          normalized.rfind("/std/collections/vector/", 0) == 0 ||
@@ -365,12 +365,14 @@ const Definition *resolveMethodCallDefinitionFromExpr(
     if (resolvedPath.empty()) {
       const std::string directCallTarget =
           findSemanticProductDirectCallTarget(semanticProgram, callExpr);
-      const bool directTargetKeepsSyntheticCountFallback =
+      const bool directTargetKeepsSyntheticCollectionFallback =
           !directCallTarget.empty() &&
           (isSimpleCallName(callExpr, "count") ||
-           isSimpleCallName(callExpr, "capacity")) &&
-          !blocksSyntheticCountFallbackDirectTarget(directCallTarget);
-      if (directTargetKeepsSyntheticCountFallback) {
+           isSimpleCallName(callExpr, "capacity") ||
+           isSimpleCallName(callExpr, "at") ||
+           isSimpleCallName(callExpr, "at_unsafe")) &&
+          !blocksSyntheticCollectionFallbackDirectTarget(directCallTarget);
+      if (directTargetKeepsSyntheticCollectionFallback) {
         if (const Definition *resolvedDef =
                 resolveLoweredDefinitionPath(directCallTarget);
             resolvedDef != nullptr) {

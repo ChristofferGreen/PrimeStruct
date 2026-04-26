@@ -1141,9 +1141,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irMethodResolution.find("buildReceiverMethodTargetPath(") !=
         std::string::npos);
-  CHECK(irMethodResolution.find("blocksSyntheticCountFallbackDirectTarget(") !=
+  CHECK(irMethodResolution.find("blocksSyntheticCollectionFallbackDirectTarget(") !=
         std::string::npos);
-  CHECK(irMethodResolution.find("directTargetKeepsSyntheticCountFallback") !=
+  CHECK(irMethodResolution.find("directTargetKeepsSyntheticCollectionFallback") !=
         std::string::npos);
   CHECK(irMethodResolution.find("missing semantic-product method-call target: ") !=
         std::string::npos);

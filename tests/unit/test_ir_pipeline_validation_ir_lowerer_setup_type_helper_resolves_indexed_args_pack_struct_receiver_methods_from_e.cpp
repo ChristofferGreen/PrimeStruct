@@ -268,14 +268,20 @@ TEST_CASE("ir lowerer setup type helper rejects synthetic direct-call probes for
   CHECK(error == "missing semantic-product method-call target: count");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps semantic direct user count fallbacks") {
+TEST_CASE("ir lowerer setup type helper keeps semantic direct user collection fallbacks") {
   primec::Definition i32CountDef;
   i32CountDef.fullPath = "/i32/count";
   primec::Definition arrayCapacityDef;
   arrayCapacityDef.fullPath = "/array/capacity";
+  primec::Definition arrayAtDef;
+  arrayAtDef.fullPath = "/array/at";
+  primec::Definition arrayAtUnsafeDef;
+  arrayAtUnsafeDef.fullPath = "/array/at_unsafe";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {
       {i32CountDef.fullPath, &i32CountDef},
       {arrayCapacityDef.fullPath, &arrayCapacityDef},
+      {arrayAtDef.fullPath, &arrayAtDef},
+      {arrayAtUnsafeDef.fullPath, &arrayAtUnsafeDef},
   };
 
   primec::Expr receiverExpr;
@@ -367,6 +373,60 @@ TEST_CASE("ir lowerer setup type helper keeps semantic direct user count fallbac
       error);
   CHECK(resolved == &arrayCapacityDef);
   CHECK(error.empty());
+
+  primec::Expr indexExpr;
+  indexExpr.kind = primec::Expr::Kind::Literal;
+  indexExpr.intValue = 0;
+  indexExpr.intWidth = 32;
+
+  auto expectDirectAccessFallback =
+      [&](std::string helperName,
+          uint64_t semanticNodeId,
+          const char *resolvedPath,
+          const primec::Definition &expectedDef) {
+        primec::Expr accessMethodCall;
+        accessMethodCall.kind = primec::Expr::Kind::Call;
+        accessMethodCall.name = std::move(helperName);
+        accessMethodCall.isMethodCall = true;
+        accessMethodCall.semanticNodeId = semanticNodeId;
+        accessMethodCall.args = {valuesReceiverExpr, indexExpr};
+
+        semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+            .scopePath = "/main",
+            .callName = accessMethodCall.name,
+            .sourceLine = 0,
+            .sourceColumn = 0,
+            .semanticNodeId = semanticNodeId,
+            .scopePathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+            .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, accessMethodCall.name),
+            .resolvedPathId =
+                primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                              resolvedPath),
+            .stdlibSurfaceId = std::nullopt,
+        });
+
+        error.clear();
+        const primec::Definition *accessResolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+            accessMethodCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            {},
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &) { return std::string(); },
+            &semanticProgram,
+            defMap,
+            error);
+        CHECK(accessResolved == &expectedDef);
+        CHECK(error.empty());
+      };
+
+  expectDirectAccessFallback("at", 63, "/array/at", arrayAtDef);
+  expectDirectAccessFallback("at_unsafe", 64, "/array/at_unsafe", arrayAtUnsafeDef);
 }
 
 TEST_CASE("ir lowerer setup type helper rejects semantic-product method targets without lowered definitions") {
