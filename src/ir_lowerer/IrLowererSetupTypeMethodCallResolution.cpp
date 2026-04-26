@@ -392,6 +392,16 @@ const Definition *resolveMethodCallDefinitionFromExpr(
         (normalizeCollectionHelperPath(resolvedPath) == "/map/count" ||
          normalizeCollectionHelperPath(resolvedPath) ==
              "/std/collections/map/count");
+    const bool routesExplicitVectorCountMethodThroughBuiltinScalarTarget =
+        requestsExplicitVectorCountMethod &&
+        (resolvedPath == "/string/count" || resolvedPath == "/array/count");
+    if (routesExplicitVectorCountMethodThroughBuiltinScalarTarget) {
+      if (const Definition *explicitVectorCountDef =
+              resolveLoweredDefinitionPath(explicitMethodPath);
+          explicitVectorCountDef != nullptr) {
+        return explicitVectorCountDef;
+      }
+    }
     const std::string explicitVectorCountBridgePath =
         routesExplicitVectorCountMethodThroughMapMethodTarget
             ? findSemanticProductBridgePathChoice(semanticProgram, callExpr)

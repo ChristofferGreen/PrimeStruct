@@ -254,6 +254,81 @@ TEST_CASE("ir lowerer setup type helper reports unknown vector mutators when no 
   CHECK(error == "unknown method: /std/collections/vector/pop");
 }
 
+TEST_CASE("ir lowerer setup type helper keeps semantic explicit vector count helper over scalar builtin target") {
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "value";
+
+  primec::Expr methodCall;
+  methodCall.kind = primec::Expr::Kind::Call;
+  methodCall.name = "count";
+  methodCall.namespacePrefix = "/vector";
+  methodCall.isMethodCall = true;
+  methodCall.args = {receiverExpr};
+  methodCall.semanticNodeId = 42;
+
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId stringCountId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/string/count");
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "count",
+      .receiverTypeText = "string",
+      .semanticNodeId = methodCall.semanticNodeId,
+      .resolvedPathId = stringCountId,
+  });
+
+  primec::Definition vectorCountDef;
+  vectorCountDef.fullPath = "/vector/count";
+  std::unordered_map<std::string, const primec::Definition *> defMap{
+      {vectorCountDef.fullPath, &vectorCountDef},
+  };
+
+  std::string error = "stale";
+  const primec::Definition *resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticProgram,
+      {},
+      defMap,
+      error);
+
+  REQUIRE(resolved != nullptr);
+  CHECK(resolved->fullPath == "/vector/count");
+  CHECK(error == "stale");
+
+  defMap.clear();
+  error = "stale";
+  resolved = primec::ir_lowerer::resolveMethodCallDefinitionFromExpr(
+      methodCall,
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+      {},
+      {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return std::string(); },
+      &semanticProgram,
+      {},
+      defMap,
+      error);
+
+  CHECK(resolved == nullptr);
+  CHECK(error == "semantic-product method-call target missing lowered definition: /string/count");
+}
+
 TEST_CASE("ir lowerer setup type helper reports method call definition diagnostics from expressions") {
   primec::Expr methodCall;
   methodCall.kind = primec::Expr::Kind::Call;
