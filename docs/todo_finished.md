@@ -4777,3 +4777,32 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     stale-expectation failures now print the observed semantic or emitter
     output, removed `TODO-4145` from the live queue and coverage snapshots in
     `docs/todo.md`, and deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4146: Split or optimize slow serialization shards
+  - owner: ai
+  - created_at: 2026-04-25
+  - phase: Test-suite audit follow-up and release-gate stability
+  - scope: Investigate the `primestruct.ir_pipeline.serialization` release
+    shards that currently exceed the doctest runtime guardrail in
+    `build-release/Testing/Temporary/CTestCostData.txt`, especially cases
+    `53_56`, `57_60`, and `61_64`, and reduce the hotspot through smaller
+    shards or targeted test/runtime optimization without dropping coverage.
+  - acceptance:
+    - No serialization shard with multiple cases remains above 5 seconds in
+      routine release validation unless the test source or registration gains
+      a brief justification for the retained cost.
+    - The touched serialization shards keep deterministic ordering and preserve
+      the current serialization contract coverage.
+    - Focused release reruns for the touched serialization shards pass from
+      `build-release/`.
+  - stop_rule: Limit work to serialization tests, shard registration, and the
+    smallest helper/runtime changes needed to reduce the hotspot; do not
+    broaden into unrelated backend refactors.
+  - finished_at: 2026-04-26
+  - evidence: Split the slow serialization registration range in
+    `cmake/PrimeStructManagedUnitBackendSuites.cmake` so cases `53` through
+    `64` now run in two-case shards while surrounding serialization ranges keep
+    four-case shards. Added source-lock coverage for the hotspot range split in
+    `tests/unit/test_ir_pipeline_backends_architecture.h`, updated the TODO
+    docs-lock expectations, removed `TODO-4146` from the live queue and
+    coverage snapshots, and deferred release reruns to CI per the lite workflow.

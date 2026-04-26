@@ -467,6 +467,14 @@ TEST_CASE("managed backend suite sharding keeps lowering and runtime suites on f
             "addPrimeStructManagedDoctestSuite(\"primestruct.ir.pipeline.validation\"\n"
             "  TARGET PrimeStruct_backend_ir_tests") != std::string::npos);
   CHECK(managedSuites.find(
+            "addPrimeStructManagedDoctestSuite(\"primestruct.ir.pipeline.serialization\"\n"
+            "  TARGET PrimeStruct_backend_ir_tests\n"
+            "  LABEL \"parallel-safe\"\n"
+            "  TIMEOUT 300\n"
+            "  RANGE_FIRST 53\n"
+            "  RANGE_LAST 64\n"
+            "  CASES_PER_SHARD 2") != std::string::npos);
+  CHECK(managedSuites.find(
             "addPrimeStructManagedDoctestSuite(\"primestruct.ir.pipeline.to_glsl\"\n"
             "  TARGET PrimeStruct_backend_runtime_tests") != std::string::npos);
   CHECK(managedSuites.find(

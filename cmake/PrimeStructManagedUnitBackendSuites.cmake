@@ -12,7 +12,26 @@ addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
   TARGET PrimeStruct_backend_ir_tests
   LABEL "parallel-safe"
   TIMEOUT 300
-  TOTAL_CASES 112
+  RANGE_FIRST 1
+  RANGE_LAST 52
+  CASES_PER_SHARD 4
+)
+
+addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
+  TARGET PrimeStruct_backend_ir_tests
+  LABEL "parallel-safe"
+  TIMEOUT 300
+  RANGE_FIRST 53
+  RANGE_LAST 64
+  CASES_PER_SHARD 2
+)
+
+addPrimeStructManagedDoctestSuite("primestruct.ir.pipeline.serialization"
+  TARGET PrimeStruct_backend_ir_tests
+  LABEL "parallel-safe"
+  TIMEOUT 300
+  RANGE_FIRST 65
+  RANGE_LAST 112
   CASES_PER_SHARD 4
 )
 

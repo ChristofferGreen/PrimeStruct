@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4146
 - TODO-4147
 - TODO-4151
 - TODO-4152
@@ -79,7 +78,6 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Release-gate stability and test-suite audit follow-up: TODO-4146
 - Semantic-product authority and lowerer boundary enforcement: TODO-4147,
   TODO-4169, TODO-4151, TODO-4148, TODO-4170, TODO-4150, TODO-4155,
   TODO-4157, TODO-4158, TODO-4159, TODO-4160, TODO-4161, TODO-4164
@@ -95,40 +93,39 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4146
-2. TODO-4147
-3. TODO-4151
-4. TODO-4152
-5. TODO-4167
-6. TODO-4169
-7. TODO-4171
-8. TODO-4148
-9. TODO-4168
-10. TODO-4170
-11. TODO-4150
-12. TODO-4153
-13. TODO-4172
-14. TODO-4155
-15. TODO-4157
-16. TODO-4158
-17. TODO-4162
-18. TODO-4165
-19. TODO-4159
-20. TODO-4160
-21. TODO-4161
-22. TODO-4163
-23. TODO-4164
-24. TODO-4166
-25. TODO-4174
-26. TODO-4173
-27. TODO-4176
-28. TODO-4175
-29. TODO-4179
-30. TODO-4177
-31. TODO-4178
-32. TODO-4180
-33. TODO-4182
-34. TODO-4181
+1. TODO-4147
+2. TODO-4151
+3. TODO-4152
+4. TODO-4167
+5. TODO-4169
+6. TODO-4171
+7. TODO-4148
+8. TODO-4168
+9. TODO-4170
+10. TODO-4150
+11. TODO-4153
+12. TODO-4172
+13. TODO-4155
+14. TODO-4157
+15. TODO-4158
+16. TODO-4162
+17. TODO-4165
+18. TODO-4159
+19. TODO-4160
+20. TODO-4161
+21. TODO-4163
+22. TODO-4164
+23. TODO-4166
+24. TODO-4174
+25. TODO-4173
+26. TODO-4176
+27. TODO-4175
+28. TODO-4179
+29. TODO-4177
+30. TODO-4178
+31. TODO-4180
+32. TODO-4182
+33. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -152,7 +149,7 @@ Task template:
 | Debugger/source-map provenance parity | TODO-4165 |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | TODO-4146 |
+| Test-suite audit follow-up and release-gate stability | none |
 
 ### Validation Coverage Snapshot
 
@@ -167,14 +164,14 @@ Task template:
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
 | De-experimentalization surface and namespace parity | TODO-4178, TODO-4182 |
 | `soa_vector` maturity and canonical surface parity | TODO-4177, TODO-4178, TODO-4180, TODO-4182 |
-| Focused backend rerun ergonomics and suite partitioning | TODO-4146 |
+| Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | TODO-4152, TODO-4171, TODO-4172 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | TODO-4165 |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | TODO-4146 |
+| Release benchmark/example suite stability and doctest governance | none |
 
 ### Vector/Map Bridge Contract Summary
 
@@ -921,24 +918,3 @@ Task template:
       provenance only.
   - stop_rule: Stop once return-info lowering no longer depends on semantics
     graph internals; do not broaden into unrelated inference migration work.
-
-- [ ] TODO-4146: Split or optimize slow serialization shards
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Test-suite audit follow-up and release-gate stability
-  - scope: Investigate the `primestruct.ir_pipeline.serialization` release
-    shards that currently exceed the doctest runtime guardrail in
-    `build-release/Testing/Temporary/CTestCostData.txt`, especially cases
-    `53_56`, `57_60`, and `61_64`, and reduce the hotspot through smaller
-    shards or targeted test/runtime optimization without dropping coverage.
-  - acceptance:
-    - No serialization shard with multiple cases remains above 5 seconds in
-      routine release validation unless the test source or registration gains
-      a brief justification for the retained cost.
-    - The touched serialization shards keep deterministic ordering and preserve
-      the current serialization contract coverage.
-    - Focused release reruns for the touched serialization shards pass from
-      `build-release/`.
-  - stop_rule: Limit work to serialization tests, shard registration, and the
-    smallest helper/runtime changes needed to reduce the hotspot; do not
-    broaden into unrelated backend refactors.
