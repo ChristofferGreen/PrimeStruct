@@ -548,6 +548,13 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,
     const Definition &definition) {
+  if (semanticProgram != nullptr) {
+    if (const auto *fact = semanticProgramLookupPublishedOnErrorFactByDefinitionSemanticId(
+            *semanticProgram, definition.semanticNodeId);
+        fact != nullptr) {
+      return fact;
+    }
+  }
   if (const auto *fact = findSemanticProductOnErrorFactBySemanticId(semanticIndex, definition);
       fact != nullptr) {
     return fact;
@@ -631,6 +638,13 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,
     const Expr &expr) {
+  if (semanticProgram != nullptr) {
+    if (const auto *fact = semanticProgramLookupPublishedLocalAutoFactBySemanticId(
+            *semanticProgram, expr.semanticNodeId);
+        fact != nullptr) {
+      return fact;
+    }
+  }
   if (const auto *fact = findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr);
       fact != nullptr) {
     return fact;
@@ -682,6 +696,13 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,
     const Expr &expr) {
+  if (semanticProgram != nullptr) {
+    if (const auto *fact = semanticProgramLookupPublishedQueryFactBySemanticId(
+            *semanticProgram, expr.semanticNodeId);
+        fact != nullptr) {
+      return fact;
+    }
+  }
   if (const auto *fact = findSemanticProductQueryFactBySemanticId(semanticIndex, expr);
       fact != nullptr) {
     return fact;
@@ -732,6 +753,13 @@ const SemanticProgramTryFact *findSemanticProductTryFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,
     const Expr &expr) {
+  if (semanticProgram != nullptr) {
+    if (const auto *fact = semanticProgramLookupPublishedTryFactBySemanticId(
+            *semanticProgram, expr.semanticNodeId);
+        fact != nullptr) {
+      return fact;
+    }
+  }
   if (const auto *fact = findSemanticProductTryFactBySemanticId(semanticIndex, expr);
       fact != nullptr) {
     return fact;

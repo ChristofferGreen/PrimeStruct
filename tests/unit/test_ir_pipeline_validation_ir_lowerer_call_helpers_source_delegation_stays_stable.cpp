@@ -2618,6 +2618,71 @@ TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches
   CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
 }
 
+TEST_CASE("ir lowerer semantic-product adapter uses raw query semantic-id before partial fallback index") {
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.sourceLine = 19;
+  queryExpr.sourceColumn = 5;
+  queryExpr.semanticNodeId = 8303;
+
+  primec::SemanticProgram semanticProgram;
+  const primec::SymbolId callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "lookup");
+  const primec::SymbolId resolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup");
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 19,
+      .sourceColumn = 5,
+      .semanticNodeId = 8303,
+      .resolvedPathId = resolvedPathId,
+      .stdlibSurfaceId = std::nullopt,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 19,
+      .sourceColumn = 5,
+      .semanticNodeId = 8303,
+      .callNameId = callNameId,
+      .resolvedPathId = resolvedPathId,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<f64, FileError>",
+      .bindingTypeText = "Result<f64, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "f64",
+      .resultErrorType = "FileError",
+      .sourceLine = 19,
+      .sourceColumn = 5,
+      .semanticNodeId = 0,
+      .callNameId = callNameId,
+      .resolvedPathId = resolvedPathId,
+  });
+  semanticProgram.publishedRoutingLookups.queryFactIndicesByResolvedPathAndCallNameId
+      .insert_or_assign((static_cast<uint64_t>(resolvedPathId) << 32) |
+                            static_cast<uint64_t>(callNameId),
+                        1);
+
+  const auto adapter = primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  CHECK(adapter.semanticIndex.queryFactsByExpr.empty());
+  const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
+  REQUIRE(queryFact != nullptr);
+  CHECK(queryFact->semanticNodeId == 8303);
+  CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
+}
+
 TEST_CASE("ir lowerer semantic-product index resolves query facts without broad adapter") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
