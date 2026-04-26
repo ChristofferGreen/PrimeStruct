@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4161: Add semantic-product contract-version compatibility
+  coverage. Completed: the split direct-call and method-call public
+  semantic-product fact headers now carry explicit v1 shape markers, and
+  source-lock coverage derives each public struct field shape from the header
+  and compares it to the marker. Future changes to the touched public fact
+  shape now fail with a focused marker mismatch unless the compatibility
+  surface is updated alongside the shape change.
 - ✓ TODO-4160: Split `SemanticProduct.h` into family-specific public
   surfaces. Completed: direct-call and method-call semantic-product routing
   facts now live in dedicated public headers under

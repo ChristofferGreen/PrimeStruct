@@ -741,6 +741,110 @@ TEST_CASE("semantic product routing facts have dedicated public headers") {
         std::string::npos);
 }
 
+TEST_CASE("semantic product routing fact v1 shape markers match public fields") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path directCallFactsPath =
+      cwd / "include" / "primec" / "semantic_product" / "DirectCallFacts.h";
+  std::filesystem::path methodCallFactsPath =
+      cwd / "include" / "primec" / "semantic_product" / "MethodCallFacts.h";
+  if (!std::filesystem::exists(directCallFactsPath)) {
+    directCallFactsPath =
+        cwd.parent_path() / "include" / "primec" / "semantic_product" / "DirectCallFacts.h";
+    methodCallFactsPath =
+        cwd.parent_path() / "include" / "primec" / "semantic_product" / "MethodCallFacts.h";
+  }
+  REQUIRE(std::filesystem::exists(directCallFactsPath));
+  REQUIRE(std::filesystem::exists(methodCallFactsPath));
+
+  const auto trim = [](std::string value) {
+    const std::size_t first = value.find_first_not_of(" \t\r\n");
+    if (first == std::string::npos) {
+      return std::string{};
+    }
+    const std::size_t last = value.find_last_not_of(" \t\r\n");
+    return value.substr(first, last - first + 1);
+  };
+  const auto extractStructShape = [&](const std::string &source, std::string_view structName) {
+    const std::string structNeedle = "struct " + std::string(structName) + " {";
+    const std::size_t structStart = source.find(structNeedle);
+    if (structStart == std::string::npos) {
+      return "missing struct " + std::string(structName);
+    }
+    const std::size_t bodyStart = source.find('\n', structStart);
+    const std::size_t bodyEnd = source.find("\n};", bodyStart);
+    if (bodyStart == std::string::npos || bodyEnd == std::string::npos) {
+      return "missing struct body " + std::string(structName);
+    }
+
+    std::string shape;
+    std::size_t lineStart = bodyStart + 1;
+    while (lineStart < bodyEnd) {
+      const std::size_t lineEnd = source.find('\n', lineStart);
+      const std::size_t clampedLineEnd =
+          lineEnd == std::string::npos || lineEnd > bodyEnd ? bodyEnd : lineEnd;
+      const std::string line =
+          trim(source.substr(lineStart, clampedLineEnd - lineStart));
+      if (!line.empty()) {
+        if (!shape.empty()) {
+          shape += "|";
+        }
+        shape += line;
+      }
+      if (lineEnd == std::string::npos || lineEnd >= bodyEnd) {
+        break;
+      }
+      lineStart = lineEnd + 1;
+    }
+    return shape;
+  };
+  const auto extractStringViewMarker = [&](const std::string &source, std::string_view markerName) {
+    const std::size_t markerStart = source.find(markerName);
+    if (markerStart == std::string::npos) {
+      return "missing marker " + std::string(markerName);
+    }
+    const std::size_t initStart = source.find('=', markerStart);
+    if (initStart == std::string::npos) {
+      return "missing marker initializer " + std::string(markerName);
+    }
+    std::size_t initEnd = std::string::npos;
+    bool inString = false;
+    for (std::size_t i = initStart + 1; i < source.size(); ++i) {
+      if (source[i] == '"') {
+        inString = !inString;
+      } else if (source[i] == ';' && !inString) {
+        initEnd = i;
+        break;
+      }
+    }
+    if (initEnd == std::string::npos) {
+      return "missing marker terminator " + std::string(markerName);
+    }
+
+    std::string marker;
+    std::size_t searchStart = initStart;
+    while (searchStart < initEnd) {
+      const std::size_t quoteStart = source.find('"', searchStart);
+      if (quoteStart == std::string::npos || quoteStart >= initEnd) {
+        break;
+      }
+      const std::size_t quoteEnd = source.find('"', quoteStart + 1);
+      if (quoteEnd == std::string::npos || quoteEnd > initEnd) {
+        return "unterminated marker string " + std::string(markerName);
+      }
+      marker += source.substr(quoteStart + 1, quoteEnd - quoteStart - 1);
+      searchStart = quoteEnd + 1;
+    }
+    return marker;
+  };
+
+  const std::string directCallFacts = readTextFile(directCallFactsPath);
+  const std::string methodCallFacts = readTextFile(methodCallFactsPath);
+  CHECK(extractStructShape(directCallFacts, "SemanticProgramDirectCallTarget") ==
+        extractStringViewMarker(directCallFacts, "SemanticProgramDirectCallTargetContractV1Shape"));
+  CHECK(extractStructShape(methodCallFacts, "SemanticProgramMethodCallTarget") ==
+        extractStringViewMarker(methodCallFacts, "SemanticProgramMethodCallTargetContractV1Shape"));
+}
+
 #if 0
 TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   const std::filesystem::path cwd = std::filesystem::current_path();

@@ -28,6 +28,16 @@ struct SemanticProgramMethodCallTarget {
   std::optional<StdlibSurfaceId> stdlibSurfaceId;
 };
 
+inline constexpr std::string_view SemanticProgramMethodCallTargetContractV1Shape =
+    "std::string scopePath;|std::string methodName;|"
+    "std::string receiverTypeText;|int sourceLine = 0;|"
+    "int sourceColumn = 0;|uint64_t semanticNodeId = 0;|"
+    "uint64_t provenanceHandle = 0;|SymbolId scopePathId = InvalidSymbolId;|"
+    "SymbolId methodNameId = InvalidSymbolId;|"
+    "SymbolId receiverTypeTextId = InvalidSymbolId;|"
+    "SymbolId resolvedPathId = InvalidSymbolId;|"
+    "std::optional<StdlibSurfaceId> stdlibSurfaceId;";
+
 std::vector<const SemanticProgramMethodCallTarget *>
 semanticProgramMethodCallTargetView(const SemanticProgram &semanticProgram);
 std::optional<SymbolId> semanticProgramLookupPublishedMethodCallTargetId(

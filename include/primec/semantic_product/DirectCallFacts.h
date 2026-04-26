@@ -26,6 +26,14 @@ struct SemanticProgramDirectCallTarget {
   std::optional<StdlibSurfaceId> stdlibSurfaceId;
 };
 
+inline constexpr std::string_view SemanticProgramDirectCallTargetContractV1Shape =
+    "std::string scopePath;|std::string callName;|int sourceLine = 0;|"
+    "int sourceColumn = 0;|uint64_t semanticNodeId = 0;|"
+    "uint64_t provenanceHandle = 0;|SymbolId scopePathId = InvalidSymbolId;|"
+    "SymbolId callNameId = InvalidSymbolId;|"
+    "SymbolId resolvedPathId = InvalidSymbolId;|"
+    "std::optional<StdlibSurfaceId> stdlibSurfaceId;";
+
 std::vector<const SemanticProgramDirectCallTarget *>
 semanticProgramDirectCallTargetView(const SemanticProgram &semanticProgram);
 std::optional<SymbolId> semanticProgramLookupPublishedDirectCallTargetId(

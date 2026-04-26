@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4161
 - TODO-4163
 - TODO-4164
 - TODO-4166
@@ -69,8 +68,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Semantic-product authority and lowerer boundary enforcement: TODO-4161,
-  TODO-4164
+- Semantic-product authority and lowerer boundary enforcement: TODO-4164
 - Compile-pipeline boundary hardening and provenance parity: TODO-4163,
   TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
@@ -80,20 +78,19 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4161
-2. TODO-4163
-3. TODO-4164
-4. TODO-4166
-5. TODO-4174
-6. TODO-4173
-7. TODO-4176
-8. TODO-4175
-9. TODO-4179
-10. TODO-4177
-11. TODO-4178
-12. TODO-4180
-13. TODO-4182
-14. TODO-4181
+1. TODO-4163
+2. TODO-4164
+3. TODO-4166
+4. TODO-4174
+5. TODO-4173
+6. TODO-4176
+7. TODO-4175
+8. TODO-4179
+9. TODO-4177
+10. TODO-4178
+11. TODO-4180
+12. TODO-4182
+13. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
@@ -109,7 +106,7 @@ Task template:
 | SoA maturity and `soa_vector` promotion | TODO-4177, TODO-4178, TODO-4179, TODO-4180, TODO-4182 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
-| Semantic-product public API factoring and versioning | TODO-4161, TODO-4163 |
+| Semantic-product public API factoring and versioning | TODO-4163 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
@@ -123,7 +120,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4161, TODO-4163 |
+| Semantic-product-authority conformance | TODO-4163 |
 | AST transform hook conformance | TODO-4173, TODO-4176 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
 | Compile-pipeline stage handoff conformance | TODO-4166 |
@@ -475,22 +472,3 @@ Task template:
   - stop_rule: Stop once one representative full semantic-product dump path
     has worker-count parity coverage; do not build a massive worker-count
     matrix in one slice.
-
-- [ ] TODO-4161: Add semantic-product contract-version compatibility coverage
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Semantic-product authority
-  - depends_on: TODO-4160
-  - scope: Turn the touched semantic-product contract version into an enforced
-    compatibility surface with coverage that fails clearly when the published
-    shape changes without the required versioning update.
-  - acceptance:
-    - The touched coverage fails clearly when the semantic-product contract
-      shape changes without the corresponding compatibility update.
-    - Tests assert the touched contract version or compatibility marker for the
-      selected public surface.
-    - Version mismatch diagnostics or failures stay deterministic for the
-      touched coverage.
-  - stop_rule: Stop once one canonical semantic-product surface enforces
-    contract-version compatibility; do not broaden into general serialization
-    migration policy.
