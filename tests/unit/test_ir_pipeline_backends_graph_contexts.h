@@ -1559,9 +1559,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.bindingFactsByExpr.reserve(bindingFacts.size())") ==
         std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("if (entry == nullptr)") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("definition.fullPath.empty()") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("expr.semanticNodeId") != std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("insert_or_assign(entry.semanticNodeId, &entry)") != std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("insert_or_assign(entry->semanticNodeId, entry)") != std::string::npos);
   CHECK(semanticTargetAdapterSource.find("std::string findSemanticProductDirectCallTarget(const SemanticProgram *semanticProgram, const Expr &expr)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr)") !=

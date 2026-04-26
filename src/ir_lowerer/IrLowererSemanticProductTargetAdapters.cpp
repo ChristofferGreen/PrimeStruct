@@ -153,6 +153,9 @@ struct SemanticProductIndexBuilder {
     index.onErrorFactsByDefinitionId.reserve(onErrorFacts.size());
     index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size());
     for (const auto *entry : onErrorFacts) {
+      if (entry == nullptr) {
+        continue;
+      }
       if (entry->semanticNodeId != 0) {
         index.onErrorFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
       }
@@ -172,6 +175,9 @@ struct SemanticProductIndexBuilder {
     index.returnFactsByDefinitionId.reserve(returnFacts.size());
     index.returnFactsByDefinitionPathId.reserve(returnFacts.size());
     for (const auto *entry : returnFacts) {
+      if (entry == nullptr) {
+        continue;
+      }
       if (entry->semanticNodeId != 0) {
         index.returnFactsByDefinitionId.insert_or_assign(entry->semanticNodeId, entry);
       }
@@ -202,6 +208,9 @@ struct SemanticProductIndexBuilder {
     index.localAutoFactsByExpr.reserve(localAutoFacts.size());
     index.localAutoFactsByInitPathAndBindingNameId.reserve(localAutoFacts.size());
     for (const auto *entry : localAutoFacts) {
+      if (entry == nullptr) {
+        continue;
+      }
       if (entry->semanticNodeId != 0) {
         index.localAutoFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
@@ -231,6 +240,9 @@ struct SemanticProductIndexBuilder {
     index.queryFactsByExpr.reserve(queryFacts.size());
     index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size());
     for (const auto *entry : queryFacts) {
+      if (entry == nullptr) {
+        continue;
+      }
       if (entry->semanticNodeId != 0) {
         index.queryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
@@ -259,6 +271,9 @@ struct SemanticProductIndexBuilder {
     index.tryFactsByExpr.reserve(tryFacts.size());
     index.tryFactsByOperandPathAndSource.reserve(tryFacts.size());
     for (const auto *entry : tryFacts) {
+      if (entry == nullptr) {
+        continue;
+      }
       if (entry->semanticNodeId != 0) {
         index.tryFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
@@ -279,6 +294,9 @@ struct SemanticProductIndexBuilder {
     const auto bindingFacts = semanticProgramBindingFactView(*semanticProgram);
     index.bindingFactsByExpr.reserve(bindingFacts.size());
     for (const auto *entry : bindingFacts) {
+      if (entry == nullptr) {
+        continue;
+      }
       if (entry->semanticNodeId != 0) {
         index.bindingFactsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
@@ -296,6 +314,9 @@ struct SemanticProductIndexBuilder {
     const auto collectionSpecializations = semanticProgramCollectionSpecializationView(*semanticProgram);
     index.collectionSpecializationsByExpr.reserve(collectionSpecializations.size());
     for (const auto *entry : collectionSpecializations) {
+      if (entry == nullptr) {
+        continue;
+      }
       if (entry->semanticNodeId != 0) {
         index.collectionSpecializationsByExpr.insert_or_assign(entry->semanticNodeId, entry);
       }
