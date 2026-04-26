@@ -1591,9 +1591,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedCallableSummary(*semanticProgram, fullPath)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramDirectCallTargetView(*semanticProgram)") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramDirectCallTargetView(*semanticProgram)") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramMethodCallTargetView(*semanticProgram)") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramMethodCallTargetView(*semanticProgram)") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramBridgePathChoiceView(*semanticProgram)") ==
         std::string::npos);
@@ -1717,6 +1717,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("std::string findSemanticProductMethodCallTarget(const SemanticProgram *semanticProgram, const Expr &expr)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("std::string findSemanticProductBridgePathChoice(const SemanticProgram *semanticProgram, const Expr &expr)") !=
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramDirectCallTargetView(*semanticProgram)") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("semanticProgramMethodCallTargetView(*semanticProgram)") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("entry->callName != expr.name") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("entry->methodName != expr.name") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("const SemanticProgramCallableSummary *findSemanticProductCallableSummary(const SemanticProgram *semanticProgram,") !=
         std::string::npos);

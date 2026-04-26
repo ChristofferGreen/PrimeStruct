@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4157: Retire temporary semantic-product adapter code. Completed:
+  `IrLowererSemanticProductTargetAdapters.cpp` no longer falls back from
+  missing direct-call or method-call semantic-node identities to
+  source-line/source-column scans for target paths or stdlib surface ids.
+  Focused adapter coverage now proves source-position-only matches are
+  ignored while semantic-id lookup still resolves hand-built semantic-program
+  fixtures, and graph-context source-lock coverage pins the deleted scans.
 - ✓ TODO-4163: Add worker-count parity golden coverage for the full
   semantic-product dump. Completed: the `/std/math/*` semantic-product dump
   worker-count parity coverage now treats the 1-worker full dump as the
