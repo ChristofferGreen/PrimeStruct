@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4185: Align SoA compatibility follow-up docs. Completed:
+  `docs/PrimeStruct.md` no longer says completed SoA promotion tasks still
+  track receiver ownership, borrowed-view rules, backend parity, or example
+  migration while the active TODO queue is empty. The experimental namespace
+  policy now requires a concrete exit, promotion, or reclassification TODO
+  before new seam-changing work starts, and source-lock coverage rejects the
+  stale follow-up wording.
 - ✓ TODO-4184: Align arg-pack remaining-gap docs. Completed:
   `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` no longer
   describe arg-pack backend/runtime gaps as generic follow-up work while the

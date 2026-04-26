@@ -204,6 +204,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path syntaxSpecPath = std::filesystem::path("..") / "docs" / "PrimeStruct_SyntaxSpec.md";
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
@@ -213,13 +214,18 @@ TEST_CASE("soa maturity track docs stay source locked") {
   if (!std::filesystem::exists(todoPath)) {
     todoPath = std::filesystem::current_path() / "docs" / "todo.md";
   }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
 
   CHECK(primeStructDoc.find("### SoA Maturity Track") != std::string::npos);
   CHECK(primeStructDoc.find("`soa_vector<T>` remains an incubating public extension") !=
@@ -240,6 +246,14 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") != std::string::npos);
+  CHECK(primeStructDoc.find("get an explicit exit or downgrade TODO before work starts") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("future promotion or retirement work must be tied to a") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("none active; add a concrete TODO only before retiring, accepting, or reclassifying") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("This section is the scope reference for future SoA-specific maturity decision") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("contract after the remaining compatibility-only seams are retired") !=
         std::string::npos);
   CHECK(primeStructDoc.find("generic SoA substrate cleanup is complete") !=
@@ -248,6 +262,9 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Representative wildcard canonical helper/conversion tests now run") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("SoA promotion tasks still track receiver ownership") ==
+        std::string::npos);
+  CHECK(primeStructDoc.find("tie that state to a follow-up TODO") == std::string::npos);
 
   CHECK(todo.find("### SoA Maturity Track Summary") != std::string::npos);
   CHECK(todo.find("`soa_vector<T>` remains an incubating public extension") !=
@@ -265,6 +282,9 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("TODO-4059") == std::string::npos);
   CHECK(todo.find("TODO-4181") == std::string::npos);
   CHECK(todo.find("TODO-4182") == std::string::npos);
+  CHECK(todo.find("TODO-4185") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4185: Align SoA compatibility follow-up docs") !=
+        std::string::npos);
 
   CHECK(syntaxSpecDoc.find("The current public spellings are") !=
         std::string::npos);

@@ -2656,15 +2656,16 @@ before renaming, deleting, or promoting that surface.
 - **Temporary compatibility namespace:** an `experimental` namespace that
   remains importable only to preserve current behavior while the canonical
   namespace or maturity decision finishes. Every compatibility namespace must
-  have an explicit exit or downgrade TODO.
+  get an explicit exit or downgrade TODO before work starts to retire, promote,
+  or reclassify it.
 - **Internal substrate/helper namespace:** an `experimental` namespace that is
   implementation plumbing rather than public API. It may stay imported by
   wrappers, conformance harnesses, or bridge code, but it should not be
   presented as an ordinary user-facing contract.
 - **Default rule:** no `experimental` namespace counts as canonical public API
   by default. If a surface still needs public incubation, the docs must say so
-  explicitly and tie that state to a follow-up TODO instead of relying on
-  blanket `experimental` wording.
+  explicitly, and future promotion or retirement work must be tied to a
+  concrete TODO instead of relying on blanket `experimental` wording.
 
 Current `stdlib/std` experimental module classification:
 
@@ -2673,8 +2674,8 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports remain only for targeted compatibility or conformance coverage. | SoA promotion tasks still track receiver ownership, borrowed-view rules, backend parity, and example migration before the compatibility seam can be retired. |
-| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Internal conversion module behind canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/*` conversion helpers; direct imports remain only for targeted compatibility or conformance coverage. | SoA promotion tasks still track receiver ownership and example migration before the compatibility seam can be retired. |
+| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports remain only for targeted compatibility or conformance coverage. | none active; add a concrete TODO only before retiring, accepting, or reclassifying this compatibility seam. |
+| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Internal conversion module behind canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/*` conversion helpers; direct imports remain only for targeted compatibility or conformance coverage. | none active; add a concrete TODO only before retiring, accepting, or reclassifying this conversion seam. |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
@@ -2686,8 +2687,8 @@ should be treated as explicit implementation namespaces rather than as
 candidate public APIs.
 
 ### SoA Maturity Track
-This section is the scope reference for the SoA-specific maturity decision lane
-in `docs/todo.md`. It is intentionally separate from vector/map promotion.
+This section is the scope reference for future SoA-specific maturity decision
+TODOs. It is intentionally separate from vector/map promotion.
 
 - **Current status:** `soa_vector<T>` remains an incubating public extension,
   not a fully promoted public contract on the same maturity level as
