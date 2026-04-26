@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4178: Add canonical `soa_vector` backend and runtime parity
+  coverage. Completed: the representative wildcard canonical helper slice now
+  runs across the C++ emitter, VM, and native backend without importing
+  `/std/collections/experimental_soa_vector/*` in the test source. The tests
+  import `/std/collections/soa_vector/*` and
+  `/std/collections/soa_vector_conversions/*`, infer the wrapper value from the
+  canonical constructor, exercise reserve/push/count/get/ref plus AoS
+  conversion, and keep direct experimental imports limited to compatibility
+  coverage.
 - ✓ TODO-4177: Stabilize the borrowed-view and field-view contract for public
   `soa_vector`. Completed: canonical method-form and call-form field-view
   bindings now bypass the old pending diagnostic, infer `SoaFieldView` values

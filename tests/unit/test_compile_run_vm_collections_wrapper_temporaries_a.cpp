@@ -338,11 +338,11 @@ main() {
   CHECK(runCommand(runCmd) == 1);
 }
 
-TEST_CASE("vm wildcard-imported canonical soa_vector helpers lower") {
+TEST_CASE("vm wildcard-imported canonical soa_vector helpers run without experimental imports") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/soa_vector/*
-import /std/collections/experimental_soa_vector/*
+import /std/collections/soa_vector_conversions/*
 
 [struct reflect]
 Particle() {
@@ -351,13 +351,13 @@ Particle() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [auto mut] values{soaVectorNew<Particle>()}
   reserve(values, 2i32)
   push(values, Particle(4i32))
   push(values, Particle(9i32))
   [Particle] first{get(values, 0i32)}
   [Reference<Particle>] second{ref(values, 1i32)}
-  [vector<Particle>] unpacked{to_aos(values)}
+  [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
   return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
 }
 )";

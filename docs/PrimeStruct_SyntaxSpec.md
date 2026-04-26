@@ -878,8 +878,9 @@ lowering, and imported method `push/reserve` now also reaches the same canonical
 the older mutable-vector-binding gap. Root and imported builtin bare/direct `to_aos` forms on raw `soa_vector<T>`
 bindings now also lower through the canonical stdlib shim instead of stopping on the earlier builtin-to-wrapper
 parameter mismatch, and imported plus no-import root builtin bare/direct/method/slash-method `to_aos` now
-materialize `/std/collections/soa_vector/to_aos__...` before lowering. The bridged native runtime path remains a
-follow-up.
+materialize `/std/collections/soa_vector/to_aos__...` before lowering. Representative wildcard canonical
+helper/conversion coverage now runs across C++ emitter, VM, and native without direct experimental SoA imports in the
+test source.
 The fixed-width `.prime` SoA storage substrate now reaches sixteen columns. Reflected structs can now generate
 `SoaSchemaFieldCount`, `SoaSchemaFieldName`, `SoaSchemaFieldType`, and `SoaSchemaFieldVisibility` helpers to bridge the
 current constant-index metadata boundary, and can now also generate `SoaSchemaChunkCount`,
@@ -975,7 +976,8 @@ checks now share one generic AST call-path helper instead of each backend file c
 `soa_vector/to_aos` matcher. Imported and no-import root bare/direct/method/slash-method
 builtin `to_aos` forms on raw `soa_vector<T>` bindings therefore now reach the same canonical
 semantic rewrite, materialize `/std/collections/soa_vector/to_aos__...`, and clear lowering plus
-C++/VM/native execution on that bridged conversion path. The remaining raw-builtin
+C++/VM/native execution on that bridged conversion path. Representative wildcard canonical
+helper/conversion flows now also run on those three entrypoints without direct experimental SoA imports. The remaining raw-builtin
 conversion-specific compiler-owned code is now reduced to invalid-target/user-shadow fallback
 handling instead of a native runtime trap. The diagnostic harness now also locks both direct-canonical and
 imported-helper experimental-wrapper `to_aos` forms to that same canonical helper path at

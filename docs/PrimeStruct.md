@@ -2696,7 +2696,9 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
   The canonical wrapper now owns the ordinary constructor, count/get/ref,
   reserve/push, field-view, and AoS conversion helper names; ordinary public
   examples should not import the experimental implementation modules for those
-  helper flows.
+  helper flows. Representative wildcard canonical helper/conversion tests now
+  run across C++ emitter, VM, and native without direct experimental SoA
+  imports in the test source.
 - **Compatibility-only namespaces:** `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain bridge
   seams behind that canonical experiment surface. They may stay importable while
@@ -2705,10 +2707,10 @@ in `docs/todo.md`. It is intentionally separate from vector/map promotion.
 - **Internal substrate namespace:** `/std/collections/internal_soa_storage/*`
   stays implementation-facing storage/layout plumbing rather than public API.
 - **Promotion gate:** SoA should only move from incubating to promoted public
-  contract after borrowed-view/lifetime rules, backend/runtime parity, and the
-  remaining direct experimental implementation imports are retired. Until then,
-  docs should call `soa_vector<T>` incubating explicitly instead of implying it
-  has already graduated with vector/map.
+  contract after the remaining direct experimental receiver contracts and
+  example imports are retired. Until then, docs should call `soa_vector<T>`
+  incubating explicitly instead of implying it has already graduated with
+  vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -3554,7 +3556,9 @@ no-import root raw-builtin bare/direct/method/slash-method `to_aos` now also loc
 Runtime-code helper/conversion/field-view cleanup and the matching diagnostic/test special-case cleanup are therefore
 complete; borrowed-view lifetime/provenance behavior is now enforced, with no runtime-side routing removal left. The current
 successful field-view indexing surface is already locked by compile-run, dump, and source-level coverage rather than
-backend-local routing contracts. The wrapper now also exposes `soaVectorRef<T>()`
+backend-local routing contracts, and representative wildcard canonical
+helper/conversion flows now run across C++ emitter, VM, and native without
+direct experimental imports in the source. The wrapper now also exposes `soaVectorRef<T>()`
 plus `values.ref(i)` on top of the current single-column borrowed-slot substrate, and those
 borrowed-return paths now run successfully across the current backends without depending on the
 conversion helper surface. The pending `soa_vector` field-view and borrowed-view diagnostics now also route through shared
