@@ -322,8 +322,7 @@
             "        resolvedOut == \"/std/collections/vector/at_unsafe\")") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "if ((resolvedOut == \"/std/collections/vector/at\" ||\n"
-            "         resolvedOut == \"/std/collections/vector/at_unsafe\") &&") !=
+            "const bool isExplicitRootedVectorMethod =") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "if ((resolvedOut == \"/std/collections/vector/at\" ||\n"
@@ -343,22 +342,13 @@
             "       explicitVectorReceiverFamily == \"soa_vector\"))") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "if (explicitVectorHelperPath == \"/vector/count\" &&\n"
-            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
-            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
-            "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
+            "const bool isExplicitVectorFamilyReceiver =") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "if (explicitVectorHelperPath == \"/vector/capacity\" &&\n"
-            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
-            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
-            "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
+            "if (isExplicitRootedVectorMethod && isExplicitVectorFamilyReceiver) {") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "if (explicitVectorHelperPath == \"/vector/at\" &&\n"
-            "      (explicitVectorReceiverFamily == \"vector\" ||\n"
-            "       explicitVectorReceiverFamily == \"experimental_vector\" ||\n"
-            "       explicitVectorReceiverFamily == \"soa_vector\"))") !=
+            "hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
             "auto rejectsRootedVectorBuiltinAlias =") ==
@@ -455,27 +445,11 @@
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
             "resolveCalleePath(expr).rfind(\"/std/collections/vector/count\", 0) == 0") ==
         std::string::npos);
-  CHECK(semanticsExprLateCallCompatibilitySource.find(
-            "if (!expr.isMethodCall &&\n"
-            "      resolved == \"/std/collections/vector/count\" &&\n"
-            "      expr.args.size() == 1 && defMap_.find(resolved) == defMap_.end()) {\n"
-            "    std::string elemType;\n"
-            "    std::string arrayElemType;\n"
-            "    const bool resolvesVector =\n"
-            "        context.dispatchResolvers->resolveVectorTarget(expr.args.front(),\n"
-            "                                                       elemType);\n"
-            "    std::string experimentalElemType;\n"
-            "    const bool resolvesExperimentalVector =\n"
-            "        context.dispatchResolvers->resolveExperimentalVectorTarget(\n"
-            "            expr.args.front(), experimentalElemType);\n"
-            "    const bool resolvesArray =\n"
-            "        context.dispatchResolvers->resolveArrayTarget(expr.args.front(),\n"
-            "                                                      arrayElemType);\n"
-            "    const bool resolvesString =\n"
-            "        context.dispatchResolvers->resolveStringTarget(expr.args.front());") !=
+  CHECK(semanticsExprCollectionDispatchSetupSource.find(
+            "const bool isStdNamespacedVectorCountCall =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
-            "bool isStdNamespacedVectorCountCall = false;") !=
+            "bool isStdNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "directCollectionFallbackContext.isStdNamespacedVectorCountCall =") ==
@@ -488,7 +462,7 @@
             "            rewrittenDirectCollectionFallbackCall)") !=
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
-            "bool isStdNamespacedVectorCountCall = false;") !=
+            "bool isStdNamespacedVectorCountCall = false;") ==
         std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "struct ExprDirectCollectionFallbackContext {") ==
@@ -871,7 +845,7 @@
             "auto isExplicitVectorCompatibilityMethodWithTemplateArgs = [&]() {") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (resolved == \"/std/collections/vector/count\" &&") ==
+            "if (resolved == \"/std/collections/vector/count\" &&") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "auto explicitVectorCountMethodMissingSamePathHelper = [&]() -> std::string {") ==
@@ -898,9 +872,7 @@
             "const bool hasCanonicalOnlyVectorHelper =") ==
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
-            "if (isVectorReceiver &&\n"
-            "        hasDeclaredDefinitionPath(\"/std/collections/vector/\" + expr.name) &&\n"
-            "        !hasImportedDefinitionPath(\"/std/collections/vector/\" + expr.name)) {") !=
+            "const bool isVectorCompatibilityMethod =") !=
         std::string::npos);
   CHECK(semanticsExprMethodResolutionSource.find(
             "const bool hasExplicitVectorCompatibilityNamespace =") ==

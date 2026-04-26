@@ -58,7 +58,7 @@
   CHECK(semanticsExprSource.find("auto isKnownCollectionTarget = [&](const Expr &targetExpr) -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprMethodCompatibilitySetupSource.find(
-            "auto isKnownCollectionTarget = [this, &dispatchBootstrap](") !=
+            "auto isKnownCollectionTarget = [&dispatchBootstrap](") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("const auto &resolveIndexedArgsPackElementType =") == std::string::npos);
   CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveIndexedArgsPackElementType;") ==
@@ -88,7 +88,7 @@
   CHECK(semanticsExprSource.find("builtinCollectionDispatchResolvers.resolveExperimentalMapTarget;") ==
         std::string::npos);
   CHECK(semanticsExprDispatchBootstrapSource.find(
-            "bootstrapOut.resolveMapTarget = [this, paramsPtr, localsPtr, &bootstrapOut](const Expr &target) -> bool {") !=
+            "bootstrapOut.resolveMapTarget = [this,") !=
         std::string::npos);
   CHECK(semanticsExprDispatchBootstrapSource.find("bootstrapOut.dispatchResolvers.resolveExperimentalMapTarget(target, keyType,") !=
         std::string::npos);
@@ -147,7 +147,7 @@
   CHECK(semanticsExprMethodTargetResolutionSource.find("setCollectionMethodTarget(\"/soa_vector/count\")") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "preferredSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
+            "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "preferredSoaHelperTargetForCollectionType(") != std::string::npos);
@@ -202,7 +202,7 @@
   CHECK(semanticsExprSource.find("auto resolvesExperimentalVectorValueReceiverForBareAccess =") ==
         std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find(
-            "auto resolvesExperimentalVectorValueReceiverForBareAccess =") !=
+            "const bool receiverLooksLikeBuiltinCountTarget =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find("Expr rewrittenVectorHelperCall;") == std::string::npos);
   CHECK(semanticsExprDirectCollectionFallbacksSource.find("Expr rewrittenVectorHelperCall;") !=

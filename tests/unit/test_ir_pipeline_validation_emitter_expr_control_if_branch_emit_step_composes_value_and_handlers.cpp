@@ -1268,26 +1268,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "candidate.kind != Expr::Kind::Call || !isResolvedMapConstructorPath(resolveCalleePath(candidate))") ==
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "    std::string resolvedPath = preferredCollectionHelperResolvedPath(candidate);\n"
-            "    if (resolvedPath.empty()) {\n"
-            "      resolvedPath = resolveCalleePath(candidate);\n"
-            "    }\n"
-            "    if (!resolvedPath.empty()) {\n"
-            "      const std::string concreteResolvedPath =\n"
-            "          resolveExprConcreteCallPath(params, locals, candidate, resolvedPath);\n"
-            "      if (!concreteResolvedPath.empty()) {\n"
-            "        resolvedPath = concreteResolvedPath;\n"
-            "      }\n"
-            "    }\n"
-            "    if (resolvedPath == \"/to_aos\" || resolvedPath == \"/to_aos_ref\") {\n"
-            "      return false;\n"
-            "    }\n"
-            "    const std::string resolvedCanonical =\n"
-            "        canonicalizeLegacySoaToAosHelperPath(resolvedPath);\n"
-            "    if (resolvedCanonical != \"/std/collections/soa_vector/to_aos\" &&\n"
-            "        resolvedCanonical != \"/std/collections/soa_vector/to_aos_ref\") {\n"
-            "      return false;\n"
-            "    }\n") !=
+            "preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "preferredSoaHelperTargetForCollectionType(helperName, \"/soa_vector\")") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
             "const std::string resolvedPath = resolveCalleePath(candidate);\n"
@@ -1446,7 +1430,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
         std::string::npos);
   CHECK(statementBindingsSource.find("isBuiltinSoaRefExpr(") ==
         std::string::npos);
-  CHECK(statementBindingsSource.find("builtinSoaAccessHelperName(") ==
+  CHECK(statementBindingsSource.find("builtinSoaAccessHelperName(") !=
         std::string::npos);
   CHECK(inferDefinitionSource.find("isBuiltinSoaRefExpr(") ==
         std::string::npos);
@@ -1524,30 +1508,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "bool isCanonicalSoaRefLikeHelperPath(std::string_view path);") !=
         std::string::npos);
   CHECK(exprSource.find(
-            "const std::string resolvedSoaToAosCanonical =") !=
+            "const auto isExplicitOldSurfaceSoaConversionCall =") ==
         std::string::npos);
-  CHECK(exprSource.find(
-            "const bool resolvedUsesCanonicalSoaNamespace =") !=
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "const auto isExplicitOldSurfaceSoaConversionCall =") !=
         std::string::npos);
-  CHECK(exprSource.find(
-            "canonicalizeLegacySoaToAosHelperPath(resolved)") !=
-        std::string::npos);
-  CHECK(exprSource.find(
-            "resolved.rfind(\"/std/collections/soa_vector/\", 0) == 0") !=
-        std::string::npos);
-  CHECK(exprSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(\n"
-            "            resolvedSoaToAosCanonical, \"to_aos\")") !=
-        std::string::npos);
-  CHECK(exprSource.find(
-            "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==
-        std::string::npos);
-  CHECK(exprSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(\n"
-            "            resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
-        std::string::npos);
-  CHECK(exprSource.find(
-            "resolvedSoaToAosCanonical == \"/std/collections/soa_vector/to_aos_ref\"") ==
+  CHECK(exprMapSoaBuiltinsSource.find(
+            "rejectExplicitOldSurfaceToAosCall ? \"/to_aos\" : \"/to_aos_ref\"") !=
         std::string::npos);
   CHECK(exprSource.find(
             "resolved.rfind(\"/std/collections/soa_vector/to_aos\", 0)") ==
@@ -1809,26 +1776,24 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
              "                             \"count_ref\")") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
-            "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/count\")") !=
+            "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" +\n"
+            "                                                    soaCountHelperName)") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "!hasVisibleDefinitionPathForCurrentImports(\"/soa_vector/\" +\n"
             "                                                    soaCountHelperName)") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
-            "soaUnavailableMethodDiagnostic(\"/soa_vector/count\")") !=
+            "soaUnavailableMethodDiagnostic(\"/soa_vector/\" +\n"
+            "                                           soaCountHelperName)") !=
         std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "soaUnavailableMethodDiagnostic(\"/soa_vector/\" +\n"
             "                                           soaCountHelperName)") !=
         std::string::npos);
-  CHECK((exprCountCapacityMapBuiltinsSource.find(
-            "preferredSoaHelperTargetForCurrentImports(\"count\") ==\n"
-            "                \"/soa_vector/count\"") !=
-        std::string::npos ||
-        exprCountCapacityMapBuiltinsSource.find(
-            "hasVisibleSoaHelperTargetForCurrentImports(\"count\")") !=
-            std::string::npos));
+  CHECK(exprCountCapacityMapBuiltinsSource.find(
+            "hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)") !=
+        std::string::npos);
   CHECK(exprCountCapacityMapBuiltinsSource.find(
             "hasVisibleSoaHelperTargetForCurrentImports(soaCountHelperName)") !=
         std::string::npos);
@@ -1873,7 +1838,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
   CHECK(inferMethodResolutionSource.find("preferredBorrowedSoaAccessHelperTarget(") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find(
-            "/std/collections/experimental_soa_vector/soaVectorGetRef") !=
+            "preferredBorrowedSoaAccessHelperTarget(") !=
         std::string::npos);
   CHECK(inferMethodResolutionSource.find("hasVisibleSoaHelperTargetForCurrentImports(") !=
         std::string::npos);
@@ -1895,9 +1860,10 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "preferredSoaHelperTargetForCollectionType(") !=
         std::string::npos);
   CHECK(buildInitializerInferenceSource.find(
-            "if (collectionTypePath == \"/soa_vector\") {\n"
-            "    return samePath;\n"
-            "  }") !=
+            "preferredSoaHelperTargetForCurrentImports(helperName)") !=
+        std::string::npos);
+  CHECK(buildInitializerInferenceSource.find(
+            "preferredSamePathSoaHelperTarget(helper)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find("auto preferredSoaCountMethodTarget =") ==
         std::string::npos);
@@ -1938,19 +1904,13 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "resolvedSoaGetCanonical == \"/std/collections/soa_vector/get_ref\"") ==
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "const std::string resolvedSoaToAosCanonical =") !=
+            "const bool isExplicitRootedVectorMethod =") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "const bool matchesSoaToAosTarget =") !=
+            "const bool isExplicitVectorFamilyReceiver =") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "const bool matchesBorrowedSoaToAosTarget =") !=
-        std::string::npos);
-  CHECK(exprMethodTargetResolutionSource.find(
-            "resolvedSoaToAosCanonical, \"to_aos\")") !=
-        std::string::npos);
-  CHECK(exprMethodTargetResolutionSource.find(
-            "resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
+            "hasReceiverCompatibleExplicitVectorHelperPath(") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "((target.isMethodCall && target.name == \"to_aos\") ||\n"
@@ -1961,7 +1921,7 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "           (!target.isMethodCall && isSimpleCallName(target, \"to_aos_ref\")))") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "canonicalizeLegacySoaToAosHelperPath(resolveCalleePath(target))") !=
+            "preferredBorrowedSoaAccessHelperTarget(normalizedMethodName)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==
@@ -2006,12 +1966,11 @@ TEST_CASE("soa pending diagnostics route through shared semantics helpers") {
             "isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical)") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(\n"
-            "            resolvedSoaToAosCanonical, \"to_aos\")") !=
+            "preferredSoaHelperTargetForCollectionType(normalizedMethodName,\n"
+            "                                                      \"/soa_vector\")") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(\n"
-            "            resolvedSoaToAosCanonical, \"to_aos_ref\")") !=
+            "preferredSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
         std::string::npos);
   CHECK(exprMethodTargetResolutionSource.find(
             "isCanonicalSoaToAosHelperPath(resolvedSoaToAosCanonical)") ==

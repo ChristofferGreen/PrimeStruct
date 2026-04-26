@@ -57,10 +57,10 @@
             "auto publishCollectionCountCapacityDiagnostic = [&]() -> bool {") ==
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "auto failCollectionCountCapacityDiagnostic = [&](std::string message) -> bool {") !=
+            "const auto lacksVisibleResolvedMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprCollectionCountCapacitySource.find(
-            "return failExprDiagnostic(expr, std::move(message));") !=
+            "const auto resolveVisiblePreferredVectorHelperMethodTarget =") !=
         std::string::npos);
   CHECK(semanticsExprSource.find(
             "auto publishPreDispatchDirectCallDiagnostic = [&]() -> bool {") ==
@@ -854,7 +854,7 @@
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
-            "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
+            "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
         std::string::npos);
   CHECK(semanticsExprMethodTargetResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(canonical)") ==
@@ -863,7 +863,7 @@
             "hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)") ==
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
-            "usesSamePathSoaHelperTargetForCollectionType(\"count\", \"/vector\")") !=
+            "usesSamePathSoaHelperTargetForCollectionType(normalizedMethodName, \"/vector\")") !=
         std::string::npos);
   CHECK(semanticsInferMethodResolutionSource.find(
             "hasVisibleDefinitionPathForCurrentImports(canonical)") ==

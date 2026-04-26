@@ -1492,16 +1492,16 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "methodPathCanonical == \"/std/collections/soa_vector/ref_ref\"") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "path == \"/std/collections/soa_vector/get\"") ==
+            "path == \"/std/collections/soa_vector/get\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "path == \"/std/collections/soa_vector/get_ref\"") ==
+            "path == \"/std/collections/soa_vector/get_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "path == \"/std/collections/soa_vector/count\"") ==
+            "path == \"/std/collections/soa_vector/count\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
-            "path == \"/std/collections/soa_vector/count_ref\"") ==
+            "path == \"/std/collections/soa_vector/count_ref\"") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "path == \"/std/collections/soa_vector/reserve\"") ==
@@ -1620,7 +1620,7 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "inferDefinitionReturnBindingForTemplatedFallback(\n"
-            "                defIt->second, allowMathBare, ctx, inferredReturn)") !=
+            "                    defIt->second, allowMathBare, ctx, inferredReturn)") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "const bool receiverResolvesBorrowedExperimentalSoaVector =\n"
