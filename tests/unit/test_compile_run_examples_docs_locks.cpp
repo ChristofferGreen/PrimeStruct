@@ -138,6 +138,43 @@ TEST_CASE("semantic-product docs avoid inactive Group 12 pointers") {
         std::string::npos);
 }
 
+TEST_CASE("graphics UI docs avoid inactive follow-up pointers") {
+  std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
+  std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
+  std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  if (!std::filesystem::exists(primeStructPath)) {
+    primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
+  }
+  if (!std::filesystem::exists(todoPath)) {
+    todoPath = std::filesystem::current_path() / "docs" / "todo.md";
+  }
+  if (!std::filesystem::exists(todoFinishedPath)) {
+    todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
+  }
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(primeStructDoc.find("No active TODO currently tracks broader backend/runtime package-path") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Add a concrete TODO before changing that graphics backend/runtime seam") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("No active TODO currently tracks platform/runtime consumption") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Add a concrete TODO before changing that UI runtime seam") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("broader backend/runtime follow-up work is still staged") ==
+        std::string::npos);
+  CHECK(primeStructDoc.find("planned follow-up layers now center") == std::string::npos);
+  CHECK(todo.find("TODO-4191") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4191: Align graphics UI follow-up docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib style boundary docs stay source locked") {
   std::filesystem::path codeExamplesPath = std::filesystem::path("..") / "docs" / "CodeExamples.md";
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";

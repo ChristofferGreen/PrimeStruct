@@ -1038,9 +1038,10 @@ module {
   `GfxError` mapping plus locked `VertexColored` upload layout definitions now live in one shared example header instead
   of being duplicated per macOS host, bare explicit bindings of Result-returning gfx wrappers still fail
   deterministically during semantics, unsupported `create_pipeline` vertex types now reject deterministically instead of
-  degrading into generic compiler errors, and broader backend/runtime follow-up work is still staged; current
-  spinning-cube execution therefore still mixes shared `.prime` simulation with browser/native/Metal host glue outside
-  the fully canonical package path.
+  degrading into generic compiler errors. No active TODO currently tracks broader backend/runtime package-path cleanup.
+  Add a concrete TODO before changing that graphics backend/runtime seam; current spinning-cube execution
+  therefore still mixes shared `.prime` simulation with browser/native/Metal host glue outside the fully canonical
+  package path.
 - **Layered UI/rendering roadmap:** the first `/std/ui/*` foundation now includes deterministic command-list rendering,
   a two-pass layout tree contract, basic control emission, a basic panel container primitive, and the first composite
   widget helper, plus deterministic HTML/backend adapter records and deterministic platform input records
@@ -1053,9 +1054,9 @@ module {
   `arrange`, deterministic `serialize()` output), and the current host bridge can blit a deterministic BGRA8 software
   surface through the native window presenter and macOS Metal host paths while the shared widget/layout model can also
   emit deterministic HTML/backend adapter records and normalize pointer, keyboard, IME, resize, and focus input into
-  deterministic UI event-stream records; planned follow-up layers now center on platform/runtime consumption of that
-  shared event stream, with composite-widget composition locked to the basic widget/container APIs rather than raw
-  draw-command helpers or raw HTML record append helpers.
+  deterministic UI event-stream records. No active TODO currently tracks platform/runtime consumption of that shared
+  event stream. Add a concrete TODO before changing that UI runtime seam; composite-widget composition remains locked
+  to the basic widget/container APIs rather than raw draw-command helpers or raw HTML record append helpers.
 - **IR definition (stable, PSIR v21):**
   - **Module:** `{ string_table, struct_layouts, functions, instruction_source_map, entry_index, version }`.
   - **Function:** `{ name, metadata, local_debug_slots, instructions }` where instructions are linear, stack-based ops

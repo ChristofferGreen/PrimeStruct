@@ -6,6 +6,12 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4191: Align graphics UI follow-up docs. Completed:
+  `docs/PrimeStruct.md` no longer describes broader graphics backend/runtime
+  package-path cleanup or UI platform/runtime event-stream consumption as
+  staged/planned follow-up work while the active queue is empty. The docs
+  now require a concrete TODO before changing those graphics/UI runtime
+  seams, and source-lock coverage rejects the stale follow-up wording.
 - ✓ TODO-4190: Align semantic-product Group 12 docs. Completed:
   `docs/PrimeStruct.md` no longer says Group 12 entrypoint retirement,
   provenance/ownership coverage, backend conformance, compatibility caller
