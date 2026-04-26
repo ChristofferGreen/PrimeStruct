@@ -418,8 +418,10 @@ Compile-pipeline publication contract:
 - Failure paths should continue to report diagnostics against AST-backed provenance, but post-semantics compile-pipeline
   failures should still preserve the published semantic product plus a first-class failure object rather than dropping
   back to raw string/error-stage side channels.
-- User-visible CLI/runtime reporting now reads that preserved failure object directly, and post-semantics diagnostics
-  may explicitly note that a semantic product is already available even though later target validation failed.
+- The `primevm` runtime entrypoint now consumes an explicit compile-pipeline success/failure variant for that
+  preserved failure object, while the legacy output struct remains as the compatibility surface for unmigrated callers.
+  Post-semantics diagnostics may explicitly note that a semantic product is already available even though later target
+  validation failed.
 - The current published shell is still intentionally narrow, but it now includes the resolved call-target surface:
   entry path, import inventories, deterministic definition/execution inventories, resolved direct-call targets with
   canonical callee paths, resolved receiver/method-call targets with receiver-side helper-family choices, and direct
@@ -437,8 +439,9 @@ Compile-pipeline publication contract:
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather
   than rebuilding semantic facts ad hoc from the raw `Program`.
 - That success-path handoff is now live for `primec` compile/emit entrypoints, `primevm`, backend registry dispatch,
-  and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. Remaining CLI/runtime plumbing work is now
-  limited to semantic-product dump/report surfaces and failure/report ordering, not the success-path lowering handoff.
+  and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. The `primevm` result boundary now also uses
+  explicit success/failure variants; remaining CLI/runtime plumbing work is limited to migrating the remaining
+  compatibility callers and semantic-product dump/report surfaces, not the success-path lowering handoff.
 
 CLI/runtime plumbing contract:
 - `primec` and `primevm` should receive the semantic product only through compile-pipeline success artifacts, not

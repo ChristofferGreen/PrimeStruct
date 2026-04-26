@@ -56,7 +56,6 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4166
 - TODO-4174
 
 ### Immediate Next 10 (After Ready Now)
@@ -66,7 +65,6 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Compile-pipeline boundary hardening and provenance parity: TODO-4166
 - User-authored AST transform hooks: TODO-4174, TODO-4173, TODO-4176,
   TODO-4175
 - `soa_vector` promotion and de-experimentalization: TODO-4179, TODO-4177,
@@ -74,24 +72,23 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-1. TODO-4166
-2. TODO-4174
-3. TODO-4173
-4. TODO-4176
-5. TODO-4175
-6. TODO-4179
-7. TODO-4177
-8. TODO-4178
-9. TODO-4180
-10. TODO-4182
-11. TODO-4181
+1. TODO-4174
+2. TODO-4173
+3. TODO-4176
+4. TODO-4175
+5. TODO-4179
+6. TODO-4177
+7. TODO-4178
+8. TODO-4180
+9. TODO-4182
+10. TODO-4181
 
 ### PrimeStruct Coverage Snapshot
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | none |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4166 |
+| Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | TODO-4174, TODO-4173, TODO-4176 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
@@ -117,7 +114,7 @@ Task template:
 | Semantic-product-authority conformance | none |
 | AST transform hook conformance | TODO-4173, TODO-4176 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4176 |
-| Compile-pipeline stage handoff conformance | TODO-4166 |
+| Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | none |
@@ -414,21 +411,3 @@ Task template:
   - stop_rule: Stop after one definition-to-definition AST transform contract
     works end-to-end; do not add text transforms, execution hooks, or broad
     mutable AST editing APIs in this slice.
-
-- [ ] TODO-4166: Refactor compile-pipeline results into explicit success and failure variants
-  - owner: ai
-  - created_at: 2026-04-25
-  - phase: Compile-pipeline boundary hardening
-  - depends_on: TODO-4162
-  - scope: Replace the touched flag-heavy compile-pipeline result surface with
-    explicit success and failure variants so callers cannot observe invalid
-    state combinations around diagnostics, semantic-product handoff, or IR
-    preparation.
-  - acceptance:
-    - The touched compile-pipeline callers consume explicit success or failure
-      variants instead of checking multiple flags or optional fields.
-    - Stage diagnostics and semantic-product handoff behavior remain unchanged
-      for the touched flows.
-    - Invalid mixed result states disappear from the touched pipeline surface.
-  - stop_rule: Stop once one compile-pipeline result surface uses explicit
-    variants end-to-end; do not rewrite every caller in one slice.

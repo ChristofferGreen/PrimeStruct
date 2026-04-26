@@ -16,6 +16,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace {
@@ -444,12 +445,17 @@ int main(int argc, char **argv) {
   std::string error;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
-  primec::CompilePipelineOutput pipelineOutput;
   primec::CompilePipelineDiagnosticInfo pipelineDiagnosticInfo;
   primec::CompilePipelineErrorStage pipelineError = primec::CompilePipelineErrorStage::None;
-  if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo)) {
-    return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
+  primec::CompilePipelineResult pipelineResult =
+      primec::runCompilePipelineResult(options, pipelineError, error, &pipelineDiagnosticInfo);
+  if (const auto *pipelineFailure =
+          std::get_if<primec::CompilePipelineFailureResult>(&pipelineResult)) {
+    return primec::emitCliFailure(
+        std::cerr, options, primec::describeCompilePipelineFailure(*pipelineFailure));
   }
+  primec::CompilePipelineOutput pipelineOutput =
+      std::move(std::get<primec::CompilePipelineSuccessResult>(pipelineResult).output);
   if (pipelineOutput.hasDumpOutput) {
     std::cout << pipelineOutput.dumpOutput;
     return 0;

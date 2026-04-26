@@ -8,6 +8,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "primec/AstMemory.h"
@@ -2313,6 +2314,38 @@ TEST_CASE("cli driver reports semantic-product availability on post-semantics fa
   CHECK(*failure.sourceText == output.filteredSource);
 }
 
+TEST_CASE("compile pipeline result variants expose import failures without success state") {
+  const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
+  std::error_code ec;
+  std::filesystem::remove(tempPath, ec);
+
+  primec::Options options;
+  options.inputPath = tempPath.string();
+  options.entryPath = "/main";
+  options.emitKind = "vm";
+  primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
+
+  primec::CompilePipelineDiagnosticInfo diagnosticInfo;
+  primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
+  std::string error;
+  primec::CompilePipelineResult result =
+      primec::runCompilePipelineResult(options, errorStage, error, &diagnosticInfo);
+
+  const auto *failure = std::get_if<primec::CompilePipelineFailureResult>(&result);
+  REQUIRE(failure != nullptr);
+  CHECK(std::get_if<primec::CompilePipelineSuccessResult>(&result) == nullptr);
+  CHECK(errorStage == primec::CompilePipelineErrorStage::Import);
+  CHECK(failure->failure.stage == primec::CompilePipelineErrorStage::Import);
+  CHECK(failure->failure.message == error);
+  CHECK_FALSE(failure->hasSemanticProgram);
+  CHECK(failure->filteredSource.empty());
+
+  const primec::CliFailure cliFailure = primec::describeCompilePipelineFailure(*failure);
+  CHECK(cliFailure.code == primec::DiagnosticCode::ImportError);
+  CHECK(cliFailure.plainPrefix == "Import error: ");
+  CHECK(cliFailure.notes == std::vector<std::string>{"stage: import"});
+}
+
 TEST_CASE("cpp-ir backend accepts semantic-product prepared IR from compile pipeline helper") {
   const std::string source =
       "[return<T>]\n"
@@ -4488,13 +4521,15 @@ TEST_CASE("primevm uses shared ir preparation helper") {
   const size_t replayFastPathPos =
       source.find("if (!options.debugReplayPath.empty() && options.dumpStage.empty())");
   const size_t compilePipelinePos = source.find(
-      "if (!primec::runCompilePipeline(options, pipelineOutput, pipelineError, error, &pipelineDiagnosticInfo))");
+      "runCompilePipelineResult(options, pipelineError, error, &pipelineDiagnosticInfo)");
   REQUIRE(replayFastPathPos != std::string::npos);
   REQUIRE(compilePipelinePos != std::string::npos);
   CHECK(replayFastPathPos < compilePipelinePos);
   CHECK(source.find("vmIrBackendDiagnostics()") != std::string::npos);
   CHECK(source.find("normalizeVmLoweringError") != std::string::npos);
-  CHECK(source.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);
+  CHECK(source.find("std::get_if<primec::CompilePipelineFailureResult>(&pipelineResult)") !=
+        std::string::npos);
+  CHECK(source.find("describeCompilePipelineFailure(*pipelineFailure)") != std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);

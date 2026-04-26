@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 26, 2026)**
+- ✓ TODO-4166: Refactor compile-pipeline results into explicit success and
+  failure variants. Completed: `include/primec/CompilePipeline.h` now exposes
+  `CompilePipelineResult` as explicit success/failure variants, with failure
+  results carrying the preserved diagnostics, filtered source, semantic-product
+  availability, and benchmark counters without exposing a mixed success/failure
+  state. `primevm` now consumes the variant entrypoint end-to-end, CLI failure
+  description accepts the explicit failure result directly, source-lock coverage
+  pins the new result surface, and regression coverage proves import failures
+  select the failure variant without a success payload.
 - ✓ TODO-4164: Remove AST-side semantic re-derivation caches after boundary
   cutover. Completed: `IrLowererLowerEntrySetup.cpp` now validates
   `result-control.on-error` completeness directly from published callable

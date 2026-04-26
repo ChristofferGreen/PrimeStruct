@@ -107,17 +107,16 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
   return failure.exitCode;
 }
 
-CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
-  CliFailure failure;
-  if (!output.hasFailure) {
-    failure.code = DiagnosticCode::EmitError;
-    failure.plainPrefix = "Compile pipeline error: ";
-    failure.notes = {"stage: compile-pipeline"};
-    return failure;
-  }
+namespace {
 
-  failure.message = output.failure.message;
-  switch (output.failure.stage) {
+CliFailure describeCompilePipelineFailureDetails(
+    const CompilePipelineFailure &pipelineFailure,
+    bool hasSemanticProgram,
+    const std::string &filteredSource) {
+  CliFailure failure;
+
+  failure.message = pipelineFailure.message;
+  switch (pipelineFailure.stage) {
     case CompilePipelineErrorStage::Import:
       failure.code = DiagnosticCode::ImportError;
       failure.plainPrefix = "Import error: ";
@@ -132,8 +131,8 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
       failure.code = DiagnosticCode::ParseError;
       failure.plainPrefix = "Parse error: ";
       failure.notes = {"stage: parse"};
-      failure.diagnosticInfo = output.failure.diagnosticInfo;
-      failure.sourceText = output.filteredSource;
+      failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
+      failure.sourceText = filteredSource;
       break;
     case CompilePipelineErrorStage::UnsupportedDumpStage:
       failure.code = DiagnosticCode::UnsupportedDumpStage;
@@ -144,11 +143,11 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
       failure.code = DiagnosticCode::SemanticError;
       failure.plainPrefix = "Semantic error: ";
       failure.notes = {"stage: semantic"};
-      if (output.hasSemanticProgram) {
+      if (hasSemanticProgram) {
         failure.notes.push_back("semantic-product: available");
       }
-      failure.diagnosticInfo = output.failure.diagnosticInfo;
-      failure.sourceText = output.filteredSource;
+      failure.diagnosticInfo = pipelineFailure.diagnosticInfo;
+      failure.sourceText = filteredSource;
       break;
     case CompilePipelineErrorStage::None:
     default:
@@ -158,6 +157,26 @@ CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
       break;
   }
   return failure;
+}
+
+} // namespace
+
+CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output) {
+  if (!output.hasFailure) {
+    CliFailure failure;
+    failure.code = DiagnosticCode::EmitError;
+    failure.plainPrefix = "Compile pipeline error: ";
+    failure.notes = {"stage: compile-pipeline"};
+    return failure;
+  }
+
+  return describeCompilePipelineFailureDetails(
+      output.failure, output.hasSemanticProgram, output.filteredSource);
+}
+
+CliFailure describeCompilePipelineFailure(const CompilePipelineFailureResult &output) {
+  return describeCompilePipelineFailureDetails(
+      output.failure, output.hasSemanticProgram, output.filteredSource);
 }
 
 std::vector<std::string> makeIrBackendNotes(const IrBackendDiagnostics &diagnostics, std::string_view stage) {

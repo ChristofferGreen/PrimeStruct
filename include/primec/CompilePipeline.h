@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace primec {
@@ -76,6 +77,29 @@ struct CompilePipelineOutput {
   bool hasFailure = false;
 };
 
+struct CompilePipelineSuccessResult {
+  CompilePipelineOutput output;
+};
+
+struct CompilePipelineFailureResult {
+  Program program;
+  SemanticProgram semanticProgram;
+  bool hasSemanticProgram = false;
+  CompilePipelineSemanticProductDecision semanticProductDecision =
+      CompilePipelineSemanticProductDecision::RequireForConsumingPath;
+  bool semanticProductRequested = false;
+  bool semanticProductBuilt = false;
+  SemanticPhaseCounters semanticPhaseCounters;
+  bool hasSemanticPhaseCounters = false;
+  std::string filteredSource;
+  std::string dumpOutput;
+  bool hasDumpOutput = false;
+  CompilePipelineFailure failure;
+};
+
+using CompilePipelineResult =
+    std::variant<CompilePipelineSuccessResult, CompilePipelineFailureResult>;
+
 void addDefaultStdlibInclude(const std::string &inputPath, std::vector<std::string> &importPaths);
 
 bool runCompilePipeline(const Options &options,
@@ -90,5 +114,18 @@ bool runCompilePipeline(const Options &options,
                         CompilePipelineErrorStage &errorStage,
                         std::string &error,
                         CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
+
+CompilePipelineResult runCompilePipelineResult(
+    const Options &options,
+    CompilePipelineErrorStage &errorStage,
+    std::string &error,
+    CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
+
+CompilePipelineResult runCompilePipelineResult(
+    const Options &options,
+    const CompilePipelineRunConfig &runConfig,
+    CompilePipelineErrorStage &errorStage,
+    std::string &error,
+    CompilePipelineDiagnosticInfo *diagnosticInfo = nullptr);
 
 } // namespace primec

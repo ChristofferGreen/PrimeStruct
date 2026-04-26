@@ -892,6 +892,66 @@ bool runCompilePipeline(const Options &options,
   return runCompilePipeline(options, runConfig, output, errorStage, error, diagnosticInfo);
 }
 
+namespace {
+
+CompilePipelineFailureResult makeCompilePipelineFailureResult(
+    CompilePipelineOutput &&output,
+    CompilePipelineErrorStage errorStage,
+    const std::string &error,
+    const CompilePipelineDiagnosticInfo *diagnosticInfo) {
+  CompilePipelineFailureResult result;
+  result.program = std::move(output.program);
+  result.semanticProgram = std::move(output.semanticProgram);
+  result.hasSemanticProgram = output.hasSemanticProgram;
+  result.semanticProductDecision = output.semanticProductDecision;
+  result.semanticProductRequested = output.semanticProductRequested;
+  result.semanticProductBuilt = output.semanticProductBuilt;
+  result.semanticPhaseCounters = output.semanticPhaseCounters;
+  result.hasSemanticPhaseCounters = output.hasSemanticPhaseCounters;
+  result.filteredSource = std::move(output.filteredSource);
+  result.dumpOutput = std::move(output.dumpOutput);
+  result.hasDumpOutput = output.hasDumpOutput;
+  result.failure = std::move(output.failure);
+  if (!output.hasFailure) {
+    result.failure.stage = errorStage;
+    result.failure.message = error;
+    if (diagnosticInfo != nullptr) {
+      result.failure.diagnosticInfo = *diagnosticInfo;
+    }
+  }
+  if (result.failure.message.empty()) {
+    result.failure.message = error;
+  }
+  return result;
+}
+
+} // namespace
+
+CompilePipelineResult runCompilePipelineResult(
+    const Options &options,
+    CompilePipelineErrorStage &errorStage,
+    std::string &error,
+    CompilePipelineDiagnosticInfo *diagnosticInfo) {
+  CompilePipelineBenchmarkConfig benchmarkConfig;
+  const CompilePipelineRunConfig runConfig =
+      makeCompilePipelineRunConfigFromOptions(options, benchmarkConfig);
+  return runCompilePipelineResult(options, runConfig, errorStage, error, diagnosticInfo);
+}
+
+CompilePipelineResult runCompilePipelineResult(
+    const Options &options,
+    const CompilePipelineRunConfig &runConfig,
+    CompilePipelineErrorStage &errorStage,
+    std::string &error,
+    CompilePipelineDiagnosticInfo *diagnosticInfo) {
+  CompilePipelineOutput output;
+  if (runCompilePipeline(options, runConfig, output, errorStage, error, diagnosticInfo)) {
+    return CompilePipelineSuccessResult{std::move(output)};
+  }
+  return makeCompilePipelineFailureResult(
+      std::move(output), errorStage, error, diagnosticInfo);
+}
+
 bool runCompilePipeline(const Options &options,
                         const CompilePipelineRunConfig &runConfig,
                         CompilePipelineOutput &output,

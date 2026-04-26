@@ -32,6 +32,8 @@ int emitCliFailure(std::ostream &err, const Options &options, const CliFailure &
 
 CliFailure describeCompilePipelineFailure(const CompilePipelineOutput &output);
 
+CliFailure describeCompilePipelineFailure(const CompilePipelineFailureResult &output);
+
 CliFailure describeIrPreparationFailure(const IrPreparationFailure &failure,
                                         const IrBackendDiagnostics &diagnostics,
                                         IrLoweringErrorNormalizer normalizeLoweringError = nullptr,
