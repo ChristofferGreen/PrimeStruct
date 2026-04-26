@@ -57,7 +57,39 @@ bool SemanticsValidator::validateExprNamedArguments(
   if (!validateNamedArguments(expr.args, expr.argNames, resolved, error_)) {
     return false;
   }
-  if (defMap_.find(resolved) == defMap_.end() || resolvedMethod) {
+  std::string resolvedWithoutSpecialization = resolved;
+  if (const size_t suffix = resolvedWithoutSpecialization.find("__");
+      suffix != std::string::npos) {
+    resolvedWithoutSpecialization.erase(suffix);
+  }
+  const std::string resolvedSoaGetCanonical =
+      canonicalizeLegacySoaGetHelperPath(resolvedWithoutSpecialization);
+  const std::string resolvedSoaRefCanonical =
+      canonicalizeLegacySoaRefHelperPath(resolvedWithoutSpecialization);
+  const std::string resolvedSoaToAosCanonical =
+      canonicalizeLegacySoaToAosHelperPath(resolvedWithoutSpecialization);
+  const bool resolvedIsSoaAccess =
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get_ref") ||
+      isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical) ||
+      isExperimentalSoaGetLikeHelperPath(resolvedWithoutSpecialization) ||
+      isExperimentalSoaRefLikeHelperPath(resolvedWithoutSpecialization);
+  const bool resolvedIsSoaConversion =
+      resolvedWithoutSpecialization == "/to_soa" ||
+      resolvedSoaToAosCanonical == "/std/collections/soa_vector/to_aos" ||
+      resolvedSoaToAosCanonical ==
+          "/std/collections/soa_vector/to_aos_ref" ||
+      isExperimentalSoaVectorConversionFamilyPath(resolvedWithoutSpecialization);
+  const bool shouldValidateDirectSoaSurface =
+      ((isSimpleCallName(expr, "get") || isSimpleCallName(expr, "get_ref") ||
+        isSimpleCallName(expr, "ref") || isSimpleCallName(expr, "ref_ref")) &&
+       resolvedIsSoaAccess) ||
+      ((isSimpleCallName(expr, "to_soa") ||
+        isSimpleCallName(expr, "to_aos") ||
+        isSimpleCallName(expr, "to_aos_ref")) &&
+       resolvedIsSoaConversion);
+  if (defMap_.find(resolved) == defMap_.end() || resolvedMethod ||
+      shouldValidateDirectSoaSurface) {
     return validateExprNamedArgumentBuiltins(
         params, locals, expr, resolved, resolvedMethod, context);
   }
@@ -92,6 +124,21 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
   }
 
   std::string builtinName;
+  std::string resolvedWithoutSpecialization = resolved;
+  if (const size_t suffix = resolvedWithoutSpecialization.find("__");
+      suffix != std::string::npos) {
+    resolvedWithoutSpecialization.erase(suffix);
+  }
+  const std::string resolvedSoaGetCanonical =
+      canonicalizeLegacySoaGetHelperPath(resolvedWithoutSpecialization);
+  const std::string resolvedSoaRefCanonical =
+      canonicalizeLegacySoaRefHelperPath(resolvedWithoutSpecialization);
+  const bool resolvedIsSoaAccess =
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
+      isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get_ref") ||
+      isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical) ||
+      isExperimentalSoaGetLikeHelperPath(resolvedWithoutSpecialization) ||
+      isExperimentalSoaRefLikeHelperPath(resolvedWithoutSpecialization);
   auto isLegacyCollectionBuiltinCall = [&]() {
     std::string collectionName;
     if (!getBuiltinCollectionName(expr, collectionName)) {
@@ -204,7 +251,10 @@ bool SemanticsValidator::validateExprNamedArgumentBuiltins(
         }
       }
     }
-    return defMap_.find(resolved) == defMap_.end();
+    return ((expr.name == "get" || expr.name == "get_ref" ||
+             expr.name == "ref" || expr.name == "ref_ref") &&
+            resolvedIsSoaAccess) ||
+           defMap_.find(resolved) == defMap_.end();
   };
   auto resolveLegacyVectorHelperName = [&](std::string &nameOut) -> bool {
     if (isSimpleCallName(expr, "push")) {

@@ -943,13 +943,49 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     }
     const bool resolvedUsesCanonicalSoaNamespace =
         resolved.rfind("/std/collections/soa_vector/", 0) == 0;
+    std::string resolvedWithoutSpecialization = resolved;
+    if (const size_t suffix = resolvedWithoutSpecialization.find("__");
+        suffix != std::string::npos) {
+      resolvedWithoutSpecialization.erase(suffix);
+    }
+    const std::string resolvedSoaGetCanonical =
+        canonicalizeLegacySoaGetHelperPath(resolvedWithoutSpecialization);
+    const std::string resolvedSoaRefCanonical =
+        canonicalizeLegacySoaRefHelperPath(resolvedWithoutSpecialization);
+    const std::string resolvedSoaToAosCanonical =
+        canonicalizeLegacySoaToAosHelperPath(resolvedWithoutSpecialization);
+    const bool resolvedIsSoaAccess =
+        isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical, "get") ||
+        isLegacyOrCanonicalSoaHelperPath(resolvedSoaGetCanonical,
+                                         "get_ref") ||
+        isCanonicalSoaRefLikeHelperPath(resolvedSoaRefCanonical) ||
+        isExperimentalSoaGetLikeHelperPath(resolvedWithoutSpecialization) ||
+        isExperimentalSoaRefLikeHelperPath(resolvedWithoutSpecialization);
+    const bool resolvedIsSoaConversion =
+        resolvedWithoutSpecialization == "/to_soa" ||
+        resolvedSoaToAosCanonical == "/std/collections/soa_vector/to_aos" ||
+        resolvedSoaToAosCanonical ==
+            "/std/collections/soa_vector/to_aos_ref" ||
+        isExperimentalSoaVectorConversionFamilyPath(
+            resolvedWithoutSpecialization);
+    const bool shouldLateValidateDirectSoaSurface =
+        ((isSimpleCallName(expr, "get") ||
+          isSimpleCallName(expr, "get_ref") ||
+          isSimpleCallName(expr, "ref") ||
+          isSimpleCallName(expr, "ref_ref")) &&
+         resolvedIsSoaAccess) ||
+        ((isSimpleCallName(expr, "to_soa") ||
+          isSimpleCallName(expr, "to_aos") ||
+          isSimpleCallName(expr, "to_aos_ref")) &&
+         resolvedIsSoaConversion);
     const bool shouldLateValidateCanonicalSoaToAos =
         resolvedUsesCanonicalSoaNamespace &&
         isCanonicalStdlibSoaHelperPath(resolved, "to_aos");
     const bool shouldLateValidateCanonicalSoaToAosRef =
         resolvedUsesCanonicalSoaNamespace &&
         isCanonicalStdlibSoaHelperPath(resolved, "to_aos_ref");
-    if (resolvedDefinition == nullptr || resolvedMethod || shouldLateValidateCanonicalSoaToAos ||
+    if (resolvedDefinition == nullptr || resolvedMethod ||
+        shouldLateValidateDirectSoaSurface || shouldLateValidateCanonicalSoaToAos ||
         shouldLateValidateCanonicalSoaToAosRef) {
       ExprLateMapSoaBuiltinContext lateMapSoaBuiltinContext;
       prepareExprLateMapSoaBuiltinContext(
