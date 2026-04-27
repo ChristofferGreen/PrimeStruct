@@ -1065,4 +1065,102 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary capacity
   CHECK(error == "stale");
 }
 
+TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary count calls") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::Definition wrapVector;
+  wrapVector.fullPath = "/wrapVector";
+  wrapVector.transforms.push_back(
+      primec::Transform{.name = "return", .templateArgs = {"vector<i32>"}});
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "wrapVector";
+
+  primec::Expr countCall;
+  countCall.kind = primec::Expr::Kind::Call;
+  countCall.name = "/std/collections/vector/count";
+  countCall.args = {receiverCall};
+
+  primec::Definition vectorCount;
+  vectorCount.fullPath = "/std/collections/vector/count";
+
+  std::string error = "stale";
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            countCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "wrapVector") {
+                return &wrapVector;
+              }
+              return &vectorCount;
+            },
+            [&](const primec::Expr &,
+                const primec::Definition &,
+                const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(emitCalls == 0);
+  CHECK(error == "stale");
+}
+
+TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary capacity calls") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::Definition wrapVector;
+  wrapVector.fullPath = "/wrapVector";
+  wrapVector.transforms.push_back(
+      primec::Transform{.name = "return", .templateArgs = {"vector<i32>"}});
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "wrapVector";
+
+  primec::Expr capacityCall;
+  capacityCall.kind = primec::Expr::Kind::Call;
+  capacityCall.name = "/std/collections/vector/capacity";
+  capacityCall.args = {receiverCall};
+
+  primec::Definition vectorCapacity;
+  vectorCapacity.fullPath = "/std/collections/vector/capacity";
+
+  std::string error = "stale";
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            capacityCall,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              if (callExpr.name == "wrapVector") {
+                return &wrapVector;
+              }
+              return &vectorCapacity;
+            },
+            [&](const primec::Expr &,
+                const primec::Definition &,
+                const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(emitCalls == 0);
+  CHECK(error == "stale");
+}
+
 TEST_SUITE_END();
