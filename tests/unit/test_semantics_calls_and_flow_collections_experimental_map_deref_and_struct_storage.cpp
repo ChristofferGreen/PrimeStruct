@@ -53,6 +53,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map constructors keep arg-pack count when soa helpers are imported") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+import /std/collections/soa_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                "right"raw_utf8, 7i32))}
+  return(plus(/std/collections/map/count(values),
+              /std/collections/map/at(values, "right"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
 TEST_CASE("helper-wrapped dereferenced Result.ok storage keeps mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*

@@ -1158,6 +1158,12 @@ bool rewriteExpr(Expr &expr,
       expr.name = preferredCollectionHelperPath;
       expr.namespacePrefix.clear();
     }
+    if (expr.namespacePrefix.empty() &&
+        expr.name.find('/') == std::string::npos &&
+        isLegacyOrCanonicalSoaHelperPath(resolvedPath, "count") &&
+        inferCollectionReceiverFamily(mapHelperReceiverExpr(expr)) != "soa_vector") {
+      return true;
+    }
     const std::string preferredBorrowedSoaPath =
         preferredBorrowedSoaWrapperPath(resolvedPath);
     if (!preferredBorrowedSoaPath.empty() &&
