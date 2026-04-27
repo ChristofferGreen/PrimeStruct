@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4235: Retire remaining semantic/lowerer architecture source locks.
+  Completed: Removed the remaining migrated-boundary lowerer/source-composition
+  source assertions that pinned private semantic-product target adapter and
+  return-info implementation details. Existing public
+  semantic-product adapter, lowerer handoff, and fail-closed coverage now owns
+  the behavior. `docs/memories.md` still accurately records that other private
+  source-lock tests remain, and no `tests -> src` include-layer allowlist entry
+  was added. Local validation is deferred per the lite workflow.
 - ✓ TODO-4221: Retire stale semantic validator source locks.
   Completed: Migrated the semantic-validator boundary lock from private
   source-string assertions onto public manifest, validation-plan, and

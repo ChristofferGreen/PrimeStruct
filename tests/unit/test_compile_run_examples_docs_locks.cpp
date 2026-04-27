@@ -807,14 +807,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4235: Retire remaining semantic/lowerer architecture source locks") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4236: Define graph invalidation contracts by edit family") !=
         std::string::npos);
-  CHECK(todo.find("### Priority Lanes (Current)\n\n"
-                  "- Semantic phase contract hardening: TODO-4235") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4237: Add graph invalidation fan-out regression tests") !=
         std::string::npos);
+  CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4236 -> TODO-4237") !=
         std::string::npos);
   CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4240") !=
@@ -822,10 +820,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4235: Retire remaining semantic/lowerer architecture source locks") !=
+                  "- TODO-4236: Define graph invalidation contracts by edit family") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4235: Retire remaining semantic/lowerer architecture source locks",
       "TODO-4236: Define graph invalidation contracts by edit family",
       "TODO-4237: Add graph invalidation fan-out regression tests",
       "TODO-4238: Pin the CT-eval graph and semantic-product boundary",
@@ -912,7 +909,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4221") == std::string::npos);
   CHECK(todoFinished.find("TODO-4221: Retire stale semantic validator source locks") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4235") != std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4235") == std::string::npos);
+  CHECK(todo.find("TODO-4235") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4235: Retire remaining semantic/lowerer architecture source locks") !=
+        std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4236") != std::string::npos);
   CHECK(todo.find("TODO-4216") == std::string::npos);
   CHECK(todoFinished.find("TODO-4216: Split semantic rewrites into an explicit pass manifest") !=
@@ -986,7 +986,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-pipeline stage handoff conformance | TODO-4240 |") !=
         std::string::npos);
-  CHECK(todo.find("| Architecture contract probe migration | TODO-4235, TODO-4242 |") !=
+  CHECK(todo.find("| Architecture contract probe migration | TODO-4242 |") !=
         std::string::npos);
   CHECK(todo.find("| Semantic-product publication parity and deterministic ordering | TODO-4240 |") !=
         std::string::npos);
