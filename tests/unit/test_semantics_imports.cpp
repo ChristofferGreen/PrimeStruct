@@ -897,6 +897,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("exact map imports keep canonical wrapper access helpers visible") {
+  const std::string source = R"(
+import /std/collections/map
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 7i32, 2i32, 11i32)}
+  if(/std/collections/map/contains(values, 1i32),
+     then() { },
+     else() { return(0i32) })
+  return(plus(/std/collections/map/at(values, 1i32),
+      /std/collections/map/at_unsafe(values, 2i32)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact vector imports keep bare bridge aliases") {
   const std::string source = R"(
 import /std/collections/vector

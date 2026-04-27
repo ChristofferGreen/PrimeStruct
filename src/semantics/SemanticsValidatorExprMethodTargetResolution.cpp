@@ -45,8 +45,17 @@ bool SemanticsValidator::isStaticHelperDefinition(const Definition &def) const {
 }
 
 bool SemanticsValidator::hasDeclaredDefinitionPath(const std::string &path) const {
+  std::string canonicalPath = path;
+  const size_t generatedSuffix = canonicalPath.find("__");
+  if (generatedSuffix != std::string::npos) {
+    canonicalPath.erase(generatedSuffix);
+  }
+  const std::string templatedPrefix = canonicalPath + "<";
+  const std::string specializedPrefix = canonicalPath + "__";
   for (const auto &def : program_.definitions) {
-    if (def.fullPath == path) {
+    if (def.fullPath == canonicalPath ||
+        def.fullPath.rfind(templatedPrefix, 0) == 0 ||
+        def.fullPath.rfind(specializedPrefix, 0) == 0) {
       return true;
     }
   }
