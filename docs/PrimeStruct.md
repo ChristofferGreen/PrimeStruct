@@ -2835,7 +2835,7 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Accepted temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports are accepted only for targeted compatibility or conformance coverage while `soa_vector<T>` is incubating. C++ and native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | `TODO-4246`, `TODO-4247`, `TODO-4249`, and `TODO-4252` track final promotion, wrapper migration, direct-import retirement, and documentation cleanup. |
+| `/std/collections/experimental_soa_vector/*` | Accepted temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports are accepted only for targeted compatibility or conformance coverage while `soa_vector<T>` is incubating. C++ and native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | `TODO-4247`, `TODO-4249`, and `TODO-4252` track wrapper migration, direct-import retirement, and documentation cleanup under the final promotion contract below. |
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Internal conversion module behind canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/*` conversion helpers; direct imports remain only for targeted compatibility or conformance coverage. | `TODO-4248` and `TODO-4249` track conversion-wrapper migration and direct experimental import retirement. |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
@@ -2880,12 +2880,37 @@ TODOs. It is intentionally separate from vector/map promotion.
   direct-import cleanup TODOs decide its exit.
 - **Internal substrate namespace:** `/std/collections/internal_soa_storage/*`
   stays implementation-facing storage/layout plumbing rather than public API.
-- **Promotion gate:** SoA should only move from incubating to promoted public
-  contract after the pending conversion compatibility seam is retired or
-  explicitly accepted, direct experimental import cleanup is complete, and the
-  generic SoA substrate cleanup is complete. Until then, docs should call
-  `soa_vector<T>` incubating explicitly instead of implying it has already
-  graduated with vector/map.
+- **Final promotion contract:** `soa_vector<T>` may move from incubating
+  extension to promoted public collection only when all public behavior is owned
+  by canonical stdlib surfaces and the remaining compiler/runtime pieces are
+  generic substrate rather than SoA-specific compatibility paths:
+  - Construction, read/ref, mutator, and field-view helpers are spelled through
+    `/std/collections/soa_vector/*` with `SoaVector<T>` and
+    `Reference<SoaVector<T>>` receivers; method sugar must lower to those same
+    canonical helpers and preserve deterministic user-helper shadowing.
+  - AoS/SoA conversions are spelled through
+    `/std/collections/soa_vector_conversions/*` and canonical
+    `/std/collections/soa_vector/to_aos*` helpers; conversion receivers must not
+    require direct imports of experimental conversion modules in ordinary code.
+  - Borrowed `ref(...)` values, field views, structural mutation, explicit
+    conversions, owner destroy, and scope exit have one documented invalidation
+    model, and invalid escapes fail with deterministic diagnostics.
+  - C++ emitter, VM, and native coverage exercise the same canonical
+    construction/read/ref/mutator, field-view, and conversion programs where
+    each backend supports the feature; unsupported paths reject explicitly
+    instead of falling back to hidden raw-builtin behavior.
+  - `/std/collections/internal_soa_storage/*` remains implementation-only, and
+    any retained `/std/collections/experimental_soa_vector*/*` path is either a
+    documented compatibility shim with conformance coverage or retired.
+- **Promotion blockers:** before final promotion, the canonical wrapper must
+  move off direct experimental implementation imports (`TODO-4247`), canonical
+  conversions must move off direct experimental conversion imports
+  (`TODO-4248`), direct experimental public imports must be retired or
+  reclassified (`TODO-4249`), raw builtin SoA bridges must normalize onto the
+  canonical wrapper surface (`TODO-4250`), cross-backend canonical parity must
+  be complete (`TODO-4251`), and the final docs/ownership matrix update must
+  land (`TODO-4252`). Until then, docs should call `soa_vector<T>` incubating
+  explicitly instead of implying it has already graduated with vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.

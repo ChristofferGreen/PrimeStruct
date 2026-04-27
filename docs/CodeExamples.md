@@ -70,6 +70,13 @@ incubating. Ordinary public examples should use
 `/std/collections/experimental_soa_vector_conversions/*` remain pending cleanup
 under the SoA finish TODOs.
 
+Final SoA promotion contract for examples: user-facing examples may treat
+`soa_vector<T>` as promoted only after construction/read/ref/mutator helpers,
+field-view helpers, AoS/SoA conversions, and backend parity are all covered by
+canonical `/std/collections/soa_vector/*` or
+`/std/collections/soa_vector_conversions/*` imports. Until then, examples that
+are not compatibility tests should keep calling it an incubating extension.
+
 Mixed-directory rule:
 - `stdlib/std/collections` is intentionally mixed; follow the file-level list
   above.

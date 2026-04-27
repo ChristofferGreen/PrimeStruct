@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4246: Define final `soa_vector` promotion contract
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred SoA finish
+  - scope: Replace the remaining incubating-language ambiguity with a final
+    promotion contract for `soa_vector`, including which canonical APIs must
+    exist, which experimental compatibility imports must retire or remain
+    explicit shims, and which internal substrate paths are implementation-only.
+  - acceptance:
+    - `docs/PrimeStruct.md`, `docs/CodeExamples.md`, and `docs/todo.md`
+      agree on the final SoA promotion contract and blocker list.
+    - The contract names construction/read/ref/mutator, field-view, conversion,
+      and backend-support requirements.
+    - At least one focused source or docs lock proves the promotion contract
+      cannot drift silently.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the final contract and blocker list are explicit and
+    locked; leave implementation seam cleanup to TODO-4247 and TODO-4248.
+  - finished_at: 2026-04-28
+  - evidence: Locked the final SoA promotion contract in
+    `docs/PrimeStruct.md`, `docs/CodeExamples.md`, and `docs/todo.md`.
+    Promotion now requires canonical construction/read/ref/mutator and
+    field-view helpers, canonical AoS/SoA conversions, one borrowed-view
+    invalidation model, C++/VM/native parity, and no hidden raw-builtin SoA
+    fallback behavior. Removed `TODO-4246` from the live queue, promoted
+    `TODO-4247` to Ready Now, and deferred release reruns to CI per the lite
+    workflow.
+
 - [x] TODO-4244: Decide the `soa_vector` maturity exit
   - owner: ai
   - created_at: 2026-04-27
