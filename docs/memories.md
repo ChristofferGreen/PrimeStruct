@@ -71,10 +71,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Evidence: Focused release reruns of `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_vm_collections_vector_limits_a.cpp` plus direct `./primec --emit=vm` reproductions against those fixtures.
 
 ### source-lock-tests-read-private-semantics-fragments-directly
-- Updated: 2026-04-19
+- Updated: 2026-04-27
 - Tags: tests, semantics, source-lock
-- Fact: Some source-lock IR and semantics tests read individual `src/semantics/*.h` and `*.cpp` fragments directly, including private headers, so moving logic between fragments requires updating those file-path assertions instead of assuming the assembled include surface is enough.
-- Evidence: `tests/unit/test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_01.h` explicitly loads `SemanticsValidatorPrivateExprValidation.h` and many sibling fragments with `readText(...)`.
+- Fact: `docs/source_lock_inventory.md` is the canonical inventory for source-lock tests that read private `src/` files, private headers, public headers as architecture proxies, or checked-in docs/examples, including the existing private semantics fragment locks.
+- Evidence: `tests/unit/test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_01.h` explicitly loads `SemanticsValidatorPrivateExprValidation.h` and many sibling fragments with `readText(...)`; `docs/source_lock_inventory.md` classifies the wider source-lock surface and records intended replacement contracts.
 
 ### text-filter-collect-diagnostics-locks-stdlib-fallback-messages
 - Updated: 2026-04-20

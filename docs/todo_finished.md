@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- [x] TODO-4242: Inventory repo-wide source-lock replacement candidates
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred semantic-product/backend/tooling follow-up
+  - scope: Create a repo-wide inventory of source-lock tests that read private
+    source files and classify each as contract-worthy, temporary migration
+    lock, or stale lock with a proposed replacement surface.
+  - acceptance:
+    - The inventory covers source-lock tests under `tests/unit` that read
+      `src/`, private headers, or checked-in docs as architecture proxies.
+    - At least one stale source-lock assertion is converted to or paired with a
+      public contract assertion.
+    - `docs/memories.md` is updated if any remembered source-lock fact changes.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after the inventory exists and one stale lock is replaced;
+    do not migrate every source-lock test in this leaf.
+  - finished_at: 2026-04-27
+  - evidence: Added `docs/source_lock_inventory.md` to classify source-lock
+    tests that read private sources, private headers, public headers as
+    architecture proxies, and checked-in docs/examples. Paired the stale
+    `CompilePipelineResult` raw source-shape lock with an explicit public
+    compile-time/runtime result-variant contract in
+    `tests/unit/test_ir_pipeline_backends_registry.cpp`, locked the new
+    inventory doc from `test_compile_run_examples_docs_locks.cpp`, updated the
+    source-lock memory, and deferred release reruns to CI per the lite
+    workflow.
+
 - [x] TODO-4279: Retire compile-pipeline helper compatibility callers
   - owner: ai
   - created_at: 2026-04-27

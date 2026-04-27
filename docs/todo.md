@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4242: Inventory repo-wide source-lock replacement candidates
+- TODO-4243: Improve focused backend rerun ergonomics
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4243: Improve focused backend rerun ergonomics
 - TODO-4244: Decide the `soa_vector` maturity exit
 - TODO-4246: Define final `soa_vector` promotion contract
 - TODO-4247: Move canonical SoA wrapper off experimental implementation imports
@@ -81,10 +80,11 @@ Task template:
 - TODO-4251: Add full cross-backend SoA parity coverage
 - TODO-4252: Promote `soa_vector` docs after compatibility cleanup
 - TODO-4245: Plan dynamic vector growth and runtime storage support
+- TODO-4253: Implement brace-only construction semantics
 
 ### Priority Lanes (Current)
 
-- Deferred semantic-product/backend/tooling follow-ups: TODO-4242 -> TODO-4243;
+- Deferred semantic-product/backend/tooling follow-ups: TODO-4243;
   TODO-4245
 - Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
   -> TODO-4248 -> TODO-4249 -> TODO-4250 -> TODO-4251 -> TODO-4252
@@ -99,7 +99,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4242: Inventory repo-wide source-lock replacement candidates
 - TODO-4243: Improve focused backend rerun ergonomics
 - TODO-4244: Decide the `soa_vector` maturity exit
 - TODO-4246: Define final `soa_vector` promotion contract
@@ -159,7 +158,7 @@ Task template:
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | TODO-4242, TODO-4243 |
+| Test-suite audit follow-up and release-gate stability | TODO-4243 |
 | Algebraic sum types and brace-only construction | TODO-4253, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
@@ -178,7 +177,7 @@ Task template:
 | De-experimentalization surface and namespace parity | none |
 | `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4243 |
-| Architecture contract probe migration | TODO-4242 |
+| Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
@@ -295,23 +294,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4242: Inventory repo-wide source-lock replacement candidates
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred semantic-product/backend/tooling follow-up
-  - scope: Create a repo-wide inventory of source-lock tests that read private
-    source files and classify each as contract-worthy, temporary migration
-    lock, or stale lock with a proposed replacement surface.
-  - acceptance:
-    - The inventory covers source-lock tests under `tests/unit` that read
-      `src/`, private headers, or checked-in docs as architecture proxies.
-    - At least one stale source-lock assertion is converted to or paired with a
-      public contract assertion.
-    - `docs/memories.md` is updated if any remembered source-lock fact changes.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after the inventory exists and one stale lock is replaced;
-    do not migrate every source-lock test in this leaf.
 
 - [ ] TODO-4243: Improve focused backend rerun ergonomics
   - owner: ai

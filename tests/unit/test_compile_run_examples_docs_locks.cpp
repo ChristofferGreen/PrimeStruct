@@ -775,6 +775,26 @@ TEST_CASE("canonical soa_vector example stays source locked") {
   CHECK(exampleSweep.find("soa_vector_ecs_draft.prime") == std::string::npos);
 }
 
+TEST_CASE("source lock inventory keeps replacement surfaces explicit") {
+  std::filesystem::path inventoryPath =
+      std::filesystem::path("..") / "docs" / "source_lock_inventory.md";
+  if (!std::filesystem::exists(inventoryPath)) {
+    inventoryPath = std::filesystem::current_path() / "docs" / "source_lock_inventory.md";
+  }
+  REQUIRE(std::filesystem::exists(inventoryPath));
+
+  const std::string inventory = readFile(inventoryPath.string());
+
+  CHECK(inventory.find("# Source-Lock Inventory") != std::string::npos);
+  CHECK(inventory.find("tests/unit/test_compile_run_examples_docs_locks.cpp") !=
+        std::string::npos);
+  CHECK(inventory.find("tests/unit/test_ir_pipeline_backends_graph_contexts.h") !=
+        std::string::npos);
+  CHECK(inventory.find("temporary migration lock") != std::string::npos);
+  CHECK(inventory.find("CompilePipelineResult") != std::string::npos);
+  CHECK(inventory.find("direct variant contract test") != std::string::npos);
+}
+
 TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
@@ -812,23 +832,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4242: Inventory repo-wide source-lock replacement candidates") !=
+                  "- TODO-4243: Improve focused backend rerun ergonomics") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4243: Improve focused backend rerun ergonomics") !=
+                  "- TODO-4244: Decide the `soa_vector` maturity exit") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
         std::string::npos);
-  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4242 -> TODO-4243") !=
+  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4243;") !=
         std::string::npos);
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4242: Inventory repo-wide source-lock replacement candidates") !=
+                  "- TODO-4243: Improve focused backend rerun ergonomics") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4242: Inventory repo-wide source-lock replacement candidates",
       "TODO-4243: Improve focused backend rerun ergonomics",
       "TODO-4244: Decide the `soa_vector` maturity exit",
       "TODO-4246: Define final `soa_vector` promotion contract",
@@ -839,6 +858,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4251: Add full cross-backend SoA parity coverage",
       "TODO-4252: Promote `soa_vector` docs after compatibility cleanup",
       "TODO-4245: Plan dynamic vector growth and runtime storage support",
+      "TODO-4253: Implement brace-only construction semantics",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -943,6 +963,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4279") == std::string::npos);
   CHECK(todoFinished.find("TODO-4279: Retire compile-pipeline helper compatibility callers") !=
         std::string::npos);
+  CHECK(todo.find("TODO-4242") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4242: Inventory repo-wide source-lock replacement candidates") !=
+        std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4244") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4246") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4247") != std::string::npos);
@@ -980,7 +1003,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | TODO-4243 |") !=
         std::string::npos);
-  CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | TODO-4242, TODO-4243 |") !=
+  CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | TODO-4243 |") !=
         std::string::npos);
   CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
         std::string::npos);
@@ -1006,7 +1029,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-pipeline stage handoff conformance | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Architecture contract probe migration | TODO-4242 |") !=
+  CHECK(todo.find("| Architecture contract probe migration | none |") !=
         std::string::npos);
   CHECK(todo.find("| Semantic-product publication parity and deterministic ordering | none |") !=
         std::string::npos);

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -2728,6 +2729,29 @@ TEST_CASE("cli driver reports semantic-product availability on post-semantics fa
   CHECK(failure.diagnosticInfo->message == output.failure.message);
   REQUIRE(failure.sourceText.has_value());
   CHECK(*failure.sourceText == output.filteredSource);
+}
+
+TEST_CASE("compile pipeline result variants keep explicit success failure contract") {
+  using Result = primec::CompilePipelineResult;
+  static_assert(std::variant_size_v<Result> == 2);
+  static_assert(
+      std::is_same_v<std::variant_alternative_t<0, Result>, primec::CompilePipelineSuccessResult>);
+  static_assert(
+      std::is_same_v<std::variant_alternative_t<1, Result>, primec::CompilePipelineFailureResult>);
+
+  primec::CompilePipelineSuccessResult success;
+  success.output.hasSemanticProgram = true;
+  Result successResult = success;
+  CHECK(std::holds_alternative<primec::CompilePipelineSuccessResult>(successResult));
+
+  primec::CompilePipelineFailureResult failure;
+  failure.failure.stage = primec::CompilePipelineErrorStage::Semantic;
+  failure.hasSemanticProgram = true;
+  Result failureResult = failure;
+  const auto *failureView = std::get_if<primec::CompilePipelineFailureResult>(&failureResult);
+  REQUIRE(failureView != nullptr);
+  CHECK(failureView->failure.stage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK(failureView->hasSemanticProgram);
 }
 
 TEST_CASE("compile pipeline result variants expose import failures without success state") {
