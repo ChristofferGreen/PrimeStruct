@@ -944,6 +944,14 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe"))) {
     return InlineCallDispatchResult::NotHandled;
   }
+  if (expr.isMethodCall && !expr.args.empty() &&
+      isVectorReturningCallTarget(expr.args.front()) &&
+      (isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
+       isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
+       isSimpleCallName(expr, "remove_at") ||
+       isSimpleCallName(expr, "remove_swap"))) {
+    return InlineCallDispatchResult::NotHandled;
+  }
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity")) &&
       (isVectorTarget(expr.args.front(), localsIn) ||

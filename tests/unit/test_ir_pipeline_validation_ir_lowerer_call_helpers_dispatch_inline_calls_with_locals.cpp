@@ -1344,4 +1344,67 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutators
   expectDeferred("/std/collections/vector/remove_at", {receiverCall, valueArg});
 }
 
+TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary mutator methods") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::Definition wrapVector;
+  wrapVector.fullPath = "/wrapVector";
+  wrapVector.transforms.push_back(
+      primec::Transform{.name = "return", .templateArgs = {"vector<i32>"}});
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "wrapVector";
+
+  primec::Expr valueArg;
+  valueArg.kind = primec::Expr::Kind::Literal;
+  valueArg.intWidth = 32;
+  valueArg.literalValue = 4;
+
+  auto expectDeferred = [&](const std::string &methodName,
+                            std::vector<primec::Expr> args) {
+    primec::Expr mutatorCall;
+    mutatorCall.kind = primec::Expr::Kind::Call;
+    mutatorCall.name = methodName;
+    mutatorCall.isMethodCall = true;
+    mutatorCall.args = std::move(args);
+
+    primec::Definition mutatorCallee;
+    mutatorCallee.fullPath = "/std/collections/vector/" + methodName;
+
+    std::string error = "stale";
+    int emitCalls = 0;
+    CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+              mutatorCall,
+              {},
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+                CHECK(false);
+                return &mutatorCallee;
+              },
+              [&](const primec::Expr &callExpr) -> const primec::Definition * {
+                CHECK(callExpr.name == "wrapVector");
+                return &wrapVector;
+              },
+              [&](const primec::Expr &,
+                  const primec::Definition &,
+                  const primec::ir_lowerer::LocalMap &) {
+                ++emitCalls;
+                return true;
+              },
+              error) == Result::NotHandled);
+    CHECK(emitCalls == 0);
+    CHECK(error == "stale");
+  };
+
+  expectDeferred("push", {receiverCall, valueArg});
+  expectDeferred("pop", {receiverCall});
+  expectDeferred("reserve", {receiverCall, valueArg});
+  expectDeferred("clear", {receiverCall});
+  expectDeferred("remove_at", {receiverCall, valueArg});
+  expectDeferred("remove_swap", {receiverCall, valueArg});
+}
+
 TEST_SUITE_END();
