@@ -72,6 +72,14 @@ When semantic behavior changes intentionally shift memory usage:
   April 26, 2026 release artifact observed `21086208` bytes on the release
   runner. The cap preserves roughly 5% headroom over that observed value while
   leaving the baseline row unchanged for future comparison.
+- `imported_math_body:ast-semantic` keeps a hard cap of `21108326` bytes after
+  the April 27, 2026 release artifact observed `20103168` bytes on the release
+  runner. The cap preserves roughly 5% headroom over that observed value while
+  leaving the baseline row unchanged for future comparison.
+- `math_vector_matrix:ast-semantic` keeps a hard cap of `20953497` bytes after
+  the April 27, 2026 release artifact observed `19955712` bytes on the release
+  runner. The cap preserves roughly 5% headroom over that observed value while
+  leaving the baseline row unchanged for future comparison.
 
 ### Canonical Regeneration Command and Expected Rows
 
