@@ -15,6 +15,14 @@ static std::filesystem::path resolveUnitTestsPath() {
   return testsPath;
 }
 
+static std::filesystem::path resolveRepoPath(const std::filesystem::path &relativePath) {
+  std::filesystem::path path = std::filesystem::path("..") / relativePath;
+  if (!std::filesystem::exists(path)) {
+    path = std::filesystem::current_path() / relativePath;
+  }
+  return path;
+}
+
 static std::vector<std::filesystem::path> filesWithRetainedDoctestSkips(
     const std::filesystem::path &testsPath) {
   std::vector<std::filesystem::path> paths;
@@ -735,22 +743,16 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("**Promotion blockers:** before final promotion") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("before final promotion, raw builtin SoA bridges must\n  normalize onto the canonical wrapper surface") !=
+  CHECK(primeStructDoc.find("the final docs/ownership\n  matrix update must land (`TODO-4252`)") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("raw builtin SoA bridges must\n  normalize onto the canonical wrapper surface\n  (`TODO-4250`)") !=
+  CHECK(primeStructDoc.find("Ordinary public code should not import either experimental SoA namespace") ==
         std::string::npos);
-  CHECK(primeStructDoc.find("Ordinary public code should not import either experimental SoA namespace") !=
+  CHECK(primeStructDoc.find("One source-locked wildcard\n  canonical parity program now runs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Representative wildcard\n  canonical helper/conversion tests now run") !=
+  CHECK(primeStructDoc.find("add a separate concrete SoA cleanup TODO before changing behavior outside that scope") ==
         std::string::npos);
-  CHECK(primeStructDoc.find("The deferred SoA finish\n    chain tracks their cleanup") !=
-        std::string::npos);
-  CHECK(primeStructDoc.find("`TODO-4250` covering the remaining semantics method/builtin fallbacks") !=
-        std::string::npos);
-  CHECK(primeStructDoc.find("`TODO-4250` tracks the remaining compiler-owned builtin semantics") !=
-        std::string::npos);
-  CHECK(primeStructDoc.find("add a separate concrete SoA cleanup TODO before changing behavior outside that scope") !=
-        std::string::npos);
+  CHECK(primeStructDoc.find("`TODO-4250`") == std::string::npos);
+  CHECK(primeStructDoc.find("`TODO-4251`") == std::string::npos);
   CHECK(primeStructDoc.find("SoA promotion tasks still track receiver ownership") ==
         std::string::npos);
   CHECK(primeStructDoc.find("tie that state to a follow-up TODO") == std::string::npos);
@@ -774,7 +776,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("`/std/collections/internal_soa_vector_conversions/*` owns canonical") !=
         std::string::npos);
   CHECK(todo.find("First promotion pass complete") != std::string::npos);
-  CHECK(todo.find("Further promotion work is tracked by the deferred SoA finish chain") !=
+  CHECK(todo.find("Remaining promotion work is tracked by `TODO-4252`") !=
         std::string::npos);
   CHECK(todo.find("Final promotion contract: `soa_vector<T>` can become a promoted public") !=
         std::string::npos);
@@ -782,9 +784,8 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("without hidden raw-builtin fallback behavior") !=
         std::string::npos);
-  CHECK(todo.find("`TODO-4250` through `TODO-4252`") !=
-        std::string::npos);
-  CHECK(todo.find("raw-builtin bridge\n  normalization, parity coverage") !=
+  CHECK(todo.find("`TODO-4250` through `TODO-4252`") == std::string::npos);
+  CHECK(todo.find("raw-builtin bridge\n  normalization, parity coverage") ==
         std::string::npos);
   CHECK(todo.find("Promotion requires borrowed-view/lifetime rules, backend/runtime parity") ==
         std::string::npos);
@@ -815,6 +816,12 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("TODO-4249") == std::string::npos);
   CHECK(todoFinished.find("TODO-4249: Retire direct experimental SoA public imports") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4250") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4251") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4251: Add full cross-backend SoA parity coverage") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4185: Align SoA compatibility follow-up docs") !=
         std::string::npos);
@@ -866,6 +873,85 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(nativeCompatTest.find("TEST_CASE(\"compiles and runs native experimental soa_vector stdlib helpers\")") !=
         std::string::npos);
   CHECK(nativeCompatTest.find("import /std/collections/experimental_soa_vector/*") !=
+        std::string::npos);
+}
+
+TEST_CASE("canonical soa_vector backend parity matrix stays source locked") {
+  const std::filesystem::path cppParityPath =
+      resolveRepoPath(std::filesystem::path("tests") / "unit" / "test_compile_run_imports_operations.cpp");
+  const std::filesystem::path vmParityPath = resolveRepoPath(
+      std::filesystem::path("tests") / "unit" / "test_compile_run_vm_collections_wrapper_temporaries_a.cpp");
+  const std::filesystem::path nativeParityPath = resolveRepoPath(
+      std::filesystem::path("tests") / "unit" /
+      "test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp");
+  REQUIRE(std::filesystem::exists(cppParityPath));
+  REQUIRE(std::filesystem::exists(vmParityPath));
+  REQUIRE(std::filesystem::exists(nativeParityPath));
+
+  const std::string cppParity = readFile(cppParityPath.string());
+  const std::string vmParity = readFile(vmParityPath.string());
+  const std::string nativeParity = readFile(nativeParityPath.string());
+  const std::string parityProgram = R"(import /std/collections/*
+import /std/collections/soa_vector/*
+import /std/collections/soa_vector_conversions/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+  [i32] y{2i32}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [auto mut] values{soaVectorNew<Particle>()}
+  reserve(values, 2i32)
+  push(values, Particle(4i32, 6i32))
+  push(values, Particle(9i32, 11i32))
+  [Particle] first{get(values, 0i32)}
+  [Reference<Particle>] second{ref(values, 1i32)}
+  [i32] firstY{values.y()[0i32]}
+  [i32] secondX{x(values)[1i32]}
+  assign(values.y()[1i32], 13i32)
+  [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
+  [SoaVector<Particle>] repacked{soaVectorFromAos<Particle>(unpacked)}
+  [Particle] repackedSecond{get(repacked, 1i32)}
+  return(plus(plus(count(values), count(unpacked)),
+              plus(plus(first.x, second.x),
+                   plus(plus(firstY, secondX), repackedSecond.y))))
+})";
+
+  CHECK(parityProgram.find("experimental_soa_vector") == std::string::npos);
+  CHECK(parityProgram.find("soaVectorNew<Particle>()") != std::string::npos);
+  CHECK(parityProgram.find("reserve(values, 2i32)") != std::string::npos);
+  CHECK(parityProgram.find("push(values, Particle(4i32, 6i32))") != std::string::npos);
+  CHECK(parityProgram.find("get(values, 0i32)") != std::string::npos);
+  CHECK(parityProgram.find("ref(values, 1i32)") != std::string::npos);
+  CHECK(parityProgram.find("values.y()[0i32]") != std::string::npos);
+  CHECK(parityProgram.find("x(values)[1i32]") != std::string::npos);
+  CHECK(parityProgram.find("assign(values.y()[1i32], 13i32)") != std::string::npos);
+  CHECK(parityProgram.find("soaVectorToAos<Particle>(values)") != std::string::npos);
+  CHECK(parityProgram.find("soaVectorFromAos<Particle>(unpacked)") != std::string::npos);
+
+  CHECK(cppParity.find(
+            "TEST_CASE(\"wildcard-imported canonical soa_vector helpers run without experimental imports in C++ emitter\")") !=
+        std::string::npos);
+  const std::size_t cppParityProgramOffset = cppParity.find(parityProgram);
+  CHECK(cppParityProgramOffset != std::string::npos);
+  CHECK(cppParity.find("CHECK(runCommand(exePath) == 45);", cppParityProgramOffset) !=
+        std::string::npos);
+
+  CHECK(vmParity.find("TEST_CASE(\"vm wildcard-imported canonical soa_vector helpers run without experimental imports\")") !=
+        std::string::npos);
+  const std::size_t vmParityProgramOffset = vmParity.find(parityProgram);
+  CHECK(vmParityProgramOffset != std::string::npos);
+  CHECK(vmParity.find("CHECK(runCommand(runCmd) == 45);", vmParityProgramOffset) !=
+        std::string::npos);
+
+  CHECK(nativeParity.find("TEST_CASE(\"native wildcard-imported canonical soa_vector helpers run without experimental imports\")") !=
+        std::string::npos);
+  const std::size_t nativeParityProgramOffset = nativeParity.find(parityProgram);
+  CHECK(nativeParityProgramOffset != std::string::npos);
+  CHECK(nativeParity.find("CHECK(runCommand(exePath) == 45);", nativeParityProgramOffset) !=
         std::string::npos);
 }
 
@@ -1031,24 +1117,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers") !=
+                  "- TODO-4252: Promote `soa_vector` docs after compatibility cleanup") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4251: Add full cross-backend SoA parity coverage") !=
+                  "- TODO-4245: Plan dynamic vector growth and runtime storage support") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
         std::string::npos);
   CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4245") !=
         std::string::npos);
-  CHECK(todo.find("- Deferred SoA finish: TODO-4250 -> TODO-4251") !=
+  CHECK(todo.find("- Deferred SoA finish: TODO-4252") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers") !=
+                  "- TODO-4252: Promote `soa_vector` docs after compatibility cleanup") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers",
-      "TODO-4251: Add full cross-backend SoA parity coverage",
       "TODO-4252: Promote `soa_vector` docs after compatibility cleanup",
       "TODO-4245: Plan dynamic vector growth and runtime storage support",
       "TODO-4253: Implement brace-only construction semantics",
@@ -1188,8 +1272,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("  - depends_on: TODO-4247") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4248") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4249") == std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4250") != std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4251") != std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4250") == std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4251") == std::string::npos);
   CHECK(todo.find("- TODO-4162") == std::string::npos);
   CHECK(todo.find("- TODO-4165") == std::string::npos);
   CHECK(todo.find("- TODO-4159") == std::string::npos);
@@ -1224,11 +1308,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa_vector` promotion | TODO-4250, TODO-4251, TODO-4252 |") !=
+  CHECK(todo.find("| SoA maturity and `soa_vector` promotion | TODO-4252 |") !=
         std::string::npos);
   CHECK(todo.find("| De-experimentalization surface and namespace parity | none |") !=
         std::string::npos);
-  CHECK(todo.find("| `soa_vector` maturity and canonical surface parity | TODO-4250, TODO-4251, TODO-4252 |") !=
+  CHECK(todo.find("| `soa_vector` maturity and canonical surface parity | TODO-4252 |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);

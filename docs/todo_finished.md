@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4251: Add full cross-backend SoA parity coverage
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred SoA finish
+  - scope: Add a focused cross-backend SoA parity matrix for canonical
+    construction/read/ref/mutator, field-view, and conversion flows after the
+    compatibility and raw-builtin bridge cleanup.
+  - acceptance:
+    - C++/VM/native coverage exercises the same canonical SoA wrapper program
+      for construction/read/ref/mutator behavior where supported.
+    - Field-view and AoS/SoA conversion coverage exists for each supported
+      backend, with deterministic unsupported diagnostics elsewhere.
+    - The matrix uses canonical imports only except for explicit compatibility
+      assertions.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once one canonical SoA parity matrix covers the required
+    flow families; leave final docs promotion to TODO-4252.
+  - finished_at: 2026-04-28
+  - evidence: Expanded the canonical wildcard SoA compile-run program shared
+    by the C++ emitter, VM, and native suites so it covers construction,
+    reserve/push mutators, count/get/ref reads, generated field views, field
+    mutation through a view, canonical `soaVectorToAos`, and canonical
+    `soaVectorFromAos` without direct experimental imports. Added a source-lock
+    matrix that requires the same canonical program in all three backend
+    suites, updated the SoA maturity docs to leave only final promotion docs in
+    `TODO-4252`, and deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4280: Normalize direct lowerer SoA wrapper dispatch
   - owner: ai
   - created_at: 2026-04-28

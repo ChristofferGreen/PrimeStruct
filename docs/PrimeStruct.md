@@ -2867,9 +2867,10 @@ TODOs. It is intentionally separate from vector/map promotion.
   examples should not import the experimental implementation modules for those
   helper flows. The canonical conversion helpers now use `SoaVector<T>` and
   `Reference<SoaVector<T>>` receiver spellings while routing through canonical
-  `/std/collections/soa_vector/*` helper paths. Representative wildcard
-  canonical helper/conversion tests now run across C++ emitter, VM, and native
-  without direct experimental SoA imports in the test source.
+  `/std/collections/soa_vector/*` helper paths. One source-locked wildcard
+  canonical parity program now runs across C++ emitter, VM, and native for
+  construction/read/ref/mutator, field-view, and conversion behavior without
+  direct experimental SoA imports in the test source.
 - **Accepted compatibility seams:** `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain importable
   only for targeted compatibility and conformance coverage while the SoA
@@ -2911,11 +2912,10 @@ TODOs. It is intentionally separate from vector/map promotion.
     `/std/collections/internal_soa_storage/*` remain implementation-only, and
     any retained `/std/collections/experimental_soa_vector*/*` path is either a
     documented compatibility shim with conformance coverage or retired.
-- **Promotion blockers:** before final promotion, cross-backend canonical
-  parity must be complete (`TODO-4251`), and the final docs/ownership matrix
-  update must land (`TODO-4252`). Until then, docs should call `soa_vector<T>`
-  incubating explicitly instead of implying it has already graduated with
-  vector/map.
+- **Promotion blockers:** before final promotion, the final docs/ownership
+  matrix update must land (`TODO-4252`). Until then, docs should call
+  `soa_vector<T>` incubating explicitly instead of implying it has already
+  graduated with vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.

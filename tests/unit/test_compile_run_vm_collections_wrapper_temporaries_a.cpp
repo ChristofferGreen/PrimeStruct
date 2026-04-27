@@ -347,18 +347,26 @@ import /std/collections/soa_vector_conversions/*
 [struct reflect]
 Particle() {
   [i32] x{1i32}
+  [i32] y{2i32}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [auto mut] values{soaVectorNew<Particle>()}
   reserve(values, 2i32)
-  push(values, Particle(4i32))
-  push(values, Particle(9i32))
+  push(values, Particle(4i32, 6i32))
+  push(values, Particle(9i32, 11i32))
   [Particle] first{get(values, 0i32)}
   [Reference<Particle>] second{ref(values, 1i32)}
+  [i32] firstY{values.y()[0i32]}
+  [i32] secondX{x(values)[1i32]}
+  assign(values.y()[1i32], 13i32)
   [vector<Particle>] unpacked{soaVectorToAos<Particle>(values)}
-  return(plus(plus(count(values), plus(first.x, second.x)), count(unpacked)))
+  [SoaVector<Particle>] repacked{soaVectorFromAos<Particle>(unpacked)}
+  [Particle] repackedSecond{get(repacked, 1i32)}
+  return(plus(plus(count(values), count(unpacked)),
+              plus(plus(first.x, second.x),
+                   plus(plus(firstY, secondX), repackedSecond.y))))
 }
 )";
   const std::string srcPath =
@@ -366,7 +374,7 @@ main() {
   const std::string outPath =
       (testScratchPath("") / "primec_vm_wildcard_canonical_soa_vector_helpers.psvm").string();
   const std::string runCmd = "./primec --emit=vm " + srcPath + " -o " + outPath + " --entry /main";
-  CHECK(runCommand(runCmd) == 17);
+  CHECK(runCommand(runCmd) == 45);
 }
 
 TEST_CASE("vm runs graph-solved direct local-auto vector helper shadows") {
