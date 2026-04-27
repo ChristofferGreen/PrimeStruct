@@ -11,6 +11,12 @@ bool isVectorStructPath(const std::string &structPath) {
          structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
 }
 
+bool isSoaVectorStructPath(const std::string &structPath) {
+  return structPath == "/soa_vector" ||
+         structPath == "/std/collections/experimental_soa_vector/SoaVector" ||
+         structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
 std::string stripGeneratedStructSuffix(std::string structPath) {
   const size_t leafStart = structPath.find_last_of('/');
   const size_t suffixStart =
@@ -27,6 +33,9 @@ bool isCompatibleInlineStructFieldPath(const std::string &expectedStructPath,
     return true;
   }
   if (isVectorStructPath(expectedStructPath) && isVectorStructPath(actualStructPath)) {
+    return true;
+  }
+  if (isSoaVectorStructPath(expectedStructPath) && isSoaVectorStructPath(actualStructPath)) {
     return true;
   }
   return stripGeneratedStructSuffix(expectedStructPath) ==

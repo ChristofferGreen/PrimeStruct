@@ -64,6 +64,81 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
   CHECK(error == "struct field type mismatch");
 }
 
+TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector storage") {
+  constexpr const char *SpecializedSoaVector =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
+      {SpecializedSoaVector, "/soa_vector"},
+      {"/soa_vector", SpecializedSoaVector},
+  };
+
+  for (const auto &[fieldStructPath, argStructPath] : compatiblePaths) {
+    primec::Expr arg;
+    arg.kind = primec::Expr::Kind::Name;
+    arg.name = "values";
+    const std::vector<const primec::Expr *> orderedArgs = {&arg};
+
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    layout.structPath = "/pkg/Holder";
+    layout.totalSlots = 4;
+    primec::ir_lowerer::StructSlotFieldInfo field;
+    field.name = "values";
+    field.slotOffset = 1;
+    field.slotCount = 3;
+    field.structPath = fieldStructPath;
+    layout.fields.push_back(field);
+
+    int32_t nextLocal = 20;
+    int32_t nextTempLocal = 90;
+    int copyCalls = 0;
+    int32_t copiedDest = -1;
+    int32_t copiedSrc = -1;
+    int32_t copiedCount = -1;
+    std::vector<primec::IrInstruction> instructions;
+    std::string error;
+
+    REQUIRE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+        "/pkg/Holder",
+        orderedArgs,
+        {},
+        false,
+        nextLocal,
+        [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+          layoutOut = layout;
+          return true;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return argStructPath;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return true;
+        },
+        [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
+          ++copyCalls;
+          copiedDest = destBaseLocal;
+          copiedSrc = srcPtrLocal;
+          copiedCount = slotCount;
+          return true;
+        },
+        [&]() { return nextTempLocal++; },
+        [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+        error));
+
+    CHECK(error.empty());
+    CHECK(nextLocal == 24);
+    CHECK(copyCalls == 1);
+    CHECK(copiedDest == 21);
+    CHECK(copiedSrc == 90);
+    CHECK(copiedCount == 3);
+    REQUIRE(instructions.size() == 1u);
+    CHECK(instructions.front().op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions.front().imm == 90u);
+  }
+}
+
 TEST_CASE("ir lowerer inline param helper emits non-struct parameter flow") {
   primec::Expr stringParam;
   stringParam.kind = primec::Expr::Kind::Name;
