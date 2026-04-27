@@ -217,6 +217,36 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       logicalResolvedMethod = canonicalExperimentalMapHelperResolved;
     }
   }
+  auto hasDeclaredCallableArity = [&](const std::string &path) {
+    std::string canonicalPath = path;
+    const size_t generatedSuffix = canonicalPath.find("__");
+    if (generatedSuffix != std::string::npos) {
+      canonicalPath.erase(generatedSuffix);
+    }
+    const std::string templatedPrefix = canonicalPath + "<";
+    const std::string specializedPrefix = canonicalPath + "__";
+    for (const auto &def : program_.definitions) {
+      if (def.fullPath != canonicalPath &&
+          def.fullPath.rfind(templatedPrefix, 0) != 0 &&
+          def.fullPath.rfind(specializedPrefix, 0) != 0) {
+        continue;
+      }
+      auto paramsIt = paramsByDef_.find(def.fullPath);
+      if (paramsIt != paramsByDef_.end() &&
+          paramsIt->second.size() == expr.args.size()) {
+        return true;
+      }
+    }
+    return false;
+  };
+  if (resolvedMethod &&
+      (logicalResolvedMethod == "/map/count" ||
+       logicalResolvedMethod == "/map/count_ref" ||
+       logicalResolvedMethod == "/std/collections/map/count" ||
+       logicalResolvedMethod == "/std/collections/map/count_ref") &&
+      hasDeclaredCallableArity(logicalResolvedMethod)) {
+    return true;
+  }
   const std::string logicalSoaCountCanonical =
       canonicalizeSoaCountHelperPath(logicalResolvedMethod);
   const auto isExplicitOldSurfaceSoaCountCall = [&]() {
