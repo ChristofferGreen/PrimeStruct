@@ -2110,7 +2110,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector mutating field-view method reports pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating field-view method reports argument escape diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -2128,10 +2128,10 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(error.find("field-view escapes via argument") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating field-view call-form reports pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating field-view call-form reports argument escape diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -2149,7 +2149,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(error.find("field-view escapes via argument") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view index validates") {
@@ -2181,7 +2181,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view method reports pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating dereferenced borrowed helper-return field-view method reports argument escape diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -2204,7 +2204,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(error.find("field-view escapes via argument") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view indexes validate") {
@@ -2278,7 +2278,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view methods report pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating inline location borrowed helper-return field-view methods report argument escape diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -2304,10 +2304,10 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(error.find("field-view escapes via argument") != std::string::npos);
 }
 
-TEST_CASE("experimental soa_vector mutating method-like borrowed helper-return field-view methods report pending diagnostic") {
+TEST_CASE("experimental soa_vector mutating method-like borrowed helper-return field-view methods report argument escape diagnostic") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*
 
@@ -2337,7 +2337,7 @@ main() {
 )";
   std::string error;
   CHECK(!validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(error.find("field-view escapes via argument") != std::string::npos);
 }
 
 TEST_CASE("experimental soa_vector mutating ref field access validates") {
