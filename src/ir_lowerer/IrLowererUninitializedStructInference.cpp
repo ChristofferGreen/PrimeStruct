@@ -8,6 +8,7 @@
 
 #include "IrLowererHelpers.h"
 #include "IrLowererBindingTransformHelpers.h"
+#include "IrLowererSetupTypeCollectionHelpers.h"
 #include "IrLowererStructFieldBindingHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
@@ -538,6 +539,45 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         const std::string rawCallPath = resolveScopedCallPath(exprIn);
         const std::string slashPrefixedRawCallPath =
             (!rawCallPath.empty() && rawCallPath.front() != '/') ? "/" + rawCallPath : rawCallPath;
+        auto inferPublishedMapConstructorStruct = [&](const std::string &candidatePath) {
+          const std::string publishedMapStruct =
+              inferPublishedExperimentalMapStructPathFromConstructorPath(candidatePath);
+          if (!publishedMapStruct.empty()) {
+            return publishedMapStruct;
+          }
+          return std::string{};
+        };
+        if (exprIn.templateArgs.size() == 2 &&
+            isPublishedStdlibSurfaceConstructorExpr(
+                exprIn,
+                primec::StdlibSurfaceId::CollectionsMapConstructors)) {
+          const std::string mapType =
+              "map<" + trimTemplateTypeText(exprIn.templateArgs.front()) + ", " +
+              trimTemplateTypeText(exprIn.templateArgs.back()) + ">";
+          const std::string templateStruct =
+              inferUninitializedTargetStructPath(mapType, exprIn.namespacePrefix, resolveStructTypeName);
+          if (!templateStruct.empty()) {
+            return templateStruct;
+          }
+        }
+        if (const std::string publishedStruct = inferPublishedMapConstructorStruct(resolvedPath);
+            !publishedStruct.empty()) {
+          return publishedStruct;
+        }
+        if (rawCallPath != resolvedPath) {
+          if (const std::string publishedStruct = inferPublishedMapConstructorStruct(rawCallPath);
+              !publishedStruct.empty()) {
+            return publishedStruct;
+          }
+        }
+        if (slashPrefixedRawCallPath != resolvedPath &&
+            slashPrefixedRawCallPath != rawCallPath) {
+          if (const std::string publishedStruct =
+                  inferPublishedMapConstructorStruct(slashPrefixedRawCallPath);
+              !publishedStruct.empty()) {
+            return publishedStruct;
+          }
+        }
         auto defIt = defMap.find(resolvedPath);
         if (defIt == defMap.end() && rawCallPath != resolvedPath) {
           defIt = defMap.find(rawCallPath);

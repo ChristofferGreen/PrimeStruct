@@ -803,5 +803,48 @@ TEST_CASE("ir lowerer uninitialized type helpers resolve field storage type info
   CHECK(error == "native backend does not support uninitialized storage for type: Thing<i32>");
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer concrete stdlib map constructor structs") {
+  primec::Definition mapPairDef;
+  mapPairDef.fullPath = "/std/collections/mapPair__tgeneric";
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs.push_back("map<K, V>");
+  mapPairDef.transforms.push_back(returnTransform);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {mapPairDef.fullPath, &mapPairDef},
+  };
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) {
+    return false;
+  };
+  auto resolveExprPath = [](const primec::Expr &) {
+    return std::string("/std/collections/mapPair__tgeneric");
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  auto resolveStructFieldSlot = [](const std::string &,
+                                   const std::string &,
+                                   primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::Expr intMapPair;
+  intMapPair.kind = primec::Expr::Kind::Call;
+  intMapPair.name = "/std/collections/mapPair";
+  intMapPair.templateArgs = {"string", "i32"};
+
+  primec::Expr boolMapPair = intMapPair;
+  boolMapPair.templateArgs = {"string", "bool"};
+
+  const std::string intMapStruct =
+      primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+          intMapPair, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+  const std::string boolMapStruct =
+      primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+          boolMapPair, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+
+  CHECK(intMapStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+  CHECK(boolMapStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+  CHECK(intMapStruct != boolMapStruct);
+}
 
 TEST_SUITE_END();
