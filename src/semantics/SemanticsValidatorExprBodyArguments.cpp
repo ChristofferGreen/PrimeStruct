@@ -38,6 +38,76 @@ bool SemanticsValidator::validateExprBodyArguments(
     resolved = preferVectorStdlibHelperPath(resolved);
   }
 
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto inferPointerLikeTargetTypeText = [&](const Expr &receiverExpr) -> std::string {
+    if (receiverExpr.kind == Expr::Kind::Name) {
+      if (const BindingInfo *binding = findBinding(params, locals, receiverExpr.name);
+          binding != nullptr &&
+          (binding->typeName == "Pointer" || binding->typeName == "Reference") &&
+          !binding->typeTemplateArg.empty()) {
+        return binding->typeTemplateArg;
+      }
+      return "";
+    }
+
+    if (receiverExpr.kind != Expr::Kind::Call) {
+      return "";
+    }
+
+    std::string builtinName;
+    if (getBuiltinPointerName(receiverExpr, builtinName) && builtinName == "location" &&
+        receiverExpr.args.size() == 1) {
+      const Expr &target = receiverExpr.args.front();
+      if (target.kind == Expr::Kind::Name) {
+        if (const BindingInfo *binding = findBinding(params, locals, target.name)) {
+          return bindingTypeText(*binding);
+        }
+      }
+      const ReturnKind targetKind = inferExprReturnKind(target, params, locals);
+      return typeNameForReturnKind(targetKind);
+    }
+
+    const std::string receiverPath = resolveCalleePath(receiverExpr);
+    auto defIt = defMap_.find(receiverPath);
+    if (defIt == defMap_.end() || defIt->second == nullptr) {
+      return "";
+    }
+    for (const auto &transform : defIt->second->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string base;
+      std::string arg;
+      if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg)) {
+        continue;
+      }
+      base = normalizeBindingTypeName(base);
+      if ((base == "Pointer" || base == "Reference") && !arg.empty()) {
+        return arg;
+      }
+    }
+    return "";
+  };
+  if (expr.isMethodCall && !expr.args.empty()) {
+    std::string namespacedCollection;
+    std::string namespacedHelper;
+    if (getNamespacedCollectionHelperName(expr, namespacedCollection, namespacedHelper) &&
+        namespacedCollection == "vector" &&
+        (namespacedHelper == "count" || namespacedHelper == "capacity")) {
+      const std::string targetTypeText =
+          inferPointerLikeTargetTypeText(expr.args.front());
+      if (!targetTypeText.empty()) {
+        resolved = "/" + normalizeBindingTypeName(targetTypeText) + "/" + namespacedHelper;
+        resolvedMethod = false;
+      }
+    }
+  }
+
   if (resolvedMethod ||
       (!hasDeclaredDefinitionPath(resolved) &&
        !hasImportedDefinitionPath(resolved))) {
