@@ -1,6 +1,25 @@
 #include "IrLowererInlineCallContextHelpers.h"
 
+#include <string_view>
+
 namespace primec::ir_lowerer {
+
+namespace {
+
+bool isGeneratedPathWithPrefix(std::string_view path, std::string_view prefix) {
+  return path.rfind(prefix, 0) == 0 && path.find("__", prefix.size()) != std::string_view::npos;
+}
+
+bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
+  return path.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+         path.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+         path.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+         path.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0 ||
+         path.rfind("/std/collections/internal_soa_storage/SoaFieldView__", 0) == 0 ||
+         isGeneratedPathWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumns");
+}
+
+} // namespace
 
 bool prepareInlineDefinitionCallContext(
     const Definition &callee,
@@ -31,9 +50,15 @@ bool prepareInlineDefinitionCallContext(
     return false;
   }
 
-  if (!inlineStack.insert(callee.fullPath).second) {
+  const bool alreadyInInlineStack = inlineStack.count(callee.fullPath) != 0;
+  if (alreadyInInlineStack &&
+      !(out.structDefinition && isGeneratedStdlibCollectionStructPath(callee.fullPath))) {
     error = "native backend does not support recursive calls: " + callee.fullPath;
     return false;
+  }
+  if (!alreadyInInlineStack) {
+    inlineStack.insert(callee.fullPath);
+    out.insertedInlineStackEntry = true;
   }
   loweredCallTargets.insert(callee.fullPath);
 

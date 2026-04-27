@@ -16,6 +16,7 @@ namespace primec::ir_lowerer {
 struct InlineDefinitionCallContextSetup {
   ReturnInfo returnInfo;
   bool structDefinition = false;
+  bool insertedInlineStackEntry = false;
   std::optional<OnErrorHandler> scopedOnError;
   std::optional<ResultReturnInfo> scopedResult;
 };

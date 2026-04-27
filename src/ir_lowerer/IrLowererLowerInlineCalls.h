@@ -20,6 +20,11 @@
     OnErrorScope onErrorScope(currentOnError, callSetup.scopedOnError);
     ResultReturnScope resultScope(currentReturnResult, callSetup.scopedResult);
     pushFileScope();
+    auto popInlineStack = [&]() {
+      if (callSetup.insertedInlineStackEntry) {
+        inlineStack.erase(callee.fullPath);
+      }
+    };
     std::vector<Expr> callParams;
     std::vector<const Expr *> orderedArgs;
     std::vector<const Expr *> packedArgs;
@@ -34,7 +39,7 @@
             packedArgs,
             packedParamIndex,
             error)) {
-      inlineStack.erase(callee.fullPath);
+      popInlineStack();
       return false;
     }
 
@@ -96,10 +101,10 @@
               [&]() { return allocTempLocal(); },
               [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
               error)) {
-        inlineStack.erase(callee.fullPath);
+        popInlineStack();
         return false;
       }
-      inlineStack.erase(callee.fullPath);
+      popInlineStack();
       return true;
     }
 
@@ -194,7 +199,7 @@
               infoError.clear();
               return true;
             })) {
-      inlineStack.erase(callee.fullPath);
+      popInlineStack();
       return false;
     }
 
@@ -204,7 +209,7 @@
                 .calleeLocals = &calleeLocals,
             },
             error)) {
-      inlineStack.erase(callee.fullPath);
+      popInlineStack();
       return false;
     }
 
@@ -278,7 +283,7 @@
       auto valueIt = calleeLocals.find("value");
       if (valuesIt == calleeLocals.end() || keyIt == calleeLocals.end() || valueIt == calleeLocals.end()) {
         error = "builtin canonical map insert lowering requires values or entries plus key/value locals";
-        inlineStack.erase(callee.fullPath);
+        popInlineStack();
         return false;
       }
       const Expr *originalValuesArg = nullptr;
@@ -331,7 +336,7 @@
         }
         if (valuesIt->second.mapKeyKind == LocalInfo::ValueKind::Unknown) {
           error = "builtin canonical map insert lowering requires typed map bindings";
-          inlineStack.erase(callee.fullPath);
+          popInlineStack();
           return false;
         }
         auto isDirectMapStorageLocal = [](const LocalInfo &info) {
@@ -383,7 +388,7 @@
                 [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
                 [&](size_t indexToPatch, uint64_t target) { function.instructions[indexToPatch].imm = target; })) {
           error = "failed to lower builtin canonical map insert helper";
-          inlineStack.erase(callee.fullPath);
+          popInlineStack();
           return false;
         }
         if (requireValue) {
@@ -391,7 +396,7 @@
         }
         emitFileScopeCleanup(fileScopeStack.back());
         popFileScope();
-        inlineStack.erase(callee.fullPath);
+        popInlineStack();
         return true;
       }
     }
@@ -407,7 +412,7 @@
             },
             contextSetup,
             error)) {
-      inlineStack.erase(callee.fullPath);
+      popInlineStack();
       return false;
     }
     context.returnsVoid = contextSetup.returnsVoid;
@@ -450,7 +455,7 @@
                 },
             },
             error)) {
-      inlineStack.erase(callee.fullPath);
+      popInlineStack();
       return false;
     }
 
@@ -463,13 +468,13 @@
                 .requireValue = requireValue,
             },
             error)) {
-      inlineStack.erase(callee.fullPath);
+      popInlineStack();
       return false;
     }
     if (requireValue && context.returnsVoid && !structDef && isGeneratedMapInsertHelper) {
       function.instructions.push_back({IrOpcode::PushI32, 0});
     }
 
-    inlineStack.erase(callee.fullPath);
+    popInlineStack();
     return true;
   };

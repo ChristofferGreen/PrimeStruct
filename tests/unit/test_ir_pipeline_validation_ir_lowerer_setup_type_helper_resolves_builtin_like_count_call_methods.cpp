@@ -515,6 +515,7 @@ TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
   CHECK_FALSE(out.returnInfo.resultHasValue);
   CHECK(out.returnInfo.kind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
   CHECK_FALSE(out.structDefinition);
+  CHECK(out.insertedInlineStackEntry);
   REQUIRE(out.scopedOnError.has_value());
   CHECK(out.scopedOnError->handlerPath == "/pkg/on_error");
   REQUIRE(out.scopedResult.has_value());
@@ -572,8 +573,34 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK(error == "native backend does not support recursive calls: /pkg/do_work");
   CHECK(loweredCallTargets.empty());
 
+  primec::Definition generatedVectorStruct;
+  generatedVectorStruct.fullPath = "/std/collections/experimental_vector/Vector__ti32";
   error.clear();
   inlineStack.clear();
+  inlineStack.insert(generatedVectorStruct.fullPath);
+  CHECK(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      generatedVectorStruct,
+      true,
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &infoOut) {
+        infoOut = primec::ir_lowerer::ReturnInfo{};
+        infoOut.returnsVoid = false;
+        return true;
+      },
+      [](const primec::Definition &) { return true; },
+      inlineStack,
+      loweredCallTargets,
+      onErrorByDef,
+      out,
+      error));
+  CHECK(error.empty());
+  CHECK(out.structDefinition);
+  CHECK_FALSE(out.insertedInlineStackEntry);
+  CHECK(inlineStack.count(generatedVectorStruct.fullPath) == 1u);
+  CHECK(loweredCallTargets.count(generatedVectorStruct.fullPath) == 1u);
+
+  error.clear();
+  inlineStack.clear();
+  loweredCallTargets.clear();
   CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
       callee,
       false,
