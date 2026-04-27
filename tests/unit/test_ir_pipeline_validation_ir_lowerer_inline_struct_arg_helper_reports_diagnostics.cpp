@@ -231,6 +231,85 @@ TEST_CASE("ir lowerer inline struct arg helper accepts internal soa storage alia
   }
 }
 
+TEST_CASE("ir lowerer inline struct arg helper accepts std ui struct aliases") {
+  const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
+      {"LayoutTree", "/std/ui/LayoutTree"},
+      {"/std/ui/LayoutTree", "LayoutTree"},
+      {"CommandList", "/std/ui/CommandList"},
+      {"/std/ui/CommandList", "CommandList"},
+  };
+
+  for (const auto &[fieldStructPath, argStructPath] : compatiblePaths) {
+    primec::Expr arg;
+    arg.kind = primec::Expr::Kind::Name;
+    arg.name = "layout";
+    const std::vector<const primec::Expr *> orderedArgs = {&arg};
+
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    layout.structPath = "/pkg/Holder";
+    layout.totalSlots = 4;
+    primec::ir_lowerer::StructSlotFieldInfo field;
+    field.name = "ui";
+    field.slotOffset = 1;
+    field.slotCount = 3;
+    field.structPath = fieldStructPath;
+    layout.fields.push_back(field);
+
+    int32_t nextLocal = 20;
+    int32_t nextTempLocal = 90;
+    int copyCalls = 0;
+    int32_t copiedDest = -1;
+    int32_t copiedSrc = -1;
+    int32_t copiedCount = -1;
+    std::vector<primec::IrInstruction> instructions;
+    std::string error;
+
+    REQUIRE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+        "/pkg/Holder",
+        orderedArgs,
+        {},
+        false,
+        nextLocal,
+        [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+          layoutOut = layout;
+          return true;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return argStructPath;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return true;
+        },
+        [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
+          ++copyCalls;
+          copiedDest = destBaseLocal;
+          copiedSrc = srcPtrLocal;
+          copiedCount = slotCount;
+          return true;
+        },
+        [&]() { return nextTempLocal++; },
+        [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+        error));
+
+    CHECK(error.empty());
+    CHECK(nextLocal == 25);
+    CHECK(copyCalls == 1);
+    CHECK(copiedDest == 21);
+    CHECK(copiedSrc == 90);
+    CHECK(copiedCount == 3);
+    REQUIRE(instructions.size() == 3u);
+    CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions[0].imm == 90u);
+    CHECK(instructions[1].op == primec::IrOpcode::AddressOfLocal);
+    CHECK(instructions[1].imm == 21u);
+    CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions[2].imm == 24u);
+  }
+}
+
 TEST_CASE("ir lowerer inline struct arg helper rejects incompatible internal soa storage aliases") {
   primec::Expr arg;
   arg.kind = primec::Expr::Kind::Name;
