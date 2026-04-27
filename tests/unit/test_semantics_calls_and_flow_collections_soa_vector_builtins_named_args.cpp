@@ -1271,7 +1271,7 @@ main() {
   CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
 }
 
-TEST_CASE("soa_vector field-view index syntax reports get helper diagnostic") {
+TEST_CASE("soa_vector field-view index syntax validates through helper substrate") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1284,8 +1284,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector field-view builtin rejects named arguments") {

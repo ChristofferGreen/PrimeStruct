@@ -318,8 +318,13 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   if (const auto pendingPath =
           builtinSoaDirectPendingHelperPath(initializer, params, locals)) {
     std::string pendingFieldName;
+    std::string resolvedInitializerPath = preferredCollectionHelperResolvedPath(initializer);
+    if (resolvedInitializerPath.empty()) {
+      resolvedInitializerPath = resolveCalleePath(initializer);
+    }
     if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName) &&
-        isBuiltinSoaFieldViewExpr(initializer, params, locals, nullptr)) {
+        (isBuiltinSoaFieldViewExpr(initializer, params, locals, nullptr) ||
+         isExperimentalSoaFieldViewHelperPath(resolvedInitializerPath))) {
       // Field-view bindings are handled below so borrow roots and invalidation
       // diagnostics remain tied to the binding lifetime.
     } else {

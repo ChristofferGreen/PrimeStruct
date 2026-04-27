@@ -1,6 +1,8 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
 
+#include <limits>
+
 namespace primec::semantics {
 namespace {
 
@@ -505,6 +507,11 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
     }
   }
 
+  if (normalizedName.find('/') == std::string::npos &&
+      hasVisibleSoaHelperTargetForCurrentImports(normalizedName)) {
+    return false;
+  }
+
   std::string resolved = preferredCollectionHelperResolvedPath(candidate);
   if (resolved.empty()) {
     resolved = resolveCalleePath(candidate);
@@ -518,10 +525,6 @@ bool SemanticsValidator::isBuiltinSoaFieldViewExpr(
   }
   if (splitSoaFieldViewHelperPath(resolved, fieldNameOut)) {
     return true;
-  }
-
-  if (hasVisibleSoaHelperTargetForCurrentImports(normalizedName)) {
-    return false;
   }
 
   const Expr *receiver = nullptr;
@@ -582,6 +585,65 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   }
   if (splitSoaFieldViewHelperPath(candidate.name, &fieldName)) {
     return soaFieldViewHelperPath(fieldName);
+  }
+  auto fieldViewPathFromExperimentalHelper = [&]() -> std::optional<std::string> {
+    if (candidate.kind != Expr::Kind::Call || candidate.args.size() < 2 ||
+        candidate.args[1].kind != Expr::Kind::Literal ||
+        candidate.templateArgs.empty()) {
+      return std::nullopt;
+    }
+    std::string resolvedPath = preferredCollectionHelperResolvedPath(candidate);
+    if (resolvedPath.empty()) {
+      resolvedPath = resolveCalleePath(candidate);
+    }
+    if (!isExperimentalSoaFieldViewHelperPath(resolvedPath)) {
+      return std::nullopt;
+    }
+    if (candidate.args[1].literalValue >
+        static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
+      return std::nullopt;
+    }
+    std::string currentNamespace;
+    if (!currentValidationState_.context.definitionPath.empty()) {
+      const size_t slash =
+          currentValidationState_.context.definitionPath.find_last_of('/');
+      if (slash != std::string::npos && slash > 0) {
+        currentNamespace =
+            currentValidationState_.context.definitionPath.substr(0, slash);
+      }
+    }
+    const std::string structPath = resolveStructTypePath(
+        normalizeBindingTypeName(candidate.templateArgs.front()),
+        currentNamespace,
+        structNames_);
+    auto defIt = defMap_.find(structPath);
+    if (structPath.empty() || defIt == defMap_.end() ||
+        defIt->second == nullptr) {
+      return std::nullopt;
+    }
+    const size_t targetFieldIndex =
+        static_cast<size_t>(candidate.args[1].literalValue);
+    size_t currentFieldIndex = 0;
+    for (const auto &fieldStmt : defIt->second->statements) {
+      bool isStaticField = false;
+      for (const auto &transform : fieldStmt.transforms) {
+        if (transform.name == "static") {
+          isStaticField = true;
+          break;
+        }
+      }
+      if (!fieldStmt.isBinding || isStaticField) {
+        continue;
+      }
+      if (currentFieldIndex == targetFieldIndex) {
+        return soaFieldViewHelperPath(fieldStmt.name);
+      }
+      ++currentFieldIndex;
+    }
+    return std::nullopt;
+  };
+  if (const auto pendingFieldViewPath = fieldViewPathFromExperimentalHelper()) {
+    return *pendingFieldViewPath;
   }
   auto fallbackSoaFieldViewName = [&]() -> std::optional<std::string> {
     if (candidate.kind != Expr::Kind::Call || candidate.isBinding ||
