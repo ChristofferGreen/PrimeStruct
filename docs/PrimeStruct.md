@@ -1001,8 +1001,9 @@ module {
   codes). Current implementation status: the contract and host/sample coverage exist, canonical `/std/gfx/*` is now the
   authoritative public gfx surface, and `/std/gfx/experimental/*` remains only as a legacy compatibility shim over
   that canonical helper layer rather than as part of the public gfx contract. The experimental path still keeps an explicit `.prime` `GraphicsSubstrate` token/config
-  boundary for its legacy wrapper types, the constructor-shaped experimental and canonical `Window(...)`, `Device()`,
-  and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers, canonical `Window(...)` and `Device()`
+  boundary for its legacy wrapper types, the legacy constructor-shaped experimental and canonical `Window(...)`,
+  `Device()`, and `Buffer<T>(count)` compatibility entry points now rewrite onto matching stdlib helpers, canonical
+  `Window(...)` and `Device()`
   now also route through a private `.prime` `GraphicsSubstrate.createWindow(...)` / `createDevice(...)` /
   `createQueue(...)` boundary inside `/std/gfx/*`, the experimental and canonical `create_swapchain(...)`,
   `create_mesh(...)`, `frame()`, and `Device.create_pipeline([vertex_type] VertexColored, ...)` wrapper paths now run
@@ -1015,7 +1016,7 @@ module {
   `endRenderPass(...)` / `submitFrame(...)` / `presentFrame(...)` layer, canonical and experimental `Buffer<T>` now
   also expose `.prime`-authored `count()`,
   `empty()`, `is_valid()`, `readback()`, compute-only `load(index)`, and compute-only `store(index, value)` plus the
-  preferred constructor-shaped `Buffer<T>(count)` entry point and explicit slash-call `allocate<T>(count)` /
+  legacy constructor-shaped `Buffer<T>(count)` compatibility entry point and explicit slash-call `allocate<T>(count)` /
   `upload(...)` / `load(...)` / `store(...)` helpers so public buffer inspection, host-side allocation/readback/upload,
   and compute storage access no longer have to route directly through raw fields or builtin `/std/gpu/buffer(...)` /
   `/std/gpu/readback(...)` / `/std/gpu/upload(...)` / `/std/gpu/buffer_load(...)` / `/std/gpu/buffer_store(...)` call
@@ -1175,14 +1176,20 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   - Syntax markers: `[]` compile-time transforms, `<>` templates, `()` runtime parameters/calls, `{}` runtime code
     (definition bodies, binding initializers).
   - `[...]` enumerates metafunction transforms applied in order (see “Built-in transforms”).
+  - **Bracket-list name binding rule:** `[...]` is contextual. Entries already known in the current syntactic position
+    keep their transform, type-envelope, modifier, or label meaning. When the grammar expects a binding pattern, fresh
+    identifiers inside the bracket list introduce new names. This preserves existing forms such as `[i32] count{0i32}`
+    and `[mut] value{0i32}` while allowing future destructuring forms such as `[left right] pair`; mixed or ambiguous
+    lists must be diagnosed deterministically rather than silently reinterpreted.
   - `<...>` supplies compile-time envelopes/templates—primarily for transforms or when inference must be overridden.
   - `(...)` lists runtime parameters; calls always include `()` (even with no args), and `()` never appears on bindings.
   - **Parameters:** use the same binding envelope as locals: `main([array<string>] args, [i32] limit{10i32})`.
     Qualifiers like `mut`/`copy` apply here as well; defaults are optional and currently limited to literal/pure forms
     (no name references).
   - `{...}` holds runtime code for definition bodies and value blocks for binding initializers. Binding initializers
-    evaluate the block and use its resulting value (last item or `return(value)`); use explicit constructor calls when
-    passing multiple arguments (e.g., `[T] name{ T(arg1, arg2) }`).
+    evaluate the block and use its resulting value (last item or `return(value)`); value construction uses brace
+    constructor forms, including multi-field construction (e.g., `[T] name{T{arg1, arg2}}`). `Type(...)` is ordinary
+    execution/call syntax and is not construction.
   - Bindings are only valid inside definition bodies or parameter lists; top-level bindings are rejected.
 - **Draft variadic argument packs (parser + call semantics + read-only body API + spread call-lowering landed;
   backend/runtime materialization is now partial):** to support stdlib-owned `vector`/`map` implementations without
@@ -1276,8 +1283,9 @@ explicit `utf8`/`ascii` suffix.** `ascii` enforces 7-bit ASCII (the compiler rej
   (`execute_task<…>(args)`) with mandatory parentheses and no body, and map to an envelope with an implicit empty body.
   Calls always use `()`; the `name{...}` form is reserved for bindings so `execute_task{...}` is invalid.
   - Executions accept the same argument syntax as calls, including labeled arguments (`[param] value`).
-  - Nested calls inside execution arguments still follow builtin rules (e.g., `array<i32>([first] 1i32)` is rejected).
-  - Example: `execute_task([items] array<i32>(1i32, 2i32) [pairs] map<i32, i32>(1i32, 2i32))`.
+  - Nested forms inside execution arguments still follow their own rules (e.g., labeled entries are valid in
+    `array<i32>{[first] 1i32}` only if that collection form explicitly supports them).
+  - Example: `execute_task([items] array<i32>{1i32, 2i32} [pairs] map<i32, i32>{1i32=2i32})`.
   - **Definition order:** call sites may reference definitions that appear later in the same file or namespace. Name
     resolution runs after import expansion and namespace expansion; unresolved names remain diagnostics.
   - **Helper overloading:** non-struct definitions may reuse the same public helper path when their exact parameter
@@ -1547,7 +1555,7 @@ or a semicolon if you intended to index.
   permissively.
 - **Member syntax:** every field is a stack-value binding (`[f32 mut] exposure{1.0f32}`, `[handle<PathNode>]
   target{get_default()}`). In inference/surface levels, fields may omit the envelope when the initializer resolves
-  concretely (e.g., `center{Vec3(0.0f32, 0.0f32, 0.0f32)}`). Attributes (`[mut]`, `[align_bytes(16)]`,
+  concretely (e.g., `center{Vec3{0.0f32, 0.0f32, 0.0f32}}`). Attributes (`[mut]`, `[align_bytes(16)]`,
   `[handle<PathNode>]`) decorate the execution, and transforms record the metadata for layout consumers.
 - **Method calls & indexing:** `value.method(args...)` desugars to `/<envelope>/method(value, args...)` in the method
   namespace (no hidden object model), where `<envelope>` is the envelope name associated with `value`. For struct
@@ -1608,8 +1616,8 @@ or a semicolon if you intended to index.
   are allowed only when inference resolves a single concrete envelope; struct fields must resolve before layout manifest
   emission. Default initializers are mandatory for fields; local bindings may omit the initializer only when the
   envelope is a struct type with a zero-argument constructor **and** the compiler can prove the construction has no
-  outside effects. In that case the binding desugars to `Type()` (e.g., `[BrushSettings] s` → `[BrushSettings]
-  s{BrushSettings()}`).
+  outside effects. In the planned brace-only construction model, the binding desugars to `Type{}` (e.g.,
+  `[BrushSettings] s` -> `[BrushSettings] s{BrushSettings{}}`).
   - **No outside effects (definition):** zero-arg construction is outside-effect-free only when all of the following
     hold:
     - The constructor path has an empty effects/capabilities mask (no `effects(...)`/`capabilities(...)`, and no callees
@@ -1692,7 +1700,9 @@ or a semicolon if you intended to index.
 - **`operators`:** desugars infix/prefix operators, comparisons, boolean ops, assignment, and increment/decrement
   (`++`/`--`) into canonical calls (`plus`, `less_than`, `assign`, `increment`, etc.).
   - Example: `a = b` rewrites to `assign(a, b)`.
-- **`collections`:** rewrites `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` literals into constructor calls.
+- **`collections`:** rewrites `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` literals into collection builder
+  forms. Existing compatibility lowering still routes several builder forms through call-shaped stdlib helpers; the
+  brace-only migration is tracked in `TODO-4254`.
 - **`implicit-utf8`:** appends `utf8` to bare string literals.
 - **`implicit-i32`:** appends `i32` to bare integer literals (enabled by default).
   - Text transform arguments are limited to identifiers and literals (no nested envelopes or calls).
@@ -1757,12 +1767,12 @@ or a semicolon if you intended to index.
     `not_equal(...)` folded by `or`), using identity results when no instance fields exist (`Equal -> true`, `NotEqual
     -> false`). When `Equal` is generated for a reflected struct, surface `left == right` routes through the generated
     `/Type/Equal(left, right)` helper instead of requiring the explicit helper spelling.
-  - **`Default`:** emits `/Type/Default() -> Type` returning `Type()`; static fields are ignored by constructor argument
+  - **`Default`:** emits `/Type/Default() -> Type` returning `Type{}`; static fields are ignored by constructor entry
     mapping.
   - **`IsDefault`:** emits `/Type/IsDefault([Type] value) -> bool` by comparing non-static fields against a synthesized
-    default instance (`Type()`); structs with no instance fields return `true`.
-  - **`Clone`:** emits `/Type/Clone([Type] value) -> Type` by rebuilding `Type(...)` from non-static fields (static-only
-    structs clone as `Type()`).
+    default instance (`Type{}`); structs with no instance fields return `true`.
+  - **`Clone`:** emits `/Type/Clone([Type] value) -> Type` by rebuilding `Type{...}` from non-static fields
+    (static-only structs clone as `Type{}`).
   - **`DebugPrint`:** emits `/Type/DebugPrint([Type] value) -> void` with deterministic line-based output (`/Type {`,
     one line per non-static field name, closing `}`, or `/Type {}` when no instance fields exist).
   - **v1.1 progress (`Compare`, `Hash64`, `Clear`, `CopyFrom`):** `Compare` emits `/Type/Compare([Type] left, [Type]
@@ -1770,7 +1780,7 @@ or a semicolon if you intended to index.
     right`, `0` when equal); `Hash64` emits `/Type/Hash64([Type] value) -> u64` and folds non-static fields in
     deterministic source order using `convert<u64>(field)` with stable FNV-style multiply/add constants; `Clear` emits
     `/Type/Clear([Type mut] value) -> void` and resets non-static fields by assigning from a synthesized default
-    instance (`Type()`); `CopyFrom` emits `/Type/CopyFrom([Type mut] value, [Type] other) -> void` and copies non-static
+    instance (`Type{}`); `CopyFrom` emits `/Type/CopyFrom([Type mut] value, [Type] other) -> void` and copies non-static
     fields from `other` into `value` in deterministic source order. Structs with no instance fields (or only static
     fields) keep identity/no-op behavior (`Compare -> 0`, `Hash64 -> 1469598103934665603u64`, `Clear -> no-op`,
     `CopyFrom -> no-op`), and `Compare`/`Hash64` now emit deterministic helper-scoped diagnostics when a field envelope
@@ -1786,7 +1796,7 @@ or a semicolon if you intended to index.
     `at(payload, 0i32) == 1u64`), returns deterministic non-zero error codes (`1` = size mismatch, `2` = version
     mismatch), decodes payload slots in source order via `convert<fieldType>(at(payload, index))`, and returns
     `Result.ok()` on success. Structs with no instance fields (or only static fields) keep identity behavior (`Validate`
-    returns `Result.ok()`, `Serialize` returns `array<u64>(1u64)`, `Deserialize` only applies the size/version guards
+    returns `Result.ok()`, `Serialize` returns `array<u64>{1u64}`, `Deserialize` only applies the size/version guards
     then returns `Result.ok()`). `ToString` generation remains deferred; requesting `generate(ToString)` emits a
     deterministic diagnostic directing users to `DebugPrint`.
   - **v2.1 progress (`SoaSchema`):** `SoaSchema` emits `/Type/SoaSchemaFieldCount() -> i32`,
@@ -1988,8 +1998,8 @@ for(
   definitions, `return()` is allowed. Implicit `return(void)` fires at end-of-body when omitted. Non-void definitions
   must return on all control paths; fallthrough is a compile-time error. Inside value blocks (binding initializers /
   brace constructors), `return(value)` returns from the block and yields its value.
-- **IR note:** VM/native IR lowering supports numeric/bool `array<T>(...)` and `vector<T>(...)` calls plus
-  `array<T>{...}` and `vector<T>{...}` literals, along with `count`/`at`/`at_unsafe` on those sequences. Map literals
+- **IR note:** VM/native IR lowering supports numeric/bool `array<T>{...}` and `vector<T>{...}` construction plus their
+  current call-shaped compatibility helper paths, along with `count`/`at`/`at_unsafe` on those sequences. Map literals
   are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or
   bindings backed by literals (string table entries). VM/native vectors currently use fixed capacity; `push`/`reserve`
   succeed while capacity allows and error once exceeded, and shrinking helpers (`pop`, `clear`, `remove_at`,
@@ -2060,15 +2070,16 @@ for(
     that same backing implementation whenever their receiver is an experimental `Vector<T>` value, and the wrapper-layer
     `vectorCount|vectorCapacity|vectorAt*|vectorPush|vectorPop|vectorReserve|vectorClear|vectorRemove*` helpers keep
     forwarding through the canonical vector wrapper path with inferred receivers instead of hard-coded builtin
-    `vector<T>` parameters. Imported wrapper-layer `vectorNew|vectorSingle|vectorPair|vectorTriple|...` constructor
-    aliases still rewrite onto `/std/collections/experimental_vector/*` whenever an explicit experimental `Vector<T>`
-    destination already pins the target type, infer that same experimental `Vector<T>` type for imported `[auto]`
-    locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call receiver
+    `vector<T>` parameters. Imported wrapper-layer `vectorNew|vectorSingle|vectorPair|vectorTriple|...` legacy
+    constructor-shaped aliases still rewrite onto `/std/collections/experimental_vector/*` whenever an explicit
+    experimental `Vector<T>` destination already pins the target type, infer that same experimental `Vector<T>` type for
+    imported `[auto]` locals and `return<auto>` definitions, and now also rewrite nested direct helper-call plus method-call receiver
     expressions built from those aliases onto the experimental constructor path before helper resolution. Imported
     positional canonical `/std/collections/vector/vector<T>(...)` calls now prefer a real variadic canonical wrapper
     over that same backing constructor for `auto` bindings and temporary receiver flows, and imported named-argument
-    canonical constructor calls now resolve through same-path fixed-arity `/std/collections/vector/vector` overloads
-    instead of helper-path rewrites for those same inferred and temporary receiver cases. Canonical
+    legacy constructor-shaped canonical calls now resolve through same-path fixed-arity
+    `/std/collections/vector/vector` overloads instead of helper-path rewrites for those same inferred and temporary
+    receiver cases. Canonical
     `/std/collections/vector/*` `pop` / `clear` helpers now reuse that same backing discard path for
     ownership-sensitive element types on explicit experimental `Vector<T>` bindings, and canonical
     `/std/collections/vector/*` `remove_at` / `remove_swap` helpers now reuse the backing indexed-removal path for
@@ -2115,7 +2126,8 @@ for(
     unchecked indexing (`value[index]` and `value.at(index)` are the same safe operation). Vector forms currently
     require `import /std/collections/*`.
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
-  - **Collections:** `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`.
+  - **Collections:** `array<T>{...}`, `vector<T>{...}`, `map<K, V>{...}`. Legacy call-shaped collection helpers remain
+    compatibility surfaces until `TODO-4254` migrates them.
   - **Pointer helpers:** `location`, `dereference`.
   - **Ownership helpers:** `move`, `clone`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
@@ -2141,6 +2153,11 @@ for(
     `or`, `not`.
   - **Result helpers (draft):**
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
+  - **ADT migration note:** `Result<T, Error>` and status-only `Result<Error>` are intended to become stdlib-owned sum
+    types after generic/unit sums, stdlib `Maybe<T>`, and core `pick` lowering are implemented. Status-only results use
+    a unit success variant plus an error payload variant rather than an empty payload struct. The migration is gated by
+    `TODO-4263` through `TODO-4267`; `?` propagation must not be rewritten onto sums until the Result sum contract is
+    implemented and covered.
   - `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract stay
     language-defined, while constructors, helper combinators, and domain-specific error policy should keep moving into
     stdlib `.prime`.
@@ -2256,8 +2273,8 @@ sum_two_files([string] a, [string] b) {
     `FileError.isEof(err)` helpers for explicit access to the current stdlib FileError helper surface. The same
     import also exposes
     `.prime`-authored `/File/openRead(...)`, `/File/openWrite(...)`, and `/File/openAppend(...)` wrappers so the
-    common constructor-shaped `File<Mode>(path)` surface can resolve through stdlib-owned helpers while the host file
-    substrate remains builtin and effect-gated underneath.
+    legacy constructor-shaped `File<Mode>(path)` compatibility surface can resolve through stdlib-owned helpers while
+    the host file substrate remains builtin and effect-gated underneath.
     Import `/std/collections/*` to use `.prime`-authored `containerErrorStatus(err)` /
     `containerErrorResult<T>(err)` compatibility helpers, the type-owned `ContainerError.status(err)` /
     `ContainerError.result<T>(err)` namespace surface, the canonical constructor helpers
@@ -2297,7 +2314,9 @@ sum_two_files([string] a, [string] b) {
   - `File<Mode>` is move-only; `Clone` is a compile-time error.
   - `close()` disarms the handle so `Destroy` becomes a no-op.
 - **Modes:** `Read`, `Write`, `Append`.
-- **Construction:** `File<Mode>(path)` returns `Result<File<Mode>, FileError>`.
+- **Construction:** `/File/openRead(path)`, `/File/openWrite(path)`, and `/File/openAppend(path)` return
+  `Result<File<Mode>, FileError>`. The imported constructor-shaped `File<Mode>(path)` form is legacy compatibility
+  syntax until `TODO-4254` migrates constructor-shaped surfaces.
   - `path` is a `string` (string literal or literal-backed binding in VM/native).
 - **Methods (all return `Result<FileError>`):**
   - `readByte([i32 mut] value)` (reads one byte into `value`; leaves `value` unchanged on error)
@@ -2319,7 +2338,7 @@ sum_two_files([string] a, [string] b) {
     `/File/close<Mode>(...)`.
     Compatibility wrappers keep the older snake_case spellings (`open_read`, `read_byte`, `write_line`,
     `write_byte`, `write_bytes`, `is_eof`) available for migration-only callers.
-    Imported constructor-shaped `File<Mode>(path)` calls now route through those `.prime`
+    Imported legacy constructor-shaped `File<Mode>(path)` calls now route through those `.prime`
     mode-specific open wrappers, and imported method/free-call sugar now prefers the same stdlib
     layer for `readByte`, `write`, `writeLine`, `writeByte`, `writeBytes`, `flush`, and
     `close` across that current zero-to-nine-value overload family. Once `write(...)` or
@@ -2413,7 +2432,7 @@ sum_two_files([string] a, [string] b) {
   main() {
     [i32 mut] width{0i32}
     [i32 mut] height{0i32}
-    [vector<i32> mut] pixels{vector<i32>()}
+    [vector<i32> mut] pixels{vector<i32>{}}
     print_line(Result.why(ppm.read(width, height, pixels, "input.ppm"utf8)))
     print_line(Result.why(ppm.write("output.ppm"utf8, width, height, pixels)))
     print_line(Result.why(png.read(width, height, pixels, "input.png"utf8)))
@@ -2736,7 +2755,8 @@ TODOs. It is intentionally separate from vector/map promotion.
 - **Bindings:** declared type in the transform list, or `auto` if omitted.
 - **Calls:** well-typed if the callee resolves to a definition or builtin, and every argument matches the parameter
   type.
-- **Constructors:** struct constructors follow call rules; all fields must be provided or defaulted.
+- **Constructors:** value construction uses brace forms (`Type{...}` and context-typed `{...}`), never call syntax.
+  Struct constructors map positional/labeled entries to fields; all fields must be provided or defaulted.
 - **`convert<T>` and `T{...}`:** explicit conversions; `T` must be a supported conversion target.
 - **`assign(target, value)`:** allowed only when `target` is mutable and `value` has the exact same type.
 - **Matrix/quaternion operators (draft):** matrix and quaternion arithmetic is explicit and shape-checked; no implicit
@@ -2805,13 +2825,13 @@ Enum example (desugared shape):
 Colors() {
   [i32] value{0i32}
 
-  [public static Colors] Blue{Colors(5i32)}
-  [public static Colors] Red{Colors(6i32)}
-  [public static Colors] Green{Colors(7i32)}
+  [public static Colors] Blue{Colors{[value] 5i32}}
+  [public static Colors] Red{Colors{[value] 6i32}}
+  [public static Colors] Green{Colors{[value] 7i32}}
 }
 ```
 
-Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the constructor call (`Colors(5i32)`).
+Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace construction (`Colors{[value] 5i32}`).
 
 ### Ownership and Mutability
 - `mut` marks writeable bindings.
@@ -2942,13 +2962,17 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to the c
 ## Optional Values (Maybe) (draft)
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.
 - **Naming:** `Maybe<T>` is the canonical optional type in PrimeStruct; there is no separate `Option<T>`.
+- **ADT migration note:** `Maybe<T>` is intended to become a stdlib-owned sum type with a unit `none` variant and a
+  payload-carrying `some` variant after generic sums and unit variants are supported. That migration is explicitly
+  deferred behind the core `[sum]` / `pick` implementation and tracked by `TODO-4263` and `TODO-4264`; until then, the
+  existing representation and helpers remain the supported surface.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)`
   to destroy.
-- **Ergonomic constructor surface:** `Maybe()` yields empty. Use `some<T>(value)` for a present value and `none<T>()`
-  for empty.
+- **Ergonomic constructor surface:** `Maybe{}` yields empty. Use `some<T>(value)` for a present value and `none<T>()`
+  for empty helper construction.
   - `Maybe<T>` is intended to be a stdlib-owned optional type, not a permanently compiler-owned special case.
-  - Present-value construction is explicit: `Maybe(value)` / `Maybe<T>(value)` are intentionally unsupported; use
+  - Present-value construction is explicit: `Maybe{value}` / `Maybe<T>{value}` are intentionally unsupported; use
     `some<T>(value)` instead.
 - **Helper surface (stdlib):** `isEmpty()` / `isSome()`, `set(value)`, `clear()`, `take()` (consumes the stored value
   and marks empty). Compatibility wrappers keep `is_empty()` / `is_some()` available for migration-only callers.
@@ -3083,24 +3107,59 @@ bad_use_after_take() {
   normalized escapes and an explicit `utf8`/`ascii` suffix. `implicit-utf8` (enabled by default) appends `utf8` when
   omitted.
 - **Boolean:** keywords `true`, `false` map to backend equivalents.
-- **Composite constructors:** structured values are introduced through standard envelope executions
-  (`ColorGrade([hue_shift] 0.1f32 [exposure] 0.95f32)`) or brace constructor forms (`ColorGrade{ ... }`) in value
-  positions; brace constructors evaluate the block and pass its resulting value to the constructor. If the block
-  executes `return(value)`, that value is used; otherwise the last item is used. Binding initializers are value blocks;
-  to pass multiple constructor arguments use an explicit call (e.g., `[ColorGrade] grade{ ColorGrade([hue_shift] 0.1f32
-  [exposure] 0.95f32) }`). Labeled arguments map to fields, and every field must have either an explicit argument or an
-  envelope-provided default before validation. Labeled arguments may only be used on user-defined calls.
+- **Composite constructors:** structured values are introduced through brace constructor forms only. Calls such as
+  `ColorGrade(...)` are ordinary executions and do not construct values. Use `ColorGrade{[hue_shift] 0.1f32 [exposure]
+  0.95f32}` or a context-typed binding initializer such as `[ColorGrade] grade{[hue_shift] 0.1f32 [exposure] 0.95f32}`.
+  Labeled entries map to fields, and every field must have either an explicit entry or an envelope-provided default
+  before validation.
   - **Defaults & validation:** struct constructors accept positional and labeled arguments. Missing fields are filled
     from their field initializers; if a field has no initializer, zero-arg construction requires a `Create()` helper to
     assign it. Extra arguments are a semantic error (`argument count mismatch`).
-  - **Multi-expression blocks:** `{ ... }` is a value block, not an argument list. If you need to pass multiple
-    constructor arguments, use `Type(arg1, arg2)` (or labeled arguments). A brace block with multiple expressions still
-    produces a single value via `return(value)` or the final expression.
+  - **Multi-expression blocks:** constructor braces hold constructor field entries. General binding initializer blocks
+    still produce one value via `return(value)` or the final expression when they are not parsed as a constructor entry
+    list.
+- **Algebraic sum types (planned):** `[sum]` definitions declare named, field-like variants. Payload-carrying variants
+  have one payload envelope; unit/no-payload variants are a planned follow-up using bare lowerCamelCase names such as
+  `none`. A sum value has exactly one active variant at runtime.
+  ```prime
+  [sum]
+  Shape {
+    [Circle] circle
+    [Rectangle] rectangle
+    [Text] text
+  }
+
+  [Shape] a{[circle] Circle{[radius] 3.4}}
+  [Shape] b{[circle] Circle{3.4}}
+  [Shape] c{Circle{3.4}}
+  ```
+  The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{Circle{3.4}}`) is valid only
+  when exactly one `Shape` variant accepts a `Circle` payload; zero matches are type errors and multiple matches are
+  ambiguity errors requiring an explicit `[variant]` label.
+  Generic/unit sums are required for the planned stdlib `Maybe<T>` shape:
+  ```prime
+  [sum]
+  Maybe<T> {
+    none
+    [T] some
+  }
+
+  [Maybe<i32>] a{}
+  [Maybe<i32>] b{none}
+  [Maybe<i32>] c{[some] 1i32}
+  ```
+  Default sum construction is valid only when the first declared variant is a unit variant; the default active variant
+  is tag `0` in source order. Payload variants are not default-constructed implicitly, so `[Shape] value{}` is rejected
+  when the first `Shape` variant carries a payload. Variant order is therefore layout/serialization-sensitive and should
+  be treated as version-sensitive API surface.
+  `pick(value) { variant(payload) { ... } }` is the planned exhaustive pattern form. Unit variants use bare arms such
+  as `none { ... }`; payload variants require binders such as `some(value) { ... }`. Missing variants are diagnostics
+  unless a future explicit fallback form is specified.
 - **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on
   executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries.
   Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.
   - Example: `sum3(1i32 [c] 3i32 [b] 2i32)` is valid.
-  - Example: `array<i32>([first] 1i32)` is rejected because collections are builtin calls.
+  - Example: `array<i32>{[first] 1i32}` is rejected unless the collection constructor defines a `first` entry.
   - Duplicate labeled arguments are rejected for definitions and executions (`execute_task([a] 1i32 [a] 2i32)`).
   - Variadic-pack interaction: if a definition ends in `[args<T>] values`, positional arguments fill the fixed
     parameters first and the remaining positional arguments bind to `values`; named arguments do not target the
@@ -3145,10 +3204,11 @@ bad_use_after_take() {
     arg-packs now preserves `write*()` / `flush()` receivers plus `readByte(...)` `?` inference across direct calls
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
     named-argument rejection path.
-- **Collections:** `array<Type>{ … }` / `array<Type>[ … ]`, `vector<Type>{ … }` / `vector<Type>[ … ]`, `map<Key,Value>{
-  … }` / `map<Key,Value>[ … ]` rewrite to standard builder functions. The brace/bracket forms desugar to
-  `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)`. Map literals supply
-  alternating key/value forms.
+- **Collections:** `array<Type>{ ... }` / `array<Type>[ ... ]`, `vector<Type>{ ... }` / `vector<Type>[ ... ]`,
+  `map<Key,Value>{ ... }` / `map<Key,Value>[ ... ]` rewrite to standard builder functions. The brace/bracket forms are
+  the user-facing construction syntax; current compatibility lowering may still route through call-shaped builder
+  helpers such as `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)` until
+  `TODO-4254` migrates those surfaces. Map literals supply alternating key/value forms.
   - Requires the `collections` text transform (enabled by default in `--text-transforms`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are
@@ -3165,8 +3225,9 @@ bad_use_after_take() {
   - Ownership direction: keep `array<T>` as language-core substrate, but move the public constructor/helper behavior of
     `vector<T>` and `map<K, V>` into stdlib `.prime` definitions; `soa_vector<T>` should follow the same model once the
     generic SoA substrate is ready.
-  - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` and `vector<T>(...)` are variadic
-    constructors (0..N). Growth operations require `effects(heap_alloc)` (or the active default effects set), and
+  - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` is the user-facing variadic
+    constructor form (0..N); `vector<T>(...)` remains a legacy compatibility helper path until `TODO-4254`. Growth
+    operations require `effects(heap_alloc)` (or the active default effects set), and
     `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
   - Planned stdlib-owned constructor surface: the temporary experimental vector namespace now uses `vector(values...)`
     over trailing `[args<T>] values`, and the remaining migration work is to move the canonical imported surface off
@@ -3176,7 +3237,7 @@ bad_use_after_take() {
     `value.remove_swap(index)` (canonical helper equivalents remain `count(value)`, `at(value, index)`, `push(value,
     item)`, etc.). Import `/std/collections/*` before using bare helper names or method-sugar examples.
     Exact `import /std/collections/vector` is part of the verified runnable surface for bare
-    `vector(...)` construction plus canonical `/std/collections/vector/*` helper forms. Concise
+    legacy `vector(...)` construction compatibility plus canonical `/std/collections/vector/*` helper forms. Concise
     binding initializers such as `[vector<T>] values{1, 2, 3}` are now also part of the verified
     wildcard-import surface for readable vector examples and loop/index code, while explicit
     `vector<T>{...}` construction remains available when examples want to emphasize constructor
@@ -3250,8 +3311,8 @@ bad_use_after_take() {
     `vector`/`map`/`soa_vector` elements and structs with custom move/destroy hooks are rejected for builtin
     `push`/`reserve`.
   - Vector binding forms:
-    - `[vector<T> mut] v{vector<T>()}` and `[mut] v{vector<T>()}` are both valid.
-    - `[vector<T> mut] v{}` is shorthand for zero-arg construction and rewrites to `[vector<T> mut] v{vector<T>()}`.
+    - `[vector<T> mut] v{vector<T>{}}` and `[mut] v{vector<T>{}}` are both valid.
+    - `[vector<T> mut] v{}` is shorthand for zero-arg construction and rewrites to `[vector<T> mut] v{vector<T>{}}`.
   - `soa_vector<T>` is an explicit structure-of-arrays container (SoA). It is separate from `vector<T>`; the compiler
     must not silently rewrite AoS (`vector`) to SoA (`soa_vector`).
   - Intended usage: data-oriented loops and ECS-style component storage where field-wise contiguous iteration is
@@ -3261,7 +3322,7 @@ bad_use_after_take() {
     field-view borrowing/invalidation, and allocation primitives). The end-state is that C++ source does not contain
     `soa_vector`-named collection semantics.
   - Proposed `soa_vector<T>` surface:
-    - Construction/growth mirrors vector (`soa_vector<T>()`, `push`, `reserve`, `count`) and allocation still requires
+    - Construction/growth mirrors vector (`soa_vector<T>{}`, `push`, `reserve`, `count`) and allocation still requires
       `effects(heap_alloc)`.
     - Indexing/access is explicit and SoA-aware (`value.field()[i]`, `value.get(i)`, and optionally `value.ref(i)` proxy
       access).
@@ -3299,7 +3360,7 @@ bad_use_after_take() {
     when visible), returning `SoaFieldView` values that can be bound with a tracked borrow root instead of stopping on a
     pending diagnostic; direct call-argument and return escapes remain deterministic `field-view escapes ...`
     diagnostics. `count(...)` on `soa_vector` lowers through the native count path for current SoA bindings, empty
-    `soa_vector<T>()` literals lower to header-only storage, and builtin `ref(...)` now rejects direct and helper-return
+    `soa_vector<T>{}` literals lower to header-only storage, and builtin `ref(...)` now rejects direct and helper-return
     local binding persistence plus direct and helper-return call-argument/return escapes with
     `unknown method: /std/collections/soa_vector/ref`
     until the borrowed-view substrate exists, including old-explicit
@@ -3842,8 +3903,9 @@ read-only path.
   - **Current implementation status:** VM/native vector locals use a heap-backed `count/capacity/data_ptr` record
     layout. `push` and dynamic `reserve` growth allocate/reallocate backing storage and report deterministic runtime
     allocation failures (`vector push allocation failed (out of memory)` / `vector reserve allocation failed (out of
-    memory)`) once the local dynamic-capacity limit (`256`) is exceeded. `vector<T>(...)` constructors above `256`
-    elements and out-of-range/negative folded `reserve` integer literal expressions are rejected at lowering time
+    memory)`) once the local dynamic-capacity limit (`256`) is exceeded. `vector<T>{...}` construction and legacy
+    `vector<T>(...)` compatibility construction above `256` elements and out-of-range/negative folded `reserve`
+    integer literal expressions are rejected at lowering time
     (`vector literal exceeds local capacity limit (256)` / `vector reserve exceeds local capacity limit (256)` /
     `vector reserve expects non-negative capacity` / `vector reserve literal expression overflow`). Folded literal
     support currently covers `plus`/`minus`/`negate` expression trees, and both signed and unsigned fold-overflow paths
@@ -3987,7 +4049,7 @@ read-only path.
     `/std/collections/map/map(...)`, `/std/collections/map/count(...)`, `/std/collections/map/contains(...)`,
     `/std/collections/map/tryAt(...)`, `/std/collections/map/at(...)`, and `/std/collections/map/at_unsafe(...)`
     wrappers follow ordinary definition argument rules such as named-argument support. Canonical
-    `/std/collections/map/map(...)` constructor calls, `/std/collections/map/count(...)` count calls,
+    `/std/collections/map/map(...)` legacy constructor-shaped builder calls, `/std/collections/map/count(...)` count calls,
     `/std/collections/map/contains(...)` contains calls, `/std/collections/map/tryAt(...)` calls, and canonical
     `/std/collections/map/at(...)` plus `/std/collections/map/at_unsafe(...)` access calls now require those imported
     wrappers or an explicit source definition instead of falling back to builtin `/map/map`, `/map/count`,
@@ -4009,7 +4071,7 @@ read-only path.
     parameter targets reached through method-call sugar, explicit or inferred experimental `Map<K, V>` struct fields
     initialized through struct-constructor arguments, direct `assign(values, ...)` writes into explicit `[Map<K, V>
     mut]` locals or parameters plus explicit or inferred experimental `Map<K, V>` struct fields, both explicit-template
-    plus implicit-template constructor calls flowing through `[auto]` locals and `return<auto>` definitions,
+    plus implicit-template legacy constructor-shaped calls flowing through `[auto]` locals and `return<auto>` definitions,
     `return<auto>` definitions whose inferred result is an experimental `Map<K, V>`, block-bodied value returns inside
     those inferred-return definitions, helper-wrapped return-path expressions inside those explicit or inferred
     experimental-map definitions, `auto` bindings nested inside those returned blocks, and direct method-call receivers
@@ -4188,8 +4250,8 @@ tweak_color([copy mut restrict<Image>] img) {
 }
 
 restrict_demo() {
-  [restrict<array<i32>>] ok{array<i32>(1i32, 2i32)}
-  [restrict<array<i32>>] bad{array<u64>(1u64, 2u64)} // diagnostic: expected array<i32>
+  [restrict<array<i32>>] ok{array<i32>{1i32, 2i32}}
+  [restrict<array<i32>>] bad{array<u64>{1u64, 2u64}} // diagnostic: expected array<i32>
 }
 
 // Canonicalization example for parameters:
@@ -4234,7 +4296,7 @@ blend([f32] a, [f32] b) {
 
 [effects(gpu_dispatch) return<i32>]
 main() {
-  [array<i32>] values{array<i32>(1i32, 2i32, 3i32, 4i32)}
+  [array<i32>] values{array<i32>{1i32, 2i32, 3i32, 4i32}}
   [Buffer<i32>] input{ /std/gpu/upload(values) }
   [Buffer<i32>] output{ /std/gpu/buffer<i32>(4i32) }
   /std/gpu/dispatch(/add_one, 4i32, 1i32, 1i32, input, output, 4i32)

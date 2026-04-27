@@ -21,7 +21,7 @@ PrimeStruct uses a single canonical form called an **Envelope** for definitions 
 - `{...}` contains a definition body (bindings use `{...}` for initializers).
 
 Executions are call-style forms with mandatory parentheses and no body. In the canonical AST they are envelopes with an
-implicit empty body:
+implicit empty body. Executions model behavior, not value construction:
 
 ```
 foo()
@@ -413,9 +413,9 @@ Notes:
   iterations, initializing loop-body bindings once before the loop begins and keeping them alive for the loop duration.
 - Text transforms accept only identifier/literal arguments; semantic transforms may accept full forms. If a text
   transform is given a non-simple argument, it is a diagnostic.
-- `brace_ctor` is a constructor form: `Type{...}` in value positions evaluates the value block and passes its value to
-  the constructor. If the block executes `return(value)`, that value is used; otherwise the last item is used. In
-  statement position, `name{...}` is parsed as a binding.
+- `brace_ctor` is the only constructor form. `Type{...}` in value positions maps positional/labeled entries to
+  constructor fields. `Type(...)` is an ordinary execution/call and is not constructor syntax. In statement position,
+  `name{...}` is parsed as a binding unless a surrounding type context makes it a value initializer.
 - `block()` with a trailing body block is allowed in any form position; `block{...}` is invalid and parsed as a binding
   or brace constructor.
 - `quoted_string` in `import<...>` declarations is a raw quoted string without suffixes.
@@ -587,12 +587,13 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
     numeric/bool/string operands. String comparisons require both operands to be strings. Numeric/bool comparisons
     reject mixed signed/unsigned operands and mixed integer/float operands. `bool` participates as signed `0/1`, so
     `bool` with `u64` is rejected as mixed signedness while `bool` with signed ints is allowed.
-- Collection literals (via the `collections` text transform) rewrite to constructor calls:
-  - `array<T>{...}` / `array<T>[...]` -> `array<T>(...)`
-  - `vector<T>{...}` / `vector<T>[...]` -> `vector<T>(...)`
-  - `map<K, V>{...}` / `map<K, V>[...]` -> `map<K, V>(...)`
-  - Map literals accept `key = value` pairs as shorthand for alternating arguments (e.g., `map<i32, i32>{1i32=2i32}` ->
-    `map<i32, i32>(1i32, 2i32)`).
+- Collection literals (via the `collections` text transform) are constructor forms:
+  - `array<T>{...}` / `array<T>[...]`
+  - `vector<T>{...}` / `vector<T>[...]`
+  - `map<K, V>{...}` / `map<K, V>[...]`
+  - Map literals accept `key = value` pairs as shorthand for entry construction (e.g., `map<i32, i32>{1i32=2i32}`).
+  - Current implementation still lowers several collection surfaces through call-shaped compatibility helpers; the
+    planned language contract is brace-only construction, tracked by the construction TODOs.
   - Planned stdlib-owned map lowering target: once variadic packs are available for user-defined constructors, the
     intended canonical helper target is `map<K, V>(entry(key1, value1), entry(key2, value2), ...)` rather than
     alternating raw key/value user-defined variadic parameters.
@@ -679,34 +680,120 @@ block()
 
 - A binding is a stack value execution.
 - Binding initializers are value blocks. The block is evaluated left-to-right; its resulting value (last item
-  or `return(value)`) becomes the initializer value. Use explicit constructor calls when you need to pass multiple
-  arguments (e.g., `[T] name{ T(arg1, arg2) }`). Commas and semicolons are treated as whitespace separators.
-  A brace constructor form (`Type{...}`) is allowed in value positions (e.g., `bool{35}` in arguments
-  or returns) and passes the block’s resulting value to the constructor.
+  or `return(value)`) becomes the initializer value. Use brace constructors when you need to construct a value with
+  multiple fields (e.g., `[T] name{T{[left] arg1, [right] arg2}}`). Commas and semicolons are treated as whitespace
+  separators. `Type(...)` is a call/execution form, not construction.
 - If a local binding omits an initializer, it is a diagnostic unless the binding envelope is a struct type with a
   zero-argument constructor **and** the compiler can prove the construction has no outside effects. In that case the
-  initializer is treated as `Type()` (e.g., `[A] a` → `[A] a{A()}`). Struct fields still require explicit initializers.
+  initializer is treated as `Type{}` (e.g., `[A] a` -> `[A] a{A{}}`). Struct fields still require explicit initializers.
   - **No outside effects (definition):**
     - Empty effects/capabilities mask (no `effects(...)`/`capabilities(...)`, and no callees with non-empty effects).
     - Writes limited to the newly constructed value (`this`) and local temporaries; writes through pointers/references
       or to non-local bindings are disallowed.
     - Field initializers and helper calls must be effect-free transitively.
     - If the compiler cannot prove these constraints, omitted-initializer bindings are rejected.
-- Struct constructor calls treat non-static field bindings as parameters. Positional and labeled arguments map to
-  fields; any field not supplied by the call uses its field initializer expression. Missing fields without
+- Struct constructors treat non-static field bindings as parameters. Positional and labeled entries map to
+  fields; any field not supplied by the constructor uses its field initializer expression. Missing fields without
   initializers are a semantic error (struct fields require initializers).
 - **Zero-arg constructor:** exists when every field has an initializer, or when a `Create()` helper exists and
   initializes every field (including `uninitialized<T>` fields via `init`). Field initializers run first, then
   `Create()` runs (if present) and may override field values.
 - If the binding omits an explicit envelope annotation, the compiler first tries to infer the envelope from the
   initializer form; if inference fails, it is a diagnostic. Parameters are handled separately.
-- For struct fields, omitted envelope annotations follow the same rule (`center{Vec3(...)}` is valid when inference
+- For struct fields, omitted envelope annotations follow the same rule (`center{Vec3{...}}` is valid when inference
   resolves one concrete envelope). Field envelopes must be concrete before layout manifest emission; unresolved or
   ambiguous inference is a diagnostic.
 - Field visibility tags (`[public]` / `[private]`) default to `public` and control field-access metadata only; they do
   not affect top-level import/export visibility.
 - An explicit `auto` envelope on a binding must resolve to a concrete envelope; it does not default to any width.
 - `mut` marks the binding as writable; otherwise immutable.
+
+### 7.1A Planned Sum Types and Brace-Only Construction
+
+Algebraic sum types use field-like variant declarations:
+
+```prime
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+  [Text] text
+}
+```
+
+Each payload variant has a lowerCamelCase variant name and one payload envelope. A sum value has exactly one active
+variant at runtime. Unit/no-payload variants are a planned follow-up needed for stdlib `Maybe<T>` and status-only
+`Result<Error>`; they use bare lowerCamelCase variant names such as `none` rather than an empty struct payload
+workaround. Sum construction uses the same brace-only construction model as structs:
+
+```prime
+[Shape] explicitLabeled{[circle] Circle{[radius] 3.4}}
+[Shape] explicitPositional{[circle] Circle{3.4}}
+[Shape] inferredVariant{Circle{3.4}}
+```
+
+The explicit `[variant] payload` form always selects that variant. The inferred form is valid only when the target sum
+type is known from context and exactly one variant payload type accepts the constructed payload. If zero variants match,
+construction is a type error. If more than one variant matches, construction is ambiguous and the source must use the
+explicit `[variant]` form.
+
+```prime
+[sum]
+Message {
+  [Text] title
+  [Text] body
+}
+
+[Message] bad{Text{"hello"}}          // ambiguous: title and body both accept Text
+[Message] ok{[title] Text{"hello"}}   // explicit variant selection
+```
+
+Planned generic/unit sum shape:
+
+```prime
+[sum]
+Maybe<T> {
+  none
+  [T] some
+}
+
+[Maybe<i32>] a{}        // defaults to first variant because it is unit
+[Maybe<i32>] b{none}    // explicit unit variant
+[Maybe<i32>] c{[some] 1i32}
+```
+
+Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
+therefore tag `0`, following source order. Payload variants are never default-constructed implicitly; if the first
+variant has a payload, `[Sum] value{}` is a diagnostic even when that payload type has its own default constructor.
+Variant tag order is layout/serialization-sensitive, so reordering variants changes ABI-like behavior and must be
+treated as a version-sensitive change.
+
+`pick` is the planned exhaustive pattern form for sums. Each arm names a variant and binds its payload; missing variants
+are diagnostics unless an explicit fallback form is later specified. Unit variants use a bare arm with no payload
+binder; payload variants require a binder.
+
+```prime
+pick(shape) {
+  circle(c) {
+    draw_circle(c.radius)
+  }
+  rectangle(r) {
+    draw_rect(r.w, r.h)
+  }
+  text(t) {
+    draw_text(t.s)
+  }
+}
+
+pick(maybeValue) {
+  none {
+    return(0)
+  }
+  some(value) {
+    return(value)
+  }
+}
+```
 
 ### 7.2 Parameters
 
@@ -735,9 +822,8 @@ inference is a diagnostic. Defaults are limited to literal/pure forms (no name r
 ### 8.1 Arrays
 
 ```
-array<i32>(1i32, 2i32)
-array<i32>{1i32, 2i32}   // surface form
-array<i32>[1i32, 2i32]   // surface form
+array<i32>{1i32, 2i32}
+array<i32>[1i32, 2i32]   // alternate surface form
 ```
 
 Arrays are fixed-size contiguous value sequences once constructed (C++ `std::array`-like behavior).
@@ -758,22 +844,22 @@ Architectural direction for type ownership:
 
 ### 8.2 Vectors
 
-``` 
-vector<i32>(1i32, 2i32)
+```
 vector<i32>{1i32, 2i32}
 vector<i32>[1i32, 2i32]
 ```
 
-Vectors are C++-style dynamic contiguous sequences. Construction is variadic; zero or more arguments are accepted.
-Planned stdlib-owned replacement: the user-defined constructor surface is intended to become `vector(values...)`,
+Vectors are C++-style dynamic contiguous sequences. Brace construction is variadic; zero or more entries are accepted.
+Current call-shaped vector helpers remain compatibility surfaces until the brace-only construction migration lands.
+Planned stdlib-owned replacement: the user-defined builder helper is intended to become `vector(values...)`,
 canonically represented as a trailing `[args<T>]` parameter rather than fixed-arity helper families.
 The current builtin/vector-envelope behavior is transitional; the intended steady state is stdlib-owned public vector
 behavior over generic allocation/access substrate.
 Growth operations (`push`, `reserve`) may reallocate and invalidate references/pointers into vector storage.
 Binding forms:
-- `[vector<T> mut] v{vector<T>()}`
-- `[mut] v{vector<T>()}`
-- `[vector<T> mut] v{}` (rewrites to `[vector<T> mut] v{vector<T>()}`)
+- `[vector<T> mut] v{vector<T>{}}`
+- `[mut] v{vector<T>{}}`
+- `[vector<T> mut] v{}` (rewrites to `[vector<T> mut] v{vector<T>{}}`)
 Helpers:
 - `value.count()` (canonical equivalent: `count(value)`)
 - `value.at(index)` / `value[index]` / `value.at_unsafe(index)` (canonical equivalents: `at(value, index)`,
@@ -802,7 +888,6 @@ behavior outside that scope.
 ### 8.3 Maps
 
 ```
-map<i32, i32>(1i32, 2i32)
 map<i32, i32>{1i32=2i32, 3i32=4i32}
 map<i32, i32>[1i32=2i32, 3i32=4i32]
 ```
@@ -832,7 +917,7 @@ the canonical `/std/collections/soa_vector/*` and
 namespaces remain compatibility seams rather than ordinary public imports.
 
 Draft surface shape:
-- `soa_vector<T>()`
+- `soa_vector<T>{}`
 - `value.count()`
 - `value.push(item)` / `value.reserve(capacity)` (requires `effects(heap_alloc)`)
 - Field-wise access for struct fields: `value.field_name()[index]`
@@ -864,7 +949,7 @@ real stdlib-owned implementation. Method-form/call-form field-view names now rou
 when visible), returning `SoaFieldView` values that can be bound with a tracked borrow root; direct builtin
 field-view call-argument/return escapes remain deterministic `field-view escapes ...` diagnostics while current IR lowering routes
 `count(...)` on `soa_vector` through the native count path for current SoA bindings
-while empty `soa_vector<T>()` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
+while empty `soa_vector<T>{}` literals lower to header-only storage. The stdlib wrapper/helper surface now also covers
 direct canonical `/std/collections/soa_vector/*` helper calls plus imported wrapper `to_aos` helper/method routing
 across C++/native/VM; canonical conversion helpers use `SoaVector<T>` and
 `Reference<SoaVector<T>>` receiver spellings while routing through canonical

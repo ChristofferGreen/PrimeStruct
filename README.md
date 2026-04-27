@@ -140,7 +140,7 @@ Rect {
 }
 
 area_with_default_height() {
-  rect{Rect([width] 4)}
+  rect{Rect{[width] 4}}
   return(rect.width * rect.height)
 }
 ```

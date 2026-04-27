@@ -214,7 +214,7 @@ Counter {
 }
 
 counter_result() {
-  counter{Counter([value] 4)}
+  counter{Counter{[value] 4}}
   return(counter.nextValue())
 }
 ```
@@ -248,7 +248,7 @@ Counter {
 
 [int]
 useCounter() {
-  counter{Counter([value] 5)}
+  counter{Counter{[value] 5}}
   return(counter.doubled() + Counter.defaultStep())
 }
 ```
@@ -331,8 +331,8 @@ Pair {
 
 [bool]
 pairs_match() {
-  left{Pair([x] 1, [y] 2)}
-  right{Pair([x] 1, [y] 2)}
+  left{Pair{[x] 1, [y] 2}}
+  right{Pair{[x] 1, [y] 2}}
   return(left == right)
 }
 ```
@@ -379,7 +379,7 @@ Rect {
 }
 
 area_with_default_height() {
-  rect{Rect([width] 4)}
+  rect{Rect{[width] 4}}
   return(rect.width * rect.height)
 }
 ```
