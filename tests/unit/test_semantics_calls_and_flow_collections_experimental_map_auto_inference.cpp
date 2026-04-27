@@ -550,7 +550,7 @@ main() {
   checkImplicitMapPairConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred experimental map struct fields keep mapNew template diagnostics") {
+TEST_CASE("helper-wrapped inferred experimental map struct fields validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -575,12 +575,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped inferred experimental map struct fields keep mapNew template diagnostics on mismatches") {
+TEST_CASE("helper-wrapped inferred experimental map struct fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -604,11 +604,11 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
-        std::string::npos);
+  INFO(error);
+  checkImplicitMapPairConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred experimental result map struct fields keep mapNew template diagnostics") {
+TEST_CASE("helper-wrapped inferred experimental result map struct fields validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -631,13 +631,12 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped inferred experimental result map struct fields keep mapNew template diagnostics on mismatches") {
+TEST_CASE("helper-wrapped inferred experimental result map struct fields keep mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -662,8 +661,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
-        std::string::npos);
+  checkImplicitMapPairConflict(error);
 }
 
 TEST_SUITE_END();

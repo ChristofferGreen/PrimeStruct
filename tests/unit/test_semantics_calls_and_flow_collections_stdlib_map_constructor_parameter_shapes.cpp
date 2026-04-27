@@ -179,7 +179,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred experimental map default parameters keep mapNew template diagnostics") {
+TEST_CASE("helper-wrapped inferred experimental map default parameters validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -213,9 +213,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
 }
 
 TEST_CASE("helper-wrapped inferred experimental map default parameters keep mismatch diagnostics") {
@@ -292,7 +292,7 @@ main() {
   checkMapPairTemplateConflict(error);
 }
 
-TEST_CASE("helper-wrapped inferred experimental result map default parameters keep mapNew template diagnostics") {
+TEST_CASE("helper-wrapped inferred experimental result map default parameters validate") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -314,10 +314,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(validateProgram(source, "/main", error));
   INFO(error);
-  CHECK(error.find("template arguments required for /std/collections/experimental_map/mapNew") !=
-        std::string::npos);
+  CHECK(error.empty());
 }
 
 TEST_CASE("helper-wrapped inferred experimental result map default parameters keep mismatch diagnostics") {
