@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4218: Make local-auto graph facts the exclusive inference authority
+- TODO-4231: Make query/try/on_error graph facts the exclusive authority
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4231: Make query/try/on_error graph facts the exclusive authority
 - TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
 - TODO-4225: Close call-target and helper-routing lowerer fallbacks
 - TODO-4232: Close binding/type/effect/layout lowerer fallbacks
@@ -81,11 +80,12 @@ Task template:
 - TODO-4221: Retire stale semantic validator source locks
 - TODO-4235: Retire remaining semantic/lowerer architecture source locks
 - TODO-4236: Define graph invalidation contracts by edit family
+- TODO-4237: Add graph invalidation fan-out regression tests
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4218 -> TODO-4231
-  -> TODO-4219 -> TODO-4225 -> TODO-4232
+- Semantic phase contract hardening: TODO-4231 -> TODO-4219
+  -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
   -> TODO-4238 -> TODO-4239
@@ -104,7 +104,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4218: Make local-auto graph facts the exclusive inference authority
 - TODO-4231: Make query/try/on_error graph facts the exclusive authority
 - TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
 - TODO-4225: Close call-target and helper-routing lowerer fallbacks
@@ -162,7 +161,7 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -317,28 +316,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4218: Make local-auto graph facts the exclusive inference authority
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Remove or quarantine remaining production paths that re-derive
-    local-auto facts outside the graph-backed semantic fact flow, keeping any
-    legacy comparison only behind benchmark-only shadow wiring.
-  - acceptance:
-    - Production validation and semantic-product publication use graph-backed
-      local-auto facts as the sole authority for migrated cases.
-    - Benchmark-only legacy shadows cannot affect published facts or lowering.
-    - Focused graph-local-auto tests cover at least one success path and one
-      deterministic unresolved/contradictory diagnostic.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after local-auto facts are fail-closed on graph facts; leave
-    query/try/on_error inference islands to TODO-4231.
-
 - [ ] TODO-4231: Make query/try/on_error graph facts the exclusive authority
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4218
   - scope: Remove or quarantine remaining production paths that re-derive
     query, `try(...)`, or `on_error` facts outside the graph-backed semantic
     fact flow, keeping legacy comparison only behind benchmark-only shadow

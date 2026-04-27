@@ -2229,7 +2229,7 @@ TEST_CASE("ir lowerer semantic-product index resolves on_error facts without bro
   CHECK(primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, *onErrorFact) == "/handler");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter indexes local-auto facts by initializer path and binding name") {
+TEST_CASE("ir lowerer semantic-product adapter ignores local-auto initializer-path fallback") {
   primec::Expr initCall;
   initCall.kind = primec::Expr::Kind::Call;
   initCall.name = "id";
@@ -2301,12 +2301,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes local-auto facts by initi
   CHECK(adapter.semanticIndex.localAutoFactsByInitPathAndBindingNameId.count(
             (static_cast<uint64_t>(initializerPathId) << 32) | static_cast<uint64_t>(bindingNameId)) == 1);
   const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(adapter, localBinding);
-  REQUIRE(localAutoFact != nullptr);
-  CHECK(localAutoFact->bindingTypeText == "i32");
-  CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(semanticProgram, *localAutoFact) == "/id");
+  CHECK(localAutoFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index resolves local-auto facts without broad adapter") {
+TEST_CASE("ir lowerer semantic-product index keeps local-auto path index non-authoritative") {
   primec::Expr initCall;
   initCall.kind = primec::Expr::Kind::Call;
   initCall.name = "id";
@@ -2378,13 +2376,10 @@ TEST_CASE("ir lowerer semantic-product index resolves local-auto facts without b
   const auto *localAutoFact =
       primec::ir_lowerer::findSemanticProductLocalAutoFact(
           &semanticProgram, semanticIndex, localBinding);
-  REQUIRE(localAutoFact != nullptr);
-  CHECK(localAutoFact->bindingTypeText == "i32");
-  CHECK(primec::semanticProgramLocalAutoFactInitializerResolvedPath(
-            semanticProgram, *localAutoFact) == "/id");
+  CHECK(localAutoFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product adapter prefers local-auto semantic-id matches over initializer-path index") {
+TEST_CASE("ir lowerer semantic-product adapter uses local-auto semantic-id matches without path fallback") {
   primec::Expr initCall;
   initCall.kind = primec::Expr::Kind::Call;
   initCall.name = "id";

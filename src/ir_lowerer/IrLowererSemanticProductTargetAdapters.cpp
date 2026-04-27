@@ -106,20 +106,6 @@ std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProgram *semanti
   return std::nullopt;
 }
 
-std::optional<SymbolId> resolveLocalAutoInitializerPathId(const SemanticProgram *semanticProgram,
-                                                          const Expr &bindingExpr) {
-  if (bindingExpr.args.empty()) {
-    return std::nullopt;
-  }
-
-  const Expr &initializerExpr = bindingExpr.args.front();
-  if (const auto initializerPathId = resolveSemanticExprPathId(semanticProgram, initializerExpr);
-      initializerPathId.has_value()) {
-    return initializerPathId;
-  }
-  return std::nullopt;
-}
-
 struct SemanticProductIndexBuilder {
   const SemanticProgram *semanticProgram = nullptr;
 
@@ -601,34 +587,7 @@ const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(
       return fact;
     }
   }
-  if (const auto *fact = findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr);
-      fact != nullptr) {
-    return fact;
-  }
-  if (semanticProgram == nullptr || !expr.isBinding || expr.args.size() != 1 ||
-      expr.name.empty()) {
-    return nullptr;
-  }
-  const auto bindingNameId =
-      semanticProgramLookupCallTargetStringId(*semanticProgram, expr.name);
-  if (!bindingNameId.has_value()) {
-    return nullptr;
-  }
-  const auto initializerPathId = resolveLocalAutoInitializerPathId(semanticProgram, expr);
-  if (!initializerPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto *fact = semanticProgramLookupPublishedLocalAutoFactByInitializerPathAndBindingNameId(
-          *semanticProgram, *initializerPathId, *bindingNameId);
-      fact != nullptr) {
-    return fact;
-  }
-  if (const auto it = semanticIndex.localAutoFactsByInitPathAndBindingNameId.find(
-          makeLocalAutoInitPathBindingNameKey(*initializerPathId, *bindingNameId));
-      it != semanticIndex.localAutoFactsByInitPathAndBindingNameId.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr);
 }
 
 const SemanticProgramLocalAutoFact *findSemanticProductLocalAutoFact(const SemanticProductTargetAdapter &adapter,

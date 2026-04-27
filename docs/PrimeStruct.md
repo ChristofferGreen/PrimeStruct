@@ -434,6 +434,8 @@ Compile-pipeline publication contract:
   temporary migration adapter, and deterministic semantic-product dump/formatter are therefore all complete. The
   active queue no longer tracks Group 12 entrypoint retirement, provenance/ownership coverage, backend conformance, or
   cleanup/removal passes; add a concrete TODO before changing any of those seams.
+- Local-auto lowering consumes semantic-node-id facts only. Initializer-path plus binding-name indexes may remain as
+  published metadata for inspection, but production lowering must fail closed instead of using them as a recovery path.
 - Dump-stage handling should be able to read either the syntax-facing canonical AST dump or the future semantic-product
   dump from the same compile-pipeline success result without re-running semantics.
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather

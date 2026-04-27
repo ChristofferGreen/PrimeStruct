@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4218: Make local-auto graph facts the exclusive inference authority.
+  Completed: local-auto lowering now treats semantic-node-id facts as the only
+  production authority. The semantic-product target adapter still indexes
+  initializer-path plus binding-name facts for published metadata/inspection,
+  but broad local-auto lookups no longer recover through that key and instead
+  fail closed when the semantic id fact is missing. Existing production
+  diagnostics continue to report deterministic missing semantic-product
+  local-auto fact failures, benchmark legacy-shadow flags remain benchmark
+  only, and source-lock/adapter tests now pin the no-fallback contract. Local
+  validation is deferred per the lite workflow.
 - ✓ TODO-4230: Cut over gfx compatibility decisions to surface adapters.
   Completed: gfx Buffer helper compatibility decisions now route through
   `StdlibSurfaceRegistry::GfxBufferHelpers` instead of bespoke semantic

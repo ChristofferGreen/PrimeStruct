@@ -807,13 +807,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4218: Make local-auto graph facts the exclusive inference authority") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4231: Make query/try/on_error graph facts the exclusive authority") !=
         std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4219: Fail closed on residual lowerer AST semantic fallbacks") !=
+        std::string::npos);
   CHECK(todo.find("### Priority Lanes (Current)\n\n"
-                  "- Semantic phase contract hardening: TODO-4218 -> TODO-4231") !=
+                  "- Semantic phase contract hardening: TODO-4231 -> TODO-4219") !=
         std::string::npos);
   CHECK(todo.find("  -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235") !=
         std::string::npos);
@@ -824,10 +824,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4218: Make local-auto graph facts the exclusive inference authority") !=
+                  "- TODO-4231: Make query/try/on_error graph facts the exclusive authority") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4218: Make local-auto graph facts the exclusive inference authority",
       "TODO-4231: Make query/try/on_error graph facts the exclusive authority",
       "TODO-4219: Fail closed on residual lowerer AST semantic fallbacks",
       "TODO-4225: Close call-target and helper-routing lowerer fallbacks",
@@ -887,7 +886,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4230") == std::string::npos);
   CHECK(todoFinished.find("TODO-4230: Cut over gfx compatibility decisions to surface adapters") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4218") != std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4218") == std::string::npos);
+  CHECK(todo.find("TODO-4218") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4218: Make local-auto graph facts the exclusive inference authority") !=
+        std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4231") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4219") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4225") != std::string::npos);
@@ -929,7 +931,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
   CHECK(todo.find("- TODO-4147") == std::string::npos);
-  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |") !=
+  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |") !=
         std::string::npos);
   CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | TODO-4220, TODO-4234 |") !=
         std::string::npos);
