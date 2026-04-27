@@ -138,7 +138,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
     }
     const std::string message =
         formatReturnInferenceCycleDiagnostic(unresolvedDefinitions);
-    if (collectDiagnostics_ && diagnosticInfo_ != nullptr) {
+    if (shouldCollectStructuredDiagnostics()) {
       DiagnosticSinkRecord record;
       record.message = message;
       const Definition *primary = unresolvedDefinitions.front();
@@ -162,7 +162,7 @@ bool SemanticsValidator::inferUnknownReturnKindsGraph() {
         span.label = "cycle member: " + unresolvedNodes[index]->resolvedPath;
         record.relatedSpans.push_back(std::move(span));
       }
-      diagnosticSink_.setRecords({std::move(record)});
+      resultSink_.setRecords({std::move(record)});
       rememberFirstCollectedDiagnosticMessage(message);
       return false;
     }

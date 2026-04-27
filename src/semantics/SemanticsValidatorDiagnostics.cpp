@@ -45,11 +45,11 @@ bool isExplicitStdNamespacedVectorHelperCall(const Expr &expr,
 } // namespace
 
 void SemanticsValidator::capturePrimarySpanIfUnset(int line, int column) {
-  diagnosticSink_.capturePrimarySpanIfUnset(line, column);
+  resultSink_.capturePrimarySpanIfUnset(line, column);
 }
 
 void SemanticsValidator::captureRelatedSpan(int line, int column, const std::string &label) {
-  diagnosticSink_.addRelatedSpan(line, column, label);
+  resultSink_.addRelatedSpan(line, column, label);
 }
 
 void SemanticsValidator::captureExprContext(const Expr &expr) {
@@ -92,23 +92,20 @@ bool SemanticsValidator::failExprDiagnostic(const Expr &expr,
                   : "argument count mismatch for builtin capacity";
   }
   captureExprContext(expr);
-  error_ = std::move(message);
-  return publishCurrentStructuredDiagnosticNow();
+  return resultSink_.fail(std::move(message));
 }
 
 bool SemanticsValidator::failDefinitionDiagnostic(
     const Definition &def,
     std::string message) {
   captureDefinitionContext(def);
-  error_ = std::move(message);
-  return publishCurrentStructuredDiagnosticNow();
+  return resultSink_.fail(std::move(message));
 }
 
 bool SemanticsValidator::failExecutionDiagnostic(const Execution &exec,
                                                  std::string message) {
   captureExecutionContext(exec);
-  error_ = std::move(message);
-  return publishCurrentStructuredDiagnosticNow();
+  return resultSink_.fail(std::move(message));
 }
 
 bool SemanticsValidator::definitionDiagnosticOrderLess(
@@ -217,7 +214,7 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
                      return left.path < right.path;
                    });
 
-  if (diagnosticInfo_ != nullptr) {
+  if (shouldCollectStructuredDiagnostics()) {
     std::vector<DiagnosticSinkRecord> records;
     records.reserve(duplicateGroups.size());
     for (const auto &group : duplicateGroups) {
@@ -257,7 +254,7 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
       }
       records.push_back(std::move(record));
     }
-    diagnosticSink_.setRecords(std::move(records));
+    resultSink_.setRecords(std::move(records));
   }
 
   return failUncontextualizedDiagnostic("duplicate definition: " +
@@ -265,53 +262,33 @@ bool SemanticsValidator::collectDuplicateDefinitionDiagnostics() {
 }
 
 bool SemanticsValidator::shouldCollectStructuredDiagnostics() const {
-  return collectDiagnostics_ && diagnosticInfo_ != nullptr;
+  return resultSink_.shouldCollectStructuredDiagnostics();
 }
 
 void SemanticsValidator::clearStructuredDiagnosticContext() {
-  if (!shouldCollectStructuredDiagnostics()) {
-    return;
-  }
-  diagnosticSink_.clearContext();
+  resultSink_.clearContext();
 }
 
 void SemanticsValidator::moveCurrentStructuredDiagnosticTo(std::vector<SemanticDiagnosticRecord> &out) {
-  if (!shouldCollectStructuredDiagnostics() || error_.empty()) {
-    return;
-  }
-  out.push_back(diagnosticSink_.makeRecord(error_));
-  error_.clear();
-  clearStructuredDiagnosticContext();
+  resultSink_.moveCurrentDiagnosticTo(out);
 }
 
 void SemanticsValidator::rememberFirstCollectedDiagnosticMessage(
     const std::string &message) {
-  if (error_.empty()) {
-    error_ = message;
-  }
+  resultSink_.rememberFirstCollectedMessage(message);
 }
 
 bool SemanticsValidator::failUncontextualizedDiagnostic(std::string message) {
-  error_ = std::move(message);
-  return publishCurrentStructuredDiagnosticNow();
+  return resultSink_.fail(std::move(message));
 }
 
 bool SemanticsValidator::publishCurrentStructuredDiagnosticNow() {
-  if (!shouldCollectStructuredDiagnostics() || error_.empty()) {
-    return false;
-  }
-  diagnosticSink_.setRecords({diagnosticSink_.makeRecord(error_)});
-  return false;
+  return resultSink_.publishCurrentDiagnosticNow();
 }
 
 bool SemanticsValidator::finalizeCollectedStructuredDiagnostics(
     std::vector<SemanticDiagnosticRecord> &records) {
-  if (!shouldCollectStructuredDiagnostics() || records.empty()) {
-    return true;
-  }
-  diagnosticSink_.setRecords(std::move(records));
-  rememberFirstCollectedDiagnosticMessage(diagnosticInfo_->records.front().message);
-  return false;
+  return resultSink_.finalizeCollectedDiagnostics(records);
 }
 
 } // namespace primec::semantics

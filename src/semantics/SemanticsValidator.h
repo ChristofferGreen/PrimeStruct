@@ -19,6 +19,7 @@
 #include "SemanticsValidatorGraphLocalAuto.h"
 #include "SemanticsHelpers.h"
 #include "primec/SemanticValidationPlan.h"
+#include "primec/SemanticValidationResult.h"
 #include "primec/SymbolInterner.h"
 #include "primec/Semantics.h"
 
@@ -476,9 +477,7 @@ private:
   const std::vector<std::string> &defaultEffects_;
   const std::vector<std::string> &entryDefaultEffects_;
   std::shared_ptr<const SemanticValidationPlan> validationPlan_;
-  SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
-  DiagnosticSink diagnosticSink_;
-  bool collectDiagnostics_ = false;
+  SemanticValidationResultSink resultSink_;
   uint32_t benchmarkSemanticDefinitionValidationWorkerCount_ = 1;
   bool benchmarkSemanticPhaseCountersEnabled_ = false;
   bool methodTargetMemoizationEnabled_ = true;

@@ -66,6 +66,10 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferGraph.cpp";
   const std::filesystem::path semanticsDiagnosticsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorDiagnostics.cpp";
+  const std::filesystem::path semanticsValidatorHeaderPath =
+      repoRoot / "src" / "semantics" / "SemanticsValidator.h";
+  const std::filesystem::path semanticValidationResultPath =
+      repoRoot / "src" / "semantics" / "SemanticValidationResult.cpp";
   const std::filesystem::path semanticsInferMethodResolutionPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorInferMethodResolution.cpp";
   const std::filesystem::path semanticsInferStructReturnPath =
@@ -101,6 +105,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsInferDefinitionPath));
   REQUIRE(std::filesystem::exists(semanticsInferGraphPath));
   REQUIRE(std::filesystem::exists(semanticsDiagnosticsPath));
+  REQUIRE(std::filesystem::exists(semanticsValidatorHeaderPath));
+  REQUIRE(std::filesystem::exists(semanticValidationResultPath));
   REQUIRE(std::filesystem::exists(semanticsInferMethodResolutionPath));
   REQUIRE(std::filesystem::exists(semanticsInferStructReturnPath));
   REQUIRE(std::filesystem::exists(semanticsInferTargetResolutionPath));
@@ -110,6 +116,8 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsValidatePath));
   const std::string semanticsInferSource = readText(semanticsInferPath);
   const std::string semanticsDiagnosticsSource = readText(semanticsDiagnosticsPath);
+  const std::string semanticsValidatorHeaderSource = readText(semanticsValidatorHeaderPath);
+  const std::string semanticValidationResultSource = readText(semanticValidationResultPath);
   const std::string semanticsInferCombinedSource = readTexts({
       semanticsInferPath,
       semanticsInferCollectionCountCapacityPath,
@@ -1029,6 +1037,24 @@ TEST_CASE("semantics validator infer source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsDiagnosticsSource.find(
             "void SemanticsValidator::sortTypeResolutionNodesForDiagnosticOrder(") !=
+        std::string::npos);
+  CHECK(semanticsValidatorHeaderSource.find("SemanticValidationResultSink resultSink_;") !=
+        std::string::npos);
+  CHECK(semanticsValidatorHeaderSource.find("DiagnosticSink diagnosticSink_;") ==
+        std::string::npos);
+  CHECK(semanticsValidatorHeaderSource.find("SemanticDiagnosticInfo *diagnosticInfo_") ==
+        std::string::npos);
+  CHECK(semanticsValidatorHeaderSource.find("bool collectDiagnostics_") ==
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find("return resultSink_.fail(std::move(message));") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find(
+            "return resultSink_.finalizeCollectedDiagnostics(records);") !=
+        std::string::npos);
+  CHECK(semanticsDiagnosticsSource.find("diagnosticSink_.setRecords") ==
+        std::string::npos);
+  CHECK(semanticValidationResultSource.find(
+            "bool SemanticValidationResultSink::finalizeCollectedDiagnostics(") !=
         std::string::npos);
   CHECK(semanticsInferGraphPath.string().find("SemanticsValidatorInferGraph.cpp") !=
         std::string::npos);

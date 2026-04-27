@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4226: Add a structured semantic diagnostic/result sink.
+  Completed: semantic validation now routes fatal diagnostic publication,
+  collected diagnostic finalization, and first-error adaptation through
+  `SemanticValidationResultSink` instead of storing raw diagnostic sink and
+  collection-policy fields directly on `SemanticsValidator`. Focused coverage
+  verifies the sink preserves the legacy first-error adapter and structured
+  record ordering, and source locks reject reintroducing validator-owned
+  diagnostic sink side channels. Local validation is deferred per the lite
+  workflow.
 - ✓ TODO-4222: Route execution validation through the shared plan.
   Completed: `SemanticValidationPlan` now owns a stable execution slice, and
   execution validation plus execution callable-summary collection/rebinding

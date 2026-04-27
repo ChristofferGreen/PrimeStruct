@@ -24,7 +24,8 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawAst = false;
   bool sawReflect = false;
   bool sawGenerate = false;
-  const bool collectTransformDiagnostics = transformDiagnosticRecords != nullptr && collectDiagnostics_ && diagnosticInfo_ != nullptr;
+  const bool collectTransformDiagnostics =
+      transformDiagnosticRecords != nullptr && shouldCollectStructuredDiagnostics();
 
   auto addTransformDiagnostic = [&](const std::string &message) -> bool {
     if (!collectTransformDiagnostics) {

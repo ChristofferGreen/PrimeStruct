@@ -780,15 +780,15 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4226: Add a structured semantic diagnostic/result sink") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4214: Introduce deterministic worker result bundles") !=
         std::string::npos);
-  CHECK(todo.find("### Priority Lanes (Current)\n\n"
-                  "- Semantic phase contract hardening: TODO-4226") !=
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4227: Move semantic-product fact families into worker bundles") !=
         std::string::npos);
-  CHECK(todo.find("  -> TODO-4214 -> TODO-4227 -> TODO-4215") !=
+  CHECK(todo.find("### Priority Lanes (Current)\n\n"
+                  "- Semantic phase contract hardening: TODO-4214 -> TODO-4227 -> TODO-4215") !=
+        std::string::npos);
+  CHECK(todo.find("  -> TODO-4228 -> TODO-4216 -> TODO-4217") !=
         std::string::npos);
   CHECK(todo.find("  -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235") !=
         std::string::npos);
@@ -799,10 +799,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4226: Add a structured semantic diagnostic/result sink") !=
+                  "- TODO-4214: Introduce deterministic worker result bundles") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4226: Add a structured semantic diagnostic/result sink",
       "TODO-4214: Introduce deterministic worker result bundles",
       "TODO-4227: Move semantic-product fact families into worker bundles",
       "TODO-4215: Make semantic-product publication consume merged fact bundles",
@@ -844,7 +843,6 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
     CHECK(todo.find("- " + entry) != std::string::npos);
     CHECK(todo.find("- [ ] " + entry) != std::string::npos);
   }
-  CHECK(todo.find("  - depends_on: TODO-4222") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4226") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4214") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4227") != std::string::npos);
@@ -893,7 +891,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4147") == std::string::npos);
   CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | TODO-4226, TODO-4220, TODO-4234 |") !=
+  CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | TODO-4220, TODO-4234 |") !=
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |") !=
         std::string::npos);
@@ -915,7 +913,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |") !=
         std::string::npos);
-  CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | TODO-4226, TODO-4214, TODO-4227 |") !=
+  CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | TODO-4214, TODO-4227 |") !=
         std::string::npos);
   CHECK(todo.find("| Semantic-product publication by module and fact family | TODO-4214, TODO-4227, TODO-4215, TODO-4240, TODO-4241 |") !=
         std::string::npos);
@@ -927,7 +925,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| AST transform hook conformance | TODO-4238, TODO-4239 |") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-pipeline stage handoff conformance | TODO-4226, TODO-4220, TODO-4234, TODO-4240 |") !=
+  CHECK(todo.find("| Compile-pipeline stage handoff conformance | TODO-4220, TODO-4234, TODO-4240 |") !=
         std::string::npos);
   CHECK(todo.find("| Architecture contract probe migration | TODO-4221, TODO-4235, TODO-4242 |") !=
         std::string::npos);
@@ -1013,6 +1011,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("✓ TODO-4213: Route definition workers through the shared validation plan.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4222: Route execution validation through the shared plan.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4226: Add a structured semantic diagnostic/result sink.") !=
         std::string::npos);
 
   CHECK(vmMath.find("TEST_CASE(\"runs vm with qualified math names\")") != std::string::npos);

@@ -1,6 +1,7 @@
 #include "third_party/doctest.h"
 
 #include "primec/SemanticProduct.h"
+#include "primec/SemanticValidationResult.h"
 #include "primec/SemanticsBenchmark.h"
 #include "primec/SemanticsDefinitionPartitioner.h"
 #include "primec/SemanticsDefinitionPrepass.h"
@@ -84,6 +85,41 @@ bool validateWithWorkerCount(primec::Semantics &semantics,
 }
 
 } // namespace
+
+TEST_CASE("semantic validation result sink preserves first-error adapter") {
+  std::string legacyError;
+  primec::SemanticDiagnosticInfo diagnostics;
+  primec::SemanticValidationResultSink sink(legacyError, &diagnostics, true);
+  sink.reset();
+
+  sink.capturePrimarySpanIfUnset(3, 5);
+  sink.addRelatedSpan(2, 1, "definition: /main");
+  CHECK_FALSE(sink.fail("first fatal"));
+
+  CHECK(legacyError == "first fatal");
+  REQUIRE(diagnostics.records.size() == 1);
+  CHECK(diagnostics.message == "first fatal");
+  CHECK(diagnostics.records[0].message == "first fatal");
+  CHECK(diagnostics.records[0].hasPrimarySpan);
+  CHECK(diagnostics.records[0].primarySpan.line == 3);
+  REQUIRE(diagnostics.records[0].relatedSpans.size() == 1);
+  CHECK(diagnostics.records[0].relatedSpans[0].label == "definition: /main");
+
+  legacyError.clear();
+  std::vector<primec::SemanticDiagnosticRecord> records;
+  primec::SemanticDiagnosticRecord second;
+  second.message = "second fatal";
+  records.push_back(second);
+  primec::SemanticDiagnosticRecord third;
+  third.message = "third fatal";
+  records.push_back(third);
+
+  CHECK_FALSE(sink.finalizeCollectedDiagnostics(records));
+  CHECK(legacyError == "second fatal");
+  REQUIRE(diagnostics.records.size() == 2);
+  CHECK(diagnostics.records[0].message == "second fatal");
+  CHECK(diagnostics.records[1].message == "third fatal");
+}
 
 TEST_CASE("definition partitioner emits deterministic balanced contiguous chunks") {
   const std::string source = R"(

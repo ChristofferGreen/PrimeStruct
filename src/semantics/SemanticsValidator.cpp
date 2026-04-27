@@ -98,9 +98,7 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       defaultEffects_(defaultEffects),
       entryDefaultEffects_(entryDefaultEffects),
       validationPlan_(std::move(validationPlan)),
-      diagnosticInfo_(diagnosticInfo),
-      diagnosticSink_(diagnosticInfo),
-      collectDiagnostics_(collectDiagnostics),
+      resultSink_(error, diagnosticInfo, collectDiagnostics),
       benchmarkSemanticDefinitionValidationWorkerCount_(
           benchmarkSemanticDefinitionValidationWorkerCount),
       benchmarkSemanticPhaseCountersEnabled_(benchmarkSemanticPhaseCountersEnabled),
@@ -112,7 +110,7 @@ SemanticsValidator::SemanticsValidator(const Program &program,
         std::make_shared<SemanticValidationPlan>(
             buildSemanticValidationPlan(program_, entryPath_));
   }
-  diagnosticSink_.reset();
+  resultSink_.reset();
   if (benchmarkSemanticGraphLocalAutoLegacyKeyShadow ||
       benchmarkSemanticGraphLocalAutoLegacySideChannelShadow) {
     graphLocalAutoBenchmarkShadow_ = std::make_unique<GraphLocalAutoBenchmarkShadow>(
@@ -400,7 +398,7 @@ bool SemanticsValidator::run() {
           std::string("semantic validator exception in ") + stageName);
     }
   };
-  if (collectDiagnostics_ &&
+  if (shouldCollectStructuredDiagnostics() &&
       !runStage("collectDuplicateDefinitionDiagnostics",
                 [&] { return collectDuplicateDefinitionDiagnostics(); })) {
     return false;

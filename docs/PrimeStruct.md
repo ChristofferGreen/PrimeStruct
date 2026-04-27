@@ -773,10 +773,10 @@ Planned validation-context split contract:
 - This split is a prerequisite for later parallel validation because worker tasks need isolated validation state and one
   deterministic merge surface for published semantic facts and diagnostics.
 
-Planned structured diagnostic-sink contract:
-- `SemanticsValidator` should publish diagnostics through one structured sink instead of relying on a shared mutable
-  `error_` field as semantic truth.
-- The sink should carry enough structure for later semantic-product publication and deterministic merging:
+Structured diagnostic-sink contract:
+- `SemanticsValidator` publishes fatal diagnostics through one `SemanticValidationResultSink` that owns the adapter
+  between structured diagnostic records and the legacy first-error string surface.
+- The sink carries enough structure for later semantic-product publication and deterministic merging:
   - severity
   - stable diagnostic code/category
   - primary message
@@ -785,16 +785,15 @@ Planned structured diagnostic-sink contract:
   - stable semantic node identity or sort key when the diagnostic is attached to lowering-facing facts
 - In the current single-threaded path, the first-error rule remains unchanged:
   - validation still stops at the first emitted fatal diagnostic for the active entrypoint
-  - replacing `error_` must not broaden validation into multi-error mode unless that is an explicit later design change
+  - the legacy error string remains an output adapter and scratch surface, not the validator's diagnostic publication
+    boundary
 - The sink should separate production from policy:
   - validators emit structured diagnostics into the sink
   - the compile pipeline decides whether to stop immediately, buffer, dump, or publish them
-- Temporary adapters are acceptable during migration, but they must convert from structured diagnostics to the old
-  single-error surface at the boundary rather than reintroducing string-only validator state internally.
-- Completion criteria:
-  - validator code no longer depends on shared mutable string/error slots as the source of semantic failure state
-  - deterministic first-error behavior is preserved on existing entrypoints
-  - the same structured diagnostic records can later participate in semantic-product dumps and parallel merge ordering
+- Current compatibility adapters convert structured diagnostics back to the old single-error surface at the boundary
+  while preserving existing byte-stable messages and collected-diagnostic ordering.
+- Follow-up work may add stable diagnostic codes, severity modeling, and merge keys to the same sink/result surface
+  without reintroducing string-only validator publication state.
 
 ### Language ethos (v1)
 - **Simplified and coherent C:** keep the core small, explicit, and close to how the machine behaves when it matters.
