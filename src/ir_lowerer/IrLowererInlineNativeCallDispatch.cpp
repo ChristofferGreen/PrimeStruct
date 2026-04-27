@@ -816,6 +816,21 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       }
     }
   }
+  auto isVectorReturningCallTarget = [&](const Expr &receiverExpr) {
+    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
+      return false;
+    }
+    const Definition *receiverDef = resolveDefinitionCallFn(receiverExpr);
+    if (receiverDef == nullptr) {
+      return false;
+    }
+    std::string collectionName;
+    std::vector<std::string> collectionArgs;
+    return inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) &&
+           collectionName == "vector" && collectionArgs.size() == 1;
+  };
+
+  bool deferVectorReturningMutatorCall = false;
   auto tryEmitVectorMutatorCallFormExpr = [&]() {
     const bool isVectorMutatorCall =
         isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") ||
@@ -885,6 +900,10 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         }
         std::swap(methodExpr.argNames[0], methodExpr.argNames[receiverIndex]);
       }
+      if (isVectorReturningCallTarget(methodExpr.args.front())) {
+        deferVectorReturningMutatorCall = true;
+        return InlineCallDispatchResult::NotHandled;
+      }
       const std::string priorError = error;
       const Definition *callee = resolveMethodCallDefinitionFn(methodExpr, localsIn);
       if (callee == nullptr) {
@@ -908,19 +927,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
     return vectorMutatorCallFormResult;
   }
-  auto isVectorReturningCallTarget = [&](const Expr &receiverExpr) {
-    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
-      return false;
-    }
-    const Definition *receiverDef = resolveDefinitionCallFn(receiverExpr);
-    if (receiverDef == nullptr) {
-      return false;
-    }
-    std::string collectionName;
-    std::vector<std::string> collectionArgs;
-    return inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) &&
-           collectionName == "vector" && collectionArgs.size() == 1;
-  };
+  if (deferVectorReturningMutatorCall) {
+    return InlineCallDispatchResult::NotHandled;
+  }
   if (!expr.isMethodCall && !expr.args.empty() &&
       isVectorReturningCallTarget(expr.args.front())) {
     std::string helperName;
