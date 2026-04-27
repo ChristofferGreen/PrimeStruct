@@ -591,4 +591,68 @@ bool getBuiltinCollectionName(const Expr &expr, std::string &out) {
   return false;
 }
 
+bool getExperimentalVectorConstructorElementTypeAlias(const Expr &expr,
+                                                      std::string &out) {
+  out.clear();
+  if (expr.kind != Expr::Kind::Call || expr.name.empty() ||
+      expr.isMethodCall || !expr.templateArgs.empty()) {
+    return false;
+  }
+  std::string scopedName = resolveScopedExprName(expr);
+  if (!scopedName.empty() && scopedName.front() == '/') {
+    scopedName.erase(scopedName.begin());
+  }
+  const std::string prefix = "std/collections/experimental_vector/";
+  if (scopedName.rfind(prefix, 0) != 0) {
+    return false;
+  }
+  std::string alias = scopedName.substr(prefix.size());
+  if (alias.empty() || alias.find('/') != std::string::npos ||
+      alias.find("__") != std::string::npos) {
+    return false;
+  }
+  const char *const reservedAliases[] = {
+      "Vector",
+      "vector",
+      "vectorNew",
+      "vectorSingle",
+      "vectorPair",
+      "vectorTriple",
+      "vectorQuad",
+      "vectorQuint",
+      "vectorSext",
+      "vectorSept",
+      "vectorOct",
+      "vectorAlloc",
+      "vectorSlotUnsafe",
+      "vectorDataPtr",
+      "vectorInitSlot",
+      "vectorDropSlot",
+      "vectorTakeSlot",
+      "vectorBorrowSlot",
+      "vectorDropRange",
+      "vectorMovePrefixToBuffer",
+      "vectorCheckShape",
+      "vectorCheckIndex",
+      "vectorReserveInternal",
+      "vectorCount",
+      "vectorCapacity",
+      "vectorPush",
+      "vectorPop",
+      "vectorReserve",
+      "vectorClear",
+      "vectorRemoveAt",
+      "vectorRemoveSwap",
+      "vectorAt",
+      "vectorAtUnsafe",
+  };
+  for (const char *reserved : reservedAliases) {
+    if (alias == reserved) {
+      return false;
+    }
+  }
+  out = std::move(alias);
+  return true;
+}
+
 } // namespace primec::ir_lowerer

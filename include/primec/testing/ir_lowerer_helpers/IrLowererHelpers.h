@@ -70,5 +70,6 @@ bool getBuiltinGpuName(const Expr &expr, std::string &out);
 bool getBuiltinArrayAccessName(const Expr &expr, std::string &out);
 bool getBuiltinPointerName(const Expr &expr, std::string &out);
 bool getBuiltinCollectionName(const Expr &expr, std::string &out);
+bool getExperimentalVectorConstructorElementTypeAlias(const Expr &expr,
+                                                      std::string &out);
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
-

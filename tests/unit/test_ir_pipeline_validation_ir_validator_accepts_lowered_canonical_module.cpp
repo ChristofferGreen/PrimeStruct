@@ -287,6 +287,27 @@ TEST_CASE("ir lowerer helper keeps parser-shaped canonical vector constructor bu
   CHECK(builtin == "vector");
 }
 
+TEST_CASE("ir lowerer helper recognizes experimental vector element alias constructor") {
+  primec::Expr rewrittenVectorCall;
+  rewrittenVectorCall.kind = primec::Expr::Kind::Call;
+  rewrittenVectorCall.name = "i32";
+  rewrittenVectorCall.namespacePrefix = "/std/collections/experimental_vector";
+
+  std::string elementType;
+  CHECK(primec::ir_lowerer::getExperimentalVectorConstructorElementTypeAlias(
+      rewrittenVectorCall, elementType));
+  CHECK(elementType == "i32");
+
+  primec::Expr helperCall = rewrittenVectorCall;
+  helperCall.name = "vectorCount";
+  CHECK_FALSE(primec::ir_lowerer::getExperimentalVectorConstructorElementTypeAlias(
+      helperCall, elementType));
+
+  helperCall.name = "vector";
+  CHECK_FALSE(primec::ir_lowerer::getExperimentalVectorConstructorElementTypeAlias(
+      helperCall, elementType));
+}
+
 TEST_CASE("ir lowerer helper keeps bare array builtin inside namespaced stdlib internals") {
   primec::Expr namespacedArrayCall;
   namespacedArrayCall.kind = primec::Expr::Kind::Call;

@@ -373,6 +373,24 @@
           if (directCallee == nullptr && isDirectCollectionHelperPath(resolvedExprPath)) {
             directCallee = findDirectHelperDefinition(resolvedExprPath);
           }
+          if (directCallee == nullptr) {
+            std::string experimentalVectorElementType;
+            if (getExperimentalVectorConstructorElementTypeAlias(
+                    expr, experimentalVectorElementType)) {
+              Expr rewrittenVectorCtor = expr;
+              rewrittenVectorCtor.name = "/std/collections/experimental_vector/vector";
+              rewrittenVectorCtor.namespacePrefix.clear();
+              rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};
+              if (const Definition *vectorCtor =
+                      resolveDirectHelperDefinition(rewrittenVectorCtor)) {
+                if (!emitInlineDefinitionCall(
+                        rewrittenVectorCtor, *vectorCtor, localsIn, true)) {
+                  return false;
+                }
+                return true;
+              }
+            }
+          }
           if (directCallee != nullptr) {
             if (ir_lowerer::isStructDefinition(*directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
