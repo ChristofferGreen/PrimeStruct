@@ -17,7 +17,17 @@ bool isSpecializedExperimentalCollectionTypeName(const std::string &typeName) {
   return typeName.rfind("std/collections/experimental_map/Map__", 0) == 0 ||
          typeName.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
          typeName.rfind("std/collections/experimental_vector/Vector__", 0) == 0 ||
-         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+         typeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+         typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
+bool isExperimentalSoaVectorTypeName(const std::string &typeName) {
+  return typeName == "SoaVector" ||
+         typeName == "std/collections/experimental_soa_vector/SoaVector" ||
+         typeName == "/std/collections/experimental_soa_vector/SoaVector" ||
+         typeName.rfind("std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+         typeName.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
 }
 
 LayoutFieldBinding layoutFieldBindingFromSemanticProduct(
@@ -69,7 +79,8 @@ bool extractExplicitLayoutFieldBinding(const Expr &expr, LayoutFieldBinding &bin
     if (!transform.arguments.empty()) {
       continue;
     }
-    if (transform.templateArgs.empty() && isSpecializedExperimentalCollectionTypeName(transform.name)) {
+    if ((transform.templateArgs.empty() && isSpecializedExperimentalCollectionTypeName(transform.name)) ||
+        isExperimentalSoaVectorTypeName(transform.name)) {
       bindingOut.typeName = transform.name;
     } else {
       bindingOut.typeName = normalizeCollectionBindingTypeName(transform.name);

@@ -518,6 +518,39 @@ TEST_CASE("ir lowerer struct type helpers report definition slot layout diagnost
     auto collectStructLayoutFields = [](const std::string &structPath,
                                         std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
       out.clear();
+      if (structPath == "/pkg/ExperimentalSoaHolder") {
+        out.push_back({"storage", "SoaVector", "Particle", false});
+        return true;
+      }
+      return false;
+    };
+    primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+    std::unordered_set<std::string> layoutStack;
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    std::string error;
+    REQUIRE(primec::ir_lowerer::resolveStructSlotLayoutFromDefinitionFields("/pkg/ExperimentalSoaHolder",
+                                                                             collectStructLayoutFields,
+                                                                             resolveDefinitionNamespacePrefix,
+                                                                             resolveStructTypeName,
+                                                                             valueKindFromTypeName,
+                                                                             layoutCache,
+                                                                             layoutStack,
+                                                                             layout,
+                                                                             error));
+    CHECK(error.empty());
+    CHECK(layout.totalSlots == 4);
+    REQUIRE(layout.fields.size() == 1);
+    CHECK(layout.fields[0].name == "storage");
+    CHECK(layout.fields[0].slotOffset == 1);
+    CHECK(layout.fields[0].slotCount == 3);
+    CHECK(layout.fields[0].structPath.rfind(
+              "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
+  }
+
+  {
+    auto collectStructLayoutFields = [](const std::string &structPath,
+                                        std::vector<primec::ir_lowerer::StructLayoutFieldInfo> &out) {
+      out.clear();
       if (structPath == "/pkg/BadTemplate") {
         out.push_back({"slot", "array", "i32", false});
         return true;

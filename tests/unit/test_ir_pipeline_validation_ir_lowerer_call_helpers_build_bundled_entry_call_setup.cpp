@@ -535,6 +535,25 @@ TEST_CASE("ir lowerer struct field binding helpers extract explicit envelopes") 
   CHECK(binding.typeName == "map");
   CHECK(binding.typeTemplateArg == "i32, bool");
 
+  primec::Expr experimentalSoaExpr;
+  primec::Transform experimentalSoaTransform;
+  experimentalSoaTransform.name = "SoaVector";
+  experimentalSoaTransform.templateArgs = {"Particle"};
+  experimentalSoaExpr.transforms = {publicTransform, experimentalSoaTransform};
+  CHECK(primec::ir_lowerer::extractExplicitLayoutFieldBinding(experimentalSoaExpr, binding));
+  CHECK(binding.typeName == "SoaVector");
+  CHECK(binding.typeTemplateArg == "Particle");
+
+  primec::Expr specializedSoaExpr;
+  primec::Transform specializedSoaTransform;
+  specializedSoaTransform.name =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  specializedSoaExpr.transforms = {publicTransform, specializedSoaTransform};
+  CHECK(primec::ir_lowerer::extractExplicitLayoutFieldBinding(specializedSoaExpr, binding));
+  CHECK(binding.typeName ==
+        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(binding.typeTemplateArg.empty());
+
   primec::Expr qualifierOnlyExpr;
   primec::Transform alignTransform;
   alignTransform.name = "align_bytes";

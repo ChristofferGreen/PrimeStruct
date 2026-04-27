@@ -168,6 +168,19 @@ bool resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
   return true;
 }
 
+std::string resolveSoaVectorFieldStructPath(const std::string &typeName,
+                                            const std::string &typeTemplateArg) {
+  if (!isBuiltinSoaVectorTypeName(typeName)) {
+    std::string specializedStructPath;
+    if (resolveSpecializedExperimentalSoaVectorStructPathFromTypeText(
+            buildTemplatedTypeName(typeName, typeTemplateArg),
+            specializedStructPath)) {
+      return specializedStructPath;
+    }
+  }
+  return normalizeVectorStructPath(typeName);
+}
+
 } // namespace
 
 bool resolveStructSlotFieldByName(const std::vector<StructSlotFieldInfo> &fields,
@@ -313,7 +326,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         info.structPath = normalizeVectorStructPath(binding.typeName);
         info.slotCount = isExperimentalVectorTypeName(binding.typeName) ? 4 : 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
-        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, binding.typeTemplateArg);
         info.slotCount = 3;
       } else if (normalizeCollectionBindingTypeName(binding.typeName) == "Result") {
         std::vector<std::string> args;
@@ -371,7 +384,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
       }
       if (splitTemplateTypeName(binding.typeName, inlineTemplateBase, inlineTemplateArg) &&
           normalizeCollectionBindingTypeName(inlineTemplateBase) == "soa_vector") {
-        info.structPath = normalizeVectorStructPath(inlineTemplateBase);
+        info.structPath = resolveSoaVectorFieldStructPath(inlineTemplateBase, inlineTemplateArg);
         info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
@@ -413,7 +426,7 @@ bool resolveStructSlotLayoutFromDefinitionFields(
         continue;
       }
       if (normalizeCollectionBindingTypeName(binding.typeName) == "soa_vector") {
-        info.structPath = normalizeVectorStructPath(binding.typeName);
+        info.structPath = resolveSoaVectorFieldStructPath(binding.typeName, "");
         info.slotCount = 3;
         layout.fields.push_back(info);
         offset += info.slotCount;
