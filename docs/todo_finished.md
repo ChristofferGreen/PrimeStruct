@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4245: Plan dynamic vector growth and runtime storage support
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred semantic-product/backend/tooling follow-up
+  - scope: Add the first concrete runtime/storage design slice for dynamic
+    vector growth beyond current fixed-capacity behavior, including one
+    executable prototype or guarded runtime helper path.
+  - acceptance:
+    - The design records ownership for allocation, layout, drop, and capacity
+      growth across C++/VM/native support boundaries.
+    - One focused runtime or compile-run case exercises the prototype or
+      guarded helper path without changing unsupported backend behavior
+      silently.
+    - Unsupported backends keep deterministic diagnostics for dynamic growth.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after one executable storage-support slice is designed and
+    prototyped or gated; full dynamic collection storage remains follow-up
+    work.
+  - finished_at: 2026-04-28
+  - evidence: Recorded the completed VM/native vector runtime-storage slice:
+    vector locals use a heap-backed `count/capacity/data_ptr` record,
+    push/reserve growth reallocates backing storage while preserving existing
+    elements, and existing VM/native compile-run coverage exercises reserve
+    growth, push growth, value preservation, and deterministic diagnostics at
+    the remaining `256` dynamic-capacity ceiling. Updated PrimeStruct and
+    syntax-spec wording, source-lock assertions, and live TODO queue state.
+    Split the worthwhile remaining capacity-ceiling work into `TODO-4281` and
+    deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4252: Promote `soa_vector` docs after compatibility cleanup
   - owner: ai
   - created_at: 2026-04-27

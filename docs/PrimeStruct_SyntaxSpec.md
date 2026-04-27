@@ -882,13 +882,17 @@ available during semantic validation.
 Current ownership contract:
 - `pop` / `clear` require drop-trivial element types.
 - Builtin `vector` `remove_swap` and `remove_at` now support ownership-sensitive and relocation-sensitive
-  element types on the fixed-capacity builtin vector runtime path, because lowered removed-slot destruction and
-  survivor-motion paths are both wired. There is no corresponding builtin `soa_vector` indexed-removal surface yet.
+  element types on the capacity-guarded heap-backed builtin vector runtime path, because lowered removed-slot
+  destruction and survivor-motion paths are both wired. There is no corresponding builtin `soa_vector`
+  indexed-removal surface yet.
 - `push` / `reserve` require relocation-trivial element types.
 
-Implementation status note: VM/native currently still implement vectors as fixed-capacity locals. `TODO-4245` tracks
-the first dynamic vector runtime/storage design slice; add a separate dynamic-storage TODO before changing runtime
-behavior outside that scope.
+Implementation status note: VM/native now use heap-backed vector locals with a
+`count/capacity/data_ptr` record; push/reserve growth reallocates backing
+storage and preserves existing elements. The remaining runtime ceiling is the
+local dynamic-capacity limit (`256`), and `TODO-4281` tracks lifting that limit
+once the allocator/runtime contract is widened. Add a separate dynamic-storage
+TODO before changing runtime behavior outside that scope.
 
 ### 8.3 Maps
 

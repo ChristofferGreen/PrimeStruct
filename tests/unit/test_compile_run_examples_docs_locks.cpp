@@ -135,11 +135,15 @@ TEST_CASE("spinning cube native-window status avoids inactive TODO pointers") {
         std::string::npos);
 }
 
-TEST_CASE("vector dynamic-storage docs point at active TODO pointers") {
+TEST_CASE("vector dynamic-storage docs lock completed first slice") {
   std::filesystem::path primeStructPath = std::filesystem::path("..") / "docs" / "PrimeStruct.md";
   std::filesystem::path syntaxSpecPath = std::filesystem::path("..") / "docs" / "PrimeStruct_SyntaxSpec.md";
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";
+  std::filesystem::path vmVectorLimitsPath =
+      std::filesystem::path("..") / "tests" / "unit" / "test_compile_run_vm_collections_vector_limits_a.cpp";
+  std::filesystem::path nativeVectorLimitsPath = std::filesystem::path("..") / "tests" / "unit" /
+                                                 "test_compile_run_native_backend_collections_mutators_and_limits_a.cpp";
   if (!std::filesystem::exists(primeStructPath)) {
     primeStructPath = std::filesystem::current_path() / "docs" / "PrimeStruct.md";
   }
@@ -152,31 +156,56 @@ TEST_CASE("vector dynamic-storage docs point at active TODO pointers") {
   if (!std::filesystem::exists(todoFinishedPath)) {
     todoFinishedPath = std::filesystem::current_path() / "docs" / "todo_finished.md";
   }
+  if (!std::filesystem::exists(vmVectorLimitsPath)) {
+    vmVectorLimitsPath =
+        std::filesystem::current_path() / "tests" / "unit" / "test_compile_run_vm_collections_vector_limits_a.cpp";
+  }
+  if (!std::filesystem::exists(nativeVectorLimitsPath)) {
+    nativeVectorLimitsPath = std::filesystem::current_path() / "tests" / "unit" /
+                             "test_compile_run_native_backend_collections_mutators_and_limits_a.cpp";
+  }
   REQUIRE(std::filesystem::exists(primeStructPath));
   REQUIRE(std::filesystem::exists(syntaxSpecPath));
   REQUIRE(std::filesystem::exists(todoPath));
   REQUIRE(std::filesystem::exists(todoFinishedPath));
+  REQUIRE(std::filesystem::exists(vmVectorLimitsPath));
+  REQUIRE(std::filesystem::exists(nativeVectorLimitsPath));
 
   const std::string primeStructDoc = readFile(primeStructPath.string());
   const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
   const std::string todo = readFile(todoPath.string());
   const std::string todoFinished = readFile(todoFinishedPath.string());
+  const std::string vmVectorLimits = readFile(vmVectorLimitsPath.string());
+  const std::string nativeVectorLimits = readFile(nativeVectorLimitsPath.string());
 
-  CHECK(primeStructDoc.find("`TODO-4245` tracks the first dynamic vector runtime/storage") !=
+  CHECK(primeStructDoc.find("VM/native now use a heap-backed\n    `count/capacity/data_ptr` record") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("add a separate concrete TODO before changing runtime semantics outside that scope") !=
+  CHECK(primeStructDoc.find("push/reserve growth\n    reallocates backing storage while preserving existing elements") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("add a separate concrete dynamic-storage TODO before changing runtime behavior") !=
+  CHECK(primeStructDoc.find("`TODO-4281`\n    tracks lifting the remaining local dynamic-capacity limit beyond `256`") !=
         std::string::npos);
-  CHECK(syntaxSpecDoc.find("`TODO-4245` tracks\nthe first dynamic vector runtime/storage design slice") !=
+  CHECK(syntaxSpecDoc.find("VM/native now use heap-backed vector locals with a\n`count/capacity/data_ptr` record") !=
         std::string::npos);
-  CHECK(syntaxSpecDoc.find("add a separate dynamic-storage TODO before changing runtime\nbehavior outside that scope") !=
+  CHECK(syntaxSpecDoc.find("`TODO-4281` tracks lifting that limit") !=
+        std::string::npos);
+  CHECK(vmVectorLimits.find("runs vm vector reserve growth through count and capacity helpers") !=
+        std::string::npos);
+  CHECK(vmVectorLimits.find("preserves vm vector values across push growth") !=
+        std::string::npos);
+  CHECK(nativeVectorLimits.find("grows native vector push beyond initial capacity") !=
+        std::string::npos);
+  CHECK(nativeVectorLimits.find("preserves native vector values across reserve growth") !=
         std::string::npos);
   CHECK(primeStructDoc.find("No active TODO currently tracks migration to dynamic storage") ==
         std::string::npos);
   CHECK(primeStructDoc.find("No active TODO currently tracks full dynamic vector") ==
         std::string::npos);
   CHECK(syntaxSpecDoc.find("No active TODO\ncurrently tracks full dynamic vector runtime parity") ==
+        std::string::npos);
+  CHECK(todo.find("TODO-4245") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4245: Plan dynamic vector growth and runtime storage support") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4281: Lift vector dynamic capacity limit") !=
         std::string::npos);
   CHECK(todo.find("TODO-4189") == std::string::npos);
   CHECK(todo.find("TODO-4192") == std::string::npos);
@@ -1109,23 +1138,24 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4245: Plan dynamic vector growth and runtime storage support") !=
+                  "- TODO-4253: Implement brace-only construction semantics") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4253: Implement brace-only construction semantics") !=
+                  "- TODO-4254: Migrate generated construction surfaces") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
         std::string::npos);
-  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4245") !=
+  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4245") ==
+        std::string::npos);
+  CHECK(todo.find("- Deferred dynamic runtime storage follow-up: TODO-4281") !=
         std::string::npos);
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4245: Plan dynamic vector growth and runtime storage support") !=
+                  "- TODO-4253: Implement brace-only construction semantics") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4245: Plan dynamic vector growth and runtime storage support",
       "TODO-4253: Implement brace-only construction semantics",
       "TODO-4254: Migrate generated construction surfaces",
       "TODO-4255: Migrate collection construction surfaces",
@@ -1136,6 +1166,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4260: Add `pick` semantic validation",
       "TODO-4261: Lower and execute `pick` matches",
       "TODO-4262: Add public sum-type examples",
+      "TODO-4263: Design generic and unit sum variants",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1249,6 +1280,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4244") == std::string::npos);
   CHECK(todoFinished.find("TODO-4244: Decide the `soa_vector` maturity exit") !=
         std::string::npos);
+  CHECK(todo.find("TODO-4245") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4245: Plan dynamic vector growth and runtime storage support") !=
+        std::string::npos);
   CHECK(todo.find("TODO-4246") == std::string::npos);
   CHECK(todoFinished.find("TODO-4246: Define final `soa_vector` promotion contract") !=
         std::string::npos);
@@ -1301,7 +1335,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4281 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
@@ -1339,7 +1373,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4281 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=

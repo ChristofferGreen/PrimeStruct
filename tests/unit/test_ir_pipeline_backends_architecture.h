@@ -110,7 +110,7 @@ TEST_CASE("design doc records stdlib de-experimentalization policy") {
   CHECK(design.find("/std/collections/internal_soa_storage/*") != std::string::npos);
 }
 
-TEST_CASE("design doc records soa maturity track") {
+TEST_CASE("design doc records soa public collection contract") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path designPath = cwd / "docs" / "PrimeStruct.md";
   if (!std::filesystem::exists(designPath)) {
@@ -120,10 +120,11 @@ TEST_CASE("design doc records soa maturity track") {
   REQUIRE(std::filesystem::exists(designPath));
 
   const std::string design = readTextFile(designPath);
-  CHECK(design.find("### SoA Maturity Track") != std::string::npos);
-  CHECK(design.find("`soa_vector<T>` remains an incubating public extension") !=
+  CHECK(design.find("### SoA Public Collection Contract") != std::string::npos);
+  CHECK(design.find("`soa_vector<T>` is a promoted stdlib-owned public") !=
         std::string::npos);
   CHECK(design.find("/std/collections/soa_vector/*") != std::string::npos);
+  CHECK(design.find("Accepted compatibility namespace") != std::string::npos);
   CHECK(design.find("/std/collections/experimental_soa_vector/*") != std::string::npos);
   CHECK(design.find("/std/collections/internal_soa_storage/*") != std::string::npos);
 }

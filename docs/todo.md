@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4245: Plan dynamic vector growth and runtime storage support
+- TODO-4253: Implement brace-only construction semantics
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4253: Implement brace-only construction semantics
 - TODO-4254: Migrate generated construction surfaces
 - TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
@@ -81,10 +80,10 @@ Task template:
 - TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
 - TODO-4262: Add public sum-type examples
+- TODO-4263: Design generic and unit sum variants
 
 ### Priority Lanes (Current)
 
-- Deferred semantic-product/backend/tooling follow-ups: TODO-4245
 - Deferred algebraic types and brace-only construction: TODO-4253
   -> TODO-4254 -> TODO-4255 -> TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
@@ -93,10 +92,10 @@ Task template:
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
+- Deferred dynamic runtime storage follow-up: TODO-4281
 
 ### Execution Queue (Recommended)
 
-- TODO-4245: Plan dynamic vector growth and runtime storage support
 - TODO-4253: Implement brace-only construction semantics
 - TODO-4254: Migrate generated construction surfaces
 - TODO-4255: Migrate collection construction surfaces
@@ -123,6 +122,7 @@ Task template:
 - TODO-4273: Add heterogeneous value-pack inference
 - TODO-4277: Add tuple destructuring sugar
 - TODO-4278: Integrate multi-wait with stdlib tuple
+- TODO-4281: Lift vector dynamic capacity limit
 
 ### PrimeStruct Coverage Snapshot
 
@@ -133,7 +133,7 @@ Task template:
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4281 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | none |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -161,7 +161,7 @@ Task template:
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4281 |
 | De-experimentalization surface and namespace parity | none |
 | `soa_vector` maturity and canonical surface parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
@@ -289,25 +289,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4245: Plan dynamic vector growth and runtime storage support
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred semantic-product/backend/tooling follow-up
-  - scope: Add the first concrete runtime/storage design slice for dynamic
-    vector growth beyond current fixed-capacity behavior, including one
-    executable prototype or guarded runtime helper path.
-  - acceptance:
-    - The design records ownership for allocation, layout, drop, and capacity
-      growth across C++/VM/native support boundaries.
-    - One focused runtime or compile-run case exercises the prototype or
-      guarded helper path without changing unsupported backend behavior
-      silently.
-    - Unsupported backends keep deterministic diagnostics for dynamic growth.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after one executable storage-support slice is designed and
-    prototyped or gated; full dynamic collection storage remains follow-up
-    work.
 
 - [ ] TODO-4253: Implement brace-only construction semantics
   - owner: ai
@@ -1142,3 +1123,34 @@ Task template:
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
+
+- [ ] TODO-4281: Lift vector dynamic capacity limit
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred dynamic runtime storage follow-up
+  - scope: Lift the current VM/native vector local dynamic-capacity limit
+    beyond `256` now that vector locals use heap-backed
+    `count/capacity/data_ptr` storage and push/reserve growth paths are
+    executable.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererHelpers.{h,cpp}`,
+      `src/ir_lowerer/IrLowererFlowVectorHelpers.cpp`,
+      `src/ir_lowerer/IrLowererOperatorCollectionMutationHelpers.cpp`,
+      `tests/unit/test_compile_run_vm_collections_vector_limits_a.cpp`, and
+      `tests/unit/test_compile_run_native_backend_collections_mutators_and_limits_*.cpp`.
+    - Preserve deterministic allocation-failure diagnostics for requests that
+      still exceed the widened runtime/allocator contract.
+    - Update docs and source locks that mention the `256` ceiling in the same
+      change.
+  - acceptance:
+    - VM and native vector literals, `reserve`, and repeated `push` can grow
+      past the old `256` local dynamic-capacity limit for supported element
+      kinds.
+    - Out-of-range folded and runtime capacity requests still produce stable
+      diagnostics instead of silent wraparound or backend faults.
+    - Existing ownership, relocation, drop, and borrowed-access behavior stays
+      stable across growth.
+    - Docs record the new capacity contract and any remaining backend limits.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the old `256` ceiling is either removed or replaced by
+    a documented wider allocator/runtime bound with VM/native coverage.

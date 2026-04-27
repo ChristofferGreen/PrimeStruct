@@ -2036,7 +2036,7 @@ here.
   map-only and returns `bool`. `at` performs bounds checking; `at_unsafe` does not. In VM/native backends, an
   out-of-bounds `at` aborts execution (prints a diagnostic to stderr and returns exit code `3`).
 - **Runtime error reporting (VM/native):** runtime guards (bounds checks, missing map keys, invalid integer `pow`
-  exponents, and the current fixed-capacity vector-growth guard) abort execution, print a diagnostic to stderr, and
+  exponents, and the current vector dynamic-capacity guard) abort execution, print a diagnostic to stderr, and
   return exit code `3`. Parse/semantic/lowering errors remain exit code `2`.
 - **`print(value)` / `print_line(value)` / `print_error(value)` / `print_line_error(value)`:** stdout/stderr output
   primitives (statement-only). `print`/`print_line` require `io_out`, and `print_error`/`print_line_error` require
@@ -2116,12 +2116,12 @@ for(
 - **IR note:** VM/native IR lowering supports numeric/bool `array<T>{...}` and `vector<T>{...}` construction plus their
   current call-shaped compatibility helper paths, along with `count`/`at`/`at_unsafe` on those sequences. Map literals
   are supported in VM/native for numeric/bool values, and string-keyed maps work when the keys are string literals or
-  bindings backed by literals (string table entries). VM/native vectors currently use fixed capacity; `push`/`reserve`
-  succeed while capacity allows and error once exceeded, and shrinking helpers (`pop`, `clear`, `remove_at`,
-  `remove_swap`) continue to work against the fixed capacity until dynamic-vector parity lands. Vector locals now lower
-  through an explicit record header (`count`, `capacity`, `data_ptr`), and vector element access/mutation uses
-  `data_ptr` indirection instead of fixed in-header element offsets. Vector constructors above the current VM/native
-  local capacity limit (`256`) are rejected during lowering with `vector literal exceeds local capacity limit (256)`,
+  bindings backed by literals (string table entries). VM/native vectors now lower through an explicit heap-backed
+  record header (`count`, `capacity`, `data_ptr`): `push`/`reserve` reallocate backing storage while capacity remains
+  within the current `256` dynamic-capacity ceiling and error once exceeded, and shrinking helpers (`pop`, `clear`,
+  `remove_at`, `remove_swap`) work against that heap-backed record. Vector element access/mutation uses `data_ptr`
+  indirection instead of fixed in-header element offsets. Vector constructors above the current VM/native local capacity
+  limit (`256`) are rejected during lowering with `vector literal exceeds local capacity limit (256)`,
   and `reserve` with out-of-range or negative integer literal expressions (including folded signed/unsigned
   `plus`/`minus`/`negate`, such as `plus(200i32, 57i32)`, `minus(1u64, 2u64)`, `plus(18446744073709551615u64, 1u64)`, or
   `negate(1i32)`) is also rejected at lowering time (`vector reserve exceeds local capacity limit (256)` / `vector
@@ -2151,9 +2151,13 @@ for(
     builtin map path, while the experimental stdlib map helper path now has VM/native `mapTryAt` coverage for string
     values.
   - String indexing in **`VM/native (limited)`** requires string literals or bindings backed by literals.
-  - `vector<T>` is specified as a C++-style dynamic contiguous sequence (`push`/`reserve` may grow capacity). VM/native
-    currently still enforce fixed-capacity growth limits. `TODO-4245` tracks the first dynamic vector runtime/storage
-    design slice; add a separate concrete TODO before changing runtime semantics outside that scope.
+  - `vector<T>` is specified as a C++-style dynamic contiguous sequence
+    (`push`/`reserve` may grow capacity). VM/native now use a heap-backed
+    `count/capacity/data_ptr` record for vector locals, so push/reserve growth
+    reallocates backing storage while preserving existing elements. `TODO-4281`
+    tracks lifting the remaining local dynamic-capacity limit beyond `256`;
+    add a separate concrete TODO before changing runtime semantics outside
+    that scope.
   - Stdlib collection helpers now share `ContainerError` for deterministic error payloads: `containerMissingKey()`
     (`1`), `containerIndexOutOfBounds()` (`2`), `containerEmpty()` (`3`), and `containerCapacityExceeded()` (`4`).
     `containerErrorStatus(err)` packs a status-only `Result<ContainerError>`, `containerErrorResult<T>(err)` packs a
@@ -3428,13 +3432,13 @@ bad_use_after_take() {
     helpers and whose fields are also drop-trivial. Builtin `vector`/`map`/`soa_vector` elements and structs with
     `Destroy` hooks are rejected for builtin `pop`/`clear`.
   - Current indexed-removal contract: builtin `vector` `remove_swap` and builtin `vector` `remove_at` now support
-    ownership-sensitive and relocation-sensitive element types on the fixed-capacity builtin runtime path. The lowerer
-    has a reusable lifecycle-aware destroy-at-pointer helper, a shared vector destroy-at-slot primitive, and shared
-    survivor-motion helpers, so both builtin indexed-removal helpers now destroy the removed slot and move survivors
-    without depending on relocation-trivial raw copies. Canonical `/std/collections/vector/*` indexed-removal helpers
-    on explicit experimental `Vector<T>` bindings remain exempt from builtin-runtime constraints because they route
-    onto the experimental `.prime` implementation instead. There is no corresponding builtin `soa_vector`
-    indexed-removal surface yet.
+    ownership-sensitive and relocation-sensitive element types on the capacity-guarded heap-backed builtin runtime
+    path. The lowerer has a reusable lifecycle-aware destroy-at-pointer helper, a shared vector destroy-at-slot
+    primitive, and shared survivor-motion helpers, so both builtin indexed-removal helpers now destroy the removed slot
+    and move survivors without depending on relocation-trivial raw copies. Canonical `/std/collections/vector/*`
+    indexed-removal helpers on explicit experimental `Vector<T>` bindings remain exempt from builtin-runtime constraints
+    because they route onto the experimental `.prime` implementation instead. There is no corresponding builtin
+    `soa_vector` indexed-removal surface yet.
   - Remaining live ownership/runtime migration work is now the builtin canonical `map<K, V>` growth
     surface follow-up beyond the current owning local numeric-map path. The lowerer now has a shared
     non-local grown-pointer write-back/repoint primitive for wrapper targets, and direct canonical
@@ -4388,11 +4392,13 @@ read-only path.
 - **Strings & IO:** string values are indices into the module string table; `PrintString`/`LoadStringByte` read from it.
   File operations use OS descriptors stored as `i64` values and must be explicitly closed or they close on scope end via
   lowering.
-- **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with count metadata plus contiguous element
-  slots. Vectors are specified as dynamic contiguous storage (heap-backed semantics), but VM/native currently implement
-  vectors as inline fixed-capacity locals. `TODO-4245` tracks the first dynamic vector runtime/storage design slice;
-  add a separate concrete dynamic-storage TODO before changing runtime behavior outside that scope. No reference
-  counting is performed.
+- **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with
+  count metadata plus contiguous element slots. VM/native vector locals use a
+  heap-backed `count/capacity/data_ptr` record; push/reserve growth reallocates
+  that backing storage and preserves existing elements, while the current
+  `256` local dynamic-capacity limit remains in force. `TODO-4281` tracks
+  lifting that limit once the allocator/runtime contract is widened. No
+  reference counting is performed.
 - **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM
   runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
