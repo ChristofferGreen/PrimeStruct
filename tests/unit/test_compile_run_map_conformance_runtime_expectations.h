@@ -258,6 +258,15 @@ inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std
 }
 
 inline void expectExperimentalMapMethodParameterConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(
+        makeExperimentalMapMethodParameterConformanceSource(),
+        "map_experimental_method_parameter_" + emitMode,
+        emitMode,
+        "native backend only supports arithmetic/comparison");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(
       makeExperimentalMapMethodParameterConformanceSource(),
       "map_experimental_method_parameter_" + emitMode,

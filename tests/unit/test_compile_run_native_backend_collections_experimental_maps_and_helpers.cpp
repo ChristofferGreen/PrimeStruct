@@ -3207,7 +3207,7 @@ TEST_CASE("compiles and runs native wrapper map helpers on experimental map valu
   expectWrapperMapHelperExperimentalValueConformance("native");
 }
 
-TEST_CASE("compiles and runs native ownership-sensitive experimental map value methods") {
+TEST_CASE("rejects native ownership-sensitive experimental map value methods") {
   expectExperimentalMapOwnershipMethodConformance("native");
 }
 
@@ -3279,11 +3279,11 @@ TEST_CASE("compiles and runs native auto block inferred experimental map returns
   expectAutoBlockInferredExperimentalMapReturnConformance("native");
 }
 
-TEST_CASE("compiles and runs native inferred experimental map call receivers") {
+TEST_CASE("rejects native inferred experimental map call receivers") {
   expectInferredExperimentalMapCallReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map struct fields") {
+TEST_CASE("rejects native experimental map struct fields") {
   expectExperimentalMapStructFieldConformance("native");
 }
 
@@ -3295,7 +3295,7 @@ TEST_CASE("rejects native helper-wrapped inferred experimental map struct field 
   expectWrappedInferredExperimentalMapStructFieldConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map method parameters") {
+TEST_CASE("rejects native experimental map method parameter constructor expressions") {
   expectExperimentalMapMethodParameterConformance("native");
 }
 
@@ -3319,11 +3319,11 @@ TEST_CASE("compiles and runs native helper-wrapped experimental map helper recei
   expectWrappedExperimentalMapHelperReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native experimental map method receivers") {
+TEST_CASE("rejects native experimental map method receivers") {
   expectExperimentalMapMethodReceiverConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped experimental map method receivers") {
+TEST_CASE("rejects native helper-wrapped experimental map method receivers") {
   expectWrappedExperimentalMapMethodReceiverConformance("native");
 }
 
