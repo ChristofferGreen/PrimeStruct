@@ -521,6 +521,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa_vector ref_ref helper still accepts call and return escapes through same-path helper") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref_ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(13i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick([soa_vector<Particle>] values, [vector<i32>] idx) {
+  return(ref_ref(values, idx))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [soa_vector<Particle>] values{soa_vector<Particle>()}
+  [vector<i32>] idx{vector<i32>(0i32)}
+  return(plus(consume(ref_ref(values, idx)), plus(consume(values.ref_ref(idx)), pick(values, idx))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector helper-return bare ref keeps same-path helper across escapes") {
   const std::string source = R"(
 Particle() {
@@ -552,6 +585,44 @@ main() {
   [vector<i32>] idx{vector<i32>(0i32)}
   [auto] item{ref(cloneValues(), idx)}
   return(plus(item, plus(consume(ref(cloneValues(), idx)), pick(idx))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("soa_vector helper-return bare ref_ref keeps same-path helper across escapes") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref_ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(13i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick([vector<i32>] idx) {
+  return(ref_ref(cloneValues(), idx))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] idx{vector<i32>(0i32)}
+  [auto] item{ref_ref(cloneValues(), idx)}
+  return(plus(item, plus(consume(ref_ref(cloneValues(), idx)), pick(idx))))
 }
 )";
   std::string error;

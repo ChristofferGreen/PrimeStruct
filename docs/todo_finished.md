@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4204: Lock same-path SoA ref_ref helpers. Completed:
+  `tests/unit/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp`
+  now covers visible same-path `/soa_vector/ref_ref` user helpers for direct
+  `soa_vector<T>` receivers and helper-returned receivers across local
+  bindings, call arguments, and return expressions, preserving user-helper
+  shadowing parity with `/soa_vector/ref` without adding new active TODO debt.
+  Local validation is deferred per the lite workflow.
 - ✓ TODO-4203: Lock SoA ref_ref return diagnostics. Completed:
   `tests/unit/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp`
   now covers return-expression pending diagnostics for both direct and
