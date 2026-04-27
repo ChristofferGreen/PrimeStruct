@@ -2334,6 +2334,9 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "primec::stdlibSurfacePreferredSpellingForMember(") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "primec::StdlibSurfaceId::CollectionsSoaVectorHelpers") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "if (path == \"/std/collections/map/count\")") == std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "if (path == \"/std/collections/vector/count\" || path == \"/vector/count\")") ==
@@ -2370,7 +2373,17 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "  }") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count\")") !=
+            "stdlibSurfaceCanonicalHelperPath(\n"
+            "        primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "return \"/std/collections/experimental_soa_vector/soaVectorCount\"") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "matchesPath(\"/std/collections/count\")") ==
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"count\")") ==
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "normalizeCollectionReceiverTypeName(normalizedBase) == \"soa_vector\" ||\n"

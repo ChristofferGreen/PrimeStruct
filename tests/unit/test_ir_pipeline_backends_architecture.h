@@ -71,8 +71,11 @@ TEST_CASE("design doc records vector map bridge contract") {
                     "  first migrated family") != std::string::npos);
   CHECK(design.find("Template monomorphization now asks the same registry") !=
         std::string::npos);
-  CHECK(design.find("SoA and gfx\n"
-                    "  compatibility branches are queued under `TODO-4229` and `TODO-4230`") !=
+  CHECK(design.find("SoA helper compatibility is routed\n"
+                    "  through `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers`") !=
+        std::string::npos);
+  CHECK(design.find("The remaining gfx compatibility branch is queued under\n"
+                    "  `TODO-4230`") !=
         std::string::npos);
   CHECK(design.find("Out of scope for this bridge lane:** `array<T>` core ownership,") !=
         std::string::npos);
@@ -235,6 +238,9 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("StdlibSurfaceId::CollectionsSoaVectorHelpers") != std::string::npos);
   CHECK(source.find("\"collections.soa_vector_helpers\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/soa_vector\"") != std::string::npos);
+  CHECK(source.find("\"field_view\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/count\"") != std::string::npos);
+  CHECK(source.find("\"/soa_vector/to_aos\"") != std::string::npos);
   CHECK(source.find("\"soaVectorGetRef\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_soa_vector/soaVectorPush\"") !=
         std::string::npos);
@@ -297,7 +303,7 @@ TEST_CASE("map insert surface registry resolves legacy compatibility spellings")
         "/std/collections/map/insert_ref");
 }
 
-TEST_CASE("vector map helper surface registry resolves preferred compatibility spellings") {
+TEST_CASE("collection helper surface registry resolves preferred compatibility spellings") {
   CHECK(primec::stdlibSurfacePreferredSpellingForMember(
             primec::StdlibSurfaceId::CollectionsVectorHelpers,
             "/std/collections/vector/count",
@@ -322,6 +328,34 @@ TEST_CASE("vector map helper surface registry resolves preferred compatibility s
             primec::StdlibSurfaceId::CollectionsMapHelpers,
             "/not_map/count",
             "/std/collections/experimental_map/") == "");
+  CHECK(primec::stdlibSurfacePreferredSpellingForMember(
+            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            "/std/collections/soa_vector/count",
+            "/std/collections/experimental_soa_vector/") ==
+        "/std/collections/experimental_soa_vector/soaVectorCount");
+  CHECK(primec::stdlibSurfacePreferredSpellingForMember(
+            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            "/std/collections/count",
+            "/std/collections/experimental_soa_vector/") ==
+        "/std/collections/experimental_soa_vector/soaVectorCount");
+  CHECK(primec::stdlibSurfacePreferredSpellingForMember(
+            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            "/soa_vector/push",
+            "/std/collections/experimental_soa_vector/") ==
+        "/std/collections/experimental_soa_vector/soaVectorPush");
+  CHECK(primec::stdlibSurfacePreferredSpellingForMember(
+            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            "/std/collections/soa_vector/to_aos",
+            "/std/collections/experimental_soa_vector_conversions/") ==
+        "/std/collections/experimental_soa_vector_conversions/soaVectorToAos");
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            "/std/collections/experimental_soa_vector/soaVectorGetRef") ==
+        "/std/collections/soa_vector/get_ref");
+  CHECK(primec::stdlibSurfacePreferredSpellingForMember(
+            primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
+            "/not_soa/count",
+            "/std/collections/experimental_soa_vector/") == "");
 }
 
 TEST_CASE("map insert semantic rewrite uses stdlib surface adapter") {

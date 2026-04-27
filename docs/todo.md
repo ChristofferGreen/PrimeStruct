@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4229: Cut over SoA compatibility decisions to surface adapters
+- TODO-4230: Cut over gfx compatibility decisions to surface adapters
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4230: Cut over gfx compatibility decisions to surface adapters
 - TODO-4218: Make local-auto graph facts the exclusive inference authority
 - TODO-4231: Make query/try/on_error graph facts the exclusive authority
 - TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
@@ -81,11 +80,12 @@ Task template:
 - TODO-4220: Add semantic phase handoff conformance gates
 - TODO-4234: Add semantic budget and worker-parity release gates
 - TODO-4221: Retire stale semantic validator source locks
+- TODO-4235: Retire remaining semantic/lowerer architecture source locks
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4229 -> TODO-4230
-  -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
+- Semantic phase contract hardening: TODO-4230 -> TODO-4218
+  -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
   -> TODO-4238 -> TODO-4239
@@ -104,7 +104,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4229: Cut over SoA compatibility decisions to surface adapters
 - TODO-4230: Cut over gfx compatibility decisions to surface adapters
 - TODO-4218: Make local-auto graph facts the exclusive inference authority
 - TODO-4231: Make query/try/on_error graph facts the exclusive authority
@@ -168,7 +167,7 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4229, TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
@@ -230,13 +229,18 @@ Task template:
   `/std/collections/map/insert(_ref)`, compatibility `/map/insert(_ref)`,
   wrapper `/std/collections/mapInsert(_Ref)`, and experimental
   `/std/collections/experimental_map/mapInsert(_Ref)` spellings. Template
-  monomorphization now asks the registry for preferred experimental vector/map
-  helper spellings instead of carrying bespoke canonical-to-experimental maps,
-  and vector/map constructor compatibility is already metadata-backed by the
-  constructor surface adapters. Remaining removed-helper diagnostics, import
-  spellings, wildcard expansion, user-defined helper precedence, and lowerer
-  raw-path dispatch checks are syntax/provenance-owned or lowering-owned. SoA
-  and gfx branches are queued under `TODO-4229` and `TODO-4230`.
+  monomorphization now asks the registry for preferred experimental vector/map/SoA
+  helper spellings instead of carrying bespoke canonical-to-experimental maps.
+  SoA helper compatibility is routed through
+  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` for canonical
+  `/std/collections/soa_vector/*`, same-path `/soa_vector/*`, mixed
+  `/std/collections/{count,get,ref,reserve,push}`, experimental helper wrapper,
+  and conversion-helper spellings. Vector/map and SoA constructor compatibility
+  is already metadata-backed by the constructor surface adapters. Remaining
+  removed-helper diagnostics, import spellings, wildcard expansion,
+  user-defined helper precedence, field-view field-name lowering, and lowerer
+  raw-path dispatch checks are syntax/provenance-owned or lowering-owned. The
+  remaining gfx branch is queued under `TODO-4230`.
 - Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and
   runtime/storage redesign remain separate boundaries and should not be folded
   into the vector/map bridge tasks below.
@@ -310,30 +314,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4229: Cut over SoA compatibility decisions to surface adapters
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Move remaining non-syntax-owned SoA compatibility decisions behind
-    shared surface adapters, or document and test them as explicitly
-    syntax/provenance-owned.
-  - acceptance:
-    - No non-syntax-owned SoA compatibility decision remains in bespoke
-      semantic rewrite, validation, template-monomorph, or lowerer branches
-      outside the shared adapters.
-    - Retained experimental SoA compatibility imports remain accepted or reject
-      with the same diagnostics as before.
-    - Canonical SoA wrapper and conversion coverage remains stable for
-      C++/VM/native where supported.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop when the SoA inventory is empty except for documented
-    syntax/provenance-owned exceptions; leave gfx adapter work to TODO-4230.
-
 - [ ] TODO-4230: Cut over gfx compatibility decisions to surface adapters
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4229
   - scope: Move remaining non-syntax-owned gfx compatibility decisions behind
     shared surface adapters, or document and test them as explicitly
     syntax/provenance-owned.
@@ -701,7 +685,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred semantic-product/backend/tooling follow-up
-  - depends_on: TODO-4229
   - scope: Choose and implement the next concrete `soa_vector` maturity step:
     accept current incubating status with explicit compatibility ownership,
     retire one remaining experimental compatibility seam, or promote one

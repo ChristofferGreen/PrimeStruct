@@ -6,6 +6,21 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4229: Cut over SoA compatibility decisions to surface adapters.
+  Completed: SoA helper compatibility decisions now route through
+  `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` instead of the
+  template-monomorph bespoke canonical-to-experimental helper map. The adapter
+  records canonical `/std/collections/soa_vector/*`, same-path `/soa_vector/*`,
+  mixed `/std/collections/{count,get,ref,reserve,push}`, experimental helper
+  wrapper, and conversion-helper spellings, including `field_view` membership.
+  Template monomorphization asks the registry for preferred experimental SoA
+  helper spellings while preserving the existing borrowed-helper no-remap
+  behavior for `count_ref`, `get_ref`, and `ref_ref`. Remaining field-view
+  field-name lowering, removed-helper diagnostics, import/wildcard routing,
+  user-helper precedence, and lowerer raw-path dispatch checks are documented
+  as syntax/provenance-owned or lowering-owned. Focused registry and
+  source-lock coverage pins the adapter path. Local validation is deferred per
+  the lite workflow.
 - ✓ TODO-4224: Cut over vector/map compatibility decisions to surface adapters.
   Completed: template monomorphization now resolves vector/map helper
   compatibility through `StdlibSurfaceRegistry` instead of bespoke

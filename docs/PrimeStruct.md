@@ -2705,13 +2705,18 @@ re-defining it piecemeal.
   before it rewrites constructor-backed receivers to the canonical helper or
   non-local/builtin receivers to `/std/collections/map/insert_builtin`.
   Template monomorphization now asks the same registry for preferred
-  experimental vector/map helper spellings instead of carrying bespoke
-  canonical-to-experimental helper maps. Vector/map constructor compatibility
-  is already metadata-backed by the constructor surface adapters. Remaining
-  explicit removed-helper diagnostics, import spellings, wildcard expansion,
-  user-defined helper precedence, and lowerer raw-path dispatch checks are
-  syntax/provenance-owned or lowering-owned. SoA and gfx compatibility
-  branches are queued under `TODO-4229` and `TODO-4230`.
+  experimental vector/map/SoA helper spellings instead of carrying bespoke
+  canonical-to-experimental helper maps. SoA helper compatibility is routed
+  through `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` for canonical
+  `/std/collections/soa_vector/*`, same-path `/soa_vector/*`, mixed
+  `/std/collections/{count,get,ref,reserve,push}`, experimental helper wrapper,
+  and conversion-helper spellings. Vector/map and SoA constructor
+  compatibility is already metadata-backed by the constructor surface adapters.
+  Remaining explicit removed-helper diagnostics, import spellings, wildcard
+  expansion, user-defined helper precedence, field-view field-name lowering,
+  and lowerer raw-path dispatch checks are syntax/provenance-owned or
+  lowering-owned. The remaining gfx compatibility branch is queued under
+  `TODO-4230`.
 - **Internal implementation seams:** `/std/collections/experimental_vector/*`
   and `/std/collections/experimental_map/*` remain implementation-owned
   modules behind the canonical wrappers; direct imports should stay limited to
