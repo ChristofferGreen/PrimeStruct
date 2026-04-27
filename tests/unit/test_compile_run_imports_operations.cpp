@@ -755,7 +755,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("no-import root soa_vector to_aos method helper forms reject SoaVector-only canonical helper contract in C++ emitter") {
+TEST_CASE("no-import root soa_vector to_aos method helper forms reject during semantics in C++ emitter") {
   const std::string source = R"(
 [struct reflect]
 Particle() {
@@ -776,8 +776,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown struct type for layout: SoaColumn") !=
-        std::string::npos);
+  CHECK(readFile(errPath).find("binding initializer type mismatch") != std::string::npos);
 }
 
 TEST_CASE("no-import root soa_vector canonical to_aos_ref helper form runs empty builtin soa_vector contract in C++ emitter") {
