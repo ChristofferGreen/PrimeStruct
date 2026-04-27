@@ -386,6 +386,41 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(inlineParamHelpersSource.find(
             "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa_vector/count\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa_vector/get\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa_vector/get_ref\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa_vector/ref\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa_vector/ref_ref\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa_vector/to_aos\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find(
+            "matchesPath(\"/std/collections/soa_vector/to_aos_ref\")") !=
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/count\")") ==
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/get\")") ==
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/get_ref\")") ==
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/ref\")") ==
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/ref_ref\")") ==
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/to_aos\")") ==
+        std::string::npos);
+  CHECK(inlineParamHelpersSource.find("matchesPath(\"/soa_vector/to_aos_ref\")") ==
+        std::string::npos);
   CHECK(uninitializedStructInferenceSource.find(
             "soa_paths::isExperimentalSoaVectorSpecializedTypePath(normalizedReceiverStruct)") !=
         std::string::npos);

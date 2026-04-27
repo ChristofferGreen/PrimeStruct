@@ -6,6 +6,36 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred SoA finish
+  - scope: Remove remaining compiler-owned raw `soa_vector<T>` bridge
+    scaffolding that routes through special lowerer/emitter/backend behavior
+    when the canonical `SoaVector<T>` wrapper surface can own the same
+    semantics.
+  - acceptance:
+    - At least one remaining raw builtin `soa_vector<T>` count/get/ref,
+      push/reserve, field-view, or conversion bridge is deleted or converted to
+      a canonical wrapper path.
+    - Same-path user-helper shadowing and canonical helper diagnostics remain
+      stable for the migrated bridge family.
+    - Missing canonical wrapper facts fail deterministically instead of using a
+      hidden raw-builtin fallback.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after one real raw-builtin bridge family is removed or
+    normalized; add follow-up leaves if the audit finds unrelated bridge
+    families.
+  - finished_at: 2026-04-28
+  - evidence: Removed rooted `/soa_vector/{count,get,get_ref,ref,ref_ref,to_aos,to_aos_ref}`
+    acceptance from the lowerer inline parameter bridge so wrapper parameter
+    adaptation now recognizes only canonical `/std/collections/soa_vector/*`
+    helper paths. Added source-lock coverage that keeps canonical SoA bridge
+    paths present while preventing rooted raw helper paths from returning to
+    `IrLowererInlineParamHelpers.cpp`. Split the remaining direct-call raw
+    wrapper dispatch fallback into `TODO-4280`; deferred release reruns to CI
+    per the lite workflow.
+
 - [x] TODO-4249: Retire direct experimental SoA public imports
   - owner: ai
   - created_at: 2026-04-27
