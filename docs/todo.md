@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4227: Move semantic-product fact families into worker bundles
+- TODO-4215: Make semantic-product publication consume merged fact bundles
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4215: Make semantic-product publication consume merged fact bundles
 - TODO-4228: Factor and version the semantic-product boundary API
 - TODO-4216: Split semantic rewrites into an explicit pass manifest
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
@@ -80,11 +79,13 @@ Task template:
 - TODO-4230: Cut over gfx compatibility decisions to surface adapters
 - TODO-4218: Make local-auto graph facts the exclusive inference authority
 - TODO-4231: Make query/try/on_error graph facts the exclusive authority
+- TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
+- TODO-4225: Close call-target and helper-routing lowerer fallbacks
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4227 -> TODO-4215
-  -> TODO-4228 -> TODO-4216 -> TODO-4217 -> TODO-4224 -> TODO-4229 -> TODO-4230
+- Semantic phase contract hardening: TODO-4215 -> TODO-4228 -> TODO-4216
+  -> TODO-4217 -> TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
@@ -104,7 +105,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4227: Move semantic-product fact families into worker bundles
 - TODO-4215: Make semantic-product publication consume merged fact bundles
 - TODO-4228: Factor and version the semantic-product boundary API
 - TODO-4216: Split semantic rewrites into an explicit pass manifest
@@ -170,7 +170,7 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -178,8 +178,8 @@ Task template:
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4217, TODO-4224, TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
-| Validator entrypoint and benchmark-plumbing split | TODO-4227 |
-| Semantic-product publication by module and fact family | TODO-4227, TODO-4215, TODO-4240, TODO-4241 |
+| Validator entrypoint and benchmark-plumbing split | none |
+| Semantic-product publication by module and fact family | TODO-4215, TODO-4240, TODO-4241 |
 | Semantic-product public API factoring and versioning | TODO-4215, TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
 | IR lowerer compile-unit breakup | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
 | Backend validation/build ergonomics | TODO-4243 |
@@ -201,7 +201,7 @@ Task template:
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | TODO-4220, TODO-4234, TODO-4240 |
-| Semantic-product publication parity and deterministic ordering | TODO-4227, TODO-4215, TODO-4240 |
+| Semantic-product publication parity and deterministic ordering | TODO-4215, TODO-4240 |
 | Lowerer/source-composition contract coverage | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4217, TODO-4224, TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
@@ -302,28 +302,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4227: Move semantic-product fact families into worker bundles
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Move semantic-product fact-family buffers produced by definition
-    workers into the deterministic worker-result bundle now used by definition
-    validation workers.
-  - acceptance:
-    - Direct-call, bridge-path, binding, query, try, on_error, and callable
-      publication facts no longer merge through separate worker side channels.
-    - Existing worker-count semantic-product dump tests remain byte-stable.
-    - The merged result surface contains every fact family currently consumed
-      by semantic-product publication.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once current publication fact families are in the worker
-    result bundle; leave publication API changes to TODO-4215.
-
 - [ ] TODO-4215: Make semantic-product publication consume merged fact bundles
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4227
   - scope: Move semantic-product publication to consume the deterministic
     merged fact bundle produced by validation rather than pulling publication
     data back through mutable validator snapshot methods.

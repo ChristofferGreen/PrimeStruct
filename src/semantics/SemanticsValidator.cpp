@@ -256,6 +256,7 @@ void SemanticsValidator::releaseTransientSnapshotCaches() {
 
 void SemanticsValidator::invalidatePilotRoutingSemanticCollectors() {
   pilotRoutingSemanticCollectorsValid_ = false;
+  mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = false;
   std::vector<CollectedDirectCallTargetEntry>().swap(collectedDirectCallTargets_);
   std::vector<CollectedMethodCallTargetEntry>().swap(collectedMethodCallTargets_);
   std::vector<CollectedBridgePathChoiceEntry>().swap(collectedBridgePathChoices_);

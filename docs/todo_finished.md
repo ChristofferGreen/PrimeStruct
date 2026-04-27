@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4227: Move semantic-product fact families into worker bundles.
+  Completed: definition-worker validation now collects a full
+  `SemanticPublicationSurface` into each `SemanticDefinitionWorkerResultBundle`
+  instead of returning callable and `on_error` side channels. The root
+  parallel-definition pass deterministically merges direct-call, method-call,
+  bridge-path, callable, type metadata, struct-field, binding, return,
+  local-auto, query, try, and `on_error` fact families into one worker
+  publication surface, then semantic-product publication consumes that merged
+  surface when available. Source-lock coverage now pins the full worker
+  publication boundary and rejects the old callable/on_error-only merge
+  helpers. Local validation is deferred per the lite workflow.
 - ✓ TODO-4214: Introduce deterministic worker result bundles.
   Completed: definition-worker validation now returns one named
   `SemanticDefinitionWorkerResultBundle` carrying the worker partition key,

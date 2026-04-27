@@ -26,15 +26,14 @@ bool SemanticsValidator::buildDefinitionMaps() {
     graphLocalAutoBenchmarkShadow_->clear();
   }
   pilotRoutingSemanticCollectorsValid_ = false;
-  mergedWorkerCallableSummariesValid_ = false;
-  mergedWorkerOnErrorFactsValid_ = false;
+  mergedWorkerPublicationFactsValid_ = false;
+  mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = false;
   mergedWorkerPublicationSeedStringsValid_ = false;
   collectedDirectCallTargets_.clear();
   collectedMethodCallTargets_.clear();
   collectedBridgePathChoices_.clear();
   collectedCallableSummaries_.clear();
-  mergedWorkerCallableSummaries_.clear();
-  mergedWorkerOnErrorFacts_.clear();
+  mergedWorkerPublicationFacts_ = {};
   mergedWorkerPublicationSeedStrings_.clear();
   onErrorSnapshotFactCacheValid_ = false;
   onErrorSnapshotCache_.clear();

@@ -3647,15 +3647,13 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   REQUIRE(callableSummaryStart < typeMetadataStart);
   REQUIRE(ensureOnErrorStart < typeMetadataStart);
 
-  CHECK(semanticsHeader.find("bool mergedWorkerCallableSummariesValid_ = false;") !=
+  CHECK(semanticsHeader.find("bool mergedWorkerPublicationFactsValid_ = false;") !=
         std::string::npos);
-  CHECK(semanticsHeader.find("bool mergedWorkerOnErrorFactsValid_ = false;") !=
+  CHECK(semanticsHeader.find("bool mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = false;") !=
         std::string::npos);
   CHECK(semanticsHeader.find("bool mergedWorkerPublicationSeedStringsValid_ = false;") !=
         std::string::npos);
-  CHECK(semanticsHeader.find("std::vector<CollectedCallableSummaryEntry> mergedWorkerCallableSummaries_;") !=
-        std::string::npos);
-  CHECK(semanticsHeader.find("std::vector<OnErrorSnapshotEntry> mergedWorkerOnErrorFacts_;") !=
+  CHECK(semanticsHeader.find("SemanticPublicationSurface mergedWorkerPublicationFacts_;") !=
         std::string::npos);
   CHECK(semanticsHeader.find("std::vector<std::string> mergedWorkerPublicationSeedStrings_;") !=
         std::string::npos);
@@ -3669,13 +3667,26 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(semanticsSnapshots.find("SemanticsValidator::collectOnErrorSnapshotEntriesForStableRange(") !=
         std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::collectDefinitionPublicationFactsForStableRange(") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds()") !=
+        std::string::npos);
   CHECK(semanticsSnapshots.find("SemanticsValidator::sortCollectedOnErrorSnapshots(") !=
         std::string::npos);
 
   const std::string collectHelperBody =
       semanticsSnapshots.substr(collectHelperStart, callableSummaryStart - collectHelperStart);
-  CHECK(collectHelperBody.find("if (mergedWorkerCallableSummariesValid_) {") != std::string::npos);
-  CHECK(collectHelperBody.find("collectedCallableSummaries_ = mergedWorkerCallableSummaries_;") !=
+  CHECK(collectHelperBody.find("const bool useMergedWorkerPublicationFacts = mergedWorkerPublicationFactsValid_;") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("rebindMergedWorkerPublicationFactSemanticNodeIds();") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("collectedDirectCallTargets_ = mergedWorkerPublicationFacts_.directCallTargets;") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("collectedMethodCallTargets_ = mergedWorkerPublicationFacts_.methodCallTargets;") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("collectedBridgePathChoices_ = mergedWorkerPublicationFacts_.bridgePathChoices;") !=
+        std::string::npos);
+  CHECK(collectHelperBody.find("collectedCallableSummaries_ = mergedWorkerPublicationFacts_.callableSummaries;") !=
         std::string::npos);
   CHECK(collectHelperBody.find("rebindCollectedCallableSummarySemanticNodeIds(collectedCallableSummaries_);") !=
         std::string::npos);
@@ -3685,7 +3696,6 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(collectHelperBody.find("sortCollectedCallableSummaries(collectedCallableSummaries_);") !=
         std::string::npos);
-  CHECK(collectHelperBody.find("collectedCallableSummaries_.push_back(") != std::string::npos);
   CHECK(semanticsSnapshots.find("if (left.fullPath != right.fullPath)") != std::string::npos);
   CHECK(semanticsSnapshots.find("return left.isExecution < right.isExecution;") !=
         std::string::npos);
@@ -3695,9 +3705,7 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(definitionWorkerResultHeader.find("SemanticDefinitionWorkerCounters counters;") !=
         std::string::npos);
-  CHECK(definitionWorkerResultHeader.find("std::vector<CollectedCallableSummaryEntry> callableSummaries;") !=
-        std::string::npos);
-  CHECK(definitionWorkerResultHeader.find("std::vector<OnErrorSnapshotEntry> onErrorFacts;") !=
+  CHECK(definitionWorkerResultHeader.find("SemanticPublicationSurface publicationFacts;") !=
         std::string::npos);
   CHECK(definitionWorkerResultHeader.find("WorkerSymbolInternerSnapshot publicationStringSnapshot;") !=
         std::string::npos);
@@ -3709,23 +3717,31 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("std::vector<std::future<SemanticDefinitionWorkerResultBundle>>") !=
         std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("worker.collectCallableSummaryEntriesForStableRange(") !=
+  CHECK(semanticsDefinitionPasses.find("worker.collectDefinitionPublicationFactsForStableRange(") !=
         std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("mergeWorkerCallableSummaries") != std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("collectExecutionCallableSummaryEntries(mergedWorkerCallableSummaries_);") !=
+  CHECK(semanticsDefinitionPasses.find("mergeWorkerPublicationFacts") != std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergeWorkerCallableSummaries") == std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("mergeWorkerOnErrorFacts") == std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("collectExecutionCallableSummaryEntries(\n"
+                                      "        mergedWorkerPublicationFacts_.callableSummaries);") !=
         std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("sortCollectedCallableSummaries(mergedWorkerCallableSummaries_);") !=
+  CHECK(semanticsDefinitionPasses.find("sortCollectedCallableSummaries(mergedWorkerPublicationFacts_.callableSummaries);") !=
         std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("mergedWorkerCallableSummariesValid_ = true;") !=
+  CHECK(semanticsDefinitionPasses.find("mergedWorkerPublicationFactsValid_ = true;") !=
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("appendSemanticPublicationStringOrigins(") !=
         std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("worker.collectOnErrorSnapshotEntriesForStableRange(") !=
+  CHECK(semanticsDefinitionPasses.find("sortCollectedOnErrorSnapshots(mergedWorkerPublicationFacts_.onErrorFacts);") !=
         std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("mergeWorkerOnErrorFacts") != std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("sortCollectedOnErrorSnapshots(mergedWorkerOnErrorFacts_);") !=
+  CHECK(semanticsDefinitionPasses.find("appendMoved(mergedWorkerPublicationFacts_.bindingFacts,") !=
         std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("mergedWorkerOnErrorFactsValid_ = true;") !=
+  CHECK(semanticsDefinitionPasses.find("appendMoved(mergedWorkerPublicationFacts_.queryFacts,") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("appendMoved(mergedWorkerPublicationFacts_.tryFacts,") !=
+        std::string::npos);
+  CHECK(semanticsDefinitionPasses.find("appendMoved(mergedWorkerPublicationFacts_.onErrorFacts,") !=
+        std::string::npos);
+  CHECK(semanticsSnapshots.find("rebindSemanticNodeIdsBySnapshotKey(") !=
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("mergeWorkerPublicationSeedStrings") !=
         std::string::npos);
@@ -3748,8 +3764,8 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
 
   const std::string ensureOnErrorBody =
       semanticsSnapshots.substr(ensureOnErrorStart, typeMetadataStart - ensureOnErrorStart);
-  CHECK(ensureOnErrorBody.find("if (mergedWorkerOnErrorFactsValid_) {") != std::string::npos);
-  CHECK(ensureOnErrorBody.find("onErrorSnapshotCache_ = mergedWorkerOnErrorFacts_;") !=
+  CHECK(ensureOnErrorBody.find("if (mergedWorkerPublicationFactsValid_) {") != std::string::npos);
+  CHECK(ensureOnErrorBody.find("onErrorSnapshotCache_ = mergedWorkerPublicationFacts_.onErrorFacts;") !=
         std::string::npos);
   CHECK(ensureOnErrorBody.find("collectOnErrorSnapshotEntriesForStableRange(") !=
         std::string::npos);

@@ -6,7 +6,6 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 
 namespace primec::semantics {
 
@@ -21,8 +20,7 @@ struct SemanticDefinitionWorkerResultBundle {
   std::string error;
   SemanticDiagnosticInfo diagnostics;
   SemanticDefinitionWorkerCounters counters;
-  std::vector<CollectedCallableSummaryEntry> callableSummaries;
-  std::vector<OnErrorSnapshotEntry> onErrorFacts;
+  SemanticPublicationSurface publicationFacts;
   WorkerSymbolInternerSnapshot publicationStringSnapshot;
 };
 

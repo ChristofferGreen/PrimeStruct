@@ -515,15 +515,14 @@ private:
   std::vector<TryValueSnapshotEntry> tryValueSnapshotCache_;
   std::vector<CallBindingSnapshotEntry> callBindingSnapshotCache_;
   bool pilotRoutingSemanticCollectorsValid_ = false;
-  bool mergedWorkerCallableSummariesValid_ = false;
-  bool mergedWorkerOnErrorFactsValid_ = false;
+  bool mergedWorkerPublicationFactsValid_ = false;
+  bool mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = false;
   bool mergedWorkerPublicationSeedStringsValid_ = false;
   std::vector<CollectedDirectCallTargetEntry> collectedDirectCallTargets_;
   std::vector<CollectedMethodCallTargetEntry> collectedMethodCallTargets_;
   std::vector<CollectedBridgePathChoiceEntry> collectedBridgePathChoices_;
   std::vector<CollectedCallableSummaryEntry> collectedCallableSummaries_;
-  std::vector<CollectedCallableSummaryEntry> mergedWorkerCallableSummaries_;
-  std::vector<OnErrorSnapshotEntry> mergedWorkerOnErrorFacts_;
+  SemanticPublicationSurface mergedWorkerPublicationFacts_;
   std::vector<std::string> mergedWorkerPublicationSeedStrings_;
   mutable bool onErrorSnapshotFactCacheValid_ = false;
   mutable std::vector<OnErrorSnapshotEntry> onErrorSnapshotCache_;

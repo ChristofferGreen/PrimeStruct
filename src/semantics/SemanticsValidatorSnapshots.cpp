@@ -8,6 +8,8 @@
 #include <functional>
 #include <limits>
 #include <optional>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace primec::semantics {
 namespace {
@@ -26,6 +28,49 @@ bool isSemanticCollectorEnabled(const SemanticProductBuildConfig *buildConfig,
   return std::find(buildConfig->collectorAllowlist.begin(),
                    buildConfig->collectorAllowlist.end(),
                    collectorFamily) != buildConfig->collectorAllowlist.end();
+}
+
+template <typename Entry, typename PathForEntry>
+void appendEntriesForDefinitionPaths(std::vector<Entry> &out,
+                                     std::vector<Entry> entries,
+                                     const std::unordered_set<std::string> &definitionPaths,
+                                     PathForEntry pathForEntry) {
+  for (auto &entry : entries) {
+    if (definitionPaths.count(pathForEntry(entry)) == 0) {
+      continue;
+    }
+    out.push_back(std::move(entry));
+  }
+}
+
+template <typename Entry, typename KeyForEntry>
+void rebindSemanticNodeIdsBySnapshotKey(std::vector<Entry> &entries,
+                                        std::vector<Entry> freshEntries,
+                                        KeyForEntry keyForEntry) {
+  std::unordered_map<std::string, uint64_t> semanticNodeIdsByKey;
+  semanticNodeIdsByKey.reserve(freshEntries.size());
+  for (const auto &entry : freshEntries) {
+    semanticNodeIdsByKey.insert_or_assign(keyForEntry(entry), entry.semanticNodeId);
+  }
+  for (auto &entry : entries) {
+    const auto idIt = semanticNodeIdsByKey.find(keyForEntry(entry));
+    if (idIt != semanticNodeIdsByKey.end()) {
+      entry.semanticNodeId = idIt->second;
+    }
+  }
+}
+
+std::string snapshotKey(std::string_view first,
+                        std::string_view second,
+                        int sourceLine,
+                        int sourceColumn,
+                        std::string_view third = {},
+                        std::string_view fourth = {},
+                        std::string_view fifth = {}) {
+  return std::string(first) + "\x1f" + std::string(second) + "\x1f" +
+         std::to_string(sourceLine) + "\x1f" + std::to_string(sourceColumn) +
+         "\x1f" + std::string(third) + "\x1f" + std::string(fourth) +
+         "\x1f" + std::string(fifth);
 }
 
 std::optional<std::pair<std::string, std::string>>
@@ -713,6 +758,238 @@ void SemanticsValidator::collectOnErrorSnapshotEntriesForStableRange(
   }
 }
 
+void SemanticsValidator::collectDefinitionPublicationFactsForStableRange(
+    std::size_t stableOrderOffset,
+    std::size_t stableOrderCount,
+    SemanticPublicationSurface &out) {
+  const auto &declarations =
+      validationPlan_->definitionPrepass.declarationsInStableOrder;
+  const std::size_t declarationCount = declarations.size();
+  if (stableOrderCount == 0 || stableOrderOffset >= declarationCount) {
+    return;
+  }
+
+  const std::size_t boundedCount =
+      std::min(stableOrderCount, declarationCount - stableOrderOffset);
+  std::unordered_set<std::string> definitionPaths;
+  definitionPaths.reserve(boundedCount);
+  for (std::size_t stableOrdinal = 0; stableOrdinal < boundedCount;
+       ++stableOrdinal) {
+    const std::size_t stableIndex =
+        declarations[stableOrderOffset + stableOrdinal].stableIndex;
+    definitionPaths.insert(program_.definitions[stableIndex].fullPath);
+  }
+
+  collectPilotRoutingSemanticProductFacts();
+  appendEntriesForDefinitionPaths(
+      out.directCallTargets,
+      std::move(collectedDirectCallTargets_),
+      definitionPaths,
+      [](const CollectedDirectCallTargetEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.methodCallTargets,
+      std::move(collectedMethodCallTargets_),
+      definitionPaths,
+      [](const CollectedMethodCallTargetEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.bridgePathChoices,
+      std::move(collectedBridgePathChoices_),
+      definitionPaths,
+      [](const CollectedBridgePathChoiceEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  invalidatePilotRoutingSemanticCollectors();
+
+  collectCallableSummaryEntriesForStableRange(
+      stableOrderOffset, stableOrderCount, out.callableSummaries);
+  appendEntriesForDefinitionPaths(
+      out.typeMetadata,
+      typeMetadataSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const TypeMetadataSnapshotEntry &entry) -> const std::string & {
+        return entry.fullPath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.structFieldMetadata,
+      structFieldMetadataSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const StructFieldMetadataSnapshotEntry &entry) -> const std::string & {
+        return entry.structPath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.bindingFacts,
+      bindingFactSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const BindingFactSnapshotEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.returnFacts,
+      returnFactSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const ReturnFactSnapshotEntry &entry) -> const std::string & {
+        return entry.definitionPath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.localAutoFacts,
+      localAutoFactSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const LocalAutoBindingSnapshotEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.queryFacts,
+      queryFactSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const QueryFactSnapshotEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.tryFacts,
+      tryFactSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const TryValueSnapshotEntry &entry) -> const std::string & {
+        return entry.scopePath;
+      });
+  collectOnErrorSnapshotEntriesForStableRange(
+      stableOrderOffset, stableOrderCount, out.onErrorFacts);
+}
+
+void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
+  if (!mergedWorkerPublicationFactsValid_ ||
+      mergedWorkerPublicationFactSemanticNodeIdsCurrent_) {
+    return;
+  }
+
+  rebindCollectedCallableSummarySemanticNodeIds(
+      mergedWorkerPublicationFacts_.callableSummaries);
+  rebindCollectedOnErrorSemanticNodeIds(mergedWorkerPublicationFacts_.onErrorFacts);
+
+  mergedWorkerPublicationFactsValid_ = false;
+  invalidatePilotRoutingSemanticCollectors();
+  collectPilotRoutingSemanticProductFacts();
+  auto freshDirectCallTargets = std::exchange(collectedDirectCallTargets_, {});
+  auto freshMethodCallTargets = std::exchange(collectedMethodCallTargets_, {});
+  auto freshBridgePathChoices = std::exchange(collectedBridgePathChoices_, {});
+  invalidatePilotRoutingSemanticCollectors();
+
+  auto freshTypeMetadata = typeMetadataSnapshotForSemanticProduct();
+  auto freshStructFieldMetadata = structFieldMetadataSnapshotForSemanticProduct();
+  auto freshBindingFacts = bindingFactSnapshotForSemanticProduct();
+  auto freshReturnFacts = returnFactSnapshotForSemanticProduct();
+  auto freshLocalAutoFacts = localAutoFactSnapshotForSemanticProduct();
+  auto freshQueryFacts = queryFactSnapshotForSemanticProduct();
+  auto freshTryFacts = tryFactSnapshotForSemanticProduct();
+  onErrorSnapshotFactCacheValid_ = false;
+  onErrorSnapshotCache_.clear();
+  auto freshOnErrorFacts = onErrorFactSnapshotForSemanticProduct();
+
+  mergedWorkerPublicationFactsValid_ = true;
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.directCallTargets,
+      std::move(freshDirectCallTargets),
+      [](const CollectedDirectCallTargetEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.callName,
+                           entry.sourceLine,
+                           entry.sourceColumn,
+                           entry.resolvedPath);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.methodCallTargets,
+      std::move(freshMethodCallTargets),
+      [](const CollectedMethodCallTargetEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.methodName,
+                           entry.sourceLine,
+                           entry.sourceColumn,
+                           entry.resolvedPath);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.bridgePathChoices,
+      std::move(freshBridgePathChoices),
+      [](const CollectedBridgePathChoiceEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.collectionFamily,
+                           entry.sourceLine,
+                           entry.sourceColumn,
+                           entry.helperName,
+                           entry.chosenPath);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.typeMetadata,
+      std::move(freshTypeMetadata),
+      [](const TypeMetadataSnapshotEntry &entry) {
+        return snapshotKey(entry.fullPath, entry.category, 0, 0);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.structFieldMetadata,
+      std::move(freshStructFieldMetadata),
+      [](const StructFieldMetadataSnapshotEntry &entry) {
+        return snapshotKey(entry.structPath,
+                           entry.fieldName,
+                           0,
+                           0,
+                           std::to_string(entry.fieldIndex));
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.bindingFacts,
+      std::move(freshBindingFacts),
+      [](const BindingFactSnapshotEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.siteKind,
+                           entry.sourceLine,
+                           entry.sourceColumn,
+                           entry.name,
+                           entry.resolvedPath);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.returnFacts,
+      std::move(freshReturnFacts),
+      [](const ReturnFactSnapshotEntry &entry) {
+        return snapshotKey(entry.definitionPath, std::string_view{}, 0, 0);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.localAutoFacts,
+      std::move(freshLocalAutoFacts),
+      [](const LocalAutoBindingSnapshotEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.bindingName,
+                           entry.sourceLine,
+                           entry.sourceColumn);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.queryFacts,
+      std::move(freshQueryFacts),
+      [](const QueryFactSnapshotEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.callName,
+                           entry.sourceLine,
+                           entry.sourceColumn,
+                           entry.resolvedPath);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.tryFacts,
+      std::move(freshTryFacts),
+      [](const TryValueSnapshotEntry &entry) {
+        return snapshotKey(entry.scopePath,
+                           entry.operandResolvedPath,
+                           entry.sourceLine,
+                           entry.sourceColumn);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.onErrorFacts,
+      std::move(freshOnErrorFacts),
+      [](const OnErrorSnapshotEntry &entry) {
+        return snapshotKey(entry.definitionPath, std::string_view{}, 0, 0);
+      });
+  mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = true;
+}
+
 void SemanticsValidator::sortCollectedOnErrorSnapshots(
     std::vector<OnErrorSnapshotEntry> &entries) {
   std::stable_sort(entries.begin(),
@@ -726,6 +1003,9 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   if (pilotRoutingSemanticCollectorsValid_) {
     return;
   }
+  if (mergedWorkerPublicationFactsValid_) {
+    rebindMergedWorkerPublicationFactSemanticNodeIds();
+  }
 
   collectedDirectCallTargets_.clear();
   collectedMethodCallTargets_.clear();
@@ -736,6 +1016,13 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
   collectedBridgePathChoices_.reserve(program_.definitions.size());
   collectedCallableSummaries_.reserve(
       program_.definitions.size() + program_.executions.size());
+  const bool useMergedWorkerPublicationFacts = mergedWorkerPublicationFactsValid_;
+  if (useMergedWorkerPublicationFacts) {
+    collectedDirectCallTargets_ = mergedWorkerPublicationFacts_.directCallTargets;
+    collectedMethodCallTargets_ = mergedWorkerPublicationFacts_.methodCallTargets;
+    collectedBridgePathChoices_ = mergedWorkerPublicationFacts_.bridgePathChoices;
+    collectedCallableSummaries_ = mergedWorkerPublicationFacts_.callableSummaries;
+  }
 
   std::function<void(const std::string &, const Expr &)> collectDirectCallExpr;
   auto collectDirectCallExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
@@ -791,13 +1078,15 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
     collectDirectCallExprs(scopePath, expr.bodyArguments);
   };
 
-  for (const auto &def : program_.definitions) {
-    DefinitionContextScope definitionScope(*this, def);
-    ValidationStateScope validationStateScope(*this, buildDefinitionValidationState(def));
-    collectDirectCallExprs(def.fullPath, def.parameters);
-    collectDirectCallExprs(def.fullPath, def.statements);
-    if (def.returnExpr.has_value()) {
-      collectDirectCallExpr(def.fullPath, *def.returnExpr);
+  if (!useMergedWorkerPublicationFacts) {
+    for (const auto &def : program_.definitions) {
+      DefinitionContextScope definitionScope(*this, def);
+      ValidationStateScope validationStateScope(*this, buildDefinitionValidationState(def));
+      collectDirectCallExprs(def.fullPath, def.parameters);
+      collectDirectCallExprs(def.fullPath, def.statements);
+      if (def.returnExpr.has_value()) {
+        collectDirectCallExpr(def.fullPath, *def.returnExpr);
+      }
     }
   }
 
@@ -807,33 +1096,36 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
     collectDirectCallExprs(exec.fullPath, exec.bodyArguments);
   }
 
-  forEachLocalAwareSnapshotCall([&](const Definition &def,
-                                    const std::vector<ParameterInfo> &defParams,
-                                    const Expr &expr,
-                                    const std::unordered_map<std::string, BindingInfo> &activeLocals) {
-    if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty()) {
-      return;
-    }
+  if (!useMergedWorkerPublicationFacts) {
+    forEachLocalAwareSnapshotCall(
+        [&](const Definition &def,
+            const std::vector<ParameterInfo> &defParams,
+            const Expr &expr,
+            const std::unordered_map<std::string, BindingInfo> &activeLocals) {
+          if (expr.kind != Expr::Kind::Call || !expr.isMethodCall || expr.args.empty()) {
+            return;
+          }
 
-    QuerySnapshotData queryData;
-    if (!inferQuerySnapshotData(defParams, activeLocals, expr, queryData) ||
-        queryData.resolvedPath.empty()) {
-      return;
-    }
+          QuerySnapshotData queryData;
+          if (!inferQuerySnapshotData(defParams, activeLocals, expr, queryData) ||
+              queryData.resolvedPath.empty()) {
+            return;
+          }
 
-    collectedMethodCallTargets_.push_back(CollectedMethodCallTargetEntry{
-        def.fullPath,
-        expr.name,
-        std::move(queryData.resolvedPath),
-        expr.sourceLine,
-        expr.sourceColumn,
-        std::move(queryData.receiverBinding),
-        expr.semanticNodeId,
-    });
-  });
+          collectedMethodCallTargets_.push_back(CollectedMethodCallTargetEntry{
+              def.fullPath,
+              expr.name,
+              std::move(queryData.resolvedPath),
+              expr.sourceLine,
+              expr.sourceColumn,
+              std::move(queryData.receiverBinding),
+              expr.semanticNodeId,
+          });
+        });
+  }
 
-  if (mergedWorkerCallableSummariesValid_) {
-    collectedCallableSummaries_ = mergedWorkerCallableSummaries_;
+  if (useMergedWorkerPublicationFacts) {
+    collectExecutionCallableSummaryEntries(collectedCallableSummaries_);
     rebindCollectedCallableSummarySemanticNodeIds(collectedCallableSummaries_);
   } else {
     collectCallableSummaryEntriesForStableRange(
@@ -928,6 +1220,9 @@ SemanticPublicationSurface
 SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
     const SemanticProductBuildConfig *buildConfig) {
   SemanticPublicationSurface surface;
+  if (mergedWorkerPublicationFactsValid_) {
+    rebindMergedWorkerPublicationFactSemanticNodeIds();
+  }
 
   const bool needsRoutingSurface =
       isSemanticCollectorEnabled(buildConfig, "direct_call_targets") ||
@@ -951,29 +1246,46 @@ SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
     invalidatePilotRoutingSemanticCollectors();
   }
 
+  const bool useMergedWorkerPublicationFacts = mergedWorkerPublicationFactsValid_;
   if (isSemanticCollectorEnabled(buildConfig, "type_metadata")) {
-    surface.typeMetadata = typeMetadataSnapshotForSemanticProduct();
+    surface.typeMetadata = useMergedWorkerPublicationFacts
+                               ? mergedWorkerPublicationFacts_.typeMetadata
+                               : typeMetadataSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "struct_field_metadata")) {
-    surface.structFieldMetadata = structFieldMetadataSnapshotForSemanticProduct();
+    surface.structFieldMetadata = useMergedWorkerPublicationFacts
+                                      ? mergedWorkerPublicationFacts_.structFieldMetadata
+                                      : structFieldMetadataSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "binding_facts")) {
-    surface.bindingFacts = bindingFactSnapshotForSemanticProduct();
+    surface.bindingFacts = useMergedWorkerPublicationFacts
+                               ? mergedWorkerPublicationFacts_.bindingFacts
+                               : bindingFactSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "return_facts")) {
-    surface.returnFacts = returnFactSnapshotForSemanticProduct();
+    surface.returnFacts = useMergedWorkerPublicationFacts
+                              ? mergedWorkerPublicationFacts_.returnFacts
+                              : returnFactSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "local_auto_facts")) {
-    surface.localAutoFacts = localAutoFactSnapshotForSemanticProduct();
+    surface.localAutoFacts = useMergedWorkerPublicationFacts
+                                 ? mergedWorkerPublicationFacts_.localAutoFacts
+                                 : localAutoFactSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "query_facts")) {
-    surface.queryFacts = queryFactSnapshotForSemanticProduct();
+    surface.queryFacts = useMergedWorkerPublicationFacts
+                             ? mergedWorkerPublicationFacts_.queryFacts
+                             : queryFactSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "try_facts")) {
-    surface.tryFacts = tryFactSnapshotForSemanticProduct();
+    surface.tryFacts = useMergedWorkerPublicationFacts
+                           ? mergedWorkerPublicationFacts_.tryFacts
+                           : tryFactSnapshotForSemanticProduct();
   }
   if (isSemanticCollectorEnabled(buildConfig, "on_error_facts")) {
-    surface.onErrorFacts = onErrorFactSnapshotForSemanticProduct();
+    surface.onErrorFacts = useMergedWorkerPublicationFacts
+                               ? mergedWorkerPublicationFacts_.onErrorFacts
+                               : onErrorFactSnapshotForSemanticProduct();
   }
 
   if (!surface.callableSummaries.empty() || !surface.onErrorFacts.empty()) {
@@ -1003,8 +1315,8 @@ void SemanticsValidator::ensureOnErrorSnapshotFactCache() const {
   }
 
   onErrorSnapshotCache_.clear();
-  if (mergedWorkerOnErrorFactsValid_) {
-    onErrorSnapshotCache_ = mergedWorkerOnErrorFacts_;
+  if (mergedWorkerPublicationFactsValid_) {
+    onErrorSnapshotCache_ = mergedWorkerPublicationFacts_.onErrorFacts;
   } else {
     onErrorSnapshotCache_.reserve(program_.definitions.size());
     collectOnErrorSnapshotEntriesForStableRange(

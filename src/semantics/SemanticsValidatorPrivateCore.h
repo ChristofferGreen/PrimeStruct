@@ -15,6 +15,11 @@
       std::size_t stableOrderOffset,
       std::size_t stableOrderCount,
       std::vector<CollectedCallableSummaryEntry> &out) const;
+  void collectDefinitionPublicationFactsForStableRange(
+      std::size_t stableOrderOffset,
+      std::size_t stableOrderCount,
+      SemanticPublicationSurface &out);
+  void rebindMergedWorkerPublicationFactSemanticNodeIds();
   void collectExecutionCallableSummaryEntries(
       std::vector<CollectedCallableSummaryEntry> &out) const;
   void rebindCollectedCallableSummarySemanticNodeIds(
