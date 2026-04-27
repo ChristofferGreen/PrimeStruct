@@ -6,6 +6,20 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4224: Cut over vector/map compatibility decisions to surface adapters.
+  Completed: template monomorphization now resolves vector/map helper
+  compatibility through `StdlibSurfaceRegistry` instead of bespoke
+  canonical-to-experimental helper maps. `StdlibSurfaceRegistry` now exposes
+  `stdlibSurfacePreferredSpellingForMember(...)`, records rooted `/vector/*`
+  helper spellings as vector compatibility spellings, and resolves preferred
+  experimental helper spellings for canonical, wrapper-layer, and rooted
+  compatibility vector/map helper paths. The vector/map inventory is closed:
+  map-insert semantic rewrites are adapter-backed, vector/map constructor
+  compatibility was already metadata-backed, remaining explicit removed-helper
+  diagnostics/imports/wildcard expansion/user-helper precedence are
+  syntax/provenance-owned, and lowerer raw-path dispatch checks are
+  lowering-owned. Focused registry and source-lock coverage pins the new
+  adapter path. Local validation is deferred per the lite workflow.
 - ✓ TODO-4217: Move stdlib compatibility rewrites behind surface adapters.
   Completed: map insert helper compatibility is now routed through the shared
   `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter instead of bespoke

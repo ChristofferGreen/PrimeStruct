@@ -2322,10 +2322,21 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr,") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path)") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "primec::stdlibSurfacePreferredSpellingForMember(") !=
+        std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "if (path == \"/std/collections/map/count\")") == std::string::npos);
+  CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
+            "if (path == \"/std/collections/vector/count\" || path == \"/vector/count\")") ==
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "bool isExperimentalSoaVectorPublicHelperPath(const std::string &path)") !=

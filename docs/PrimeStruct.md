@@ -2692,22 +2692,26 @@ re-defining it piecemeal.
   dispatch metadata.
 - **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
   `vectorCount` / `mapCount`-style lowering names remain temporary
-  compatibility seams. `TODO-4224` owns the remaining vector/map compatibility
-  cutover; do not delete, accept, or reclassify those seams outside that task
-  or an explicit successor TODO.
-- **Compatibility adapter inventory:** map insert helper compatibility is the
-  first migrated family. The semantic map-insert rewrite now asks the
+  compatibility seams. The vector/map adapter cutover is complete for
+  semantic and template-monomorph helper decisions; no active TODO targets
+  deleting or accepting those temporary seams, so add a concrete successor TODO
+  before changing their public status.
+- **Compatibility adapter inventory:** map insert helper compatibility was the
+  first migrated family. The semantic map-insert rewrite asks the
   `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter to classify
   canonical `/std/collections/map/insert(_ref)`, compatibility
   `/map/insert(_ref)`, wrapper `/std/collections/mapInsert(_Ref)`, and
   experimental `/std/collections/experimental_map/mapInsert(_Ref)` spellings
   before it rewrites constructor-backed receivers to the canonical helper or
   non-local/builtin receivers to `/std/collections/map/insert_builtin`.
-  Remaining vector/map helper, constructor, template-monomorph, and lowerer
-  compatibility branches are queued under `TODO-4224`; SoA and gfx
-  compatibility branches are queued under `TODO-4229` and `TODO-4230`.
-  Import spellings, wildcard expansion, and user-defined helper precedence are
-  syntax/provenance-owned.
+  Template monomorphization now asks the same registry for preferred
+  experimental vector/map helper spellings instead of carrying bespoke
+  canonical-to-experimental helper maps. Vector/map constructor compatibility
+  is already metadata-backed by the constructor surface adapters. Remaining
+  explicit removed-helper diagnostics, import spellings, wildcard expansion,
+  user-defined helper precedence, and lowerer raw-path dispatch checks are
+  syntax/provenance-owned or lowering-owned. SoA and gfx compatibility
+  branches are queued under `TODO-4229` and `TODO-4230`.
 - **Internal implementation seams:** `/std/collections/experimental_vector/*`
   and `/std/collections/experimental_map/*` remain implementation-owned
   modules behind the canonical wrappers; direct imports should stay limited to

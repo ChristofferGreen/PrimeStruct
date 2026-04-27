@@ -442,77 +442,17 @@ bool resolveExperimentalMapValueReceiverTemplateArgs(const Expr *receiverExpr,
 }
 
 std::string experimentalMapHelperPathForCanonicalHelper(const std::string &path) {
-  if (path == "/std/collections/map/count") {
-    return "/std/collections/experimental_map/mapCount";
-  }
-  if (path == "/std/collections/map/count_ref") {
-    return "/std/collections/experimental_map/mapCountRef";
-  }
-  if (path == "/std/collections/map/contains") {
-    return "/std/collections/experimental_map/mapContains";
-  }
-  if (path == "/std/collections/map/contains_ref") {
-    return "/std/collections/experimental_map/mapContainsRef";
-  }
-  if (path == "/std/collections/map/tryAt") {
-    return "/std/collections/experimental_map/mapTryAt";
-  }
-  if (path == "/std/collections/map/tryAt_ref") {
-    return "/std/collections/experimental_map/mapTryAtRef";
-  }
-  if (path == "/std/collections/map/at") {
-    return "/std/collections/experimental_map/mapAt";
-  }
-  if (path == "/std/collections/map/at_ref") {
-    return "/std/collections/experimental_map/mapAtRef";
-  }
-  if (path == "/std/collections/map/at_unsafe") {
-    return "/std/collections/experimental_map/mapAtUnsafe";
-  }
-  if (path == "/std/collections/map/at_unsafe_ref") {
-    return "/std/collections/experimental_map/mapAtUnsafeRef";
-  }
-  if (path == "/std/collections/map/insert") {
-    return "/std/collections/experimental_map/mapInsert";
-  }
-  if (path == "/std/collections/map/insert_ref") {
-    return "/std/collections/experimental_map/mapInsertRef";
-  }
-  return {};
+  return primec::stdlibSurfacePreferredSpellingForMember(
+      primec::StdlibSurfaceId::CollectionsMapHelpers,
+      path,
+      "/std/collections/experimental_map/");
 }
 
 std::string experimentalVectorHelperPathForCanonicalHelper(const std::string &path) {
-  if (path == "/std/collections/vector/count" || path == "/vector/count") {
-    return "/std/collections/experimental_vector/vectorCount";
-  }
-  if (path == "/std/collections/vector/capacity" || path == "/vector/capacity") {
-    return "/std/collections/experimental_vector/vectorCapacity";
-  }
-  if (path == "/std/collections/vector/push" || path == "/vector/push") {
-    return "/std/collections/experimental_vector/vectorPush";
-  }
-  if (path == "/std/collections/vector/pop" || path == "/vector/pop") {
-    return "/std/collections/experimental_vector/vectorPop";
-  }
-  if (path == "/std/collections/vector/reserve" || path == "/vector/reserve") {
-    return "/std/collections/experimental_vector/vectorReserve";
-  }
-  if (path == "/std/collections/vector/clear" || path == "/vector/clear") {
-    return "/std/collections/experimental_vector/vectorClear";
-  }
-  if (path == "/std/collections/vector/remove_at" || path == "/vector/remove_at") {
-    return "/std/collections/experimental_vector/vectorRemoveAt";
-  }
-  if (path == "/std/collections/vector/remove_swap" || path == "/vector/remove_swap") {
-    return "/std/collections/experimental_vector/vectorRemoveSwap";
-  }
-  if (path == "/std/collections/vector/at" || path == "/vector/at") {
-    return "/std/collections/experimental_vector/vectorAt";
-  }
-  if (path == "/std/collections/vector/at_unsafe" || path == "/vector/at_unsafe") {
-    return "/std/collections/experimental_vector/vectorAtUnsafe";
-  }
-  return {};
+  return primec::stdlibSurfacePreferredSpellingForMember(
+      primec::StdlibSurfaceId::CollectionsVectorHelpers,
+      path,
+      "/std/collections/experimental_vector/");
 }
 
 std::string experimentalSoaVectorHelperPathForCanonicalHelper(const std::string &path) {
@@ -588,25 +528,10 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
 }
 
 std::string experimentalMapHelperPathForWrapperHelper(const std::string &path) {
-  if (path == "/std/collections/mapCount") {
-    return "/std/collections/experimental_map/mapCount";
-  }
-  if (path == "/std/collections/mapContains") {
-    return "/std/collections/experimental_map/mapContains";
-  }
-  if (path == "/std/collections/mapTryAt") {
-    return "/std/collections/experimental_map/mapTryAt";
-  }
-  if (path == "/std/collections/mapAt") {
-    return "/std/collections/experimental_map/mapAt";
-  }
-  if (path == "/std/collections/mapAtUnsafe") {
-    return "/std/collections/experimental_map/mapAtUnsafe";
-  }
-  if (path == "/std/collections/mapInsert") {
-    return "/std/collections/experimental_map/mapInsert";
-  }
-  return {};
+  return primec::stdlibSurfacePreferredSpellingForMember(
+      primec::StdlibSurfaceId::CollectionsMapHelpers,
+      path,
+      "/std/collections/experimental_map/");
 }
 
 bool resolveExperimentalVectorValueReceiverTemplateArgs(const Expr *receiverExpr,

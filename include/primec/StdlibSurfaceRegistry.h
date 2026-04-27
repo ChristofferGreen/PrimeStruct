@@ -54,6 +54,9 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string
 std::string_view resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,
                                                 std::string_view path);
 std::string stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id, std::string_view helperName);
+std::string stdlibSurfacePreferredSpellingForMember(StdlibSurfaceId id,
+                                                    std::string_view spelling,
+                                                    std::string_view preferredPrefix);
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling);
 bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName);
 bool isStdlibVectorStatementHelperName(std::string_view memberName);

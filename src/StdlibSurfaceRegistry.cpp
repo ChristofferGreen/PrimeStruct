@@ -107,6 +107,16 @@ constexpr auto CollectionsVectorImportAliases = std::to_array<std::string_view>(
 });
 
 constexpr auto CollectionsVectorCompatibilitySpellings = std::to_array<std::string_view>({
+    "/vector/count",
+    "/vector/capacity",
+    "/vector/push",
+    "/vector/pop",
+    "/vector/reserve",
+    "/vector/clear",
+    "/vector/remove_at",
+    "/vector/remove_swap",
+    "/vector/at",
+    "/vector/at_unsafe",
     "/std/collections/experimental_vector/vector",
     "/std/collections/experimental_vector/vectorPair",
     "/std/collections/experimental_vector/vectorCount",
@@ -922,6 +932,41 @@ std::string stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id, std::string_vie
     return {};
   }
   return std::string(metadata->canonicalPath) + "/" + std::string(resolvedMemberName);
+}
+
+std::string stdlibSurfacePreferredSpellingForMember(StdlibSurfaceId id,
+                                                    std::string_view spelling,
+                                                    std::string_view preferredPrefix) {
+  const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadata(id);
+  if (metadata == nullptr) {
+    return {};
+  }
+  if (spelling.find('/') != std::string_view::npos) {
+    const StdlibSurfaceMetadata *spellingMetadata =
+        findStdlibSurfaceMetadataByResolvedPath(spelling);
+    if (spellingMetadata == nullptr || spellingMetadata->id != id) {
+      return {};
+    }
+  }
+  const std::string_view memberName =
+      resolveStdlibSurfaceMemberName(*metadata, spelling);
+  if (memberName.empty()) {
+    return {};
+  }
+  auto findPreferred = [&](std::span<const std::string_view> spellings) {
+    for (const std::string_view candidate : spellings) {
+      if (candidate.rfind(preferredPrefix, 0) == 0 &&
+          resolveStdlibSurfaceMemberName(*metadata, candidate) == memberName) {
+        return std::string(candidate);
+      }
+    }
+    return std::string{};
+  };
+  if (std::string preferred = findPreferred(metadata->loweringSpellings);
+      !preferred.empty()) {
+    return preferred;
+  }
+  return findPreferred(metadata->compatibilitySpellings);
 }
 
 bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName) {

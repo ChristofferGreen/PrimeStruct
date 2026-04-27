@@ -412,14 +412,17 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("future vector/map ownership-cutover\nTODOs") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`TODO-4224` owns the remaining vector/map compatibility") !=
+  CHECK(primeStructDoc.find("The vector/map adapter cutover is complete") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Compatibility adapter inventory:") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("map insert helper compatibility is the\n"
+  CHECK(primeStructDoc.find("map insert helper compatibility was the\n"
                             "  first migrated family") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("queued under `TODO-4224`; SoA and gfx") !=
+  CHECK(primeStructDoc.find("Template monomorphization now asks the same registry") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("SoA and gfx\n"
+                            "  compatibility branches are queued under `TODO-4229` and `TODO-4230`") !=
         std::string::npos);
   CHECK(primeStructDoc.find("later cutover TODOs delete them") == std::string::npos);
   CHECK(primeStructDoc.find("**Out of scope for this bridge lane:** `array<T>` core ownership,") !=
@@ -430,13 +433,16 @@ TEST_CASE("vector map bridge boundary docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("Migration-only seams: rooted `/vector/*` and `/map/*` spellings,") !=
         std::string::npos);
-  CHECK(todo.find("`TODO-4224` owns the remaining vector/map compatibility cutover") !=
+  CHECK(todo.find("The vector/map adapter cutover is complete for semantic and") !=
         std::string::npos);
   CHECK(todo.find("Compatibility adapter inventory: map insert helper compatibility is migrated") !=
         std::string::npos);
   CHECK(todo.find("through `StdlibSurfaceRegistry::CollectionsMapHelpers`") !=
         std::string::npos);
-  CHECK(todo.find("vector/map helper, constructor, template-monomorph, and lowerer") !=
+  CHECK(todo.find("Template\n"
+                  "  monomorphization now asks the registry for preferred experimental vector/map") !=
+        std::string::npos);
+  CHECK(todo.find("syntax/provenance-owned or lowering-owned") !=
         std::string::npos);
   CHECK(todo.find("later cutover TODOs retire them") == std::string::npos);
   CHECK(todo.find("Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and") !=
@@ -791,13 +797,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4224: Cut over vector/map compatibility decisions to surface adapters") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4229: Cut over SoA compatibility decisions to surface adapters") !=
         std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4230: Cut over gfx compatibility decisions to surface adapters") !=
+        std::string::npos);
   CHECK(todo.find("### Priority Lanes (Current)\n\n"
-                  "- Semantic phase contract hardening: TODO-4224 -> TODO-4229 -> TODO-4230") !=
+                  "- Semantic phase contract hardening: TODO-4229 -> TODO-4230") !=
         std::string::npos);
   CHECK(todo.find("  -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235") !=
         std::string::npos);
@@ -808,10 +814,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4224: Cut over vector/map compatibility decisions to surface adapters") !=
+                  "- TODO-4229: Cut over SoA compatibility decisions to surface adapters") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4224: Cut over vector/map compatibility decisions to surface adapters",
       "TODO-4229: Cut over SoA compatibility decisions to surface adapters",
       "TODO-4230: Cut over gfx compatibility decisions to surface adapters",
       "TODO-4218: Make local-auto graph facts the exclusive inference authority",
@@ -864,7 +869,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4217") == std::string::npos);
   CHECK(todoFinished.find("TODO-4217: Move stdlib compatibility rewrites behind surface adapters") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4224") != std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4224") == std::string::npos);
+  CHECK(todo.find("TODO-4224") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4224: Cut over vector/map compatibility decisions to surface adapters") !=
+        std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4229") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4230") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4218") != std::string::npos);
@@ -915,9 +923,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4224, TODO-4229, TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4229, TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4224, TODO-4245 |") !=
+  CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |") !=
         std::string::npos);
   CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4220, TODO-4234, TODO-4243 |") !=
         std::string::npos);
@@ -953,7 +961,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |") !=
         std::string::npos);
-  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4224, TODO-4245 |") !=
+  CHECK(todo.find("| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |") !=
         std::string::npos);
   CHECK(todo.find("### Skipped Doctest Debt Summary") != std::string::npos);
   CHECK(todo.find("Retained `doctest::skip(true)` coverage is currently absent from the active") !=
