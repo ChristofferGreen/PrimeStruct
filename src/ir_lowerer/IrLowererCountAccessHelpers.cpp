@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <memory>
+#include <string_view>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
@@ -90,6 +91,36 @@ bool isNamedArgumentCollectionTemporary(const Expr &expr,
   }
   std::string collection;
   return getBuiltinCollectionName(expr, collection) && collection == collectionName;
+}
+
+std::string normalizedInternalSoaStorageMetadataLeaf(std::string structPath) {
+  const size_t leafStart = structPath.find_last_of('/');
+  const size_t suffixStart =
+      structPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (suffixStart != std::string::npos) {
+    structPath.erase(suffixStart);
+  }
+  if (!structPath.empty() && structPath.front() == '/') {
+    structPath.erase(structPath.begin());
+  }
+  constexpr std::string_view Prefix = "std/collections/internal_soa_storage/";
+  if (structPath.rfind(Prefix, 0) == 0) {
+    structPath.erase(0, Prefix.size());
+  }
+  if (structPath == "SoaColumn" || structPath == "SoaFieldView") {
+    return structPath;
+  }
+  return {};
+}
+
+bool isInternalSoaStorageMetadataTarget(const Expr &target,
+                                        const LocalMap &localsIn) {
+  if (target.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localsIn.find(target.name);
+  return it != localsIn.end() &&
+         !normalizedInternalSoaStorageMetadataLeaf(it->second.structTypeName).empty();
 }
 
 bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
@@ -556,6 +587,16 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
   }
+  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
+      isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
   if (expr.isMethodCall && expr.name == "field_capacity" && expr.args.size() == 1 &&
       isDynamicVectorCapacityTargetFn != nullptr &&
       isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
@@ -563,6 +604,16 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       return CountAccessCallEmitResult::Error;
     }
     emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+  if (expr.isMethodCall && expr.name == "field_capacity" && expr.args.size() == 1 &&
+      isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::PushI64, 2 * IrSlotBytes);
     emitInstruction(IrOpcode::AddI64, 0);
     emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
