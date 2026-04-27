@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4248: Move canonical SoA conversions off experimental conversion imports
+- TODO-4249: Retire direct experimental SoA public imports
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4249: Retire direct experimental SoA public imports
 - TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers
 - TODO-4251: Add full cross-backend SoA parity coverage
 - TODO-4252: Promote `soa_vector` docs after compatibility cleanup
@@ -81,12 +80,12 @@ Task template:
 - TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
 - TODO-4257: Add sum declaration metadata and layout
+- TODO-4258: Add explicit sum construction
 
 ### Priority Lanes (Current)
 
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4245
-- Deferred SoA finish: TODO-4248 -> TODO-4249
-  -> TODO-4250 -> TODO-4251 -> TODO-4252
+- Deferred SoA finish: TODO-4249 -> TODO-4250 -> TODO-4251 -> TODO-4252
 - Deferred algebraic types and brace-only construction: TODO-4253
   -> TODO-4254 -> TODO-4255 -> TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
@@ -98,7 +97,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4248: Move canonical SoA conversions off experimental conversion imports
 - TODO-4249: Retire direct experimental SoA public imports
 - TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers
 - TODO-4251: Add full cross-backend SoA parity coverage
@@ -139,10 +137,10 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | none |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4248, TODO-4249 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4249 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| SoA maturity and `soa_vector` promotion | TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
+| SoA maturity and `soa_vector` promotion | TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -170,7 +168,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
-| `soa_vector` maturity and canonical surface parity | TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
+| `soa_vector` maturity and canonical surface parity | TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
@@ -234,9 +232,11 @@ Task template:
   `/std/collections/soa_vector/*`.
 - Pending temporary compatibility namespace:
   `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
-  behind canonical conversion helpers. The deferred SoA finish chain
-  (`TODO-4248` through `TODO-4252`) owns the final promotion, retirement,
-  parity, and documentation cleanup path for the remaining SoA seams.
+  for direct experimental imports. Canonical conversion helpers now route
+  through `/std/collections/internal_soa_vector_conversions/*`; the remaining
+  deferred SoA finish chain (`TODO-4249` through `TODO-4252`) owns direct
+  import retirement, raw-builtin bridge normalization, parity, and final
+  documentation cleanup for the remaining SoA seams.
 - Internal collection implementation modules:
   `/std/collections/experimental_vector/*` and
   `/std/collections/experimental_map/*` now remain implementation-owned seams
@@ -249,6 +249,7 @@ Task template:
 - Internal substrate/helper namespaces:
   `/std/collections/internal_buffer_checked/*`,
   `/std/collections/internal_buffer_unchecked/*`,
+  `/std/collections/internal_soa_vector_conversions/*`,
   `/std/collections/internal_soa_vector/*`, and
   `/std/collections/internal_soa_storage/*` are implementation-facing plumbing
   rather than public API.
@@ -267,10 +268,11 @@ Task template:
   C++ and native direct-import tests lock that temporary contract.
 - Pending conversion compatibility seam:
   `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
-  behind canonical conversion helpers until the SoA finish chain decides its
-  exit.
+  for direct experimental imports until the SoA finish chain decides its exit.
 - Internal substrate namespaces: `/std/collections/internal_soa_vector/*`
-  owns canonical wrapper implementation forwarding, while
+  owns canonical wrapper implementation forwarding,
+  `/std/collections/internal_soa_vector_conversions/*` owns canonical
+  conversion implementation forwarding, while
   `/std/collections/internal_soa_storage/*` remains implementation-facing SoA
   storage/layout plumbing. The internal wrapper adapter still preserves the
   temporary experimental `SoaVector<T>` type identity until raw-builtin bridge
@@ -282,10 +284,10 @@ Task template:
   documented borrowed-view invalidation model, and C++/VM/native canonical
   backend parity all exist without hidden raw-builtin fallback behavior.
 - Further promotion work is tracked by the deferred SoA finish chain
-  (`TODO-4248` through `TODO-4252`), which owns the pending conversion seam
-  exit, public import cleanup, raw-builtin bridge normalization, parity
-  coverage, and final promotion docs needed before `soa_vector` can be treated
-  as a promoted public contract.
+  (`TODO-4249` through `TODO-4252`), which owns the remaining public import
+  cleanup, raw-builtin bridge normalization, parity coverage, and final
+  promotion docs needed before `soa_vector` can be treated as a promoted public
+  contract.
 - First promotion pass complete: the canonical public helper wrapper is
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
@@ -294,11 +296,12 @@ Task template:
   ECS example uses canonical wrapper/conversion imports, and ordinary public
   code no longer needs `experimental_soa_vector` or
   `experimental_soa_vector_conversions` imports. `soa_vector<T>` remains an
-  incubating canonical experiment until the pending conversion seam, remaining
-  public import cleanup, parity coverage, and generic SoA substrate cleanup
-  finish. The canonical wrapper now routes through
-  `/std/collections/internal_soa_vector/*` instead of directly importing
-  `/std/collections/experimental_soa_vector/*`.
+  incubating canonical experiment until the direct experimental conversion
+  seam, remaining public import cleanup, parity coverage, and generic SoA
+  substrate cleanup finish. The canonical wrapper now routes through
+  `/std/collections/internal_soa_vector/*` and canonical conversions route
+  through `/std/collections/internal_soa_vector_conversions/*` instead of
+  directly importing experimental implementation modules.
 
 ### Skipped Doctest Debt Summary
 
@@ -310,32 +313,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4248: Move canonical SoA conversions off experimental conversion imports
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred SoA finish
-  - scope: Move canonical `/std/collections/soa_vector_conversions/*` and
-    canonical `to_aos`/`from_aos` helper flows away from direct
-    `/std/collections/experimental_soa_vector_conversions/*` imports where a
-    stable internal substrate or promoted implementation path can own the
-    behavior.
-  - acceptance:
-    - Canonical conversion helpers use canonical `SoaVector<T>` receiver
-      spellings and no longer depend on direct experimental conversion imports
-      outside explicit compatibility shims.
-    - AoS/SoA conversion tests cover direct calls, method sugar, and
-      helper-return receivers for supported backends.
-    - Unsupported conversion paths keep deterministic diagnostics.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once canonical conversion wrappers are off direct
-    experimental conversion imports; leave public experimental-import
-    retirement to TODO-4249.
-
 - [ ] TODO-4249: Retire direct experimental SoA public imports
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred SoA finish
-  - depends_on: TODO-4248
   - scope: Retire, gate, or explicitly reclassify direct public imports of
     `/std/collections/experimental_soa_vector/*` and
     `/std/collections/experimental_soa_vector_conversions/*` now that canonical

@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4248: Move canonical SoA conversions off experimental conversion imports
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred SoA finish
+  - scope: Move canonical `/std/collections/soa_vector_conversions/*` and
+    canonical `to_aos`/`from_aos` helper flows away from direct
+    `/std/collections/experimental_soa_vector_conversions/*` imports where a
+    stable internal substrate or promoted implementation path can own the
+    behavior.
+  - acceptance:
+    - Canonical conversion helpers use canonical `SoaVector<T>` receiver
+      spellings and no longer depend on direct experimental conversion imports
+      outside explicit compatibility shims.
+    - AoS/SoA conversion tests cover direct calls, method sugar, and
+      helper-return receivers for supported backends.
+    - Unsupported conversion paths keep deterministic diagnostics.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once canonical conversion wrappers are off direct
+    experimental conversion imports; leave public experimental-import
+    retirement to TODO-4249.
+  - finished_at: 2026-04-28
+  - evidence: Added
+    `stdlib/std/collections/internal_soa_vector_conversions.prime` as the
+    internal conversion implementation adapter for canonical SoA AoS helpers.
+    `stdlib/std/collections/soa_vector_conversions.prime` now imports and
+    forwards through `/std/collections/internal_soa_vector_conversions/*`
+    instead of directly importing an experimental SoA implementation module;
+    `experimental_soa_vector_conversions.prime` remains only as a compatibility
+    conversion module for targeted direct-import coverage. Updated SoA docs and
+    source-lock checks, removed `TODO-4248` from the live queue, promoted
+    `TODO-4249` to Ready Now, and deferred release reruns to CI per the lite
+    workflow.
+
 - [x] TODO-4247: Move canonical SoA wrapper off experimental implementation imports
   - owner: ai
   - created_at: 2026-04-27
