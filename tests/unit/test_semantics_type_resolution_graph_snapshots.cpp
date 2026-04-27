@@ -327,7 +327,36 @@ TEST_CASE("implicit template-arg graph facts publish inferred argument facts") {
 
   const auto it = std::find_if(facts.begin(), facts.end(), [](const auto &fact) {
     return fact.targetPath == "/id" &&
+           fact.scopePath == "/main" &&
            fact.callName == "id" &&
+           fact.inferredArgsText == "i32";
+  });
+  REQUIRE(it != facts.end());
+}
+
+TEST_CASE("implicit template-arg graph facts publish helper-routing scope") {
+  const std::string source =
+      "[return<T>]\n"
+      "/std/collections/vector/pick<T>([vector<T>] values, [T] fallback) {\n"
+      "  return(fallback)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main([vector<i32>] values) {\n"
+      "  [auto] left{/std/collections/vector/pick(values, 1i32)}\n"
+      "  [auto] right{/std/collections/vector/pick(values, 2i32)}\n"
+      "  return(plus(left, right))\n"
+      "}\n";
+
+  std::string error;
+  std::vector<primec::semantics::ImplicitTemplateArgResolutionFactForTesting> facts;
+  REQUIRE(primec::semantics::collectImplicitTemplateArgResolutionFactsForTesting(
+      parseProgram(source), "/main", error, facts));
+  CHECK(error.empty());
+
+  const auto it = std::find_if(facts.begin(), facts.end(), [](const auto &fact) {
+    return fact.scopePath == "/main" &&
+           fact.targetPath == "/std/collections/vector/pick" &&
            fact.inferredArgsText == "i32";
   });
   REQUIRE(it != facts.end());
@@ -415,7 +444,7 @@ TEST_CASE("implicit template-arg graph facts are consumed by inference cache") {
   REQUIRE(primec::semantics::collectImplicitTemplateArgFactConsumptionMetricsForTesting(
       parseProgram(source), "/main", error, metrics));
   CHECK(error.empty());
-  CHECK(metrics.hitCount >= 0u);
+  CHECK(metrics.hitCount > 0u);
 }
 
 TEST_CASE("type-resolution preparation reports template fact-cache hits") {

@@ -226,6 +226,12 @@ Planned non-template inference migration contract:
 Planned template-inference migration contract:
 - Explicit and implicit template inference should move onto the graph-backed path only after non-template inference
   islands and graph invalidation rules are stable.
+- Current status: repeated implicit-template helper calls publish and consume
+  definition-scoped graph facts keyed by the helper target, explicit template
+  arguments, ordered argument types, and packed-argument shape. The first
+  migrated helper-routing slice covers stdlib vector helper calls whose receiver
+  type determines the inferred template argument while preserving existing
+  conflict diagnostics.
 - Template migration should not introduce a separate graph-independent solver cache for template arguments; the graph
   remains the owner of dependency ordering and revisit rules.
 - Each migration slice should identify:

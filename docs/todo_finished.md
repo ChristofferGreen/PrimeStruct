@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4239: Migrate helper-routing template inference onto graph facts.
+  Completed: Implicit template-argument fact keys and published testing facts
+  now use the current definition path as their semantic scope instead of the
+  namespace prefix, aligning repeated call consumption with the type-resolution
+  graph's definition-scoped ownership model. Focused graph-fact coverage now
+  pins `/main` scope publication for normal implicit calls and for a
+  helper-routed `/std/collections/vector/pick<T>` call whose receiver and
+  fallback argument infer `T`, while the existing conflict diagnostic test
+  continues to pin contradictory inputs. Local validation is deferred per the
+  lite workflow.
 - ✓ TODO-4238: Pin the CT-eval graph and semantic-product boundary.
   Completed: Executable AST transform hooks now evaluate through an explicit
   syntax-owned `ct-eval ast-transform adapter` boundary instead of matching the

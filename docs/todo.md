@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4239: Migrate helper-routing template inference onto graph facts
+- TODO-4240: Add backend semantic-product conformance coverage
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4240: Add backend semantic-product conformance coverage
 - TODO-4241: Retire semantic-product output compatibility callers
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
 - TODO-4243: Improve focused backend rerun ergonomics
@@ -81,10 +80,10 @@ Task template:
 - TODO-4248: Move canonical SoA conversions off experimental conversion imports
 - TODO-4249: Retire direct experimental SoA public imports
 - TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers
+- TODO-4251: Add full cross-backend SoA parity coverage
 
 ### Priority Lanes (Current)
 
-- Deferred graph and inference hardening: TODO-4239
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4240
   -> TODO-4241; TODO-4242 -> TODO-4243; TODO-4245
 - Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
@@ -100,7 +99,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4239: Migrate helper-routing template inference onto graph facts
 - TODO-4240: Add backend semantic-product conformance coverage
 - TODO-4241: Retire semantic-product output compatibility callers
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
@@ -145,9 +143,9 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4239 |
+| Semantic ownership boundary and graph/local-auto authority | none |
 | Compile-pipeline stage and publication-boundary contracts | none |
-| Compile-time macro hooks and AST transform ownership | TODO-4239 |
+| Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
@@ -173,7 +171,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4240, TODO-4241 |
-| AST transform hook conformance | TODO-4239 |
+| AST transform hook conformance | none |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4240 |
@@ -299,23 +297,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4239: Migrate helper-routing template inference onto graph facts
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred graph and inference hardening
-  - scope: Move one helper-routing or call-target template-inference slice onto
-    graph-backed facts instead of a local ad hoc inference cache.
-  - acceptance:
-    - The selected template-inference slice consumes graph-backed receiver,
-      call-target, or helper-routing facts.
-    - Existing helper-shadow and canonical-path choices remain stable for the
-      migrated slice.
-    - Focused positive and negative tests pin unchanged diagnostics for
-      unresolved or contradictory template inference inputs.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after one template-inference slice is graph-backed and
-    covered; broader template solving remains separate follow-up work.
 
 - [ ] TODO-4240: Add backend semantic-product conformance coverage
   - owner: ai

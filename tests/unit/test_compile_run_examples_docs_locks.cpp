@@ -807,23 +807,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4239: Migrate helper-routing template inference onto graph facts") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4240: Add backend semantic-product conformance coverage") !=
         std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4241: Retire semantic-product output compatibility callers") !=
+        std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
-  CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") !=
+  CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
         std::string::npos);
   CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4240") !=
         std::string::npos);
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4239: Migrate helper-routing template inference onto graph facts") !=
+                  "- TODO-4240: Add backend semantic-product conformance coverage") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4239: Migrate helper-routing template inference onto graph facts",
       "TODO-4240: Add backend semantic-product conformance coverage",
       "TODO-4241: Retire semantic-product output compatibility callers",
       "TODO-4242: Inventory repo-wide source-lock replacement candidates",
@@ -922,6 +921,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4238") == std::string::npos);
   CHECK(todoFinished.find("TODO-4238: Pin the CT-eval graph and semantic-product boundary") !=
         std::string::npos);
+  CHECK(todo.find("TODO-4239") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4239: Migrate helper-routing template inference onto graph facts") !=
+        std::string::npos);
   CHECK(todo.find("TODO-4216") == std::string::npos);
   CHECK(todoFinished.find("TODO-4216: Split semantic rewrites into an explicit pass manifest") !=
         std::string::npos);
@@ -952,11 +954,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
   CHECK(todo.find("- TODO-4147") == std::string::npos);
-  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | TODO-4239 |") !=
+  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | none |") !=
         std::string::npos);
   CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | TODO-4239 |") !=
+  CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
   CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |") !=
         std::string::npos);
@@ -988,7 +990,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Semantic-product-authority conformance | TODO-4240, TODO-4241 |") !=
         std::string::npos);
-  CHECK(todo.find("| AST transform hook conformance | TODO-4239 |") !=
+  CHECK(todo.find("| AST transform hook conformance | none |") !=
         std::string::npos);
   CHECK(todo.find("| Compile-pipeline stage handoff conformance | TODO-4240 |") !=
         std::string::npos);

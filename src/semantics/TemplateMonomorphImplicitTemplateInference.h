@@ -488,11 +488,15 @@ bool inferImplicitTemplateArgs(const Definition &def,
     }
     return false;
   }
+  const std::string implicitInferenceFactScopePath =
+      !ctx.currentDefinitionPath.empty()
+          ? ctx.currentDefinitionPath
+          : (namespacePrefix.empty() ? std::string("/") : namespacePrefix);
   std::string implicitInferenceFactKey;
   bool canConsumeImplicitInferenceFact = true;
   {
     std::ostringstream key;
-    key << (namespacePrefix.empty() ? std::string("/") : namespacePrefix)
+    key << implicitInferenceFactScopePath
         << "|" << def.fullPath
         << "|template:"
         << joinTemplateArgs(callExpr.templateArgs)
@@ -574,7 +578,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
       if (ctx.collectImplicitTemplateArgFactsForTesting) {
         ctx.implicitTemplateArgFactsForTesting.push_back(
             ImplicitTemplateArgResolutionFactForTesting{
-                namespacePrefix.empty() ? std::string("/") : namespacePrefix,
+                implicitInferenceFactScopePath,
                 callExpr.name,
                 def.fullPath,
                 joinTemplateArgs(outArgs),
@@ -872,7 +876,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
   if (ctx.collectImplicitTemplateArgFactsForTesting) {
     ctx.implicitTemplateArgFactsForTesting.push_back(
         ImplicitTemplateArgResolutionFactForTesting{
-            namespacePrefix.empty() ? std::string("/") : namespacePrefix,
+            implicitInferenceFactScopePath,
             callExpr.name,
             def.fullPath,
             joinTemplateArgs(outArgs),
