@@ -1145,7 +1145,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector builtin field view call argument escapes use unavailable-method diagnostics") {
+TEST_CASE("soa_vector builtin field view call argument escapes report escape diagnostics") {
   const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
@@ -1162,14 +1162,14 @@ TEST_CASE("soa_vector builtin field view call argument escapes use unavailable-m
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+    CHECK(error.find("field-view escapes via argument") != std::string::npos);
   };
 
   checkReject("x(values)");
   checkReject("values.x()");
 }
 
-TEST_CASE("soa_vector builtin field view return escapes use unavailable-method diagnostics") {
+TEST_CASE("soa_vector builtin field view return escapes report escape diagnostics") {
   const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
@@ -1187,7 +1187,7 @@ TEST_CASE("soa_vector builtin field view return escapes use unavailable-method d
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
-    CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+    CHECK(error.find("field-view escapes via return") != std::string::npos);
   };
 
   checkReject("x(values)");
@@ -1394,7 +1394,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector field-view method reports unsupported diagnostic") {
+TEST_CASE("soa_vector field-view method statement validates through helper substrate") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1408,11 +1408,11 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector field-view call-form reports unsupported diagnostic") {
+TEST_CASE("soa_vector field-view call-form statement validates through helper substrate") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -1426,8 +1426,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("soa_vector field-view index syntax validates through helper substrate") {
