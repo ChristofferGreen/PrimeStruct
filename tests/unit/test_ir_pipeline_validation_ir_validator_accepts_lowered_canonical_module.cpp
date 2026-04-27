@@ -1663,6 +1663,13 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   CHECK(primec::resolveStdlibSurfaceMemberName(*mapCtorMetadata, "/map/map") == "map");
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *mapCtorMetadata, "/std/collections/mapPair__t1234") == "mapPair");
+
+  const auto *mapRefMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/mapTryAtRef");
+  REQUIRE(mapRefMetadata != nullptr);
+  CHECK(mapRefMetadata->id == primec::StdlibSurfaceId::CollectionsMapHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *mapRefMetadata, "/std/collections/mapTryAtRef") == "tryAt_ref");
 }
 
 TEST_CASE("emitter cpp keeps canonical vector count builtin fallback") {
