@@ -152,8 +152,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map bindings") {
