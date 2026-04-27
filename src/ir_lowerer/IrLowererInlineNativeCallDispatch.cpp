@@ -469,6 +469,16 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   return false;
 }
 
+bool isExperimentalVectorTarget(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localsIn.find(expr.name);
+  return it != localsIn.end() &&
+         it->second.kind == LocalInfo::Kind::Value &&
+         isExperimentalVectorStructPath(it->second.structTypeName);
+}
+
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
@@ -906,6 +916,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       return InlineCallDispatchResult::NotHandled;
     }
     if (callee != nullptr && callee->fullPath == "/vector/capacity") {
+      if (isExperimentalVectorTarget(expr.args.front(), localsIn)) {
+        return InlineCallDispatchResult::NotHandled;
+      }
       error =
           "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions (call=" +
           expr.name + ", name=" + expr.name +

@@ -920,4 +920,55 @@ TEST_CASE("ir lowerer inline dispatch defers experimental vector count methods")
   CHECK(error == "stale");
 }
 
+TEST_CASE("ir lowerer inline dispatch defers experimental vector capacity methods") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo experimentalVectorInfo{};
+  experimentalVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  experimentalVectorInfo.valueKind =
+      primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  experimentalVectorInfo.structTypeName =
+      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  locals.emplace("values", experimentalVectorInfo);
+
+  primec::Expr receiver;
+  receiver.kind = primec::Expr::Kind::Name;
+  receiver.name = "values";
+
+  primec::Expr methodCapacityCall;
+  methodCapacityCall.kind = primec::Expr::Kind::Call;
+  methodCapacityCall.name = "capacity";
+  methodCapacityCall.isMethodCall = true;
+  methodCapacityCall.args = {receiver};
+
+  primec::Definition vectorCapacity;
+  vectorCapacity.fullPath = "/vector/capacity";
+
+  std::string error = "stale";
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            methodCapacityCall,
+            locals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return &vectorCapacity;
+            },
+            [](const primec::Expr &) -> const primec::Definition * {
+              CHECK(false);
+              return nullptr;
+            },
+            [&](const primec::Expr &,
+                const primec::Definition &,
+                const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              return true;
+            },
+            error) == Result::NotHandled);
+  CHECK(emitCalls == 0);
+  CHECK(error == "stale");
+}
+
 TEST_SUITE_END();
