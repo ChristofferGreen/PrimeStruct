@@ -298,8 +298,10 @@ TEST_CASE("soa_vector builtin ref local bindings use pending diagnostic") {
   checkReject("Particle", "/soa_vector/ref(values, 0i32)");
 }
 
-TEST_CASE("soa_vector helper-return ref local bindings use pending diagnostic") {
-  const auto checkReject = [](const std::string &bindingType, const std::string &bindingInit) {
+TEST_CASE("soa_vector helper-return ref/ref_ref local bindings use pending diagnostic") {
+  const auto checkReject = [](const std::string &bindingType,
+                              const std::string &bindingInit,
+                              const std::string &expected) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -315,13 +317,21 @@ TEST_CASE("soa_vector helper-return ref local bindings use pending diagnostic") 
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("auto", "ref(cloneValues(), 0i32)");
-  checkReject("auto", "cloneValues().ref(0i32)");
-  checkReject("Particle", "ref(cloneValues(), 0i32)");
-  checkReject("Particle", "cloneValues().ref(0i32)");
+  const std::string refPending =
+      "unknown method: /std/collections/soa_vector/ref";
+  const std::string refRefPending =
+      "unknown method: /std/collections/soa_vector/ref_ref";
+  checkReject("auto", "ref(cloneValues(), 0i32)", refPending);
+  checkReject("auto", "cloneValues().ref(0i32)", refPending);
+  checkReject("Particle", "ref(cloneValues(), 0i32)", refPending);
+  checkReject("Particle", "cloneValues().ref(0i32)", refPending);
+  checkReject("auto", "ref_ref(cloneValues(), 0i32)", refRefPending);
+  checkReject("auto", "cloneValues().ref_ref(0i32)", refRefPending);
+  checkReject("Particle", "ref_ref(cloneValues(), 0i32)", refRefPending);
+  checkReject("Particle", "cloneValues().ref_ref(0i32)", refRefPending);
 }
 
 TEST_CASE("soa_vector ref helper binding keeps same-path user helper for auto inference") {
@@ -377,33 +387,36 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
               "unknown method: /std/collections/soa_vector/ref_ref");
 }
 
-TEST_CASE("soa_vector helper-return ref call argument escapes use borrowed-view diagnostic") {
-  const std::string source = R"(
-Particle() {
-  [i32] x{1i32}
-}
+TEST_CASE("soa_vector helper-return ref/ref_ref call argument escapes use pending diagnostic") {
+  const auto checkReject = [](const std::string &expr,
+                              const std::string &expected) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "Holder() {}\n\n"
+        "[return<soa_vector<Particle>>]\n"
+        "/Holder/cloneValues([Holder] self) {\n"
+        "  return(soa_vector<Particle>())\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "consume<T>([T] value) {\n"
+        "  return(0i32)\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [Holder] holder{Holder()}\n"
+        "  return(consume(" + expr + "))\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find(expected) != std::string::npos);
+  };
 
-Holder() {}
-
-[return<soa_vector<Particle>>]
-/Holder/cloneValues([Holder] self) {
-  return(soa_vector<Particle>())
-}
-
-[return<int>]
-consume<T>([T] value) {
-  return(0i32)
-}
-
-[return<int>]
-main() {
-  [Holder] holder{Holder()}
-  return(consume(ref(holder.cloneValues(), 0i32)))
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
+  checkReject("ref(holder.cloneValues(), 0i32)",
+              "unknown method: /std/collections/soa_vector/ref");
+  checkReject("ref_ref(holder.cloneValues(), 0i32)",
+              "unknown method: /std/collections/soa_vector/ref_ref");
 }
 
 TEST_CASE("soa_vector builtin ref return escapes use pending diagnostic") {

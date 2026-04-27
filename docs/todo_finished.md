@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4202: Lock helper-return SoA ref_ref diagnostics. Completed:
+  `tests/unit/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp`
+  now covers helper-returned `soa_vector<T>` receivers for both `ref(...)`
+  and `ref_ref(...)` pending diagnostics in local bindings and call-argument
+  escapes, preserving the canonical `/std/collections/soa_vector/ref*`
+  diagnostic surface without adding new active TODO debt. Local validation is
+  deferred per the lite workflow.
 - ✓ TODO-4201: Share method target query snapshot inference. Completed:
   method-call target semantic-product collection now reuses
   `inferQuerySnapshotData(...)` for resolved-path and receiver-binding facts
