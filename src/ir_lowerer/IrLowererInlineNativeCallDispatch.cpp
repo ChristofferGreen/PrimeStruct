@@ -725,6 +725,22 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (!expr.isMethodCall) {
     std::string mapHelperName;
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+    std::string experimentalVectorElementType;
+    if (getExperimentalVectorConstructorElementTypeAlias(
+            expr, experimentalVectorElementType)) {
+      Expr rewrittenVectorCtor = expr;
+      rewrittenVectorCtor.name = "/std/collections/experimental_vector/vector";
+      rewrittenVectorCtor.namespacePrefix.clear();
+      rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};
+      const Definition *vectorCtor =
+          resolveDefinitionCallFn(rewrittenVectorCtor);
+      if (vectorCtor != nullptr) {
+        return emitCanonicalInlineDefinitionCall(rewrittenVectorCtor,
+                                                 *vectorCtor)
+                   ? InlineCallDispatchResult::Emitted
+                   : InlineCallDispatchResult::Error;
+      }
+    }
     const bool isCanonicalStdMapHelperCall =
         rawPath.rfind("/std/collections/map/", 0) == 0 ||
         rawPath.rfind("std/collections/map/", 0) == 0;

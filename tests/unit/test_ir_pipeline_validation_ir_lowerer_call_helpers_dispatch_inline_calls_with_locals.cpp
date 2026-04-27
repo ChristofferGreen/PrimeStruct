@@ -821,4 +821,52 @@ TEST_CASE("ir lowerer call helpers emit unsupported native call diagnostics for 
             error) == Result::NotHandled);
 }
 
+TEST_CASE("ir lowerer inline dispatch emits experimental vector element constructor aliases") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::Expr aliasCtor;
+  aliasCtor.kind = primec::Expr::Kind::Call;
+  aliasCtor.namespacePrefix = "/std/collections/experimental_vector";
+  aliasCtor.name = "i32";
+
+  primec::Definition vectorCtor;
+  vectorCtor.fullPath = "/std/collections/experimental_vector/vector";
+
+  std::string error = "stale";
+  int resolveDefinitionCalls = 0;
+  int emitCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+            aliasCtor,
+            {},
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+              return nullptr;
+            },
+            [&](const primec::Expr &callExpr) -> const primec::Definition * {
+              ++resolveDefinitionCalls;
+              CHECK(callExpr.name == "/std/collections/experimental_vector/vector");
+              CHECK(callExpr.namespacePrefix.empty());
+              REQUIRE(callExpr.templateArgs.size() == 1);
+              CHECK(callExpr.templateArgs.front() == "i32");
+              return &vectorCtor;
+            },
+            [&](const primec::Expr &callExpr,
+                const primec::Definition &resolvedCallee,
+                const primec::ir_lowerer::LocalMap &) {
+              ++emitCalls;
+              CHECK(callExpr.name == "/std/collections/experimental_vector/vector");
+              REQUIRE(callExpr.templateArgs.size() == 1);
+              CHECK(callExpr.templateArgs.front() == "i32");
+              CHECK(resolvedCallee.fullPath ==
+                    "/std/collections/experimental_vector/vector");
+              return true;
+            },
+            error) == Result::Emitted);
+  CHECK(resolveDefinitionCalls == 1);
+  CHECK(emitCalls == 1);
+  CHECK(error == "stale");
+}
+
 TEST_SUITE_END();
