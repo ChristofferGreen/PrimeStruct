@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4215: Make semantic-product publication consume merged fact bundles
+- TODO-4228: Factor and version the semantic-product boundary API
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4228: Factor and version the semantic-product boundary API
 - TODO-4216: Split semantic rewrites into an explicit pass manifest
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
@@ -81,11 +80,12 @@ Task template:
 - TODO-4231: Make query/try/on_error graph facts the exclusive authority
 - TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
 - TODO-4225: Close call-target and helper-routing lowerer fallbacks
+- TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4215 -> TODO-4228 -> TODO-4216
-  -> TODO-4217 -> TODO-4224 -> TODO-4229 -> TODO-4230
+- Semantic phase contract hardening: TODO-4228 -> TODO-4216 -> TODO-4217
+  -> TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
@@ -105,7 +105,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4215: Make semantic-product publication consume merged fact bundles
 - TODO-4228: Factor and version the semantic-product boundary API
 - TODO-4216: Split semantic rewrites into an explicit pass manifest
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
@@ -179,8 +178,8 @@ Task template:
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | TODO-4215, TODO-4240, TODO-4241 |
-| Semantic-product public API factoring and versioning | TODO-4215, TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
+| Semantic-product publication by module and fact family | TODO-4240, TODO-4241 |
+| Semantic-product public API factoring and versioning | TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
 | IR lowerer compile-unit breakup | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
 | Backend validation/build ergonomics | TODO-4243 |
 | Emitter/semantics map-helper parity | none |
@@ -197,11 +196,11 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4215, TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
+| Semantic-product-authority conformance | TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | TODO-4220, TODO-4234, TODO-4240 |
-| Semantic-product publication parity and deterministic ordering | TODO-4215, TODO-4240 |
+| Semantic-product publication parity and deterministic ordering | TODO-4240 |
 | Lowerer/source-composition contract coverage | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4217, TODO-4224, TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
@@ -302,30 +301,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4215: Make semantic-product publication consume merged fact bundles
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Move semantic-product publication to consume the deterministic
-    merged fact bundle produced by validation rather than pulling publication
-    data back through mutable validator snapshot methods.
-  - acceptance:
-    - `publishSemanticProgramAfterValidation(...)` or its replacement accepts a
-      publication-ready fact bundle boundary.
-    - Published lookup indexes and formatted `semantic-product` output remain
-      byte-stable across serial and worker validation.
-    - Lowerer adapter tests prove published indexes are still the lowering
-      authority for routing/local-auto/query/try/on_error families.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once publication no longer depends on validator-owned
-    mutable snapshot extraction for migrated families; leave public API and
-    versioning cleanup to TODO-4228.
-
 - [ ] TODO-4228: Factor and version the semantic-product boundary API
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4215
   - scope: Define the narrow post-semantics boundary API, including which facts
     are semantic-product owned, which provenance remains AST-owned, and how
     future semantic-product dump/API changes are versioned or documented.

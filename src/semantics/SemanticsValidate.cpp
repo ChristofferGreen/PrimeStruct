@@ -24,6 +24,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace primec {
@@ -6075,13 +6076,19 @@ bool runSemanticValidation(Program &program,
     }
     semantics::assignSemanticNodeIds(program);
     validator.invalidatePilotRoutingSemanticCollectors();
+    semantics::SemanticPublicationSurface publicationSurface;
+    if (semanticProgramOut != nullptr) {
+      publicationSurface =
+          validator.takeSemanticPublicationSurfaceForSemanticProduct(
+              semanticProductBuildConfig);
+    }
     semantics::maybeRelieveSemanticAllocatorPressure();
     validationBenchmark.captureAfter();
     validatorLifetimeBenchmark.captureAfterRun();
     if (semanticProgramOut != nullptr) {
       semantics::publishSemanticProgramAfterValidation(program,
                                                        entryPath,
-                                                       validator,
+                                                       std::move(publicationSurface),
                                                        semanticProductBuildConfig,
                                                        benchmarkRuntime,
                                                        *semanticProgramOut);

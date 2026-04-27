@@ -1,7 +1,6 @@
 #include "SemanticsValidationPublicationOrchestration.h"
 
 #include "SemanticPublicationBuilders.h"
-#include "SemanticsValidator.h"
 
 #include <utility>
 
@@ -11,10 +10,8 @@ namespace {
 SemanticProgram buildSemanticProgramAfterValidation(
     const Program &program,
     const std::string &entryPath,
-    SemanticsValidator &validator,
+    SemanticPublicationSurface publicationSurface,
     const SemanticProductBuildConfig *buildConfig) {
-  auto publicationSurface =
-      validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig);
   maybeRelieveSemanticAllocatorPressure();
   SemanticProgram semanticProgram = buildSemanticProgramFromPublicationSurface(
       program,
@@ -50,7 +47,7 @@ uint64_t semanticProgramFactCountForValidationPublication(
 void publishSemanticProgramAfterValidation(
     const Program &program,
     const std::string &entryPath,
-    SemanticsValidator &validator,
+    SemanticPublicationSurface publicationSurface,
     const SemanticProductBuildConfig *buildConfig,
     const SemanticValidationBenchmarkRuntime &benchmarkRuntime,
     SemanticProgram &semanticProgramOut) {
@@ -68,7 +65,7 @@ void publishSemanticProgramAfterValidation(
   semanticProgramOut = buildSemanticProgramAfterValidation(
       program,
       entryPath,
-      validator,
+      std::move(publicationSurface),
       buildConfig);
 
   if (benchmarkRuntime.phaseCounters == nullptr) {

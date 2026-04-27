@@ -3713,6 +3713,17 @@ TEST_CASE("semantic benchmark plumbing keeps production validate surface narrow"
         std::string::npos);
   CHECK(publicationOrchestrationHeader.find("publishSemanticProgramAfterValidation(") !=
         std::string::npos);
+  CHECK(publicationOrchestrationHeader.find("SemanticPublicationSurface publicationSurface") !=
+        std::string::npos);
+  CHECK(publicationOrchestrationHeader.find("class SemanticsValidator;") ==
+        std::string::npos);
+  CHECK(publicationOrchestrationSource.find("#include \"SemanticsValidator.h\"") ==
+        std::string::npos);
+  CHECK(publicationOrchestrationSource.find("SemanticsValidator &validator") ==
+        std::string::npos);
+  CHECK(publicationOrchestrationSource.find(
+            "validator.takeSemanticPublicationSurfaceForSemanticProduct(") ==
+        std::string::npos);
   CHECK(publicationOrchestrationSource.find("semanticProductBuild.callsVisited = 1;") !=
         std::string::npos);
   CHECK(publicationOrchestrationSource.find(

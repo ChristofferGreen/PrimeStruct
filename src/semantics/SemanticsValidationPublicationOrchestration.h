@@ -2,18 +2,17 @@
 
 #include "primec/Semantics.h"
 
+#include "SemanticPublicationSurface.h"
 #include "SemanticsValidationBenchmarkOrchestration.h"
 
 #include <string>
 
 namespace primec::semantics {
 
-class SemanticsValidator;
-
 void publishSemanticProgramAfterValidation(
     const Program &program,
     const std::string &entryPath,
-    SemanticsValidator &validator,
+    SemanticPublicationSurface publicationSurface,
     const SemanticProductBuildConfig *buildConfig,
     const SemanticValidationBenchmarkRuntime &benchmarkRuntime,
     SemanticProgram &semanticProgramOut);

@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4215: Make semantic-product publication consume merged fact bundles.
+  Completed: semantic validation now extracts a publication-ready
+  `SemanticPublicationSurface` after final semantic-node-id assignment and
+  passes that surface by value into
+  `publishSemanticProgramAfterValidation(...)`. Semantic-product publication
+  orchestration no longer includes `SemanticsValidator`, accepts the prepared
+  fact bundle directly, and builds the `SemanticProgram` from that boundary
+  before recording semantic-product benchmark counters. Source-lock coverage
+  now rejects reintroducing validator-owned mutable snapshot extraction inside
+  the publication orchestration path. Local validation is deferred per the
+  lite workflow.
 - ✓ TODO-4227: Move semantic-product fact families into worker bundles.
   Completed: definition-worker validation now collects a full
   `SemanticPublicationSurface` into each `SemanticDefinitionWorkerResultBundle`

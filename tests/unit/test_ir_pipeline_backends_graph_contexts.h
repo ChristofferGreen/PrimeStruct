@@ -2276,56 +2276,64 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(primevmMain.find("prepareIrModule(program, semanticProgram, options, primec::IrValidationTarget::Vm, ir, irFailure)") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program,") !=
+  CHECK(semanticsValidate.find("semantics::SemanticPublicationSurface publicationSurface;") !=
         std::string::npos);
-  const std::size_t buildSemanticProgramStart =
-      semanticsValidate.find("SemanticProgram buildSemanticProgram(const Program &program,");
-  const std::size_t semanticProgramFactCountStart =
-      semanticsValidate.find("uint64_t semanticProgramFactCount(const SemanticProgram &semanticProgram) {");
-  REQUIRE(buildSemanticProgramStart != std::string::npos);
-  REQUIRE(semanticProgramFactCountStart != std::string::npos);
-  REQUIRE(buildSemanticProgramStart < semanticProgramFactCountStart);
-  const std::string buildSemanticProgramBody = semanticsValidate.substr(
-      buildSemanticProgramStart, semanticProgramFactCountStart - buildSemanticProgramStart);
-
-  CHECK(buildSemanticProgramBody.find("auto publicationSurface =") != std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig)") !=
+  CHECK(semanticsValidate.find("validator.takeSemanticPublicationSurfaceForSemanticProduct(") !=
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("semantics::buildSemanticProgramFromPublicationSurface(") !=
+  CHECK(semanticsValidate.find("std::move(publicationSurface)") !=
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.takeCollectedDirectCallTargetsForSemanticProduct()") ==
+  CHECK(semanticsValidate.find("buildSemanticProgramFromPublicationSurface(") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.takeCollectedMethodCallTargetsForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationHeader.find(
+            "SemanticPublicationSurface publicationSurface") != std::string::npos);
+  CHECK(semanticPublicationOrchestrationHeader.find("class SemanticsValidator;") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.takeCollectedBridgePathChoicesForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("#include \"SemanticsValidator.h\"") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("directCallTargetSnapshotsForBridgeDerivation") == std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.takeCollectedCallableSummariesForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find(
+            "validator.takeSemanticPublicationSurfaceForSemanticProduct(") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.typeMetadataSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find(
+            "SemanticPublicationSurface publicationSurface") != std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find(
+            "buildSemanticProgramFromPublicationSurface(") != std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("SemanticsValidator &validator") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.structFieldMetadataSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.takeCollectedDirectCallTargetsForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.bindingFactSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.takeCollectedMethodCallTargetsForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.returnFactSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.takeCollectedBridgePathChoicesForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.localAutoFactSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("directCallTargetSnapshotsForBridgeDerivation") == std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("validator.takeCollectedCallableSummariesForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.queryFactSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.typeMetadataSnapshotForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.tryFactSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.structFieldMetadataSnapshotForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("validator.onErrorFactSnapshotForSemanticProduct()") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.bindingFactSnapshotForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("ensureModuleResolvedArtifacts(") == std::string::npos);
-  CHECK(buildSemanticProgramBody.find("semanticProgram.moduleResolvedArtifacts.reserve(") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.returnFactSnapshotForSemanticProduct()") ==
         std::string::npos);
-  CHECK(buildSemanticProgramBody.find("std::sort(semanticProgram.moduleResolvedArtifacts.begin(),") ==
+  CHECK(semanticPublicationOrchestrationSource.find("validator.localAutoFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("validator.queryFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("validator.tryFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("validator.onErrorFactSnapshotForSemanticProduct()") ==
+        std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("ensureModuleResolvedArtifacts(") == std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("semanticProgram.moduleResolvedArtifacts.reserve(") ==
+        std::string::npos);
+  CHECK(semanticPublicationOrchestrationSource.find("std::sort(semanticProgram.moduleResolvedArtifacts.begin(),") ==
         std::string::npos);
   CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath);") ==
         std::string::npos);
-  CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);") !=
+  CHECK(semanticsValidate.find("std::move(publicationSurface)") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("*semanticProgramOut = buildSemanticProgram(program, entryPath, validator, semanticProductBuildConfig);") ==
         std::string::npos);
 }
 #endif
@@ -2585,11 +2593,6 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationOrchestrationHeader.find(
             "publishSemanticProgramAfterValidation(") != std::string::npos);
-  CHECK(semanticPublicationOrchestrationSource.find(
-            "validator.takeSemanticPublicationSurfaceForSemanticProduct(buildConfig)") !=
-        std::string::npos);
-  CHECK(semanticPublicationOrchestrationSource.find(
-            "buildSemanticProgramFromPublicationSurface(") != std::string::npos);
   CHECK(semanticPublicationOrchestrationSource.find(
             "semanticProgramFactCountForValidationPublication(") != std::string::npos);
   CHECK(semanticPublicationOrchestrationSource.find(
