@@ -17,6 +17,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #if defined(__APPLE__)
@@ -133,8 +134,9 @@ struct BenchmarkSemanticRepeatLeakCheck {
   std::vector<double> wallSecondsByRun;
 };
 
+template <typename PipelineResultLike>
 void emitBenchmarkSemanticPhaseCounters(std::ostream &err,
-                                        const primec::CompilePipelineOutput &output) {
+                                        const PipelineResultLike &output) {
   if (!output.hasSemanticPhaseCounters) {
     return;
   }
@@ -293,12 +295,12 @@ int main(int argc, char **argv) {
     }
   }
   for (uint32_t runIndex = 0; runIndex < repeatCount; ++runIndex) {
-    primec::CompilePipelineOutput runOutput;
     primec::CompilePipelineErrorStage runError = primec::CompilePipelineErrorStage::None;
     std::string runErrorText;
     const bool isFinalRun = (runIndex + 1u == repeatCount);
     const auto runStart = std::chrono::steady_clock::now();
-    const bool ok = primec::runCompilePipeline(options, runOutput, runError, runErrorText);
+    primec::CompilePipelineResult runResult =
+        primec::runCompilePipelineResult(options, runError, runErrorText);
     (void)runError;
     const auto runStop = std::chrono::steady_clock::now();
     if (repeatLeakCheck.enabled) {
@@ -307,8 +309,8 @@ int main(int argc, char **argv) {
       const ProcessRssSample rssAfterRun = captureProcessRssSample();
       repeatLeakCheck.rssAfterEachRunBytes.push_back(rssAfterRun.valid ? rssAfterRun.residentBytes : 0);
     }
-    if (!ok) {
-      pipelineOutput = std::move(runOutput);
+    if (auto *pipelineFailure =
+            std::get_if<primec::CompilePipelineFailureResult>(&runResult)) {
       error = std::move(runErrorText);
       if (repeatLeakCheck.enabled) {
         const ProcessRssSample rssAfter = captureProcessRssSample();
@@ -318,12 +320,14 @@ int main(int argc, char **argv) {
                                           static_cast<int64_t>(repeatLeakCheck.rssBeforeBytes);
         }
       }
-      emitBenchmarkSemanticPhaseCounters(std::cerr, pipelineOutput);
+      emitBenchmarkSemanticPhaseCounters(std::cerr, *pipelineFailure);
       emitBenchmarkSemanticRepeatLeakCheck(std::cerr, repeatLeakCheck);
-      return primec::emitCliFailure(std::cerr, options, primec::describeCompilePipelineFailure(pipelineOutput));
+      return primec::emitCliFailure(
+          std::cerr, options, primec::describeCompilePipelineFailure(*pipelineFailure));
     }
     if (isFinalRun) {
-      pipelineOutput = std::move(runOutput);
+      pipelineOutput =
+          std::move(std::get<primec::CompilePipelineSuccessResult>(runResult).output);
       error = std::move(runErrorText);
     }
   }

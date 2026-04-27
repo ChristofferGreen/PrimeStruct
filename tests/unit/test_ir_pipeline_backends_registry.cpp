@@ -2690,12 +2690,11 @@ TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") 
 }
 
 TEST_CASE("cli driver preserves parse-stage diagnostic context") {
-  primec::CompilePipelineOutput output;
+  primec::CompilePipelineFailureResult output;
   output.filteredSource = "main() { return(1i32) }";
   output.failure.stage = primec::CompilePipelineErrorStage::Parse;
   output.failure.message = "raw parse failure";
   output.failure.diagnosticInfo.message = "expected token";
-  output.hasFailure = true;
 
   const primec::CliFailure failure = primec::describeCompilePipelineFailure(output);
 
@@ -2711,14 +2710,13 @@ TEST_CASE("cli driver preserves parse-stage diagnostic context") {
 }
 
 TEST_CASE("cli driver reports semantic-product availability on post-semantics failures") {
-  primec::CompilePipelineOutput output;
+  primec::CompilePipelineFailureResult output;
   output.filteredSource = "import /std/gfx/*\n[return<int>]\nmain(){ return(0i32) }\n";
   output.semanticProgram.entryPath = "/main";
   output.hasSemanticProgram = true;
   output.failure.stage = primec::CompilePipelineErrorStage::Semantic;
   output.failure.message = "graphics stdlib runtime substrate unavailable for glsl target: /std/gfx/*";
   output.failure.diagnosticInfo.message = output.failure.message;
-  output.hasFailure = true;
 
   const primec::CliFailure failure = primec::describeCompilePipelineFailure(output);
 
@@ -4936,7 +4934,14 @@ TEST_CASE("main routes cpp and exe through ir backend alias lookup") {
   CHECK(source.find("findIrBackend(irBackendKind)") != std::string::npos);
   CHECK(source.find("if (irBackend == nullptr && options.dumpStage.empty())") != std::string::npos);
   CHECK(source.find("options.skipSemanticProductForNonConsumingPath = true;") != std::string::npos);
-  CHECK(source.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);
+  CHECK(source.find("runCompilePipelineResult(options, runError, runErrorText)") != std::string::npos);
+  CHECK(source.find("std::get_if<primec::CompilePipelineFailureResult>(&runResult)") !=
+        std::string::npos);
+  CHECK(source.find("describeCompilePipelineFailure(*pipelineFailure)") != std::string::npos);
+  CHECK(source.find("std::get<primec::CompilePipelineSuccessResult>(runResult).output") !=
+        std::string::npos);
+  CHECK(source.find("runCompilePipeline(options, runOutput") == std::string::npos);
+  CHECK(source.find("describeCompilePipelineFailure(pipelineOutput)") == std::string::npos);
   CHECK(source.find("describeIrPreparationFailure(") != std::string::npos);
   CHECK(source.find("pipelineOutput.hasSemanticProgram ? &pipelineOutput.semanticProgram : nullptr") !=
         std::string::npos);

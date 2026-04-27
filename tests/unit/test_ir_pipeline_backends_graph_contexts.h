@@ -1411,7 +1411,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(structLayoutHelpersHeader.find("const ::primec::SemanticProgram *semanticProgram,") !=
         std::string::npos);
 
-  CHECK(primecMain.find("describeCompilePipelineFailure(pipelineOutput)") != std::string::npos);
+  CHECK(primecMain.find("std::get_if<primec::CompilePipelineFailureResult>(&runResult)") !=
+        std::string::npos);
+  CHECK(primecMain.find("describeCompilePipelineFailure(*pipelineFailure)") !=
+        std::string::npos);
+  CHECK(primecMain.find("describeCompilePipelineFailure(pipelineOutput)") ==
+        std::string::npos);
   CHECK(primevmMain.find("std::get_if<primec::CompilePipelineFailureResult>(&pipelineResult)") !=
         std::string::npos);
   CHECK(primevmMain.find("describeCompilePipelineFailure(*pipelineFailure)") !=

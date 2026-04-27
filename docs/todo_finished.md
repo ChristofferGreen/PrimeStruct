@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4241: Retire semantic-product output compatibility callers.
+  Completed: The `primec` entrypoint now uses the explicit
+  `CompilePipelineResult` success/failure variant instead of the legacy
+  `runCompilePipeline(...)` output-struct compatibility call. Failure reporting
+  now passes `CompilePipelineFailureResult` directly into the CLI failure
+  descriptor, benchmark semantic phase counter emission accepts both success and
+  failure result shapes, and focused CLI-driver tests cover parse and
+  post-semantics semantic-product failure paths through the explicit failure
+  variant. Remaining helper/test compatibility callers were split into
+  TODO-4279. Local validation is deferred per the lite workflow.
 - ✓ TODO-4240: Add backend semantic-product conformance coverage.
   Completed: The lowerer semantic-product completeness matrix now validates
   collection-specialization coverage for vector/map/`soa_vector` bindings and

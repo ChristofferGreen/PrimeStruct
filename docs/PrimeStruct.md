@@ -441,8 +441,9 @@ Compile-pipeline publication contract:
 - Failure paths should continue to report diagnostics against AST-backed provenance, but post-semantics compile-pipeline
   failures should still preserve the published semantic product plus a first-class failure object rather than dropping
   back to raw string/error-stage side channels.
-- The `primevm` runtime entrypoint now consumes an explicit compile-pipeline success/failure variant for that
-  preserved failure object, while the legacy output struct remains as the compatibility surface for unmigrated callers.
+- The `primec` and `primevm` runtime entrypoints now consume explicit compile-pipeline success/failure variants for
+  that preserved failure object, while the legacy output struct remains as the compatibility surface for
+  unmigrated helper/test callers.
   Post-semantics diagnostics may explicitly note that a semantic product is already available even though later target
   validation failed.
 - The current published shell is still intentionally narrow, but it now includes the resolved call-target surface:
@@ -466,10 +467,9 @@ Compile-pipeline publication contract:
 - Backend/runtime entrypoints should consume the semantic product from compile-pipeline output once available rather
   than rebuilding semantic facts ad hoc from the raw `Program`.
 - That success-path handoff is now live for `primec` compile/emit entrypoints, `primevm`, backend registry dispatch,
-  and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. The `primevm` result boundary now also uses
-  explicit success/failure variants. `TODO-4241` tracks the remaining compatibility caller migration, and the
-  semantic-product dump/report API boundary is now versioned under the contract below. Add a separate concrete TODO
-  before changing unrelated CLI/runtime seams.
+  and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. The `primec` and `primevm` result boundaries
+  now also use explicit success/failure variants, and the semantic-product dump/report API boundary is now versioned
+  under the contract below. Add a separate concrete TODO before changing unrelated CLI/runtime seams.
 
 CLI/runtime plumbing contract:
 - `primec` and `primevm` should receive the semantic product only through compile-pipeline success artifacts, not

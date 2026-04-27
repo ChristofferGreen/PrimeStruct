@@ -67,7 +67,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4241: Retire semantic-product output compatibility callers
+- TODO-4279: Retire compile-pipeline helper compatibility callers
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -84,7 +84,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred semantic-product/backend/tooling follow-ups: TODO-4241;
+- Deferred semantic-product/backend/tooling follow-ups: TODO-4279;
   TODO-4242 -> TODO-4243; TODO-4245
 - Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
   -> TODO-4248 -> TODO-4249 -> TODO-4250 -> TODO-4251 -> TODO-4252
@@ -99,7 +99,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4241: Retire semantic-product output compatibility callers
+- TODO-4279: Retire compile-pipeline helper compatibility callers
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
 - TODO-4243: Improve focused backend rerun ergonomics
 - TODO-4244: Decide the `soa_vector` maturity exit
@@ -151,8 +151,8 @@ Task template:
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | TODO-4241 |
-| Semantic-product public API factoring and versioning | TODO-4241 |
+| Semantic-product publication by module and fact family | TODO-4279 |
+| Semantic-product public API factoring and versioning | TODO-4279 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | TODO-4243 |
 | Emitter/semantics map-helper parity | none |
@@ -169,7 +169,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4241 |
+| Semantic-product-authority conformance | TODO-4279 |
 | AST transform hook conformance | none |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | none |
@@ -297,22 +297,28 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4241: Retire semantic-product output compatibility callers
+- [ ] TODO-4279: Retire compile-pipeline helper compatibility callers
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred semantic-product/backend/tooling follow-up
-  - scope: Replace remaining compatibility callers of legacy semantic-product
-    output structs or adapters with explicit success/failure result variants.
+  - scope: Replace remaining test/helper compatibility callers of legacy
+    compile-pipeline output structs or adapters with explicit success/failure
+    result variants where they exercise failure reporting or post-semantics
+    semantic-product availability.
+  - implementation_notes: Start with tests and helper APIs that still call
+    `runCompilePipeline(...)` only to inspect success/failure state or
+    `CompilePipelineOutput::failure`; keep success-only dump and conformance
+    helpers on the legacy API until they need failure-object preservation.
   - acceptance:
-    - At least one legacy semantic-product output compatibility caller is
-      deleted or migrated to the explicit result variant.
+    - At least one remaining test/helper compatibility caller is deleted or
+      migrated to the explicit result variant.
     - Success and failure paths remain covered by focused tests.
-    - `docs/PrimeStruct.md` no longer describes the migrated caller as a live
-      compatibility seam.
+    - `docs/PrimeStruct.md` accurately describes any remaining legacy output
+      callers as helper/test compatibility seams.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after one real compatibility caller is retired and the
-    replacement result API is covered; split additional callers into follow-up
-    leaves if more remain.
+  - stop_rule: Stop after one remaining helper/test compatibility caller is
+    retired and the replacement result API is covered; split additional
+    callers into follow-up leaves if more remain.
 
 - [ ] TODO-4242: Inventory repo-wide source-lock replacement candidates
   - owner: ai
