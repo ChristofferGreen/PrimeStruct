@@ -461,6 +461,13 @@
             "dispatchBootstrap.dispatchResolvers,\n"
             "            rewrittenDirectCollectionFallbackCall)") !=
         std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "unknown call target: /std/collections/vector/\" + helperName") ==
+        std::string::npos);
+  CHECK(semanticsExprSource.find(
+            "hasDeclaredDefinitionPath(\"/vector/\" +\n"
+            "                                  normalizeCollectionMethodName(expr.name))") ==
+        std::string::npos);
   CHECK(semanticsExprPrivateValidationSource.find(
             "bool isStdNamespacedVectorCountCall = false;") ==
         std::string::npos);

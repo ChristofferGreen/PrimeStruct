@@ -520,33 +520,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
         }
       }
     }
-    if (!expr.isMethodCall && expr.namespacePrefix.empty() &&
-        expr.name.find('/') == std::string::npos &&
-        (normalizeCollectionMethodName(expr.name) == "count" ||
-         normalizeCollectionMethodName(expr.name) == "capacity" ||
-         normalizeCollectionMethodName(expr.name) == "at" ||
-         normalizeCollectionMethodName(expr.name) == "at_unsafe") &&
-        hasDeclaredDefinitionPath("/vector/" +
-                                  normalizeCollectionMethodName(expr.name))) {
-      const std::string helperName = normalizeCollectionMethodName(expr.name);
-      size_t receiverIndex = 0;
-      for (size_t i = 0; i < expr.argNames.size() && i < expr.args.size(); ++i) {
-        if (expr.argNames[i].has_value() && *expr.argNames[i] == "values") {
-          receiverIndex = i;
-          break;
-        }
-      }
-      if (receiverIndex < expr.args.size()) {
-        std::string receiverTypeText;
-        if (inferQueryExprTypeText(expr.args[receiverIndex], params, locals,
-                                   receiverTypeText) &&
-            inferMethodCollectionTypePathFromTypeText(receiverTypeText) ==
-                "/vector") {
-          return failExprRootDiagnostic(
-              "unknown call target: /std/collections/vector/" + helperName);
-        }
-      }
-    }
     if (!expr.isMethodCall &&
         (expr.namespacePrefix == "vector" ||
          expr.namespacePrefix == "/vector" ||
