@@ -6,6 +6,49 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4280: Normalize direct lowerer SoA wrapper dispatch
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred SoA finish
+  - scope: Remove the remaining lowerer direct-call dispatch fallback that
+    treats rooted `/soa_vector/*`, `/to_aos`, and `/to_aos_ref` spellings as
+    compiler-owned SoA wrapper helper families when canonical
+    `/std/collections/soa_vector/*` definitions or explicit compatibility
+    modules should own that behavior.
+  - implementation_notes:
+    - Start from `src/ir_lowerer/IrLowererLowerStatementsExpr.h` and its
+      `isSoaWrapperHelperFamilyPath` / `findDirectSoaWrapperDefinition`
+      fallback path.
+    - Preserve canonical wrapper dispatch and explicit experimental
+      compatibility-module dispatch; do not remove visible same-path user
+      helpers unless a focused diagnostic test proves they are hidden raw
+      compiler fallbacks rather than user code.
+    - Source-lock coverage near
+      `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`
+      or the emitter/delegation source locks should pin the removed raw path
+      probes.
+  - acceptance:
+    - Direct lowerer SoA wrapper dispatch no longer uses rooted
+      `/soa_vector/*`, `/to_aos`, or `/to_aos_ref` as hidden wrapper-family
+      fallback probes.
+    - Same-path user-helper shadowing and canonical helper diagnostics remain
+      stable for the migrated direct-dispatch path.
+    - Missing canonical wrapper facts fail deterministically instead of using a
+      hidden raw-builtin fallback.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after the direct lowerer wrapper-dispatch raw fallback is
+    removed or normalized; leave cross-backend parity expansion to TODO-4251.
+  - finished_at: 2026-04-28
+  - evidence: Split same-path SoA helper recognition from canonical wrapper
+    helper dispatch in `IrLowererLowerStatementsExpr.h`. The lowerer no longer
+    searches direct wrapper dispatch through rooted `/soa_vector/*`, `/to_aos`,
+    or `/to_aos_ref` probes; rooted helpers are emitted only when normal call
+    resolution already found a visible same-path user definition. Added
+    source-lock coverage for the canonical-only wrapper probe and the
+    no-hidden-same-path-fallback guard. Updated the SoA maturity docs and
+    promoted `TODO-4251` to Ready Now; deferred release reruns to CI per the
+    lite workflow.
+
 - [x] TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers
   - owner: ai
   - created_at: 2026-04-27

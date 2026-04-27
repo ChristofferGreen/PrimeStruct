@@ -149,12 +149,15 @@
           return isInternalSoaHelperFamilyName(
               extractHelperTail(normalizeCollectionHelperPath(path)));
         };
-        auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {
+        auto isSamePathSoaHelperPath = [&](const std::string &path) {
           const std::string normalizedPath = stripGeneratedHelperSuffix(path);
           return normalizedPath.rfind("/soa_vector/", 0) == 0 ||
                  normalizedPath == "/to_aos" ||
-                 normalizedPath == "/to_aos_ref" ||
-                 normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
+                 normalizedPath == "/to_aos_ref";
+        };
+        auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {
+          const std::string normalizedPath = stripGeneratedHelperSuffix(path);
+          return normalizedPath.rfind("/std/collections/soa_vector/", 0) == 0 ||
                  normalizedPath.rfind("/std/collections/experimental_soa_vector/soaVector", 0) == 0 ||
                  normalizedPath.rfind("/std/collections/experimental_soa_vector_conversions/soaVector", 0) == 0;
         };
@@ -418,8 +421,12 @@
               }
               return true;
             }
-            if (isSoaWrapperHelperFamilyPath(rawPath) ||
-                isSoaWrapperHelperFamilyPath(directCallee->fullPath)) {
+            const bool isVisibleSamePathSoaHelper =
+                isSamePathSoaHelperPath(rawPath) &&
+                isDirectHelperDefinitionFamily(expr, *directCallee);
+            const bool isResolvedSoaWrapperHelper =
+                isSoaWrapperHelperFamilyPath(directCallee->fullPath);
+            if (isResolvedSoaWrapperHelper || isVisibleSamePathSoaHelper) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
               }

@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4280: Normalize direct lowerer SoA wrapper dispatch
+- TODO-4251: Add full cross-backend SoA parity coverage
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4251: Add full cross-backend SoA parity coverage
 - TODO-4252: Promote `soa_vector` docs after compatibility cleanup
 - TODO-4245: Plan dynamic vector growth and runtime storage support
 - TODO-4253: Implement brace-only construction semantics
@@ -81,11 +80,12 @@ Task template:
 - TODO-4257: Add sum declaration metadata and layout
 - TODO-4258: Add explicit sum construction
 - TODO-4259: Add inferred sum variant construction
+- TODO-4260: Add `pick` semantic validation
 
 ### Priority Lanes (Current)
 
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4245
-- Deferred SoA finish: TODO-4280 -> TODO-4251 -> TODO-4252
+- Deferred SoA finish: TODO-4251 -> TODO-4252
 - Deferred algebraic types and brace-only construction: TODO-4253
   -> TODO-4254 -> TODO-4255 -> TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
@@ -97,7 +97,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4280: Normalize direct lowerer SoA wrapper dispatch
 - TODO-4251: Add full cross-backend SoA parity coverage
 - TODO-4252: Promote `soa_vector` docs after compatibility cleanup
 - TODO-4245: Plan dynamic vector growth and runtime storage support
@@ -139,7 +138,7 @@ Task template:
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| SoA maturity and `soa_vector` promotion | TODO-4280, TODO-4251, TODO-4252 |
+| SoA maturity and `soa_vector` promotion | TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -167,7 +166,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
-| `soa_vector` maturity and canonical surface parity | TODO-4280, TODO-4251, TODO-4252 |
+| `soa_vector` maturity and canonical surface parity | TODO-4251, TODO-4252 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
@@ -270,10 +269,10 @@ Task template:
   conversion implementation forwarding, while
   `/std/collections/internal_soa_storage/*` remains implementation-facing SoA
   storage/layout plumbing. The internal wrapper adapter still preserves the
-  temporary experimental `SoaVector<T>` type identity until raw-builtin bridge
-  cleanup moves that type onto a final substrate. The inline parameter bridge
-  no longer accepts rooted `/soa_vector/*` spellings as wrapper adaptation
-  paths; remaining direct-dispatch bridge cleanup is tracked separately.
+  temporary experimental `SoaVector<T>` type identity until final promotion
+  moves that type onto a final substrate. The inline-parameter and direct
+  lowerer wrapper-dispatch bridges no longer use rooted `/soa_vector/*`,
+  `/to_aos`, or `/to_aos_ref` spellings as hidden raw fallbacks.
 - Final promotion contract: `soa_vector<T>` can become a promoted public
   collection only after canonical `/std/collections/soa_vector/*`
   construction/read/ref/mutator and field-view helpers, canonical
@@ -281,9 +280,9 @@ Task template:
   documented borrowed-view invalidation model, and C++/VM/native canonical
   backend parity all exist without hidden raw-builtin fallback behavior.
 - Further promotion work is tracked by the deferred SoA finish chain
-  (`TODO-4280`, `TODO-4251`, and `TODO-4252`), which owns the remaining
-  raw-builtin bridge normalization, parity coverage, and final promotion docs
-  needed before `soa_vector` can be treated as a promoted public contract.
+  (`TODO-4251` and `TODO-4252`), which owns parity coverage and final
+  promotion docs needed before `soa_vector` can be treated as a promoted public
+  contract.
 - First promotion pass complete: the canonical public helper wrapper is
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
@@ -309,44 +308,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4280: Normalize direct lowerer SoA wrapper dispatch
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Deferred SoA finish
-  - scope: Remove the remaining lowerer direct-call dispatch fallback that
-    treats rooted `/soa_vector/*`, `/to_aos`, and `/to_aos_ref` spellings as
-    compiler-owned SoA wrapper helper families when canonical
-    `/std/collections/soa_vector/*` definitions or explicit compatibility
-    modules should own that behavior.
-  - implementation_notes:
-    - Start from `src/ir_lowerer/IrLowererLowerStatementsExpr.h` and its
-      `isSoaWrapperHelperFamilyPath` / `findDirectSoaWrapperDefinition`
-      fallback path.
-    - Preserve canonical wrapper dispatch and explicit experimental
-      compatibility-module dispatch; do not remove visible same-path user
-      helpers unless a focused diagnostic test proves they are hidden raw
-      compiler fallbacks rather than user code.
-    - Source-lock coverage near
-      `tests/unit/test_ir_pipeline_validation_ir_lowerer_call_helpers_source_delegation_stays_stable.cpp`
-      or the emitter/delegation source locks should pin the removed raw path
-      probes.
-  - acceptance:
-    - Direct lowerer SoA wrapper dispatch no longer uses rooted
-      `/soa_vector/*`, `/to_aos`, or `/to_aos_ref` as hidden wrapper-family
-      fallback probes.
-    - Same-path user-helper shadowing and canonical helper diagnostics remain
-      stable for the migrated direct-dispatch path.
-    - Missing canonical wrapper facts fail deterministically instead of using a
-      hidden raw-builtin fallback.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after the direct lowerer wrapper-dispatch raw fallback is
-    removed or normalized; leave cross-backend parity expansion to TODO-4251.
-
 - [ ] TODO-4251: Add full cross-backend SoA parity coverage
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred SoA finish
-  - depends_on: TODO-4280
   - scope: Add a focused cross-backend SoA parity matrix for canonical
     construction/read/ref/mutator, field-view, and conversion flows after the
     compatibility and raw-builtin bridge cleanup.

@@ -2839,7 +2839,7 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_soa_vector_conversions/*` | Accepted temporary compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/internal_soa_vector_conversions/*`, and direct imports remain only for targeted compatibility or conformance coverage. | `TODO-4252` tracks final documentation cleanup under the promotion contract below. |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
-| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace | Internal SoA wrapper implementation adapter used by canonical `/std/collections/soa_vector/*`; it is not a public import surface. It still preserves the temporary experimental `SoaVector<T>` type identity until the remaining raw direct-dispatch bridge cleanup moves that type onto a final substrate. | `TODO-4280` tracks the remaining direct-dispatch bridge cleanup. |
+| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace | Internal SoA wrapper implementation adapter used by canonical `/std/collections/soa_vector/*`; it is not a public import surface. It still preserves the temporary experimental `SoaVector<T>` type identity until final promotion moves that type onto a final substrate. | none |
 | `/std/collections/internal_soa_vector_conversions/*` | Internal substrate/helper namespace | Internal SoA conversion implementation adapter used by canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/to_aos*`; it is not a public import surface. | none |
 | `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
 
@@ -2885,9 +2885,9 @@ TODOs. It is intentionally separate from vector/map promotion.
   `/std/collections/internal_soa_storage/*` stays implementation-facing
   storage/layout plumbing. Neither is public API. The internal wrapper adapter
   still preserves the temporary experimental `SoaVector<T>` type identity. The
-  inline parameter bridge no longer accepts rooted `/soa_vector/*` spellings as
-  wrapper adaptation paths; the remaining direct-dispatch bridge cleanup is
-  tracked separately.
+  inline-parameter and direct lowerer wrapper-dispatch bridges no longer use
+  rooted `/soa_vector/*`, `/to_aos`, or `/to_aos_ref` spellings as hidden raw
+  fallbacks.
 - **Final promotion contract:** `soa_vector<T>` may move from incubating
   extension to promoted public collection only when all public behavior is owned
   by canonical stdlib surfaces and the remaining compiler/runtime pieces are
@@ -2911,12 +2911,11 @@ TODOs. It is intentionally separate from vector/map promotion.
     `/std/collections/internal_soa_storage/*` remain implementation-only, and
     any retained `/std/collections/experimental_soa_vector*/*` path is either a
     documented compatibility shim with conformance coverage or retired.
-- **Promotion blockers:** before final promotion, remaining raw direct-dispatch
-  SoA bridges must normalize onto the canonical wrapper surface
-  (`TODO-4280`), cross-backend canonical parity must be complete
-  (`TODO-4251`), and the final docs/ownership matrix update must land
-  (`TODO-4252`). Until then, docs should call `soa_vector<T>` incubating
-  explicitly instead of implying it has already graduated with vector/map.
+- **Promotion blockers:** before final promotion, cross-backend canonical
+  parity must be complete (`TODO-4251`), and the final docs/ownership matrix
+  update must land (`TODO-4252`). Until then, docs should call `soa_vector<T>`
+  incubating explicitly instead of implying it has already graduated with
+  vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -3571,10 +3570,10 @@ bad_use_after_take() {
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method
     `to_aos` forms now also materialize the canonical `/std/collections/soa_vector/to_aos__...`
     helper path and run through that same bridged substrate on native instead of trapping. These compiler-owned
-    `soa_vector` paths are compatibility scaffolding rather than the intended end-state. The deferred SoA finish
-    chain tracks their cleanup, with `TODO-4280` covering the remaining
-    direct-dispatch lowerer fallback after the inline-parameter bridge was
-    normalized to canonical helper paths.
+    `soa_vector` paths are compatibility scaffolding rather than the intended end-state. The inline-parameter
+    and direct lowerer wrapper-dispatch bridges now require canonical wrapper
+    paths, while remaining promotion work focuses on cross-backend parity and
+    final docs classification.
   - **Compile-time schema substrate status:** the minimum field-schema introspection needed for a `.prime`
     `soa_vector<T>` implementation already exists through compile-time reflection metadata queries:
     `meta.field_count<T>()`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
@@ -3724,9 +3723,10 @@ after rewrite. The no-shadow path still keeps that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin
 `to_aos requires soa_vector target` diagnostic, while struct-vector literal/runtime limits remain
 tracked separately from that helper-routing boundary.
-`TODO-4280` tracks the remaining direct-call lowerer fallback for rooted
-`soa_vector` wrapper dispatch; add a separate concrete SoA cleanup TODO before
-changing behavior outside that scope. Dedicated inline-dispatch builtin
+Direct lowerer wrapper dispatch no longer uses rooted `/soa_vector/*`,
+`/to_aos`, or `/to_aos_ref` paths as hidden wrapper-family fallback probes; add
+a separate concrete SoA cleanup TODO before changing behavior outside that
+scope. Dedicated inline-dispatch builtin
 `soa_vector` count/get/ref
 helper bridging is now gone as well, so those helper shapes flow through the shared
 definition-resolution plus count/access fallback path instead of a one-off SoA branch. Root

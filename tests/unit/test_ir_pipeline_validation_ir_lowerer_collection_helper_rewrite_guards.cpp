@@ -186,6 +186,66 @@ TEST_CASE("ir lowerer temp receiver method access skips builtin array lowering")
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer direct soa wrapper dispatch uses canonical wrapper probes only") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path lowerStatementsExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+
+  REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
+  const std::string source = readText(lowerStatementsExprPath);
+
+  const size_t samePathHelper =
+      source.find("auto isSamePathSoaHelperPath = [&](const std::string &path) {");
+  const size_t wrapperHelper =
+      source.find("auto isSoaWrapperHelperFamilyPath = [&](const std::string &path) {");
+  const size_t wrapperEnd =
+      source.find("auto isBuiltinMapInsertFamilyPath", wrapperHelper);
+
+  REQUIRE(samePathHelper != std::string::npos);
+  REQUIRE(wrapperHelper != std::string::npos);
+  REQUIRE(wrapperEnd != std::string::npos);
+  CHECK(samePathHelper < wrapperHelper);
+
+  const std::string wrapperHelperSource =
+      source.substr(wrapperHelper, wrapperEnd - wrapperHelper);
+  CHECK(wrapperHelperSource.find("/std/collections/soa_vector/") !=
+        std::string::npos);
+  CHECK(wrapperHelperSource.find("/std/collections/experimental_soa_vector/soaVector") !=
+        std::string::npos);
+  CHECK(wrapperHelperSource.find(
+            "/std/collections/experimental_soa_vector_conversions/soaVector") !=
+        std::string::npos);
+  CHECK(wrapperHelperSource.find("\"/soa_vector/") == std::string::npos);
+  CHECK(wrapperHelperSource.find("\"/to_aos\"") == std::string::npos);
+  CHECK(wrapperHelperSource.find("\"/to_aos_ref\"") == std::string::npos);
+
+  CHECK(source.find("directCallee == nullptr &&\n"
+                    "              isSamePathSoaHelperPath(rawPath)") ==
+        std::string::npos);
+  CHECK(source.find("const bool isVisibleSamePathSoaHelper =\n"
+                    "                isSamePathSoaHelperPath(rawPath) &&\n"
+                    "                isDirectHelperDefinitionFamily(expr, *directCallee);") !=
+        std::string::npos);
+  CHECK(source.find("const bool isResolvedSoaWrapperHelper =\n"
+                    "                isSoaWrapperHelperFamilyPath(directCallee->fullPath);") !=
+        std::string::npos);
+  CHECK(source.find("if (isResolvedSoaWrapperHelper || isVisibleSamePathSoaHelper)") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before direct resolution") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
