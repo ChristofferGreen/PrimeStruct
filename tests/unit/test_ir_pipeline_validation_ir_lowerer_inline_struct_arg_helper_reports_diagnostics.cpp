@@ -139,6 +139,127 @@ TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector sto
   }
 }
 
+TEST_CASE("ir lowerer inline struct arg helper accepts internal soa storage aliases") {
+  const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
+      {"/std/collections/internal_soa_storage/SoaColumn__ti32", "SoaColumn"},
+      {"SoaColumn", "/std/collections/internal_soa_storage/SoaColumn__ti32"},
+      {"/std/collections/internal_soa_storage/SoaColumns2__ti32_i64", "SoaColumns2"},
+      {"SoaFieldView", "/std/collections/internal_soa_storage/SoaFieldView__ti32"},
+  };
+
+  for (const auto &[fieldStructPath, argStructPath] : compatiblePaths) {
+    primec::Expr arg;
+    arg.kind = primec::Expr::Kind::Name;
+    arg.name = "storage";
+    const std::vector<const primec::Expr *> orderedArgs = {&arg};
+
+    primec::ir_lowerer::StructSlotLayoutInfo layout;
+    layout.structPath = "/pkg/Holder";
+    layout.totalSlots = 5;
+    primec::ir_lowerer::StructSlotFieldInfo field;
+    field.name = "storage";
+    field.slotOffset = 1;
+    field.slotCount = 4;
+    field.structPath = fieldStructPath;
+    layout.fields.push_back(field);
+
+    int32_t nextLocal = 20;
+    int32_t nextTempLocal = 90;
+    int copyCalls = 0;
+    int32_t copiedDest = -1;
+    int32_t copiedSrc = -1;
+    int32_t copiedCount = -1;
+    std::vector<primec::IrInstruction> instructions;
+    std::string error;
+
+    REQUIRE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+        "/pkg/Holder",
+        orderedArgs,
+        {},
+        false,
+        nextLocal,
+        [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+          layoutOut = layout;
+          return true;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        },
+        [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return argStructPath;
+        },
+        [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+          return true;
+        },
+        [&](int32_t destBaseLocal, int32_t srcPtrLocal, int32_t slotCount) {
+          ++copyCalls;
+          copiedDest = destBaseLocal;
+          copiedSrc = srcPtrLocal;
+          copiedCount = slotCount;
+          return true;
+        },
+        [&]() { return nextTempLocal++; },
+        [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+        error));
+
+    CHECK(error.empty());
+    CHECK(nextLocal == 25);
+    CHECK(copyCalls == 1);
+    CHECK(copiedDest == 21);
+    CHECK(copiedSrc == 90);
+    CHECK(copiedCount == 4);
+    REQUIRE(instructions.size() == 1u);
+    CHECK(instructions.front().op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions.front().imm == 90u);
+  }
+}
+
+TEST_CASE("ir lowerer inline struct arg helper rejects incompatible internal soa storage aliases") {
+  primec::Expr arg;
+  arg.kind = primec::Expr::Kind::Name;
+  arg.name = "storage";
+  const std::vector<const primec::Expr *> orderedArgs = {&arg};
+
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  layout.structPath = "/pkg/Holder";
+  layout.totalSlots = 5;
+  primec::ir_lowerer::StructSlotFieldInfo field;
+  field.name = "storage";
+  field.slotOffset = 1;
+  field.slotCount = 4;
+  field.structPath = "/std/collections/internal_soa_storage/SoaColumn__ti32";
+  layout.fields.push_back(field);
+
+  int32_t nextLocal = 20;
+  std::string error;
+
+  CHECK_FALSE(primec::ir_lowerer::emitInlineStructDefinitionArguments(
+      "/pkg/Holder",
+      orderedArgs,
+      {},
+      false,
+      nextLocal,
+      [&](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+        layoutOut = layout;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return std::string("/std/collections/internal_soa_storage/SoaColumns2__ti32_i32");
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return true;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 90; },
+      [](primec::IrOpcode, uint64_t) {},
+      error));
+
+  CHECK(error.find("struct field type mismatch") != std::string::npos);
+}
+
 TEST_CASE("ir lowerer inline param helper emits non-struct parameter flow") {
   primec::Expr stringParam;
   stringParam.kind = primec::Expr::Kind::Name;

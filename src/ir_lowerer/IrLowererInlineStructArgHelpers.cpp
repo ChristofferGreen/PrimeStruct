@@ -2,6 +2,8 @@
 
 #include "IrLowererFlowHelpers.h"
 
+#include <string_view>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -27,6 +29,31 @@ std::string stripGeneratedStructSuffix(std::string structPath) {
   return structPath;
 }
 
+std::string normalizedInternalSoaStorageLeaf(std::string structPath) {
+  structPath = stripGeneratedStructSuffix(std::move(structPath));
+  if (!structPath.empty() && structPath.front() == '/') {
+    structPath.erase(structPath.begin());
+  }
+  constexpr std::string_view Prefix = "std/collections/internal_soa_storage/";
+  if (structPath.rfind(Prefix, 0) == 0) {
+    structPath.erase(0, Prefix.size());
+  }
+  if (structPath == "SoaColumn" || structPath == "SoaFieldView" ||
+      structPath.rfind("SoaColumns", 0) == 0) {
+    return structPath;
+  }
+  return {};
+}
+
+bool isCompatibleInternalSoaStorageFieldPath(const std::string &expectedStructPath,
+                                             const std::string &actualStructPath) {
+  const std::string expectedLeaf = normalizedInternalSoaStorageLeaf(expectedStructPath);
+  if (expectedLeaf.empty()) {
+    return false;
+  }
+  return expectedLeaf == normalizedInternalSoaStorageLeaf(actualStructPath);
+}
+
 bool isCompatibleInlineStructFieldPath(const std::string &expectedStructPath,
                                        const std::string &actualStructPath) {
   if (expectedStructPath == actualStructPath) {
@@ -36,6 +63,9 @@ bool isCompatibleInlineStructFieldPath(const std::string &expectedStructPath,
     return true;
   }
   if (isSoaVectorStructPath(expectedStructPath) && isSoaVectorStructPath(actualStructPath)) {
+    return true;
+  }
+  if (isCompatibleInternalSoaStorageFieldPath(expectedStructPath, actualStructPath)) {
     return true;
   }
   return stripGeneratedStructSuffix(expectedStructPath) ==
