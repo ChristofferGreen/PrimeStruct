@@ -555,8 +555,11 @@ void SemanticsValidator::collectCallableSummaryEntriesForStableRange(
 
 void SemanticsValidator::collectExecutionCallableSummaryEntries(
     std::vector<CollectedCallableSummaryEntry> &out) const {
-  out.reserve(out.size() + program_.executions.size());
-  for (const auto &exec : program_.executions) {
+  out.reserve(out.size() +
+              validationPlan_->executionSlice.executionsInStableOrder.size());
+  for (const auto &executionDeclaration :
+       validationPlan_->executionSlice.executionsInStableOrder) {
+    const Execution &exec = program_.executions[executionDeclaration.stableIndex];
     const auto state = buildExecutionValidationState(exec);
     const auto &context = state.context;
     out.push_back(CollectedCallableSummaryEntry{
@@ -585,12 +588,15 @@ void SemanticsValidator::rebindCollectedCallableSummarySemanticNodeIds(
   for (auto &entry : entries) {
     entry.semanticNodeId = 0;
     if (entry.isExecution) {
-      const auto execIt = std::find_if(
-          program_.executions.begin(),
-          program_.executions.end(),
-          [&](const Execution &exec) { return exec.fullPath == entry.fullPath; });
-      if (execIt != program_.executions.end()) {
-        entry.semanticNodeId = execIt->semanticNodeId;
+      const auto executionIt = std::find_if(
+          validationPlan_->executionSlice.executionsInStableOrder.begin(),
+          validationPlan_->executionSlice.executionsInStableOrder.end(),
+          [&](const SemanticValidationExecutionDeclaration &executionDeclaration) {
+            return executionDeclaration.fullPath == entry.fullPath;
+          });
+      if (executionIt != validationPlan_->executionSlice.executionsInStableOrder.end()) {
+        entry.semanticNodeId =
+            program_.executions[executionIt->stableIndex].semanticNodeId;
       }
       continue;
     }

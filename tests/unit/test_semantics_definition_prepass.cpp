@@ -202,6 +202,9 @@ TEST_CASE("semantic validation plan captures prepass inputs deterministically") 
   CHECK(plan.graphLocalAutoInputs.entryPath == "/main");
   CHECK(plan.graphLocalAutoInputs.definitionCount == 2);
   CHECK(plan.graphLocalAutoInputs.executionCount == 1);
+  REQUIRE(plan.executionSlice.executionsInStableOrder.size() == 1);
+  CHECK(plan.executionSlice.executionsInStableOrder[0].fullPath == "/run");
+  CHECK(plan.executionSlice.executionsInStableOrder[0].stableIndex == 0);
 }
 
 TEST_SUITE_END();

@@ -587,7 +587,8 @@ bool SemanticsValidator::validateDefinitions() {
     mergedWorkerCallableSummariesValid_ = false;
     std::vector<CollectedCallableSummaryEntry>().swap(mergedWorkerCallableSummaries_);
 
-    std::size_t callableSummaryCount = program_.executions.size();
+    std::size_t callableSummaryCount =
+        validationPlan_->executionSlice.executionsInStableOrder.size();
     for (const WorkerChunkResult &result : workerResults) {
       callableSummaryCount += result.callableSummaries.size();
     }

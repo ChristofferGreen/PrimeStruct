@@ -36,12 +36,22 @@ struct SemanticValidationGraphLocalAutoInputs {
   std::size_t executionCount = 0;
 };
 
+struct SemanticValidationExecutionDeclaration {
+  std::string fullPath;
+  std::size_t stableIndex = 0;
+};
+
+struct SemanticValidationExecutionSlice {
+  std::vector<SemanticValidationExecutionDeclaration> executionsInStableOrder;
+};
+
 struct SemanticValidationPlan {
   DefinitionPrepassSnapshot definitionPrepass;
   SemanticValidationEntryMetadata entry;
   SemanticValidationImportSummary imports;
   SemanticValidationBuiltinCapabilityTables builtinCapabilityTables;
   SemanticValidationGraphLocalAutoInputs graphLocalAutoInputs;
+  SemanticValidationExecutionSlice executionSlice;
 };
 
 SemanticValidationPlan buildSemanticValidationPlan(const Program &program,

@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4222: Route execution validation through the shared plan
+- TODO-4226: Add a structured semantic diagnostic/result sink
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4226: Add a structured semantic diagnostic/result sink
 - TODO-4214: Introduce deterministic worker result bundles
 - TODO-4227: Move semantic-product fact families into worker bundles
 - TODO-4215: Make semantic-product publication consume merged fact bundles
@@ -70,10 +69,11 @@ Task template:
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 - TODO-4229: Cut over SoA compatibility decisions to surface adapters
 - TODO-4230: Cut over gfx compatibility decisions to surface adapters
+- TODO-4218: Make local-auto graph facts the exclusive inference authority
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4222 -> TODO-4226
+- Semantic phase contract hardening: TODO-4226
   -> TODO-4214 -> TODO-4227 -> TODO-4215 -> TODO-4228
   -> TODO-4216 -> TODO-4217 -> TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
@@ -87,7 +87,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4222: Route execution validation through the shared plan
 - TODO-4226: Add a structured semantic diagnostic/result sink
 - TODO-4214: Introduce deterministic worker result bundles
 - TODO-4227: Move semantic-product fact families into worker bundles
@@ -130,15 +129,15 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4222, TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4222, TODO-4226, TODO-4220, TODO-4234 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
+| Compile-pipeline stage and publication-boundary contracts | TODO-4226, TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4217, TODO-4224, TODO-4229, TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4217, TODO-4224, TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
-| Validator entrypoint and benchmark-plumbing split | TODO-4222, TODO-4226, TODO-4214, TODO-4227 |
+| Validator entrypoint and benchmark-plumbing split | TODO-4226, TODO-4214, TODO-4227 |
 | Semantic-product publication by module and fact family | TODO-4214, TODO-4227, TODO-4215, TODO-4240, TODO-4241 |
 | Semantic-product public API factoring and versioning | TODO-4215, TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
 | IR lowerer compile-unit breakup | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
@@ -157,7 +156,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4215, TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
-| Compile-pipeline stage handoff conformance | TODO-4222, TODO-4226, TODO-4220, TODO-4234, TODO-4240 |
+| Compile-pipeline stage handoff conformance | TODO-4226, TODO-4220, TODO-4234, TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4214, TODO-4227, TODO-4215, TODO-4240 |
 | Lowerer/source-composition contract coverage | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4217, TODO-4224, TODO-4245 |
@@ -255,24 +254,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4222: Route execution validation through the shared plan
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - depends_on: TODO-4213
-  - scope: Extend the validation-plan boundary to execution validation and
-    execution callable summaries so executions do not remain a hidden side
-    channel beside definition workers.
-  - acceptance:
-    - Execution validation contexts and execution callable summaries are built
-      from the shared plan or a plan-owned execution slice, not from ad hoc
-      validator-global reconstruction.
-    - Focused execution diagnostics and 1/2/4-worker semantic-product parity
-      tests keep deterministic message and dump ordering.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once execution validation shares the plan boundary; leave
-    structured diagnostic/result plumbing to TODO-4226.
 
 - [ ] TODO-4226: Add a structured semantic diagnostic/result sink
   - owner: ai

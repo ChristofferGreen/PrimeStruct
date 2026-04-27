@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4222: Route execution validation through the shared plan.
+  Completed: `SemanticValidationPlan` now owns a stable execution slice, and
+  execution validation plus execution callable-summary collection/rebinding
+  iterate through that shared plan boundary instead of directly rebuilding
+  from validator-global execution lists. Focused source-lock and plan-content
+  coverage pins the execution slice and rejects the old ad hoc summary
+  reserve path. Local validation is deferred per the lite workflow.
 - ✓ TODO-4213: Route definition workers through the shared validation plan.
   Completed: `SemanticsValidator` now stores the semantic validation plan as a
   shared immutable object, root validation builds it once, and definition

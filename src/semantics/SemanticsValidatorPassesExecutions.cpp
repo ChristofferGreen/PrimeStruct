@@ -136,7 +136,9 @@ bool SemanticsValidator::validateExecutions() {
     return true;
   };
 
-  for (const auto &exec : program_.executions) {
+  for (const auto &executionDeclaration :
+       validationPlan_->executionSlice.executionsInStableOrder) {
+    const Execution &exec = program_.executions[executionDeclaration.stableIndex];
     clearStructuredDiagnosticContext();
     if (collectDiagnostics) {
       ValidationStateScope validationContextScope(*this, buildExecutionValidationState(exec));

@@ -49,6 +49,16 @@ SemanticValidationPlan buildSemanticValidationPlan(const Program &program,
   plan.graphLocalAutoInputs.definitionCount = program.definitions.size();
   plan.graphLocalAutoInputs.executionCount = program.executions.size();
 
+  plan.executionSlice.executionsInStableOrder.reserve(program.executions.size());
+  for (std::size_t stableIndex = 0; stableIndex < program.executions.size();
+       ++stableIndex) {
+    plan.executionSlice.executionsInStableOrder.push_back(
+        SemanticValidationExecutionDeclaration{
+            program.executions[stableIndex].fullPath,
+            stableIndex,
+        });
+  }
+
   return plan;
 }
 
