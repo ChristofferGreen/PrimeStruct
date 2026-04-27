@@ -2,10 +2,10 @@
 
 namespace {
 
-void checkMapPairTemplateConflict(const std::string &error) {
-  CHECK(error.find("implicit template arguments conflict on ") !=
-        std::string::npos);
+void checkMapPairMismatchDiagnostic(const std::string &error) {
   CHECK(error.find("mapPair") != std::string::npos);
+  CHECK(error.find("parameter secondValue") != std::string::npos);
+  CHECK(error.find("expected i32 got bool") != std::string::npos);
 }
 
 } // namespace
@@ -35,7 +35,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  checkMapPairMismatchDiagnostic(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map parameters") {
@@ -108,7 +108,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  checkMapPairMismatchDiagnostic(error);
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map bindings") {
@@ -154,7 +154,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairTemplateConflict(error);
+  checkMapPairMismatchDiagnostic(error);
 }
 
 TEST_CASE("helper-wrapped map constructors accept explicit experimental map bindings") {
