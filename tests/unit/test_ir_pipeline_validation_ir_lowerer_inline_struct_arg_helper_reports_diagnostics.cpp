@@ -132,14 +132,18 @@ TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector sto
         error));
 
     CHECK(error.empty());
-    CHECK(nextLocal == 24);
+    CHECK(nextLocal == 25);
     CHECK(copyCalls == 1);
     CHECK(copiedDest == 21);
     CHECK(copiedSrc == 90);
     CHECK(copiedCount == 3);
-    REQUIRE(instructions.size() == 1u);
-    CHECK(instructions.front().op == primec::IrOpcode::StoreLocal);
-    CHECK(instructions.front().imm == 90u);
+    REQUIRE(instructions.size() == 3u);
+    CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions[0].imm == 90u);
+    CHECK(instructions[1].op == primec::IrOpcode::AddressOfLocal);
+    CHECK(instructions[1].imm == 21u);
+    CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions[2].imm == 24u);
   }
 }
 
@@ -212,14 +216,18 @@ TEST_CASE("ir lowerer inline struct arg helper accepts internal soa storage alia
         error));
 
     CHECK(error.empty());
-    CHECK(nextLocal == 25);
+    CHECK(nextLocal == 26);
     CHECK(copyCalls == 1);
     CHECK(copiedDest == 21);
     CHECK(copiedSrc == 90);
     CHECK(copiedCount == 4);
-    REQUIRE(instructions.size() == 1u);
-    CHECK(instructions.front().op == primec::IrOpcode::StoreLocal);
-    CHECK(instructions.front().imm == 90u);
+    REQUIRE(instructions.size() == 3u);
+    CHECK(instructions[0].op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions[0].imm == 90u);
+    CHECK(instructions[1].op == primec::IrOpcode::AddressOfLocal);
+    CHECK(instructions[1].imm == 21u);
+    CHECK(instructions[2].op == primec::IrOpcode::StoreLocal);
+    CHECK(instructions[2].imm == 25u);
   }
 }
 
