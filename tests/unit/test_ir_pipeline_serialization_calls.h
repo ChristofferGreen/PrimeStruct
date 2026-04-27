@@ -27,6 +27,7 @@ main() {
   CHECK(module.functions[1].name == "/addOne");
   CHECK(module.functions[0].instructions.size() > 2);
   bool sawAdd = false;
+  bool sawCalleeAdd = false;
   bool sawReturn = false;
   for (const auto &inst : module.functions[0].instructions) {
     if (inst.op == primec::IrOpcode::AddI32) {
@@ -34,11 +35,15 @@ main() {
     }
   }
   for (const auto &inst : module.functions[1].instructions) {
+    if (inst.op == primec::IrOpcode::AddI32) {
+      sawCalleeAdd = true;
+    }
     if (inst.op == primec::IrOpcode::ReturnI32) {
       sawReturn = true;
     }
   }
   CHECK(sawAdd);
+  CHECK(sawCalleeAdd);
   CHECK(sawReturn);
 
   primec::Vm vm;

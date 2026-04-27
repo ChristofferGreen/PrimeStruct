@@ -399,7 +399,6 @@ FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
   outFunctions.push_back(std::move(entryFunction));
   entryIndex = 0;
 
-  IrFunction callableFunction;
   const auto callableLoweringResult = lowerCallableDefinitionOrchestration(
       program,
       entryDef,
@@ -414,9 +413,9 @@ FunctionTableFinalizationResult finalizeEntryFunctionTableAndLowerCallables(
       buildDefinitionCallContext,
       emitInlineDefinitionCall,
       [&](const std::string &definitionPath, const ReturnInfo &returnInfo) {
-        return emitReturnForDefinition(callableFunction.instructions, definitionPath, returnInfo, error);
+        return emitReturnForDefinition(entryFunction.instructions, definitionPath, returnInfo, error);
       },
-      callableFunction,
+      entryFunction,
       nextLocal,
       outFunctions,
       error);
