@@ -305,6 +305,65 @@ bool applyExecutableAstTransformHook(const Definition &hookDef,
   return true;
 }
 
+bool importTargetsOnlyPublicAstHooks(const Program &program, const std::string &importPath) {
+  if (importPath.empty() || importPath.front() != '/') {
+    return false;
+  }
+
+  bool isWildcard = false;
+  std::string prefix;
+  if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+    isWildcard = true;
+    prefix = importPath.substr(0, importPath.size() - 2);
+  } else if (importPath.find('/', 1) == std::string::npos) {
+    isWildcard = true;
+    prefix = importPath;
+  }
+
+  if (!isWildcard) {
+    const auto defIt = std::find_if(program.definitions.begin(),
+                                    program.definitions.end(),
+                                    [&](const Definition &def) {
+                                      return def.fullPath == importPath;
+                                    });
+    return defIt != program.definitions.end() &&
+           hasPublicVisibility(*defIt) &&
+           hasTransformNamed(defIt->transforms, "ast");
+  }
+
+  const std::string scopedPrefix = prefix + "/";
+  bool sawPublicAstHook = false;
+  bool sawPublicNonAstDefinition = false;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath.rfind(scopedPrefix, 0) != 0 || !hasPublicVisibility(def)) {
+      continue;
+    }
+    const std::string remainder = def.fullPath.substr(scopedPrefix.size());
+    if (remainder.empty() || remainder.find('/') != std::string::npos) {
+      continue;
+    }
+    if (hasTransformNamed(def.transforms, "ast")) {
+      sawPublicAstHook = true;
+    } else {
+      sawPublicNonAstDefinition = true;
+    }
+  }
+  return sawPublicAstHook && !sawPublicNonAstDefinition;
+}
+
+void pruneAstHookOnlyImports(Program &program) {
+  auto prune = [&](std::vector<std::string> &imports) {
+    imports.erase(std::remove_if(imports.begin(),
+                                 imports.end(),
+                                 [&](const std::string &importPath) {
+                                   return importTargetsOnlyPublicAstHooks(program, importPath);
+                                 }),
+                  imports.end());
+  };
+  prune(program.imports);
+  prune(program.sourceImports);
+}
+
 bool executeDefinitionAstTransformHooks(Program &program, std::string &error) {
   std::unordered_map<std::string, const Definition *> definitionsByPath;
   for (const auto &def : program.definitions) {
@@ -335,6 +394,7 @@ bool executeDefinitionAstTransformHooks(Program &program, std::string &error) {
     }
   }
 
+  pruneAstHookOnlyImports(program);
   program.definitions.erase(
       std::remove_if(program.definitions.begin(),
                      program.definitions.end(),
