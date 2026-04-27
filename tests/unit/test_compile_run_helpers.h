@@ -7,11 +7,13 @@
 #include "primec/testing/TestScratch.h"
 
 #include <cstdlib>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #if defined(__unix__) || defined(__APPLE__)
@@ -49,7 +51,15 @@ inline std::string quoteShellArg(const std::string &value) {
 }
 
 inline int runCommand(const std::string &command) {
-  int code = std::system(command.c_str());
+  int code = -1;
+  constexpr int MaxAttempts = 3;
+  for (int attempt = 0; attempt < MaxAttempts; ++attempt) {
+    code = std::system(command.c_str());
+    if (code != -1 || attempt + 1 == MaxAttempts) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50 * (attempt + 1)));
+  }
 #if defined(__unix__) || defined(__APPLE__)
   if (code == -1) {
     return -1;
