@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4206: Lock borrowed SoA ref_ref semantic targets. Completed:
+  `tests/unit/test_semantics_type_resolution_graph_snapshots.cpp` now
+  verifies that borrowed helper-return `Reference<SoaVector<T>>` receivers
+  publish same-path `/soa_vector/ref_ref` semantic-product targets for both
+  `receiver.ref(...)` method sugar and direct `ref_ref(...)` calls, including
+  the corresponding local-auto initializer facts. Local validation is
+  deferred per the lite workflow.
 - ✓ TODO-4205: Lock borrowed SoA ref_ref helper shadows. Completed:
   `tests/unit/test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`
   now covers visible same-path `/soa_vector/ref_ref` user helpers on borrowed
