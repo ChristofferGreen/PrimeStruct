@@ -573,7 +573,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("Ordinary public code should not import either experimental SoA namespace") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("Representative wildcard canonical helper/conversion tests now run") !=
+  CHECK(primeStructDoc.find("Representative wildcard\n  canonical helper/conversion tests now run") !=
         std::string::npos);
   CHECK(primeStructDoc.find("No active TODO currently\n    tracks their cleanup") !=
         std::string::npos);
@@ -604,7 +604,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("code no longer needs `experimental_soa_vector`") !=
         std::string::npos);
-  CHECK(todo.find("`soa_vector<T>` remains an incubating canonical experiment") !=
+  CHECK(todo.find("`soa_vector<T>` remains an\n  incubating canonical experiment") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
   CHECK(todo.find("TODO-4103") == std::string::npos);
@@ -661,7 +661,7 @@ TEST_CASE("arg-pack docs do not point at inactive TODO slices") {
         std::string::npos);
   CHECK(primeStructDoc.find("should get a new explicit TODO before further implementation") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("newly discovered unsupported non-string pack gaps") !=
+  CHECK(primeStructDoc.find("Newly discovered unsupported non-string pack gaps") !=
         std::string::npos);
   CHECK(primeStructDoc.find("concrete TODOs only when backed by a reproducible") !=
         std::string::npos);
