@@ -1163,4 +1163,123 @@ TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary capacity
   CHECK(error == "stale");
 }
 
+TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary access calls") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::Definition wrapVector;
+  wrapVector.fullPath = "/wrapVector";
+  wrapVector.transforms.push_back(
+      primec::Transform{.name = "return", .templateArgs = {"vector<i32>"}});
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "wrapVector";
+
+  primec::Expr indexArg;
+  indexArg.kind = primec::Expr::Kind::Literal;
+  indexArg.intWidth = 32;
+  indexArg.literalValue = 0;
+
+  auto expectDeferred = [&](const std::string &callName,
+                            const std::string &calleePath) {
+    primec::Expr accessCall;
+    accessCall.kind = primec::Expr::Kind::Call;
+    accessCall.name = callName;
+    accessCall.args = {receiverCall, indexArg};
+
+    primec::Definition accessCallee;
+    accessCallee.fullPath = calleePath;
+
+    std::string error = "stale";
+    int emitCalls = 0;
+    CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+              accessCall,
+              {},
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+                CHECK(false);
+                return nullptr;
+              },
+              [&](const primec::Expr &callExpr) -> const primec::Definition * {
+                if (callExpr.name == "wrapVector") {
+                  return &wrapVector;
+                }
+                return &accessCallee;
+              },
+              [&](const primec::Expr &,
+                  const primec::Definition &,
+                  const primec::ir_lowerer::LocalMap &) {
+                ++emitCalls;
+                return true;
+              },
+              error) == Result::NotHandled);
+    CHECK(emitCalls == 0);
+    CHECK(error == "stale");
+  };
+
+  expectDeferred("/std/collections/vector/at", "/std/collections/vector/at");
+  expectDeferred("/std/collections/vector/at_unsafe",
+                 "/std/collections/vector/at_unsafe");
+}
+
+TEST_CASE("ir lowerer inline dispatch defers vector-returning temporary access methods") {
+  using Result = primec::ir_lowerer::InlineCallDispatchResult;
+
+  primec::Definition wrapVector;
+  wrapVector.fullPath = "/wrapVector";
+  wrapVector.transforms.push_back(
+      primec::Transform{.name = "return", .templateArgs = {"vector<i32>"}});
+
+  primec::Expr receiverCall;
+  receiverCall.kind = primec::Expr::Kind::Call;
+  receiverCall.name = "wrapVector";
+
+  primec::Expr indexArg;
+  indexArg.kind = primec::Expr::Kind::Literal;
+  indexArg.intWidth = 32;
+  indexArg.literalValue = 0;
+
+  auto expectDeferred = [&](const std::string &methodName,
+                            const std::string &calleePath) {
+    primec::Expr methodCall;
+    methodCall.kind = primec::Expr::Kind::Call;
+    methodCall.name = methodName;
+    methodCall.isMethodCall = true;
+    methodCall.args = {receiverCall, indexArg};
+
+    primec::Definition accessCallee;
+    accessCallee.fullPath = calleePath;
+
+    std::string error = "stale";
+    int emitCalls = 0;
+    CHECK(primec::ir_lowerer::tryEmitInlineCallDispatchWithLocals(
+              methodCall,
+              {},
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+              [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+                return &accessCallee;
+              },
+              [&](const primec::Expr &callExpr) -> const primec::Definition * {
+                CHECK(callExpr.name == "wrapVector");
+                return &wrapVector;
+              },
+              [&](const primec::Expr &,
+                  const primec::Definition &,
+                  const primec::ir_lowerer::LocalMap &) {
+                ++emitCalls;
+                return true;
+              },
+              error) == Result::NotHandled);
+    CHECK(emitCalls == 0);
+    CHECK(error == "stale");
+  };
+
+  expectDeferred("at", "/std/collections/vector/at");
+  expectDeferred("at_unsafe", "/std/collections/vector/at_unsafe");
+}
+
 TEST_SUITE_END();

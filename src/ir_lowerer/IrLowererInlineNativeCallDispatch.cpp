@@ -921,13 +921,19 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     return inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) &&
            collectionName == "vector" && collectionArgs.size() == 1;
   };
-  if (!expr.isMethodCall && expr.args.size() == 1 &&
+  if (!expr.isMethodCall && !expr.args.empty() &&
       isVectorReturningCallTarget(expr.args.front())) {
     std::string helperName;
     if (resolveVectorHelperAliasName(expr, helperName) &&
-        (helperName == "count" || helperName == "capacity")) {
+        (helperName == "count" || helperName == "capacity" ||
+         helperName == "at" || helperName == "at_unsafe")) {
       return InlineCallDispatchResult::NotHandled;
     }
+  }
+  if (expr.isMethodCall && !expr.args.empty() &&
+      isVectorReturningCallTarget(expr.args.front()) &&
+      (isSimpleCallName(expr, "at") || isSimpleCallName(expr, "at_unsafe"))) {
+    return InlineCallDispatchResult::NotHandled;
   }
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity")) &&
