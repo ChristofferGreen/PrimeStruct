@@ -263,7 +263,7 @@ inline void expectExperimentalMapMethodParameterConformance(const std::string &e
         makeExperimentalMapMethodParameterConformanceSource(),
         "map_experimental_method_parameter_" + emitMode,
         emitMode,
-        "native backend only supports arithmetic/comparison");
+        "Native lowering error:");
     return;
   }
 
@@ -281,7 +281,7 @@ inline void expectInferredExperimentalMapParameterConformance(const std::string 
         makeInferredExperimentalMapParameterConformanceSource(),
         "map_experimental_inferred_parameter_" + emitMode,
         emitMode,
-        "native backend only supports arithmetic/comparison");
+        "Native lowering error:");
     return;
   }
 
@@ -299,7 +299,7 @@ inline void expectInferredExperimentalMapDefaultParameterConformance(const std::
         makeInferredExperimentalMapDefaultParameterConformanceSource(),
         "map_experimental_inferred_default_parameter_" + emitMode,
         emitMode,
-        "native backend only supports arithmetic/comparison");
+        "Native lowering error:");
     return;
   }
 
