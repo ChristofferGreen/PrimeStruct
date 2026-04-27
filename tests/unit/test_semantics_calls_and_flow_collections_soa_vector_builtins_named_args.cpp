@@ -378,8 +378,10 @@ TEST_CASE("soa_vector builtin ref call argument escapes use pending diagnostic")
     CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
-  checkReject("values.ref(0i32)", "unknown method: /std/collections/soa_vector/ref");
+  checkReject("ref(values, 0i32)",
+              "unknown method: /std/collections/soa_vector/ref");
+  checkReject("values.ref(0i32)",
+              "unknown method: /std/collections/soa_vector/ref");
   checkReject("/soa_vector/ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
   checkReject("ref_ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref_ref");
   checkReject("values.ref_ref(0i32)", "unknown method: /std/collections/soa_vector/ref_ref");
@@ -419,8 +421,9 @@ TEST_CASE("soa_vector helper-return ref/ref_ref call argument escapes use pendin
               "unknown method: /std/collections/soa_vector/ref_ref");
 }
 
-TEST_CASE("soa_vector builtin ref return escapes use pending diagnostic") {
-  const auto checkReject = [](const std::string &expr) {
+TEST_CASE("soa_vector builtin ref/ref_ref return escapes use pending diagnostic") {
+  const auto checkReject = [](const std::string &expr,
+                              const std::string &expected) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -437,12 +440,52 @@ TEST_CASE("soa_vector builtin ref return escapes use pending diagnostic") {
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
-    CHECK(error.find("unknown method: /std/collections/soa_vector/ref") != std::string::npos);
+    CHECK(error.find(expected) != std::string::npos);
   };
 
-  checkReject("ref(values, 0i32)");
-  checkReject("values.ref(0i32)");
-  checkReject("/soa_vector/ref(values, 0i32)");
+  checkReject("ref(values, 0i32)", "unknown method: /std/collections/soa_vector/ref");
+  checkReject("values.ref(0i32)", "unknown method: /std/collections/soa_vector/ref");
+  checkReject("/soa_vector/ref(values, 0i32)",
+              "unknown method: /std/collections/soa_vector/ref");
+  checkReject("ref_ref(values, 0i32)",
+              "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("values.ref_ref(0i32)",
+              "unknown method: /std/collections/soa_vector/ref_ref");
+  checkReject("/soa_vector/ref_ref(values, 0i32)",
+              "unknown method: /std/collections/soa_vector/ref_ref");
+}
+
+TEST_CASE("soa_vector helper-return ref/ref_ref return escapes use pending diagnostic") {
+  const auto checkReject = [](const std::string &expr,
+                              const std::string &expected) {
+    const std::string source =
+        "Particle() {\n"
+        "  [i32] x{1i32}\n"
+        "}\n\n"
+        "Holder() {}\n\n"
+        "[return<soa_vector<Particle>>]\n"
+        "/Holder/cloneValues([Holder] self) {\n"
+        "  return(soa_vector<Particle>())\n"
+        "}\n\n"
+        "[return<auto>]\n"
+        "pick([Holder] holder) {\n"
+        "  return(" + expr + ")\n"
+        "}\n\n"
+        "[return<int>]\n"
+        "main() {\n"
+        "  [Holder] holder{Holder()}\n"
+        "  pick(holder)\n"
+        "  return(0i32)\n"
+        "}\n";
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/pick", error));
+    CHECK(error.find(expected) != std::string::npos);
+  };
+
+  checkReject("ref(holder.cloneValues(), 0i32)",
+              "unknown method: /std/collections/soa_vector/ref");
+  checkReject("ref_ref(holder.cloneValues(), 0i32)",
+              "unknown method: /std/collections/soa_vector/ref_ref");
 }
 
 TEST_CASE("soa_vector ref helper still accepts call and return escapes through same-path helper") {
