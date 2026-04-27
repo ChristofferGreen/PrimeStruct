@@ -908,15 +908,30 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
     return vectorMutatorCallFormResult;
   }
+  auto isVectorReturningCallTarget = [&](const Expr &receiverExpr) {
+    if (receiverExpr.kind != Expr::Kind::Call || receiverExpr.isBinding) {
+      return false;
+    }
+    const Definition *receiverDef = resolveDefinitionCallFn(receiverExpr);
+    if (receiverDef == nullptr) {
+      return false;
+    }
+    std::string collectionName;
+    std::vector<std::string> collectionArgs;
+    return inferDeclaredReturnCollection(*receiverDef, collectionName, collectionArgs) &&
+           collectionName == "vector" && collectionArgs.size() == 1;
+  };
   if (expr.isMethodCall && expr.args.size() == 1 &&
       (isSimpleCallName(expr, "count") || isSimpleCallName(expr, "capacity")) &&
-      isVectorTarget(expr.args.front(), localsIn)) {
+      (isVectorTarget(expr.args.front(), localsIn) ||
+       isVectorReturningCallTarget(expr.args.front()))) {
     const Definition *callee = resolveMethodCallDefinitionFn(expr, localsIn);
     if (callee != nullptr && callee->fullPath == "/vector/count") {
       return InlineCallDispatchResult::NotHandled;
     }
     if (callee != nullptr && callee->fullPath == "/vector/capacity") {
-      if (isExperimentalVectorTarget(expr.args.front(), localsIn)) {
+      if (isExperimentalVectorTarget(expr.args.front(), localsIn) ||
+          isVectorReturningCallTarget(expr.args.front())) {
         return InlineCallDispatchResult::NotHandled;
       }
       error =
