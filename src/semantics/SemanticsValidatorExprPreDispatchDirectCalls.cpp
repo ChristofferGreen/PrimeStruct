@@ -273,9 +273,13 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
       const std::string path = "/std/collections/map/" + helperName;
       return hasImportedDefinitionPath(path) || hasDeclaredDefinitionPath(path);
     };
-    if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
+    const bool isBareMapAccessBuiltinSurface =
+        getBuiltinArrayAccessName(expr, builtinAccessName) &&
+        isSimpleCallName(expr, builtinAccessName);
+    if (!builtinAccessName.empty() &&
         hasVisibleStdlibMapAccessDefinition(builtinAccessName) &&
-        defMap_.find("/std/collections/map/" + builtinAccessName) == defMap_.end() &&
+        (isBareMapAccessBuiltinSurface ||
+         defMap_.find("/std/collections/map/" + builtinAccessName) == defMap_.end()) &&
         !hasDeclaredDefinitionPath("/map/" + builtinAccessName)) {
       size_t receiverIndex = 0;
       size_t keyIndex = 1;

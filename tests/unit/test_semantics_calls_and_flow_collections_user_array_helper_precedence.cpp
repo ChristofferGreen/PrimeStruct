@@ -423,6 +423,24 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/map/at") != std::string::npos);
 }
 
+TEST_CASE("bare map at uses canonical helper as visibility gate only") {
+  const std::string source = R"(
+[return<int>]
+/std/collections/map/at([map<i32, i32>] values, [bool] key) {
+  return(67i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 2i32)}
+  return(at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("at method requires canonical map helper even when alias helper exists") {
   const std::string source = R"(
 [return<int>]
