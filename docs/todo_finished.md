@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4231: Make query/try/on_error graph facts the exclusive authority.
+  Completed: query, `try(...)`, and `on_error` lowerer consumption now uses
+  semantic-node-id facts as the only production authority. The semantic-product
+  adapter no longer recovers query facts through resolved-path plus call-name
+  metadata or `try(...)` facts through operand-path plus source metadata, and
+  on_error completeness/adapter lookup no longer recovers through definition
+  path ids. Those published indexes remain available for inspection and
+  formatter/public-API tests, but missing semantic-id facts now fail closed
+  with the existing deterministic semantic-product diagnostics. Focused
+  adapter, on_error-helper, and source-lock tests now pin the no-fallback
+  contract. Local validation is deferred per the lite workflow.
 - ✓ TODO-4218: Make local-auto graph facts the exclusive inference authority.
   Completed: local-auto lowering now treats semantic-node-id facts as the only
   production authority. The semantic-product target adapter still indexes

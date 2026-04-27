@@ -72,40 +72,6 @@ uint64_t makeTryFactOperandPathSourceKey(SymbolId operandPathId, int sourceLine,
          columnBits;
 }
 
-std::optional<SymbolId> resolveSemanticExprPathId(const SemanticProgram *semanticProgram,
-                                                  const Expr &expr) {
-  if (semanticProgram == nullptr) {
-    return std::nullopt;
-  }
-
-  auto lookupPathId = [&](const std::string &resolvedPath) -> std::optional<SymbolId> {
-    if (resolvedPath.empty()) {
-      return std::nullopt;
-    }
-    return semanticProgramLookupCallTargetStringId(*semanticProgram, resolvedPath);
-  };
-
-  if (const auto directPathId =
-          lookupPathId(findSemanticProductDirectCallTarget(semanticProgram, expr));
-      directPathId.has_value()) {
-    return directPathId;
-  }
-  if (const auto methodPathId =
-          lookupPathId(findSemanticProductMethodCallTarget(semanticProgram, expr));
-      methodPathId.has_value()) {
-    return methodPathId;
-  }
-  if (const auto bridgePathId =
-          lookupPathId(findSemanticProductBridgePathChoice(semanticProgram, expr));
-      bridgePathId.has_value()) {
-    return bridgePathId;
-  }
-  if (!expr.name.empty() && expr.name.front() == '/') {
-    return lookupPathId(expr.name);
-  }
-  return std::nullopt;
-}
-
 struct SemanticProductIndexBuilder {
   const SemanticProgram *semanticProgram = nullptr;
 
@@ -497,32 +463,7 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(
       return fact;
     }
   }
-  if (const auto *fact = findSemanticProductOnErrorFactBySemanticId(semanticIndex, definition);
-      fact != nullptr) {
-    return fact;
-  }
-  if (semanticProgram == nullptr || definition.fullPath.empty()) {
-    return nullptr;
-  }
-  const auto definitionPathId =
-      semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath);
-  if (!definitionPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto *fact = semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
-          *semanticProgram, *definitionPathId);
-      fact != nullptr) {
-    return fact;
-  }
-  if (const auto it = semanticIndex.onErrorFactsByDefinitionPathId.find(*definitionPathId);
-      it != semanticIndex.onErrorFactsByDefinitionPathId.end()) {
-    if (const auto *fact = it->second;
-        fact != nullptr &&
-        fact->definitionPath == definition.fullPath) {
-      return fact;
-    }
-  }
-  return nullptr;
+  return findSemanticProductOnErrorFactBySemanticId(semanticIndex, definition);
 }
 
 const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticProductTargetAdapter &adapter,
@@ -618,33 +559,7 @@ const SemanticProgramQueryFact *findSemanticProductQueryFact(
       return fact;
     }
   }
-  if (const auto *fact = findSemanticProductQueryFactBySemanticId(semanticIndex, expr);
-      fact != nullptr) {
-    return fact;
-  }
-  if (semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name.empty()) {
-    return nullptr;
-  }
-  const auto callNameId =
-      semanticProgramLookupCallTargetStringId(*semanticProgram, expr.name);
-  if (!callNameId.has_value()) {
-    return nullptr;
-  }
-  const auto resolvedPathId = resolveSemanticExprPathId(semanticProgram, expr);
-  if (!resolvedPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto *fact = semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(
-          *semanticProgram, *resolvedPathId, *callNameId);
-      fact != nullptr) {
-    return fact;
-  }
-  if (const auto it = semanticIndex.queryFactsByResolvedPathAndCallNameId.find(
-          makeQueryFactResolvedPathCallNameKey(*resolvedPathId, *callNameId));
-      it != semanticIndex.queryFactsByResolvedPathAndCallNameId.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findSemanticProductQueryFactBySemanticId(semanticIndex, expr);
 }
 
 const SemanticProgramQueryFact *findSemanticProductQueryFact(const SemanticProductTargetAdapter &adapter,
@@ -675,29 +590,7 @@ const SemanticProgramTryFact *findSemanticProductTryFact(
       return fact;
     }
   }
-  if (const auto *fact = findSemanticProductTryFactBySemanticId(semanticIndex, expr);
-      fact != nullptr) {
-    return fact;
-  }
-  if (semanticProgram == nullptr || expr.kind != Expr::Kind::Call || expr.name != "try" ||
-      expr.args.empty() || expr.sourceLine <= 0 || expr.sourceColumn <= 0) {
-    return nullptr;
-  }
-  const auto operandPathId = resolveSemanticExprPathId(semanticProgram, expr.args.front());
-  if (!operandPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto *fact = semanticProgramLookupPublishedTryFactByOperandPathAndSource(
-          *semanticProgram, *operandPathId, expr.sourceLine, expr.sourceColumn);
-      fact != nullptr) {
-    return fact;
-  }
-  if (const auto it = semanticIndex.tryFactsByOperandPathAndSource.find(
-          makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn));
-      it != semanticIndex.tryFactsByOperandPathAndSource.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findSemanticProductTryFactBySemanticId(semanticIndex, expr);
 }
 
 const SemanticProgramTryFact *findSemanticProductTryFact(const SemanticProductTargetAdapter &adapter,

@@ -2141,7 +2141,7 @@ TEST_CASE("ir lowerer semantic-product index resolves return facts without broad
   CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) == "/main");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter indexes on_error facts by definition path id") {
+TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -2180,12 +2180,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes on_error facts by definit
   CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionId.empty());
   CHECK(semanticTargets.semanticIndex.onErrorFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *onErrorFact = primec::ir_lowerer::findSemanticProductOnErrorFact(semanticTargets, mainDef);
-  REQUIRE(onErrorFact != nullptr);
-  CHECK(primec::semanticProgramOnErrorFactDefinitionPath(semanticProgram, *onErrorFact) == "/main");
-  CHECK(primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, *onErrorFact) == "/handler");
+  CHECK(onErrorFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index resolves on_error facts without broad adapter") {
+TEST_CASE("ir lowerer semantic-product index keeps on_error path index non-authoritative") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -2224,9 +2222,7 @@ TEST_CASE("ir lowerer semantic-product index resolves on_error facts without bro
   const auto *onErrorFact =
       primec::ir_lowerer::findSemanticProductOnErrorFact(
           &semanticProgram, semanticIndex, mainDef);
-  REQUIRE(onErrorFact != nullptr);
-  CHECK(primec::semanticProgramOnErrorFactDefinitionPath(semanticProgram, *onErrorFact) == "/main");
-  CHECK(primec::semanticProgramOnErrorFactHandlerPath(semanticProgram, *onErrorFact) == "/handler");
+  CHECK(onErrorFact == nullptr);
 }
 
 TEST_CASE("ir lowerer semantic-product adapter ignores local-auto initializer-path fallback") {
@@ -2579,7 +2575,7 @@ TEST_CASE("ir lowerer statement binding helper consumes semantic-product index d
   CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
-TEST_CASE("ir lowerer semantic-product adapter indexes query facts by resolved path and call name") {
+TEST_CASE("ir lowerer semantic-product adapter ignores query resolved-path fallback") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
@@ -2624,12 +2620,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes query facts by resolved p
   CHECK(adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.count(
             (static_cast<uint64_t>(resolvedPathId) << 32) | static_cast<uint64_t>(callNameId)) == 1);
   const auto *queryFact = primec::ir_lowerer::findSemanticProductQueryFact(adapter, queryExpr);
-  REQUIRE(queryFact != nullptr);
-  CHECK(queryFact->resolvedPathId != primec::InvalidSymbolId);
-  CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *queryFact) == "/lookup");
+  CHECK(queryFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches over resolved-path index") {
+TEST_CASE("ir lowerer semantic-product adapter uses query semantic-id matches without path fallback") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
@@ -2694,7 +2688,7 @@ TEST_CASE("ir lowerer semantic-product adapter prefers query semantic-id matches
   CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter uses raw query semantic-id before partial fallback index") {
+TEST_CASE("ir lowerer semantic-product adapter uses raw query semantic-id without path fallback") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
@@ -2759,7 +2753,7 @@ TEST_CASE("ir lowerer semantic-product adapter uses raw query semantic-id before
   CHECK(queryFact->queryTypeText == "Result<i32, FileError>");
 }
 
-TEST_CASE("ir lowerer semantic-product index resolves query facts without broad adapter") {
+TEST_CASE("ir lowerer semantic-product index keeps query path index non-authoritative") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;
   queryExpr.name = "lookup";
@@ -2802,12 +2796,10 @@ TEST_CASE("ir lowerer semantic-product index resolves query facts without broad 
             (static_cast<uint64_t>(resolvedPathId) << 32) | static_cast<uint64_t>(callNameId)) == 1);
   const auto *queryFact =
       primec::ir_lowerer::findSemanticProductQueryFact(&semanticProgram, semanticIndex, queryExpr);
-  REQUIRE(queryFact != nullptr);
-  CHECK(queryFact->resolvedPathId != primec::InvalidSymbolId);
-  CHECK(primec::semanticProgramQueryFactResolvedPath(semanticProgram, *queryFact) == "/lookup");
+  CHECK(queryFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product adapter indexes try facts by operand path and source") {
+TEST_CASE("ir lowerer semantic-product adapter ignores try operand-path fallback") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
   operandExpr.name = "lookup";
@@ -2860,12 +2852,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes try facts by operand path
   CHECK(adapter.semanticIndex.tryFactsByExpr.empty());
   CHECK(adapter.semanticIndex.tryFactsByOperandPathAndSource.count(tryKey) == 1);
   const auto *tryFact = primec::ir_lowerer::findSemanticProductTryFact(adapter, tryExpr);
-  REQUIRE(tryFact != nullptr);
-  CHECK(tryFact->operandResolvedPathId != primec::InvalidSymbolId);
-  CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *tryFact) == "/lookup");
+  CHECK(tryFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product adapter prefers try semantic-id matches over operand-path index") {
+TEST_CASE("ir lowerer semantic-product adapter uses try semantic-id matches without path fallback") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
   operandExpr.name = "lookup";
@@ -2940,7 +2930,7 @@ TEST_CASE("ir lowerer semantic-product adapter prefers try semantic-id matches o
   CHECK(tryFact->valueType == "i32");
 }
 
-TEST_CASE("ir lowerer semantic-product index resolves try facts without broad adapter") {
+TEST_CASE("ir lowerer semantic-product index keeps try operand-path index non-authoritative") {
   primec::Expr operandExpr;
   operandExpr.kind = primec::Expr::Kind::Call;
   operandExpr.name = "lookup";
@@ -2993,9 +2983,7 @@ TEST_CASE("ir lowerer semantic-product index resolves try facts without broad ad
   CHECK(semanticIndex.tryFactsByOperandPathAndSource.count(tryKey) == 1);
   const auto *tryFact =
       primec::ir_lowerer::findSemanticProductTryFact(&semanticProgram, semanticIndex, tryExpr);
-  REQUIRE(tryFact != nullptr);
-  CHECK(tryFact->operandResolvedPathId != primec::InvalidSymbolId);
-  CHECK(primec::semanticProgramTryFactOperandResolvedPath(semanticProgram, *tryFact) == "/lookup");
+  CHECK(tryFact == nullptr);
 }
 
 TEST_CASE("ir lowerer call helpers resolve definition calls through slashless map import aliases") {

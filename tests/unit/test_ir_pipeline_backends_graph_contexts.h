@@ -1310,7 +1310,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irEntrySetupSource.find("validateOnErrorFactFamily") != std::string::npos);
   CHECK(irEntrySetupSource.find("semanticProgramLookupPublishedOnErrorFactByDefinitionSemanticId(") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(") !=
+  CHECK(irEntrySetupSource.find("semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(") ==
         std::string::npos);
   CHECK(irEntrySetupSource.find("semanticProgramOnErrorFactHandlerPath(") !=
         std::string::npos);
@@ -1657,7 +1657,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("findDefinitionScopedSemanticFact(semanticIndex.onErrorFactsByDefinitionId, definition)") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.onErrorFactsByDefinitionPathId.reserve(onErrorFacts.size())") !=
         std::string::npos);
@@ -1720,7 +1720,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.queryFactsByResolvedPathAndCallNameId.reserve(queryFacts.size())") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.find(") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.queryFactsByResolvedPathAndCallNameId.find(") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.queryFactsByExpr.reserve(queryFacts.size())") ==
         std::string::npos);
@@ -1728,15 +1728,15 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("const auto queryFacts = semanticProgramQueryFactView(*adapter.semanticProgram);") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("resolveSemanticExprPathId(adapter, expr)") !=
+  CHECK(semanticTargetAdapterSource.find("resolveSemanticExprPathId(adapter, expr)") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedQueryFactByResolvedPathAndCallNameId(") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramTryFactView(*semanticProgram)") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("index.tryFactsByOperandPathAndSource.reserve(tryFacts.size())") !=
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.tryFactsByOperandPathAndSource.find(") !=
+  CHECK(semanticTargetAdapterSource.find("adapter.semanticIndex.tryFactsByOperandPathAndSource.find(") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.tryFactsByExpr.reserve(tryFacts.size())") ==
         std::string::npos);
@@ -1744,9 +1744,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("const auto tryFacts = semanticProgramTryFactView(*adapter.semanticProgram);") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn)") !=
+  CHECK(semanticTargetAdapterSource.find("makeTryFactOperandPathSourceKey(*operandPathId, expr.sourceLine, expr.sourceColumn)") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedTryFactByOperandPathAndSource(") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupPublishedTryFactByOperandPathAndSource(") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramBindingFactView(*semanticProgram)") !=
         std::string::npos);

@@ -89,10 +89,6 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
           *context.semanticProgram, summary->semanticNodeId);
     }
     if (onErrorFact == nullptr) {
-      onErrorFact = semanticProgramLookupPublishedOnErrorFactByDefinitionPathId(
-          *context.semanticProgram, summary->fullPathId);
-    }
-    if (onErrorFact == nullptr) {
       error = "missing semantic-product on_error fact: " + std::string(callablePath);
       return false;
     }
