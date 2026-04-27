@@ -43,12 +43,81 @@ struct InvalidationCounts {
   uint64_t receiverType = 0;
 };
 
+uint64_t &invalidationCountForFamily(InvalidationCounts &counts,
+                                     TypeResolutionGraphInvalidationEditFamily editFamily) {
+  switch (editFamily) {
+  case TypeResolutionGraphInvalidationEditFamily::LocalBinding:
+    return counts.localBinding;
+  case TypeResolutionGraphInvalidationEditFamily::ControlFlow:
+    return counts.controlFlow;
+  case TypeResolutionGraphInvalidationEditFamily::InitializerShape:
+    return counts.initializerShape;
+  case TypeResolutionGraphInvalidationEditFamily::DefinitionSignature:
+    return counts.definitionSignature;
+  case TypeResolutionGraphInvalidationEditFamily::ImportAlias:
+    return counts.importAlias;
+  case TypeResolutionGraphInvalidationEditFamily::ReceiverType:
+    return counts.receiverType;
+  }
+  return counts.localBinding;
+}
+
+uint64_t invalidationCountForFamily(const InvalidationCounts &counts,
+                                    TypeResolutionGraphInvalidationEditFamily editFamily) {
+  switch (editFamily) {
+  case TypeResolutionGraphInvalidationEditFamily::LocalBinding:
+    return counts.localBinding;
+  case TypeResolutionGraphInvalidationEditFamily::ControlFlow:
+    return counts.controlFlow;
+  case TypeResolutionGraphInvalidationEditFamily::InitializerShape:
+    return counts.initializerShape;
+  case TypeResolutionGraphInvalidationEditFamily::DefinitionSignature:
+    return counts.definitionSignature;
+  case TypeResolutionGraphInvalidationEditFamily::ImportAlias:
+    return counts.importAlias;
+  case TypeResolutionGraphInvalidationEditFamily::ReceiverType:
+    return counts.receiverType;
+  }
+  return 0;
+}
+
+void recordInvalidationObservation(InvalidationCounts &counts,
+                                   TypeResolutionGraphInvalidationEditFamily editFamily) {
+  ++invalidationCountForFamily(counts, editFamily);
+}
+
+void setTypeResolutionGraphInvalidationCount(
+    TypeResolutionGraph &graph,
+    TypeResolutionGraphInvalidationEditFamily editFamily,
+    uint64_t count) {
+  switch (editFamily) {
+  case TypeResolutionGraphInvalidationEditFamily::LocalBinding:
+    graph.invalidationLocalBindingCount = count;
+    return;
+  case TypeResolutionGraphInvalidationEditFamily::ControlFlow:
+    graph.invalidationControlFlowCount = count;
+    return;
+  case TypeResolutionGraphInvalidationEditFamily::InitializerShape:
+    graph.invalidationInitializerShapeCount = count;
+    return;
+  case TypeResolutionGraphInvalidationEditFamily::DefinitionSignature:
+    graph.invalidationDefinitionSignatureCount = count;
+    return;
+  case TypeResolutionGraphInvalidationEditFamily::ImportAlias:
+    graph.invalidationImportAliasCount = count;
+    return;
+  case TypeResolutionGraphInvalidationEditFamily::ReceiverType:
+    graph.invalidationReceiverTypeCount = count;
+    return;
+  }
+}
+
 void countInvalidationExpr(const Expr &expr, InvalidationCounts &counts) {
   if (isIfCall(expr) || isMatchCall(expr)) {
-    ++counts.controlFlow;
+    recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::ControlFlow);
   }
   if (expr.isMethodCall && !expr.isFieldAccess) {
-    ++counts.receiverType;
+    recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::ReceiverType);
   }
   for (const auto &arg : expr.args) {
     countInvalidationExpr(arg, counts);
@@ -60,8 +129,13 @@ void countInvalidationExpr(const Expr &expr, InvalidationCounts &counts) {
 
 InvalidationCounts computeInvalidationCounts(const Program &program) {
   InvalidationCounts counts;
-  counts.definitionSignature = program.definitions.size();
-  counts.importAlias = program.imports.size();
+  for (size_t index = 0; index < program.definitions.size(); ++index) {
+    recordInvalidationObservation(
+        counts, TypeResolutionGraphInvalidationEditFamily::DefinitionSignature);
+  }
+  for (size_t index = 0; index < program.imports.size(); ++index) {
+    recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::ImportAlias);
+  }
   for (const auto &def : program.definitions) {
     for (const auto &param : def.parameters) {
       countInvalidationExpr(param, counts);
@@ -71,9 +145,10 @@ InvalidationCounts computeInvalidationCounts(const Program &program) {
         continue;
       }
       if (stmt.isBinding) {
-        ++counts.localBinding;
+        recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::LocalBinding);
         if (!stmt.args.empty() || !stmt.bodyArguments.empty()) {
-          ++counts.initializerShape;
+          recordInvalidationObservation(
+              counts, TypeResolutionGraphInvalidationEditFamily::InitializerShape);
         }
       }
       countInvalidationExpr(stmt, counts);
@@ -514,6 +589,110 @@ std::string_view typeResolutionEdgeKindName(TypeResolutionEdgeKind kind) {
   return "dependency";
 }
 
+std::string_view typeResolutionGraphInvalidationEditFamilyName(
+    TypeResolutionGraphInvalidationEditFamily editFamily) {
+  switch (editFamily) {
+  case TypeResolutionGraphInvalidationEditFamily::LocalBinding:
+    return "local_binding";
+  case TypeResolutionGraphInvalidationEditFamily::ControlFlow:
+    return "control_flow";
+  case TypeResolutionGraphInvalidationEditFamily::InitializerShape:
+    return "initializer_shape";
+  case TypeResolutionGraphInvalidationEditFamily::DefinitionSignature:
+    return "definition_signature";
+  case TypeResolutionGraphInvalidationEditFamily::ImportAlias:
+    return "import_alias";
+  case TypeResolutionGraphInvalidationEditFamily::ReceiverType:
+    return "receiver_type";
+  }
+  return "local_binding";
+}
+
+std::string_view typeResolutionGraphInvalidationPropagationName(
+    TypeResolutionGraphInvalidationPropagation propagation) {
+  switch (propagation) {
+  case TypeResolutionGraphInvalidationPropagation::DefinitionLocal:
+    return "definition_local";
+  case TypeResolutionGraphInvalidationPropagation::CrossDefinition:
+    return "cross_definition";
+  }
+  return "definition_local";
+}
+
+const std::vector<TypeResolutionGraphInvalidationContract> &
+typeResolutionGraphInvalidationContracts() {
+  static const std::vector<TypeResolutionGraphInvalidationContract> Contracts = {
+      {TypeResolutionGraphInvalidationEditFamily::LocalBinding,
+       "local_binding",
+       TypeResolutionGraphInvalidationPropagation::DefinitionLocal,
+       "local_auto, binding, query, try, on_error nodes in the edited definition",
+       "binding/result consumers reached from the edited definition's dependency edges",
+       "diagnostics attached to the edited binding and its dependent local facts"},
+      {TypeResolutionGraphInvalidationEditFamily::ControlFlow,
+       "control_flow",
+       TypeResolutionGraphInvalidationPropagation::DefinitionLocal,
+       "definition-return, branch-local binding, and control-dependent query nodes",
+       "return/result consumers whose dependency edges touch the edited control-flow region",
+       "branch reachability and return-consistency diagnostics in the edited definition"},
+      {TypeResolutionGraphInvalidationEditFamily::InitializerShape,
+       "initializer_shape",
+       TypeResolutionGraphInvalidationPropagation::DefinitionLocal,
+       "local_auto and call_constraint nodes owned by the edited initializer",
+       "initializer binding/result queries and downstream local facts in dependency order",
+       "initializer type, result-shape, and helper-resolution diagnostics for the edited site"},
+      {TypeResolutionGraphInvalidationEditFamily::DefinitionSignature,
+       "definition_signature",
+       TypeResolutionGraphInvalidationPropagation::CrossDefinition,
+       "definition_return nodes for the edited definition and directly dependent call sites",
+       "dependent call_constraint, binding, result, and return nodes across import boundaries",
+       "call-compatibility, return-contract, and template-argument diagnostics at dependent sites"},
+      {TypeResolutionGraphInvalidationEditFamily::ImportAlias,
+       "import_alias",
+       TypeResolutionGraphInvalidationPropagation::CrossDefinition,
+       "call_constraint nodes whose canonical path or helper-shadow choice used the alias",
+       "dependent helper-routing, binding, and result queries in deterministic path order",
+       "unresolved import, ambiguous helper, and alias-derived call diagnostics"},
+      {TypeResolutionGraphInvalidationEditFamily::ReceiverType,
+       "receiver_type",
+       TypeResolutionGraphInvalidationPropagation::CrossDefinition,
+       "method call_constraint nodes and receiver-derived helper-family selections",
+       "dependent method targets, binding/result facts, and helper-routing queries",
+       "method-target, receiver-binding, and helper-family diagnostics at dependent sites"},
+  };
+  return Contracts;
+}
+
+const TypeResolutionGraphInvalidationContract *
+typeResolutionGraphInvalidationContract(
+    TypeResolutionGraphInvalidationEditFamily editFamily) {
+  for (const auto &contract : typeResolutionGraphInvalidationContracts()) {
+    if (contract.editFamily == editFamily) {
+      return &contract;
+    }
+  }
+  return nullptr;
+}
+
+uint64_t typeResolutionGraphInvalidationCount(
+    const TypeResolutionGraph &graph,
+    TypeResolutionGraphInvalidationEditFamily editFamily) {
+  switch (editFamily) {
+  case TypeResolutionGraphInvalidationEditFamily::LocalBinding:
+    return graph.invalidationLocalBindingCount;
+  case TypeResolutionGraphInvalidationEditFamily::ControlFlow:
+    return graph.invalidationControlFlowCount;
+  case TypeResolutionGraphInvalidationEditFamily::InitializerShape:
+    return graph.invalidationInitializerShapeCount;
+  case TypeResolutionGraphInvalidationEditFamily::DefinitionSignature:
+    return graph.invalidationDefinitionSignatureCount;
+  case TypeResolutionGraphInvalidationEditFamily::ImportAlias:
+    return graph.invalidationImportAliasCount;
+  case TypeResolutionGraphInvalidationEditFamily::ReceiverType:
+    return graph.invalidationReceiverTypeCount;
+  }
+  return 0;
+}
+
 TypeResolutionGraph buildTypeResolutionGraph(const Program &program) {
   const auto start = std::chrono::steady_clock::now();
   TypeResolutionGraphBuilder builder(program);
@@ -551,12 +730,12 @@ bool buildTypeResolutionGraphForProgram(Program program,
   out.prepareMillis =
       static_cast<uint64_t>(
           std::chrono::duration_cast<std::chrono::milliseconds>(prepEnd - prepStart).count());
-  out.invalidationLocalBindingCount = invalidationCounts.localBinding;
-  out.invalidationControlFlowCount = invalidationCounts.controlFlow;
-  out.invalidationInitializerShapeCount = invalidationCounts.initializerShape;
-  out.invalidationDefinitionSignatureCount = invalidationCounts.definitionSignature;
-  out.invalidationImportAliasCount = invalidationCounts.importAlias;
-  out.invalidationReceiverTypeCount = invalidationCounts.receiverType;
+  for (const auto &contract : typeResolutionGraphInvalidationContracts()) {
+    setTypeResolutionGraphInvalidationCount(
+        out,
+        contract.editFamily,
+        invalidationCountForFamily(invalidationCounts, contract.editFamily));
+  }
   out.explicitTemplateArgInferenceFactHitCount = explicitTemplateArgFactHitCount;
   out.implicitTemplateArgInferenceFactHitCount = implicitTemplateArgFactHitCount;
   if (const auto maxPrepare = readGraphMetricBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX");
@@ -641,6 +820,14 @@ std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
       << " invalidation_definition_signature=" << graph.invalidationDefinitionSignatureCount
       << " invalidation_import_alias=" << graph.invalidationImportAliasCount
       << " invalidation_receiver_type=" << graph.invalidationReceiverTypeCount << "\n";
+  for (const auto &contract : typeResolutionGraphInvalidationContracts()) {
+    out << "  invalidation_contract name=" << contract.name
+        << " propagation=" << typeResolutionGraphInvalidationPropagationName(contract.propagation)
+        << " observed=" << typeResolutionGraphInvalidationCount(graph, contract.editFamily)
+        << " immediate=\"" << contract.immediateInvalidations << "\""
+        << " lazy=\"" << contract.lazyRevisits << "\""
+        << " diagnostics=\"" << contract.diagnosticDiscards << "\"\n";
+  }
   for (const auto &node : graph.nodes) {
     out << "  node " << node.id << " kind=" << typeResolutionNodeKindName(node.kind)
         << " label=\"" << node.label << "\""
@@ -734,6 +921,17 @@ bool buildTypeResolutionGraphForTesting(Program program,
         edge.sourceId,
         edge.targetId,
         std::string(typeResolutionEdgeKindName(edge.kind)),
+    });
+  }
+  out.invalidationContracts.reserve(typeResolutionGraphInvalidationContracts().size());
+  for (const auto &contract : typeResolutionGraphInvalidationContracts()) {
+    out.invalidationContracts.push_back(TypeResolutionGraphInvalidationContractSnapshot{
+        std::string(contract.name),
+        std::string(typeResolutionGraphInvalidationPropagationName(contract.propagation)),
+        std::string(contract.immediateInvalidations),
+        std::string(contract.lazyRevisits),
+        std::string(contract.diagnosticDiscards),
+        typeResolutionGraphInvalidationCount(graph, contract.editFamily),
     });
   }
   return true;

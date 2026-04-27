@@ -99,6 +99,45 @@ main() {
   CHECK(requireGraphEdge(graph, 3).targetId == 4);
 }
 
+TEST_CASE("type resolution graph exposes explicit invalidation contracts for local and cross definition edits") {
+  const std::string source = R"(
+[public return<i32>]
+id([i32] value) {
+  return(value)
+}
+
+[return<i32>]
+main() {
+  [auto] value{id(1i32)}
+  return(value)
+}
+)";
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  REQUIRE(graph.invalidationContracts.size() == 6);
+  const auto localBinding = requireInvalidationContract(graph, "local_binding");
+  CHECK(localBinding.propagation == "definition_local");
+  CHECK(localBinding.immediateInvalidations.find("local_auto") != std::string::npos);
+  CHECK(localBinding.lazyRevisits.find("binding/result") != std::string::npos);
+  CHECK(localBinding.diagnosticDiscards.find("edited binding") != std::string::npos);
+  CHECK(localBinding.observedCount == graph.invalidationLocalBindingCount);
+  CHECK(localBinding.observedCount == 1);
+
+  const auto definitionSignature = requireInvalidationContract(graph, "definition_signature");
+  CHECK(definitionSignature.propagation == "cross_definition");
+  CHECK(definitionSignature.immediateInvalidations.find("definition_return") !=
+        std::string::npos);
+  CHECK(definitionSignature.lazyRevisits.find("dependent call_constraint") !=
+        std::string::npos);
+  CHECK(definitionSignature.diagnosticDiscards.find("call-compatibility") !=
+        std::string::npos);
+  CHECK(definitionSignature.observedCount == graph.invalidationDefinitionSignatureCount);
+  CHECK(definitionSignature.observedCount == 2);
+}
+
 TEST_CASE("type resolution graph builder records requirement edges for explicit return contracts") {
   const std::string source = R"(
 [return<i32>]
@@ -684,7 +723,11 @@ TEST_CASE("type resolution graph dump stays stable for a simple call chain") {
   CHECK(metricsLine.find("invalidation_definition_signature=") != std::string::npos);
   CHECK(metricsLine.find("invalidation_import_alias=") != std::string::npos);
   CHECK(metricsLine.find("invalidation_receiver_type=") != std::string::npos);
-  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  CHECK(dump.find("  invalidation_contract name=local_binding propagation=definition_local") !=
+        std::string::npos);
+  CHECK(dump.find("  invalidation_contract name=definition_signature propagation=cross_definition") !=
+        std::string::npos);
+  const std::string stripped = stripTypeResolutionGraphVariableHeader(dump);
   CHECK(stripped == expected);
 }
 
@@ -723,7 +766,7 @@ TEST_CASE("type resolution graph dump stays stable for mutual recursion") {
   CHECK(metricsLine.find("nodes=4") != std::string::npos);
   CHECK(metricsLine.find("edges=4") != std::string::npos);
   CHECK(metricsLine.find("scc_count=1") != std::string::npos);
-  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  const std::string stripped = stripTypeResolutionGraphVariableHeader(dump);
   CHECK(stripped == expected);
 }
 
@@ -758,7 +801,7 @@ TEST_CASE("type resolution graph dump stays stable for namespace import resoluti
   REQUIRE(metricsEnd != std::string::npos);
   const std::string metricsLine = dump.substr(metricsStart, metricsEnd - metricsStart);
   CHECK(metricsLine.rfind("  metrics ", 0) == 0);
-  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  const std::string stripped = stripTypeResolutionGraphVariableHeader(dump);
   CHECK(stripped == expected);
 }
 
@@ -795,7 +838,7 @@ TEST_CASE("type resolution graph dump stays stable for template specialization e
   REQUIRE(metricsEnd != std::string::npos);
   const std::string metricsLine = dump.substr(metricsStart, metricsEnd - metricsStart);
   CHECK(metricsLine.rfind("  metrics ", 0) == 0);
-  const std::string stripped = header + dump.substr(metricsEnd + 1);
+  const std::string stripped = stripTypeResolutionGraphVariableHeader(dump);
   CHECK(stripped == expected);
 }
 

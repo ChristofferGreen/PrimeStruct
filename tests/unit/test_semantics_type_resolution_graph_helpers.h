@@ -14,6 +14,17 @@ namespace {
   return graph.edges.at(index);
 }
 
+[[maybe_unused]] primec::semantics::TypeResolutionGraphInvalidationContractSnapshot
+requireInvalidationContract(const primec::semantics::TypeResolutionGraphSnapshot &graph,
+                            const std::string &editFamily) {
+  const auto it = std::find_if(
+      graph.invalidationContracts.begin(),
+      graph.invalidationContracts.end(),
+      [&](const auto &contract) { return contract.editFamily == editFamily; });
+  REQUIRE(it != graph.invalidationContracts.end());
+  return *it;
+}
+
 [[maybe_unused]] std::string requireTypeResolutionGraphDump(const std::string &source, const std::string &entryPath) {
   std::string error;
   std::string dump;
@@ -24,6 +35,23 @@ namespace {
   }
   CHECK(error.empty());
   return dump;
+}
+
+[[maybe_unused]] std::string stripTypeResolutionGraphVariableHeader(const std::string &dump) {
+  const std::string header = "type_graph {\n";
+  REQUIRE(dump.rfind(header, 0) == 0);
+  size_t lineStart = header.size();
+  while (lineStart < dump.size()) {
+    const size_t lineEnd = dump.find('\n', lineStart);
+    REQUIRE(lineEnd != std::string::npos);
+    const std::string line = dump.substr(lineStart, lineEnd - lineStart);
+    if (line.rfind("  metrics ", 0) != 0 &&
+        line.rfind("  invalidation_contract ", 0) != 0) {
+      break;
+    }
+    lineStart = lineEnd + 1;
+  }
+  return header + dump.substr(lineStart);
 }
 
 [[maybe_unused]] primec::semantics::TypeResolutionLocalBindingSnapshotEntry requireLocalBindingSnapshotEntry(

@@ -21,6 +21,31 @@ enum class TypeResolutionEdgeKind {
   Requirement,
 };
 
+enum class TypeResolutionGraphInvalidationEditFamily {
+  LocalBinding,
+  ControlFlow,
+  InitializerShape,
+  DefinitionSignature,
+  ImportAlias,
+  ReceiverType,
+};
+
+enum class TypeResolutionGraphInvalidationPropagation {
+  DefinitionLocal,
+  CrossDefinition,
+};
+
+struct TypeResolutionGraphInvalidationContract {
+  TypeResolutionGraphInvalidationEditFamily editFamily =
+      TypeResolutionGraphInvalidationEditFamily::LocalBinding;
+  std::string_view name;
+  TypeResolutionGraphInvalidationPropagation propagation =
+      TypeResolutionGraphInvalidationPropagation::DefinitionLocal;
+  std::string_view immediateInvalidations;
+  std::string_view lazyRevisits;
+  std::string_view diagnosticDiscards;
+};
+
 struct TypeResolutionGraphNode {
   uint32_t id = 0;
   TypeResolutionNodeKind kind = TypeResolutionNodeKind::DefinitionReturn;
@@ -58,6 +83,18 @@ struct TypeResolutionGraph {
 
 std::string_view typeResolutionNodeKindName(TypeResolutionNodeKind kind);
 std::string_view typeResolutionEdgeKindName(TypeResolutionEdgeKind kind);
+std::string_view typeResolutionGraphInvalidationEditFamilyName(
+    TypeResolutionGraphInvalidationEditFamily editFamily);
+std::string_view typeResolutionGraphInvalidationPropagationName(
+    TypeResolutionGraphInvalidationPropagation propagation);
+const std::vector<TypeResolutionGraphInvalidationContract> &
+typeResolutionGraphInvalidationContracts();
+const TypeResolutionGraphInvalidationContract *
+typeResolutionGraphInvalidationContract(
+    TypeResolutionGraphInvalidationEditFamily editFamily);
+uint64_t typeResolutionGraphInvalidationCount(
+    const TypeResolutionGraph &graph,
+    TypeResolutionGraphInvalidationEditFamily editFamily);
 TypeResolutionGraph buildTypeResolutionGraph(const Program &program);
 bool buildTypeResolutionGraphForProgram(Program program,
                                         const std::string &entryPath,

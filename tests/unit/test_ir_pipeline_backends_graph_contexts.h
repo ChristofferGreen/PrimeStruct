@@ -361,6 +361,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(cmake.find("primestruct.semantics.type_resolution_graph") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotNode") != std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshotEdge") != std::string::npos);
+  CHECK(testApi.find("struct TypeResolutionGraphInvalidationContractSnapshot") !=
+        std::string::npos);
   CHECK(testApi.find("struct TypeResolutionGraphSnapshot") != std::string::npos);
   CHECK(testApi.find("buildTypeResolutionGraphForTesting") != std::string::npos);
   CHECK(testApi.find("dumpTypeResolutionGraphForTesting") != std::string::npos);
@@ -389,6 +391,10 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(validationApi.find("classifyTemplatedFallbackQueryTypeTextForTesting") == std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionNodeKind") != std::string::npos);
   CHECK(graphHeader.find("enum class TypeResolutionEdgeKind") != std::string::npos);
+  CHECK(graphHeader.find("enum class TypeResolutionGraphInvalidationEditFamily") !=
+        std::string::npos);
+  CHECK(graphHeader.find("typeResolutionGraphInvalidationContracts") !=
+        std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraphNode") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraphEdge") != std::string::npos);
   CHECK(graphHeader.find("struct TypeResolutionGraph") != std::string::npos);
@@ -396,6 +402,8 @@ TEST_CASE("type resolution graph builder is wired through semantics testing api"
   CHECK(graphHeader.find("formatTypeResolutionGraph") != std::string::npos);
   CHECK(graphSource.find("TypeResolutionGraphBuilder") != std::string::npos);
   CHECK(graphSource.find("prepareProgramForTypeResolutionAnalysis(program, entryPath, semanticTransforms, error)") !=
+        std::string::npos);
+  CHECK(graphSource.find("typeResolutionGraphInvalidationContracts()") !=
         std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraph(program)") != std::string::npos);
   CHECK(graphSource.find("buildTypeResolutionGraphForProgram(std::move(program), entryPath") != std::string::npos);

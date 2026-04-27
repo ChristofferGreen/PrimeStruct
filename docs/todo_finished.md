@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4236: Define graph invalidation contracts by edit family.
+  Completed: Type-resolution graph invalidation now has an explicit edit-family
+  contract API covering local-binding, control-flow, initializer-shape,
+  definition-signature, import-alias, and receiver-type edits. Each family
+  declares immediate invalidations, lazy revisits, diagnostic discard rules, and
+  definition-local versus cross-definition propagation. The type-graph dump and
+  testing snapshot expose the contract plus observed counts, and focused tests
+  pin one definition-local family and one cross-definition family. The design
+  doc now records the supported contract. Local validation is deferred per the
+  lite workflow.
 - ✓ TODO-4235: Retire remaining semantic/lowerer architecture source locks.
   Completed: Removed the remaining migrated-boundary lowerer/source-composition
   source assertions that pinned private semantic-product target adapter and

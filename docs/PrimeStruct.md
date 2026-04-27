@@ -130,31 +130,37 @@ Planned CT-eval boundary on the graph path:
 - Template-inference migration and optional parallel solve remain blocked on this boundary being explicit, because both
   features would otherwise multiply hidden solver state across compile-time and runtime-oriented semantics paths.
 
-Planned graph invalidation contract:
-- Graph invalidation must be explicit per edit family rather than inferred from incidental cache misses.
-- The invalidation model should distinguish at least these edit classes:
-  - intra-definition churn: local-binding changes, control-flow shape changes, initializer-shape changes
-  - cross-definition churn: definition-signature changes, import-alias changes, receiver-type changes
-- Each edit class must declare:
-  - which graph nodes are invalidated immediately
-  - which downstream queries are revisited lazily on demand
-  - which previously emitted diagnostics must be discarded and recomputed
-  - whether the edit can stay definition-local or must propagate across import/definition boundaries
-- Intra-definition invalidation should be the cheapest path:
-  - local-binding, control-flow, and initializer-shape edits should not force unrelated definition or module rebuilds
-  - cached query/binding/result metadata outside the edited definition should remain reusable when dependency edges do
-    not cross into that definition
-- Cross-definition invalidation must preserve deterministic propagation order:
-  - definition-signature edits should revisit dependent call sites and result/binding consumers in one stable order
-  - import-alias edits should invalidate canonical-path resolution and helper-shadow decisions derived from that alias
-  - receiver-type edits should invalidate helper-family selection, method-target resolution, and dependent binding/result
-    facts that were derived from that receiver
-- Coverage should pin both correctness and scope:
-  - positive cases prove dependent facts refresh after each edit family
-  - negative cases prove unrelated definitions or modules are not spuriously invalidated
-  - dump or counter-based checks should make invalidation fan-out observable enough to detect scope regressions
-- Template inference, CT-eval expansion, and optional parallel solve remain blocked on this contract being explicit,
-  because they would otherwise consume graph state whose invalidation boundaries are undefined.
+Graph invalidation contract:
+- Graph invalidation is explicit per edit family rather than inferred from
+  incidental cache misses. The supported edit-family metadata is published by
+  `typeResolutionGraphInvalidationContracts()` and mirrored in the type-graph
+  testing snapshot/dump surface.
+- Each edit family declares immediate invalidations, lazy revisits, diagnostic
+  discard rules, and whether propagation stays definition-local or crosses
+  definition/import boundaries:
+
+| Edit family | Propagation | Immediate invalidations | Lazy revisits | Diagnostics discarded |
+| --- | --- | --- | --- | --- |
+| `local_binding` | definition-local | local-auto, binding, query, `try(...)`, and `on_error` nodes in the edited definition | binding/result consumers reached from the edited definition's dependency edges | diagnostics attached to the edited binding and dependent local facts |
+| `control_flow` | definition-local | definition-return, branch-local binding, and control-dependent query nodes | return/result consumers whose dependency edges touch the edited control-flow region | branch reachability and return-consistency diagnostics in the edited definition |
+| `initializer_shape` | definition-local | local-auto and call-constraint nodes owned by the edited initializer | initializer binding/result queries and downstream local facts in dependency order | initializer type, result-shape, and helper-resolution diagnostics for the edited site |
+| `definition_signature` | cross-definition | definition-return nodes for the edited definition and directly dependent call sites | dependent call-constraint, binding, result, and return nodes across import boundaries | call-compatibility, return-contract, and template-argument diagnostics at dependent sites |
+| `import_alias` | cross-definition | call-constraint nodes whose canonical path or helper-shadow choice used the alias | dependent helper-routing, binding, and result queries in deterministic path order | unresolved import, ambiguous helper, and alias-derived call diagnostics |
+| `receiver_type` | cross-definition | method call-constraint nodes and receiver-derived helper-family selections | dependent method targets, binding/result facts, and helper-routing queries | method-target, receiver-binding, and helper-family diagnostics at dependent sites |
+
+- Intra-definition invalidation remains the cheapest path: local-binding,
+  control-flow, and initializer-shape edits do not force unrelated definition or
+  module rebuilds when dependency edges do not cross into that definition.
+- Cross-definition invalidation preserves deterministic propagation order:
+  definition-signature, import-alias, and receiver-type edits revisit dependent
+  graph nodes through stable path/node ordering rather than hash iteration.
+- Current coverage pins the contract shape and representative observed counts
+  for one definition-local family (`local_binding`) and one cross-definition
+  family (`definition_signature`). Broader positive/negative fan-out coverage
+  for every family remains owned by TODO-4237.
+- Template inference, CT-eval expansion, and optional parallel solve remain
+  blocked on this contract being explicit and covered, because they would
+  otherwise consume graph state whose invalidation boundaries are undefined.
 
 Planned optional parallel-solve contract:
 - Baseline implementation design note: `docs/Semantics_Multithread_Design.md`.
