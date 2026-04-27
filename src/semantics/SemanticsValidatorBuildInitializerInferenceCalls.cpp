@@ -1,5 +1,8 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+
+#include <optional>
+
 namespace primec::semantics {
 namespace {
 std::string bindingTypeText(const BindingInfo &binding) {
@@ -511,6 +514,129 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
            inferenceStack_.contains(resolvedPath) ||
            queryTypeInferenceDefinitionStack_.contains(resolvedPath);
   };
+  auto inferBuiltinSoaFieldViewBinding = [&](const Expr &candidate) -> bool {
+    std::string fieldName;
+    if (!isBuiltinSoaFieldViewExpr(candidate, params, locals, &fieldName) ||
+        fieldName.empty() || candidate.args.empty()) {
+      return false;
+    }
+
+    auto assignBindingTypeFromText = [](const std::string &typeText,
+                                        BindingInfo &targetBinding) -> bool {
+      const std::string normalizedType = normalizeBindingTypeName(typeText);
+      if (normalizedType.empty()) {
+        return false;
+      }
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(normalizedType, base, argText)) {
+        targetBinding.typeName = normalizeBindingTypeName(base);
+        targetBinding.typeTemplateArg = argText;
+        return true;
+      }
+      targetBinding.typeName = normalizedType;
+      targetBinding.typeTemplateArg.clear();
+      return true;
+    };
+    auto inferReceiverBinding = [&](const Expr &receiver,
+                                    BindingInfo &receiverBinding) -> bool {
+      if (receiver.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding =
+                findParamBinding(params, receiver.name)) {
+          receiverBinding = *paramBinding;
+          return true;
+        }
+        auto localIt = locals.find(receiver.name);
+        if (localIt != locals.end()) {
+          receiverBinding = localIt->second;
+          return true;
+        }
+      }
+      if (inferBindingTypeFromInitializer(receiver, params, locals,
+                                          receiverBinding)) {
+        return true;
+      }
+      std::string receiverTypeText;
+      return inferQueryExprTypeText(receiver, params, locals, receiverTypeText) &&
+             assignBindingTypeFromText(receiverTypeText, receiverBinding);
+    };
+    auto resolveDirectReceiver = [&](const Expr &receiver,
+                                     std::string &elemTypeOut) -> bool {
+      BindingInfo receiverBinding;
+      if (!inferReceiverBinding(receiver, receiverBinding)) {
+        return false;
+      }
+      if (normalizeBindingTypeName(receiverBinding.typeName) == "soa_vector" &&
+          !receiverBinding.typeTemplateArg.empty()) {
+        elemTypeOut = receiverBinding.typeTemplateArg;
+        return true;
+      }
+      return extractExperimentalSoaVectorElementType(receiverBinding,
+                                                     elemTypeOut) &&
+             !elemTypeOut.empty();
+    };
+
+    std::string elemType;
+    if (!resolveSoaVectorOrExperimentalBorrowedReceiver(
+            candidate.args.front(), params, locals, resolveDirectReceiver,
+            elemType) ||
+        elemType.empty()) {
+      return false;
+    }
+
+    std::string currentNamespace;
+    if (!currentValidationState_.context.definitionPath.empty()) {
+      const size_t slash =
+          currentValidationState_.context.definitionPath.find_last_of('/');
+      if (slash != std::string::npos && slash > 0) {
+        currentNamespace =
+            currentValidationState_.context.definitionPath.substr(0, slash);
+      }
+    }
+    const std::string lookupNamespace =
+        !candidate.args.front().namespacePrefix.empty()
+            ? candidate.args.front().namespacePrefix
+            : currentNamespace;
+    const std::string elementStructPath = resolveStructTypePath(
+        normalizeBindingTypeName(elemType), lookupNamespace, structNames_);
+    auto structIt = defMap_.find(elementStructPath);
+    if (elementStructPath.empty() || structIt == defMap_.end() ||
+        structIt->second == nullptr) {
+      return false;
+    }
+
+    for (const auto &fieldStmt : structIt->second->statements) {
+      bool isStaticField = false;
+      for (const auto &transform : fieldStmt.transforms) {
+        if (transform.name == "static") {
+          isStaticField = true;
+          break;
+        }
+      }
+      if (!fieldStmt.isBinding || isStaticField || fieldStmt.name != fieldName) {
+        continue;
+      }
+      BindingInfo fieldBinding;
+      std::optional<std::string> restrictType;
+      std::string fieldError;
+      if (!parseBindingInfo(fieldStmt,
+                            structIt->second->namespacePrefix,
+                            structNames_,
+                            importAliases_,
+                            fieldBinding,
+                            restrictType,
+                            fieldError)) {
+        return false;
+      }
+      bindingOut.typeName = "SoaFieldView";
+      bindingOut.typeTemplateArg = bindingTypeText(fieldBinding);
+      return true;
+    }
+    return false;
+  };
+  if (inferBuiltinSoaFieldViewBinding(initializer)) {
+    return true;
+  }
   std::string graphPreferredResolvedInitializer;
   ReturnKind graphPreferredDirectCallReturnKind = ReturnKind::Unknown;
   const bool graphDirectCallFactAvailable =
