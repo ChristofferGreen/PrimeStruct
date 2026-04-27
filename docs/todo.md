@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4217: Move stdlib compatibility rewrites behind surface adapters
+- TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 - TODO-4229: Cut over SoA compatibility decisions to surface adapters
 - TODO-4230: Cut over gfx compatibility decisions to surface adapters
 - TODO-4218: Make local-auto graph facts the exclusive inference authority
@@ -81,11 +80,11 @@ Task template:
 - TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 - TODO-4233: Close backend-adapter and source-composition fallbacks
 - TODO-4220: Add semantic phase handoff conformance gates
+- TODO-4234: Add semantic budget and worker-parity release gates
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4217
-  -> TODO-4224 -> TODO-4229 -> TODO-4230
+- Semantic phase contract hardening: TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
@@ -105,7 +104,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 - TODO-4229: Cut over SoA compatibility decisions to surface adapters
 - TODO-4230: Cut over gfx compatibility decisions to surface adapters
@@ -171,8 +169,8 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4217, TODO-4224, TODO-4229, TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4217, TODO-4224, TODO-4245 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4224, TODO-4229, TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4224, TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
@@ -200,7 +198,7 @@ Task template:
 | Compile-pipeline stage handoff conformance | TODO-4220, TODO-4234, TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4240 |
 | Lowerer/source-composition contract coverage | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4217, TODO-4224, TODO-4245 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4224, TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
 | `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4243 |
@@ -224,8 +222,18 @@ Task template:
 - Migration-only seams: rooted `/vector/*` and `/map/*` spellings,
   `vectorCount` / `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
-  No active TODO currently targets their deletion or acceptance, so add a
-  concrete cutover TODO before changing those seams.
+  `TODO-4224` owns the remaining vector/map compatibility cutover; do not
+  delete, accept, or reclassify those seams outside that task or an explicit
+  successor TODO.
+- Compatibility adapter inventory: map insert helper compatibility is migrated
+  through `StdlibSurfaceRegistry::CollectionsMapHelpers` for canonical
+  `/std/collections/map/insert(_ref)`, compatibility `/map/insert(_ref)`,
+  wrapper `/std/collections/mapInsert(_Ref)`, and experimental
+  `/std/collections/experimental_map/mapInsert(_Ref)` spellings. Remaining
+  vector/map helper, constructor, template-monomorph, and lowerer
+  compatibility branches are queued under `TODO-4224`; SoA and gfx branches
+  are queued under `TODO-4229` and `TODO-4230`. Import spellings, wildcard
+  expansion, and user-defined helper precedence are syntax/provenance-owned.
 - Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and
   runtime/storage redesign remain separate boundaries and should not be folded
   into the vector/map bridge tasks below.
@@ -299,37 +307,11 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4217: Move stdlib compatibility rewrites behind surface adapters
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Inventory vector/map/SoA/gfx compatibility decisions that currently
-    live in broad semantic rewrite, validation, template-monomorph, or lowering
-    paths, then move the first high-churn family behind an explicit
-    `StdlibSurfaceRegistry`-backed adapter with canonical, compatibility,
-    syntax-owned, and lowering spellings called out per family.
-  - acceptance:
-    - The inventory identifies every non-syntax-owned compatibility decision in
-      the targeted families and marks it migrated, syntax/provenance-owned, or
-      queued under TODO-4224, TODO-4229, or TODO-4230.
-    - At least one high-churn collection family routes compatibility decisions
-      through the shared surface adapter instead of bespoke validator rewrite
-      code.
-    - Existing canonical and compatibility import tests keep the same success
-      or diagnostic behavior.
-    - Any deleted compatibility branch is covered by a targeted regression test
-      proving the adapter owns the behavior.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after the adapter boundary, inventory, and one
-    representative family are migrated; TODO-4224 owns closing the rest of the
-    inventory.
-
 - [ ] TODO-4224: Cut over vector/map compatibility decisions to surface adapters
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4217
-  - scope: Close the TODO-4217 compatibility inventory by moving every
+  - scope: Close the compatibility adapter inventory by moving every
     remaining non-syntax-owned vector/map decision behind shared surface
     adapters, or by documenting and testing the decision as explicitly
     syntax/provenance-owned.

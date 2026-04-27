@@ -6,6 +6,21 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4217: Move stdlib compatibility rewrites behind surface adapters.
+  Completed: map insert helper compatibility is now routed through the shared
+  `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter instead of bespoke
+  semantic rewrite path lists. The adapter resolves canonical
+  `/std/collections/map/insert(_ref)`, compatibility `/map/insert(_ref)`,
+  wrapper `/std/collections/mapInsert(_Ref)`, and experimental
+  `/std/collections/experimental_map/mapInsert(_Ref)` spellings before the
+  pre-validator rewrite chooses canonical constructor-backed helpers or
+  `/std/collections/map/insert_builtin` for builtin/non-local receivers.
+  `docs/PrimeStruct.md` and `docs/todo.md` now record the compatibility
+  inventory: the migrated map-insert family, vector/map follow-up work under
+  `TODO-4224`, SoA under `TODO-4229`, gfx under `TODO-4230`, and
+  syntax/provenance-owned import/helper-precedence exceptions. Focused
+  registry and source-lock coverage pins the adapter boundary. Local
+  validation is deferred per the lite workflow.
 - ✓ TODO-4216: Split semantic rewrites into an explicit pass manifest.
   Completed: semantic validation now exposes an ordered
   `semanticValidationPassManifest()` on the public validation-plan surface,

@@ -64,6 +64,10 @@ TEST_CASE("design doc records vector map bridge contract") {
   CHECK(design.find("exact and wildcard `/std/collections`") != std::string::npos);
   CHECK(design.find("Migration-only seams:") != std::string::npos);
   CHECK(design.find("rooted `/vector/*` and `/map/*` spellings") != std::string::npos);
+  CHECK(design.find("Compatibility adapter inventory:") != std::string::npos);
+  CHECK(design.find("map insert helper compatibility is the\n"
+                    "  first migrated family") != std::string::npos);
+  CHECK(design.find("queued under `TODO-4224`; SoA and gfx") != std::string::npos);
   CHECK(design.find("Out of scope for this bridge lane:** `array<T>` core ownership,") !=
         std::string::npos);
 }
@@ -150,6 +154,7 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(header.find("findStdlibSurfaceMetadataBySpelling") != std::string::npos);
   CHECK(header.find("findStdlibSurfaceMetadataByResolvedPath") != std::string::npos);
   CHECK(header.find("resolveStdlibSurfaceMemberName") != std::string::npos);
+  CHECK(header.find("stdlibSurfaceCanonicalHelperPath") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::FileHelpers") != std::string::npos);
   CHECK(source.find("\"file.file_helpers\"") != std::string::npos);
@@ -200,10 +205,13 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/std/collections/experimental_map/mapAtUnsafeRef\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapInsert\"") != std::string::npos);
   CHECK(source.find("\"/std/collections/experimental_map/mapInsertRef\"") != std::string::npos);
+  CHECK(source.find("\"/std/collections/mapInsertRef\"") != std::string::npos);
   CHECK(source.find("stripResolvedPathSpecializationSuffix(") != std::string::npos);
   CHECK(source.find("resolveCollectionsVectorMemberName(") != std::string::npos);
   CHECK(source.find("resolveCollectionsMapHelperMemberName(") != std::string::npos);
   CHECK(source.find("resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,") !=
+        std::string::npos);
+  CHECK(source.find("stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id,") !=
         std::string::npos);
   CHECK(source.find("matchesResolvedRootedMemberPath(") != std::string::npos);
 
@@ -249,6 +257,54 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"/GfxError\"") != std::string::npos);
   CHECK(source.find("\"/std/gfx/experimental/GfxError\"") != std::string::npos);
   CHECK(source.find("\"frame_present_failed\"") != std::string::npos);
+}
+
+TEST_CASE("map insert surface registry resolves legacy compatibility spellings") {
+  const primec::StdlibSurfaceMetadata *metadata =
+      primec::findStdlibSurfaceMetadata(primec::StdlibSurfaceId::CollectionsMapHelpers);
+  REQUIRE(metadata != nullptr);
+
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "insert") == "insert");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/map/insert") == "insert");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/mapInsert") ==
+        "insert");
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *metadata, "/std/collections/experimental_map/mapInsert") == "insert");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "insert_ref") == "insert_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/map/insert_ref") ==
+        "insert_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(*metadata, "/std/collections/mapInsertRef") ==
+        "insert_ref");
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *metadata, "/std/collections/experimental_map/mapInsertRef") == "insert_ref");
+
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::CollectionsMapHelpers, "insert") ==
+        "/std/collections/map/insert");
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::CollectionsMapHelpers, "/std/collections/mapInsertRef") ==
+        "/std/collections/map/insert_ref");
+}
+
+TEST_CASE("map insert semantic rewrite uses stdlib surface adapter") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path sourcePath = cwd / "src" / "semantics" / "SemanticsValidate.cpp";
+  if (!std::filesystem::exists(sourcePath)) {
+    sourcePath = cwd.parent_path() / "src" / "semantics" / "SemanticsValidate.cpp";
+  }
+  REQUIRE(std::filesystem::exists(sourcePath));
+
+  const std::string source = readTextFile(sourcePath);
+  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") != std::string::npos);
+  CHECK(source.find("resolveBuiltinMapInsertSurfaceMemberName(") != std::string::npos);
+  CHECK(source.find("findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers)") !=
+        std::string::npos);
+  CHECK(source.find("resolveStdlibSurfaceMemberName(*metadata, name)") != std::string::npos);
+  CHECK(source.find("stdlibSurfaceCanonicalHelperPath(\n"
+                    "      StdlibSurfaceId::CollectionsMapHelpers,") != std::string::npos);
+  CHECK(source.find("kBuiltinMapInsertAliasPath") == std::string::npos);
+  CHECK(source.find("kBuiltinExperimentalMapInsertPath") == std::string::npos);
+  CHECK(source.find("kBuiltinMapInsertRefWrapperPath") == std::string::npos);
 }
 
 TEST_CASE("cmake splits primec library into subsystem targets") {

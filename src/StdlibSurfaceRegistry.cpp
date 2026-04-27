@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <string>
 #include <string_view>
 
 namespace primec {
@@ -254,6 +255,7 @@ constexpr auto CollectionsMapLoweringSpellings = std::to_array<std::string_view>
     "/std/collections/experimental_map/mapAtUnsafe",
     "/std/collections/experimental_map/mapAtUnsafeRef",
     "/std/collections/mapInsert",
+    "/std/collections/mapInsertRef",
     "/std/collections/experimental_map/mapInsert",
     "/std/collections/experimental_map/mapInsertRef",
 });
@@ -908,6 +910,18 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByBridgeKey(std::string_vi
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling) {
   return metadata.canonicalPath == spelling || matchesAny(metadata.importAliasSpellings, spelling) ||
          matchesAny(metadata.compatibilitySpellings, spelling) || matchesAny(metadata.loweringSpellings, spelling);
+}
+
+std::string stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id, std::string_view helperName) {
+  const StdlibSurfaceMetadata *metadata = findStdlibSurfaceMetadata(id);
+  if (metadata == nullptr || metadata->shape == StdlibSurfaceShape::ConstructorFamily) {
+    return {};
+  }
+  const std::string_view resolvedMemberName = resolveStdlibSurfaceMemberName(*metadata, helperName);
+  if (resolvedMemberName.empty()) {
+    return {};
+  }
+  return std::string(metadata->canonicalPath) + "/" + std::string(resolvedMemberName);
 }
 
 bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName) {

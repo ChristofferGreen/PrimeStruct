@@ -1,6 +1,7 @@
 #include "primec/Semantics.h"
 #include "primec/SemanticsBenchmark.h"
 #include "primec/SemanticValidationPlan.h"
+#include "primec/StdlibSurfaceRegistry.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 
@@ -5406,31 +5407,45 @@ std::optional<semantics::BindingInfo> extractDefinitionReturnBinding(const Defin
   return std::nullopt;
 }
 
-constexpr std::string_view kBuiltinCanonicalMapInsertPath = "/std/collections/map/insert";
-constexpr std::string_view kBuiltinCanonicalMapInsertRefPath = "/std/collections/map/insert_ref";
 constexpr std::string_view kBuiltinCanonicalMapInsertBuiltinPath =
     "/std/collections/map/insert_builtin";
-constexpr std::string_view kBuiltinMapInsertAliasPath = "/map/insert";
-constexpr std::string_view kBuiltinMapInsertRefAliasPath = "/map/insert_ref";
-constexpr std::string_view kBuiltinMapInsertWrapperPath = "/std/collections/mapInsert";
-constexpr std::string_view kBuiltinMapInsertRefWrapperPath = "/std/collections/mapInsertRef";
-constexpr std::string_view kBuiltinExperimentalMapInsertPath =
-    "/std/collections/experimental_map/mapInsert";
-constexpr std::string_view kBuiltinExperimentalMapInsertRefPath =
-    "/std/collections/experimental_map/mapInsertRef";
+
+std::string_view resolveBuiltinMapInsertSurfaceMemberName(std::string_view name) {
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::CollectionsMapHelpers);
+  if (metadata == nullptr) {
+    return {};
+  }
+  const std::string_view memberName = resolveStdlibSurfaceMemberName(*metadata, name);
+  if (memberName != "insert" && memberName != "insert_ref") {
+    return {};
+  }
+  if (name.find('/') == std::string_view::npos) {
+    if (name == "insert" || name == "insert_ref" ||
+        name == "mapInsert" || name == "mapInsertRef") {
+      return memberName;
+    }
+    return {};
+  }
+  if (stdlibSurfaceMatchesSpelling(*metadata, name) ||
+      findStdlibSurfaceMetadataByResolvedPath(name) == metadata) {
+    return memberName;
+  }
+  return {};
+}
+
+std::string canonicalBuiltinMapInsertSurfacePath(bool receiverIsReference) {
+  return stdlibSurfaceCanonicalHelperPath(
+      StdlibSurfaceId::CollectionsMapHelpers,
+      receiverIsReference ? "insert_ref" : "insert");
+}
 
 bool isBuiltinMapInsertValueHelperName(std::string_view name) {
-  return name == "insert" || name == kBuiltinCanonicalMapInsertPath ||
-         name == kBuiltinMapInsertAliasPath || name == "mapInsert" ||
-         name == kBuiltinMapInsertWrapperPath ||
-         name == kBuiltinExperimentalMapInsertPath;
+  return resolveBuiltinMapInsertSurfaceMemberName(name) == "insert";
 }
 
 bool isBuiltinMapInsertReferenceHelperName(std::string_view name) {
-  return name == "insert_ref" || name == kBuiltinCanonicalMapInsertRefPath ||
-         name == kBuiltinMapInsertRefAliasPath || name == "mapInsertRef" ||
-         name == kBuiltinMapInsertRefWrapperPath ||
-         name == kBuiltinExperimentalMapInsertRefPath;
+  return resolveBuiltinMapInsertSurfaceMemberName(name) == "insert_ref";
 }
 
 bool isBuiltinMapInsertHelperName(std::string_view name) {
@@ -5612,10 +5627,14 @@ void rewriteBuiltinMapInsertExpr(
     if (!expr.isMethodCall) {
       return;
     }
+    const std::string canonicalInsertPath =
+        canonicalBuiltinMapInsertSurfacePath(receiverIsReference);
+    if (canonicalInsertPath.empty()) {
+      return;
+    }
     expr.isMethodCall = false;
     expr.isFieldAccess = false;
-    expr.name = receiverIsReference ? std::string(kBuiltinCanonicalMapInsertRefPath)
-                                    : std::string(kBuiltinCanonicalMapInsertPath);
+    expr.name = canonicalInsertPath;
     expr.namespacePrefix.clear();
     if (expr.templateArgs.empty()) {
       expr.templateArgs = {keyType, valueType};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace primec {
@@ -52,6 +53,7 @@ const StdlibSurfaceMetadata *findStdlibSurfaceMetadataBySpelling(std::string_vie
 const StdlibSurfaceMetadata *findStdlibSurfaceMetadataByResolvedPath(std::string_view path);
 std::string_view resolveStdlibSurfaceMemberName(const StdlibSurfaceMetadata &metadata,
                                                 std::string_view path);
+std::string stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId id, std::string_view helperName);
 bool stdlibSurfaceMatchesSpelling(const StdlibSurfaceMetadata &metadata, std::string_view spelling);
 bool isStdlibSurfaceMemberName(StdlibSurfaceId id, std::string_view memberName);
 bool isStdlibVectorStatementHelperName(std::string_view memberName);

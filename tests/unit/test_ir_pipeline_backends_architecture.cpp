@@ -20,6 +20,7 @@
 #include "primec/Parser.h"
 #include "primec/ProcessRunner.h"
 #include "primec/Semantics.h"
+#include "primec/StdlibSurfaceRegistry.h"
 #include "primec/testing/IrLowererHelpers.h"
 
 #include "test_ir_pipeline_backends_helpers.h"

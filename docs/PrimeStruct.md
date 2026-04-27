@@ -2692,8 +2692,22 @@ re-defining it piecemeal.
   dispatch metadata.
 - **Migration-only seams:** rooted `/vector/*` and `/map/*` spellings plus
   `vectorCount` / `mapCount`-style lowering names remain temporary
-  compatibility seams. No active TODO currently targets their deletion or
-  acceptance, so add a concrete cutover TODO before changing those seams.
+  compatibility seams. `TODO-4224` owns the remaining vector/map compatibility
+  cutover; do not delete, accept, or reclassify those seams outside that task
+  or an explicit successor TODO.
+- **Compatibility adapter inventory:** map insert helper compatibility is the
+  first migrated family. The semantic map-insert rewrite now asks the
+  `StdlibSurfaceRegistry` `CollectionsMapHelpers` adapter to classify
+  canonical `/std/collections/map/insert(_ref)`, compatibility
+  `/map/insert(_ref)`, wrapper `/std/collections/mapInsert(_Ref)`, and
+  experimental `/std/collections/experimental_map/mapInsert(_Ref)` spellings
+  before it rewrites constructor-backed receivers to the canonical helper or
+  non-local/builtin receivers to `/std/collections/map/insert_builtin`.
+  Remaining vector/map helper, constructor, template-monomorph, and lowerer
+  compatibility branches are queued under `TODO-4224`; SoA and gfx
+  compatibility branches are queued under `TODO-4229` and `TODO-4230`.
+  Import spellings, wildcard expansion, and user-defined helper precedence are
+  syntax/provenance-owned.
 - **Internal implementation seams:** `/std/collections/experimental_vector/*`
   and `/std/collections/experimental_map/*` remain implementation-owned
   modules behind the canonical wrappers; direct imports should stay limited to
