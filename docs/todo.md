@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4254: Migrate generated construction surfaces
+- TODO-4255: Migrate collection construction surfaces
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
 - TODO-4257: Add sum declaration metadata and layout
 - TODO-4258: Add explicit sum construction
@@ -81,11 +80,12 @@ Task template:
 - TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
+- TODO-4265: Add stdlib-owned `Result<T, E>` sum
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4254
-  -> TODO-4255 -> TODO-4256 -> TODO-4257
+- Deferred algebraic types and brace-only construction: TODO-4255
+  -> TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
@@ -96,7 +96,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4254: Migrate generated construction surfaces
 - TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
 - TODO-4257: Add sum declaration metadata and layout
@@ -146,7 +145,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -171,7 +170,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -288,38 +287,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4254: Migrate generated construction surfaces
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4282
-  - scope: Move compiler-generated construction paths onto the brace-only
-    contract, limited to enum static values, omitted-default rewrites, and
-    reflection-generated `Default`/`Clone`/`Clear` helpers.
-  - implementation_notes:
-    - Start from enum expansion and reflection generation code under
-      `src/semantics/SemanticsValidateReflectionGeneratedHelpers*`,
-      `src/semantics/SemanticsValidateReflectionMetadata*`, and any omitted
-      initializer rewrite path left after TODO-4282.
-    - Lock behavior with `test_semantics_enum.cpp`,
-      `test_semantics_capabilities_structs_reflect_default.cpp`,
-      `test_semantics_capabilities_structs_reflect_clear.cpp`, and
-      `test_compile_run_reflection_codegen*.cpp`.
-    - Treat generated helper calls such as `/Type/Default()` as helper calls;
-      only the generated value materialization inside those helpers should use
-      brace construction.
-  - acceptance:
-    - Enum expansion, reflected `Default`/`Clone`/`Clear`, omitted defaults,
-      and zero-field/default struct helper generation use brace construction in
-      the canonicalized AST.
-    - Focused parser/semantic or IR tests lock the generated forms and confirm
-      no user-visible constructor-call semantics are synthesized.
-    - User-facing docs no longer present `Type(...)`, `vector<T>(...)`, or
-      `map<K, V>(...)` as value construction syntax.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after compiler-generated construction surfaces are
-    brace-backed; leave collection rewrites to TODO-4255.
 
 - [ ] TODO-4255: Migrate collection construction surfaces
   - owner: ai

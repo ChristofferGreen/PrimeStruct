@@ -1817,7 +1817,7 @@ or a semicolon if you intended to index.
   - Example: `a = b` rewrites to `assign(a, b)`.
 - **`collections`:** rewrites `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` literals into collection builder
   forms. Existing compatibility lowering still routes several builder forms through call-shaped stdlib helpers; the
-  brace-only migration is tracked in `TODO-4254`.
+  brace-only collection migration is tracked in `TODO-4255`.
 - **`implicit-utf8`:** appends `utf8` to bare string literals.
 - **`implicit-i32`:** appends `i32` to bare integer literals (enabled by default).
   - Text transform arguments are limited to identifiers and literals (no nested envelopes or calls).
@@ -2246,7 +2246,7 @@ for(
     require `import /std/collections/*`.
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
   - **Collections:** `array<T>{...}`, `vector<T>{...}`, `map<K, V>{...}`. Legacy call-shaped collection helpers remain
-    compatibility surfaces until `TODO-4254` migrates them.
+    compatibility surfaces until `TODO-4255` migrates them.
   - **Pointer helpers:** `location`, `dereference`.
   - **Ownership helpers:** `move`, `clone`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
@@ -2435,7 +2435,7 @@ sum_two_files([string] a, [string] b) {
 - **Modes:** `Read`, `Write`, `Append`.
 - **Construction:** `/File/openRead(path)`, `/File/openWrite(path)`, and `/File/openAppend(path)` return
   `Result<File<Mode>, FileError>`. The imported constructor-shaped `File<Mode>(path)` form is legacy compatibility
-  syntax until `TODO-4254` migrates constructor-shaped surfaces.
+  syntax until `TODO-4256` classifies constructor-shaped helper compatibility.
   - `path` is a `string` (string literal or literal-backed binding in VM/native).
 - **Methods (all return `Result<FileError>`):**
   - `readByte([i32 mut] value)` (reads one byte into `value`; leaves `value` unchanged on error)
@@ -3381,7 +3381,7 @@ bad_use_after_take() {
   `map<Key,Value>{ ... }` / `map<Key,Value>[ ... ]` rewrite to standard builder functions. The brace/bracket forms are
   the user-facing construction syntax; current compatibility lowering may still route through call-shaped builder
   helpers such as `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)` until
-  `TODO-4254` migrates those surfaces. Map literals supply alternating key/value forms.
+  `TODO-4255` migrates those surfaces. Map literals supply alternating key/value forms.
   - Requires the `collections` text transform (enabled by default in `--text-transforms`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are
@@ -3400,7 +3400,7 @@ bad_use_after_take() {
     stdlib `.prime` definitions, and treat promoted `soa_vector<T>` as the
     current stdlib-owned SoA collection surface over generic SoA substrate.
   - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` is the user-facing variadic
-    constructor form (0..N); `vector<T>(...)` remains a legacy compatibility helper path until `TODO-4254`. Growth
+    constructor form (0..N); `vector<T>(...)` remains a legacy compatibility helper path until `TODO-4255`. Growth
     operations require `effects(heap_alloc)` (or the active default effects set), and
     `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
   - Planned stdlib-owned constructor surface: the temporary experimental vector namespace now uses `vector(values...)`
@@ -3751,7 +3751,7 @@ old builtin statement-only mutator contract, and helper-return experimental-wrap
 before validation/lowering on both global helper-return and explicit `/Type/helper`
 method-like struct-helper return receivers instead of leaking through wrapper methods in
 compile-run paths. Nested struct-body helper returns that materialize wrapper values through
-`return(soaVectorSingle<Particle>(Particle(...)))` now also clear that same direct/bound
+`return(soaVectorSingle<Particle>(Particle{...}))` now also clear that same direct/bound
 helper/conversion substrate plus same-path `/soa_vector/*` and `/to_aos` helper-shadow method
 surfaces instead of failing during specialization or later expression lowering. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now prefers the

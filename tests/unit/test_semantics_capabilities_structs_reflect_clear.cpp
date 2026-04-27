@@ -68,6 +68,7 @@ main() {
   CHECK(defaultValueBinding.name == "defaultValue");
   REQUIRE(defaultValueBinding.args.size() == 1);
   REQUIRE(defaultValueBinding.args.front().kind == primec::Expr::Kind::Call);
+  CHECK(defaultValueBinding.args.front().isBraceConstructor);
   CHECK(defaultValueBinding.args.front().name == "/Pair");
 
   const auto assertAssignField = [](const primec::Expr &assignExpr, const std::string &fieldName) {

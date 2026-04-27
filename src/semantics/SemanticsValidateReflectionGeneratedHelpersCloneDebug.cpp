@@ -115,6 +115,7 @@ bool emitReflectionCloneHelper(ReflectionGeneratedHelperContext &context) {
 
   Expr cloneCall;
   cloneCall.kind = Expr::Kind::Call;
+  cloneCall.isBraceConstructor = true;
   cloneCall.name = context.def.fullPath;
   for (const auto &fieldName : context.fieldNames) {
     cloneCall.args.push_back(makeFieldAccessExpr("value", fieldName));

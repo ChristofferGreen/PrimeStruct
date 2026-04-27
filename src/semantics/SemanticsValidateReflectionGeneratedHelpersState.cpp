@@ -92,6 +92,14 @@ Expr makeBoolLiteralExpr(bool value) {
   return expr;
 }
 
+Expr makeBraceConstructorCall(const std::string &typeName) {
+  Expr call;
+  call.kind = Expr::Kind::Call;
+  call.isBraceConstructor = true;
+  call.name = typeName;
+  return call;
+}
+
 } // namespace
 
 bool emitReflectionClearHelper(ReflectionGeneratedHelperContext &context) {
@@ -116,12 +124,8 @@ bool emitReflectionClearHelper(ReflectionGeneratedHelperContext &context) {
   helper.parameters.push_back(makeTypeBinding("value", context.def.fullPath, helper.namespacePrefix, true));
 
   if (!context.fieldNames.empty()) {
-    Expr defaultCall;
-    defaultCall.kind = Expr::Kind::Call;
-    defaultCall.name = context.def.fullPath;
-
     Expr defaultValueBinding = makeTypeBinding("defaultValue", context.def.fullPath, helper.namespacePrefix);
-    defaultValueBinding.args.push_back(std::move(defaultCall));
+    defaultValueBinding.args.push_back(makeBraceConstructorCall(context.def.fullPath));
     defaultValueBinding.argNames.push_back(std::nullopt);
     helper.statements.push_back(std::move(defaultValueBinding));
 
@@ -200,10 +204,7 @@ bool emitReflectionDefaultHelper(ReflectionGeneratedHelperContext &context) {
   returnTransform.templateArgs.push_back(context.def.fullPath);
   helper.transforms.push_back(std::move(returnTransform));
 
-  Expr defaultCall;
-  defaultCall.kind = Expr::Kind::Call;
-  defaultCall.name = context.def.fullPath;
-  helper.returnExpr = std::move(defaultCall);
+  helper.returnExpr = makeBraceConstructorCall(context.def.fullPath);
   helper.hasReturnStatement = true;
 
   context.rewrittenDefinitions.push_back(std::move(helper));
@@ -235,12 +236,8 @@ bool emitReflectionIsDefaultHelper(ReflectionGeneratedHelperContext &context) {
   if (context.fieldNames.empty()) {
     helper.returnExpr = makeBoolLiteralExpr(true);
   } else {
-    Expr defaultCall;
-    defaultCall.kind = Expr::Kind::Call;
-    defaultCall.name = context.def.fullPath;
-
     Expr defaultValueBinding = makeTypeBinding("defaultValue", context.def.fullPath, helper.namespacePrefix);
-    defaultValueBinding.args.push_back(std::move(defaultCall));
+    defaultValueBinding.args.push_back(makeBraceConstructorCall(context.def.fullPath));
     defaultValueBinding.argNames.push_back(std::nullopt);
     helper.statements.push_back(std::move(defaultValueBinding));
 

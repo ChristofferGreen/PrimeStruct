@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4254: Migrate generated construction surfaces") !=
+                  "- TODO-4255: Migrate collection construction surfaces") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4255: Migrate collection construction surfaces") !=
+                  "- TODO-4256: Classify constructor-shaped helper compatibility") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,10 +1153,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4254: Migrate generated construction surfaces") !=
+                  "- TODO-4255: Migrate collection construction surfaces") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4254: Migrate generated construction surfaces",
       "TODO-4255: Migrate collection construction surfaces",
       "TODO-4256: Classify constructor-shaped helper compatibility",
       "TODO-4257: Add sum declaration metadata and layout",
@@ -1167,6 +1166,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4262: Add public sum-type examples",
       "TODO-4263: Design generic and unit sum variants",
       "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
+      "TODO-4265: Add stdlib-owned `Result<T, E>` sum",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1185,6 +1185,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4282: Reject call-shaped struct field construction") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4282: Reject call-shaped struct field construction") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4254: Migrate generated construction surfaces") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4254: Migrate generated construction surfaces") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4227") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4215") == std::string::npos);

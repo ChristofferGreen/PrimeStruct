@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4254: Migrate generated construction surfaces
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - depends_on: TODO-4282
+  - scope: Move compiler-generated construction paths onto the brace-only
+    contract, limited to enum static values, omitted-default rewrites, and
+    reflection-generated `Default`/`Clone`/`Clear` helpers.
+  - implementation_notes:
+    - Start from enum expansion and reflection generation code under
+      `src/semantics/SemanticsValidateReflectionGeneratedHelpers*`,
+      `src/semantics/SemanticsValidateReflectionMetadata*`, and any omitted
+      initializer rewrite path left after TODO-4282.
+    - Lock behavior with `test_semantics_enum.cpp`,
+      `test_semantics_capabilities_structs_reflect_default.cpp`,
+      `test_semantics_capabilities_structs_reflect_clear.cpp`, and
+      `test_compile_run_reflection_codegen*.cpp`.
+    - Treat generated helper calls such as `/Type/Default()` as helper calls;
+      only the generated value materialization inside those helpers should use
+      brace construction.
+  - acceptance:
+    - Enum expansion, reflected `Default`/`Clone`/`Clear`, omitted defaults,
+      and zero-field/default struct helper generation use brace construction in
+      the canonicalized AST.
+    - Focused parser/semantic or IR tests lock the generated forms and confirm
+      no user-visible constructor-call semantics are synthesized.
+    - User-facing docs no longer present `Type(...)`, `vector<T>(...)`, or
+      `map<K, V>(...)` as value construction syntax.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after compiler-generated construction surfaces are
+    brace-backed; leave collection rewrites to TODO-4255.
+  - finished_at: 2026-04-28
+  - evidence: Reflection-generated `Default`, `Clone`, `Clear`, and
+    `IsDefault` default materialization now emit brace-constructor AST nodes,
+    matching the enum expansion, omitted-default, and SoA generated storage
+    paths. Focused semantic assertions lock generated enum values and
+    reflection helper bodies to `Expr::isBraceConstructor` while helper calls
+    such as `/Type/Default()` remain ordinary calls. User-facing construction
+    docs already use braces for structs, and collection compatibility is
+    promoted to `TODO-4255`.
+
 - [x] TODO-4282: Reject call-shaped struct field construction
   - owner: ai
   - created_at: 2026-04-28

@@ -1039,7 +1039,7 @@ statement-only mutator contract. Helper-return experimental-wrapper method
 before validation/lowering on both global helper-return and explicit `/Type/helper`
 method-like struct-helper return receivers instead of leaking through wrapper methods in
 compile-run paths. Nested struct-body helper returns that materialize wrapper values through
-`return(soaVectorSingle<Particle>(Particle(...)))` now also clear that same direct/bound
+`return(soaVectorSingle<Particle>(Particle{...}))` now also clear that same direct/bound
 helper/conversion substrate plus same-path `/soa_vector/*` and `/to_aos` helper-shadow method
 surfaces instead of failing during specialization or later expression lowering. The equivalent
 helper-return method/infer fallback for builtin `soa_vector` `get` receivers now also prefers

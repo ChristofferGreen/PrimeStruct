@@ -39,6 +39,7 @@ main() {
   REQUIRE(generated->returnExpr.has_value());
   const primec::Expr &returnExpr = *generated->returnExpr;
   REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.isBraceConstructor);
   CHECK(returnExpr.name == "/Pair");
 }
 
@@ -73,6 +74,7 @@ main() {
   REQUIRE(generated->returnExpr.has_value());
   const primec::Expr &returnExpr = *generated->returnExpr;
   REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.isBraceConstructor);
   CHECK(returnExpr.name == "/Marker");
 }
 
@@ -132,6 +134,11 @@ main() {
   REQUIRE(generated->statements.size() == 1);
   CHECK(generated->statements.front().isBinding);
   CHECK(generated->statements.front().name == "defaultValue");
+  REQUIRE(generated->statements.front().args.size() == 1);
+  const primec::Expr &defaultCall = generated->statements.front().args.front();
+  REQUIRE(defaultCall.kind == primec::Expr::Kind::Call);
+  CHECK(defaultCall.isBraceConstructor);
+  CHECK(defaultCall.name == "/Pair");
   REQUIRE(generated->returnExpr.has_value());
   const primec::Expr &returnExpr = *generated->returnExpr;
   REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
@@ -235,6 +242,7 @@ main() {
   REQUIRE(generated->returnExpr.has_value());
   const primec::Expr &returnExpr = *generated->returnExpr;
   REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.isBraceConstructor);
   CHECK(returnExpr.name == "/Pair");
   REQUIRE(returnExpr.args.size() == 2);
   CHECK(returnExpr.args[0].kind == primec::Expr::Kind::Call);
@@ -275,6 +283,7 @@ main() {
   REQUIRE(generated->returnExpr.has_value());
   const primec::Expr &returnExpr = *generated->returnExpr;
   REQUIRE(returnExpr.kind == primec::Expr::Kind::Call);
+  CHECK(returnExpr.isBraceConstructor);
   CHECK(returnExpr.name == "/Marker");
   CHECK(returnExpr.args.empty());
 }

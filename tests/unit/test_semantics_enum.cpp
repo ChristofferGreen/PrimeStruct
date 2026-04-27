@@ -78,6 +78,7 @@ main() {
     REQUIRE(binding->args.size() == 1);
     const primec::Expr &call = binding->args.front();
     REQUIRE(call.kind == primec::Expr::Kind::Call);
+    CHECK(call.isBraceConstructor);
     CHECK(call.name == "/Colors");
     REQUIRE(call.args.size() == 1);
     const primec::Expr &literal = call.args.front();

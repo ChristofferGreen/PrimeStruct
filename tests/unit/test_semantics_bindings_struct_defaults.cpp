@@ -17,9 +17,30 @@ main() {
   return(1i32)
 }
 )";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
   CHECK(error.empty());
+
+  const primec::Definition *mainDef = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/main") {
+      mainDef = &def;
+      break;
+    }
+  }
+  REQUIRE(mainDef != nullptr);
+  REQUIRE_FALSE(mainDef->statements.empty());
+  const primec::Expr &valueBinding = mainDef->statements.front();
+  REQUIRE(valueBinding.isBinding);
+  CHECK(valueBinding.name == "value");
+  REQUIRE(valueBinding.args.size() == 1);
+  const primec::Expr &initializer = valueBinding.args.front();
+  REQUIRE(initializer.kind == primec::Expr::Kind::Call);
+  CHECK(initializer.isBraceConstructor);
+  CHECK(initializer.name == "/Thing");
 }
 
 TEST_CASE("omitted initializer rejects non-struct binding") {
