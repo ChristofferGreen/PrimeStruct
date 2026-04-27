@@ -265,6 +265,25 @@ TEST_CASE("ir lowerer flow helpers skip user-defined vector helper names") {
   CHECK(instructions.empty());
   CHECK(vectorMethodProbeCalls == 1);
 
+  error.clear();
+  instructions.clear();
+  CHECK(primec::ir_lowerer::tryEmitVectorStatementHelper(
+            namedPushCall,
+            locals,
+            instructions,
+            [&]() { return nextTempLocal++; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return ValueKind::Int32; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &) { return false; },
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            [] {},
+            error) == EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK_FALSE(instructions.empty());
+
   primec::Expr labeledFallbackPushCall = pushCall;
   labeledFallbackPushCall.args = {target, valueName};
   labeledFallbackPushCall.argNames = {std::string("value"), std::string("values")};

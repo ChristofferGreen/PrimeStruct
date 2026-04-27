@@ -587,8 +587,11 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
       if (receiverIndex >= stmt.args.size()) {
         continue;
       }
-      if (explicitVectorHelperPath &&
-          isMutableVectorTargetExpr(stmt.args[receiverIndex], localsIn, inferStructExprPath)) {
+      const bool usesNamedValuesReceiver =
+          hasNamedArgs && receiverIndex != 0 && receiverIndex < stmt.args.size();
+      const bool receiverIsMutableVector =
+          isMutableVectorTargetExpr(stmt.args[receiverIndex], localsIn, inferStructExprPath);
+      auto useReceiverIndexedBuiltinStmt = [&]() {
         normalizedStmt = stmt;
         if (receiverIndex != 0) {
           std::swap(normalizedStmt.args[0], normalizedStmt.args[receiverIndex]);
@@ -602,6 +605,9 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
         }
         activeStmt = &normalizedStmt;
         useBuiltinCompatibilityStmt = true;
+      };
+      if (explicitVectorHelperPath && receiverIsMutableVector) {
+        useReceiverIndexedBuiltinStmt();
         break;
       }
 
@@ -617,6 +623,10 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
       }
       if (isUserDefinedVectorHelperCall(methodStmt)) {
         return VectorStatementHelperPrepareResult::NotMatched;
+      }
+      if (usesNamedValuesReceiver && receiverIsMutableVector) {
+        useReceiverIndexedBuiltinStmt();
+        break;
       }
     }
   }
