@@ -11,6 +11,25 @@ std::vector<Definition> collectTemplateSpecializationFamily(const std::string &b
   return family;
 }
 
+bool canReplaceGeneratedTemplateShell(const Definition &existingDef, const Definition &clone) {
+  if (existingDef.templateArgs.empty()) {
+    return false;
+  }
+  const size_t slash = clone.fullPath.find_last_of('/');
+  if (slash == std::string::npos) {
+    return false;
+  }
+  return isGeneratedTemplateSpecializationPath(std::string_view(clone.fullPath).substr(0, slash));
+}
+
+std::string parentPathForDefinition(const std::string &path) {
+  const size_t slash = path.find_last_of('/');
+  if (slash == std::string::npos) {
+    return {};
+  }
+  return path.substr(0, slash);
+}
+
 std::vector<TemplateRootInfo> collectNestedTemplateRoots(const std::string &basePath,
                                                          const std::vector<Definition> &family) {
   std::vector<TemplateRootInfo> nestedTemplates;
@@ -80,6 +99,8 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
   cloneOutputs.reserve(family.size());
   std::unordered_set<std::string> clonePaths;
   clonePaths.reserve(family.size());
+  std::vector<bool> replaceExistingShells;
+  replaceExistingShells.reserve(family.size());
 
   for (const auto &def : family) {
     const bool shouldOutputClone =
@@ -89,9 +110,18 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
     clone.namespacePrefix = replacePathPrefix(def.namespacePrefix, basePath, specializedBasePath);
     if (def.fullPath == basePath) {
       clone.name = specializedName;
+      clone.namespacePrefix = parentPathForDefinition(specializedBasePath);
       clone.templateArgs.clear();
     }
-    if (ctx.sourceDefs.count(clone.fullPath) > 0 || !clonePaths.insert(clone.fullPath).second) {
+    if (!clonePaths.insert(clone.fullPath).second) {
+      error = "template specialization conflicts with existing definition: " + clone.fullPath;
+      ctx.specializationCache.erase(cacheKey);
+      return false;
+    }
+    const auto existingIt = ctx.sourceDefs.find(clone.fullPath);
+    const bool replaceExistingShell = existingIt != ctx.sourceDefs.end() &&
+                                      canReplaceGeneratedTemplateShell(existingIt->second, clone);
+    if (existingIt != ctx.sourceDefs.end() && !replaceExistingShell) {
       error = "template specialization conflicts with existing definition: " + clone.fullPath;
       ctx.specializationCache.erase(cacheKey);
       return false;
@@ -109,13 +139,20 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
     }
     clones.push_back(std::move(clone));
     cloneOutputs.push_back(shouldOutputClone);
+    replaceExistingShells.push_back(replaceExistingShell);
   }
 
   for (size_t cloneIndex = 0; cloneIndex < clones.size(); ++cloneIndex) {
     const Definition &clone = clones[cloneIndex];
-    ctx.sourceDefs.emplace(clone.fullPath, clone);
+    if (replaceExistingShells[cloneIndex]) {
+      ctx.sourceDefs[clone.fullPath] = clone;
+    } else {
+      ctx.sourceDefs.emplace(clone.fullPath, clone);
+    }
     if (!clone.templateArgs.empty()) {
       ctx.templateDefs.insert(clone.fullPath);
+    } else {
+      ctx.templateDefs.erase(clone.fullPath);
     }
 
     if (cloneOutputs[cloneIndex] && clone.templateArgs.empty()) {

@@ -587,6 +587,10 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphSource.find("std::vector<Definition> collectTemplateSpecializationFamily(") ==
         std::string::npos);
+  CHECK(templateMonomorphSource.find("bool canReplaceGeneratedTemplateShell(") ==
+        std::string::npos);
+  CHECK(templateMonomorphSource.find("std::string parentPathForDefinition(") ==
+        std::string::npos);
   CHECK(templateMonomorphSource.find("bool specializeTemplateDefinitionFamily(const std::string &basePath,") ==
         std::string::npos);
   CHECK(templateMonomorphSource.find("bool resolveExperimentalConstructorTargetTypeText(") ==
@@ -2656,6 +2660,12 @@ TEST_CASE("template monomorph source delegation stays stable") {
         std::string::npos);
   CHECK(templateMonomorphTemplateSpecializationSource.find(
             "std::vector<Definition> collectTemplateSpecializationFamily(const std::string &basePath,") !=
+        std::string::npos);
+  CHECK(templateMonomorphTemplateSpecializationSource.find(
+            "bool canReplaceGeneratedTemplateShell(const Definition &existingDef,") !=
+        std::string::npos);
+  CHECK(templateMonomorphTemplateSpecializationSource.find(
+            "std::string parentPathForDefinition(const std::string &path)") !=
         std::string::npos);
   CHECK(templateMonomorphTemplateSpecializationSource.find(
             "bool specializeTemplateDefinitionFamily(const std::string &basePath,") !=
