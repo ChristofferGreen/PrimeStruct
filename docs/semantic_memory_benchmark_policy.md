@@ -66,6 +66,13 @@ When semantic behavior changes intentionally shift memory usage:
 4. Include rationale in the same change that modified semantic behavior.
 5. Keep this policy note and benchmark README references aligned.
 
+### Current Budget Notes
+
+- `math_vector:ast-semantic` keeps a hard cap of `22140518` bytes after the
+  April 26, 2026 release artifact observed `21086208` bytes on the release
+  runner. The cap preserves roughly 5% headroom over that observed value while
+  leaving the baseline row unchanged for future comparison.
+
 ### Canonical Regeneration Command and Expected Rows
 
 Use this canonical regeneration command when refreshing the benchmark report used

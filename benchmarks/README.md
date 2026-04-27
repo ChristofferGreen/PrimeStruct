@@ -162,7 +162,8 @@ Initial checked-in baseline report:
   soft/hard RSS budgets plus the sustained-window rule (`2` regressions in
   a `3`-report window).
 - `docs/semantic_memory_benchmark_policy.md` documents how to update those
-  budgets safely.
+  budgets safely and records the current `math_vector:ast-semantic` budget
+  headroom note.
 - `benchmarks/semantic_memory/semantic_product_index_parity_evidence.json`
   locks the checked-in semantic-product index-family count and
   definition-worker parity field shape until the canonical baseline report is
