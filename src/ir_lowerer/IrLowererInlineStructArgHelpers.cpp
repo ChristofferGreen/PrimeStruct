@@ -15,6 +15,10 @@ bool isVectorStructPath(const std::string &structPath) {
 
 bool isSoaVectorStructPath(const std::string &structPath) {
   return structPath == "/soa_vector" ||
+         structPath == "std/collections/soa_vector" ||
+         structPath == "/std/collections/soa_vector" ||
+         structPath == "SoaVector" ||
+         structPath == "/SoaVector" ||
          structPath == "/std/collections/experimental_soa_vector/SoaVector" ||
          structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
 }

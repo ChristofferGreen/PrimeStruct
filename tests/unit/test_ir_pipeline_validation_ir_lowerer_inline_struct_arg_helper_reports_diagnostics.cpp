@@ -70,6 +70,10 @@ TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector sto
   const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
       {SpecializedSoaVector, "/soa_vector"},
       {"/soa_vector", SpecializedSoaVector},
+      {SpecializedSoaVector, "/std/collections/soa_vector"},
+      {"/std/collections/soa_vector", SpecializedSoaVector},
+      {"/soa_vector", "/std/collections/soa_vector"},
+      {"/std/collections/soa_vector", "SoaVector"},
   };
 
   for (const auto &[fieldStructPath, argStructPath] : compatiblePaths) {
