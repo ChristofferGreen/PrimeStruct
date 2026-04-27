@@ -130,6 +130,10 @@ main() {
   REQUIRE_FALSE(mainIt->statements.empty());
   CHECK(mainIt->statements.front().kind == primec::Expr::Kind::Call);
   CHECK(mainIt->statements.front().name == "return");
+  CHECK(std::none_of(mainIt->transforms.begin(), mainIt->transforms.end(),
+                    [](const primec::Transform &transform) {
+                      return transform.name == "make_seven";
+                    }));
   CHECK(std::none_of(program.definitions.begin(), program.definitions.end(),
                     [](const primec::Definition &def) {
                       return def.fullPath == "/make_seven";
@@ -165,6 +169,10 @@ main() {
   REQUIRE(mainIt->returnExpr.has_value());
   CHECK(mainIt->returnExpr->kind == primec::Expr::Kind::Literal);
   CHECK(mainIt->returnExpr->literalValue == 9);
+  CHECK(std::none_of(mainIt->transforms.begin(), mainIt->transforms.end(),
+                    [](const primec::Transform &transform) {
+                      return transform.name == "make_nine";
+                    }));
 }
 
 TEST_CASE("definition ast transform hook rejects unsupported FunctionAst result") {

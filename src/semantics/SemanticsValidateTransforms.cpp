@@ -452,8 +452,15 @@ bool executeDefinitionAstTransformHooks(Program &program, std::string &error) {
     if (hasTransformNamed(def.transforms, "ast")) {
       continue;
     }
-    for (const auto &transform : def.transforms) {
+    size_t retainedTransformCount = 0;
+    for (size_t transformIndex = 0; transformIndex < def.transforms.size();
+         ++transformIndex) {
+      auto &transform = def.transforms[transformIndex];
       if (!transform.isAstTransformHook || transform.resolvedPath.empty()) {
+        if (retainedTransformCount != transformIndex) {
+          def.transforms[retainedTransformCount] = std::move(transform);
+        }
+        ++retainedTransformCount;
         continue;
       }
       const auto hookIt = definitionsByPath.find(transform.resolvedPath);
@@ -464,12 +471,17 @@ bool executeDefinitionAstTransformHooks(Program &program, std::string &error) {
       }
       const Definition &hookDef = *hookIt->second;
       if (!isExecutableAstTransformHook(hookDef)) {
+        if (retainedTransformCount != transformIndex) {
+          def.transforms[retainedTransformCount] = std::move(transform);
+        }
+        ++retainedTransformCount;
         continue;
       }
       if (!applyExecutableAstTransformHook(hookDef, def, error)) {
         return false;
       }
     }
+    def.transforms.resize(retainedTransformCount);
   }
 
   pruneAstHookOnlyImports(program);
