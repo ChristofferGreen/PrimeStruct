@@ -656,6 +656,22 @@ Current semantic phase handoff conformance gate:
   IR preparation and expects a deterministic lowerer failure, proving stale or
   missing semantic-product facts fail closed at the compile-pipeline boundary.
 
+Current semantic budget and worker-parity release gates:
+- `PrimeStruct_graph_budget` runs the graph-budget checker against the checked-in
+  type-graph baseline and reports the offending graph counters when thresholds
+  drift.
+- `PrimeStruct_semantic_memory_benchmark` collects the semantic memory artifact
+  set, and `PrimeStruct_semantic_memory_trend` depends on that artifact target to
+  enforce the semantic memory budget policy in normal release validation.
+- `PrimeStruct_semantic_memory_definition_worker_parity` runs the semantic
+  memory benchmark across definition-validation worker modes. The helper fails
+  if the semantic-product dump hash differs or if the semantic-product
+  index-family counters differ, so fact drift is reported with the single-worker
+  and dual-worker counters instead of as an opaque benchmark failure.
+- Focused 1/2/4-worker release doctests pin semantic-product dump stability,
+  diagnostic stability, and semantic-product index-family parity for the
+  compile-pipeline worker-count stress scenarios.
+
 Current semantic-product dump contract:
 - One deterministic module/program view per compile pipeline success, positioned after `ast-semantic` and before `ir`.
 - The dump should expose lowering-facing facts directly: resolved call targets, binding/result types, effects or

@@ -324,7 +324,22 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering and serializat
           "  cmake_text,\n"
           "  re.S,\n"
           ") is not None\n"
-          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_target_contract_guard and benchmark_test_contract_guard and benchmark_timeout_guard and parity_target_contract_guard and parity_test_contract_guard and parity_timeout_guard and trend_timeout_guard\n"
+          "graph_budget_gate_guard = re.search(\n"
+          "  r'add_test\\(\\s*NAME PrimeStruct_graph_budget\\s*'\n"
+          "  r'COMMAND .*?scripts/check_graph_budget\\.py\\s*'\n"
+          "  r'.*?--baseline \\$\\{CMAKE_SOURCE_DIR\\}/benchmarks/type_graph_budget_baseline\\.json\\s*\\)',\n"
+          "  cmake_text,\n"
+          "  re.S,\n"
+          ") is not None\n"
+          "semantic_budget_gate_guard = re.search(\n"
+          "  r'add_test\\(\\s*NAME PrimeStruct_semantic_memory_trend\\s*'\n"
+          "  r'COMMAND .*?--mode trend\\s*'\n"
+          "  r'.*?--budget-report \\$\\{CMAKE_BINARY_DIR\\}/benchmarks/semantic_memory_budget_check_report\\.json\\s*'\n"
+          "  r'.*?--repo-root \\$\\{CMAKE_SOURCE_DIR\\}\\s*\\)',\n"
+          "  cmake_text,\n"
+          "  re.S,\n"
+          ") is not None\n"
+          "ok = has_thresholds and has_offenders and offender_exceeds and benchmark_target_contract_guard and benchmark_test_contract_guard and benchmark_timeout_guard and parity_target_contract_guard and parity_test_contract_guard and parity_timeout_guard and trend_timeout_guard and graph_budget_gate_guard and semantic_budget_gate_guard\n"
           "if not ok:\n"
           "  print(json.dumps({\n"
           "    'thresholds': thresholds,\n"
@@ -337,6 +352,8 @@ TEST_CASE("semantic memory ctest targets keep dependency ordering and serializat
           "    'parity_test_contract_guard': parity_test_contract_guard,\n"
           "    'parity_timeout_guard': parity_timeout_guard,\n"
           "    'trend_timeout_guard': trend_timeout_guard,\n"
+          "    'graph_budget_gate_guard': graph_budget_gate_guard,\n"
+          "    'semantic_budget_gate_guard': semantic_budget_gate_guard,\n"
           "  }, indent=2, sort_keys=True))\n"
           "sys.exit(0 if ok else 1)\n") +
       " " + quoteShellArg(baselinePath.string()) +
@@ -1142,6 +1159,68 @@ TEST_CASE("semantic memory benchmark helper reports deterministic worker-mode pa
           "  print(json.dumps(report, indent=2, sort_keys=True))\n"
           "sys.exit(0 if ok else 1)\n") +
       " " + quoteShellArg(reportPath) +
+      " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
+  CHECK(runCommand(validateCmd) == 0);
+  CHECK(readFile(validateErrPath).empty());
+}
+
+TEST_CASE("semantic memory benchmark helper fails worker parity on fact-family drift") {
+  if (!hasPython3()) {
+    INFO("python3 not available");
+    return;
+  }
+
+  const std::filesystem::path repoRoot = std::filesystem::current_path().parent_path();
+  const std::filesystem::path scriptPath = repoRoot / "scripts" / "semantic_memory_benchmark.py";
+  const std::string validateOutPath = writeTemp("semantic_memory_worker_parity_failures.out", "");
+  const std::string validateErrPath = writeTemp("semantic_memory_worker_parity_failures.err", "");
+  const std::string validateCmd =
+      "PYTHONDONTWRITEBYTECODE=1 python3 -c " +
+      quoteShellArg(
+          "import importlib.util, json, sys\n"
+          "spec = importlib.util.spec_from_file_location('semantic_memory_benchmark', sys.argv[1])\n"
+          "mod = importlib.util.module_from_spec(spec)\n"
+          "sys.modules[spec.name] = mod\n"
+          "spec.loader.exec_module(mod)\n"
+          "report = {\n"
+          "  'definition_validation_worker_mode_deltas': [\n"
+          "    {\n"
+          "      'fixture': 'stable',\n"
+          "      'phase': 'semantic-product',\n"
+          "      'dump_sha256_identical': True,\n"
+          "      'semantic_product_index_family_counts_identical': True,\n"
+          "      'semantic_product_index_family_counts_single_worker': {'return_facts': 1},\n"
+          "      'semantic_product_index_family_counts_dual_worker': {'return_facts': 1},\n"
+          "    },\n"
+          "    {\n"
+          "      'fixture': 'dump_drift',\n"
+          "      'phase': 'semantic-product',\n"
+          "      'dump_sha256_identical': False,\n"
+          "      'semantic_product_index_family_counts_identical': True,\n"
+          "      'semantic_product_index_family_counts_single_worker': {'return_facts': 1},\n"
+          "      'semantic_product_index_family_counts_dual_worker': {'return_facts': 1},\n"
+          "    },\n"
+          "    {\n"
+          "      'fixture': 'fact_drift',\n"
+          "      'phase': 'semantic-product',\n"
+          "      'dump_sha256_identical': True,\n"
+          "      'semantic_product_index_family_counts_identical': False,\n"
+          "      'semantic_product_index_family_counts_single_worker': {'return_facts': 1},\n"
+          "      'semantic_product_index_family_counts_dual_worker': {'return_facts': 2},\n"
+          "    },\n"
+          "  ]\n"
+          "}\n"
+          "failures = mod.collect_definition_validation_worker_parity_failures(report)\n"
+          "names = [row.get('fixture') for row in failures]\n"
+          "ok = names == ['dump_drift', 'fact_drift']\n"
+          "if ok:\n"
+          "  drift = failures[1]\n"
+          "  ok = drift.get('semantic_product_index_family_counts_single_worker') == {'return_facts': 1}\n"
+          "  ok = ok and drift.get('semantic_product_index_family_counts_dual_worker') == {'return_facts': 2}\n"
+          "if not ok:\n"
+          "  print(json.dumps({'failures': failures}, indent=2, sort_keys=True))\n"
+          "sys.exit(0 if ok else 1)\n") +
+      " " + quoteShellArg(scriptPath.string()) +
       " > " + quoteShellArg(validateOutPath) + " 2> " + quoteShellArg(validateErrPath);
   CHECK(runCommand(validateCmd) == 0);
   CHECK(readFile(validateErrPath).empty());

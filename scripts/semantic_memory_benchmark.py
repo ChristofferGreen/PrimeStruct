@@ -1117,6 +1117,16 @@ def compute_definition_validation_worker_mode_deltas(results: list[dict]) -> lis
     return deltas
 
 
+def collect_definition_validation_worker_parity_failures(report: dict) -> list[dict]:
+    failures: list[dict] = []
+    for row in report.get("definition_validation_worker_mode_deltas", []):
+        dump_identical = bool(row.get("dump_sha256_identical", False))
+        index_counts_identical = bool(row.get("semantic_product_index_family_counts_identical", False))
+        if not dump_identical or not index_counts_identical:
+            failures.append(row)
+    return failures
+
+
 def compute_graph_local_auto_dependency_scratch_mode_deltas(results: list[dict]) -> list[dict]:
     grouped: dict[tuple[str, str, str, str, str, str, bool, str], dict[str, dict]] = {}
     for row in results:
@@ -1363,10 +1373,7 @@ def main() -> int:
     }
 
     if args.definition_validation_workers == "both":
-        parity_failures = [
-            row for row in report["definition_validation_worker_mode_deltas"]
-            if not bool(row.get("dump_sha256_identical", False))
-        ]
+        parity_failures = collect_definition_validation_worker_parity_failures(report)
         if parity_failures:
             print(
                 "[semantic_memory_benchmark] deterministic parity failure for "
@@ -1378,7 +1385,13 @@ def main() -> int:
                     "  - fixture="
                     f"{row.get('fixture')} phase={row.get('phase')} "
                     f"single_sha={row.get('single_worker_dump_sha256')} "
-                    f"dual_sha={row.get('dual_worker_dump_sha256')}",
+                    f"dual_sha={row.get('dual_worker_dump_sha256')} "
+                    "index_counts_identical="
+                    f"{row.get('semantic_product_index_family_counts_identical')} "
+                    "single_index_counts="
+                    f"{row.get('semantic_product_index_family_counts_single_worker')} "
+                    "dual_index_counts="
+                    f"{row.get('semantic_product_index_family_counts_dual_worker')}",
                     file=sys.stderr,
                 )
             if args.report_json:

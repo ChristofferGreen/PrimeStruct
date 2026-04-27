@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4234: Add semantic budget and worker-parity release gates
+- TODO-4221: Retire stale semantic validator source locks
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4221: Retire stale semantic validator source locks
 - TODO-4235: Retire remaining semantic/lowerer architecture source locks
 - TODO-4236: Define graph invalidation contracts by edit family
 - TODO-4237: Add graph invalidation fan-out regression tests
@@ -81,11 +80,11 @@ Task template:
 - TODO-4241: Retire semantic-product output compatibility callers
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
 - TODO-4243: Improve focused backend rerun ergonomics
+- TODO-4244: Decide the `soa_vector` maturity exit
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4234 -> TODO-4221
-  -> TODO-4235
+- Semantic phase contract hardening: TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
   -> TODO-4238 -> TODO-4239
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4240
@@ -103,7 +102,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4234: Add semantic budget and worker-parity release gates
 - TODO-4221: Retire stale semantic validator source locks
 - TODO-4235: Retire remaining semantic/lowerer architecture source locks
 - TODO-4236: Define graph invalidation contracts by edit family
@@ -155,7 +153,7 @@ Task template:
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
 | Semantic ownership boundary and graph/local-auto authority | TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4234 |
+| Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
@@ -172,7 +170,7 @@ Task template:
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | TODO-4234, TODO-4242, TODO-4243 |
+| Test-suite audit follow-up and release-gate stability | TODO-4242, TODO-4243 |
 | Algebraic sum types and brace-only construction | TODO-4253, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
@@ -184,7 +182,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4240, TODO-4241 |
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
-| Compile-pipeline stage handoff conformance | TODO-4234, TODO-4240 |
+| Compile-pipeline stage handoff conformance | TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4240 |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
@@ -197,7 +195,7 @@ Task template:
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | TODO-4234, TODO-4243 |
+| Release benchmark/example suite stability and doctest governance | TODO-4243 |
 | Sum-type and brace-construction conformance | TODO-4253, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
@@ -309,29 +307,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4234: Add semantic budget and worker-parity release gates
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Add release-gate coverage for semantic memory budgets, graph budget
-    counters, and worker-count parity after the handoff conformance gate exists.
-  - acceptance:
-    - Semantic memory and graph budget checks run under the normal release gate
-      or an explicitly documented release-gate helper.
-    - Repeated 1/2/4-worker validation keeps semantic-product dumps,
-      diagnostics, and handoff facts byte-stable.
-    - Budget failures report actionable counters rather than opaque test
-      failures.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once semantic boundary correctness and budget regressions
-    are both caught by release validation; do not broaden this into a full
-    test-suite audit.
-
 - [ ] TODO-4221: Retire stale semantic validator source locks
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4234
   - scope: Replace stale source-lock tests that pin old semantic validator
     composition details for the migrated boundary with API-level contract tests
     over the plan, worker result, semantic-product, and diagnostic surfaces.
@@ -503,7 +482,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred semantic-product/backend/tooling follow-up
-  - depends_on: TODO-4234
   - scope: Add clearer CTest labels, helper output, or documented release-mode
     rerun commands for focused backend slices so failures do not require broad
     compile-run reruns to triage.

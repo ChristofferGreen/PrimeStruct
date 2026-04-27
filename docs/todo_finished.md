@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4234: Add semantic budget and worker-parity release gates.
+  Completed: The release-gate contract now documents graph-budget checking,
+  semantic memory artifact collection plus trend/budget enforcement, and
+  definition-worker parity coverage. The semantic memory benchmark helper now
+  fails definition-worker parity when either the semantic-product dump hash or
+  semantic-product index-family counters drift, and it reports the single-worker
+  and dual-worker counters for actionable failures. Existing 1/2/4-worker
+  doctests keep semantic-product dumps, diagnostics, and index-family facts
+  stable. Local validation is deferred per the lite workflow.
 - ✓ TODO-4220: Add semantic phase handoff conformance gates.
   Completed: Added a normal release-doctest conformance gate that sends
   imported, transform-normalized source through compile-pipeline validation,
