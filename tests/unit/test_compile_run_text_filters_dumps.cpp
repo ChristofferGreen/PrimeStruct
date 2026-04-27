@@ -2114,6 +2114,62 @@ main() {
   CHECK(ast.find("/std/collections/soa_vector/ref_ref", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic keeps builtin soa_vector ref_ref same-path helper shadows") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref_ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] idx{vector<i32>(0i32)}
+  [soa_vector<Particle>] values{cloneValues()}
+  [auto] direct{ref_ref(values, idx)}
+  [auto] method{values.ref_ref(idx)}
+  [auto] helperReturn{ref_ref(cloneValues(), idx)}
+  return(plus(direct, plus(method, helperReturn)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_builtin_soa_vector_ref_ref_same_path.prime",
+                source);
+  const std::string outPath =
+      (testScratchPath("") /
+       "primec_dump_ast_semantic_builtin_soa_vector_ref_ref_same_path.txt")
+          .string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("[auto] direct{/soa_vector/ref_ref(values, idx)}", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("[auto] method{/soa_vector/ref_ref(values, idx)}", mainPos) !=
+        std::string::npos);
+  CHECK(ast.find("[auto] helperReturn{/soa_vector/ref_ref(cloneValues(), idx)}",
+                 mainPos) != std::string::npos);
+  CHECK(ast.find("values.ref_ref(idx)", mainPos) == std::string::npos);
+  CHECK(ast.find("[auto] direct{ref_ref(values, idx)}", mainPos) == std::string::npos);
+  CHECK(ast.find("[auto] helperReturn{ref_ref(cloneValues(), idx)}", mainPos) ==
+        std::string::npos);
+  CHECK(ast.find("/std/collections/soa_vector/ref_ref", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic rewrites inline location experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*

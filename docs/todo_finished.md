@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4210: Lock builtin SoA ref_ref AST dumps. Completed:
+  `tests/unit/test_compile_run_text_filters_dumps.cpp` now verifies that
+  ast-semantic dumps keep builtin `soa_vector<T>` local and helper-return
+  `ref_ref(...)` calls plus method sugar on a visible same-path
+  `/soa_vector/ref_ref` helper instead of the canonical pending helper path
+  or unreduced source spelling. Local validation is deferred per the lite
+  workflow.
 - ✓ TODO-4209: Lock builtin SoA ref_ref runtime shadows. Completed:
   `tests/unit/test_compile_run_imports_operations.cpp`,
   `tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.cpp`, and
