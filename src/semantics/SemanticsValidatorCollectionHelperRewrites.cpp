@@ -202,16 +202,21 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
 }
 
 std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view helperName) const {
+  auto hasSamePathVectorHelperFamily = [&](const std::string &samePath) {
+    return hasDeclaredDefinitionPath(samePath) ||
+           hasImportedDefinitionPath(samePath) ||
+           hasDefinitionFamilyPath(samePath);
+  };
   if (helperName == "at" || helperName == "at_unsafe") {
     const std::string samePath = "/vector/" + std::string(helperName);
-    if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+    if (hasSamePathVectorHelperFamily(samePath)) {
       return samePath;
     }
     return canonicalCollectionHelperPath(
         StdlibSurfaceId::CollectionsVectorHelpers, helperName);
   }
   const std::string samePath = "/vector/" + std::string(helperName);
-  if (hasDeclaredDefinitionPath(samePath) || hasImportedDefinitionPath(samePath)) {
+  if (hasSamePathVectorHelperFamily(samePath)) {
     return samePath;
   }
   const std::string canonical = canonicalCollectionHelperPath(
