@@ -74,8 +74,16 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
   const std::vector<Definition> family = collectTemplateSpecializationFamily(basePath, ctx);
   const std::vector<TemplateRootInfo> nestedTemplates = collectNestedTemplateRoots(basePath, family);
   const SubstMap baseMapping = buildTemplateSpecializationMapping(baseTemplateParams, resolvedArgs);
+  std::vector<Definition> clones;
+  clones.reserve(family.size());
+  std::vector<bool> cloneOutputs;
+  cloneOutputs.reserve(family.size());
+  std::unordered_set<std::string> clonePaths;
+  clonePaths.reserve(family.size());
 
   for (const auto &def : family) {
+    const bool shouldOutputClone =
+        !isUnderNestedTemplateRoot(basePath, def.fullPath, nestedTemplates);
     Definition clone = def;
     clone.fullPath = replacePathPrefix(def.fullPath, basePath, specializedBasePath);
     clone.namespacePrefix = replacePathPrefix(def.namespacePrefix, basePath, specializedBasePath);
@@ -83,7 +91,7 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       clone.name = specializedName;
       clone.templateArgs.clear();
     }
-    if (ctx.sourceDefs.count(clone.fullPath) > 0) {
+    if (ctx.sourceDefs.count(clone.fullPath) > 0 || !clonePaths.insert(clone.fullPath).second) {
       error = "template specialization conflicts with existing definition: " + clone.fullPath;
       ctx.specializationCache.erase(cacheKey);
       return false;
@@ -99,13 +107,18 @@ bool specializeTemplateDefinitionFamily(const std::string &basePath,
       ctx.specializationCache.erase(cacheKey);
       return false;
     }
+    clones.push_back(std::move(clone));
+    cloneOutputs.push_back(shouldOutputClone);
+  }
 
+  for (size_t cloneIndex = 0; cloneIndex < clones.size(); ++cloneIndex) {
+    const Definition &clone = clones[cloneIndex];
     ctx.sourceDefs.emplace(clone.fullPath, clone);
     if (!clone.templateArgs.empty()) {
       ctx.templateDefs.insert(clone.fullPath);
     }
 
-    if (!isUnderNestedTemplateRoot(basePath, def.fullPath, nestedTemplates) && clone.templateArgs.empty()) {
+    if (cloneOutputs[cloneIndex] && clone.templateArgs.empty()) {
       if (ctx.outputPaths.insert(clone.fullPath).second) {
         ctx.outputDefs.push_back(clone);
       }
