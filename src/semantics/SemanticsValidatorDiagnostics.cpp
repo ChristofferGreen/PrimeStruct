@@ -25,6 +25,23 @@ std::string diagnosticOwningPath(const std::string &path) {
   return path.substr(0, lastSlash);
 }
 
+bool isExplicitStdNamespacedVectorHelperCall(const Expr &expr,
+                                             const char *helperName) {
+  const std::string absolutePath =
+      "/std/collections/vector/" + std::string(helperName);
+  const std::string relativePath =
+      "std/collections/vector/" + std::string(helperName);
+  if (expr.name == absolutePath || expr.name == relativePath) {
+    return true;
+  }
+  std::string normalizedNamespace = expr.namespacePrefix;
+  if (!normalizedNamespace.empty() && normalizedNamespace.front() == '/') {
+    normalizedNamespace.erase(normalizedNamespace.begin());
+  }
+  return normalizedNamespace == "std/collections/vector" &&
+         expr.name == helperName;
+}
+
 } // namespace
 
 void SemanticsValidator::capturePrimarySpanIfUnset(int line, int column) {
@@ -62,12 +79,14 @@ void SemanticsValidator::captureExecutionContext(const Execution &exec) {
 bool SemanticsValidator::failExprDiagnostic(const Expr &expr,
                                             std::string message) {
   if (message.rfind("unknown call target: /std/collections/vector/count", 0) == 0 &&
-      expr.args.size() != 1) {
+      expr.args.size() != 1 &&
+      !isExplicitStdNamespacedVectorHelperCall(expr, "count")) {
     message = hasNamedArguments(expr.argNames)
                   ? "named arguments not supported for builtin calls"
                   : "argument count mismatch for builtin count";
   } else if (message.rfind("unknown call target: /std/collections/vector/capacity", 0) == 0 &&
-             expr.args.size() != 1) {
+             expr.args.size() != 1 &&
+             !isExplicitStdNamespacedVectorHelperCall(expr, "capacity")) {
     message = hasNamedArguments(expr.argNames)
                   ? "named arguments not supported for builtin calls"
                   : "argument count mismatch for builtin capacity";

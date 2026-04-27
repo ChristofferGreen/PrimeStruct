@@ -131,6 +131,24 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib canonical vector helper namespace body arguments keep unknown target") {
+  const std::string source = R"(
+[return<bool>]
+/vector/count([vector<i32>] values, [bool] marker) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(values./std/collections/vector/count(true) { 1i32 })
+  }
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("array namespaced slash method pointer receiver diagnostics keep array-qualified pointer target") {
   const std::string source = R"(
 [return<int>]
