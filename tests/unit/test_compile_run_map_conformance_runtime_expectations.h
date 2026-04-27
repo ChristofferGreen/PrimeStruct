@@ -243,11 +243,11 @@ inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std
     return;
   }
   if (emitMode == "native") {
-    expectMapConformanceCompileReject(
+    expectMapConformanceProgramRuns(
         makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
         "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
         emitMode,
-        "template arguments required for /std/collections/experimental_map/mapNew");
+        13);
     return;
   }
 
@@ -285,7 +285,7 @@ inline void expectInferredExperimentalMapDefaultParameterConformance(const std::
 }
 
 inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  if (emitMode == "vm") {
+  if (emitMode == "vm" || emitMode == "native") {
     expectMapConformanceProgramRunsWithOutput(
         makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
         "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
