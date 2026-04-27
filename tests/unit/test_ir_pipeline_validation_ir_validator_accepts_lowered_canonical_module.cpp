@@ -970,6 +970,17 @@ TEST_CASE("semantics namespaced vector helper detection rejects removed rooted a
   CHECK(collectionName == "vector");
   CHECK(helperName == "count");
 
+  primec::Expr namespaceSplitCountCall;
+  namespaceSplitCountCall.kind = primec::Expr::Kind::Call;
+  namespaceSplitCountCall.namespacePrefix = "/std/collections/vector";
+  namespaceSplitCountCall.name = "count";
+  collectionName.clear();
+  helperName.clear();
+  CHECK(primec::semantics::getNamespacedCollectionHelperName(
+      namespaceSplitCountCall, collectionName, helperName));
+  CHECK(collectionName == "vector");
+  CHECK(helperName == "count");
+
   primec::Expr removedAliasCall = canonicalCountCall;
   removedAliasCall.name = "/vector/count";
   collectionName.clear();

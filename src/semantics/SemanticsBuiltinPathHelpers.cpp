@@ -831,6 +831,15 @@ bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collection
     return value;
   };
   std::string normalized = expr.name;
+  if (!expr.namespacePrefix.empty() && normalized.find('/') == std::string::npos) {
+    std::string prefix = expr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() == '/') {
+      prefix.erase(prefix.begin());
+    }
+    if (!prefix.empty()) {
+      normalized = prefix + "/" + normalized;
+    }
+  }
   if (!normalized.empty() && normalized.front() == '/') {
     normalized.erase(normalized.begin());
   }
