@@ -1679,7 +1679,7 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticTargetAdapterSource.find("buildDirectCallIndex(index);") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("buildMethodCallIndex(index);") == std::string::npos);
   CHECK(semanticTargetAdapterSource.find("buildBridgePathChoiceIndex(index);") == std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath)") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath)") ==
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.typeMetadataByPath.reserve(semanticProgram->typeMetadata.size())") ==
         std::string::npos);
@@ -1703,7 +1703,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("adapter.returnFactsByDefinitionPathId.reserve(returnFacts.size())") ==
         std::string::npos);
-  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath)") !=
+  CHECK(semanticTargetAdapterSource.find("semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath)") ==
+        std::string::npos);
+  CHECK(semanticTargetAdapterSource.find("return findSemanticProductReturnFactBySemanticId(semanticIndex, definition);") !=
         std::string::npos);
   CHECK(semanticTargetAdapterSource.find("semanticProgramLocalAutoFactView(*semanticProgram)") !=
         std::string::npos);

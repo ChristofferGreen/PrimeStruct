@@ -478,26 +478,10 @@ const SemanticProgramReturnFact *findSemanticProductReturnFactBySemanticId(
 }
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(
-    const SemanticProgram *semanticProgram,
+    const SemanticProgram *,
     const SemanticProductIndex &semanticIndex,
     const Definition &definition) {
-  if (const auto *fact = findSemanticProductReturnFactBySemanticId(semanticIndex, definition);
-      fact != nullptr) {
-    return fact;
-  }
-  if (semanticProgram == nullptr || definition.fullPath.empty()) {
-    return nullptr;
-  }
-  const auto definitionPathId =
-      semanticProgramLookupCallTargetStringId(*semanticProgram, definition.fullPath);
-  if (!definitionPathId.has_value()) {
-    return nullptr;
-  }
-  if (const auto it = semanticIndex.returnFactsByDefinitionPathId.find(*definitionPathId);
-      it != semanticIndex.returnFactsByDefinitionPathId.end()) {
-    return it->second;
-  }
-  return nullptr;
+  return findSemanticProductReturnFactBySemanticId(semanticIndex, definition);
 }
 
 const SemanticProgramReturnFact *findSemanticProductReturnFact(const SemanticProductTargetAdapter &adapter,

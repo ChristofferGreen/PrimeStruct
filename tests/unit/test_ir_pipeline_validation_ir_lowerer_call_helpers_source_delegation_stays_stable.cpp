@@ -1951,7 +1951,7 @@ TEST_CASE("ir lowerer semantic-product adapter ignores bridge-path choices with 
   CHECK(primec::ir_lowerer::findSemanticProductBridgePathChoice(adapter, invalidHelperIdExpr).empty());
 }
 
-TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id with return-path fallback") {
+TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id without return-path fallback") {
   primec::Definition mainDef;
   mainDef.fullPath = "/renamed_main";
   mainDef.semanticNodeId = 61;
@@ -2064,10 +2064,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id with r
   legacyFixtureDef.fullPath = "/legacy_main";
   const auto *legacyReturnFact =
       primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, legacyFixtureDef);
-  REQUIRE(legacyReturnFact != nullptr);
-  CHECK(legacyReturnFact == returnFact);
-  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *legacyReturnFact) ==
-        "/legacy_main");
+  CHECK(legacyReturnFact == nullptr);
 
   const auto *localAutoFact = primec::ir_lowerer::findSemanticProductLocalAutoFact(semanticTargets, localAutoExpr);
   REQUIRE(localAutoFact != nullptr);
@@ -2082,7 +2079,7 @@ TEST_CASE("ir lowerer semantic-product adapter joins facts by semantic id with r
   CHECK(tryFact->onErrorHandlerPath == "/handler");
 }
 
-TEST_CASE("ir lowerer semantic-product adapter indexes return facts by definition path id") {
+TEST_CASE("ir lowerer semantic-product adapter keeps return path index non-authoritative") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -2111,12 +2108,10 @@ TEST_CASE("ir lowerer semantic-product adapter indexes return facts by definitio
   CHECK(semanticTargets.semanticIndex.returnFactsByDefinitionId.empty());
   CHECK(semanticTargets.semanticIndex.returnFactsByDefinitionPathId.count(*mainPathId) == 1);
   const auto *returnFact = primec::ir_lowerer::findSemanticProductReturnFact(semanticTargets, mainDef);
-  REQUIRE(returnFact != nullptr);
-  CHECK(returnFact->definitionPathId != primec::InvalidSymbolId);
-  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) == "/main");
+  CHECK(returnFact == nullptr);
 }
 
-TEST_CASE("ir lowerer semantic-product index resolves return facts without broad adapter") {
+TEST_CASE("ir lowerer semantic-product index keeps return path index non-authoritative") {
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
   mainDef.semanticNodeId = 0;
@@ -2147,9 +2142,7 @@ TEST_CASE("ir lowerer semantic-product index resolves return facts without broad
   const auto *returnFact =
       primec::ir_lowerer::findSemanticProductReturnFact(
           &semanticProgram, semanticIndex, mainDef);
-  REQUIRE(returnFact != nullptr);
-  CHECK(returnFact->definitionPathId != primec::InvalidSymbolId);
-  CHECK(primec::semanticProgramReturnFactDefinitionPath(semanticProgram, *returnFact) == "/main");
+  CHECK(returnFact == nullptr);
 }
 
 TEST_CASE("ir lowerer semantic-product adapter ignores on_error definition-path fallback") {

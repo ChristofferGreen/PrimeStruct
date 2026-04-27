@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4233: Close backend-adapter and source-composition fallbacks.
+  Completed: Semantic-product return-fact lookup now treats semantic-node
+  facts as the only production authority. The backend adapter still indexes
+  definition-path return facts for published metadata and inspection, but
+  `findSemanticProductReturnFact(...)` no longer recovers through
+  `definition.fullPath` plus `returnFactsByDefinitionPathId`. Existing call,
+  binding, local-auto, query, try, on_error, and struct-layout coverage keeps
+  source-composition and backend adapter paths fail-closed; raw call/path
+  helpers remain syntax/provenance-only compatibility APIs. Local validation
+  is deferred per the lite workflow.
 - ✓ TODO-4232: Close binding/type/effect/layout lowerer fallbacks.
   Completed: The lowerer entry semantic-product contract now validates struct
   layout coverage through published `typeMetadata` and
@@ -15,9 +25,9 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   type metadata from raw AST state when a semantic product is present and no
   longer reads raw struct alignment transforms after semantic metadata exists.
   Binding, local-auto, call-routing, result, effect, and on_error coverage was
-  already fail-closed by prior slices, leaving backend adapter and
-  source-composition cleanup queued under TODO-4233. Local validation is
-  deferred per the lite workflow.
+  already fail-closed by prior slices, and backend adapter/source-composition
+  cleanup completed under TODO-4233. Local validation is deferred per the lite
+  workflow.
 - ✓ TODO-4225: Close call-target and helper-routing lowerer fallbacks.
   Completed: Production lowerer entry setup now runs the direct-call,
   bridge-path, and method-call semantic-product coverage validators before
@@ -35,8 +45,8 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   direct-call/bridge facts are missing; it now uses syntax-only spelling and
   lets semantic-product validation/lowering fail closed with existing
   diagnostics. Follow-up binding/type/effect/layout cleanup completed under
-  TODO-4232, and backend/source-composition cleanup remains queued under
-  TODO-4233. Local validation is deferred per the lite workflow.
+  TODO-4232, and backend/source-composition cleanup completed under TODO-4233.
+  Local validation is deferred per the lite workflow.
 - ✓ TODO-4231: Make query/try/on_error graph facts the exclusive authority.
   Completed: query, `try(...)`, and `on_error` lowerer consumption now uses
   semantic-node-id facts as the only production authority. The semantic-product

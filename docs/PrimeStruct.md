@@ -618,8 +618,9 @@ Current residual semantic fallback audit:
   struct provenance, and missing field facts instead of recovering layout-facing meaning from raw AST
   transforms once a semantic product is present. Syntax/provenance-owned field qualifiers and body
   traversal remain AST-owned.
-- Queued to TODO-4233: backend adapter, source-composition, and public lowerer helper APIs that could reintroduce
-  AST-side semantic inference after semantic-product publication.
+- Completed in TODO-4233: backend adapter and source-composition cleanup removed the remaining return-fact
+  definition-path fallback from `findSemanticProductReturnFact(...)`; definition-path indexes stay inspection
+  metadata only, and raw call/path helpers remain syntax/provenance-owned compatibility APIs.
 - Syntax/provenance-owned: source spans, debug/source maps, syntax reproduction, function bodies/statements used
   for emission traversal, import shorthand maps, and field qualifiers/visibility/alignment.
 
