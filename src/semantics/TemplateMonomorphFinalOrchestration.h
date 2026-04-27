@@ -12,6 +12,62 @@ void buildImportAliases(Context &ctx) {
   const auto &directImportPaths = ctx.program.sourceImports.empty()
                                       ? ctx.program.imports
                                       : ctx.program.sourceImports;
+  auto stdlibSurfaceImportAliasPriority = [](const StdlibSurfaceMetadata &metadata) {
+    switch (metadata.shape) {
+      case StdlibSurfaceShape::ConstructorFamily:
+        return 30;
+      case StdlibSurfaceShape::ErrorFamily:
+        return 20;
+      case StdlibSurfaceShape::HelperFamily:
+        return 10;
+    }
+    return 0;
+  };
+  auto stdlibSurfaceMatchesImportAliasPath = [](const StdlibSurfaceMetadata &metadata,
+                                                const std::string_view importPath) {
+    return metadata.canonicalPath == importPath ||
+           std::find(metadata.importAliasSpellings.begin(),
+                     metadata.importAliasSpellings.end(),
+                     importPath) != metadata.importAliasSpellings.end();
+  };
+  auto findStdlibSurfaceImportAliasMetadata =
+      [&](const std::string_view importPath) -> const StdlibSurfaceMetadata * {
+    const StdlibSurfaceMetadata *bestMatch = nullptr;
+    int bestPriority = -1;
+    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+      if (!stdlibSurfaceMatchesImportAliasPath(metadata, importPath)) {
+        continue;
+      }
+      const int priority = stdlibSurfaceImportAliasPriority(metadata);
+      if (bestMatch == nullptr || priority > bestPriority) {
+        bestMatch = &metadata;
+        bestPriority = priority;
+      }
+    }
+    return bestMatch;
+  };
+  auto findStdlibSurfaceWildcardAliasMetadata =
+      [&](const std::string_view importRoot,
+          const std::string_view aliasName) -> const StdlibSurfaceMetadata * {
+    const StdlibSurfaceMetadata *bestMatch = nullptr;
+    int bestPriority = -1;
+    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+      if (metadata.canonicalImportRoot != importRoot) {
+        continue;
+      }
+      if (std::find(metadata.importAliasSpellings.begin(),
+                    metadata.importAliasSpellings.end(),
+                    aliasName) == metadata.importAliasSpellings.end()) {
+        continue;
+      }
+      const int priority = stdlibSurfaceImportAliasPriority(metadata);
+      if (bestMatch == nullptr || priority > bestPriority) {
+        bestMatch = &metadata;
+        bestPriority = priority;
+      }
+    }
+    return bestMatch;
+  };
   auto shouldSkipWildcardAlias = [](const std::string &prefix, const std::string &remainder) {
     return prefix == "/std/collections" && (remainder == "vector" || remainder == "map");
   };
@@ -41,6 +97,46 @@ void buildImportAliases(Context &ctx) {
       ctx.importAliases[aliasName] = targetPath;
     }
   };
+  auto registerStdlibSurfaceExactAlias =
+      [&](std::unordered_map<std::string, std::string> &targetAliases,
+          const std::string &importPath) {
+    const StdlibSurfaceMetadata *metadata =
+        findStdlibSurfaceImportAliasMetadata(importPath);
+    if (metadata == nullptr) {
+      return false;
+    }
+    const size_t slash = importPath.find_last_of('/');
+    const std::string aliasName =
+        slash == std::string::npos ? importPath : importPath.substr(slash + 1);
+    if (aliasName.empty()) {
+      return false;
+    }
+    registerDefinitionAlias(
+        targetAliases, aliasName, std::string(metadata->canonicalPath));
+    return true;
+  };
+  auto registerStdlibSurfaceWildcardAliases =
+      [&](std::unordered_map<std::string, std::string> &targetAliases,
+          const std::string &prefix) {
+    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+      if (metadata.canonicalImportRoot != prefix) {
+        continue;
+      }
+      for (const std::string_view spelling : metadata.importAliasSpellings) {
+        if (spelling.empty() || spelling.front() == '/') {
+          continue;
+        }
+        const StdlibSurfaceMetadata *preferred =
+            findStdlibSurfaceWildcardAliasMetadata(prefix, spelling);
+        if (preferred != &metadata) {
+          continue;
+        }
+        registerDefinitionAlias(
+            targetAliases, std::string(spelling),
+            std::string(preferred->canonicalPath));
+      }
+    }
+  };
   for (const auto &importPath : directImportPaths) {
     if (importPath.empty() || importPath[0] != '/') {
       continue;
@@ -55,6 +151,7 @@ void buildImportAliases(Context &ctx) {
       prefix = importPath;
     }
     if (isWildcard) {
+      registerStdlibSurfaceWildcardAliases(ctx.directImportAliases, prefix);
       const std::string scopedPrefix = prefix + "/";
       for (const auto &[publicPath, overloads] : ctx.helperOverloads) {
         (void)overloads;
@@ -87,6 +184,9 @@ void buildImportAliases(Context &ctx) {
         }
         registerDefinitionAlias(ctx.directImportAliases, remainder, path);
       }
+      continue;
+    }
+    if (registerStdlibSurfaceExactAlias(ctx.directImportAliases, importPath)) {
       continue;
     }
     auto defIt = ctx.sourceDefs.find(importPath);
@@ -125,6 +225,7 @@ void buildImportAliases(Context &ctx) {
       prefix = importPath;
     }
     if (isWildcard) {
+      registerStdlibSurfaceWildcardAliases(ctx.transitiveImportAliases, prefix);
       const std::string scopedPrefix = prefix + "/";
       for (const auto &[publicPath, overloads] : ctx.helperOverloads) {
         (void)overloads;
@@ -157,6 +258,9 @@ void buildImportAliases(Context &ctx) {
         }
         registerDefinitionAlias(ctx.transitiveImportAliases, remainder, path);
       }
+      continue;
+    }
+    if (registerStdlibSurfaceExactAlias(ctx.transitiveImportAliases, importPath)) {
       continue;
     }
     const std::string remainder = importPath.substr(importPath.find_last_of('/') + 1);
