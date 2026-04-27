@@ -275,7 +275,7 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("vector namespaced capacity alias type mismatch keeps builtin capacity diagnostics") {
+TEST_CASE("vector namespaced capacity alias type mismatch rejects compatibility template forwarding") {
   const std::string source = R"(
 [return<int>]
 /vector/capacity([vector<i32>] values, [i32] marker) {
@@ -295,7 +295,7 @@ main() {
   )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for builtin capacity") != std::string::npos);
+  CHECK(error.find("argument type mismatch for /vector/capacity parameter marker") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced capacity alias named arguments reject compatibility template forwarding") {
