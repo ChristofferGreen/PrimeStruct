@@ -1124,6 +1124,28 @@ TEST_CASE("ir lowerer call helpers resolve direct definition calls only") {
   CHECK(primec::ir_lowerer::resolveDefinitionCall(bindingCall, defMap, resolver) == nullptr);
 }
 
+TEST_CASE("ir lowerer call helpers prefer explicit experimental vector helpers over structs") {
+  primec::Definition vectorHelper;
+  vectorHelper.fullPath = "/std/collections/experimental_vector/vector__t25a78a513414c3bf";
+  primec::Definition vectorStruct;
+  vectorStruct.fullPath = "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {vectorHelper.fullPath, &vectorHelper},
+      {vectorStruct.fullPath, &vectorStruct},
+  };
+  auto resolver = [](const primec::Expr &) {
+    return std::string("/std/collections/experimental_vector/Vector__t25a78a513414c3bf");
+  };
+
+  primec::Expr directCall;
+  directCall.kind = primec::Expr::Kind::Call;
+  directCall.name = "/std/collections/experimental_vector/vector";
+  directCall.templateArgs = {"i32"};
+
+  CHECK(primec::ir_lowerer::resolveDefinitionCall(directCall, defMap, resolver) ==
+        &vectorHelper);
+}
+
 TEST_CASE("ir lowerer call helpers reject missing definition path resolver") {
   primec::Definition callee;
   callee.fullPath = "/callee";

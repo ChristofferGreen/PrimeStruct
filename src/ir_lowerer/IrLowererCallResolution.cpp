@@ -456,6 +456,36 @@ const Definition *preferExplicitExperimentalMapHelperDefinition(
   return nullptr;
 }
 
+const Definition *preferExplicitExperimentalVectorHelperDefinition(
+    const Expr &expr,
+    const std::string &resolvedPath,
+    const std::unordered_map<std::string, const Definition *> &defMap) {
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall ||
+      resolvedPath.rfind("/std/collections/experimental_vector/Vector__", 0) != 0) {
+    return nullptr;
+  }
+  const std::string rawPath = resolveCallPathWithoutSemanticFallbackProbes(expr);
+  if (rawPath != "/std/collections/experimental_vector/vector") {
+    return nullptr;
+  }
+  if (const Definition *rawDef = resolveDefinitionByPath(defMap, rawPath);
+      rawDef != nullptr) {
+    return rawDef;
+  }
+  const std::string specializedPrefix = rawPath + "__t";
+  const std::string overloadPrefix = rawPath + "__ov";
+  for (const auto &[path, def] : defMap) {
+    if (def == nullptr) {
+      continue;
+    }
+    if (path.rfind(specializedPrefix, 0) == 0 ||
+        path.rfind(overloadPrefix, 0) == 0) {
+      return def;
+    }
+  }
+  return nullptr;
+}
+
 const Definition *preferExplicitRootedMapAliasDefinition(
     const Expr &expr,
     const std::unordered_map<std::string, const Definition *> &defMap) {
@@ -536,6 +566,11 @@ const Definition *resolveDefinitionCall(const Expr &callExpr,
           preferExplicitExperimentalMapHelperDefinition(callExpr, resolved, defMap);
       explicitExperimentalMapHelperDef != nullptr) {
     return explicitExperimentalMapHelperDef;
+  }
+  if (const Definition *explicitExperimentalVectorHelperDef =
+          preferExplicitExperimentalVectorHelperDefinition(callExpr, resolved, defMap);
+      explicitExperimentalVectorHelperDef != nullptr) {
+    return explicitExperimentalVectorHelperDef;
   }
   if (const Definition *resolvedDef = resolveDefinitionByPath(defMap, resolved);
       resolvedDef != nullptr) {
