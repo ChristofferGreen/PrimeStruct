@@ -528,6 +528,43 @@
             }
           }
         }
+        auto generatedPrimitiveDefaultKind = [&]() {
+          const std::string resolvedPrimitivePath = resolveExprPath(expr);
+          const size_t slash = resolvedPrimitivePath.find_last_of('/');
+          const std::string leaf = slash == std::string::npos
+                                       ? resolvedPrimitivePath
+                                       : resolvedPrimitivePath.substr(slash + 1);
+          if (leaf == "int" || leaf == "i32" || leaf == "i64" ||
+              leaf == "u64" || leaf == "float" || leaf == "f32" ||
+              leaf == "f64" || leaf == "bool") {
+            return valueKindFromTypeName(leaf);
+          }
+          return LocalInfo::ValueKind::Unknown;
+        };
+        if (!expr.isMethodCall &&
+            expr.args.empty() &&
+            expr.templateArgs.empty() &&
+            !expr.hasBodyArguments &&
+            expr.bodyArguments.empty()) {
+          switch (generatedPrimitiveDefaultKind()) {
+          case LocalInfo::ValueKind::Int32:
+          case LocalInfo::ValueKind::Bool:
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            return true;
+          case LocalInfo::ValueKind::Int64:
+          case LocalInfo::ValueKind::UInt64:
+            function.instructions.push_back({IrOpcode::PushI64, 0});
+            return true;
+          case LocalInfo::ValueKind::Float32:
+            function.instructions.push_back({IrOpcode::PushF32, 0});
+            return true;
+          case LocalInfo::ValueKind::Float64:
+            function.instructions.push_back({IrOpcode::PushF64, 0});
+            return true;
+          default:
+            break;
+          }
+        }
 
         std::string accessName;
         if (getBuiltinArrayAccessName(expr, accessName)) {

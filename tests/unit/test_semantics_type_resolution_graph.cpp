@@ -506,7 +506,7 @@ right() {
   const uint32_t rightCallId = requireGraphNodeId(graph, "/right::call#0");
   const uint32_t rightId = requireGraphNodeId(graph, "/right");
 
-  const auto &localBinding =
+  const auto localBinding =
       requireInvalidationFanout(graph, "local_binding", "/left::auto:value#0");
   CHECK(nodeIdListContains(localBinding.immediateNodeIds, leftAutoId));
   CHECK(nodeIdListContains(localBinding.lazyRevisitNodeIds, leftCallId));
@@ -515,7 +515,7 @@ right() {
   CHECK_FALSE(nodeIdListContains(localBinding.diagnosticNodeIds, rightCallId));
   CHECK_FALSE(nodeIdListContains(localBinding.diagnosticNodeIds, rightId));
 
-  const auto &initializerShape =
+  const auto initializerShape =
       requireInvalidationFanout(graph, "initializer_shape", "/left::auto:value#0");
   CHECK(nodeIdListContains(initializerShape.immediateNodeIds, leftAutoId));
   CHECK(nodeIdListContains(initializerShape.immediateNodeIds, leftCallId));
@@ -546,7 +546,7 @@ main([bool] flag) {
   REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
   CHECK(error.empty());
 
-  const auto &fanout = requireInvalidationFanout(graph, "control_flow", "/main");
+  const auto fanout = requireInvalidationFanout(graph, "control_flow", "/main");
   CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/main")));
   CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main::call#0")));
   CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/leaf")));
@@ -575,7 +575,7 @@ orphan() {
   REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
   CHECK(error.empty());
 
-  const auto &fanout = requireInvalidationFanout(graph, "definition_signature", "/leaf");
+  const auto fanout = requireInvalidationFanout(graph, "definition_signature", "/leaf");
   CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/leaf")));
   CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main::call#0")));
   CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main")));
@@ -602,7 +602,7 @@ main() {
   REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
   CHECK(error.empty());
 
-  const auto &fanout = requireInvalidationFanout(graph, "import_alias", "/main::call#0");
+  const auto fanout = requireInvalidationFanout(graph, "import_alias", "/main::call#0");
   CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/main::call#0")));
   CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main")));
   CHECK(nodeIdListContains(fanout.diagnosticNodeIds, requireGraphNodeId(graph, "/pkg/leaf")));
@@ -631,7 +631,7 @@ main() {
   REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
   CHECK(error.empty());
 
-  const auto &fanout = requireInvalidationFanout(graph, "receiver_type", "/main::call#0");
+  const auto fanout = requireInvalidationFanout(graph, "receiver_type", "/main::call#0");
   CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/main::call#0")));
   CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main")));
   CHECK(nodeIdListContains(fanout.diagnosticNodeIds, requireGraphNodeId(graph, "/Box/get")));

@@ -8,6 +8,12 @@ void checkMapPairMismatchDiagnostic(const std::string &error) {
   CHECK(error.find("expected i32 got bool") != std::string::npos);
 }
 
+void checkMapPairTemplateConflict(const std::string &error) {
+  CHECK(error.find("implicit template arguments conflict on ") !=
+        std::string::npos);
+  CHECK(error.find("mapPair") != std::string::npos);
+}
+
 } // namespace
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");

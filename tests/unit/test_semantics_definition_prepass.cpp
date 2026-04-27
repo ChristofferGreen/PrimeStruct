@@ -371,7 +371,7 @@ epsilon() {}
     for (std::size_t offset = 0; offset < chunk.stableOrderCount; ++offset) {
       const auto &declaration =
           plan.definitionPrepass.declarationsInStableOrder[chunk.stableOrderOffset + offset];
-      partitionedPaths.push_back(declaration.fullPath);
+      partitionedPaths.emplace_back(declaration.fullPath);
       CHECK(program.definitions[declaration.stableIndex].fullPath == declaration.fullPath);
     }
   }

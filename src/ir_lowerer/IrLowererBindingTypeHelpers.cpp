@@ -79,6 +79,13 @@ struct ExpectedCollectionSpecialization {
   std::vector<std::string> templateArgs;
 };
 
+std::string normalizeExpectedCollectionTemplateArg(std::string arg) {
+  arg = normalizeCollectionBindingTypeName(trimTemplateTypeText(arg));
+  const LocalInfo::ValueKind valueKind = valueKindFromTypeName(arg);
+  const std::string normalizedValueType = typeNameForValueKind(valueKind);
+  return normalizedValueType.empty() ? arg : normalizedValueType;
+}
+
 bool extractExpectedCollectionSpecialization(std::string typeText,
                                              ExpectedCollectionSpecialization &out) {
   typeText = unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
@@ -89,13 +96,7 @@ bool extractExpectedCollectionSpecialization(std::string typeText,
   std::string base;
   std::string argText;
   if (!splitTemplateTypeName(typeText, base, argText)) {
-    const std::string family =
-        normalizeCollectionBindingTypeName(trimTemplateTypeText(typeText));
-    if (family != "vector" && family != "map" && family != "soa_vector") {
-      return false;
-    }
-    out = ExpectedCollectionSpecialization{family, {}};
-    return true;
+    return false;
   }
 
   base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
@@ -113,7 +114,7 @@ bool extractExpectedCollectionSpecialization(std::string typeText,
       args = {argText};
     }
     for (auto &arg : args) {
-      arg = trimTemplateTypeText(arg);
+      arg = normalizeExpectedCollectionTemplateArg(arg);
     }
   }
   out = ExpectedCollectionSpecialization{base, std::move(args)};

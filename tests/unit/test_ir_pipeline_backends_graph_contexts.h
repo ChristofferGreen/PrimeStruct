@@ -898,6 +898,8 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
       readRepoFile("src/ir_lowerer/IrLowererSetupTypeMethodCallResolution.cpp");
   const std::string bindingTypeHelpersSource =
       readRepoFile("src/ir_lowerer/IrLowererBindingTypeHelpers.cpp");
+  const std::string structLayoutHelpersSource =
+      readRepoFile("src/ir_lowerer/IrLowererStructLayoutHelpers.cpp");
   const std::string irLowererResultHelpers =
       readRepoFile("src/ir_lowerer/IrLowererResultHelpers.cpp");
   const std::string statementCallHelpersHeader =
