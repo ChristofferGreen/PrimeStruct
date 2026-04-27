@@ -934,7 +934,7 @@ ResolveExprPathFn makeResolveCallPathFromScope(
           !isResidualBridgeHelperPath(resolvedPath)) {
         return resolvedPath;
       }
-      return resolveCallPathWithoutSemanticFallbackProbes(expr);
+      return resolveCallPathFromScope(expr, defMap, importAliases);
     }
     if (const std::string resolvedPath = findSemanticProductDirectCallTarget(semanticProgram, expr);
         !resolvedPath.empty()) {

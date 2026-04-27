@@ -964,6 +964,17 @@ main([array<string>] args) {
   const primec::Definition *layoutTreeDef = findDefinitionByPath(program, "/std/ui/LayoutTree");
   REQUIRE(layoutTreeDef != nullptr);
 
+  std::unordered_map<std::string, const primec::Definition *> defMap;
+  std::unordered_set<std::string> structNames;
+  primec::ir_lowerer::buildDefinitionMapAndStructNames(
+      program.definitions, defMap, structNames, &semanticProgram);
+  const auto importAliases = primec::ir_lowerer::buildImportAliasesFromProgram(
+      program.imports, program.definitions, defMap);
+  const auto callResolutionAdapters =
+      primec::ir_lowerer::makeCallResolutionAdapters(defMap, importAliases, &semanticProgram);
+  const auto resolveDefinitionCall =
+      primec::ir_lowerer::makeResolveDefinitionCall(
+          defMap, callResolutionAdapters.resolveExprPath, &semanticProgram);
   auto bindingTypeAdapters = primec::ir_lowerer::makeBindingTypeAdapters(&semanticProgram);
   const auto semanticProductTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
@@ -988,9 +999,7 @@ main([array<string>] args) {
       info,
       error,
       {},
-      [&](const primec::Expr &expr) -> const primec::Definition * {
-        return expr.name == "LayoutTree" ? layoutTreeDef : nullptr;
-      },
+      resolveDefinitionCall,
       {},
       &semanticProductTargets));
   CHECK(error.empty());
