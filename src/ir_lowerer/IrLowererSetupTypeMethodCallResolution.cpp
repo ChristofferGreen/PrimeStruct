@@ -797,7 +797,7 @@ const Definition *resolveMethodCallDefinitionFromExpr(
       const bool blocksBareMapTryAtReceiverProbeKindFallback =
           isBareMapTryAtReceiverProbeExpr(*receiver);
       const bool blocksExplicitVectorReceiverProbeKindFallback =
-          isExplicitVectorReceiverProbeHelperExpr(*receiver);
+          blocksExplicitVectorReceiverProbeKindFallbackExpr(*receiver);
       if (!blocksExplicitMapReceiverProbeKindFallback &&
           !blocksBareMapAccessReceiverProbeKindFallback &&
           !blocksBareMapTryAtReceiverProbeKindFallback &&

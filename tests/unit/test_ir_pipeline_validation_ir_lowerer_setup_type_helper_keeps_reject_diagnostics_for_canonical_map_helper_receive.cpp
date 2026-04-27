@@ -484,7 +484,7 @@ TEST_CASE("ir lowerer setup type helper keeps auto-wrapper primitive diagnostics
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowerer setup type helper rejects direct alias primitive fallback from inferred receiver kinds") {
+TEST_CASE("ir lowerer setup type helper accepts direct alias primitive fallback from inferred receiver kinds") {
   primec::Definition i32TagDef;
   i32TagDef.fullPath = "/i32/tag";
   const std::unordered_map<std::string, const primec::Definition *> defMap = {

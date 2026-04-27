@@ -524,6 +524,27 @@ bool isExplicitVectorReceiverProbeHelperExpr(const Expr &expr) {
           helperName == "count" || helperName == "capacity");
 }
 
+bool blocksExplicitVectorReceiverProbeKindFallbackExpr(const Expr &expr) {
+  if (!isExplicitVectorReceiverProbeHelperExpr(expr)) {
+    return false;
+  }
+  if (expr.isMethodCall) {
+    return true;
+  }
+  if (!expr.name.empty() && expr.name.front() == '/') {
+    return isExplicitRemovedVectorMethodAliasPath(expr.name);
+  }
+  if (!expr.namespacePrefix.empty()) {
+    std::string scopedPath = expr.namespacePrefix;
+    if (!scopedPath.empty() && scopedPath.front() != '/') {
+      scopedPath.insert(scopedPath.begin(), '/');
+    }
+    scopedPath += "/" + expr.name;
+    return isExplicitRemovedVectorMethodAliasPath(scopedPath);
+  }
+  return isExplicitRemovedVectorMethodAliasPath(expr.name);
+}
+
 bool isAllowedResolvedMapDirectCallPath(const std::string &callPath, const std::string &resolvedPath) {
   if (!isExplicitMapMethodAliasPath(callPath)) {
     return true;

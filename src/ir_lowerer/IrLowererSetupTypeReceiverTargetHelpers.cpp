@@ -332,7 +332,7 @@ bool inferBuiltinAccessReceiverResultKind(const Expr &receiverCallExpr,
        (isExplicitMapMethodAliasPath(scopedReceiverMethodPath) ||
         isExplicitMapContainsOrTryAtMethodPath(scopedReceiverMethodPath))) ||
       isExplicitMapHelperFallbackPath(receiverCallExpr) ||
-      isExplicitVectorReceiverProbeHelperExpr(receiverCallExpr)) {
+      blocksExplicitVectorReceiverProbeKindFallbackExpr(receiverCallExpr)) {
     return false;
   }
 
@@ -677,7 +677,7 @@ bool resolveMethodReceiverTarget(const Expr &receiverExpr,
     const bool blocksBareMapTryAtReceiverProbeKindFallback =
         isBareMapTryAtReceiverProbeExpr(receiverExpr);
     const bool blocksExplicitVectorReceiverProbeKindFallback =
-        isExplicitVectorReceiverProbeHelperExpr(receiverExpr);
+        blocksExplicitVectorReceiverProbeKindFallbackExpr(receiverExpr);
     const LocalInfo::ValueKind inferredKind =
         (inferExprKind && !blocksExplicitMapReceiverProbeKindFallback &&
          !blocksBareMapAccessReceiverProbeKindFallback &&
