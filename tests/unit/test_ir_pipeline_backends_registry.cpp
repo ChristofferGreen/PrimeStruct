@@ -1148,6 +1148,121 @@ TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product type metadata for struct layouts") {
+  primec::Program program;
+
+  primec::Definition structDef;
+  structDef.fullPath = "/Point";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structDef.transforms.push_back(structTransform);
+  program.definitions.push_back(structDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product type metadata: /Point");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects missing semantic-product struct field metadata") {
+  primec::Program program;
+
+  primec::Definition structDef;
+  structDef.fullPath = "/Point";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structDef.transforms.push_back(structTransform);
+  primec::Expr field;
+  field.kind = primec::Expr::Kind::Name;
+  field.isBinding = true;
+  field.name = "x";
+  structDef.statements.push_back(field);
+  program.definitions.push_back(structDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = "/Point",
+      .category = "struct",
+      .isPublic = false,
+      .hasNoPadding = false,
+      .hasPlatformIndependentPadding = false,
+      .hasExplicitAlignment = false,
+      .explicitAlignmentBytes = 0,
+      .fieldCount = 1,
+      .enumValueCount = 0,
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 82,
+      .provenanceHandle = 0,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product struct field metadata: /Point/x");
+  CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("ir lowerer rejects stale semantic-product struct provenance") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = "/Ghost",
+      .category = "struct",
+      .isPublic = false,
+      .hasNoPadding = false,
+      .hasPlatformIndependentPadding = false,
+      .hasExplicitAlignment = false,
+      .explicitAlignmentBytes = 0,
+      .fieldCount = 0,
+      .enumValueCount = 0,
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 82,
+      .provenanceHandle = 0,
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product struct provenance: /Ghost");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order") {
   primec::Program program;
 

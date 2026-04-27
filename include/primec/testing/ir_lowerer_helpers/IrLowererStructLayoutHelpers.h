@@ -35,6 +35,9 @@ bool computeStructLayoutWithCache(
     const std::function<bool(IrStructLayout &, std::string &)> &computeUncachedLayout,
     IrStructLayout &layoutOut,
     std::string &errorOut);
+bool validateSemanticProductStructLayoutCoverage(const ::primec::Program &program,
+                                                 const ::primec::SemanticProgram *semanticProgram,
+                                                 std::string &errorOut);
 bool computeStructLayoutUncached(
     const ::primec::Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,

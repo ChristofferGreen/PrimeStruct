@@ -9,6 +9,7 @@
 #include "IrLowererHelpers.h"
 #include "IrLowererStructTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
+#include "primec/SemanticProduct.h"
 
 namespace primec::ir_lowerer {
 
@@ -113,6 +114,21 @@ bool classifyBindingTypeLayoutInternal(const LayoutFieldBinding &binding,
 
   structTypeNameOut = normalized;
   return true;
+}
+
+bool isStructLikeSemanticProductCategory(const std::string &category) {
+  return category == "struct" || category == "pod" || category == "handle" ||
+         category == "gpu_lane";
+}
+
+std::size_t countSemanticProductLayoutFields(const Definition &def) {
+  std::size_t count = 0;
+  for (const auto &stmt : def.statements) {
+    if (stmt.isBinding && !isStaticField(stmt)) {
+      ++count;
+    }
+  }
+  return count;
 }
 
 } // namespace
@@ -265,6 +281,86 @@ bool computeStructLayoutWithCache(
   return true;
 }
 
+bool validateSemanticProductStructLayoutCoverage(const Program &program,
+                                                 const SemanticProgram *semanticProgram,
+                                                 std::string &errorOut) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  std::unordered_map<std::string, const Definition *> defMap;
+  defMap.reserve(program.definitions.size());
+  for (const auto &def : program.definitions) {
+    defMap.emplace(def.fullPath, &def);
+  }
+
+  std::unordered_set<std::string> semanticStructPaths;
+  for (const auto *typeMetadata : semanticProgramStructTypeMetadataView(*semanticProgram)) {
+    if (typeMetadata == nullptr || typeMetadata->fullPath.empty() ||
+        !isStructLikeSemanticProductCategory(typeMetadata->category)) {
+      continue;
+    }
+    if (!semanticStructPaths.insert(typeMetadata->fullPath).second) {
+      errorOut = "duplicate semantic-product type metadata: " + typeMetadata->fullPath;
+      return false;
+    }
+
+    const auto defIt = defMap.find(typeMetadata->fullPath);
+    if (defIt == defMap.end() || defIt->second == nullptr) {
+      errorOut = "missing semantic-product struct provenance: " + typeMetadata->fullPath;
+      return false;
+    }
+
+    const Definition &def = *defIt->second;
+    const std::size_t layoutFieldCount = countSemanticProductLayoutFields(def);
+    if (typeMetadata->fieldCount != layoutFieldCount) {
+      errorOut = "semantic-product struct field count mismatch: " + def.fullPath;
+      return false;
+    }
+
+    const auto semanticFields =
+        semanticProgramStructFieldMetadataView(*semanticProgram, def.fullPath);
+    std::size_t fieldIndex = 0;
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding || isStaticField(stmt)) {
+        continue;
+      }
+      const auto semanticFieldIt =
+          std::find_if(semanticFields.begin(),
+                       semanticFields.end(),
+                       [&](const SemanticProgramStructFieldMetadata *fieldMetadata) {
+                         return fieldMetadata != nullptr &&
+                                fieldMetadata->fieldIndex == fieldIndex &&
+                                fieldMetadata->fieldName == stmt.name;
+                       });
+      if (semanticFieldIt == semanticFields.end()) {
+        errorOut = "missing semantic-product struct field metadata: " +
+                   def.fullPath + "/" + stmt.name;
+        return false;
+      }
+      if ((*semanticFieldIt)->bindingTypeText.empty()) {
+        errorOut = "missing semantic-product struct field binding type: " +
+                   def.fullPath + "/" + stmt.name;
+        return false;
+      }
+      ++fieldIndex;
+    }
+    if (semanticFields.size() != layoutFieldCount) {
+      errorOut = "semantic-product struct field count mismatch: " + def.fullPath;
+      return false;
+    }
+  }
+
+  for (const auto &def : program.definitions) {
+    if (isStructDefinition(def) && semanticStructPaths.count(def.fullPath) == 0) {
+      errorOut = "missing semantic-product type metadata: " + def.fullPath;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool computeStructLayoutUncached(
     const Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,
@@ -277,9 +373,11 @@ bool computeStructLayoutUncached(
   uint32_t structAlign = 1;
   uint32_t explicitStructAlign = 1;
   bool hasStructAlign = false;
-  if (typeMetadata != nullptr && typeMetadata->hasExplicitAlignment) {
-    explicitStructAlign = typeMetadata->explicitAlignmentBytes;
-    hasStructAlign = true;
+  if (typeMetadata != nullptr) {
+    if (typeMetadata->hasExplicitAlignment) {
+      explicitStructAlign = typeMetadata->explicitAlignmentBytes;
+      hasStructAlign = true;
+    }
   } else if (!extractAlignment(
                  def.transforms, "struct " + def.fullPath, explicitStructAlign, hasStructAlign, errorOut)) {
     return false;
@@ -350,6 +448,10 @@ bool computeStructLayoutFromFieldInfo(
   };
   const SemanticProgramTypeMetadata *typeMetadata =
       semanticProgram == nullptr ? nullptr : semanticProgramLookupTypeMetadata(*semanticProgram, def.fullPath);
+  if (semanticProgram != nullptr && typeMetadata == nullptr) {
+    errorOut = "missing semantic-product type metadata: " + def.fullPath;
+    return false;
+  }
   return computeStructLayoutUncached(
       def, fieldInfoIt->second, resolveFieldTypeLayout, typeMetadata, layoutOut, errorOut);
 }

@@ -44,6 +44,17 @@ TEST_CASE("ir lowerer struct layout helpers compute uncached diagnostics") {
   CHECK_FALSE(primec::ir_lowerer::computeStructLayoutUncached(
       alignDef, wideBindings, resolveWideLayout, layout, error));
   CHECK(error == "alignment requirement on struct /pkg/BadAlign is smaller than required alignment of 8");
+
+  primec::SemanticProgramTypeMetadata semanticMetadata;
+  semanticMetadata.fullPath = "/pkg/BadAlign";
+  semanticMetadata.category = "struct";
+  semanticMetadata.hasExplicitAlignment = false;
+  semanticMetadata.fieldCount = 1;
+  error.clear();
+  CHECK(primec::ir_lowerer::computeStructLayoutUncached(
+      alignDef, wideBindings, resolveWideLayout, &semanticMetadata, layout, error));
+  CHECK(error.empty());
+  CHECK(layout.alignmentBytes == 8u);
 }
 
 TEST_CASE("ir lowerer struct layout helpers compute from field info") {
@@ -124,6 +135,70 @@ TEST_CASE("ir lowerer struct layout helpers compute from field info diagnostics"
   CHECK_FALSE(primec::ir_lowerer::computeStructLayoutFromFieldInfo(
       structDef, withFieldInfo, resolveStructTypePath, noDefs, computeStructLayout, layout, error));
   CHECK(error == "unknown struct type for layout: Missing");
+
+  primec::SemanticProgram semanticProgram;
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::computeStructLayoutFromFieldInfo(
+      structDef, withFieldInfo, resolveStructTypePath, noDefs, computeStructLayout, &semanticProgram, layout, error));
+  CHECK(error == "missing semantic-product type metadata: /pkg/S");
+}
+
+TEST_CASE("ir lowerer struct layout helpers validate semantic product coverage") {
+  primec::Program program;
+  primec::Definition structDef;
+  structDef.fullPath = "/pkg/S";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  structDef.transforms.push_back(structTransform);
+  primec::Expr fieldExpr;
+  fieldExpr.kind = primec::Expr::Kind::Name;
+  fieldExpr.isBinding = true;
+  fieldExpr.name = "value";
+  structDef.statements.push_back(fieldExpr);
+  program.definitions.push_back(structDef);
+
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductStructLayoutCoverage(program, &semanticProgram, error));
+  CHECK(error == "missing semantic-product type metadata: /pkg/S");
+
+  semanticProgram.typeMetadata.push_back(primec::SemanticProgramTypeMetadata{
+      .fullPath = "/pkg/S",
+      .category = "struct",
+      .isPublic = false,
+      .hasNoPadding = false,
+      .hasPlatformIndependentPadding = false,
+      .hasExplicitAlignment = false,
+      .explicitAlignmentBytes = 0,
+      .fieldCount = 1,
+      .enumValueCount = 0,
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 10,
+      .provenanceHandle = 0,
+  });
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductStructLayoutCoverage(program, &semanticProgram, error));
+  CHECK(error == "missing semantic-product struct field metadata: /pkg/S/value");
+
+  semanticProgram.structFieldMetadata.push_back(primec::SemanticProgramStructFieldMetadata{
+      .structPath = "/pkg/S",
+      .fieldName = "value",
+      .fieldIndex = 0,
+      .bindingTypeText = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 11,
+      .provenanceHandle = 0,
+  });
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductStructLayoutCoverage(program, &semanticProgram, error));
+  CHECK(error == "missing semantic-product struct field binding type: /pkg/S/value");
+
+  semanticProgram.structFieldMetadata.back().bindingTypeText = "i32";
+  error.clear();
+  CHECK(primec::ir_lowerer::validateSemanticProductStructLayoutCoverage(program, &semanticProgram, error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("ir lowerer struct layout helpers append program layouts") {

@@ -49,6 +49,9 @@ bool computeStructLayoutWithCache(
     const std::function<bool(IrStructLayout &, std::string &)> &computeUncachedLayout,
     IrStructLayout &layoutOut,
     std::string &errorOut);
+bool validateSemanticProductStructLayoutCoverage(const Program &program,
+                                                 const SemanticProgram *semanticProgram,
+                                                 std::string &errorOut);
 bool computeStructLayoutUncached(
     const Definition &def,
     const std::vector<LayoutFieldBinding> &fieldBindings,

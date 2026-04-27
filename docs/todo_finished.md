@@ -6,6 +6,18 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4232: Close binding/type/effect/layout lowerer fallbacks.
+  Completed: The lowerer entry semantic-product contract now validates struct
+  layout coverage through published `typeMetadata` and
+  `structFieldMetadata`, rejecting missing type metadata, stale struct
+  provenance, and missing field facts before backend setup can infer layout
+  from AST transforms. Struct layout computation also refuses to recover
+  type metadata from raw AST state when a semantic product is present and no
+  longer reads raw struct alignment transforms after semantic metadata exists.
+  Binding, local-auto, call-routing, result, effect, and on_error coverage was
+  already fail-closed by prior slices, leaving backend adapter and
+  source-composition cleanup queued under TODO-4233. Local validation is
+  deferred per the lite workflow.
 - ✓ TODO-4225: Close call-target and helper-routing lowerer fallbacks.
   Completed: Production lowerer entry setup now runs the direct-call,
   bridge-path, and method-call semantic-product coverage validators before
@@ -22,8 +34,8 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   falls back through raw `defMap` or import aliases when semantic-product
   direct-call/bridge facts are missing; it now uses syntax-only spelling and
   lets semantic-product validation/lowering fail closed with existing
-  diagnostics. Follow-up binding/type/effect/layout and
-  backend/source-composition cleanup remains queued under TODO-4232 and
+  diagnostics. Follow-up binding/type/effect/layout cleanup completed under
+  TODO-4232, and backend/source-composition cleanup remains queued under
   TODO-4233. Local validation is deferred per the lite workflow.
 - ✓ TODO-4231: Make query/try/on_error graph facts the exclusive authority.
   Completed: query, `try(...)`, and `on_error` lowerer consumption now uses

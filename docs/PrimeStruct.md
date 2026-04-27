@@ -612,9 +612,12 @@ Current residual semantic fallback audit:
   semantic-product coverage checks before helper dispatch, and bridge-path coverage no longer reclassifies
   missing bridge facts through a published-lookup fallback. Inline/native tail-dispatch classifiers and
   collection helper dispatch guards are lowering-owned compatibility dispatch after those routing facts validate.
-- Queued to TODO-4232: binding/type/effect/layout fallback inventory, including lowerer-generated temporaries,
-  synthetic locals, source-spelled type aliases, import/layout syntax qualifiers, struct field/body traversal,
-  and collection/layout classification paths.
+- Completed in TODO-4232: binding/type/effect/layout lowerer fallback closure now runs binding,
+  local-auto, call-routing, result, effect, on_error, type metadata, and struct-field metadata
+  semantic-product coverage before backend setup. Struct layout rejects missing type metadata, stale
+  struct provenance, and missing field facts instead of recovering layout-facing meaning from raw AST
+  transforms once a semantic product is present. Syntax/provenance-owned field qualifiers and body
+  traversal remain AST-owned.
 - Queued to TODO-4233: backend adapter, source-composition, and public lowerer helper APIs that could reintroduce
   AST-side semantic inference after semantic-product publication.
 - Syntax/provenance-owned: source spans, debug/source maps, syntax reproduction, function bodies/statements used

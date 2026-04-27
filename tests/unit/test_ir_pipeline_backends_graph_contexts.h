@@ -1280,9 +1280,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(irEntrySetupSource.find("{\"routing.method-call\", \"methodCallTargets[].resolvedPathId\"") !=
         std::string::npos);
+  CHECK(irEntrySetupSource.find("{\"type-shape.struct-layout\", \"typeMetadata[] + structFieldMetadata[]\"") !=
+        std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductMethodCallCoverage(context.program,") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductBindingCoverage(context.program, context.semanticProgram, error)") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find(
+            "validateSemanticProductStructLayoutCoverage(context.program, context.semanticProgram, error)") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductResultMetadataCompleteness(semanticProgram, error)") !=
         std::string::npos);
@@ -1814,11 +1819,19 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const SemanticProgramTypeMetadata *typeMetadata,") !=
         std::string::npos);
+  CHECK(structLayoutHelpersHeader.find("bool validateSemanticProductStructLayoutCoverage(const Program &program,") !=
+        std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const std::unordered_map<std::string, const Definition *> &defMap,") !=
         std::string::npos);
   CHECK(structLayoutHelpersHeader.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);
-  CHECK(structLayoutHelpersSource.find("typeMetadata != nullptr && typeMetadata->hasExplicitAlignment") !=
+  CHECK(structLayoutHelpersSource.find("if (typeMetadata != nullptr) {") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("typeMetadata != nullptr && typeMetadata->hasExplicitAlignment") ==
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("if (semanticProgram != nullptr && typeMetadata == nullptr)") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("missing semantic-product struct field metadata: ") !=
         std::string::npos);
   CHECK(structLayoutHelpersSource.find("semanticProgramLookupTypeMetadata(*semanticProgram, def.fullPath)") !=
         std::string::npos);
@@ -2924,6 +2937,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto fact: ") != std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product local-auto initializer path id: ") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("bool validateSemanticProductStructLayoutCoverage(const Program &program,") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("missing semantic-product type metadata: ") !=
+        std::string::npos);
+  CHECK(structLayoutHelpersSource.find("missing semantic-product struct provenance: ") !=
         std::string::npos);
   CHECK(irLowererResultHelpers.find("missing semantic-product return definition path id") !=
         std::string::npos);
