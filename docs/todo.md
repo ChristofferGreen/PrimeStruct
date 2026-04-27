@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4213: Route definition workers through the shared validation plan
+- TODO-4222: Route execution validation through the shared plan
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4222: Route execution validation through the shared plan
 - TODO-4226: Add a structured semantic diagnostic/result sink
 - TODO-4214: Introduce deterministic worker result bundles
 - TODO-4227: Move semantic-product fact families into worker bundles
@@ -70,11 +69,12 @@ Task template:
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 - TODO-4229: Cut over SoA compatibility decisions to surface adapters
+- TODO-4230: Cut over gfx compatibility decisions to surface adapters
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4213 -> TODO-4222
-  -> TODO-4226 -> TODO-4214 -> TODO-4227 -> TODO-4215 -> TODO-4228
+- Semantic phase contract hardening: TODO-4222 -> TODO-4226
+  -> TODO-4214 -> TODO-4227 -> TODO-4215 -> TODO-4228
   -> TODO-4216 -> TODO-4217 -> TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
@@ -87,7 +87,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4213: Route definition workers through the shared validation plan
 - TODO-4222: Route execution validation through the shared plan
 - TODO-4226: Add a structured semantic diagnostic/result sink
 - TODO-4214: Introduce deterministic worker result bundles
@@ -131,7 +130,7 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4213, TODO-4222, TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4222, TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
 | Compile-pipeline stage and publication-boundary contracts | TODO-4222, TODO-4226, TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -139,7 +138,7 @@ Task template:
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4217, TODO-4224, TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
-| Validator entrypoint and benchmark-plumbing split | TODO-4213, TODO-4222, TODO-4226, TODO-4214, TODO-4227 |
+| Validator entrypoint and benchmark-plumbing split | TODO-4222, TODO-4226, TODO-4214, TODO-4227 |
 | Semantic-product publication by module and fact family | TODO-4214, TODO-4227, TODO-4215, TODO-4240, TODO-4241 |
 | Semantic-product public API factoring and versioning | TODO-4215, TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
 | IR lowerer compile-unit breakup | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
@@ -256,24 +255,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4213: Route definition workers through the shared validation plan
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - depends_on: TODO-4212
-  - scope: Change definition-worker validation so worker validators consume the
-    shared immutable validation plan instead of reconstructing the same
-    declaration/import/type setup per worker chunk.
-  - acceptance:
-    - The worker path no longer reruns plan-owned setup for each chunk.
-    - Existing 1/2/4-worker semantic-product and diagnostic parity coverage
-      remains stable.
-    - Semantic memory definition-worker parity remains within the checked-in
-      policy budget.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after definition validation workers share the prepass plan;
-    execution validation and publication factoring can remain separate leaves.
 
 - [ ] TODO-4222: Route execution validation through the shared plan
   - owner: ai

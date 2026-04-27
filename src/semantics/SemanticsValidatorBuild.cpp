@@ -16,7 +16,6 @@ bool SemanticsValidator::buildDefinitionMaps() {
   };
   defaultEffectSet_.clear();
   entryDefaultEffectSet_.clear();
-  validationPlan_ = buildSemanticValidationPlan(program_, entryPath_);
   defMap_.clear();
   returnKinds_.clear();
   returnStructs_.clear();
@@ -95,7 +94,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     isExplicitOut = false;
     return true;
   };
-  for (const auto &declaration : validationPlan_.definitionPrepass.declarationsInStableOrder) {
+  for (const auto &declaration : validationPlan_->definitionPrepass.declarationsInStableOrder) {
     const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionScope(*this, def);
     bool isExplicit = false;
@@ -151,7 +150,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
     return structNames_.count(parent) > 0;
   };
   std::vector<SemanticDiagnosticRecord> transformDiagnosticRecords;
-  for (const auto &declaration : validationPlan_.definitionPrepass.declarationsInStableOrder) {
+  for (const auto &declaration : validationPlan_->definitionPrepass.declarationsInStableOrder) {
     const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionScope(*this, def);
     if (defMap_.count(def.fullPath) > 0) {
@@ -204,7 +203,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   }
   rebuildCallResolutionFamilyIndexes();
 
-  for (const auto &declaration : validationPlan_.definitionPrepass.declarationsInStableOrder) {
+  for (const auto &declaration : validationPlan_->definitionPrepass.declarationsInStableOrder) {
     const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionContextScope(*this, def);
     ValidationContext context;

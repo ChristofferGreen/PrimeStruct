@@ -17,7 +17,7 @@ bool SemanticsValidator::validateEntry() {
     }
     return failUncontextualizedDiagnostic(std::move(message));
   };
-  const auto &entryMetadata = validationPlan_.entry;
+  const auto &entryMetadata = validationPlan_->entry;
   auto entryIt = entryMetadata.declared ? defMap_.find(entryMetadata.fullPath) : defMap_.end();
   if (entryIt == defMap_.end()) {
     return failEntryDiagnostic("missing entry definition " + entryMetadata.fullPath);

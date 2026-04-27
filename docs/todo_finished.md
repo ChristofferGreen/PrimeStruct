@@ -6,6 +6,13 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4213: Route definition workers through the shared validation plan.
+  Completed: `SemanticsValidator` now stores the semantic validation plan as a
+  shared immutable object, root validation builds it once, and definition
+  worker validators receive that same plan instead of rebuilding plan-owned
+  declaration/import setup per chunk. Source-lock coverage now pins shared-plan
+  worker construction and rejects plan construction inside
+  `buildDefinitionMaps`. Local validation is deferred per the lite workflow.
 - ✓ TODO-4212: Introduce semantic validation plan prepass. Completed:
   `SemanticValidationPlan` now owns the semantic prepass snapshot, entry
   metadata, import summaries, builtin capability table metadata, and

@@ -505,7 +505,7 @@ void SemanticsValidator::collectCallableSummaryEntriesForStableRange(
     std::size_t stableOrderCount,
     std::vector<CollectedCallableSummaryEntry> &out) const {
   const std::size_t declarationCount =
-      validationPlan_.definitionPrepass.declarationsInStableOrder.size();
+      validationPlan_->definitionPrepass.declarationsInStableOrder.size();
   if (stableOrderCount == 0 || stableOrderOffset >= declarationCount) {
     return;
   }
@@ -515,7 +515,7 @@ void SemanticsValidator::collectCallableSummaryEntriesForStableRange(
   out.reserve(out.size() + boundedCount);
   for (std::size_t stableOrdinal = 0; stableOrdinal < boundedCount; ++stableOrdinal) {
     const std::size_t stableIndex =
-        validationPlan_.definitionPrepass
+        validationPlan_->definitionPrepass
             .declarationsInStableOrder[stableOrderOffset + stableOrdinal]
             .stableIndex;
     const Definition &def = program_.definitions[stableIndex];
@@ -650,7 +650,7 @@ void SemanticsValidator::collectOnErrorSnapshotEntriesForStableRange(
     std::size_t stableOrderCount,
     std::vector<OnErrorSnapshotEntry> &out) const {
   const std::size_t declarationCount =
-      validationPlan_.definitionPrepass.declarationsInStableOrder.size();
+      validationPlan_->definitionPrepass.declarationsInStableOrder.size();
   if (stableOrderCount == 0 || stableOrderOffset >= declarationCount) {
     return;
   }
@@ -661,7 +661,7 @@ void SemanticsValidator::collectOnErrorSnapshotEntriesForStableRange(
   for (std::size_t stableOrdinal = 0; stableOrdinal < boundedCount;
        ++stableOrdinal) {
     const std::size_t stableIndex =
-        validationPlan_.definitionPrepass
+        validationPlan_->definitionPrepass
             .declarationsInStableOrder[stableOrderOffset + stableOrdinal]
             .stableIndex;
     const Definition &def = program_.definitions[stableIndex];
@@ -831,7 +831,7 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
     rebindCollectedCallableSummarySemanticNodeIds(collectedCallableSummaries_);
   } else {
     collectCallableSummaryEntriesForStableRange(
-        0, validationPlan_.definitionPrepass.declarationsInStableOrder.size(), collectedCallableSummaries_);
+        0, validationPlan_->definitionPrepass.declarationsInStableOrder.size(), collectedCallableSummaries_);
     collectExecutionCallableSummaryEntries(collectedCallableSummaries_);
   }
 
@@ -979,7 +979,7 @@ SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
       SymbolInterner publicationStringInterner;
       appendSemanticPublicationStringOrigins(publicationStringInterner,
                                              program_,
-                                             validationPlan_.definitionPrepass,
+                                             validationPlan_->definitionPrepass,
                                              surface.callableSummaries,
                                              surface.onErrorFacts);
       surface.callTargetSeedStrings =
@@ -1003,7 +1003,7 @@ void SemanticsValidator::ensureOnErrorSnapshotFactCache() const {
     onErrorSnapshotCache_.reserve(program_.definitions.size());
     collectOnErrorSnapshotEntriesForStableRange(
         0,
-        validationPlan_.definitionPrepass.declarationsInStableOrder.size(),
+        validationPlan_->definitionPrepass.declarationsInStableOrder.size(),
         onErrorSnapshotCache_);
   }
   sortCollectedOnErrorSnapshots(onErrorSnapshotCache_);

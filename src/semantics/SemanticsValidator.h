@@ -62,7 +62,8 @@ public:
                      bool benchmarkSemanticDisableMethodTargetMemoization = false,
                      bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow = false,
                      bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow = false,
-                     bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false);
+                     bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr = false,
+                     std::shared_ptr<const SemanticValidationPlan> validationPlan = nullptr);
 
   bool run();
   const ValidationCounters &validationCounters() const { return validationCounters_; }
@@ -474,6 +475,7 @@ private:
   std::string &error_;
   const std::vector<std::string> &defaultEffects_;
   const std::vector<std::string> &entryDefaultEffects_;
+  std::shared_ptr<const SemanticValidationPlan> validationPlan_;
   SemanticDiagnosticInfo *diagnosticInfo_ = nullptr;
   DiagnosticSink diagnosticSink_;
   bool collectDiagnostics_ = false;
@@ -488,7 +490,6 @@ private:
 
   std::unordered_set<std::string> defaultEffectSet_;
   std::unordered_set<std::string> entryDefaultEffectSet_;
-  SemanticValidationPlan validationPlan_;
   std::unordered_map<std::string, const Definition *> defMap_;
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;

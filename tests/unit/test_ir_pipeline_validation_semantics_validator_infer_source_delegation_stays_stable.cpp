@@ -1321,10 +1321,16 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "const std::size_t stableIndex = resolveStableIndex(stableOrdinal);") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
-            "validationPlan_.definitionPrepass.declarationsInStableOrder.size();") !=
+            "validationPlan_->definitionPrepass.declarationsInStableOrder.size();") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
-            "partitionDefinitionsDeterministic(validationPlan_.definitionPrepass, partitionCount);") !=
+            "partitionDefinitionsDeterministic(validationPlan_->definitionPrepass, partitionCount);") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "!benchmarkGraphLocalAutoDependencyScratchPmrEnabled_,") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "validationPlan_);") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
             "return validateDefinitionsForStableRange(0, declarationCount);") !=
@@ -1348,6 +1354,8 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsBuildSource.find(
             "return failDefinitionDiagnostic(*def, std::move(message));") !=
+        std::string::npos);
+  CHECK(semanticsBuildSource.find("buildSemanticValidationPlan(program_, entryPath_)") ==
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
             "auto failPassesStructLayoutsDiagnostic = [&](std::string message) -> bool {") !=

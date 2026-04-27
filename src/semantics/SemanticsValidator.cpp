@@ -90,12 +90,14 @@ SemanticsValidator::SemanticsValidator(const Program &program,
                                        bool benchmarkSemanticDisableMethodTargetMemoization,
                                        bool benchmarkSemanticGraphLocalAutoLegacyKeyShadow,
                                        bool benchmarkSemanticGraphLocalAutoLegacySideChannelShadow,
-                                       bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr)
+                                       bool benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr,
+                                       std::shared_ptr<const SemanticValidationPlan> validationPlan)
     : program_(program),
       entryPath_(entryPath),
       error_(error),
       defaultEffects_(defaultEffects),
       entryDefaultEffects_(entryDefaultEffects),
+      validationPlan_(std::move(validationPlan)),
       diagnosticInfo_(diagnosticInfo),
       diagnosticSink_(diagnosticInfo),
       collectDiagnostics_(collectDiagnostics),
@@ -105,7 +107,11 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       methodTargetMemoizationEnabled_(!benchmarkSemanticDisableMethodTargetMemoization),
       benchmarkGraphLocalAutoDependencyScratchPmrEnabled_(
           !benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr) {
-  validationPlan_ = buildSemanticValidationPlan(program_, entryPath_);
+  if (!validationPlan_) {
+    validationPlan_ =
+        std::make_shared<SemanticValidationPlan>(
+            buildSemanticValidationPlan(program_, entryPath_));
+  }
   diagnosticSink_.reset();
   if (benchmarkSemanticGraphLocalAutoLegacyKeyShadow ||
       benchmarkSemanticGraphLocalAutoLegacySideChannelShadow) {
@@ -125,10 +131,10 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       }
     }
   };
-  for (const auto &importPath : validationPlan_.imports.sourceImportPaths) {
+  for (const auto &importPath : validationPlan_->imports.sourceImportPaths) {
     registerMathImport(importPath);
   }
-  for (const auto &importPath : validationPlan_.imports.programImportPaths) {
+  for (const auto &importPath : validationPlan_->imports.programImportPaths) {
     registerMathImport(importPath);
   }
   if (std::getenv("PRIMEC_BENCHMARK_DISABLE_STRUCT_RETURN_MEMOIZATION") !=
@@ -449,7 +455,7 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
       return true;
     }
     if (currentValidationState_.context.definitionPath.rfind("/std/", 0) == 0) {
-      for (const auto &importPath : validationPlan_.imports.programImportPaths) {
+      for (const auto &importPath : validationPlan_->imports.programImportPaths) {
         if (importPath == "/std/math/*") {
           return true;
         }

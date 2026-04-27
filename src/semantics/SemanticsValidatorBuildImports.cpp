@@ -139,7 +139,7 @@ bool SemanticsValidator::buildImportAliases() {
     if (targetPrefix.size() >= 2 && targetPrefix.compare(targetPrefix.size() - 2, 2, "/*") == 0) {
       targetPrefix.erase(targetPrefix.size() - 2);
     }
-    const auto &allImportPaths = validationPlan_.imports.directImportPaths;
+    const auto &allImportPaths = validationPlan_->imports.directImportPaths;
     for (const auto &otherImport : allImportPaths) {
       if (otherImport == importPath || otherImport.rfind("/std/", 0) != 0) {
         continue;
@@ -216,7 +216,7 @@ bool SemanticsValidator::buildImportAliases() {
                stdlibSurfaceMatchesImportAliasPath(*preferred, candidatePath);
       };
 
-  const auto &importPaths = validationPlan_.imports.directImportPaths;
+  const auto &importPaths = validationPlan_->imports.directImportPaths;
   for (const auto &importPath : importPaths) {
     if (importPath == "/std/math") {
       if (!addImportDiagnostic("import /std/math is not supported; use import /std/math/* or /std/math/<name>")) {
@@ -398,7 +398,7 @@ bool SemanticsValidator::buildImportAliases() {
     }
   }
 
-  if (validationPlan_.imports.hasSourceImports) {
+  if (validationPlan_->imports.hasSourceImports) {
     auto registerTransitiveImportAlias = [&](const std::string &importPath) {
       if (importPath.empty() || importPath[0] != '/') {
         return;
@@ -480,7 +480,7 @@ bool SemanticsValidator::buildImportAliases() {
         importAliases_.emplace(remainder, aliasTargetPath);
       }
     };
-    for (const auto &importPath : validationPlan_.imports.transitiveImportPaths) {
+    for (const auto &importPath : validationPlan_->imports.transitiveImportPaths) {
       registerTransitiveImportAlias(importPath);
     }
   }

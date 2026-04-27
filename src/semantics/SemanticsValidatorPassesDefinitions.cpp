@@ -430,7 +430,7 @@ bool SemanticsValidator::validateDefinitionsForStableRange(
     std::size_t stableOrderOffset,
     std::size_t stableOrderCount) {
   const std::size_t declarationCount =
-      validationPlan_.definitionPrepass.declarationsInStableOrder.size();
+      validationPlan_->definitionPrepass.declarationsInStableOrder.size();
   if (stableOrderCount == 0 || stableOrderOffset >= declarationCount) {
     return true;
   }
@@ -439,7 +439,7 @@ bool SemanticsValidator::validateDefinitionsForStableRange(
       std::min(stableOrderCount, declarationCount - stableOrderOffset);
   return validateDefinitionsFromStableIndexResolver(
       boundedCount, [&](std::size_t stableOrdinal) {
-        return validationPlan_.definitionPrepass
+        return validationPlan_->definitionPrepass
             .declarationsInStableOrder[stableOrderOffset + stableOrdinal]
             .stableIndex;
       });
@@ -484,7 +484,7 @@ bool SemanticsValidator::runDefinitionValidationWorkerChunk(
 
 bool SemanticsValidator::validateDefinitions() {
   const std::size_t declarationCount =
-      validationPlan_.definitionPrepass.declarationsInStableOrder.size();
+      validationPlan_->definitionPrepass.declarationsInStableOrder.size();
   if (benchmarkSemanticDefinitionValidationWorkerCount_ <= 1 ||
       declarationCount < 2) {
     return validateDefinitionsForStableRange(0, declarationCount);
@@ -494,7 +494,7 @@ bool SemanticsValidator::validateDefinitions() {
       benchmarkSemanticDefinitionValidationWorkerCount_);
   const bool collectDiagnostics = shouldCollectStructuredDiagnostics();
   std::vector<DefinitionPartitionChunk> partitions =
-      partitionDefinitionsDeterministic(validationPlan_.definitionPrepass, partitionCount);
+      partitionDefinitionsDeterministic(validationPlan_->definitionPrepass, partitionCount);
   if (partitions.size() <= 1) {
     return validateDefinitionsForStableRange(0, declarationCount);
   }
@@ -533,7 +533,12 @@ bool SemanticsValidator::validateDefinitions() {
                                     collectDiagnostics ? &result.diagnostics : nullptr,
                                     collectDiagnostics,
                                     1,
-                                    benchmarkSemanticPhaseCountersEnabled_);
+                                    benchmarkSemanticPhaseCountersEnabled_,
+                                    false,
+                                    false,
+                                    false,
+                                    !benchmarkGraphLocalAutoDependencyScratchPmrEnabled_,
+                                    validationPlan_);
           result.ok = worker.runDefinitionValidationWorkerChunk(
               stableOrderOffset,
               stableOrderCount);
@@ -546,7 +551,7 @@ bool SemanticsValidator::validateDefinitions() {
             SymbolInterner publicationStringInterner;
             appendSemanticPublicationStringOrigins(publicationStringInterner,
                                                   program_,
-                                                  validationPlan_.definitionPrepass,
+                                                  validationPlan_->definitionPrepass,
                                                   result.callableSummaries,
                                                   result.onErrorFacts);
             result.publicationStringSnapshot =
@@ -639,7 +644,7 @@ bool SemanticsValidator::validateDefinitions() {
     }
     appendSemanticPublicationStringOrigins(mergedPublicationStrings,
                                            program_,
-                                           validationPlan_.definitionPrepass,
+                                           validationPlan_->definitionPrepass,
                                            mergedWorkerCallableSummaries_,
                                            mergedWorkerOnErrorFacts_);
     mergedWorkerPublicationSeedStrings_ =
