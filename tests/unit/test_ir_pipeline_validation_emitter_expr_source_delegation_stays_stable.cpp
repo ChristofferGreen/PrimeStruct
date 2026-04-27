@@ -2527,6 +2527,15 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "isRemovedBorrowedSoaCompatibilityHelper(helperName)") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "std::string_view mapCompatibilityHelperBase(std::string_view helperName)") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(suffix))") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
+            "const std::string compatibilityPath = \"/map/\" + std::string(helperBase);") !=
+        std::string::npos);
+  CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(
             "\"/std/collections/soa_vector/\" + suffix") !=
         std::string::npos);
   CHECK(templateMonomorphCollectionCompatibilityPathsSource.find(

@@ -21,6 +21,14 @@ bool isRemovedMapCompatibilityHelper(std::string_view helperName) {
          helperName == "insert" || helperName == "insert_ref";
 }
 
+std::string_view mapCompatibilityHelperBase(std::string_view helperName) {
+  const size_t specializationSuffix = helperName.find("__");
+  if (specializationSuffix != std::string_view::npos) {
+    helperName.remove_suffix(helperName.size() - specializationSuffix);
+  }
+  return helperName;
+}
+
 bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
                                             std::string rawMethodName) {
   if (!rawMethodName.empty() && rawMethodName.front() == '/') {
@@ -66,7 +74,8 @@ bool isExplicitRemovedCollectionMethodAlias(const std::string &receiverTypeName,
     helperName =
         std::string_view(rawMethodName).substr(std::string_view("std/collections/map/").size());
   }
-  return !helperName.empty() && isRemovedMapCompatibilityHelper(helperName);
+  return !helperName.empty() &&
+         isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(helperName));
 }
 
 std::string preferVectorStdlibHelperPath(const std::string &path,
@@ -97,7 +106,7 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/map/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
+    if (!isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(suffix))) {
       const std::string stdlibAlias = "/std/collections/map/" + suffix;
       if (defs.count(stdlibAlias) > 0) {
         preferred = stdlibAlias;
@@ -106,7 +115,8 @@ std::string preferVectorStdlibHelperPath(const std::string &path,
   }
   if (preferred.rfind("/std/collections/map/", 0) == 0 && defs.count(preferred) == 0) {
     const std::string suffix = preferred.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
+    const std::string_view helperBase = mapCompatibilityHelperBase(suffix);
+    if (helperBase != "map" && !isRemovedMapCompatibilityHelper(helperBase)) {
       const std::string mapAlias = "/map/" + suffix;
       if (defs.count(mapAlias) > 0) {
         preferred = mapAlias;
@@ -156,7 +166,7 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   }
   if (path.rfind("/map/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/map/").size());
-    if (!isRemovedMapCompatibilityHelper(suffix)) {
+    if (!isRemovedMapCompatibilityHelper(mapCompatibilityHelperBase(suffix))) {
       const std::string stdlibPath = "/std/collections/map/" + suffix;
       if (ctx.sourceDefs.count(stdlibPath) > 0 && ctx.templateDefs.count(stdlibPath) > 0) {
         return stdlibPath;
@@ -165,7 +175,8 @@ std::string preferVectorStdlibTemplatePath(const std::string &path, const Contex
   }
   if (path.rfind("/std/collections/map/", 0) == 0) {
     const std::string suffix = path.substr(std::string("/std/collections/map/").size());
-    if (suffix != "map" && !isRemovedMapCompatibilityHelper(suffix)) {
+    const std::string_view helperBase = mapCompatibilityHelperBase(suffix);
+    if (helperBase != "map" && !isRemovedMapCompatibilityHelper(helperBase)) {
       const std::string mapPath = "/map/" + suffix;
       if (ctx.sourceDefs.count(mapPath) > 0 && ctx.templateDefs.count(mapPath) > 0) {
         return mapPath;
@@ -285,10 +296,12 @@ bool shouldPreserveCanonicalMapTemplatePath(const std::string &path, const Conte
     return false;
   }
   const std::string helper = path.substr(canonicalMapPrefix.size());
-  if (helper != "map" && helper != "count" && helper != "at" && helper != "at_unsafe") {
+  const std::string_view helperBase = mapCompatibilityHelperBase(helper);
+  if (helperBase != "map" && helperBase != "count" &&
+      helperBase != "at" && helperBase != "at_unsafe") {
     return false;
   }
-  const std::string compatibilityPath = "/map/" + helper;
+  const std::string compatibilityPath = "/map/" + std::string(helperBase);
   return ctx.sourceDefs.count(compatibilityPath) > 0;
 }
 
