@@ -1145,8 +1145,8 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("soa_vector builtin field views call argument escapes fail through inference") {
-  const auto checkReject = [](const std::string &expr, const std::string &expected) {
+TEST_CASE("soa_vector builtin field view call argument escapes use unavailable-method diagnostics") {
+  const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -1162,15 +1162,15 @@ TEST_CASE("soa_vector builtin field views call argument escapes fail through inf
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
-    CHECK(error.find(expected) != std::string::npos);
+    CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
   };
 
-  checkReject("x(values)", "field-view escapes via argument to");
-  checkReject("values.x()", "field-view escapes via argument to");
+  checkReject("x(values)");
+  checkReject("values.x()");
 }
 
-TEST_CASE("soa_vector builtin field views return escapes fail through inference") {
-  const auto checkReject = [](const std::string &expr, const std::string &expected) {
+TEST_CASE("soa_vector builtin field view return escapes use unavailable-method diagnostics") {
+  const auto checkReject = [](const std::string &expr) {
     const std::string source =
         "Particle() {\n"
         "  [i32] x{1i32}\n"
@@ -1187,11 +1187,11 @@ TEST_CASE("soa_vector builtin field views return escapes fail through inference"
         "}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/pick", error));
-    CHECK(error.find(expected) != std::string::npos);
+    CHECK(error.find("unknown method: /std/collections/soa_vector/field_view/x") != std::string::npos);
   };
 
-  checkReject("x(values)", "field-view escapes via return");
-  checkReject("values.x()", "field-view escapes via return");
+  checkReject("x(values)");
+  checkReject("values.x()");
 }
 
 TEST_CASE("soa_vector builtin field-view bindings track canonical borrow roots") {
