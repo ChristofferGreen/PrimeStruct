@@ -78,6 +78,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("map constructor mismatch wins over imported soa count alias") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_map/*
+import /std/collections/soa_vector/*
+
+[return<T> effects(heap_alloc)]
+wrapValues<T>([T] values) {
+  return(values)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{wrapValues(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                "wrong"raw_utf8, false))}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  INFO(error);
+  checkStdlibMapPairConstructorMismatch(error);
+}
+
 TEST_CASE("helper-wrapped dereferenced Result.ok storage keeps mismatch diagnostics") {
   const std::string source = R"(
 import /std/collections/*

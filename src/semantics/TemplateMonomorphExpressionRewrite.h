@@ -1158,7 +1158,7 @@ bool rewriteExpr(Expr &expr,
       expr.name = preferredCollectionHelperPath;
       expr.namespacePrefix.clear();
     }
-    if (expr.namespacePrefix.empty() &&
+    if (!expr.isMethodCall &&
         expr.name.find('/') == std::string::npos &&
         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "count") &&
         inferCollectionReceiverFamily(mapHelperReceiverExpr(expr)) != "soa_vector") {
