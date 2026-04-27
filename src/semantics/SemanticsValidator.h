@@ -18,7 +18,7 @@
 #include "SemanticPublicationSurface.h"
 #include "SemanticsValidatorGraphLocalAuto.h"
 #include "SemanticsHelpers.h"
-#include "primec/SemanticsDefinitionPrepass.h"
+#include "primec/SemanticValidationPlan.h"
 #include "primec/SymbolInterner.h"
 #include "primec/Semantics.h"
 
@@ -488,7 +488,7 @@ private:
 
   std::unordered_set<std::string> defaultEffectSet_;
   std::unordered_set<std::string> entryDefaultEffectSet_;
-  DefinitionPrepassSnapshot definitionPrepassSnapshot_;
+  SemanticValidationPlan validationPlan_;
   std::unordered_map<std::string, const Definition *> defMap_;
   std::unordered_map<std::string, ReturnKind> returnKinds_;
   std::unordered_map<std::string, std::string> returnStructs_;

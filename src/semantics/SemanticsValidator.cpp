@@ -105,6 +105,7 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       methodTargetMemoizationEnabled_(!benchmarkSemanticDisableMethodTargetMemoization),
       benchmarkGraphLocalAutoDependencyScratchPmrEnabled_(
           !benchmarkSemanticDisableGraphLocalAutoDependencyScratchPmr) {
+  validationPlan_ = buildSemanticValidationPlan(program_, entryPath_);
   diagnosticSink_.reset();
   if (benchmarkSemanticGraphLocalAutoLegacyKeyShadow ||
       benchmarkSemanticGraphLocalAutoLegacySideChannelShadow) {
@@ -124,10 +125,10 @@ SemanticsValidator::SemanticsValidator(const Program &program,
       }
     }
   };
-  for (const auto &importPath : program_.sourceImports) {
+  for (const auto &importPath : validationPlan_.imports.sourceImportPaths) {
     registerMathImport(importPath);
   }
-  for (const auto &importPath : program_.imports) {
+  for (const auto &importPath : validationPlan_.imports.programImportPaths) {
     registerMathImport(importPath);
   }
   if (std::getenv("PRIMEC_BENCHMARK_DISABLE_STRUCT_RETURN_MEMOIZATION") !=
@@ -448,7 +449,7 @@ bool SemanticsValidator::allowMathBareName(const std::string &name) const {
       return true;
     }
     if (currentValidationState_.context.definitionPath.rfind("/std/", 0) == 0) {
-      for (const auto &importPath : program_.imports) {
+      for (const auto &importPath : validationPlan_.imports.programImportPaths) {
         if (importPath == "/std/math/*") {
           return true;
         }

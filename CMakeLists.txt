@@ -89,6 +89,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsCallPathHelpers.cpp
   src/semantics/SemanticsDefinitionPrepass.cpp
   src/semantics/SemanticsDefinitionPartitioner.cpp
+  src/semantics/SemanticValidationPlan.cpp
   src/semantics/SemanticsReturnKindHelpers.cpp
   src/semantics/SemanticReturnDependencyOrder.cpp
   src/semantics/SemanticsHelpersCore.cpp

@@ -1,5 +1,6 @@
 #include "third_party/doctest.h"
 
+#include "primec/SemanticValidationPlan.h"
 #include "primec/SemanticsDefinitionPrepass.h"
 
 #include <string>
@@ -156,6 +157,51 @@ beta() {
   CHECK(firstMessages == secondMessages);
   CHECK(firstMessages[0].find("unknown call target: unknown_alpha") != std::string::npos);
   CHECK(firstMessages[1].find("unknown call target: unknown_beta") != std::string::npos);
+}
+
+TEST_CASE("semantic validation plan captures prepass inputs deterministically") {
+  primec::Program program;
+  program.sourceImports = {"/std/collections/*"};
+  program.imports = {"/std/math/*", "/std/collections/*"};
+
+  primec::Definition helper;
+  helper.fullPath = "/helper";
+  program.definitions.push_back(helper);
+
+  primec::Definition main;
+  main.fullPath = "/main";
+  program.definitions.push_back(main);
+
+  primec::Execution exec;
+  exec.fullPath = "/run";
+  program.executions.push_back(exec);
+
+  const primec::semantics::SemanticValidationPlan plan =
+      primec::semantics::buildSemanticValidationPlan(program, "/main");
+
+  CHECK(declarationPaths(plan.definitionPrepass) ==
+        std::vector<std::string>{"/helper", "/main"});
+  CHECK(plan.entry.fullPath == "/main");
+  CHECK(plan.entry.declared);
+  CHECK(plan.entry.stableOrderOffset == 1);
+  CHECK(plan.entry.stableIndex == 1);
+
+  CHECK(plan.imports.hasSourceImports);
+  CHECK(plan.imports.sourceImportPaths ==
+        std::vector<std::string>{"/std/collections/*"});
+  CHECK(plan.imports.programImportPaths ==
+        std::vector<std::string>{"/std/math/*", "/std/collections/*"});
+  CHECK(plan.imports.directImportPaths ==
+        std::vector<std::string>{"/std/collections/*"});
+  CHECK(plan.imports.transitiveImportPaths ==
+        std::vector<std::string>{"/std/math/*"});
+
+  CHECK(plan.builtinCapabilityTables.effectsTransformName == "effects");
+  CHECK(plan.builtinCapabilityTables.capabilitiesTransformName == "capabilities");
+  CHECK(plan.builtinCapabilityTables.allowIdentifierNamedEffects);
+  CHECK(plan.graphLocalAutoInputs.entryPath == "/main");
+  CHECK(plan.graphLocalAutoInputs.definitionCount == 2);
+  CHECK(plan.graphLocalAutoInputs.executionCount == 1);
 }
 
 TEST_SUITE_END();

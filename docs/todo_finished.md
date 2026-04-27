@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4212: Introduce semantic validation plan prepass. Completed:
+  `SemanticValidationPlan` now owns the semantic prepass snapshot, entry
+  metadata, import summaries, builtin capability table metadata, and
+  graph-local-auto input counts before validator execution. Serial definition
+  validation, entry validation, import alias building, and semantic-product
+  seed publication now consume the plan-owned data, and focused tests cover
+  plan contents plus success/failure diagnostic parity with semantic-product
+  publication requested. Local validation is deferred per the lite workflow.
 - ✓ TODO-4211: Lock builtin SoA ref_ref semantic targets. Completed:
   `tests/unit/test_semantics_type_resolution_graph_snapshots.cpp` now
   verifies that builtin `soa_vector<T>` local and helper-return receivers

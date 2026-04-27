@@ -1321,6 +1321,12 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "const std::size_t stableIndex = resolveStableIndex(stableOrdinal);") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
+            "validationPlan_.definitionPrepass.declarationsInStableOrder.size();") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
+            "partitionDefinitionsDeterministic(validationPlan_.definitionPrepass, partitionCount);") !=
+        std::string::npos);
+  CHECK(semanticsPassesDefinitionsSource.find(
             "return validateDefinitionsForStableRange(0, declarationCount);") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find("auto buildAllStableIndices = [&]()") ==

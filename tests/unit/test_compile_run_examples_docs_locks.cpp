@@ -780,13 +780,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4212: Introduce semantic validation plan prepass") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4213: Route definition workers through the shared validation plan") !=
         std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4222: Route execution validation through the shared plan") !=
+        std::string::npos);
   CHECK(todo.find("### Priority Lanes (Current)\n\n"
-                  "- Semantic phase contract hardening: TODO-4212 -> TODO-4213 -> TODO-4222") !=
+                  "- Semantic phase contract hardening: TODO-4213 -> TODO-4222") !=
         std::string::npos);
   CHECK(todo.find("  -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235") !=
         std::string::npos);
@@ -797,10 +797,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4212: Introduce semantic validation plan prepass") !=
+                  "- TODO-4213: Route definition workers through the shared validation plan") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4212: Introduce semantic validation plan prepass",
       "TODO-4213: Route definition workers through the shared validation plan",
       "TODO-4222: Route execution validation through the shared plan",
       "TODO-4226: Add a structured semantic diagnostic/result sink",
@@ -894,9 +893,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- TODO-4152") == std::string::npos);
   CHECK(todo.find("- TODO-4151") == std::string::npos);
   CHECK(todo.find("- TODO-4147") == std::string::npos);
-  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | TODO-4212, TODO-4213, TODO-4222, TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |") !=
+  CHECK(todo.find("| Semantic ownership boundary and graph/local-auto authority | TODO-4213, TODO-4222, TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | TODO-4212, TODO-4222, TODO-4226, TODO-4220, TODO-4234 |") !=
+  CHECK(todo.find("| Compile-pipeline stage and publication-boundary contracts | TODO-4222, TODO-4226, TODO-4220, TODO-4234 |") !=
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |") !=
         std::string::npos);
@@ -930,7 +929,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| AST transform hook conformance | TODO-4238, TODO-4239 |") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-pipeline stage handoff conformance | TODO-4212, TODO-4222, TODO-4226, TODO-4220, TODO-4234, TODO-4240 |") !=
+  CHECK(todo.find("| Compile-pipeline stage handoff conformance | TODO-4222, TODO-4226, TODO-4220, TODO-4234, TODO-4240 |") !=
         std::string::npos);
   CHECK(todo.find("| Architecture contract probe migration | TODO-4221, TODO-4235, TODO-4242 |") !=
         std::string::npos);
@@ -1010,6 +1009,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("✓ TODO-4106: Re-enable or prune skipped collection compatibility suites.") !=
         std::string::npos);
   CHECK(todoFinished.find("✓ TODO-4197: Lock skipped doctest debt policy.") !=
+        std::string::npos);
+  CHECK(todoFinished.find("✓ TODO-4212: Introduce semantic validation plan prepass.") !=
         std::string::npos);
 
   CHECK(vmMath.find("TEST_CASE(\"runs vm with qualified math names\")") != std::string::npos);

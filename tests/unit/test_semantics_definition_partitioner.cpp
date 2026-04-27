@@ -296,6 +296,87 @@ main() {
         primec::formatSemanticProgram(benchmarkSemanticProgram));
 }
 
+TEST_CASE("semantic validation plan keeps diagnostics stable with publication requested") {
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::Semantics semantics;
+
+  const std::string successSource = R"(
+[return<i32>]
+main() {
+  return(1i32)
+}
+)";
+  primec::Program successWithoutProduct = parseProgram(successSource);
+  primec::Program successWithProduct = parseProgram(successSource);
+  primec::SemanticDiagnosticInfo successWithoutDiagnostics;
+  primec::SemanticDiagnosticInfo successWithDiagnostics;
+  primec::SemanticProgram successSemanticProgram;
+  std::string successWithoutError;
+  std::string successWithError;
+
+  const bool successWithoutOk = semantics.validate(successWithoutProduct,
+                                                   "/main",
+                                                   successWithoutError,
+                                                   defaults,
+                                                   defaults,
+                                                   {},
+                                                   &successWithoutDiagnostics,
+                                                   true);
+  const bool successWithOk = semantics.validate(successWithProduct,
+                                                "/main",
+                                                successWithError,
+                                                defaults,
+                                                defaults,
+                                                {},
+                                                &successWithDiagnostics,
+                                                true,
+                                                &successSemanticProgram);
+
+  CHECK(successWithoutOk);
+  CHECK(successWithOk);
+  CHECK(successWithoutError == successWithError);
+  CHECK(diagnosticMessages(successWithoutDiagnostics) ==
+        diagnosticMessages(successWithDiagnostics));
+
+  const std::string failureSource = R"(
+[return<void>]
+main() {
+  missing_call()
+}
+)";
+  primec::Program failureWithoutProduct = parseProgram(failureSource);
+  primec::Program failureWithProduct = parseProgram(failureSource);
+  primec::SemanticDiagnosticInfo failureWithoutDiagnostics;
+  primec::SemanticDiagnosticInfo failureWithDiagnostics;
+  primec::SemanticProgram failureSemanticProgram;
+  std::string failureWithoutError;
+  std::string failureWithError;
+
+  const bool failureWithoutOk = semantics.validate(failureWithoutProduct,
+                                                   "/main",
+                                                   failureWithoutError,
+                                                   defaults,
+                                                   defaults,
+                                                   {},
+                                                   &failureWithoutDiagnostics,
+                                                   true);
+  const bool failureWithOk = semantics.validate(failureWithProduct,
+                                                "/main",
+                                                failureWithError,
+                                                defaults,
+                                                defaults,
+                                                {},
+                                                &failureWithDiagnostics,
+                                                true,
+                                                &failureSemanticProgram);
+
+  CHECK_FALSE(failureWithoutOk);
+  CHECK_FALSE(failureWithOk);
+  CHECK(failureWithoutError == failureWithError);
+  CHECK(diagnosticMessages(failureWithoutDiagnostics) ==
+        diagnosticMessages(failureWithDiagnostics));
+}
+
 TEST_CASE("two-chunk definition validation flag preserves diagnostic ordering parity") {
   const std::string source = R"(
 [return<void>]

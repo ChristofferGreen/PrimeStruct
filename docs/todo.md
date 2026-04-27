@@ -56,11 +56,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4212: Introduce semantic validation plan prepass
+- TODO-4213: Route definition workers through the shared validation plan
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4213: Route definition workers through the shared validation plan
 - TODO-4222: Route execution validation through the shared plan
 - TODO-4226: Add a structured semantic diagnostic/result sink
 - TODO-4214: Introduce deterministic worker result bundles
@@ -70,10 +69,11 @@ Task template:
 - TODO-4216: Split semantic rewrites into an explicit pass manifest
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
+- TODO-4229: Cut over SoA compatibility decisions to surface adapters
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4212 -> TODO-4213 -> TODO-4222
+- Semantic phase contract hardening: TODO-4213 -> TODO-4222
   -> TODO-4226 -> TODO-4214 -> TODO-4227 -> TODO-4215 -> TODO-4228
   -> TODO-4216 -> TODO-4217 -> TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
@@ -87,7 +87,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4212: Introduce semantic validation plan prepass
 - TODO-4213: Route definition workers through the shared validation plan
 - TODO-4222: Route execution validation through the shared plan
 - TODO-4226: Add a structured semantic diagnostic/result sink
@@ -132,8 +131,8 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4212, TODO-4213, TODO-4222, TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
-| Compile-pipeline stage and publication-boundary contracts | TODO-4212, TODO-4222, TODO-4226, TODO-4220, TODO-4234 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4213, TODO-4222, TODO-4214, TODO-4227, TODO-4218, TODO-4231, TODO-4236, TODO-4237, TODO-4238, TODO-4239 |
+| Compile-pipeline stage and publication-boundary contracts | TODO-4222, TODO-4226, TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4217, TODO-4224, TODO-4229, TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
@@ -159,7 +158,7 @@ Task template:
 | Semantic-product-authority conformance | TODO-4215, TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
-| Compile-pipeline stage handoff conformance | TODO-4212, TODO-4222, TODO-4226, TODO-4220, TODO-4234, TODO-4240 |
+| Compile-pipeline stage handoff conformance | TODO-4222, TODO-4226, TODO-4220, TODO-4234, TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4214, TODO-4227, TODO-4215, TODO-4240 |
 | Lowerer/source-composition contract coverage | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4217, TODO-4224, TODO-4245 |
@@ -257,30 +256,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4212: Introduce semantic validation plan prepass
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Add a `SemanticValidationPlan` (or equivalent internal prepass
-    artifact) that captures deterministic declaration order, entry metadata,
-    import/alias summaries, builtin capability tables, and graph-local-auto
-    inputs before validator execution. Route the serial validation path through
-    that artifact without changing emitted diagnostics, semantic-product dumps,
-    or backend behavior.
-  - acceptance:
-    - Serial semantics validation consumes the plan for at least declaration
-      ordering, entry metadata, and import/alias summaries instead of deriving
-      those independently in the hot path.
-    - Focused tests prove current success and failure diagnostics stay
-      byte-stable with and without semantic-product publication.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once the immutable prepass artifact owns the listed inputs
-    and one serial validation slice consumes it; do not migrate worker
-    validation or every validator map in this leaf.
-  - notes: This is the first unblocked leaf in the semantic boundary chain and
-    should keep external behavior unchanged while making the phase handoff
-    explicit.
 
 - [ ] TODO-4213: Route definition workers through the shared validation plan
   - owner: ai
