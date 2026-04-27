@@ -81,9 +81,14 @@ bool SemanticsValidator::bareMapHelperOperandIndices(
 }
 
 std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view helperName) const {
+  auto hasVisibleMapHelperFamily = [&](const std::string &path) {
+    return hasDeclaredDefinitionPath(path) ||
+           hasImportedDefinitionPath(path) ||
+           hasDefinitionFamilyPath(path);
+  };
   const std::string canonical = canonicalCollectionHelperPath(
       StdlibSurfaceId::CollectionsMapHelpers, helperName);
-  if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+  if (hasVisibleMapHelperFamily(canonical)) {
     return canonical;
   }
   if (isPublishedMapBaseHelperName(helperName) ||
@@ -91,7 +96,7 @@ std::string SemanticsValidator::preferredBareMapHelperTarget(std::string_view he
     return canonical;
   }
   const std::string alias = "/map/" + std::string(helperName);
-  if (hasDeclaredDefinitionPath(alias)) {
+  if (hasVisibleMapHelperFamily(alias)) {
     return alias;
   }
   return canonical;

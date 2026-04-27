@@ -77,9 +77,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     }
     const std::string templatedPrefix = std::string(path) + "<";
     const std::string specializedPrefix = std::string(path) + "__t";
+    const std::string overloadPrefix = std::string(path) + "__ov";
     for (const auto &def : program_.definitions) {
       if (def.fullPath == path || def.fullPath.rfind(templatedPrefix, 0) == 0 ||
-          def.fullPath.rfind(specializedPrefix, 0) == 0) {
+          def.fullPath.rfind(specializedPrefix, 0) == 0 ||
+          def.fullPath.rfind(overloadPrefix, 0) == 0) {
         return true;
       }
     }
@@ -1547,7 +1549,7 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       isBuiltinOut = true;
       return true;
     }
-    isBuiltinOut = defMap_.count(resolvedOut) == 0 &&
+    isBuiltinOut = !hasDefinitionFamilyPath(resolvedOut) &&
                    !hasImportedDefinitionPath(resolvedOut);
     return true;
   };
@@ -1584,7 +1586,8 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   auto setPreferredMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
     const std::string preferredMapHelper = preferredMapMethodTarget(receiverExpr, helperName);
-    if (hasDeclaredDefinitionPath(preferredMapHelper) || defMap_.count(preferredMapHelper) > 0) {
+    if (hasDeclaredDefinitionPath(preferredMapHelper) ||
+        hasDefinitionFamilyPath(preferredMapHelper)) {
       resolvedOut = preferredMapHelper;
       isBuiltinOut = false;
       return true;

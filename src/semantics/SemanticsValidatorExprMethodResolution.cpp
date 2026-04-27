@@ -200,7 +200,7 @@ bool SemanticsValidator::validateExprMethodCallTarget(
         vectorMethodTarget = "/std/collections/vector/" + expr.name;
       }
       if (hasImportedDefinitionPath(vectorMethodTarget) ||
-          defMap_.count(vectorMethodTarget) > 0) {
+          hasDefinitionFamilyPath(vectorMethodTarget)) {
         resolved = vectorMethodTarget;
         isBuiltinMethod = false;
       } else if (!resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(),
