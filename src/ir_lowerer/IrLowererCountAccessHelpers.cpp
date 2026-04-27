@@ -547,6 +547,26 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;
   }
+  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
+      isDynamicVectorCountTargetFn != nullptr &&
+      isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
+  if (expr.isMethodCall && expr.name == "field_capacity" && expr.args.size() == 1 &&
+      isDynamicVectorCapacityTargetFn != nullptr &&
+      isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
+    if (!emitExpr(expr.args.front(), localsIn)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    return CountAccessCallEmitResult::Emitted;
+  }
   if (isExplicitPublishedVectorCountCall(expr) &&
       expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Name &&
