@@ -380,14 +380,16 @@
           }
           const std::string rawPath = resolveTailDispatchDirectHelperPath(callExpr);
           if ((helperName == "count" || helperName == "contains" ||
-               helperName == "tryAt") &&
+               helperName == "tryAt" || helperName == "at" ||
+               helperName == "at_unsafe") &&
               rawPath.rfind("/map/", 0) == 0 &&
               normalizeCollectionHelperPath(rawPath) ==
                   normalizeCollectionHelperPath(resolveExprPath(callExpr))) {
             return false;
           }
           if ((helperName == "count" || helperName == "contains" ||
-               helperName == "tryAt" || helperName == "insert" ||
+               helperName == "tryAt" || helperName == "at" ||
+               helperName == "at_unsafe" || helperName == "insert" ||
                helperName == "insert_ref") &&
               resolveDefinitionCall(callExpr) != nullptr &&
               !isCanonicalStdMapHelperPath) {
