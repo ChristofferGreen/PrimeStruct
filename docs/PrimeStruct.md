@@ -2712,11 +2712,14 @@ re-defining it piecemeal.
   `/std/collections/{count,get,ref,reserve,push}`, experimental helper wrapper,
   and conversion-helper spellings. Vector/map and SoA constructor
   compatibility is already metadata-backed by the constructor surface adapters.
-  Remaining explicit removed-helper diagnostics, import spellings, wildcard
-  expansion, user-defined helper precedence, field-view field-name lowering,
-  and lowerer raw-path dispatch checks are syntax/provenance-owned or
-  lowering-owned. The remaining gfx compatibility branch is queued under
-  `TODO-4230`.
+  Gfx Buffer helper compatibility is routed through
+  `StdlibSurfaceRegistry::GfxBufferHelpers` for canonical `/std/gfx/Buffer/*`,
+  legacy `/std/gfx/experimental/Buffer/*`, and rooted `/Buffer/*` helper
+  spellings before semantic gfx-buffer rewrites and GPU wrapper diagnostics
+  choose canonical builtin targets. Remaining explicit removed-helper
+  diagnostics, import spellings, wildcard expansion, user-defined helper
+  precedence, field-view field-name lowering, gfx constructor sugar, and lowerer
+  raw-path dispatch checks are syntax/provenance-owned or lowering-owned.
 - **Internal implementation seams:** `/std/collections/experimental_vector/*`
   and `/std/collections/experimental_map/*` remain implementation-owned
   modules behind the canonical wrappers; direct imports should stay limited to

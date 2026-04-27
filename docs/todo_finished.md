@@ -6,6 +6,19 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4230: Cut over gfx compatibility decisions to surface adapters.
+  Completed: gfx Buffer helper compatibility decisions now route through
+  `StdlibSurfaceRegistry::GfxBufferHelpers` instead of bespoke semantic
+  canonical/experimental path-pair checks. The adapter now records canonical
+  `/std/gfx/Buffer/*`, legacy `/std/gfx/experimental/Buffer/*`, and rooted
+  `/Buffer/*` helper spellings for `count`, `empty`, `is_valid`, `readback`,
+  `load`, `store`, `allocate`, and `upload`. Semantic gfx-buffer rewrites plus
+  GPU wrapper diagnostics canonicalize helper paths through the registry before
+  choosing builtin targets or compute-only diagnostics. Remaining gfx
+  constructor sugar and lowerer raw dispatch checks are documented as
+  syntax/provenance-owned or lowering-owned. Focused registry and source-lock
+  coverage pins the adapter path. Local validation is deferred per the lite
+  workflow.
 - ✓ TODO-4229: Cut over SoA compatibility decisions to surface adapters.
   Completed: SoA helper compatibility decisions now route through
   `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers` instead of the

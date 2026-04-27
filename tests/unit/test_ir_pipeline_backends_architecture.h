@@ -74,8 +74,8 @@ TEST_CASE("design doc records vector map bridge contract") {
   CHECK(design.find("SoA helper compatibility is routed\n"
                     "  through `StdlibSurfaceRegistry::CollectionsSoaVectorHelpers`") !=
         std::string::npos);
-  CHECK(design.find("The remaining gfx compatibility branch is queued under\n"
-                    "  `TODO-4230`") !=
+  CHECK(design.find("Gfx Buffer helper compatibility is routed through\n"
+                    "  `StdlibSurfaceRegistry::GfxBufferHelpers`") !=
         std::string::npos);
   CHECK(design.find("Out of scope for this bridge lane:** `array<T>` core ownership,") !=
         std::string::npos);
@@ -265,7 +265,10 @@ TEST_CASE("stdlib surface registry stays source locked") {
   CHECK(source.find("\"gfx.buffer_helpers\"") != std::string::npos);
   CHECK(source.find("\"/std/gfx/Buffer\"") != std::string::npos);
   CHECK(source.find("\"/Buffer\"") != std::string::npos);
+  CHECK(source.find("\"/std/gfx/experimental/Buffer\"") != std::string::npos);
+  CHECK(source.find("\"/std/gfx/experimental/Buffer/count\"") != std::string::npos);
   CHECK(source.find("\"/std/gfx/experimental/Buffer/upload\"") != std::string::npos);
+  CHECK(source.find("\"/std/gfx/Buffer/is_valid\"") != std::string::npos);
   CHECK(source.find("\"/std/gpu/buffer_load\"") != std::string::npos);
 
   CHECK(source.find("StdlibSurfaceId::GfxErrorHelpers") != std::string::npos);
@@ -356,6 +359,21 @@ TEST_CASE("collection helper surface registry resolves preferred compatibility s
             primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
             "/not_soa/count",
             "/std/collections/experimental_soa_vector/") == "");
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::GfxBufferHelpers,
+            "/std/gfx/experimental/Buffer/count") ==
+        "/std/gfx/Buffer/count");
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::GfxBufferHelpers,
+            "/std/gfx/experimental/Buffer/is_valid") ==
+        "/std/gfx/Buffer/is_valid");
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::GfxBufferHelpers,
+            "/Buffer/upload") ==
+        "/std/gfx/Buffer/upload");
+  CHECK(primec::stdlibSurfaceCanonicalHelperPath(
+            primec::StdlibSurfaceId::GfxBufferHelpers,
+            "/not_gfx/upload") == "");
 }
 
 TEST_CASE("map insert semantic rewrite uses stdlib surface adapter") {
@@ -377,6 +395,32 @@ TEST_CASE("map insert semantic rewrite uses stdlib surface adapter") {
   CHECK(source.find("kBuiltinMapInsertAliasPath") == std::string::npos);
   CHECK(source.find("kBuiltinExperimentalMapInsertPath") == std::string::npos);
   CHECK(source.find("kBuiltinMapInsertRefWrapperPath") == std::string::npos);
+}
+
+TEST_CASE("gfx buffer semantic rewrite uses stdlib surface adapter") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path sourcePath =
+      cwd / "src" / "semantics" / "SemanticsValidateExperimentalGfxConstructors.cpp";
+  if (!std::filesystem::exists(sourcePath)) {
+    sourcePath = cwd.parent_path() / "src" / "semantics" /
+                 "SemanticsValidateExperimentalGfxConstructors.cpp";
+  }
+  REQUIRE(std::filesystem::exists(sourcePath));
+
+  const std::string source = readTextFile(sourcePath);
+  CHECK(source.find("#include \"primec/StdlibSurfaceRegistry.h\"") != std::string::npos);
+  CHECK(source.find("canonicalGfxBufferHelperPath") != std::string::npos);
+  CHECK(source.find("findStdlibSurfaceMetadataByResolvedPath(path)") !=
+        std::string::npos);
+  CHECK(source.find("StdlibSurfaceId::GfxBufferHelpers") != std::string::npos);
+  CHECK(source.find("expr.name == \"/std/gfx/Buffer/allocate\" ||") ==
+        std::string::npos);
+  CHECK(source.find("expr.name == \"/std/gfx/Buffer/load\" ||") ==
+        std::string::npos);
+  CHECK(source.find("directReceiverPath == \"/std/gfx/Buffer\"") ==
+        std::string::npos);
+  CHECK(source.find("receiverPath == \"/std/gfx/experimental/Buffer\"") ==
+        std::string::npos);
 }
 
 TEST_CASE("cmake splits primec library into subsystem targets") {

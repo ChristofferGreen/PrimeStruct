@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <string>
 #include <string_view>
@@ -20,13 +21,15 @@ bool isNumericOrBoolReturnKind(ReturnKind kind) {
 }
 
 bool isStdlibBufferLoadWrapperDefinitionPath(std::string_view path) {
-  return path.rfind("/std/gfx/Buffer/load", 0) == 0 ||
-         path.rfind("/std/gfx/experimental/Buffer/load", 0) == 0;
+  return primec::stdlibSurfaceCanonicalHelperPath(
+             primec::StdlibSurfaceId::GfxBufferHelpers, path) ==
+         "/std/gfx/Buffer/load";
 }
 
 bool isStdlibBufferStoreWrapperDefinitionPath(std::string_view path) {
-  return path.rfind("/std/gfx/Buffer/store", 0) == 0 ||
-         path.rfind("/std/gfx/experimental/Buffer/store", 0) == 0;
+  return primec::stdlibSurfaceCanonicalHelperPath(
+             primec::StdlibSurfaceId::GfxBufferHelpers, path) ==
+         "/std/gfx/Buffer/store";
 }
 
 } // namespace

@@ -486,6 +486,9 @@ constexpr auto CollectionsContainerErrorLoweringSpellings = std::to_array<std::s
 });
 
 constexpr auto GfxBufferHelperMembers = std::to_array<std::string_view>({
+    "count",
+    "empty",
+    "is_valid",
     "readback",
     "load",
     "store",
@@ -500,6 +503,10 @@ constexpr auto GfxBufferImportAliases = std::to_array<std::string_view>({
 });
 
 constexpr auto GfxBufferCompatibilitySpellings = std::to_array<std::string_view>({
+    "/std/gfx/experimental/Buffer",
+    "/std/gfx/experimental/Buffer/count",
+    "/std/gfx/experimental/Buffer/empty",
+    "/std/gfx/experimental/Buffer/is_valid",
     "/std/gfx/experimental/Buffer/readback",
     "/std/gfx/experimental/Buffer/load",
     "/std/gfx/experimental/Buffer/store",
@@ -508,6 +515,9 @@ constexpr auto GfxBufferCompatibilitySpellings = std::to_array<std::string_view>
 });
 
 constexpr auto GfxBufferLoweringSpellings = std::to_array<std::string_view>({
+    "/std/gfx/Buffer/count",
+    "/std/gfx/Buffer/empty",
+    "/std/gfx/Buffer/is_valid",
     "/std/gfx/Buffer/readback",
     "/std/gfx/Buffer/load",
     "/std/gfx/Buffer/store",

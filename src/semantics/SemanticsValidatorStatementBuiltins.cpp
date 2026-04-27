@@ -1,12 +1,14 @@
 #include "SemanticsValidator.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <string_view>
 
 namespace {
 
 bool isStdlibBufferStoreWrapperDefinitionPath(std::string_view path) {
-  return path.rfind("/std/gfx/Buffer/store", 0) == 0 ||
-         path.rfind("/std/gfx/experimental/Buffer/store", 0) == 0;
+  return primec::stdlibSurfaceCanonicalHelperPath(
+             primec::StdlibSurfaceId::GfxBufferHelpers, path) ==
+         "/std/gfx/Buffer/store";
 }
 
 } // namespace

@@ -2121,10 +2121,22 @@ main() {
         std::string::npos);
   CHECK(helperSource.find("StdlibSurfaceId::CollectionsContainerErrorHelpers") !=
         std::string::npos);
+  CHECK(helperSource.find("StdlibSurfaceId::GfxBufferHelpers") !=
+        std::string::npos);
   CHECK(helperSource.find("StdlibSurfaceId::GfxErrorHelpers") !=
         std::string::npos);
   CHECK(helperSource.find("appendSurfaceBasePaths(") != std::string::npos);
   CHECK(helperSource.find("appendSurfaceExactHelperFallbacks(") !=
+        std::string::npos);
+  CHECK(helperSource.find("const std::string canonicalBase = \"/std/gfx/Buffer\"") ==
+        std::string::npos);
+  CHECK(helperSource.find("const std::string experimentalBase = \"/std/gfx/experimental/Buffer\"") ==
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find("StdlibSurfaceId::GfxBufferHelpers") !=
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find("\"/std/gfx/Buffer/\" + helperName") ==
+        std::string::npos);
+  CHECK(exprMethodTargetSource.find("\"/std/gfx/experimental/Buffer/\" + helperName") ==
         std::string::npos);
 
   CHECK(buildCallResolutionSource.find("auto preferredFileErrorHelperTarget =") ==

@@ -1,4 +1,5 @@
 #include "SemanticsValidator.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 namespace primec::semantics {
 
@@ -87,12 +88,12 @@ bool SemanticsValidator::validateExprPostAccessPrechecks(
     resolvedMethod = true;
   }
 
+  const std::string canonicalGfxBufferHelper =
+      stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::GfxBufferHelpers, resolved);
   const bool isStdlibBufferLoadWrapperCall =
-      resolved.rfind("/std/gfx/Buffer/load", 0) == 0 ||
-      resolved.rfind("/std/gfx/experimental/Buffer/load", 0) == 0;
+      canonicalGfxBufferHelper == "/std/gfx/Buffer/load";
   const bool isStdlibBufferStoreWrapperCall =
-      resolved.rfind("/std/gfx/Buffer/store", 0) == 0 ||
-      resolved.rfind("/std/gfx/experimental/Buffer/store", 0) == 0;
+      canonicalGfxBufferHelper == "/std/gfx/Buffer/store";
   if (!currentValidationState_.context.definitionIsCompute &&
       (defMap_.find(resolved) != defMap_.end() ||
        hasDeclaredDefinitionPath(resolved) ||

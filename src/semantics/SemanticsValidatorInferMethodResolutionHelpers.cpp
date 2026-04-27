@@ -488,22 +488,37 @@ std::string SemanticsValidator::preferredBufferMethodTargetForCall(
     return resolveMethodStructTypePath(normalizeBindingTypeName(candidateTypeText),
                                        candidate.namespacePrefix);
   };
-  const std::string canonicalBase = "/std/gfx/Buffer";
-  const std::string experimentalBase = "/std/gfx/experimental/Buffer";
+  const StdlibSurfaceMetadata *metadata =
+      findStdlibSurfaceMetadata(StdlibSurfaceId::GfxBufferHelpers);
+  if (metadata == nullptr) {
+    return {};
+  }
+  auto isGfxBufferSurfaceBasePath = [&](std::string_view path) {
+    const StdlibSurfaceMetadata *pathMetadata =
+        findStdlibSurfaceMetadataByResolvedPath(path);
+    return pathMetadata != nullptr && pathMetadata->id == metadata->id &&
+           isSurfaceBasePath(*metadata, path);
+  };
   const std::string resolvedStructPath = resolveBufferStructPath(receiverExpr);
-  if (resolvedStructPath == canonicalBase) {
-    return helperForBasePath(canonicalBase);
+  if (isGfxBufferSurfaceBasePath(resolvedStructPath)) {
+    return helperForBasePath(resolvedStructPath);
   }
-  if (resolvedStructPath == experimentalBase) {
-    return helperForBasePath(experimentalBase);
+  const std::string canonicalHelperPath = helperForBasePath(metadata->canonicalPath);
+  std::string compatibilityHelperPath;
+  for (const std::string_view spelling : metadata->compatibilitySpellings) {
+    if (!isSurfaceBasePath(*metadata, spelling)) {
+      continue;
+    }
+    if (std::string candidate = helperForBasePath(spelling); !candidate.empty()) {
+      compatibilityHelperPath = candidate;
+      break;
+    }
   }
-  const bool hasCanonical = defMap_.count(canonicalBase + "/" + helperName) > 0;
-  const bool hasExperimental = defMap_.count(experimentalBase + "/" + helperName) > 0;
-  if (hasCanonical && !hasExperimental) {
-    return helperForBasePath(canonicalBase);
+  if (!canonicalHelperPath.empty() && compatibilityHelperPath.empty()) {
+    return canonicalHelperPath;
   }
-  if (!hasCanonical && hasExperimental) {
-    return helperForBasePath(experimentalBase);
+  if (canonicalHelperPath.empty() && !compatibilityHelperPath.empty()) {
+    return compatibilityHelperPath;
   }
   return {};
 }

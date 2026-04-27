@@ -2,6 +2,7 @@
 
 #include "SemanticsHelpers.h"
 #include "SemanticsValidateExperimentalGfxConstructorsInternal.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <cstddef>
 #include <optional>
@@ -21,6 +22,17 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
   };
   auto hasImportedDefinitionPath = [&](const std::string &path) {
     return hasExperimentalGfxImportedDefinitionPath(program, path);
+  };
+  auto canonicalGfxBufferHelperPath = [](const std::string &path) {
+    return primec::stdlibSurfaceCanonicalHelperPath(
+        primec::StdlibSurfaceId::GfxBufferHelpers,
+        path);
+  };
+  auto isGfxBufferSurfacePath = [](const std::string &path) {
+    const primec::StdlibSurfaceMetadata *metadata =
+        primec::findStdlibSurfaceMetadataByResolvedPath(path);
+    return metadata != nullptr &&
+           metadata->id == primec::StdlibSurfaceId::GfxBufferHelpers;
   };
 
   enum class BufferBindingInitKind {
@@ -406,27 +418,28 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr.templateArgs.clear();
         return true;
       }
-      if ((expr.name == "/std/gfx/Buffer/allocate" || expr.name == "/std/gfx/experimental/Buffer/allocate") &&
+      const std::string canonicalBufferHelperPath = canonicalGfxBufferHelperPath(expr.name);
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/allocate" &&
           hasImportedDefinitionPath(expr.name)) {
         expr.name = "buffer";
         expr.namespacePrefix.clear();
         return true;
       }
-      if ((expr.name == "/std/gfx/Buffer/upload" || expr.name == "/std/gfx/experimental/Buffer/upload") &&
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/upload" &&
           hasImportedDefinitionPath(expr.name)) {
         expr.name = "upload";
         expr.namespacePrefix.clear();
         expr.templateArgs.clear();
         return true;
       }
-      if ((expr.name == "/std/gfx/Buffer/readback" || expr.name == "/std/gfx/experimental/Buffer/readback") &&
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/readback" &&
           hasImportedDefinitionPath(expr.name)) {
         expr.name = "readback";
         expr.namespacePrefix.clear();
         expr.templateArgs.clear();
         return true;
       }
-      if ((expr.name == "/std/gfx/Buffer/load" || expr.name == "/std/gfx/experimental/Buffer/load") &&
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/load" &&
           hasImportedDefinitionPath(expr.name)) {
         expr.name = "buffer_load";
         expr.namespacePrefix.clear();
@@ -434,7 +447,7 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr.isMethodCall = false;
         return true;
       }
-      if ((expr.name == "/std/gfx/Buffer/store" || expr.name == "/std/gfx/experimental/Buffer/store") &&
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/store" &&
           hasImportedDefinitionPath(expr.name)) {
         expr.name = "buffer_store";
         expr.namespacePrefix.clear();
@@ -444,13 +457,12 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       }
       const std::string directReceiverPath =
           expr.args.empty() ? std::string() : resolveBufferStructPath(expr.args.front(), namespacePrefix, locals);
-      const bool isDirectCanonicalBuffer = directReceiverPath == "/std/gfx/Buffer";
-      const bool isDirectExperimentalBuffer = directReceiverPath == "/std/gfx/experimental/Buffer";
+      const bool isDirectBufferSurface = isGfxBufferSurfacePath(directReceiverPath);
       const bool isDirectKnownBuffer =
           !expr.args.empty() && isKnownBufferReceiver(expr.args.front(), locals);
-      if ((expr.name == "/std/gfx/Buffer/count" || expr.name == "/std/gfx/experimental/Buffer/count") &&
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/count" &&
           hasImportedDefinitionPath(expr.name) && expr.args.size() == 1 &&
-          (isDirectCanonicalBuffer || isDirectExperimentalBuffer || isDirectKnownBuffer)) {
+          (isDirectBufferSurface || isDirectKnownBuffer)) {
         if (std::optional<Expr> elementCountExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
           expr = *elementCountExpr;
           return true;
@@ -461,9 +473,9 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr.isMethodCall = false;
         return true;
       }
-      if ((expr.name == "/std/gfx/Buffer/empty" || expr.name == "/std/gfx/experimental/Buffer/empty") &&
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/empty" &&
           hasImportedDefinitionPath(expr.name) && expr.args.size() == 1 &&
-          (isDirectCanonicalBuffer || isDirectExperimentalBuffer || isDirectKnownBuffer)) {
+          (isDirectBufferSurface || isDirectKnownBuffer)) {
         if (std::optional<Expr> elementCountExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
           expr = makeLessThanExpr(std::move(*elementCountExpr), makeI32Literal(1));
           return true;
@@ -471,9 +483,9 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
         expr = makeBufferCountComparison(std::move(expr.args.front()), 0, 1);
         return true;
       }
-      if ((expr.name == "/std/gfx/Buffer/is_valid" || expr.name == "/std/gfx/experimental/Buffer/is_valid") &&
+      if (canonicalBufferHelperPath == "/std/gfx/Buffer/is_valid" &&
           hasImportedDefinitionPath(expr.name) && expr.args.size() == 1 &&
-          (isDirectCanonicalBuffer || isDirectExperimentalBuffer || isDirectKnownBuffer)) {
+          (isDirectBufferSurface || isDirectKnownBuffer)) {
         if (std::optional<Expr> tokenExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "token")) {
           expr = makeLessThanExpr(makeI32Literal(0), std::move(*tokenExpr));
           return true;
@@ -491,31 +503,30 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       }
       if (!expr.args.empty()) {
         const std::string receiverPath = resolveBufferStructPath(expr.args.front(), namespacePrefix, locals);
-        const bool isCanonicalBuffer = receiverPath == "/std/gfx/Buffer";
-        const bool isExperimentalBuffer = receiverPath == "/std/gfx/experimental/Buffer";
+        const bool isBufferSurface = isGfxBufferSurfacePath(receiverPath);
         const bool isKnownBuffer = isKnownBufferReceiver(expr.args.front(), locals);
-        if ((isCanonicalBuffer || isExperimentalBuffer) && expr.name == "readback" && expr.args.size() == 1) {
+        if (isBufferSurface && expr.name == "readback" && expr.args.size() == 1) {
             expr.isMethodCall = false;
             expr.name = "readback";
             expr.namespacePrefix.clear();
             expr.templateArgs.clear();
             return true;
         }
-        if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "load" && expr.args.size() == 2) {
+        if ((isBufferSurface || isKnownBuffer) && expr.name == "load" && expr.args.size() == 2) {
           expr.isMethodCall = false;
           expr.name = "buffer_load";
           expr.namespacePrefix.clear();
           expr.templateArgs.clear();
           return true;
         }
-        if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "store" && expr.args.size() == 3) {
+        if ((isBufferSurface || isKnownBuffer) && expr.name == "store" && expr.args.size() == 3) {
           expr.isMethodCall = false;
           expr.name = "buffer_store";
           expr.namespacePrefix.clear();
           expr.templateArgs.clear();
           return true;
         }
-        if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "count" && expr.args.size() == 1) {
+        if ((isBufferSurface || isKnownBuffer) && expr.name == "count" && expr.args.size() == 1) {
           if (std::optional<Expr> elementCountExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
             expr = *elementCountExpr;
             return true;
@@ -526,7 +537,7 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
           expr.templateArgs.clear();
           return true;
         }
-        if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "empty" && expr.args.size() == 1) {
+        if ((isBufferSurface || isKnownBuffer) && expr.name == "empty" && expr.args.size() == 1) {
           if (std::optional<Expr> elementCountExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "elementCount")) {
             expr = makeLessThanExpr(std::move(*elementCountExpr), makeI32Literal(1));
             return true;
@@ -534,7 +545,7 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
           expr = makeBufferCountComparison(std::move(expr.args.front()), 0, 1);
           return true;
         }
-        if ((isCanonicalBuffer || isExperimentalBuffer || isKnownBuffer) && expr.name == "is_valid" && expr.args.size() == 1) {
+        if ((isBufferSurface || isKnownBuffer) && expr.name == "is_valid" && expr.args.size() == 1) {
           if (std::optional<Expr> tokenExpr = resolveRawBufferFieldExpr(expr.args.front(), locals, "token")) {
             expr = makeLessThanExpr(makeI32Literal(0), std::move(*tokenExpr));
             return true;
@@ -589,7 +600,7 @@ bool rewriteExperimentalGfxConstructors(Program &program, std::string &error) {
       return true;
     }
     std::string resolved = resolveImportedStructPath(expr.name, expr.namespacePrefix);
-    if ((resolved == "/std/gfx/experimental/Buffer" || resolved == "/std/gfx/Buffer") && expr.args.size() == 1 &&
+    if (isGfxBufferSurfacePath(resolved) && expr.args.size() == 1 &&
         !expr.hasBodyArguments && expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames)) {
       expr.name = "buffer";
       expr.namespacePrefix.clear();

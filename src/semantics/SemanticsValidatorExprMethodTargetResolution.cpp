@@ -1,5 +1,6 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
+#include "primec/StdlibSurfaceRegistry.h"
 
 #include <string>
 #include <string_view>
@@ -1597,15 +1598,33 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
         directElemTypeOut);
   };
   auto preferredBufferMethodTarget = [&](const std::string &helperName) {
-    const std::string canonical = "/std/gfx/Buffer/" + helperName;
-    const std::string experimental = "/std/gfx/experimental/Buffer/" + helperName;
+    const StdlibSurfaceMetadata *metadata =
+        findStdlibSurfaceMetadata(StdlibSurfaceId::GfxBufferHelpers);
+    if (metadata == nullptr) {
+      return std::string{};
+    }
+    const std::string canonical = stdlibSurfaceCanonicalHelperPath(
+        StdlibSurfaceId::GfxBufferHelpers,
+        helperName);
+    const std::string canonicalFallback =
+        canonical.empty() ? std::string(metadata->canonicalPath) + "/" + helperName
+                          : canonical;
     if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
       return canonical;
     }
-    if (hasDeclaredDefinitionPath(experimental) || hasImportedDefinitionPath(experimental)) {
-      return experimental;
+    if (!canonical.empty()) {
+      for (const std::string_view spelling : metadata->compatibilitySpellings) {
+        const std::string compatibility = std::string(spelling) + "/" + helperName;
+        if (stdlibSurfaceCanonicalHelperPath(StdlibSurfaceId::GfxBufferHelpers,
+                                             compatibility) != canonical) {
+          continue;
+        }
+        if (hasDeclaredDefinitionPath(compatibility) || hasImportedDefinitionPath(compatibility)) {
+          return compatibility;
+        }
+      }
     }
-    return canonical;
+    return canonicalFallback;
   };
   auto preferExplicitCanonicalVectorHelperForReceiver = [&](const Expr &receiverExpr) -> bool {
     if (explicitVectorHelperPath.empty()) {

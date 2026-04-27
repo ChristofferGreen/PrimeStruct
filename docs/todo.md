@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4230: Cut over gfx compatibility decisions to surface adapters
+- TODO-4218: Make local-auto graph facts the exclusive inference authority
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4218: Make local-auto graph facts the exclusive inference authority
 - TODO-4231: Make query/try/on_error graph facts the exclusive authority
 - TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
 - TODO-4225: Close call-target and helper-routing lowerer fallbacks
@@ -81,11 +80,12 @@ Task template:
 - TODO-4234: Add semantic budget and worker-parity release gates
 - TODO-4221: Retire stale semantic validator source locks
 - TODO-4235: Retire remaining semantic/lowerer architecture source locks
+- TODO-4236: Define graph invalidation contracts by edit family
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4230 -> TODO-4218
-  -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
+- Semantic phase contract hardening: TODO-4218 -> TODO-4231
+  -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
   -> TODO-4238 -> TODO-4239
@@ -104,7 +104,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4230: Cut over gfx compatibility decisions to surface adapters
 - TODO-4218: Make local-auto graph facts the exclusive inference authority
 - TODO-4231: Make query/try/on_error graph facts the exclusive authority
 - TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
@@ -167,7 +166,7 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | TODO-4220, TODO-4234 |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4230, TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
@@ -236,11 +235,15 @@ Task template:
   `/std/collections/soa_vector/*`, same-path `/soa_vector/*`, mixed
   `/std/collections/{count,get,ref,reserve,push}`, experimental helper wrapper,
   and conversion-helper spellings. Vector/map and SoA constructor compatibility
-  is already metadata-backed by the constructor surface adapters. Remaining
-  removed-helper diagnostics, import spellings, wildcard expansion,
-  user-defined helper precedence, field-view field-name lowering, and lowerer
-  raw-path dispatch checks are syntax/provenance-owned or lowering-owned. The
-  remaining gfx branch is queued under `TODO-4230`.
+  is already metadata-backed by the constructor surface adapters. Gfx Buffer
+  helper compatibility is routed through
+  `StdlibSurfaceRegistry::GfxBufferHelpers` for canonical `/std/gfx/Buffer/*`,
+  legacy `/std/gfx/experimental/Buffer/*`, and rooted `/Buffer/*` helper
+  spellings before semantic gfx-buffer rewrites and GPU wrapper diagnostics
+  choose canonical builtin targets. Remaining removed-helper diagnostics,
+  import spellings, wildcard expansion, user-defined helper precedence,
+  field-view field-name lowering, gfx constructor sugar, and lowerer raw-path
+  dispatch checks are syntax/provenance-owned or lowering-owned.
 - Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and
   runtime/storage redesign remain separate boundaries and should not be folded
   into the vector/map bridge tasks below.
@@ -314,31 +317,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4230: Cut over gfx compatibility decisions to surface adapters
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Move remaining non-syntax-owned gfx compatibility decisions behind
-    shared surface adapters, or document and test them as explicitly
-    syntax/provenance-owned.
-  - acceptance:
-    - No non-syntax-owned gfx compatibility decision remains in bespoke
-      semantic rewrite, validation, template-monomorph, or lowerer branches
-      outside the shared adapters.
-    - Canonical `/std/gfx/*` behavior and legacy `/std/gfx/experimental/*`
-      compatibility coverage remain stable.
-    - Any retained gfx syntax/provenance-owned exception is named in docs and
-      covered by a contract test.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop when the gfx inventory is empty except for documented
-    syntax/provenance-owned exceptions; unrelated gfx feature work is out of
-    scope.
-
 - [ ] TODO-4218: Make local-auto graph facts the exclusive inference authority
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4230
   - scope: Remove or quarantine remaining production paths that re-derive
     local-auto facts outside the graph-backed semantic fact flow, keeping any
     legacy comparison only behind benchmark-only shadow wiring.
