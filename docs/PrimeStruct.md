@@ -2435,7 +2435,7 @@ sum_two_files([string] a, [string] b) {
 - **Modes:** `Read`, `Write`, `Append`.
 - **Construction:** `/File/openRead(path)`, `/File/openWrite(path)`, and `/File/openAppend(path)` return
   `Result<File<Mode>, FileError>`. The imported constructor-shaped `File<Mode>(path)` form is legacy compatibility
-  syntax until `TODO-4256` classifies constructor-shaped helper compatibility.
+  helper syntax that routes through the same mode-specific open helpers; it is not value construction syntax.
   - `path` is a `string` (string literal or literal-backed binding in VM/native).
 - **Methods (all return `Result<FileError>`):**
   - `readByte([i32 mut] value)` (reads one byte into `value`; leaves `value` unchanged on error)
@@ -3131,6 +3131,32 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   - Any other use of an `uninitialized<T>` value is a type error.
 - **Lifetime rules:** using a storage value after `drop`/`take` is a compile-time error until it is reinitialized.
 - **`Destroy` handling:** structs owning `uninitialized<T>` fields must explicitly `drop` them when initialized.
+
+## Constructor-Shaped Compatibility Inventory
+- **Default rule:** value construction uses braces (`Type{...}` or a context-typed `{...}`). A call-shaped form that
+  looks like construction is an ordinary helper call or a documented compatibility rewrite, not field-mapping
+  construction.
+- **File:** imported `File<Mode>(path)` is retained as compatibility helper syntax. It resolves through
+  `/File/openRead(...)`, `/File/openWrite(...)`, or `/File/openAppend(...)` after `/std/file/*` is imported and remains
+  subject to the same `file_read` / `file_write` effects. Lowerer inference coverage locks this as a fallible helper
+  return, not as a `File<Mode>` value constructor.
+- **Graphics:** imported `Window(...)`, `Device()`, and `Buffer<T>(count)` are retained compatibility entry points over
+  `/std/gfx/*` and `/std/gfx/experimental/*`. `Window(...)` and `Device()` route through stdlib create helpers and keep
+  their `Result`/`?` shape; `Buffer<T>(count)` routes through the gfx buffer helper rewrite. Gfx semantic tests also keep
+  bare explicit bindings without `?` on the mismatch path, proving these are not plain value constructors.
+- **Collections:** brace forms such as `array<T>{...}`, `vector<T>{...}`, and `map<K, V>{...}` are preferred
+  construction syntax. Legacy call-shaped `array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`, canonical
+  `/std/collections/vector/vector<T>(...)`, `/std/collections/map/map<K, V>(...)`, and `soa_vector<T>(...)` spellings
+  remain compatibility helper families registered through stdlib surface metadata; semantic-product tests publish their
+  constructor surface IDs as helper metadata rather than struct field construction.
+- **Maybe/Result migration:** `Maybe{}` remains the current empty value construction form for the existing `Maybe<T>`
+  representation, while `none<T>()` and `some<T>(value)` are helper calls. Present-value shorthand
+  `Maybe{value}` / `Maybe<T>{value}` stays rejected until the stdlib-owned sum migration lands. The full Maybe/Result
+  representation migration is intentionally tracked by TODO-4263 through TODO-4267, not by file/gfx/collection
+  compatibility.
+- **Follow-up policy:** do not add new constructor-shaped compatibility surfaces. Existing retained forms must either
+  route through named helpers with focused coverage or get a dedicated migration TODO with scope, acceptance, and
+  stop_rule before their status changes.
 
 ## Optional Values (Maybe) (draft)
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.

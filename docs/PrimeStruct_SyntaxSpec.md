@@ -855,7 +855,7 @@ vector<i32>[1i32, 2i32]
 ```
 
 Vectors are C++-style dynamic contiguous sequences. Brace construction is variadic; zero or more entries are accepted.
-Current call-shaped vector helpers remain compatibility surfaces until the brace-only construction migration lands.
+Current call-shaped vector helpers remain compatibility helper surfaces; they are not value construction syntax.
 Planned stdlib-owned replacement: the user-defined builder helper is intended to become `vector(values...)`,
 canonically represented as a trailing `[args<T>]` parameter rather than fixed-arity helper families.
 The current builtin/vector-envelope behavior is transitional; the intended steady state is stdlib-owned public vector
@@ -1429,8 +1429,9 @@ Draft constraints:
   - Block arguments on non-control-flow calls and arguments on `if` branch blocks are rejected.
   - `print*` and vector helper calls are statement-only; expression usage is rejected.
   - `File<Mode>(path)` requires a string literal or literal-backed binding; with `import /std/file/*`, that
-    constructor-shaped surface rewrites through stdlib `/File/open_read(...)`, `/File/open_write(...)`, or
-    `/File/open_append(...)` wrappers while the underlying file-open substrate remains builtin.
+    constructor-shaped compatibility helper surface rewrites through stdlib `/File/open_read(...)`,
+    `/File/open_write(...)`, or `/File/open_append(...)` wrappers while the underlying file-open substrate remains
+    builtin. It is not value construction syntax.
   - `Result.ok(value)` plus `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` currently accept
     `i32`, `bool`, `f32`, literal-backed `string`, the single-slot int-backed stdlib error structs, ordinary
     user structs that can stay on the existing stack-backed struct path, packed `File<Mode>` handles, and

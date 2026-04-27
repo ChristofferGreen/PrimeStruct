@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4256: Classify constructor-shaped helper compatibility
+- TODO-4257: Add sum declaration metadata and layout
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4257: Add sum declaration metadata and layout
 - TODO-4258: Add explicit sum construction
 - TODO-4259: Add inferred sum variant construction
 - TODO-4260: Add `pick` semantic validation
@@ -81,11 +80,12 @@ Task template:
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
+- TODO-4267: Retire legacy Maybe/Result representations
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4256 -> TODO-4257
-  -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
+- Deferred algebraic types and brace-only construction: TODO-4257 ->
+  TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -95,7 +95,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4256: Classify constructor-shaped helper compatibility
 - TODO-4257: Add sum declaration metadata and layout
 - TODO-4258: Add explicit sum construction
 - TODO-4259: Add inferred sum variant construction
@@ -143,7 +142,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -168,7 +167,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -286,42 +285,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4256: Classify constructor-shaped helper compatibility
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4255
-  - scope: Inventory remaining constructor-shaped stdlib, graphics, file,
-    optional, and buffer helper surfaces and classify each as a helper call,
-    migration diagnostic, or follow-up implementation task.
-  - implementation_notes:
-    - Start from `include/primec/StdlibSurfaceRegistry.h`,
-      `src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp`,
-      file/result helpers in semantics and `src/ir_lowerer/IrLowererFileWriteHelpers.*`,
-      maybe helpers, and imported collection alias tests.
-    - Record the inventory in `docs/PrimeStruct.md` or a tightly scoped table
-      in this TODO section before changing behavior.
-    - Prefer focused semantic/IR tests that prove retained forms resolve as
-      calls to named helpers, not constructor/value forms.
-  - acceptance:
-    - Remaining surfaces such as `File<Mode>(path)`, `Buffer<T>(count)`,
-      `Window(...)`, `Device()`, `Maybe{}`/`none<T>()`, and imported
-      collection aliases are listed with their intended status.
-    - Each retained compatibility form has focused tests proving it is a helper
-      call, not value construction.
-    - Any compatibility form too large to migrate in this task gets its own
-      follow-up TODO with scope, acceptance, and stop_rule.
-    - Public docs mark retained constructor-shaped forms as compatibility or
-      helper calls rather than construction syntax.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after remaining constructor-shaped forms are inventoried
-    and either tested, migrated, or split into follow-up TODOs.
-
 - [ ] TODO-4257: Add sum declaration metadata and layout
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4256
   - scope: Add parser, AST, semantic-product, import/visibility, and
     backend-neutral metadata support for `[sum]` declarations without adding
     value construction or `pick` matching yet.

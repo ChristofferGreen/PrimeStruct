@@ -6,6 +6,48 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4256: Classify constructor-shaped helper compatibility
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - depends_on: TODO-4255
+  - scope: Inventory remaining constructor-shaped stdlib, graphics, file,
+    optional, and buffer helper surfaces and classify each as a helper call,
+    migration diagnostic, or follow-up implementation task.
+  - implementation_notes:
+    - Start from `include/primec/StdlibSurfaceRegistry.h`,
+      `src/semantics/SemanticsValidateExperimentalGfxConstructors.cpp`,
+      file/result helpers in semantics and `src/ir_lowerer/IrLowererFileWriteHelpers.*`,
+      maybe helpers, and imported collection alias tests.
+    - Record the inventory in `docs/PrimeStruct.md` or a tightly scoped table
+      in this TODO section before changing behavior.
+    - Prefer focused semantic/IR tests that prove retained forms resolve as
+      calls to named helpers, not constructor/value forms.
+  - acceptance:
+    - Remaining surfaces such as `File<Mode>(path)`, `Buffer<T>(count)`,
+      `Window(...)`, `Device()`, `Maybe{}`/`none<T>()`, and imported
+      collection aliases are listed with their intended status.
+    - Each retained compatibility form has focused tests proving it is a helper
+      call, not value construction.
+    - Any compatibility form too large to migrate in this task gets its own
+      follow-up TODO with scope, acceptance, and stop_rule.
+    - Public docs mark retained constructor-shaped forms as compatibility or
+      helper calls rather than construction syntax.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after remaining constructor-shaped forms are inventoried
+    and either tested, migrated, or split into follow-up TODOs.
+  - finished_at: 2026-04-28
+  - evidence: Added the public constructor-shaped compatibility inventory to
+    `docs/PrimeStruct.md`, classifying `File<Mode>(path)`, gfx
+    `Window(...)` / `Device()` / `Buffer<T>(count)`, collection call-shaped
+    helpers, and current Maybe helper forms as retained helper or
+    compatibility surfaces rather than value construction. The inventory points
+    to existing focused file lowerer, gfx semantics, collection
+    semantic-product, and Maybe semantic coverage; no new follow-up TODO was
+    added because the remaining Maybe/Result representation work is already
+    tracked by TODO-4263 through TODO-4267. Promoted `TODO-4257` to Ready Now
+    and deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4255: Migrate collection construction surfaces
   - owner: ai
   - created_at: 2026-04-27

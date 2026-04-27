@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4256: Classify constructor-shaped helper compatibility") !=
+                  "- TODO-4257: Add sum declaration metadata and layout") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4257: Add sum declaration metadata and layout") !=
+                  "- TODO-4258: Add explicit sum construction") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,10 +1153,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4256: Classify constructor-shaped helper compatibility") !=
+                  "- TODO-4257: Add sum declaration metadata and layout") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4256: Classify constructor-shaped helper compatibility",
       "TODO-4257: Add sum declaration metadata and layout",
       "TODO-4258: Add explicit sum construction",
       "TODO-4259: Add inferred sum variant construction",
@@ -1167,6 +1166,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
       "TODO-4265: Add stdlib-owned `Result<T, E>` sum",
       "TODO-4266: Rewire `?` to the `Result` sum contract",
+      "TODO-4267: Retire legacy Maybe/Result representations",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1193,6 +1193,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4255: Migrate collection construction surfaces") ==
         std::string::npos);
   CHECK(todoFinished.find("TODO-4255: Migrate collection construction surfaces") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4256: Classify constructor-shaped helper compatibility") ==
+        std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4256") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4256: Classify constructor-shaped helper compatibility") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4227") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4215") == std::string::npos);
@@ -1517,6 +1522,90 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(examplesDocs.find(
             "TEST_CASE(\"collection docs snippets stay code-examples style and executable\" * doctest::skip(true))") ==
+        std::string::npos);
+}
+
+TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
+  const std::filesystem::path primeStructPath = resolveRepoPath("docs/PrimeStruct.md");
+  const std::filesystem::path syntaxSpecPath =
+      resolveRepoPath("docs/PrimeStruct_SyntaxSpec.md");
+  const std::filesystem::path fileLowererPath = resolveRepoPath(
+      "tests/unit/"
+      "test_ir_pipeline_validation_ir_lowerer_inference_get_return_info_step_reports_missing_definitions.cpp");
+  const std::filesystem::path gfxSemanticsPath =
+      resolveRepoPath("tests/unit/test_semantics_imports_gfx.h");
+  const std::filesystem::path maybeSemanticsPath =
+      resolveRepoPath("tests/unit/test_semantics_maybe.cpp");
+  const std::filesystem::path collectionSnapshotPath =
+      resolveRepoPath("tests/unit/test_semantics_type_resolution_graph_snapshots.cpp");
+  REQUIRE(std::filesystem::exists(primeStructPath));
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
+  REQUIRE(std::filesystem::exists(fileLowererPath));
+  REQUIRE(std::filesystem::exists(gfxSemanticsPath));
+  REQUIRE(std::filesystem::exists(maybeSemanticsPath));
+  REQUIRE(std::filesystem::exists(collectionSnapshotPath));
+
+  const std::string primeStructDoc = readFile(primeStructPath.string());
+  const std::string syntaxSpecDoc = readFile(syntaxSpecPath.string());
+  const std::string fileLowerer = readFile(fileLowererPath.string());
+  const std::string gfxSemantics = readFile(gfxSemanticsPath.string());
+  const std::string maybeSemantics = readFile(maybeSemanticsPath.string());
+  const std::string collectionSnapshot = readFile(collectionSnapshotPath.string());
+
+  CHECK(primeStructDoc.find("## Constructor-Shaped Compatibility Inventory") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find(
+            "value construction uses braces (`Type{...}` or a context-typed `{...}`)") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find(
+            "imported `File<Mode>(path)` is retained as compatibility helper syntax") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`Window(...)`, `Device()`, and `Buffer<T>(count)` "
+                            "are retained compatibility entry points") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find(
+            "`array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`, canonical") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find(
+            "`Maybe{}` remains the current empty value construction form") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("`none<T>()` and `some<T>(value)` are helper calls") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("Current call-shaped vector helpers remain "
+                           "compatibility helper surfaces;") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("constructor-shaped compatibility helper surface "
+                           "rewrites through stdlib") !=
+        std::string::npos);
+  CHECK(syntaxSpecDoc.find("It is not value construction syntax.") !=
+        std::string::npos);
+
+  CHECK(fileLowerer.find("TEST_CASE(\"ir lowerer inference expr-kind dispatch "
+                         "infers try from namespaced File constructors\")") !=
+        std::string::npos);
+  CHECK(gfxSemantics.find("TEST_CASE(\"canonical gfx window constructor entry "
+                          "point validates through stdlib helper\")") !=
+        std::string::npos);
+  CHECK(gfxSemantics.find("TEST_CASE(\"canonical gfx device constructor entry "
+                          "point validates through stdlib helper\")") !=
+        std::string::npos);
+  CHECK(gfxSemantics.find("TEST_CASE(\"canonical gfx Buffer constructor entry "
+                          "point validates through builtin rewrite\")") !=
+        std::string::npos);
+  CHECK(maybeSemantics.find("TEST_CASE(\"maybe helpers report empty and some\")") !=
+        std::string::npos);
+  CHECK(maybeSemantics.find("TEST_CASE(\"maybe direct constructor rejects "
+                            "payload shorthand without some\")") !=
+        std::string::npos);
+  CHECK(collectionSnapshot.find(
+            "TEST_CASE(\"semantic product publishes graph-backed collection "
+            "constructor local-auto surface ids\")") !=
+        std::string::npos);
+  CHECK(collectionSnapshot.find("StdlibSurfaceId::CollectionsVectorConstructors") !=
+        std::string::npos);
+  CHECK(collectionSnapshot.find("StdlibSurfaceId::CollectionsMapConstructors") !=
+        std::string::npos);
+  CHECK(collectionSnapshot.find("StdlibSurfaceId::CollectionsSoaVectorConstructors") !=
         std::string::npos);
 }
 
