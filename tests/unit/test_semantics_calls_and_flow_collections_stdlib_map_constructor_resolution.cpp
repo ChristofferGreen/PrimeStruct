@@ -350,6 +350,34 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib namespaced map access keeps canonical target over alias") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<bool>]
+/map/at([map<i32, i32>] values, [i32] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<bool>]
+/map/at_unsafe([map<i32, i32>] values, [i32] key) {
+  return(true)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32, 2i32, 5i32)}
+  [i32] first{/std/collections/map/at(values, 1i32)}
+  [i32] second{/std/collections/map/at_unsafe(values, 2i32)}
+  return(plus(first, second))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
 TEST_CASE("collected diagnostics ignore imported canonical map access helper calls") {
   const std::string source = R"(
 import /std/collections/*

@@ -253,6 +253,9 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
     auto canonicalVectorAccessHelperTarget = [&]() {
       return "/std/collections/vector/" + accessHelperName;
     };
+    auto canonicalMapAccessHelperTarget = [&]() {
+      return canonicalStdlibMapAccessPathForHelper(accessHelperName);
+    };
     auto hasVisibleCanonicalVectorAccessHelper = [&]() {
       const std::string canonicalTarget = canonicalVectorAccessHelperTarget();
       const bool isStdlibVectorAccessWrapperDefinition =
@@ -305,6 +308,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
+      bool resolvedCanonicalMapAccessMethod = false;
       std::string ignoredVectorElemType;
       const bool receiverSupportsBuiltinVectorSurfaceSemantics =
           usesBuiltinVectorSurfaceMethodSemantics &&
@@ -321,6 +325,21 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         if (receiverHasVisibleCanonicalVectorAccessHelper) {
           resolvedVectorAccessMethod = true;
         } else if (!hasVisiblePreferredVectorAccessHelper()) {
+          (void)failCollectionAccessTargetDiagnostic(
+              "unknown call target: " + methodResolved);
+          failedReceiverProbe = true;
+          return true;
+        }
+      }
+      if (explicitCanonicalMapAccessCall &&
+          isCanonicalMapAccessHelperName(accessHelperName) &&
+          context.resolveMapTarget(receiverCandidate)) {
+        methodResolved = canonicalMapAccessHelperTarget();
+        isBuiltinMethod = false;
+        resolvedCanonicalMapAccessMethod = true;
+        if (!hasDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath(methodResolved) &&
+            !hasImportedDefinitionPath(methodResolved)) {
           (void)failCollectionAccessTargetDiagnostic(
               "unknown call target: " + methodResolved);
           failedReceiverProbe = true;
@@ -358,7 +377,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           resolvedVectorAccessMethod = true;
         }
       }
-      if (!resolvedVectorAccessMethod &&
+      if (!resolvedVectorAccessMethod && !resolvedCanonicalMapAccessMethod &&
           !resolveMethodTarget(params, locals, expr.namespacePrefix, receiverCandidate, accessHelperName,
                                methodResolved, isBuiltinMethod)) {
         (void)validateExpr(params, locals, receiverCandidate);
@@ -446,6 +465,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
       bool isBuiltinMethod = false;
       std::string methodResolved;
       bool resolvedVectorAccessMethod = false;
+      bool resolvedCanonicalMapAccessMethod = false;
       std::string ignoredVectorElemType;
       const bool receiverSupportsBuiltinVectorSurfaceSemantics =
           usesBuiltinVectorSurfaceMethodSemantics &&
@@ -462,6 +482,19 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         if (receiverHasVisibleCanonicalVectorAccessHelper) {
           resolvedVectorAccessMethod = true;
         } else if (!hasVisiblePreferredVectorAccessHelper()) {
+          return failCollectionAccessTargetDiagnostic(
+              "unknown call target: " + methodResolved);
+        }
+      }
+      if (explicitCanonicalMapAccessCall &&
+          isCanonicalMapAccessHelperName(accessHelperName) &&
+          context.resolveMapTarget(expr.args.front())) {
+        methodResolved = canonicalMapAccessHelperTarget();
+        isBuiltinMethod = false;
+        resolvedCanonicalMapAccessMethod = true;
+        if (!hasDefinitionPath(methodResolved) &&
+            !hasDeclaredDefinitionPath(methodResolved) &&
+            !hasImportedDefinitionPath(methodResolved)) {
           return failCollectionAccessTargetDiagnostic(
               "unknown call target: " + methodResolved);
         }
@@ -498,6 +531,7 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
         }
       }
       if (resolvedVectorAccessMethod ||
+          resolvedCanonicalMapAccessMethod ||
           resolveMethodTarget(params, locals, expr.namespacePrefix, expr.args.front(), accessHelperName,
                               methodResolved, isBuiltinMethod)) {
         if (!isBuiltinMethod &&
