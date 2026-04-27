@@ -15,6 +15,15 @@
 namespace primec::ir_lowerer {
 
 namespace {
+bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
+  return path.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
+         path.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
+         path.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
+         path.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0 ||
+         path.rfind("/std/collections/internal_soa_storage/SoaFieldView__", 0) == 0 ||
+         path.rfind("/std/collections/internal_soa_storage/SoaColumns", 0) == 0;
+}
+
 bool isRemovedVectorHelperDefinitionPath(const std::string &path) {
   auto matchesPath = [&](std::string_view basePath) {
     return path == basePath || path.rfind(std::string(basePath) + "__", 0) == 0;
@@ -439,6 +448,9 @@ bool isStructTransformName(const std::string &name) {
 }
 
 bool isStructDefinition(const Definition &def) {
+  if (isGeneratedStdlibCollectionStructPath(def.fullPath)) {
+    return true;
+  }
   auto hasTypeLikeName = [&]() -> bool {
     if (def.fullPath.empty()) {
       return false;

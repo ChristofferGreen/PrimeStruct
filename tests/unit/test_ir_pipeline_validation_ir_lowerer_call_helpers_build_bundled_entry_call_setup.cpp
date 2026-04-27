@@ -172,6 +172,13 @@ TEST_CASE("ir lowerer call helpers classify struct definitions") {
   callStmt.isBinding = false;
   mixedDef.statements.push_back(callStmt);
   CHECK_FALSE(primec::ir_lowerer::isStructDefinition(mixedDef));
+
+  primec::Definition generatedVectorStruct;
+  generatedVectorStruct.fullPath =
+      "/std/collections/experimental_vector/Vector__ti32";
+  generatedVectorStruct.parameters.push_back(field);
+  generatedVectorStruct.transforms.push_back(returnTransform);
+  CHECK(primec::ir_lowerer::isStructDefinition(generatedVectorStruct));
 }
 
 TEST_CASE("frontend syntax helpers build setup import aliases") {
