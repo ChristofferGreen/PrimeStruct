@@ -417,6 +417,15 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
             "soa_paths::isExperimentalSoaVectorSpecializedTypePath(structPath)") !=
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(
+            "std::string normalizedInternalSoaStorageLeaf(std::string structPath)") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "areCompatibleInternalSoaStoragePaths(lhs, rhs)") !=
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
+            "structPath.rfind(\"/std/collections/internal_soa_storage/\", 0) == 0") ==
+        std::string::npos);
+  CHECK(operatorCollectionMutationHelpersSource.find(
             "structPath.rfind(\"/std/collections/experimental_soa_vector/SoaVector__\", 0) == 0") ==
         std::string::npos);
   CHECK(operatorCollectionMutationHelpersSource.find(

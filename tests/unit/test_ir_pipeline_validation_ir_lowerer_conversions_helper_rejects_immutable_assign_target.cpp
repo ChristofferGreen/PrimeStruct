@@ -59,6 +59,167 @@ TEST_CASE("ir lowerer conversions helper rejects immutable assign target") {
   CHECK(error == "assign target must be mutable: x");
 }
 
+TEST_CASE("ir lowerer conversions helper assigns compatible internal soa storage aliases") {
+  primec::Expr target;
+  target.kind = primec::Expr::Kind::Name;
+  target.name = "storage";
+  primec::Expr value;
+  value.kind = primec::Expr::Kind::Name;
+  value.name = "nextStorage";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "assign";
+  expr.args = {target, value};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo storageInfo;
+  storageInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  storageInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  storageInfo.structTypeName = "/std/collections/internal_soa_storage/SoaColumn__ti32";
+  storageInfo.index = 7;
+  storageInfo.isMutable = true;
+  locals.emplace("storage", storageInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 20;
+  int copyCalls = 0;
+  int32_t copiedDest = -1;
+  int32_t copiedSrc = -1;
+  int32_t copiedCount = -1;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        instructions.push_back({primec::IrOpcode::PushI64, 99});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &candidate, const primec::ir_lowerer::LocalMap &) {
+        if (candidate.name == "nextStorage") {
+          return std::string("SoaColumn<i32>");
+        }
+        return std::string();
+      },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &structPath, int32_t &slotCount) {
+        if (structPath == "/std/collections/internal_soa_storage/SoaColumn__ti32") {
+          slotCount = 3;
+          return true;
+        }
+        return false;
+      },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) {
+        return false;
+      },
+      [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
+        ++copyCalls;
+        copiedDest = destPtrLocal;
+        copiedSrc = srcPtrLocal;
+        copiedCount = slotCount;
+        return true;
+      },
+      instructions,
+      handled,
+      error);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  CHECK(copyCalls == 1);
+  CHECK(copiedDest == 20);
+  CHECK(copiedSrc == 21);
+  CHECK(copiedCount == 3);
+  CHECK(nextLocal == 22);
+  REQUIRE(instructions.size() == 5u);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 7u);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 20u);
+  CHECK(instructions[2].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[2].imm == 99u);
+  CHECK(instructions[3].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[3].imm == 21u);
+  CHECK(instructions[4].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[4].imm == 7u);
+}
+
+TEST_CASE("ir lowerer conversions helper rejects incompatible internal soa storage aliases") {
+  primec::Expr target;
+  target.kind = primec::Expr::Kind::Name;
+  target.name = "storage";
+  primec::Expr value;
+  value.kind = primec::Expr::Kind::Name;
+  value.name = "wrongStorage";
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "assign";
+  expr.args = {target, value};
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo storageInfo;
+  storageInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  storageInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  storageInfo.structTypeName = "/std/collections/internal_soa_storage/SoaColumn__ti32";
+  storageInfo.index = 7;
+  storageInfo.isMutable = true;
+  locals.emplace("storage", storageInfo);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 20;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      locals,
+      nextLocal,
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return std::string("/std/collections/internal_soa_storage/SoaColumns2__ti32_i32");
+      },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) {
+        return false;
+      },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error);
+
+  CHECK_FALSE(ok);
+  CHECK(handled);
+  CHECK(error == "assign requires matching struct value");
+  CHECK(instructions.empty());
+}
+
 TEST_CASE("ir lowerer conversions helper ignores unrelated call names") {
   primec::Expr expr;
   expr.kind = primec::Expr::Kind::Call;

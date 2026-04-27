@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <cstring>
 #include <limits>
+#include <string_view>
+#include <utility>
 
 namespace primec::ir_lowerer {
 namespace {
@@ -26,8 +28,52 @@ bool isRawBuiltinSoaVectorStructPath(const std::string &structPath) {
   return structPath == "/soa_vector" || structPath == "/std/collections/soa_vector";
 }
 
+std::string stripGeneratedStructSuffix(std::string structPath) {
+  const size_t leafStart = structPath.find_last_of('/');
+  const size_t suffixStart =
+      structPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (suffixStart != std::string::npos) {
+    structPath.erase(suffixStart);
+  }
+  return structPath;
+}
+
+std::string stripTemplateArguments(std::string structPath) {
+  const size_t templateStart = structPath.find('<');
+  if (templateStart != std::string::npos) {
+    structPath.erase(templateStart);
+  }
+  return structPath;
+}
+
+std::string normalizedInternalSoaStorageLeaf(std::string structPath) {
+  structPath = stripTemplateArguments(std::move(structPath));
+  structPath = stripGeneratedStructSuffix(std::move(structPath));
+  if (!structPath.empty() && structPath.front() == '/') {
+    structPath.erase(structPath.begin());
+  }
+  constexpr std::string_view Prefix = "std/collections/internal_soa_storage/";
+  if (structPath.rfind(Prefix, 0) == 0) {
+    structPath.erase(0, Prefix.size());
+  }
+  if (structPath == "SoaColumn" || structPath == "SoaFieldView" ||
+      structPath.rfind("SoaColumns", 0) == 0) {
+    return structPath;
+  }
+  return {};
+}
+
+bool areCompatibleInternalSoaStoragePaths(const std::string &lhs, const std::string &rhs) {
+  const std::string lhsLeaf = normalizedInternalSoaStorageLeaf(lhs);
+  if (lhsLeaf.empty()) {
+    return false;
+  }
+  return lhsLeaf == normalizedInternalSoaStorageLeaf(rhs);
+}
+
 bool areCompatibleStructPaths(const std::string &lhs, const std::string &rhs) {
-  return lhs == rhs || (isVectorStructPath(lhs) && isVectorStructPath(rhs));
+  return lhs == rhs || (isVectorStructPath(lhs) && isVectorStructPath(rhs)) ||
+         areCompatibleInternalSoaStoragePaths(lhs, rhs);
 }
 
 } // namespace
