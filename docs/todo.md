@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4221: Retire stale semantic validator source locks
+- TODO-4235: Retire remaining semantic/lowerer architecture source locks
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4235: Retire remaining semantic/lowerer architecture source locks
 - TODO-4236: Define graph invalidation contracts by edit family
 - TODO-4237: Add graph invalidation fan-out regression tests
 - TODO-4238: Pin the CT-eval graph and semantic-product boundary
@@ -81,10 +80,11 @@ Task template:
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
 - TODO-4243: Improve focused backend rerun ergonomics
 - TODO-4244: Decide the `soa_vector` maturity exit
+- TODO-4246: Define final `soa_vector` promotion contract
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4221 -> TODO-4235
+- Semantic phase contract hardening: TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
   -> TODO-4238 -> TODO-4239
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4240
@@ -102,7 +102,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4221: Retire stale semantic validator source locks
 - TODO-4235: Retire remaining semantic/lowerer architecture source locks
 - TODO-4236: Define graph invalidation contracts by edit family
 - TODO-4237: Add graph invalidation fan-out regression tests
@@ -189,7 +188,7 @@ Task template:
 | De-experimentalization surface and namespace parity | none |
 | `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Focused backend rerun ergonomics and suite partitioning | TODO-4243 |
-| Architecture contract probe migration | TODO-4221, TODO-4235, TODO-4242 |
+| Architecture contract probe migration | TODO-4235, TODO-4242 |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
@@ -307,28 +306,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4221: Retire stale semantic validator source locks
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Replace stale source-lock tests that pin old semantic validator
-    composition details for the migrated boundary with API-level contract tests
-    over the plan, worker result, semantic-product, and diagnostic surfaces.
-  - acceptance:
-    - Stale semantic-validator source assertions for the migrated boundary are
-      deleted or converted to public contract assertions.
-    - `docs/memories.md` is updated if any remembered source-lock fact becomes
-      stale.
-    - No direct `tests -> src` include-layer allowlist entries are introduced.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after migrated semantic-validator source locks are
-    replaced; leave lowerer/source-composition locks to TODO-4235.
-
 - [ ] TODO-4235: Retire remaining semantic/lowerer architecture source locks
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4221
   - scope: Replace remaining source-lock tests that pin old semantic/lowerer
     composition details for the migrated boundary with API-level contract tests
     over semantic-product and lowerer handoff surfaces.

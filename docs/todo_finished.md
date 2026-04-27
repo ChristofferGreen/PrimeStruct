@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4221: Retire stale semantic validator source locks.
+  Completed: Migrated the semantic-validator boundary lock from private
+  source-string assertions onto public manifest, validation-plan, and
+  definition-partitioner contracts. The new API coverage pins the two
+  semantic-product fact-publishing handoff passes and proves worker partitions
+  consume the validation plan's definition prepass in stable order. Stale
+  `SemanticsValidate.cpp`, definition-worker plan, worker-result bundle, and
+  execution-slice source string assertions were deleted without adding any
+  `tests -> src` include-layer allowlist entry. `docs/memories.md` still
+  accurately records that other private source-lock tests remain. Local
+  validation is deferred per the lite workflow.
 - ✓ TODO-4234: Add semantic budget and worker-parity release gates.
   Completed: The release-gate contract now documents graph-budget checking,
   semantic memory artifact collection plus trend/budget enforcement, and

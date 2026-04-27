@@ -2645,14 +2645,6 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("semantics::publishSemanticProgramAfterValidation(program,") !=
         std::string::npos);
-  CHECK(semanticsValidate.find("#include \"primec/SemanticValidationPlan.h\"") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("runSemanticValidationManifestAstPasses(") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("semantics::semanticValidationPassManifest()") !=
-        std::string::npos);
-  CHECK(semanticsValidate.find("pass.name == \"validator-passes\"") !=
-        std::string::npos);
   CHECK(semanticsValidate.find("#include \"SemanticsValidationPublicationOrchestration.h\"") !=
         std::string::npos);
   CHECK(semanticsValidate.find("#include \"SemanticPublicationBuilders.h\"") ==
@@ -3715,8 +3707,6 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp");
   const std::string semanticsDefinitionPasses =
       readTextFile(root / "src" / "semantics" / "SemanticsValidatorPassesDefinitions.cpp");
-  const std::string definitionWorkerResultHeader =
-      readTextFile(root / "src" / "semantics" / "SemanticsDefinitionWorkerResult.h");
   const std::string semanticsValidate =
       readTextFile(root / "src" / "semantics" / "SemanticsValidate.cpp");
 
@@ -3791,23 +3781,7 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   CHECK(semanticsSnapshots.find("if (left.fullPath != right.fullPath)") != std::string::npos);
   CHECK(semanticsSnapshots.find("return left.isExecution < right.isExecution;") !=
         std::string::npos);
-  CHECK(definitionWorkerResultHeader.find("struct SemanticDefinitionWorkerResultBundle {") !=
-        std::string::npos);
-  CHECK(definitionWorkerResultHeader.find("SemanticDiagnosticInfo diagnostics;") !=
-        std::string::npos);
-  CHECK(definitionWorkerResultHeader.find("SemanticDefinitionWorkerCounters counters;") !=
-        std::string::npos);
-  CHECK(definitionWorkerResultHeader.find("SemanticPublicationSurface publicationFacts;") !=
-        std::string::npos);
-  CHECK(definitionWorkerResultHeader.find("WorkerSymbolInternerSnapshot publicationStringSnapshot;") !=
-        std::string::npos);
-  CHECK(semanticsHeader.find("#include \"SemanticsDefinitionWorkerResult.h\"") !=
-        std::string::npos);
-  CHECK(semanticsHeader.find("using ValidationCounters = SemanticDefinitionWorkerCounters;") !=
-        std::string::npos);
   CHECK(semanticsDefinitionPasses.find("struct WorkerChunkResult") ==
-        std::string::npos);
-  CHECK(semanticsDefinitionPasses.find("std::vector<std::future<SemanticDefinitionWorkerResultBundle>>") !=
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("worker.collectDefinitionPublicationFactsForStableRange(") !=
         std::string::npos);

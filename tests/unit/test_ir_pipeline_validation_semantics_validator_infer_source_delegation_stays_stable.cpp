@@ -1258,8 +1258,6 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
       repoRoot / "src" / "semantics" / "SemanticsValidatorExecutionDiagnostics.cpp";
   const std::filesystem::path semanticsPassesExecutionsPath =
       repoRoot / "src" / "semantics" / "SemanticsValidatorPassesExecutions.cpp";
-  const std::filesystem::path semanticsSnapshotsPath =
-      repoRoot / "src" / "semantics" / "SemanticsValidatorSnapshots.cpp";
   REQUIRE(std::filesystem::exists(semanticsPassesPath));
   REQUIRE(std::filesystem::exists(semanticsPassesDefinitionsPath));
   REQUIRE(std::filesystem::exists(semanticsBuildPath));
@@ -1270,7 +1268,6 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   REQUIRE(std::filesystem::exists(semanticsPassesDiagnosticsPath));
   REQUIRE(std::filesystem::exists(semanticsExecutionDiagnosticsPath));
   REQUIRE(std::filesystem::exists(semanticsPassesExecutionsPath));
-  REQUIRE(std::filesystem::exists(semanticsSnapshotsPath));
   const std::string semanticsPassesSource = readText(semanticsPassesPath);
   const std::string semanticsBuildSource = readText(semanticsBuildPath);
   const std::string semanticsPassesCombinedSource = readTexts({
@@ -1287,7 +1284,6 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
   const std::string semanticsTraitsSource = readText(semanticsTraitsPath);
   const std::string semanticsPassesDiagnosticsSource = readText(semanticsPassesDiagnosticsPath);
   const std::string semanticsExecutionDiagnosticsSource = readText(semanticsExecutionDiagnosticsPath);
-  const std::string semanticsSnapshotsSource = readText(semanticsSnapshotsPath);
 
   CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateDefinitions()") != std::string::npos);
   CHECK(semanticsPassesCombinedSource.find("bool SemanticsValidator::validateExecutions()") != std::string::npos);
@@ -1345,30 +1341,7 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
             "rememberFirstCollectedDiagnosticMessage(intraDefinitionRecords.front().message);") !=
         std::string::npos);
   CHECK(semanticsPassesDefinitionsSource.find(
-            "bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(") !=
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find(
-            "const std::size_t stableIndex = resolveStableIndex(stableOrdinal);") !=
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find(
-            "validationPlan_->definitionPrepass.declarationsInStableOrder.size();") !=
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find(
-            "partitionDefinitionsDeterministic(validationPlan_->definitionPrepass, partitionCount);") !=
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find(
             "!benchmarkGraphLocalAutoDependencyScratchPmrEnabled_,") !=
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find(
-            "validationPlan_);") !=
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find(
-            "return validateDefinitionsForStableRange(0, declarationCount);") !=
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find("auto buildAllStableIndices = [&]()") ==
-        std::string::npos);
-  CHECK(semanticsPassesDefinitionsSource.find(
-            "stableIndices.reserve(boundedCount);") ==
         std::string::npos);
   CHECK(semanticsPassesOmittedInitializersSource.find(
             "auto failPassesOmittedInitializersDiagnostic =") !=
@@ -1384,8 +1357,6 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsBuildSource.find(
             "return failDefinitionDiagnostic(*def, std::move(message));") !=
-        std::string::npos);
-  CHECK(semanticsBuildSource.find("buildSemanticValidationPlan(program_, entryPath_)") ==
         std::string::npos);
   CHECK(semanticsPassesStructLayoutsSource.find(
             "auto failPassesStructLayoutsDiagnostic = [&](std::string message) -> bool {") !=
@@ -1410,22 +1381,6 @@ TEST_CASE("semantics validator passes source delegation stays stable") {
         std::string::npos);
   CHECK(semanticsPassesExecutionsSource.find(
             "rememberFirstCollectedDiagnosticMessage(intraExecutionRecords.front().message);") !=
-        std::string::npos);
-  CHECK(semanticsPassesExecutionsSource.find(
-            "validationPlan_->executionSlice.executionsInStableOrder") !=
-        std::string::npos);
-  CHECK(semanticsPassesExecutionsSource.find("for (const auto &exec : program_.executions)") ==
-        std::string::npos);
-  CHECK(semanticsSnapshotsSource.find(
-            "validationPlan_->executionSlice.executionsInStableOrder.size()") !=
-        std::string::npos);
-  CHECK(semanticsSnapshotsSource.find(
-            "const Execution &exec = program_.executions[executionDeclaration.stableIndex];") !=
-        std::string::npos);
-  CHECK(semanticsSnapshotsSource.find(
-            "const SemanticValidationExecutionDeclaration &executionDeclaration") !=
-        std::string::npos);
-  CHECK(semanticsSnapshotsSource.find("out.reserve(out.size() + program_.executions.size())") ==
         std::string::npos);
   CHECK(semanticsPassesDiagnosticsSource.find("void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(") !=
         std::string::npos);

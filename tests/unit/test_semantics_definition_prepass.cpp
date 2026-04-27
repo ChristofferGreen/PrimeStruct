@@ -1,6 +1,7 @@
 #include "third_party/doctest.h"
 
 #include "primec/SemanticValidationPlan.h"
+#include "primec/SemanticsDefinitionPartitioner.h"
 #include "primec/SemanticsDefinitionPrepass.h"
 
 #include <algorithm>
@@ -138,6 +139,36 @@ TEST_CASE("semantic validation pass manifest classifies compatibility and facts"
         primec::semantics::SemanticValidationPassKind::Publication);
   CHECK(publication->outputOwnership ==
         primec::semantics::SemanticValidationPassOwnership::SemanticProductFacts);
+}
+
+TEST_CASE("semantic validation pass manifest exposes public handoff boundaries") {
+  const auto &manifest = primec::semantics::semanticValidationPassManifest();
+  REQUIRE_FALSE(manifest.empty());
+
+  std::vector<std::string> factPublishingPasses;
+  for (const auto &pass : manifest) {
+    if (pass.action ==
+        primec::semantics::SemanticValidationPassAction::PublishesFacts) {
+      factPublishingPasses.emplace_back(pass.name);
+      CHECK(pass.outputOwnership ==
+            primec::semantics::SemanticValidationPassOwnership::SemanticProductFacts);
+      CHECK_FALSE(pass.compatibilityRewrite);
+    }
+  }
+
+  CHECK(factPublishingPasses ==
+        std::vector<std::string>{"validator-passes",
+                                 "semantic-product-publication"});
+
+  const auto *validator = findManifestPass("validator-passes");
+  const auto *publication = findManifestPass("semantic-product-publication");
+  REQUIRE(validator != nullptr);
+  REQUIRE(publication != nullptr);
+  CHECK(validator->kind ==
+        primec::semantics::SemanticValidationPassKind::Validation);
+  CHECK(publication->kind ==
+        primec::semantics::SemanticValidationPassKind::Publication);
+  CHECK(&manifest.back() == publication);
 }
 
 TEST_CASE("definition prepass indexes declarations and records duplicates deterministically") {
@@ -301,6 +332,52 @@ TEST_CASE("semantic validation plan captures prepass inputs deterministically") 
   REQUIRE(plan.executionSlice.executionsInStableOrder.size() == 1);
   CHECK(plan.executionSlice.executionsInStableOrder[0].fullPath == "/run");
   CHECK(plan.executionSlice.executionsInStableOrder[0].stableIndex == 0);
+}
+
+TEST_CASE("semantic validation plan partitions definition workers by public prepass") {
+  const std::string source = R"(
+[return<void>]
+alpha() {}
+
+[return<void>]
+beta() {}
+
+[return<void>]
+gamma() {}
+
+[return<void>]
+delta() {}
+
+[return<void>]
+epsilon() {}
+)";
+
+  const primec::Program program = parseProgram(source);
+  const primec::semantics::SemanticValidationPlan plan =
+      primec::semantics::buildSemanticValidationPlan(program, "/alpha");
+  const std::vector<primec::semantics::DefinitionPartitionChunk> partitions =
+      primec::semantics::partitionDefinitionsDeterministic(plan.definitionPrepass, 2);
+
+  REQUIRE(partitions.size() == 2);
+  CHECK(partitions[0].partitionKey == 0);
+  CHECK(partitions[0].stableOrderOffset == 0);
+  CHECK(partitions[0].stableOrderCount == 3);
+  CHECK(partitions[1].partitionKey == 1);
+  CHECK(partitions[1].stableOrderOffset == 3);
+  CHECK(partitions[1].stableOrderCount == 2);
+
+  std::vector<std::string> partitionedPaths;
+  for (const auto &chunk : partitions) {
+    for (std::size_t offset = 0; offset < chunk.stableOrderCount; ++offset) {
+      const auto &declaration =
+          plan.definitionPrepass.declarationsInStableOrder[chunk.stableOrderOffset + offset];
+      partitionedPaths.push_back(declaration.fullPath);
+      CHECK(program.definitions[declaration.stableIndex].fullPath == declaration.fullPath);
+    }
+  }
+
+  CHECK(partitionedPaths ==
+        std::vector<std::string>{"/alpha", "/beta", "/gamma", "/delta", "/epsilon"});
 }
 
 TEST_SUITE_END();
