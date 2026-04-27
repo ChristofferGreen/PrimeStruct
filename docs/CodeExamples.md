@@ -61,6 +61,15 @@ These files may stay helper-heavy or bridge-oriented while they define
 substrate, compatibility, migration, or benchmark behavior. Do not use them as
 the style reference for new public-facing examples.
 
+Current SoA compatibility exception: direct imports of
+`/std/collections/experimental_soa_vector/*` are accepted only for targeted
+compatibility and conformance coverage while `soa_vector<T>` remains
+incubating. Ordinary public examples should use
+`/std/collections/soa_vector/*` and
+`/std/collections/soa_vector_conversions/*`; direct imports of
+`/std/collections/experimental_soa_vector_conversions/*` remain pending cleanup
+under the SoA finish TODOs.
+
 Mixed-directory rule:
 - `stdlib/std/collections` is intentionally mixed; follow the file-level list
   above.

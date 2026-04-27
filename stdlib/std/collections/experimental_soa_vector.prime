@@ -1,5 +1,6 @@
-// Internal implementation module behind canonical /std/collections/soa_vector/*.
+// Accepted temporary compatibility module behind canonical /std/collections/soa_vector/*.
 // Direct imports remain only for targeted compatibility or conformance coverage.
+// Ordinary public examples should import /std/collections/soa_vector/* instead.
 import /std/collections/internal_soa_storage/*
 
 namespace std {

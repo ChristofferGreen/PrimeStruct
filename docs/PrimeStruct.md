@@ -2835,7 +2835,7 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports remain only for targeted compatibility or conformance coverage. | `TODO-4246` through `TODO-4252` track the concrete promotion, retirement, parity, and documentation exit path. |
+| `/std/collections/experimental_soa_vector/*` | Accepted temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports are accepted only for targeted compatibility or conformance coverage while `soa_vector<T>` is incubating. C++ and native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | `TODO-4246`, `TODO-4247`, `TODO-4249`, and `TODO-4252` track final promotion, wrapper migration, direct-import retirement, and documentation cleanup. |
 | `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Internal conversion module behind canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/*` conversion helpers; direct imports remain only for targeted compatibility or conformance coverage. | `TODO-4248` and `TODO-4249` track conversion-wrapper migration and direct experimental import retirement. |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
@@ -2868,18 +2868,24 @@ TODOs. It is intentionally separate from vector/map promotion.
   `/std/collections/soa_vector/*` helper paths. Representative wildcard
   canonical helper/conversion tests now run across C++ emitter, VM, and native
   without direct experimental SoA imports in the test source.
-- **Compatibility-only namespaces:** `/std/collections/experimental_soa_vector/*`
-  and `/std/collections/experimental_soa_vector_conversions/*` remain bridge
-  seams behind that canonical experiment surface. They may stay importable while
-  the SoA surface is incubating, but they are not the intended long-term
-  user-facing contract.
+- **Accepted compatibility seam:** `/std/collections/experimental_soa_vector/*`
+  remains importable only for targeted compatibility and conformance coverage
+  while the SoA surface is incubating. Existing C++ and native compile-run
+  direct-import tests are the contract for that temporary seam. It is not the
+  intended long-term user-facing contract, and ordinary public examples should
+  continue to use `/std/collections/soa_vector/*`.
+- **Pending conversion compatibility seam:**
+  `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
+  behind canonical conversion helpers until the conversion-wrapper and
+  direct-import cleanup TODOs decide its exit.
 - **Internal substrate namespace:** `/std/collections/internal_soa_storage/*`
   stays implementation-facing storage/layout plumbing rather than public API.
 - **Promotion gate:** SoA should only move from incubating to promoted public
-  contract after the remaining compatibility-only seams are retired or
-  explicitly accepted and the generic SoA substrate cleanup is complete. Until
-  then, docs should call `soa_vector<T>` incubating explicitly instead of
-  implying it has already graduated with vector/map.
+  contract after the pending conversion compatibility seam is retired or
+  explicitly accepted, direct experimental import cleanup is complete, and the
+  generic SoA substrate cleanup is complete. Until then, docs should call
+  `soa_vector<T>` incubating explicitly instead of implying it has already
+  graduated with vector/map.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -3546,12 +3552,13 @@ bad_use_after_take() {
     `soaVectorReserve<T>()`, and `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`,
     `.get(i)`, `.reserve(...)`, and `.push(...)`. The explicit AoS conversion surface now lives in
     the canonical `/std/collections/soa_vector_conversions/*` module with `soaVectorToAos<T>()`,
-    canonical `SoaVector<T>` / `Reference<SoaVector<T>>` receiver spellings,
-    while `/std/collections/experimental_soa_vector/*` and
-    `/std/collections/experimental_soa_vector_conversions/*` remain compatibility-only bridge seams
-    behind that canonical experiment surface.
-    Ordinary public code should not import either experimental SoA namespace for
-    construction, read/ref, mutator, field-view, or conversion flows.
+    canonical `SoaVector<T>` / `Reference<SoaVector<T>>` receiver spellings.
+    `/std/collections/experimental_soa_vector/*` is accepted only as a
+    targeted compatibility/conformance seam behind that canonical experiment
+    surface, and `/std/collections/experimental_soa_vector_conversions/*`
+    remains a pending conversion bridge. Ordinary public code should not import
+    either experimental SoA namespace for construction, read/ref, mutator,
+    field-view, or conversion flows.
     The wrapper now stores real `.prime` `SoaColumn<T>` state rather than the old builtin header-only
     `soa_vector<T>` backing, and it currently requires `T` to be a reflect-enabled struct via
     `meta.field_count<T>()` so non-SoA-safe element types fail early. Today the first real single-column

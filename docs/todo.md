@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4244: Decide the `soa_vector` maturity exit
+- TODO-4246: Define final `soa_vector` promotion contract
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4246: Define final `soa_vector` promotion contract
 - TODO-4247: Move canonical SoA wrapper off experimental implementation imports
 - TODO-4248: Move canonical SoA conversions off experimental conversion imports
 - TODO-4249: Retire direct experimental SoA public imports
@@ -81,11 +80,12 @@ Task template:
 - TODO-4245: Plan dynamic vector growth and runtime storage support
 - TODO-4253: Implement brace-only construction semantics
 - TODO-4254: Migrate generated construction surfaces
+- TODO-4255: Migrate collection construction surfaces
 
 ### Priority Lanes (Current)
 
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4245
-- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
+- Deferred SoA finish: TODO-4246 -> TODO-4247
   -> TODO-4248 -> TODO-4249 -> TODO-4250 -> TODO-4251 -> TODO-4252
 - Deferred algebraic types and brace-only construction: TODO-4253
   -> TODO-4254 -> TODO-4255 -> TODO-4256 -> TODO-4257
@@ -98,7 +98,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4244: Decide the `soa_vector` maturity exit
 - TODO-4246: Define final `soa_vector` promotion contract
 - TODO-4247: Move canonical SoA wrapper off experimental implementation imports
 - TODO-4248: Move canonical SoA conversions off experimental conversion imports
@@ -142,10 +141,10 @@ Task template:
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | none |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
+| SoA maturity and `soa_vector` promotion | TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -173,7 +172,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
-| `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
+| `soa_vector` maturity and canonical surface parity | TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
@@ -230,12 +229,16 @@ Task template:
   long-term user-facing contracts.
 - Canonical collection contract: `/std/collections/vector/*` and
   `/std/collections/map/*` are the sole public vector/map collection surfaces.
-- Temporary compatibility namespaces:
-  `/std/collections/experimental_soa_vector/*`, and
-  `/std/collections/experimental_soa_vector_conversions/*` remain
-  compatibility seams behind the canonical SoA experiment surface. The
-  deferred SoA finish chain (`TODO-4246` through `TODO-4252`) now owns the
-  concrete exit, acceptance, or reclassification path for those seams.
+- Accepted temporary compatibility namespace:
+  `/std/collections/experimental_soa_vector/*` remains importable only for
+  targeted compatibility and conformance coverage while `soa_vector<T>` is
+  incubating. Ordinary public examples should use
+  `/std/collections/soa_vector/*`.
+- Pending temporary compatibility namespace:
+  `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
+  behind canonical conversion helpers. The deferred SoA finish chain
+  (`TODO-4246` through `TODO-4252`) owns the final promotion, retirement,
+  parity, and documentation cleanup path for the remaining SoA seams.
 - Internal collection implementation modules:
   `/std/collections/experimental_vector/*` and
   `/std/collections/experimental_map/*` now remain implementation-owned seams
@@ -260,18 +263,21 @@ Task template:
 - Canonical experiment spellings for current docs/examples are
   `/std/collections/soa_vector/*` and
   `/std/collections/soa_vector_conversions/*`.
-- Compatibility-only namespaces:
-  `/std/collections/experimental_soa_vector/*` and
-  `/std/collections/experimental_soa_vector_conversions/*` remain bridge seams
-  behind the canonical experiment surface.
+- Accepted compatibility seam: `/std/collections/experimental_soa_vector/*`
+  remains importable only for targeted compatibility and conformance coverage;
+  C++ and native direct-import tests lock that temporary contract.
+- Pending conversion compatibility seam:
+  `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
+  behind canonical conversion helpers until the SoA finish chain decides its
+  exit.
 - Internal substrate namespace:
   `/std/collections/internal_soa_storage/*` remains implementation-facing
   SoA storage/layout plumbing.
 - Further promotion work is tracked by the deferred SoA finish chain
-  (`TODO-4246` through `TODO-4252`), which owns the compatibility seam exits,
-  final promotion/acceptance decisions, generic substrate cleanup, parity
-  coverage, and final promotion docs needed before `soa_vector` can be treated
-  as a promoted public contract.
+  (`TODO-4246` through `TODO-4252`), which owns the pending conversion seam
+  exit, final promotion decisions, generic substrate cleanup, parity coverage,
+  and final promotion docs needed before `soa_vector` can be treated as a
+  promoted public contract.
 - First promotion pass complete: the canonical public helper wrapper is
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
@@ -280,8 +286,9 @@ Task template:
   ECS example uses canonical wrapper/conversion imports, and ordinary public
   code no longer needs `experimental_soa_vector` or
   `experimental_soa_vector_conversions` imports. `soa_vector<T>` remains an
-  incubating canonical experiment until the remaining compatibility seams and
-  generic SoA substrate cleanup are explicitly retired or accepted.
+  incubating canonical experiment until the pending conversion seam, remaining
+  wrapper/import cleanup, parity coverage, and generic SoA substrate cleanup
+  finish.
 
 ### Skipped Doctest Debt Summary
 
@@ -293,30 +300,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4244: Decide the `soa_vector` maturity exit
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred semantic-product/backend/tooling follow-up
-  - scope: Choose and implement the next concrete `soa_vector` maturity step:
-    accept current incubating status with explicit compatibility ownership,
-    retire one remaining experimental compatibility seam, or promote one
-    remaining canonical surface.
-  - acceptance:
-    - `docs/PrimeStruct.md`, `docs/CodeExamples.md`, and `docs/todo.md`
-      describe the selected maturity decision consistently.
-    - At least one compatibility seam is either retired, accepted with contract
-      coverage, or promoted with canonical coverage.
-    - Existing SoA example and canonical wrapper/conversion tests remain
-      stable or are updated with documented migration notes.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after one real SoA compatibility or maturity decision is
-    implemented and covered; do not attempt full SoA stabilization in this leaf.
-
 - [ ] TODO-4246: Define final `soa_vector` promotion contract
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred SoA finish
-  - depends_on: TODO-4244
   - scope: Replace the remaining incubating-language ambiguity with a final
     promotion contract for `soa_vector`, including which canonical APIs must
     exist, which experimental compatibility imports must retire or remain

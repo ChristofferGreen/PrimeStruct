@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4244: Decide the `soa_vector` maturity exit
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred semantic-product/backend/tooling follow-up
+  - scope: Choose and implement the next concrete `soa_vector` maturity step:
+    accept current incubating status with explicit compatibility ownership,
+    retire one remaining experimental compatibility seam, or promote one
+    remaining canonical surface.
+  - acceptance:
+    - `docs/PrimeStruct.md`, `docs/CodeExamples.md`, and `docs/todo.md`
+      describe the selected maturity decision consistently.
+    - At least one compatibility seam is either retired, accepted with contract
+      coverage, or promoted with canonical coverage.
+    - Existing SoA example and canonical wrapper/conversion tests remain
+      stable or are updated with documented migration notes.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after one real SoA compatibility or maturity decision is
+    implemented and covered; do not attempt full SoA stabilization in this leaf.
+  - finished_at: 2026-04-28
+  - evidence: Accepted `/std/collections/experimental_soa_vector/*` as a
+    temporary compatibility namespace for targeted compatibility/conformance
+    coverage only while `soa_vector<T>` remains incubating. `docs/PrimeStruct.md`,
+    `docs/CodeExamples.md`, `docs/todo.md`, and the stdlib module comment now
+    agree that ordinary public examples should use canonical SoA imports.
+    Existing C++ and native compile-run direct-import tests are now source-locked
+    as the contract for that temporary seam. Removed `TODO-4244` from the live
+    queue, promoted `TODO-4246` to Ready Now, and deferred release reruns to CI
+    per the lite workflow.
+
 - [x] TODO-4243: Improve focused backend rerun ergonomics
   - owner: ai
   - created_at: 2026-04-27
