@@ -372,6 +372,22 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
         }
         return "count";
       }();
+  const bool usesExplicitStdNamespacedVectorCountHelper =
+      countHelperName == "count" &&
+      isStdNamespacedVectorCompatibilityHelperPath(resolveCalleePath(expr),
+                                                   countHelperName);
+  const bool lacksVisibleStdNamespacedVectorCountDefinition =
+      !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
+      !hasImportedDefinitionPath("/std/collections/vector/count");
+  const bool usesNonBuiltinStdNamespacedVectorCountShape =
+      expr.args.size() != 1 || !expr.templateArgs.empty() ||
+      expr.hasBodyArguments || !expr.bodyArguments.empty();
+  if (usesExplicitStdNamespacedVectorCountHelper &&
+      lacksVisibleStdNamespacedVectorCountDefinition &&
+      usesNonBuiltinStdNamespacedVectorCountShape) {
+    handledOut = true;
+    return failUnknownCallTarget("/std/collections/vector/count");
+  }
   const bool isSingleArgCountCall = expr.args.size() == 1;
   const bool isMultiArgCountCall = !isSingleArgCountCall;
   const bool routesThroughVectorBuiltinCountSurface =

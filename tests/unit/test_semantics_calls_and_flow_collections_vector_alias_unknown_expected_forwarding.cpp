@@ -533,6 +533,24 @@ main() {
   CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
 }
 
+TEST_CASE("stdlib namespaced vector count call rejects compatibility alias fallback") {
+  const std::string source = R"(
+[return<int>]
+/vector/count([vector<i32>] values, [bool] marker) {
+  return(90i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(/std/collections/vector/count(values, true))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("unknown call target: /std/collections/vector/count") != std::string::npos);
+}
+
 TEST_CASE("stdlib namespaced templated vector count arity keeps builtin template-argument diagnostics") {
   const std::string source = R"(
 [return<int>]
