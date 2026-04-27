@@ -443,10 +443,19 @@ bool isMapTryAtHelperName(const Expr &expr) {
 
 bool isSoaVectorTarget(const Expr &expr, const LocalMap &localsIn);
 
+bool isExperimentalVectorStructPath(std::string_view structTypeName) {
+  return structTypeName == "/std/collections/experimental_vector/Vector" ||
+         structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
-    return it != localsIn.end() && it->second.kind == LocalInfo::Kind::Vector;
+    return it != localsIn.end() &&
+           !it->second.isSoaVector &&
+           (it->second.kind == LocalInfo::Kind::Vector ||
+            (it->second.kind == LocalInfo::Kind::Value &&
+             isExperimentalVectorStructPath(it->second.structTypeName)));
   }
   if (expr.kind == Expr::Kind::Call) {
     std::string collection;
@@ -925,7 +934,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
             return false;
           }
           if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector ||
-              info.kind == LocalInfo::Kind::Map) {
+              info.kind == LocalInfo::Kind::Map ||
+              (info.kind == LocalInfo::Kind::Value &&
+               isExperimentalVectorStructPath(info.structTypeName))) {
             return true;
           }
           if (info.kind == LocalInfo::Kind::Reference &&
