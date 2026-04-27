@@ -201,6 +201,29 @@ TEST_CASE("ir lowerer struct layout helpers validate semantic product coverage")
   CHECK(error.empty());
 }
 
+TEST_CASE("ir lowerer struct layout coverage ignores generated collection helper subpaths") {
+  primec::Program program;
+  primec::Transform returnTransform;
+  returnTransform.name = "return";
+  returnTransform.templateArgs = {"i32"};
+
+  for (const std::string &path : {
+           "/std/collections/experimental_vector/Vector__ti32/Move",
+           "/std/collections/internal_soa_storage/SoaColumn__ti32/set_field_count",
+           "/std/collections/internal_soa_storage/SoaColumns2__ti32_i64/field_count",
+       }) {
+    primec::Definition helperDef;
+    helperDef.fullPath = path;
+    helperDef.transforms.push_back(returnTransform);
+    program.definitions.push_back(helperDef);
+  }
+
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductStructLayoutCoverage(program, &semanticProgram, error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("ir lowerer struct layout helpers append program layouts") {
   primec::Program program;
 

@@ -15,13 +15,23 @@
 namespace primec::ir_lowerer {
 
 namespace {
+bool isSinglePathSegmentWithPrefix(std::string_view path, std::string_view prefix) {
+  return path.rfind(prefix, 0) == 0 && path.size() > prefix.size() &&
+         path.find('/', prefix.size()) == std::string_view::npos;
+}
+
+bool isGeneratedSinglePathSegmentWithPrefix(std::string_view path, std::string_view prefix) {
+  return isSinglePathSegmentWithPrefix(path, prefix) &&
+         path.find("__", prefix.size()) != std::string_view::npos;
+}
+
 bool isGeneratedStdlibCollectionStructPath(std::string_view path) {
-  return path.rfind("/std/collections/experimental_vector/Vector__", 0) == 0 ||
-         path.rfind("/std/collections/experimental_map/Map__", 0) == 0 ||
-         path.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0 ||
-         path.rfind("/std/collections/internal_soa_storage/SoaColumn__", 0) == 0 ||
-         path.rfind("/std/collections/internal_soa_storage/SoaFieldView__", 0) == 0 ||
-         path.rfind("/std/collections/internal_soa_storage/SoaColumns", 0) == 0;
+  return isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_vector/Vector__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_map/Map__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/experimental_soa_vector/SoaVector__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumn__") ||
+         isSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaFieldView__") ||
+         isGeneratedSinglePathSegmentWithPrefix(path, "/std/collections/internal_soa_storage/SoaColumns");
 }
 
 bool isRemovedVectorHelperDefinitionPath(const std::string &path) {

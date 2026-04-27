@@ -598,6 +598,29 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK(inlineStack.count(generatedVectorStruct.fullPath) == 1u);
   CHECK(loweredCallTargets.count(generatedVectorStruct.fullPath) == 1u);
 
+  primec::Definition generatedVectorHelper;
+  generatedVectorHelper.fullPath = "/std/collections/experimental_vector/Vector__ti32/Move";
+  error.clear();
+  inlineStack.clear();
+  loweredCallTargets.clear();
+  inlineStack.insert(generatedVectorHelper.fullPath);
+  CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      generatedVectorHelper,
+      false,
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &infoOut) {
+        infoOut = primec::ir_lowerer::ReturnInfo{};
+        infoOut.returnsVoid = false;
+        return true;
+      },
+      [](const primec::Definition &) { return true; },
+      inlineStack,
+      loweredCallTargets,
+      onErrorByDef,
+      out,
+      error));
+  CHECK(error == "native backend does not support recursive calls: " + generatedVectorHelper.fullPath);
+  CHECK(loweredCallTargets.empty());
+
   error.clear();
   inlineStack.clear();
   loweredCallTargets.clear();
