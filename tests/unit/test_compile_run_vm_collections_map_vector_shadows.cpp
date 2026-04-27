@@ -22,8 +22,12 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_map_at_string_positional_call_shadow.prime", source);
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  const std::string errPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_user_map_at_string_positional_call_shadow_err.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
   CHECK(runCommand(runCmd) == 2);
+  CHECK(readFile(errPath).find("vm backend requires integer indices for at") != std::string::npos);
 }
 
 TEST_CASE("runs vm with map access preferring later map receiver over string") {

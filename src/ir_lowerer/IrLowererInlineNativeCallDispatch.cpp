@@ -890,6 +890,9 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
       [&](const Expr &callExpr) { return isVectorCapacityCallFn(callExpr, localsIn); },
       [&](const Expr &receiverExpr) { return isSoaVectorTarget(receiverExpr, localsIn); },
       [&](const Expr &receiverExpr) {
+        if (receiverExpr.kind == Expr::Kind::StringLiteral) {
+          return true;
+        }
         if (receiverExpr.kind == Expr::Kind::Name) {
           auto it = localsIn.find(receiverExpr.name);
           if (it == localsIn.end()) {
