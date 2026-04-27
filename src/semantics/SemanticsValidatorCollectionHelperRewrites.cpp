@@ -207,26 +207,28 @@ std::string SemanticsValidator::specializedExperimentalMapHelperTarget(
 }
 
 std::string SemanticsValidator::preferredBareVectorHelperTarget(std::string_view helperName) const {
-  auto hasSamePathVectorHelperFamily = [&](const std::string &samePath) {
-    return hasDeclaredDefinitionPath(samePath) ||
-           hasImportedDefinitionPath(samePath) ||
-           hasDefinitionFamilyPath(samePath);
+  auto hasVisibleVectorHelperFamily = [&](const std::string &path) {
+    return hasDeclaredDefinitionPath(path) ||
+           hasImportedDefinitionPath(path) ||
+           hasDefinitionFamilyPath(path);
   };
-  if (helperName == "at" || helperName == "at_unsafe") {
-    const std::string samePath = "/vector/" + std::string(helperName);
-    if (hasSamePathVectorHelperFamily(samePath)) {
-      return samePath;
-    }
-    return canonicalCollectionHelperPath(
-        StdlibSurfaceId::CollectionsVectorHelpers, helperName);
-  }
-  const std::string samePath = "/vector/" + std::string(helperName);
-  if (hasSamePathVectorHelperFamily(samePath)) {
-    return samePath;
-  }
   const std::string canonical = canonicalCollectionHelperPath(
       StdlibSurfaceId::CollectionsVectorHelpers, helperName);
-  if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
+  if (isRemovedPublishedVectorStatementHelperName(helperName)) {
+    return canonical;
+  }
+  if (helperName == "at" || helperName == "at_unsafe") {
+    const std::string samePath = "/vector/" + std::string(helperName);
+    if (hasVisibleVectorHelperFamily(samePath)) {
+      return samePath;
+    }
+    return canonical;
+  }
+  const std::string samePath = "/vector/" + std::string(helperName);
+  if (hasVisibleVectorHelperFamily(samePath)) {
+    return samePath;
+  }
+  if (hasVisibleVectorHelperFamily(canonical)) {
     return canonical;
   }
   return canonical;
