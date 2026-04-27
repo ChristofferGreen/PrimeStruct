@@ -576,9 +576,11 @@ TEST_CASE("stdlib de-experimentalization policy docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("Pending temporary compatibility namespace:") !=
         std::string::npos);
-  CHECK(todo.find("deferred SoA finish chain\n  (`TODO-4247` through `TODO-4252`) owns") !=
+  CHECK(todo.find("deferred SoA finish chain\n  (`TODO-4248` through `TODO-4252`) owns") !=
         std::string::npos);
   CHECK(todo.find("final promotion, retirement,\n  parity, and documentation cleanup path") !=
+        std::string::npos);
+  CHECK(todo.find("`/std/collections/internal_soa_vector/*`, and") !=
         std::string::npos);
   CHECK(todo.find("no active\n  TODO currently targets them") ==
         std::string::npos);
@@ -674,12 +676,16 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("C++ and native compile-run coverage locks this compatibility seam") !=
         std::string::npos);
+  CHECK(primeStructDoc.find("| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace |") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Internal SoA wrapper implementation adapter used by canonical") !=
+        std::string::npos);
   CHECK(primeStructDoc.find("/std/collections/internal_soa_storage/*") != std::string::npos);
   CHECK(primeStructDoc.find("get an explicit exit or downgrade TODO before work starts") !=
         std::string::npos);
   CHECK(primeStructDoc.find("future promotion or retirement work must be tied to a") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`TODO-4247`, `TODO-4249`, and `TODO-4252` track wrapper migration") !=
+  CHECK(primeStructDoc.find("`TODO-4249` and `TODO-4252` track direct-import retirement") !=
         std::string::npos);
   CHECK(primeStructDoc.find("`TODO-4248` and `TODO-4249` track conversion-wrapper migration") !=
         std::string::npos);
@@ -688,6 +694,10 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(primeStructDoc.find("Existing C++ and native compile-run\n  direct-import tests are the contract") !=
         std::string::npos);
   CHECK(primeStructDoc.find("Pending conversion compatibility seam:") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("**Internal substrate namespaces:** `/std/collections/internal_soa_vector/*`") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("now owns ordinary canonical wrapper implementation forwarding") !=
         std::string::npos);
   CHECK(primeStructDoc.find("**Final promotion contract:** `soa_vector<T>` may move from incubating") !=
         std::string::npos);
@@ -703,7 +713,7 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(primeStructDoc.find("**Promotion blockers:** before final promotion") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("canonical wrapper must\n  move off direct experimental implementation imports (`TODO-4247`)") !=
+  CHECK(primeStructDoc.find("canonical conversions must\n  move off direct experimental conversion imports (`TODO-4248`)") !=
         std::string::npos);
   CHECK(primeStructDoc.find("raw builtin SoA bridges must normalize onto the\n  canonical wrapper surface (`TODO-4250`)") !=
         std::string::npos);
@@ -736,6 +746,10 @@ TEST_CASE("soa maturity track docs stay source locked") {
   CHECK(todo.find("C++ and native direct-import tests lock that temporary contract") !=
         std::string::npos);
   CHECK(todo.find("Pending conversion compatibility seam:") != std::string::npos);
+  CHECK(todo.find("Internal substrate namespaces: `/std/collections/internal_soa_vector/*`") !=
+        std::string::npos);
+  CHECK(todo.find("owns canonical wrapper implementation forwarding") !=
+        std::string::npos);
   CHECK(todo.find("First promotion pass complete") != std::string::npos);
   CHECK(todo.find("Further promotion work is tracked by the deferred SoA finish chain") !=
         std::string::npos);
@@ -745,15 +759,17 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("without hidden raw-builtin fallback behavior") !=
         std::string::npos);
-  CHECK(todo.find("`TODO-4247` through `TODO-4252`") !=
+  CHECK(todo.find("`TODO-4248` through `TODO-4252`") !=
         std::string::npos);
-  CHECK(todo.find("pending conversion seam\n  exit, wrapper/import cleanup") !=
+  CHECK(todo.find("pending conversion seam\n  exit, public import cleanup") !=
         std::string::npos);
   CHECK(todo.find("Promotion requires borrowed-view/lifetime rules, backend/runtime parity") ==
         std::string::npos);
   CHECK(todo.find("code no longer needs `experimental_soa_vector`") !=
         std::string::npos);
   CHECK(todo.find("`soa_vector<T>` remains an\n  incubating canonical experiment") !=
+        std::string::npos);
+  CHECK(todo.find("The canonical wrapper now routes through\n  `/std/collections/internal_soa_vector/*`") !=
         std::string::npos);
   CHECK(todo.find("- [ ] TODO-4058:") == std::string::npos);
   CHECK(todo.find("TODO-4103") == std::string::npos);
@@ -767,6 +783,9 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(todo.find("TODO-4246") == std::string::npos);
   CHECK(todoFinished.find("TODO-4246: Define final `soa_vector` promotion contract") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4247") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4247: Move canonical SoA wrapper off experimental implementation imports") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4185: Align SoA compatibility follow-up docs") !=
         std::string::npos);
@@ -791,6 +810,9 @@ TEST_CASE("soa maturity track docs stay source locked") {
         std::string::npos);
   CHECK(experimentalSoaVector.find(
             "// Accepted temporary compatibility module behind canonical /std/collections/soa_vector/*.") !=
+        std::string::npos);
+  CHECK(experimentalSoaVector.find(
+            "// Canonical wrappers route through /std/collections/internal_soa_vector/*.") !=
         std::string::npos);
   CHECK(experimentalSoaVector.find(
             "// Ordinary public examples should import /std/collections/soa_vector/* instead.") !=
@@ -967,23 +989,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4247: Move canonical SoA wrapper off experimental implementation imports") !=
+                  "- TODO-4248: Move canonical SoA conversions off experimental conversion imports") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4248: Move canonical SoA conversions off experimental conversion imports") !=
+                  "- TODO-4249: Retire direct experimental SoA public imports") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
         std::string::npos);
   CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4245") !=
         std::string::npos);
-  CHECK(todo.find("- Deferred SoA finish: TODO-4247 -> TODO-4248") !=
+  CHECK(todo.find("- Deferred SoA finish: TODO-4248 -> TODO-4249") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4247: Move canonical SoA wrapper off experimental implementation imports") !=
+                  "- TODO-4248: Move canonical SoA conversions off experimental conversion imports") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4247: Move canonical SoA wrapper off experimental implementation imports",
       "TODO-4248: Move canonical SoA conversions off experimental conversion imports",
       "TODO-4249: Retire direct experimental SoA public imports",
       "TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers",
@@ -994,6 +1015,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4254: Migrate generated construction surfaces",
       "TODO-4255: Migrate collection construction surfaces",
       "TODO-4256: Classify constructor-shaped helper compatibility",
+      "TODO-4257: Add sum declaration metadata and layout",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1110,9 +1132,12 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4246") == std::string::npos);
   CHECK(todoFinished.find("TODO-4246: Define final `soa_vector` promotion contract") !=
         std::string::npos);
+  CHECK(todo.find("TODO-4247") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4247: Move canonical SoA wrapper off experimental implementation imports") !=
+        std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4244") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4246") == std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4247") != std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4247") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4248") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4249") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4250") != std::string::npos);
@@ -1139,7 +1164,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Compile-time macro hooks and AST transform ownership | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4247, TODO-4248, TODO-4249 |") !=
+  CHECK(todo.find("| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4248, TODO-4249 |") !=
         std::string::npos);
   CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |") !=
         std::string::npos);
@@ -1151,11 +1176,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
         std::string::npos);
-  CHECK(todo.find("| SoA maturity and `soa_vector` promotion | TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |") !=
+  CHECK(todo.find("| SoA maturity and `soa_vector` promotion | TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |") !=
         std::string::npos);
   CHECK(todo.find("| De-experimentalization surface and namespace parity | none |") !=
         std::string::npos);
-  CHECK(todo.find("| `soa_vector` maturity and canonical surface parity | TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |") !=
+  CHECK(todo.find("| `soa_vector` maturity and canonical surface parity | TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |") !=
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);
@@ -1940,6 +1965,8 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector.prime";
   std::filesystem::path soaConversionsPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
+  std::filesystem::path internalSoaVectorPath =
+      std::filesystem::path("..") / "stdlib" / "std" / "collections" / "internal_soa_vector.prime";
   std::filesystem::path experimentalSoaVectorPath =
       std::filesystem::path("..") / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
   std::filesystem::path experimentalSoaConversionsPath =
@@ -1972,6 +1999,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
     soaConversionsPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "soa_vector_conversions.prime";
   }
+  if (!std::filesystem::exists(internalSoaVectorPath)) {
+    internalSoaVectorPath =
+        std::filesystem::current_path() / "stdlib" / "std" / "collections" / "internal_soa_vector.prime";
+  }
   if (!std::filesystem::exists(experimentalSoaVectorPath)) {
     experimentalSoaVectorPath =
         std::filesystem::current_path() / "stdlib" / "std" / "collections" / "experimental_soa_vector.prime";
@@ -1989,6 +2020,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   REQUIRE(std::filesystem::exists(experimentalMapStdlibPath));
   REQUIRE(std::filesystem::exists(soaWrapperPath));
   REQUIRE(std::filesystem::exists(soaConversionsPath));
+  REQUIRE(std::filesystem::exists(internalSoaVectorPath));
   REQUIRE(std::filesystem::exists(experimentalSoaVectorPath));
   REQUIRE(std::filesystem::exists(experimentalSoaConversionsPath));
 
@@ -2000,6 +2032,7 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   const std::string experimentalMapStdlib = readFile(experimentalMapStdlibPath.string());
   const std::string soaWrapper = readFile(soaWrapperPath.string());
   const std::string soaConversions = readFile(soaConversionsPath.string());
+  const std::string internalSoaVector = readFile(internalSoaVectorPath.string());
   const std::string experimentalSoaVector = readFile(experimentalSoaVectorPath.string());
   const std::string experimentalSoaConversions = readFile(experimentalSoaConversionsPath.string());
 
@@ -2066,7 +2099,19 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(experimentalMapStdlib.find("return(mapCount<K, V>(this))") == std::string::npos);
 
   CHECK(soaWrapper.find(
-            "// Canonical public wrapper layer over the internal experimental_soa_vector implementation module.") !=
+            "// Canonical public wrapper layer over the internal_soa_vector implementation adapter.") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("import /std/collections/internal_soa_vector/*") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("import /std/collections/experimental_soa_vector/*") ==
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorNew<T>()") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/internal_soa_vector/soaVectorPush<T>(out, values[index])") !=
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/experimental_soa_vector/soaVectorNew<T>()") ==
+        std::string::npos);
+  CHECK(soaWrapper.find("/std/collections/experimental_soa_vector/soaVectorPush<T>(out, values[index])") ==
         std::string::npos);
   CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorNew<T>()") != std::string::npos);
   CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorSingle<T>([T] value)") !=
@@ -2078,6 +2123,23 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorFieldView<Struct, Field>(") !=
         std::string::npos);
   CHECK(soaWrapper.find("/std/collections/soa_vector/soaVectorPush<T>([SoaVector<T> mut] values, [T] value)") !=
+        std::string::npos);
+
+  CHECK(internalSoaVector.find(
+            "// Internal implementation adapter behind canonical /std/collections/soa_vector/*.") !=
+        std::string::npos);
+  CHECK(internalSoaVector.find(
+            "// targeted compatibility surface.") !=
+        std::string::npos);
+  CHECK(internalSoaVector.find("namespace internal_soa_vector") !=
+        std::string::npos);
+  CHECK(internalSoaVector.find("import /std/collections/experimental_soa_vector/*") !=
+        std::string::npos);
+  CHECK(internalSoaVector.find("[SoaColumn<T>] storage{values.storage}\n"
+                               "    return(/std/collections/internal_soa_storage/soaColumnCount<T>(storage))") !=
+        std::string::npos);
+  CHECK(internalSoaVector.find("[SoaColumn<T> mut] storage{values.storage}\n"
+                               "    /std/collections/internal_soa_storage/soaColumnPush<T>(storage, value)") !=
         std::string::npos);
 
   CHECK(soaConversions.find("// Canonical conversion wrappers for public soa_vector helpers.") !=
@@ -2110,6 +2172,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(experimentalSoaVector.find(
             "// Direct imports remain only for targeted compatibility or conformance coverage.") !=
+        std::string::npos);
+  CHECK(experimentalSoaVector.find(
+            "// Canonical wrappers route through /std/collections/internal_soa_vector/*.") !=
         std::string::npos);
   CHECK(experimentalSoaVector.find(
             "// Ordinary public examples should import /std/collections/soa_vector/* instead.") !=

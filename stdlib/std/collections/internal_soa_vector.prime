@@ -1,52 +1,15 @@
-// Accepted temporary compatibility module behind canonical /std/collections/soa_vector/*.
-// Direct imports remain only for targeted compatibility or conformance coverage.
-// Canonical wrappers route through /std/collections/internal_soa_vector/*.
-// Ordinary public examples should import /std/collections/soa_vector/* instead.
+// Internal implementation adapter behind canonical /std/collections/soa_vector/*.
+// It owns ordinary wrapper behavior while the experimental namespace remains a
+// targeted compatibility surface.
 import /std/collections/internal_soa_storage/*
+import /std/collections/experimental_soa_vector/*
 
 namespace std {
   namespace collections {
-  namespace experimental_soa_vector {
-  [return<void>]
+  namespace internal_soa_vector {
+  [public return<void>]
   soaVectorValidateType<T>() {
     [i32] fieldCount{/std/collections/internal_soa_storage/soaSupportedFieldCount<T>()}
-  }
-
-  [public struct]
-  SoaVector<T>() {
-    [public SoaColumn<T> mut] storage{/std/collections/internal_soa_storage/soaColumnNew<T>()}
-
-    [public return<i32>]
-    count() {
-      soaVectorValidateType<T>()
-      [SoaColumn<T>] storage{this.storage}
-      return(/std/collections/internal_soa_storage/soaColumnCount<T>(storage))
-    }
-
-    [public return<T>]
-    get([i32] index) {
-      soaVectorValidateType<T>()
-      return(soaVectorGet<T>(this, index))
-    }
-
-    [public return<Reference<T>>]
-    ref([i32] index) {
-      soaVectorValidateType<T>()
-      return(soaVectorRef<T>(this, index))
-    }
-
-    [public mut effects(heap_alloc), return<void>]
-    reserve([i32] capacity) {
-      soaVectorValidateType<T>()
-      soaVectorReserve<T>(this, capacity)
-    }
-
-    [public mut effects(heap_alloc), return<void>]
-    push([T] value) {
-      soaVectorValidateType<T>()
-      soaVectorPush<T>(this, value)
-    }
-
   }
 
   [public effects(heap_alloc), return<SoaVector<T>>]

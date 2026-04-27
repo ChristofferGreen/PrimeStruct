@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4247: Move canonical SoA wrapper off experimental implementation imports
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred SoA finish
+  - scope: Move canonical `/std/collections/soa_vector/*` construction,
+    read/ref, mutator, and field-view wrappers away from direct
+    `/std/collections/experimental_soa_vector/*` implementation imports where a
+    stable internal substrate or promoted implementation path can own the
+    behavior.
+  - acceptance:
+    - At least construction/read/ref/mutator wrappers route through a
+      non-experimental implementation path or a documented internal substrate
+      adapter.
+    - Direct experimental implementation imports remain only in targeted
+      compatibility/conformance tests or explicit shims.
+    - Canonical SoA wrapper tests remain stable across C++/VM/native where
+      supported.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after the core canonical wrapper family is off direct
+    experimental implementation imports; leave conversion wrappers to
+    TODO-4248.
+  - finished_at: 2026-04-28
+  - evidence: Added `stdlib/std/collections/internal_soa_vector.prime` as the
+    internal implementation adapter for canonical SoA construction, read/ref,
+    mutator, and field-view helpers. `stdlib/std/collections/soa_vector.prime`
+    now imports and forwards through `/std/collections/internal_soa_vector/*`
+    instead of `/std/collections/experimental_soa_vector/*`; the experimental
+    namespace remains available for targeted compatibility/conformance imports.
+    Updated SoA docs and source-lock checks, removed `TODO-4247` from the live
+    queue, promoted `TODO-4248` to Ready Now, and deferred release reruns to CI
+    per the lite workflow.
+
 - [x] TODO-4246: Define final `soa_vector` promotion contract
   - owner: ai
   - created_at: 2026-04-27

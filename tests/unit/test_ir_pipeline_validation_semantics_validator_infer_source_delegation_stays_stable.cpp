@@ -2468,13 +2468,13 @@ main() {
             "    }") !=
         std::string::npos);
   CHECK(soaVectorStdlibSource.find(
-            "return(/std/collections/experimental_soa_vector/soaVectorCountRef<T>(values))") !=
+            "return(/std/collections/internal_soa_vector/soaVectorCountRef<T>(values))") !=
         std::string::npos);
   CHECK(soaVectorStdlibSource.find(
-            "return(/std/collections/experimental_soa_vector/soaVectorGetRef<T>(values, index))") !=
+            "return(/std/collections/internal_soa_vector/soaVectorGetRef<T>(values, index))") !=
         std::string::npos);
   CHECK(soaVectorStdlibSource.find(
-            "return(/std/collections/experimental_soa_vector/soaVectorRefRef<T>(values, index))") !=
+            "return(/std/collections/internal_soa_vector/soaVectorRefRef<T>(values, index))") !=
         std::string::npos);
   CHECK(experimentalSoaVectorStdlibSource.find(
             "[SoaColumn<T>] storage{values.storage}\n"
