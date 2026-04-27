@@ -2680,7 +2680,7 @@ sum_two_files([string] a, [string] b) {
 
 ### Type Grammar (canonical)
 - **Atomic:** `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`, `void`, `Self`.
-- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, draft stdlib-owned `soa_vector<T>`,
+- **Composite:** `array<T>`, `vector<T>`, `map<K, V>`, `Pointer<T>`, `Reference<T>`, stdlib-owned `soa_vector<T>`,
   and draft math value types (`Mat2`, `Mat3`, `Mat4`, `Quat`).
 - **User types:** struct definitions and named aliases.
 - **Template applications:** `Name<T1, T2, ...>`.
@@ -2688,9 +2688,9 @@ sum_two_files([string] a, [string] b) {
 ### Core Type Set (portable)
 - `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `string`.
 - `array<T>`, `vector<T>`, `map<K, V>` where parameters are core types.
-- Draft extension: `soa_vector<T>` for explicit structure-of-arrays storage of SoA-safe struct `T`. Target end-state:
-  stdlib `.prime` implementation on top of generic language/runtime SoA substrate, not a permanent compiler-owned
-  container.
+- `soa_vector<T>` for explicit structure-of-arrays storage of SoA-safe struct `T`.
+  The public API is stdlib-owned on top of generic language/runtime SoA
+  substrate rather than a compiler-owned collection contract.
 - Draft extension: `Mat2`, `Mat3`, `Mat4`, and `Quat` with explicit conversion-only interaction rules (not yet portable
   across backends).
 - `Pointer<T>`, `Reference<T>` where `T` is primitive or a struct type.
@@ -2715,15 +2715,16 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical.
 - `stdlib-owned`
-  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, target-state `soa_vector<T>`.
+  Public types/surfaces: `Maybe<T>`, `vector<T>`, `map<K, V>`, `soa_vector<T>`.
   Ownership rule: public API should live in stdlib `.prime` on top of minimal generic substrate.
   Migration stance: prefer slices that replace type-named compiler special cases with generic
   allocation/layout/drop substrate, then delete the old compatibility paths.
 
 - `vector<T>` and `map<K, V>` therefore still appear in the portable type set today, but that
   should not be read as a permanent compiler-owned collection contract.
-- `soa_vector<T>` remains an incubating public extension today, but its intended end-state is the same
-  stdlib-owned public surface with only generic SoA substrate left in C++.
+- `soa_vector<T>` is a promoted stdlib-owned public collection surface; direct
+  experimental SoA imports remain targeted compatibility shims, not ordinary
+  public API.
 
 ### Stdlib Surface-Style Boundary
 This boundary is the scope reference for the stdlib surface-style cleanup lane in
@@ -2801,8 +2802,8 @@ re-defining it piecemeal.
   modules behind the canonical wrappers; direct imports should stay limited to
   targeted compatibility or conformance coverage rather than ordinary public
   API use.
-- **Out of scope for this bridge lane:** `array<T>` core ownership,
-  `soa_vector<T>` maturity/promotion policy, and runtime storage/allocator
+- **Out of scope for this bridge lane:** `array<T>` core ownership, promoted
+  `soa_vector<T>` implementation details, and runtime storage/allocator
   redesign stay outside the vector/map bridge contract and require separate
   TODO lanes when they move.
 
@@ -2835,87 +2836,78 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Accepted temporary compatibility namespace | Compatibility module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports are accepted only for targeted compatibility or conformance coverage while `soa_vector<T>` is incubating. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | `TODO-4252` tracks final documentation cleanup under the promotion contract below. |
-| `/std/collections/experimental_soa_vector_conversions/*` | Accepted temporary compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/internal_soa_vector_conversions/*`, and direct imports remain only for targeted compatibility or conformance coverage. | `TODO-4252` tracks final documentation cleanup under the promotion contract below. |
+| `/std/collections/experimental_soa_vector/*` | Accepted compatibility namespace | Compatibility module behind the promoted canonical `/std/collections/soa_vector/*` public surface; direct imports are accepted only for targeted compatibility or conformance coverage. C++/VM/native compile-run coverage locks this compatibility seam; ordinary public examples should use `/std/collections/soa_vector/*`. | none |
+| `/std/collections/experimental_soa_vector_conversions/*` | Accepted compatibility namespace | Compatibility conversion module for direct experimental SoA conversion imports; canonical conversions route through `/std/collections/internal_soa_vector_conversions/*`, and direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
-| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace | Internal SoA wrapper implementation adapter used by canonical `/std/collections/soa_vector/*`; it is not a public import surface. It still preserves the temporary experimental `SoaVector<T>` type identity until final promotion moves that type onto a final substrate. | none |
+| `/std/collections/internal_soa_vector/*` | Internal substrate/helper namespace | Internal SoA wrapper implementation adapter used by canonical `/std/collections/soa_vector/*`; it is not a public import surface. It still preserves the current compatibility `SoaVector<T>` type identity behind the promoted public wrapper surface. | none |
 | `/std/collections/internal_soa_vector_conversions/*` | Internal substrate/helper namespace | Internal SoA conversion implementation adapter used by canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/to_aos*`; it is not a public import surface. | none |
 | `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
 
-The policy implication is immediate: vector/map/gfx work should prefer canonical
-non-`experimental` namespaces in docs and compiler authority, SoA work must say
-explicitly that it is still on a separate maturity track, and substrate helpers
-should be treated as explicit implementation namespaces rather than as
-candidate public APIs.
+The policy implication is immediate: vector/map/gfx/SoA work should prefer
+canonical non-`experimental` namespaces in docs and compiler authority, while
+substrate helpers should be treated as explicit implementation namespaces
+rather than as candidate public APIs.
 
-### SoA Maturity Track
-This section is the scope reference for future SoA-specific maturity decision
-TODOs. It is intentionally separate from vector/map promotion.
+### SoA Public Collection Contract
+This section is the scope reference for the promoted `soa_vector<T>` public
+surface. It remains separate from vector/map implementation details because SoA
+uses a distinct structure-of-arrays substrate and field-view invalidation model.
 
-- **Current status:** `soa_vector<T>` remains an incubating public extension,
-  not a fully promoted public contract on the same maturity level as
-  `vector<T>` and `map<K, V>`. The first promotion pass is complete: ordinary
-  public code should use the canonical SoA namespaces below instead of direct
-  experimental imports, while compatibility seams remain internal/bridge
-  concerns.
-- **Current user-facing experiment surface:** `/std/collections/soa_vector/*`
-  and `/std/collections/soa_vector_conversions/*` are the canonical spellings
-  to use when docs or examples need to demonstrate the current SoA feature set.
-  The canonical wrapper now owns the ordinary constructor, count/get/ref,
-  reserve/push, field-view, and AoS conversion helper names; ordinary public
-  examples should not import the experimental implementation modules for those
-  helper flows. The canonical conversion helpers now use `SoaVector<T>` and
-  `Reference<SoaVector<T>>` receiver spellings while routing through canonical
-  `/std/collections/soa_vector/*` helper paths. One source-locked wildcard
-  canonical parity program now runs across C++ emitter, VM, and native for
-  construction/read/ref/mutator, field-view, and conversion behavior without
-  direct experimental SoA imports in the test source.
+- **Current status:** `soa_vector<T>` is a promoted stdlib-owned public
+  collection surface. Ordinary public code should use the canonical SoA
+  namespaces below instead of direct experimental imports; retained
+  experimental namespaces are compatibility shims for targeted tests and
+  migration coverage.
+- **Current user-facing surface:** `/std/collections/soa_vector/*` and
+  `/std/collections/soa_vector_conversions/*` are the canonical public
+  spellings. The canonical wrapper owns ordinary constructor, count/get/ref,
+  reserve/push, field-view, and AoS conversion helper names. The canonical
+  conversion helpers use `SoaVector<T>` and `Reference<SoaVector<T>>` receiver
+  spellings while routing through canonical `/std/collections/soa_vector/*`
+  helper paths. One source-locked wildcard canonical parity program runs
+  across C++ emitter, VM, and native for construction/read/ref/mutator,
+  field-view, and conversion behavior without direct experimental SoA imports
+  in the test source.
 - **Accepted compatibility seams:** `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain importable
-  only for targeted compatibility and conformance coverage while the SoA
-  surface is incubating. Existing C++/VM/native direct-import tests are the
-  contract for these temporary seams. They are not intended long-term
+  only for targeted compatibility and conformance coverage. Existing C++/VM/native
+  direct-import tests are the contract for these seams. They are not
   user-facing contracts, and ordinary public examples should continue to use
   `/std/collections/soa_vector/*` and
   `/std/collections/soa_vector_conversions/*`.
 - **Internal substrate namespaces:** `/std/collections/internal_soa_vector/*`
-  now owns ordinary canonical wrapper implementation forwarding,
+  owns ordinary canonical wrapper implementation forwarding,
   `/std/collections/internal_soa_vector_conversions/*` owns ordinary canonical
   conversion implementation forwarding, while
   `/std/collections/internal_soa_storage/*` stays implementation-facing
-  storage/layout plumbing. Neither is public API. The internal wrapper adapter
-  still preserves the temporary experimental `SoaVector<T>` type identity. The
-  inline-parameter and direct lowerer wrapper-dispatch bridges no longer use
-  rooted `/soa_vector/*`, `/to_aos`, or `/to_aos_ref` spellings as hidden raw
-  fallbacks.
-- **Final promotion contract:** `soa_vector<T>` may move from incubating
-  extension to promoted public collection only when all public behavior is owned
-  by canonical stdlib surfaces and the remaining compiler/runtime pieces are
-  generic substrate rather than SoA-specific compatibility paths:
+  storage/layout plumbing. None of these are public APIs. The internal wrapper
+  adapter still preserves the compatibility `SoaVector<T>` type identity behind
+  the promoted public wrapper surface. The inline-parameter and direct lowerer
+  wrapper-dispatch bridges no longer use rooted `/soa_vector/*`, `/to_aos`, or
+  `/to_aos_ref` spellings as hidden raw fallbacks.
+- **Promoted contract:** public behavior is owned by canonical stdlib surfaces
+  and the remaining compiler/runtime pieces are generic substrate rather than
+  SoA-specific compatibility paths:
   - Construction, read/ref, mutator, and field-view helpers are spelled through
     `/std/collections/soa_vector/*` with `SoaVector<T>` and
-    `Reference<SoaVector<T>>` receivers; method sugar must lower to those same
-    canonical helpers and preserve deterministic user-helper shadowing.
+    `Reference<SoaVector<T>>` receivers; method sugar lowers to those same
+    canonical helpers and preserves deterministic user-helper shadowing.
   - AoS/SoA conversions are spelled through
     `/std/collections/soa_vector_conversions/*` and canonical
-    `/std/collections/soa_vector/to_aos*` helpers; conversion receivers must not
+    `/std/collections/soa_vector/to_aos*` helpers; conversion receivers do not
     require direct imports of experimental conversion modules in ordinary code.
   - Borrowed `ref(...)` values, field views, structural mutation, explicit
-    conversions, owner destroy, and scope exit have one documented invalidation
-    model, and invalid escapes fail with deterministic diagnostics.
+    conversions, owner destroy, and scope exit share one documented
+    invalidation model, and invalid escapes fail with deterministic diagnostics.
   - C++ emitter, VM, and native coverage exercise the same canonical
     construction/read/ref/mutator, field-view, and conversion programs where
     each backend supports the feature; unsupported paths reject explicitly
     instead of falling back to hidden raw-builtin behavior.
   - `/std/collections/internal_soa_vector/*` and
     `/std/collections/internal_soa_storage/*` remain implementation-only, and
-    any retained `/std/collections/experimental_soa_vector*/*` path is either a
-    documented compatibility shim with conformance coverage or retired.
-- **Promotion blockers:** before final promotion, the final docs/ownership
-  matrix update must land (`TODO-4252`). Until then, docs should call
-  `soa_vector<T>` incubating explicitly instead of implying it has already
-  graduated with vector/map.
+    retained `/std/collections/experimental_soa_vector*/*` paths are documented
+    compatibility shims with conformance coverage.
 
 ### Backend Profiles
 - A definition is well-typed only with respect to a backend profile.
@@ -3399,9 +3391,10 @@ bad_use_after_take() {
     intentionally unsupported.
   - Array helpers: `value.count()`, `value.at(index)`, `value[index]`, `value.at_unsafe(index)` (canonical equivalents:
     `count(value)`, `at(value, index)`, `at_unsafe(value, index)`).
-  - Ownership direction: keep `array<T>` as language-core substrate, but move the public constructor/helper behavior of
-    `vector<T>` and `map<K, V>` into stdlib `.prime` definitions; `soa_vector<T>` should follow the same model once the
-    generic SoA substrate is ready.
+  - Ownership direction: keep `array<T>` as language-core substrate, move the
+    public constructor/helper behavior of `vector<T>` and `map<K, V>` into
+    stdlib `.prime` definitions, and treat promoted `soa_vector<T>` as the
+    current stdlib-owned SoA collection surface over generic SoA substrate.
   - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` is the user-facing variadic
     constructor form (0..N); `vector<T>(...)` remains a legacy compatibility helper path until `TODO-4254`. Growth
     operations require `effects(heap_alloc)` (or the active default effects set), and
@@ -3494,17 +3487,18 @@ bad_use_after_take() {
     must not silently rewrite AoS (`vector`) to SoA (`soa_vector`).
   - Intended usage: data-oriented loops and ECS-style component storage where field-wise contiguous iteration is
     preferred.
-  - Target implementation model: the public `soa_vector` API should eventually live in stdlib `.prime` files, with
-    compiler/runtime code reduced to generic SoA substrate only (field-layout/codegen/introspection, column storage,
-    field-view borrowing/invalidation, and allocation primitives). The end-state is that C++ source does not contain
-    `soa_vector`-named collection semantics.
-  - Proposed `soa_vector<T>` surface:
+  - Implementation model: the public `soa_vector` API lives in stdlib `.prime`
+    files, with compiler/runtime code reduced to generic SoA substrate only
+    (field-layout/codegen/introspection, column storage, field-view
+    borrowing/invalidation, and allocation primitives). The end-state is that
+    C++ source does not contain `soa_vector`-named collection semantics.
+  - Public `soa_vector<T>` surface:
     - Construction/growth mirrors vector (`soa_vector<T>{}`, `push`, `reserve`, `count`) and allocation still requires
       `effects(heap_alloc)`.
     - Indexing/access is explicit and SoA-aware (`value.field()[i]`, `value.get(i)`, and optionally `value.ref(i)` proxy
       access).
     - Reallocation invalidates SoA field views/proxies the same way vector growth invalidates pointers/references.
-  - Draft ownership/invalidation rules for ECS-style usage:
+  - Ownership/invalidation rules for ECS-style usage:
     - Treat `get(...)` as value-style element access.
     - Treat `ref(...)` and future field views as borrowed storage views that are invalid after structural mutation.
     - Structural mutations (`push`, `reserve`) and explicit AoS/SoA conversions (`to_soa`, `to_aos`) are mutation
@@ -3526,9 +3520,10 @@ bad_use_after_take() {
     accepts `soa_vector` bindings/literals/returns when type constraints hold (`soa_vector` struct element requirement,
     template-arity checks, and deterministic element-field envelope diagnostics such as `soa_vector field envelope is
     unsupported on /Type/field/...: ...` for disallowed direct or nested fields). Builtin `count`/`get`/`ref` validation
-    and current lowering behavior remain temporary scaffolding while the language grows the substrate needed for a real
-    stdlib-owned implementation. The canonical `/std/collections/soa_vector/*`
-    wrapper now owns public constructor/read/ref/mutator helper names and
+    and current lowering behavior remain compatibility scaffolding around the
+    stdlib-owned public wrapper surface. The canonical
+    `/std/collections/soa_vector/*` wrapper owns public
+    constructor/read/ref/mutator helper names and
     forwards through the internal `/std/collections/internal_soa_vector/*`
     adapter instead of directly importing the experimental compatibility
     module, while `/std/collections/soa_vector_conversions/*` owns the public
@@ -3570,17 +3565,16 @@ bad_use_after_take() {
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method
     `to_aos` forms now also materialize the canonical `/std/collections/soa_vector/to_aos__...`
     helper path and run through that same bridged substrate on native instead of trapping. These compiler-owned
-    `soa_vector` paths are compatibility scaffolding rather than the intended end-state. The inline-parameter
-    and direct lowerer wrapper-dispatch bridges now require canonical wrapper
-    paths, while remaining promotion work focuses on cross-backend parity and
-    final docs classification.
+    `soa_vector` paths are compatibility scaffolding around the canonical public
+    surface. The inline-parameter and direct lowerer wrapper-dispatch bridges
+    now require canonical wrapper paths.
   - **Compile-time schema substrate status:** the minimum field-schema introspection needed for a `.prime`
     `soa_vector<T>` implementation already exists through compile-time reflection metadata queries:
     `meta.field_count<T>()`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
     `meta.field_visibility<T>(i)`. Those queries validate only on reflect-enabled structs and are eliminated before IR
     emission, so future SoA stdlib code can derive column schemas from `T` without adding new compiler-owned
     collection-specific reflection primitives.
-  - **Current canonical SoA experiment surface:** public docs/examples should now use
+  - **Current canonical SoA public surface:** public docs/examples should use
     `/std/collections/soa_vector/*` with `SoaVector<T>`, `soaVectorNew<T>()`,
     `soaVectorSingle<T>()`, `soaVectorFromAos<T>()`, `soaVectorCount<T>()`, `soaVectorGet<T>()`,
     `soaVectorReserve<T>()`, and `soaVectorPush<T>()`, plus wrapper method sugar for `.count()`,
@@ -3592,7 +3586,7 @@ bad_use_after_take() {
     `/std/collections/internal_soa_vector_conversions/*` is the internal
     adapter behind canonical AoS conversion helpers,
     `/std/collections/experimental_soa_vector/*` is accepted only as a targeted
-    compatibility/conformance seam behind that canonical experiment surface,
+    compatibility/conformance seam behind that canonical public surface,
     and `/std/collections/experimental_soa_vector_conversions/*` is accepted
     only as a targeted direct-import conversion compatibility seam. Ordinary
     public code should not import either experimental SoA namespace for

@@ -6,6 +6,32 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4252: Promote `soa_vector` docs after compatibility cleanup
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred SoA finish
+  - scope: Promote `soa_vector` from incubating extension to the documented
+    public collection contract once compatibility seams, raw-builtin bridges,
+    and cross-backend parity gates are complete.
+  - acceptance:
+    - `docs/PrimeStruct.md`, `docs/CodeExamples.md`, checked-in examples, and
+      `docs/todo.md` consistently describe `soa_vector` as promoted or record
+      any remaining explicitly accepted compatibility exception.
+    - The canonical `core` / `hybrid` / `stdlib-owned` matrix is updated for
+      the final SoA ownership classification.
+    - No ordinary public example imports experimental SoA namespaces.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after docs, examples, ownership matrix, and tests reflect
+    final SoA status; leave unrelated dynamic storage separate.
+  - finished_at: 2026-04-28
+  - evidence: Updated PrimeStruct, CodeExamples, Coding_Guidelines,
+    PrimeStruct_SyntaxSpec, todo summary, and docs/source locks so
+    `soa_vector<T>` is documented as a promoted stdlib-owned public collection
+    surface. Kept direct experimental SoA imports as explicit compatibility
+    shims for targeted conformance coverage, updated the ownership matrix,
+    verified the checked-in surface example uses canonical imports, and
+    deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4251: Add full cross-backend SoA parity coverage
   - owner: ai
   - created_at: 2026-04-27

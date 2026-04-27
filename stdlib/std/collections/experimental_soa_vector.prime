@@ -1,4 +1,4 @@
-// Accepted temporary compatibility module behind canonical /std/collections/soa_vector/*.
+// Accepted compatibility module behind canonical /std/collections/soa_vector/*.
 // Direct imports remain only for targeted compatibility or conformance coverage.
 // Canonical wrappers route through /std/collections/internal_soa_vector/*.
 // Ordinary public examples should import /std/collections/soa_vector/* instead.

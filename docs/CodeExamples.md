@@ -61,22 +61,16 @@ These files may stay helper-heavy or bridge-oriented while they define
 substrate, compatibility, migration, or benchmark behavior. Do not use them as
 the style reference for new public-facing examples.
 
-Current SoA compatibility exception: direct imports of
-`/std/collections/experimental_soa_vector/*` are accepted only for targeted
-compatibility and conformance coverage while `soa_vector<T>` remains
-incubating. Ordinary public examples should use
+SoA public example rule: `soa_vector<T>` is a promoted stdlib-owned collection
+surface for user-facing examples. Ordinary public examples should use
 `/std/collections/soa_vector/*` and
-`/std/collections/soa_vector_conversions/*`. Direct imports of
+`/std/collections/soa_vector_conversions/*` for construction, read/ref,
+mutator, field-view, and AoS/SoA conversion flows.
+
+Retained SoA compatibility exception: direct imports of
 `/std/collections/experimental_soa_vector/*` and
 `/std/collections/experimental_soa_vector_conversions/*` are compatibility
 shims for targeted tests only, not ordinary example style.
-
-Final SoA promotion contract for examples: user-facing examples may treat
-`soa_vector<T>` as promoted only after construction/read/ref/mutator helpers,
-field-view helpers, AoS/SoA conversions, and backend parity are all covered by
-canonical `/std/collections/soa_vector/*` or
-`/std/collections/soa_vector_conversions/*` imports. Until then, examples that
-are not compatibility tests should keep calling it an incubating extension.
 
 Mixed-directory rule:
 - `stdlib/std/collections` is intentionally mixed; follow the file-level list

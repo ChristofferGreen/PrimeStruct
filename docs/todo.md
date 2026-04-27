@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4252: Promote `soa_vector` docs after compatibility cleanup
+- TODO-4245: Plan dynamic vector growth and runtime storage support
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4245: Plan dynamic vector growth and runtime storage support
 - TODO-4253: Implement brace-only construction semantics
 - TODO-4254: Migrate generated construction surfaces
 - TODO-4255: Migrate collection construction surfaces
@@ -81,11 +80,11 @@ Task template:
 - TODO-4259: Add inferred sum variant construction
 - TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
+- TODO-4262: Add public sum-type examples
 
 ### Priority Lanes (Current)
 
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4245
-- Deferred SoA finish: TODO-4252
 - Deferred algebraic types and brace-only construction: TODO-4253
   -> TODO-4254 -> TODO-4255 -> TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
@@ -97,7 +96,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4252: Promote `soa_vector` docs after compatibility cleanup
 - TODO-4245: Plan dynamic vector growth and runtime storage support
 - TODO-4253: Implement brace-only construction semantics
 - TODO-4254: Migrate generated construction surfaces
@@ -137,7 +135,7 @@ Task template:
 | Stdlib bridge consolidation and collection/file/gfx surface authority | none |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
-| SoA maturity and `soa_vector` promotion | TODO-4252 |
+| SoA maturity and `soa_vector` promotion | none |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
@@ -165,7 +163,7 @@ Task template:
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
-| `soa_vector` maturity and canonical surface parity | TODO-4252 |
+| `soa_vector` maturity and canonical surface parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
@@ -212,7 +210,7 @@ Task template:
   import spellings, wildcard expansion, user-defined helper precedence,
   field-view field-name lowering, gfx constructor sugar, and lowerer raw-path
   dispatch checks are syntax/provenance-owned or lowering-owned.
-- Outside this lane: `array<T>` core ownership, `soa_vector<T>` maturity, and
+- Outside this lane: `array<T>` core ownership, promoted `soa_vector<T>`, and
   runtime/storage redesign remain separate boundaries and should not be folded
   into the vector/map bridge tasks below.
 
@@ -222,11 +220,10 @@ Task template:
   long-term user-facing contracts.
 - Canonical collection contract: `/std/collections/vector/*` and
   `/std/collections/map/*` are the sole public vector/map collection surfaces.
-- Accepted temporary compatibility namespaces:
+- Accepted compatibility namespaces:
   `/std/collections/experimental_soa_vector/*` remains importable only for
-  targeted compatibility and conformance coverage while `soa_vector<T>` is
-  incubating. Ordinary public examples should use
-  `/std/collections/soa_vector/*`.
+  targeted compatibility and conformance coverage. Ordinary public examples
+  should use `/std/collections/soa_vector/*`.
   `/std/collections/experimental_soa_vector_conversions/*` remains a bridge
   for direct experimental imports. Canonical conversion helpers now route
   through `/std/collections/internal_soa_vector_conversions/*`. These direct
@@ -249,48 +246,36 @@ Task template:
   `/std/collections/internal_soa_storage/*` are implementation-facing plumbing
   rather than public API.
 - Default rule: no `experimental` namespace is canonical public API unless the
-  docs call out a temporary incubating exception explicitly.
+  docs call out an accepted compatibility exception explicitly.
 
-### SoA Maturity Track Summary
+### SoA Public Collection Summary
 
-- `soa_vector<T>` remains an incubating public extension instead of joining the
-  already-promoted vector/map public contract.
-- Canonical experiment spellings for current docs/examples are
+- `soa_vector<T>` is a promoted stdlib-owned public collection surface.
+- Canonical public spellings for current docs/examples are
   `/std/collections/soa_vector/*` and
   `/std/collections/soa_vector_conversions/*`.
 - Accepted compatibility seams: `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain importable
   only for targeted compatibility and conformance coverage; C++/VM/native
-  direct-import tests lock that temporary contract.
+  direct-import tests lock that compatibility contract.
 - Internal substrate namespaces: `/std/collections/internal_soa_vector/*`
   owns canonical wrapper implementation forwarding,
   `/std/collections/internal_soa_vector_conversions/*` owns canonical
   conversion implementation forwarding, while
   `/std/collections/internal_soa_storage/*` remains implementation-facing SoA
   storage/layout plumbing. The internal wrapper adapter still preserves the
-  temporary experimental `SoaVector<T>` type identity until final promotion
-  moves that type onto a final substrate. The inline-parameter and direct
-  lowerer wrapper-dispatch bridges no longer use rooted `/soa_vector/*`,
-  `/to_aos`, or `/to_aos_ref` spellings as hidden raw fallbacks.
-- Final promotion contract: `soa_vector<T>` can become a promoted public
-  collection only after canonical `/std/collections/soa_vector/*`
-  construction/read/ref/mutator and field-view helpers, canonical
-  `/std/collections/soa_vector_conversions/*` AoS/SoA conversions, one
-  documented borrowed-view invalidation model, and C++/VM/native canonical
-  backend parity all exist without hidden raw-builtin fallback behavior.
-- Remaining promotion work is tracked by `TODO-4252`, which owns the final
-  documentation and ownership-matrix update needed before `soa_vector` can be
-  treated as a promoted public contract.
-- First promotion pass complete: the canonical public helper wrapper is
+  compatibility `SoaVector<T>` type identity behind the promoted public wrapper
+  surface. The inline-parameter and direct lowerer wrapper-dispatch bridges no
+  longer use rooted `/soa_vector/*`, `/to_aos`, or `/to_aos_ref` spellings as
+  hidden raw fallbacks.
+- Promoted contract complete: the canonical public helper wrapper is
   authoritative for ordinary construction/read/ref/mutator/conversion helper
   names, bound field-view borrow-root invalidation, and canonical-only
   C++/VM/native helper, field-view, and conversion parity coverage. Conversion
   receiver contracts are spelled through canonical `SoaVector<T>` surfaces, the
   checked-in ECS example uses canonical wrapper/conversion imports, and ordinary
   public code no longer needs `experimental_soa_vector` or
-  `experimental_soa_vector_conversions` imports. `soa_vector<T>` remains an
-  incubating canonical experiment until final docs and ownership classification
-  finish. The canonical wrapper now routes through
+  `experimental_soa_vector_conversions` imports. The canonical wrapper routes through
   `/std/collections/internal_soa_vector/*` and canonical conversions route
   through `/std/collections/internal_soa_vector_conversions/*` instead of
   directly importing experimental implementation modules.
@@ -304,24 +289,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4252: Promote `soa_vector` docs after compatibility cleanup
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred SoA finish
-  - scope: Promote `soa_vector` from incubating extension to the documented
-    public collection contract once compatibility seams, raw-builtin bridges,
-    and cross-backend parity gates are complete.
-  - acceptance:
-    - `docs/PrimeStruct.md`, `docs/CodeExamples.md`, checked-in examples, and
-      `docs/todo.md` consistently describe `soa_vector` as promoted or record
-      any remaining explicitly accepted compatibility exception.
-    - The canonical `core` / `hybrid` / `stdlib-owned` matrix is updated for
-      the final SoA ownership classification.
-    - No ordinary public example imports experimental SoA namespaces.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after docs, examples, ownership matrix, and tests reflect
-    the final SoA status; unrelated dynamic storage work remains separate.
 
 - [ ] TODO-4245: Plan dynamic vector growth and runtime storage support
   - owner: ai

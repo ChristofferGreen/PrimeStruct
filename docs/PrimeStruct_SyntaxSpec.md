@@ -842,7 +842,8 @@ Architectural direction for type ownership:
 - `array<T>` remains a core language/runtime envelope.
 - `vector<T>` and `map<K, V>` remain portable surface envelopes today, but their public constructor/helper behavior
   should converge on stdlib `.prime` implementations over generic substrate.
-- `soa_vector<T>` should follow that same stdlib-owned end-state once the generic SoA substrate exists.
+- `soa_vector<T>` is a promoted stdlib-owned public collection surface over
+  generic SoA substrate.
 - `Maybe<T>` is intended to be stdlib-owned, while `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*`
   remain hybrid surfaces with minimal builtin/runtime substrate.
 
@@ -1271,13 +1272,14 @@ Non-empty `soa_vector` literals now lower through deterministic builtin
 materialization in backend literal lowering: struct-element payload slots are
 heap materialized and copied into SoA storage-compatible contiguous memory
 instead of emitting the former direct unsupported diagnostic boundary.
-These compiler-owned `soa_vector` paths are transitional and should be deleted once the generic SoA substrate and the
-stdlib `.prime` implementation replace them.
+These compiler-owned `soa_vector` materialization paths are transitional and
+should be deleted once generic SoA substrate owns the remaining backend storage
+work behind the promoted stdlib wrapper surface.
 Canonical example source: `examples/3.Surface/soa_vector_ecs.prime` imports
 `/std/collections/soa_vector/*` and
 `/std/collections/soa_vector_conversions/*` for the supported wrapper flow.
-That wrapper flow is the supported public shape while `soa_vector<T>` remains an
-incubating canonical experiment rather than a fully promoted vector/map peer.
+That wrapper flow is the promoted public shape for `soa_vector<T>`; direct
+experimental SoA imports remain compatibility shims for targeted tests only.
 
 ### 8.5 Matrix and Quaternion Types (Draft)
 
