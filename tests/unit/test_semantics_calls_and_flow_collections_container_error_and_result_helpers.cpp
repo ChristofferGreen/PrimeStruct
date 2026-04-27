@@ -4214,6 +4214,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("ref_ref fallback keeps same-path helper shadow through borrowed helper return receivers") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[struct]
+Holder() {
+  [return<Reference<SoaVector<Particle>>>]
+  borrowValues([Reference<SoaVector<Particle>>] values) {
+    return(values)
+  }
+}
+
+[return<int>]
+/soa_vector/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
+  return(17i32)
+}
+
+[return<int>]
+consume([int] value) {
+  return(value)
+}
+
+[return<auto>]
+pick([Holder] holder, [Reference<SoaVector<Particle>>] values) {
+  return(holder.borrowValues(values).ref(0i32))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  [Holder] holder{Holder()}
+  [auto] item{holder.borrowValues(location(values)).ref(0i32)}
+  [i32] direct{ref_ref(holder.borrowValues(location(values)), 0i32)}
+  return(plus(item,
+              plus(direct,
+                   plus(consume(holder.borrowValues(location(values)).ref(0i32)),
+                        pick(holder, location(values))))))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("get call fallback keeps same-path helper shadow for auto inference through struct helper return receivers") {
   const std::string source = R"(
 import /std/collections/*

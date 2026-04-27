@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4205: Lock borrowed SoA ref_ref helper shadows. Completed:
+  `tests/unit/test_semantics_calls_and_flow_collections_container_error_and_result_helpers.cpp`
+  now covers visible same-path `/soa_vector/ref_ref` user helpers on borrowed
+  `Reference<SoaVector<T>>` helper-return receivers across local bindings,
+  call arguments, direct `ref_ref(...)` calls, and return expressions,
+  preserving method-sugar shadowing parity with the existing `/soa_vector/ref`
+  helper-return coverage without adding new active TODO debt. Local validation
+  is deferred per the lite workflow.
 - ✓ TODO-4204: Lock same-path SoA ref_ref helpers. Completed:
   `tests/unit/test_semantics_calls_and_flow_collections_soa_vector_builtins_named_args.cpp`
   now covers visible same-path `/soa_vector/ref_ref` user helpers for direct
