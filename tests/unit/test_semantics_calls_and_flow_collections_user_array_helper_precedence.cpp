@@ -200,6 +200,24 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("count call keeps templated user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/count<T>([vector<T>] values) {
+  return(22i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("capacity call keeps user-defined vector helper precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

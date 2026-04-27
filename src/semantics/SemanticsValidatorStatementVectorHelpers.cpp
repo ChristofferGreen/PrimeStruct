@@ -89,7 +89,9 @@ std::string SemanticsValidator::preferVectorStdlibHelperPath(const std::string &
         !hasDeclaredDefinitionPath(candidate)) {
       return false;
     }
-    return hasImportedDefinitionPath(candidate) || defMap_.count(candidate) > 0;
+    return hasImportedDefinitionPath(candidate) ||
+           hasDeclaredDefinitionPath(candidate) ||
+           defMap_.count(candidate) > 0;
   };
   std::string preferred = path;
   if (preferred.rfind("/array/", 0) == 0 && !hasVisibleDefinitionPath(preferred)) {
