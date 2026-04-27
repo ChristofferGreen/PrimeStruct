@@ -12,6 +12,11 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+bool isExperimentalVectorStructPath(const std::string &structTypeName) {
+  return structTypeName == "/std/collections/experimental_vector/Vector" ||
+         structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 std::string resolveScopedCallPath(const Expr &expr) {
   if (expr.name.find('/') != std::string::npos || expr.namespacePrefix.empty()) {
     return expr.name;
@@ -631,6 +636,18 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.elemKind = it->second.valueKind;
       info.isVectorTarget = false;
       info.isSoaVector = true;
+      info.isArgsPackTarget = it->second.isArgsPack;
+      info.argsPackElementKind = it->second.argsPackElementKind;
+      info.elemSlotCount = elementSlotCountForLocal(it->second);
+      info.structTypeName = it->second.structTypeName;
+      return info;
+    }
+    if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Value &&
+        !it->second.isSoaVector && isExperimentalVectorStructPath(it->second.structTypeName)) {
+      info.isArrayOrVectorTarget = true;
+      info.elemKind = it->second.valueKind;
+      info.isVectorTarget = true;
+      info.isSoaVector = false;
       info.isArgsPackTarget = it->second.isArgsPack;
       info.argsPackElementKind = it->second.argsPackElementKind;
       info.elemSlotCount = elementSlotCountForLocal(it->second);

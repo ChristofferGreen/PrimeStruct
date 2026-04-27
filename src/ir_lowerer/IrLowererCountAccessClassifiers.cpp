@@ -18,6 +18,11 @@ bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
 
 bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn);
 
+bool isExperimentalVectorStructPath(const std::string &structTypeName) {
+  return structTypeName == "/std/collections/experimental_vector/Vector" ||
+         structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+}
+
 bool isExplicitRemovedCountLikeAliasCall(const Expr &expr,
                                          std::string_view helperName) {
   if (expr.kind != Expr::Kind::Call || expr.isMethodCall) {
@@ -57,6 +62,8 @@ bool isVectorTargetImpl(const Expr &target, const LocalMap &localsIn) {
     auto it = localsIn.find(target.name);
     return it != localsIn.end() && !it->second.isSoaVector &&
            (it->second.kind == LocalInfo::Kind::Vector ||
+            (it->second.kind == LocalInfo::Kind::Value &&
+             isExperimentalVectorStructPath(it->second.structTypeName)) ||
             (it->second.kind == LocalInfo::Kind::Reference &&
              it->second.referenceToVector) ||
             (it->second.kind == LocalInfo::Kind::Pointer &&

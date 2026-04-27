@@ -463,6 +463,13 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   vectorInfo.valueKind = Kind::Float64;
   locals.emplace("vec", vectorInfo);
 
+  LocalInfo experimentalVectorInfo;
+  experimentalVectorInfo.kind = LocalInfo::Kind::Value;
+  experimentalVectorInfo.valueKind = Kind::Int32;
+  experimentalVectorInfo.structTypeName =
+      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  locals.emplace("experimentalVec", experimentalVectorInfo);
+
   LocalInfo refArrayInfo{};
   refArrayInfo.kind = LocalInfo::Kind::Reference;
   refArrayInfo.referenceToArray = true;
@@ -572,6 +579,17 @@ TEST_CASE("ir lowerer call helpers resolve and validate array vector access targ
   CHECK(resolved.isArrayOrVectorTarget);
   CHECK(resolved.elemKind == Kind::Float64);
   CHECK(resolved.isVectorTarget);
+
+  primec::Expr experimentalVecName;
+  experimentalVecName.kind = primec::Expr::Kind::Name;
+  experimentalVecName.name = "experimentalVec";
+  resolved = primec::ir_lowerer::resolveArrayVectorAccessTargetInfo(
+      experimentalVecName, locals);
+  CHECK(resolved.isArrayOrVectorTarget);
+  CHECK(resolved.elemKind == Kind::Int32);
+  CHECK(resolved.isVectorTarget);
+  CHECK(resolved.structTypeName ==
+        "/std/collections/experimental_vector/Vector__t25a78a513414c3bf");
 
   primec::Expr refArrName;
   refArrName.kind = primec::Expr::Kind::Name;

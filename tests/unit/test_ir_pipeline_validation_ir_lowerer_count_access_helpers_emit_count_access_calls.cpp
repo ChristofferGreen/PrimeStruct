@@ -100,6 +100,40 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(error == "stale");
   CHECK(instructions.empty());
 
+  primec::ir_lowerer::LocalMap experimentalVectorLocals;
+  primec::ir_lowerer::LocalInfo experimentalVectorInfo;
+  experimentalVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  experimentalVectorInfo.valueKind =
+      primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  experimentalVectorInfo.structTypeName =
+      "/std/collections/experimental_vector/Vector__t25a78a513414c3bf";
+  experimentalVectorLocals.emplace("values", experimentalVectorInfo);
+
+  instructions.clear();
+  error.clear();
+  callExpr.name = "/std/collections/experimental_vector/vectorCount";
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            experimentalVectorLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::NotHandled);
+  CHECK(error.empty());
+  CHECK(instructions.empty());
+
   instructions.clear();
   error.clear();
   callExpr.name = "capacity";
