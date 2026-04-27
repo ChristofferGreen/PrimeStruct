@@ -576,7 +576,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+  CHECK(readFile(errPath).find("push requires vector binding") !=
         std::string::npos);
 }
 
