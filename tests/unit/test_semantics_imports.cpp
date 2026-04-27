@@ -948,6 +948,21 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("wildcard collection imports keep bare map count alias") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] pairs{map<i32, i32>(1i32, 7i32)}
+  return(count(pairs))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact vector import keeps map bridge aliases unavailable") {
   const std::string source = R"(
 import /std/collections/vector

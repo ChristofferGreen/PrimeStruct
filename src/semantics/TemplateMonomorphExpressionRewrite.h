@@ -669,7 +669,7 @@ bool rewriteExpr(Expr &expr,
     }
     return std::string{};
   };
-  auto preferCanonicalStdlibVectorFamilyHelperPath = [&](const std::string &path) {
+  auto preferCanonicalStdlibCollectionHelperPath = [&](const std::string &path) {
     const Expr *receiverExpr = mapHelperReceiverExpr(expr);
     if (receiverExpr == nullptr) {
       return path;
@@ -859,6 +859,14 @@ bool rewriteExpr(Expr &expr,
         (receiverFamily == "vector" || receiverFamily == "array" ||
          (helperName == "count" && receiverFamily == "string"))) {
       const std::string preferred = "/std/collections/vector/" + helperName;
+      if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
+          ctx.sourceDefs.count(preferred) > 0) {
+        return preferred;
+      }
+    }
+    if (!resolvesVectorFamilyPath && receiverFamily == "map" &&
+        (helperName == "count" || helperName == "count_ref")) {
+      const std::string preferred = "/std/collections/map/" + helperName;
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
@@ -1143,10 +1151,11 @@ bool rewriteExpr(Expr &expr,
       }
     }
     std::string resolvedPath = resolveCalleePath(expr, namespacePrefix, ctx);
-    const std::string preferredVectorFamilyPath = preferCanonicalStdlibVectorFamilyHelperPath(resolvedPath);
-    if (preferredVectorFamilyPath != resolvedPath) {
-      resolvedPath = preferredVectorFamilyPath;
-      expr.name = preferredVectorFamilyPath;
+    const std::string preferredCollectionHelperPath =
+        preferCanonicalStdlibCollectionHelperPath(resolvedPath);
+    if (preferredCollectionHelperPath != resolvedPath) {
+      resolvedPath = preferredCollectionHelperPath;
+      expr.name = preferredCollectionHelperPath;
       expr.namespacePrefix.clear();
     }
     const std::string preferredBorrowedSoaPath =
@@ -1618,6 +1627,13 @@ bool rewriteExpr(Expr &expr,
     const bool methodCallSyntax = expr.isMethodCall;
     std::string methodPath;
     if (resolveMethodCallTemplateTarget(expr, locals, ctx, methodPath)) {
+      const std::string preferredCollectionHelperMethodPath =
+          preferCanonicalStdlibCollectionHelperPath(methodPath);
+      if (preferredCollectionHelperMethodPath != methodPath) {
+        methodPath = preferredCollectionHelperMethodPath;
+        expr.name = preferredCollectionHelperMethodPath;
+        expr.namespacePrefix.clear();
+      }
       const std::string experimentalVectorMethodPath =
           experimentalVectorHelperPathForCanonicalHelper(methodPath);
       const std::string experimentalSoaVectorMethodPath =
