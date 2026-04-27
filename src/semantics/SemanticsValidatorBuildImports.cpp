@@ -204,6 +204,17 @@ bool SemanticsValidator::buildImportAliases() {
     return !(targetPath.rfind("/std/collections/soa_vector/", 0) == 0 &&
              isCanonicalSoaVectorHelperAliasName(aliasName));
   };
+  auto isMetadataBackedWildcardAliasDefinition =
+      [&](const std::string &prefix,
+          const std::string &aliasName,
+          const std::string &existingAliasPath,
+          const std::string &candidatePath) {
+        const StdlibSurfaceMetadata *preferred =
+            findStdlibSurfaceWildcardAliasMetadata(prefix, aliasName);
+        return preferred != nullptr &&
+               existingAliasPath == preferred->canonicalPath &&
+               stdlibSurfaceMatchesImportAliasPath(*preferred, candidatePath);
+      };
 
   const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
   for (const auto &importPath : importPaths) {
@@ -286,6 +297,10 @@ bool SemanticsValidator::buildImportAliases() {
         }
         auto [it, inserted] = directImportAliases_.emplace(remainder, path);
         if (!inserted && it->second != path) {
+          if (isMetadataBackedWildcardAliasDefinition(
+                  prefix, remainder, it->second, path)) {
+            continue;
+          }
           if (!addImportDiagnostic("import creates name conflict: " + remainder, defIt->second)) {
             return false;
           }
