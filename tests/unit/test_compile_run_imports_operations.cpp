@@ -2034,6 +2034,43 @@ main() {
   CHECK(runCommand(exePath) == 38);
 }
 
+TEST_CASE("compiles and runs builtin helper-return soa_vector ref_ref same-path helper in C++ emitter") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref_ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] idx{vector<i32>(0i32)}
+  [soa_vector<Particle>] values{cloneValues()}
+  return(plus(ref_ref(values, idx),
+              plus(values.ref_ref(idx), ref_ref(cloneValues(), idx))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_builtin_soa_vector_ref_ref_same_path_exe.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_builtin_soa_vector_ref_ref_same_path_exe")
+          .string();
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 51);
+}
+
 TEST_CASE("compiles and runs helper-return experimental soa_vector method shadows in C++ emitter") {
   const std::string source = R"(
 import /std/collections/*

@@ -6,6 +6,14 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4209: Lock builtin SoA ref_ref runtime shadows. Completed:
+  `tests/unit/test_compile_run_imports_operations.cpp`,
+  `tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.cpp`, and
+  `tests/unit/test_compile_run_native_backend_collections_experimental_maps_and_helpers.cpp`
+  now cover visible same-path `/soa_vector/ref_ref` helpers on builtin
+  `soa_vector<T>` local and helper-return receivers through C++ emitter, VM,
+  and native backend execution surfaces. Local validation is deferred per the
+  lite workflow.
 - ✓ TODO-4208: Lock borrowed SoA ref_ref runtime shadows. Completed:
   `tests/unit/test_compile_run_imports_operations.cpp`,
   `tests/unit/test_compile_run_vm_collections_wrapper_temporaries_a.cpp`, and

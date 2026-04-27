@@ -1665,6 +1665,39 @@ main() {
   CHECK(runCommand(runCmd) == 38);
 }
 
+TEST_CASE("vm runs builtin helper-return soa_vector ref_ref same-path helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[effects(heap_alloc), return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[effects(heap_alloc), return<int>]
+/soa_vector/ref_ref([soa_vector<Particle>] values, [vector<i32>] index) {
+  return(17i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] idx{vector<i32>(0i32)}
+  [soa_vector<Particle>] values{cloneValues()}
+  return(plus(ref_ref(values, idx),
+              plus(values.ref_ref(idx), ref_ref(cloneValues(), idx))))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_builtin_soa_vector_ref_ref_same_path.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 51);
+}
+
 TEST_CASE("vm runs borrowed local experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*
