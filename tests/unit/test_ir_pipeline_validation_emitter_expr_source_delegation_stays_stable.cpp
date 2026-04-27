@@ -1843,12 +1843,23 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "const std::string samePathSoaNonRefHelper = \"/soa_vector/\" + helperName;") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
+            "const auto vectorReceiverHasVisibleCanonicalHelper =\n"
+            "        [&](std::string_view candidateHelperName) {\n"
+            "          const std::string preferred =\n"
+            "              \"/std/collections/vector/\" + std::string(candidateHelperName);\n"
+            "          return receiverFamily == \"vector\" &&\n"
+            "                 hasVisibleStdCollectionsImportForPath(ctx, preferred) &&\n"
+            "                 ctx.sourceDefs.count(preferred) > 0;\n"
+            "        };") !=
+        std::string::npos);
+  CHECK(templateMonomorphExpressionRewriteSource.find(
             "const bool receiverEligibleForSamePathSoaHelper =\n"
             "          receiverFamily == \"soa_vector\" ||\n"
             "          receiverResolvesBorrowedExperimentalSoaVector ||\n"
             "          receiverResolvesExperimentalSoaVector ||\n"
             "          ((helperName == \"count\" || helperName == \"count_ref\") &&\n"
-            "           receiverFamily == \"vector\");") !=
+            "           receiverFamily == \"vector\" &&\n"
+            "           !vectorReceiverHasVisibleCanonicalHelper(helperName));") !=
         std::string::npos);
   CHECK(templateMonomorphExpressionRewriteSource.find(
             "isLegacyOrCanonicalSoaHelperPath(samePathSoaNonRefHelper,") ==

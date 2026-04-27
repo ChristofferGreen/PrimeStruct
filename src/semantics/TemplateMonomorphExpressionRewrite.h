@@ -796,6 +796,14 @@ bool rewriteExpr(Expr &expr,
         helperName = "to_aos_ref";
       }
     }
+    const auto vectorReceiverHasVisibleCanonicalHelper =
+        [&](std::string_view candidateHelperName) {
+          const std::string preferred =
+              "/std/collections/vector/" + std::string(candidateHelperName);
+          return receiverFamily == "vector" &&
+                 hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
+                 ctx.sourceDefs.count(preferred) > 0;
+        };
     if (helperName == "count" || helperName == "count_ref" ||
         helperName == "push" || helperName == "reserve") {
       const std::string samePathSoaNonRefHelper = "/soa_vector/" + helperName;
@@ -804,7 +812,8 @@ bool rewriteExpr(Expr &expr,
           receiverResolvesBorrowedExperimentalSoaVector ||
           receiverResolvesExperimentalSoaVector ||
           ((helperName == "count" || helperName == "count_ref") &&
-           receiverFamily == "vector");
+           receiverFamily == "vector" &&
+           !vectorReceiverHasVisibleCanonicalHelper(helperName));
       if (receiverEligibleForSamePathSoaHelper &&
           hasDefinitionFamilyPath(samePathSoaNonRefHelper)) {
         return samePathSoaNonRefHelper;
