@@ -637,6 +637,49 @@ main() {
   CHECK(nodeIdListContains(fanout.diagnosticNodeIds, requireGraphNodeId(graph, "/Box/get")));
 }
 
+TEST_CASE("type resolution graph receiver invalidation avoids ambiguous method targets") {
+  const std::string source = R"(
+Box {
+  value{i32}
+}
+
+Other {
+  value{i32}
+}
+
+[return<i32>]
+/Box/get([Box] self) {
+  return(self.value)
+}
+
+[return<i32>]
+/Other/get([Other] self) {
+  return(self.value)
+}
+
+[return<i32>]
+main() {
+  [Box] box{Box(1i32)}
+  return(box.get())
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  CHECK(graph.invalidationReceiverTypeCount == 1u);
+  const auto resolvedToMethodTarget = [&](const std::string &path) {
+    return std::any_of(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
+      return node.kind == "call_constraint" && node.scopePath == "/main" &&
+             node.resolvedPath == path;
+    });
+  };
+  CHECK_FALSE(resolvedToMethodTarget("/Box/get"));
+  CHECK_FALSE(resolvedToMethodTarget("/Other/get"));
+}
+
 TEST_CASE("type resolution graph local binding invalidation counts bindings") {
   const std::string source = R"(
 [return<i32>]

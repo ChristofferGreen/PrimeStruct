@@ -612,6 +612,27 @@ private:
     if (importIt != importAliases_.end()) {
       return importIt->second;
     }
+    if (expr.isMethodCall && !expr.isFieldAccess) {
+      const std::string suffix = "/" + expr.name;
+      std::string uniqueMethodTarget;
+      for (const auto &def : program_.definitions) {
+        if (callableDefinitionPaths_.count(def.fullPath) == 0 ||
+            def.fullPath.size() < suffix.size() ||
+            def.fullPath.compare(def.fullPath.size() - suffix.size(),
+                                 suffix.size(),
+                                 suffix) != 0) {
+          continue;
+        }
+        if (!uniqueMethodTarget.empty()) {
+          return {};
+        }
+        uniqueMethodTarget = def.fullPath;
+      }
+      if (!uniqueMethodTarget.empty()) {
+        return uniqueMethodTarget;
+      }
+      return {};
+    }
     return "/" + expr.name;
   }
 
