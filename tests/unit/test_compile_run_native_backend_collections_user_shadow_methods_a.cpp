@@ -382,7 +382,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects native user vector at method shadow") {
+TEST_CASE("compiles and runs native user vector at method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -396,14 +396,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_at_method_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_user_vector_at_method_shadow.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_user_vector_at_method_shadow_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 69);
 }
 
 TEST_CASE("compiles and runs native user string at_unsafe call shadow") {
@@ -474,7 +473,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects native user vector at_unsafe method shadow") {
+TEST_CASE("compiles and runs native user vector at_unsafe method shadow") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -488,14 +487,13 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("compile_native_user_vector_at_unsafe_method_shadow.prime", source);
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_user_vector_at_unsafe_method_shadow.err").string();
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_user_vector_at_unsafe_method_shadow_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 82);
 }
 
 TEST_CASE("compiles and runs native user string at call shadow") {

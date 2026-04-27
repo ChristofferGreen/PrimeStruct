@@ -506,12 +506,6 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
               !hasImportedDefinitionPath(samePath)) {
             return failExprRootDiagnostic("unknown method: " + samePath);
           }
-        } else if (expr.namespacePrefix.empty() && helperName != "capacity") {
-          const std::string samePath = "/vector/" + helperName;
-          if (hasDeclaredDefinitionPath(samePath)) {
-            return failExprRootDiagnostic(
-                "unknown method: /std/collections/vector/" + helperName);
-          }
         }
         if ((helperName == "at" || helperName == "at_unsafe") &&
             expr.args.size() == 2) {

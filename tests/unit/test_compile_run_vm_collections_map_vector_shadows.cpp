@@ -141,7 +141,7 @@ main() {
   CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/at") != std::string::npos);
 }
 
-TEST_CASE("rejects vm user vector at method shadow during semantics") {
+TEST_CASE("runs vm user vector at method shadow through same-path helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at([vector<i32>] values, [i32] index) {
@@ -155,12 +155,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_method_shadow.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_method_shadow_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 69);
 }
 
 TEST_CASE("keeps vm builtin string at_unsafe call over user shadow") {
@@ -221,7 +217,7 @@ main() {
         std::string::npos);
 }
 
-TEST_CASE("rejects vm user vector at_unsafe method shadow during semantics") {
+TEST_CASE("runs vm user vector at_unsafe method shadow through same-path helper") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
 /vector/at_unsafe([vector<i32>] values, [i32] index) {
@@ -235,12 +231,8 @@ main() {
 }
 )";
   const std::string srcPath = writeTemp("vm_user_vector_at_unsafe_method_shadow.prime", source);
-  const std::string errPath =
-      (std::filesystem::temp_directory_path() / "primec_vm_user_vector_at_unsafe_method_shadow_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown method: /std/collections/vector/at_unsafe") !=
-        std::string::npos);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 82);
 }
 
 TEST_CASE("keeps vm builtin string at call over user shadow") {
