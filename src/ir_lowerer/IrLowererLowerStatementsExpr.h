@@ -352,8 +352,12 @@
         if (!expr.isMethodCall) {
           const std::string rawPath = resolveDirectHelperPath(expr);
           std::string experimentalVectorElementType;
-          if (getExperimentalVectorConstructorElementTypeAlias(
-                  expr, experimentalVectorElementType)) {
+          const bool isExperimentalVectorConstructorAlias =
+              getExperimentalVectorConstructorElementTypeAlias(
+                  expr, experimentalVectorElementType) ||
+              getExperimentalVectorConstructorElementTypeAliasFromPath(
+                  resolveExprPath(expr), experimentalVectorElementType);
+          if (isExperimentalVectorConstructorAlias) {
             Expr rewrittenVectorCtor = expr;
             rewrittenVectorCtor.name = "/std/collections/experimental_vector/vector";
             rewrittenVectorCtor.namespacePrefix.clear();

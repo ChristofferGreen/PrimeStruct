@@ -599,14 +599,22 @@ bool getExperimentalVectorConstructorElementTypeAlias(const Expr &expr,
     return false;
   }
   std::string scopedName = resolveScopedExprName(expr);
-  if (!scopedName.empty() && scopedName.front() == '/') {
-    scopedName.erase(scopedName.begin());
+  return getExperimentalVectorConstructorElementTypeAliasFromPath(scopedName,
+                                                                  out);
+}
+
+bool getExperimentalVectorConstructorElementTypeAliasFromPath(
+    std::string path,
+    std::string &out) {
+  out.clear();
+  if (!path.empty() && path.front() == '/') {
+    path.erase(path.begin());
   }
   const std::string prefix = "std/collections/experimental_vector/";
-  if (scopedName.rfind(prefix, 0) != 0) {
+  if (path.rfind(prefix, 0) != 0) {
     return false;
   }
-  std::string alias = scopedName.substr(prefix.size());
+  std::string alias = path.substr(prefix.size());
   if (alias.empty() || alias.find('/') != std::string::npos ||
       alias.find("__") != std::string::npos) {
     return false;

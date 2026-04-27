@@ -298,6 +298,13 @@ TEST_CASE("ir lowerer helper recognizes experimental vector element alias constr
       rewrittenVectorCall, elementType));
   CHECK(elementType == "i32");
 
+  CHECK(primec::ir_lowerer::getExperimentalVectorConstructorElementTypeAliasFromPath(
+      "/std/collections/experimental_vector/i32", elementType));
+  CHECK(elementType == "i32");
+
+  CHECK_FALSE(primec::ir_lowerer::getExperimentalVectorConstructorElementTypeAliasFromPath(
+      "/std/collections/experimental_vector/vectorCount", elementType));
+
   primec::Expr helperCall = rewrittenVectorCall;
   helperCall.name = "vectorCount";
   CHECK_FALSE(primec::ir_lowerer::getExperimentalVectorConstructorElementTypeAlias(

@@ -208,18 +208,24 @@ TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before di
   const std::string source = readText(lowerStatementsExprPath);
 
   const size_t aliasRewrite = source.find(
-      "if (getExperimentalVectorConstructorElementTypeAlias(\n"
-      "                  expr, experimentalVectorElementType)) {");
+      "const bool isExperimentalVectorConstructorAlias =\n"
+      "              getExperimentalVectorConstructorElementTypeAlias(");
+  const size_t resolvedAliasRewrite = source.find(
+      "getExperimentalVectorConstructorElementTypeAliasFromPath(\n"
+      "                  resolveExprPath(expr), experimentalVectorElementType)");
   const size_t directResolution =
       source.find("const Definition *directCallee = resolveDefinitionCall(expr);");
   const size_t structFallback =
       source.find("directCallee = findDirectStructDefinition(expr);");
 
   REQUIRE(aliasRewrite != std::string::npos);
+  REQUIRE(resolvedAliasRewrite != std::string::npos);
   REQUIRE(directResolution != std::string::npos);
   REQUIRE(structFallback != std::string::npos);
   CHECK(aliasRewrite < directResolution);
+  CHECK(resolvedAliasRewrite < directResolution);
   CHECK(aliasRewrite < structFallback);
+  CHECK(resolvedAliasRewrite < structFallback);
   CHECK(source.find("rewrittenVectorCtor.name = \"/std/collections/experimental_vector/vector\";") !=
         std::string::npos);
   CHECK(source.find("rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};") !=
