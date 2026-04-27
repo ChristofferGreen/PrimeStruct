@@ -624,6 +624,8 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
                      lacksVisibleStdlibMapCountDefinition) ||
                     (isDirectNamedCountReceiverCall &&
                      methodResolved == "/vector/count" &&
+                     !hasDeclaredDefinitionPath("/vector/count") &&
+                     !hasImportedDefinitionPath("/vector/count") &&
                      !hasDeclaredDefinitionPath("/std/collections/vector/count") &&
                      !hasImportedDefinitionPath("/std/collections/vector/count")) ||
                     (isBuiltinMethod &&
