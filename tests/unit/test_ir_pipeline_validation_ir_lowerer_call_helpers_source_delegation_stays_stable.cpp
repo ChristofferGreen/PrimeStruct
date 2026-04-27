@@ -316,6 +316,12 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("isResidualBridgeHelperPath(fallbackResolvedPath)") !=
         std::string::npos);
+  CHECK(callResolutionSource.find(
+            "!isResidualBridgeHelperPath(resolvedPath)) {\n"
+            "        return resolvedPath;\n"
+            "      }\n"
+            "      return resolveCallPathWithoutSemanticFallbackProbes(expr);") !=
+        std::string::npos);
   CHECK(callResolutionSource.find("!isResolvedBridgeHelperPath(resolvedPath) &&") ==
         std::string::npos);
   CHECK(callResolutionSource.find("isResolvedBridgeHelperPath(fallbackResolvedPath) &&") ==
@@ -1328,23 +1334,28 @@ TEST_CASE("ir lowerer call helpers avoid semantic-product scope/root fallback pr
   CHECK(semanticResolveExprPath(namespacedExpr) == "/pkg/foo");
 }
 
-TEST_CASE("ir lowerer call helpers fall back to scope resolution when semantic-product direct-call targets are missing") {
+TEST_CASE("ir lowerer call helpers fail closed when semantic-product direct-call targets are missing") {
   primec::Definition callee;
-  callee.fullPath = "/callee";
-  const std::unordered_map<std::string, const primec::Definition *> defMap = {{"/callee", &callee}};
+  callee.fullPath = "/imported/callee";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/imported/callee", &callee},
+  };
   const std::unordered_map<std::string, std::string> importAliases = {
-      {"callee", "/callee"},
+      {"callee", "/imported/callee"},
   };
 
   primec::SemanticProgram semanticProgram;
   const auto semanticResolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
+  const auto semanticResolveDefinitionCall =
+      primec::ir_lowerer::makeResolveDefinitionCall(defMap, semanticResolveExprPath);
 
   primec::Expr callExpr;
   callExpr.kind = primec::Expr::Kind::Call;
   callExpr.name = "callee";
   callExpr.semanticNodeId = 17;
   CHECK(semanticResolveExprPath(callExpr) == "/callee");
+  CHECK(semanticResolveDefinitionCall(callExpr) == nullptr);
 
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
@@ -1352,12 +1363,12 @@ TEST_CASE("ir lowerer call helpers fall back to scope resolution when semantic-p
       .sourceLine = 0,
       .sourceColumn = 0,
       .semanticNodeId = 17,
-      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/imported/callee"),
       .stdlibSurfaceId = std::nullopt,
   });
   const auto populatedResolveExprPath =
       primec::ir_lowerer::makeResolveCallPathFromScope(defMap, importAliases, &semanticProgram);
-  CHECK(populatedResolveExprPath(callExpr) == "/callee");
+  CHECK(populatedResolveExprPath(callExpr) == "/imported/callee");
 }
 
 TEST_CASE("ir lowerer call helpers keep unresolved rooted semantic operator targets authoritative") {

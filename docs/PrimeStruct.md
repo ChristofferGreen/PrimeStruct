@@ -604,6 +604,21 @@ Completed lowerer alias-fallback removal:
 - Same-path helper-shadow behavior is preserved by semantic-product targets rather than lowerer-local recovery.
 - Backend-facing conformance and source-lock tests pin that production lowering path, while explicit raw helper tests still keep alias-aware behavior only where they are intentionally exercising non-semantic-product compatibility helpers.
 
+Current residual semantic fallback audit:
+- Migrated/fail-closed in the initial audit slice: semantic-product direct-call resolution no longer falls
+  back through raw `defMap` or import-alias resolution when published direct-call/bridge facts are missing;
+  it returns syntax-only spelling and lets downstream semantic-product validation/lowering report missing facts.
+- Queued to TODO-4225: residual call-target and helper-routing fallback checks, including bridge-helper
+  residual path detection, direct/method/call helper fallback candidates, inline/native tail-dispatch helper
+  classifiers, and collection helper dispatch guards.
+- Queued to TODO-4232: binding/type/effect/layout fallback inventory, including lowerer-generated temporaries,
+  synthetic locals, source-spelled type aliases, import/layout syntax qualifiers, struct field/body traversal,
+  and collection/layout classification paths.
+- Queued to TODO-4233: backend adapter, source-composition, and public lowerer helper APIs that could reintroduce
+  AST-side semantic inference after semantic-product publication.
+- Syntax/provenance-owned: source spans, debug/source maps, syntax reproduction, function bodies/statements used
+  for emission traversal, import shorthand maps, and field qualifiers/visibility/alignment.
+
 Current inspection-surface relationship:
 - `pre_ast`: post-import, post-text-transform source text
 - `ast`: parser-owned syntax tree before semantic canonicalization

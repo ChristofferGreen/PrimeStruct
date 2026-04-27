@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4219: Fail closed on residual lowerer AST semantic fallbacks.
+  Completed: Audited residual lowerer/backend-adapter fallbacks and recorded
+  ownership/queue routing in `docs/PrimeStruct.md`. The representative
+  production fallback in semantic-product direct-call resolution no longer
+  falls back through raw `defMap` or import aliases when semantic-product
+  direct-call/bridge facts are missing; it now uses syntax-only spelling and
+  lets semantic-product validation/lowering fail closed with existing
+  diagnostics. Follow-up call/helper, binding/type/effect/layout, and
+  backend/source-composition cleanup remains queued under TODO-4225,
+  TODO-4232, and TODO-4233. Local validation is deferred per the lite
+  workflow.
 - ✓ TODO-4231: Make query/try/on_error graph facts the exclusive authority.
   Completed: query, `try(...)`, and `on_error` lowerer consumption now uses
   semantic-node-id facts as the only production authority. The semantic-product

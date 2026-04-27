@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
+- TODO-4225: Close call-target and helper-routing lowerer fallbacks
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4225: Close call-target and helper-routing lowerer fallbacks
 - TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 - TODO-4233: Close backend-adapter and source-composition fallbacks
 - TODO-4220: Add semantic phase handoff conformance gates
@@ -81,11 +80,12 @@ Task template:
 - TODO-4236: Define graph invalidation contracts by edit family
 - TODO-4237: Add graph invalidation fan-out regression tests
 - TODO-4238: Pin the CT-eval graph and semantic-product boundary
+- TODO-4239: Migrate helper-routing template inference onto graph facts
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4219 -> TODO-4225 -> TODO-4232
-  -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
+- Semantic phase contract hardening: TODO-4225 -> TODO-4232 -> TODO-4233
+  -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
   -> TODO-4238 -> TODO-4239
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4240
@@ -103,7 +103,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
 - TODO-4225: Close call-target and helper-routing lowerer fallbacks
 - TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 - TODO-4233: Close backend-adapter and source-composition fallbacks
@@ -169,8 +168,8 @@ Task template:
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | TODO-4240, TODO-4241 |
-| Semantic-product public API factoring and versioning | TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
-| IR lowerer compile-unit breakup | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
+| Semantic-product public API factoring and versioning | TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
+| IR lowerer compile-unit breakup | TODO-4225, TODO-4232, TODO-4233 |
 | Backend validation/build ergonomics | TODO-4243 |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
@@ -186,12 +185,12 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
+| Semantic-product-authority conformance | TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | TODO-4220, TODO-4234, TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4240 |
-| Lowerer/source-composition contract coverage | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
+| Lowerer/source-composition contract coverage | TODO-4225, TODO-4232, TODO-4233 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
 | `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
@@ -314,36 +313,13 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Audit lowerer and backend-adapter paths for semantic decisions still
-    inferred from raw AST or import state after semantic-product publication,
-    then convert one remaining representative fallback into a fail-closed
-    semantic-product lookup.
-  - acceptance:
-    - The audit records every residual lowerer/backend-adapter semantic
-      fallback as migrated, syntax/provenance-owned, or queued under TODO-4225,
-      TODO-4232, or TODO-4233.
-    - The chosen fallback no longer re-derives semantic meaning from raw AST
-      when a semantic product is present.
-    - Missing or stale semantic-product facts produce a deterministic lowering
-      diagnostic instead of silently falling back.
-    - Focused lowerer contract tests pin the fail-closed behavior.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after one real fallback is deleted and covered; TODO-4225,
-    TODO-4232, and TODO-4233 own closing the remaining audited fallback
-    inventory.
-
 - [ ] TODO-4225: Close call-target and helper-routing lowerer fallbacks
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4219
-  - scope: Close the TODO-4219 audit items for call-target and helper-routing
-    fallbacks by deleting or fail-closing production lowerer paths that
-    silently re-derive those decisions from raw AST or import state.
+  - scope: Close the completed residual-fallback audit items for call-target
+    and helper-routing fallbacks by deleting or fail-closing production lowerer
+    paths that silently re-derive those decisions from raw AST or import state.
   - acceptance:
     - The audited call-target and helper-routing fallback inventory is empty
       except for documented syntax/provenance-owned paths.
@@ -360,9 +336,10 @@ Task template:
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
   - depends_on: TODO-4225
-  - scope: Close the TODO-4219 audit items for binding, type, effect, and
-    layout fallbacks by deleting or fail-closing production lowerer paths that
-    silently re-derive those decisions from raw AST or import state.
+  - scope: Close the completed residual-fallback audit items for binding,
+    type, effect, and layout fallbacks by deleting or fail-closing production
+    lowerer paths that silently re-derive those decisions from raw AST or import
+    state.
   - acceptance:
     - The audited binding/type/effect/layout fallback inventory is empty except
       for documented syntax/provenance-owned paths such as source spans, body
@@ -380,9 +357,10 @@ Task template:
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
   - depends_on: TODO-4232
-  - scope: Close the TODO-4219 audit items for backend adapters,
-    source-composition helpers, and public lowerer helper APIs that could
-    reintroduce AST-side semantic inference after semantic-product publication.
+  - scope: Close the completed residual-fallback audit items for backend
+    adapters, source-composition helpers, and public lowerer helper APIs that
+    could reintroduce AST-side semantic inference after semantic-product
+    publication.
   - acceptance:
     - Backend adapter and source-composition APIs require semantic-product facts
       for lowering-facing meaning or are documented as syntax/provenance-only.
