@@ -299,6 +299,10 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
           (receiverStruct == "/vector" || receiverStruct == "/array");
       const bool blocksBuiltinVectorAccessStructReturnForwarding =
           methodName == "at" || methodName == "at_unsafe";
+      if (blocksBuiltinVectorAccessStructReturnForwarding &&
+          (receiverStruct == "/vector" || receiverStruct == "/array")) {
+        return "";
+      }
       const bool isExplicitRemovedMapAliasStructReturnMethod =
           rawMethodName == "map/at" || rawMethodName == "map/at_unsafe" ||
           rawMethodName == "std/collections/map/at" || rawMethodName == "std/collections/map/at_unsafe";

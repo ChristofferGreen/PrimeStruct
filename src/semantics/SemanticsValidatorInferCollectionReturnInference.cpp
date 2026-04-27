@@ -666,6 +666,20 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
       const Expr &receiver =
           candidate.isMethodCall ? candidate.args.front()
                                  : (candidate.args.empty() ? candidate : candidate.args.front());
+      std::string elemType;
+      std::string keyType;
+      std::string valueType;
+      if (builtinCollectionDispatchResolvers.resolveVectorTarget(receiver, elemType) ||
+          builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget(receiver, elemType) ||
+          builtinCollectionDispatchResolvers.resolveArrayTarget(receiver, elemType) ||
+          builtinCollectionDispatchResolvers.resolveSoaVectorTarget(receiver, elemType)) {
+        currentTypeTextOut = normalizeBindingTypeName(elemType);
+        return !currentTypeTextOut.empty();
+      }
+      if (builtinCollectionDispatchResolvers.resolveStringTarget(receiver)) {
+        currentTypeTextOut = "i32";
+        return true;
+      }
       if (candidate.isMethodCall && !isExplicitAccessAlias) {
         std::string resolvedMethodTarget;
         bool isBuiltinMethod = false;
@@ -684,25 +698,11 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
           }
         }
       }
-      std::string elemType;
-      std::string keyType;
-      std::string valueType;
-      if (builtinCollectionDispatchResolvers.resolveVectorTarget(receiver, elemType) ||
-          builtinCollectionDispatchResolvers.resolveArgsPackAccessTarget(receiver, elemType) ||
-          builtinCollectionDispatchResolvers.resolveArrayTarget(receiver, elemType) ||
-          builtinCollectionDispatchResolvers.resolveSoaVectorTarget(receiver, elemType)) {
-        currentTypeTextOut = normalizeBindingTypeName(elemType);
-        return !currentTypeTextOut.empty();
-      }
       if (!isExplicitAccessAlias &&
           (builtinCollectionDispatchResolvers.resolveMapTarget(receiver, keyType, valueType) ||
            builtinCollectionDispatchResolvers.resolveExperimentalMapTarget(receiver, keyType, valueType))) {
         currentTypeTextOut = normalizeBindingTypeName(valueType);
         return !currentTypeTextOut.empty();
-      }
-      if (builtinCollectionDispatchResolvers.resolveStringTarget(receiver)) {
-        currentTypeTextOut = "i32";
-        return true;
       }
     }
 

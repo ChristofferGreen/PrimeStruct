@@ -29,7 +29,34 @@ main() {
   CHECK(error.find("unknown method: /vector/at_unsafe") != std::string::npos);
 }
 
-TEST_CASE("vector method access with alias and canonical struct helpers infers the alias return") {
+TEST_CASE("vector unsafe same-path method helper keeps builtin field diagnostics") {
+  const std::string source = R"(
+Marker {
+  [i32] value
+}
+
+[return<Marker>]
+/vector/at_unsafe([vector<i32>] values, [i32] index) {
+  return(Marker(index))
+}
+
+[return<auto>]
+project([vector<i32>] values) {
+  return(values./vector/at_unsafe(2i32).value)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(5i32, 6i32, 7i32)}
+  return(project(values))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
+}
+
+TEST_CASE("vector method access keeps builtin field diagnostics over struct helpers") {
   const std::string source = R"(
 AliasMarker {
   [i32] value
@@ -61,8 +88,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("vector method access reports current receiver diagnostics over canonical helper") {
@@ -97,7 +124,7 @@ main() {
   CHECK_FALSE(error.empty());
 }
 
-TEST_CASE("vector unsafe method access with canonical helper validates auto return") {
+TEST_CASE("vector unsafe method access keeps builtin field diagnostics over canonical helper") {
   const std::string source = R"(
 Marker {
   [i32] value
@@ -120,8 +147,8 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("field access requires struct receiver") != std::string::npos);
 }
 
 TEST_CASE("map method access keeps canonical struct-return forwarding") {
