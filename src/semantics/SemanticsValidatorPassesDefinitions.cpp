@@ -499,18 +499,7 @@ bool SemanticsValidator::validateDefinitions() {
     return validateDefinitionsForStableRange(0, declarationCount);
   }
 
-  struct WorkerChunkResult {
-    uint32_t partitionKey = 0;
-    bool ok = false;
-    std::string error;
-    SemanticDiagnosticInfo diagnostics;
-    ValidationCounters counters;
-    std::vector<CollectedCallableSummaryEntry> callableSummaries;
-    std::vector<OnErrorSnapshotEntry> onErrorFacts;
-    WorkerSymbolInternerSnapshot publicationStringSnapshot;
-  };
-
-  std::vector<std::future<WorkerChunkResult>> workerTasks;
+  std::vector<std::future<SemanticDefinitionWorkerResultBundle>> workerTasks;
   workerTasks.reserve(partitions.size());
   for (DefinitionPartitionChunk &chunk : partitions) {
     if (chunk.stableOrderCount == 0) {
@@ -523,7 +512,7 @@ bool SemanticsValidator::validateDefinitions() {
          partitionKey = chunk.partitionKey,
          stableOrderOffset = chunk.stableOrderOffset,
          stableOrderCount = chunk.stableOrderCount]() {
-          WorkerChunkResult result;
+          SemanticDefinitionWorkerResultBundle result;
           result.partitionKey = partitionKey;
           SemanticsValidator worker(program_,
                                     entryPath_,
@@ -564,18 +553,19 @@ bool SemanticsValidator::validateDefinitions() {
     return validateDefinitionsForStableRange(0, declarationCount);
   }
 
-  std::vector<WorkerChunkResult> workerResults;
+  std::vector<SemanticDefinitionWorkerResultBundle> workerResults;
   workerResults.reserve(workerTasks.size());
   for (auto &task : workerTasks) {
     workerResults.push_back(task.get());
   }
   std::sort(workerResults.begin(),
             workerResults.end(),
-            [](const WorkerChunkResult &left, const WorkerChunkResult &right) {
+            [](const SemanticDefinitionWorkerResultBundle &left,
+               const SemanticDefinitionWorkerResultBundle &right) {
               return left.partitionKey < right.partitionKey;
             });
   if (benchmarkSemanticPhaseCountersEnabled_) {
-    for (const WorkerChunkResult &result : workerResults) {
+    for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
       validationCounters_.callsVisited += result.counters.callsVisited;
       validationCounters_.peakLocalMapSize =
           std::max(validationCounters_.peakLocalMapSize,
@@ -589,11 +579,11 @@ bool SemanticsValidator::validateDefinitions() {
 
     std::size_t callableSummaryCount =
         validationPlan_->executionSlice.executionsInStableOrder.size();
-    for (const WorkerChunkResult &result : workerResults) {
+    for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
       callableSummaryCount += result.callableSummaries.size();
     }
     mergedWorkerCallableSummaries_.reserve(callableSummaryCount);
-    for (WorkerChunkResult &result : workerResults) {
+    for (SemanticDefinitionWorkerResultBundle &result : workerResults) {
       mergedWorkerCallableSummaries_.insert(
           mergedWorkerCallableSummaries_.end(),
           std::make_move_iterator(result.callableSummaries.begin()),
@@ -610,11 +600,11 @@ bool SemanticsValidator::validateDefinitions() {
     std::vector<OnErrorSnapshotEntry>().swap(mergedWorkerOnErrorFacts_);
 
     std::size_t onErrorFactCount = 0;
-    for (const WorkerChunkResult &result : workerResults) {
+    for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
       onErrorFactCount += result.onErrorFacts.size();
     }
     mergedWorkerOnErrorFacts_.reserve(onErrorFactCount);
-    for (WorkerChunkResult &result : workerResults) {
+    for (SemanticDefinitionWorkerResultBundle &result : workerResults) {
       mergedWorkerOnErrorFacts_.insert(
           mergedWorkerOnErrorFacts_.end(),
           std::make_move_iterator(result.onErrorFacts.begin()),
@@ -631,7 +621,7 @@ bool SemanticsValidator::validateDefinitions() {
 
     std::vector<WorkerSymbolInternerSnapshot> snapshots;
     snapshots.reserve(workerResults.size());
-    for (WorkerChunkResult &result : workerResults) {
+    for (SemanticDefinitionWorkerResultBundle &result : workerResults) {
       if (result.publicationStringSnapshot.symbolsByLocalId.empty()) {
         continue;
       }
@@ -654,7 +644,7 @@ bool SemanticsValidator::validateDefinitions() {
   };
 
   if (!collectDiagnostics) {
-    for (const WorkerChunkResult &result : workerResults) {
+    for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
       if (result.ok) {
         continue;
       }
@@ -673,7 +663,7 @@ bool SemanticsValidator::validateDefinitions() {
   }
 
   std::vector<SemanticDiagnosticRecord> collectedRecords;
-  for (WorkerChunkResult &result : workerResults) {
+  for (SemanticDefinitionWorkerResultBundle &result : workerResults) {
     if (!result.diagnostics.records.empty()) {
       collectedRecords.insert(
           collectedRecords.end(),
@@ -691,7 +681,7 @@ bool SemanticsValidator::validateDefinitions() {
     return false;
   }
 
-  for (const WorkerChunkResult &result : workerResults) {
+  for (const SemanticDefinitionWorkerResultBundle &result : workerResults) {
     if (result.ok) {
       continue;
     }

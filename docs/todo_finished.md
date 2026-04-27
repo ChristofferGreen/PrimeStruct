@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4214: Introduce deterministic worker result bundles.
+  Completed: definition-worker validation now returns one named
+  `SemanticDefinitionWorkerResultBundle` carrying the worker partition key,
+  structured diagnostics, validation counters, callable-summary slices,
+  currently migrated `on_error` fact slices, and worker-local publication
+  string snapshots before deterministic merge. The parallel definition pass no
+  longer declares an ad hoc local worker result structure, and source-lock
+  coverage pins the bundle boundary plus the existing callable-summary,
+  diagnostics, counter, and interner merge path. Local validation is deferred
+  per the lite workflow.
 - ✓ TODO-4226: Add a structured semantic diagnostic/result sink.
   Completed: semantic validation now routes fatal diagnostic publication,
   collected diagnostic finalization, and first-error adaptation through

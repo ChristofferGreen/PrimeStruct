@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "SemanticPublicationSurface.h"
+#include "SemanticsDefinitionWorkerResult.h"
 #include "SemanticsValidatorGraphLocalAuto.h"
 #include "SemanticsHelpers.h"
 #include "primec/SemanticValidationPlan.h"
@@ -46,10 +47,7 @@ public:
     BindingInfo binding;
   };
 
-  struct ValidationCounters {
-    uint64_t callsVisited = 0;
-    uint64_t peakLocalMapSize = 0;
-  };
+  using ValidationCounters = SemanticDefinitionWorkerCounters;
 
   SemanticsValidator(const Program &program,
                      const std::string &entryPath,

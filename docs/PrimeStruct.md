@@ -772,6 +772,10 @@ Planned validation-context split contract:
   - repeated validation of the same definition under unchanged global inputs is deterministic and context-local
 - This split is a prerequisite for later parallel validation because worker tasks need isolated validation state and one
   deterministic merge surface for published semantic facts and diagnostics.
+- Current definition-worker validation returns `SemanticDefinitionWorkerResultBundle` as that named merge surface for
+  partition identity, structured diagnostics, validation counters, callable-summary slices, migrated `on_error` facts,
+  and worker-local publication string snapshots. Follow-up work moves the remaining semantic-product fact families into
+  that same bundle before publication stops pulling them from validator-owned side channels.
 
 Structured diagnostic-sink contract:
 - `SemanticsValidator` publishes fatal diagnostics through one `SemanticValidationResultSink` that owns the adapter

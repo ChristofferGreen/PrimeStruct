@@ -116,10 +116,13 @@ Rule:
 
 ## Worker Result Contract
 
-Each worker returns a deterministic `WorkerResult` bundle:
+Each worker returns a deterministic `WorkerResult` bundle. Current definition
+validation uses `SemanticDefinitionWorkerResultBundle` for this boundary:
 - `partitionKey`: deterministic partition identity.
 - `diagnostics[]`: with stable per-diagnostic ordering keys.
-- `facts[]`: grouped by fact family with stable intra-partition order.
+- validation counters and execution/callable-summary slices.
+- migrated semantic facts grouped by fact family with stable intra-partition
+  order.
 - `symbolTable[]`: worker-local interned strings in stable local-id order.
 
 Merge requirements:
