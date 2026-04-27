@@ -1234,8 +1234,8 @@ module {
   to future node-based editors; full IDE/LSP integration is deferred until the compiler stabilises.
 - **AST/IR dumps:** the debug printers include executions with their argument lists so tooling can capture scheduling
   intent in snapshots.
-  - Dumps show collection literals after text-transform rewriting (e.g., `array<i32>{1i32,2i32}` becomes `array<i32>(1,
-    2)`).
+  - Dumps show collection literals after text-transform rewriting while preserving brace construction (e.g.,
+    `array<i32>{1i32,2i32}` remains `array<i32>{1i32,2i32}`).
   - Labeled execution arguments appear inline (e.g., `exec /execute_task([count] 2)`).
 
 ## Language Design Highlights
@@ -1815,9 +1815,9 @@ or a semicolon if you intended to index.
 - **`operators`:** desugars infix/prefix operators, comparisons, boolean ops, assignment, and increment/decrement
   (`++`/`--`) into canonical calls (`plus`, `less_than`, `assign`, `increment`, etc.).
   - Example: `a = b` rewrites to `assign(a, b)`.
-- **`collections`:** rewrites `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` literals into collection builder
-  forms. Existing compatibility lowering still routes several builder forms through call-shaped stdlib helpers; the
-  brace-only collection migration is tracked in `TODO-4255`.
+- **`collections`:** preserves `array<T>{...}` / `vector<T>{...}` / `map<K,V>{...}` as brace construction,
+  normalizes bracket aliases to braces, and rewrites map `key=value` entries into alternating key/value entries inside
+  the braces. Legacy compatibility lowering may still route call-shaped collection helpers through stdlib adapters.
 - **`implicit-utf8`:** appends `utf8` to bare string literals.
 - **`implicit-i32`:** appends `i32` to bare integer literals (enabled by default).
   - Text transform arguments are limited to identifiers and literals (no nested envelopes or calls).
@@ -2246,7 +2246,7 @@ for(
     require `import /std/collections/*`.
   - **`print*`**: `print`, `print_line`, `print_error`, `print_line_error`.
   - **Collections:** `array<T>{...}`, `vector<T>{...}`, `map<K, V>{...}`. Legacy call-shaped collection helpers remain
-    compatibility surfaces until `TODO-4255` migrates them.
+    compatibility helper surfaces.
   - **Pointer helpers:** `location`, `dereference`.
   - **Ownership helpers:** `move`, `clone`.
   - **Uninitialized helpers (draft):** `init`, `drop`, `take`, `borrow`.
@@ -3378,10 +3378,11 @@ bad_use_after_take() {
     plus pure/mixed spread forwarding, while wrapped `FileError` free-builtin named access remains on the existing
     named-argument rejection path.
 - **Collections:** `array<Type>{ ... }` / `array<Type>[ ... ]`, `vector<Type>{ ... }` / `vector<Type>[ ... ]`,
-  `map<Key,Value>{ ... }` / `map<Key,Value>[ ... ]` rewrite to standard builder functions. The brace/bracket forms are
-  the user-facing construction syntax; current compatibility lowering may still route through call-shaped builder
-  helpers such as `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)` until
-  `TODO-4255` migrates those surfaces. Map literals supply alternating key/value forms.
+  `map<Key,Value>{ ... }` / `map<Key,Value>[ ... ]` are brace-backed collection construction surfaces. The
+  `collections` text transform normalizes bracket aliases to braces and map `key=value` pairs to alternating key/value
+  entries; it no longer emits call-shaped collection construction text. Legacy call-shaped helpers such as
+  `array<Type>(...)`, `vector<Type>(...)`, and `map<Key,Value>(key1, value1, key2, value2, ...)` are compatibility
+  helper forms, not the preferred construction syntax. Map literals supply alternating key/value forms.
   - Requires the `collections` text transform (enabled by default in `--text-transforms`).
   - Map literal entries are read left-to-right as alternating key/value forms; an odd number of entries is a diagnostic.
   - String keys are allowed in map literals (e.g., `map<string, i32>{"a"utf8=1i32}`), and nested forms inside braces are
@@ -3400,7 +3401,7 @@ bad_use_after_take() {
     stdlib `.prime` definitions, and treat promoted `soa_vector<T>` as the
     current stdlib-owned SoA collection surface over generic SoA substrate.
   - `vector<T>` is a C++-style resizable contiguous owning sequence. `vector<T>{...}` is the user-facing variadic
-    constructor form (0..N); `vector<T>(...)` remains a legacy compatibility helper path until `TODO-4255`. Growth
+    constructor form (0..N); `vector<T>(...)` remains a legacy compatibility helper path. Growth
     operations require `effects(heap_alloc)` (or the active default effects set), and
     `push`/`reserve` may reallocate and invalidate references/pointers into vector storage.
   - Planned stdlib-owned constructor surface: the temporary experimental vector namespace now uses `vector(values...)`

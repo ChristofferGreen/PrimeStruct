@@ -99,6 +99,12 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     return name == "int" || name == "i32" || name == "i64" || name == "u64" || name == "bool" ||
            name == "float" || name == "f32" || name == "f64";
   };
+  auto isCollectionBraceType = [&](std::string name) -> bool {
+    if (!name.empty() && name.front() == '/') {
+      name.erase(name.begin());
+    }
+    return name == "array" || name == "vector" || name == "map" || name == "soa_vector";
+  };
   auto parseBraceConstructor = [&](Expr &call, Expr &out) -> bool {
     call.isBraceConstructor = true;
     if (call.templateArgs.empty() && isPrimitiveBraceType(call.name)) {
@@ -116,6 +122,12 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     block.hasBodyArguments = true;
     if (!parseValueBlock(block.bodyArguments, namespacePrefix)) {
       return false;
+    }
+    if (isCollectionBraceType(call.name)) {
+      call.args = std::move(block.bodyArguments);
+      call.argNames.assign(call.args.size(), std::nullopt);
+      out = std::move(call);
+      return true;
     }
     call.args.push_back(std::move(block));
     call.argNames.push_back(std::nullopt);
@@ -227,7 +239,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
         return true;
       }
       if (match(TokenKind::LBrace)) {
-        if (!bindingTransforms && (!allowBareBindings_ || isPrimitiveBraceType(call.name))) {
+        if (!bindingTransforms &&
+            (!allowBareBindings_ || isPrimitiveBraceType(call.name) || isCollectionBraceType(call.name))) {
           return parseBraceConstructor(call, out);
         }
         if (!call.templateArgs.empty()) {
@@ -470,7 +483,7 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
-          if (!allowBareBindings_ || isPrimitiveBraceType(call.name)) {
+          if (!allowBareBindings_ || isPrimitiveBraceType(call.name) || isCollectionBraceType(call.name)) {
             return parseBraceConstructor(call, out);
           } else if (allowBareBindings_) {
             if (!call.templateArgs.empty()) {

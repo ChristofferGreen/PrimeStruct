@@ -6,6 +6,51 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4255: Migrate collection construction surfaces
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - depends_on: TODO-4254
+  - scope: Move `array<T>`, `vector<T>`, `map<K, V>`, and `soa_vector<T>`
+    literal/builder rewrites toward brace construction without changing
+    unrelated stdlib or hybrid helper calls.
+  - implementation_notes:
+    - Start from `src/semantics/SemanticsValidatorExprCollectionLiterals.cpp`,
+      `src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.h`,
+      `src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h`,
+      `include/primec/StdlibSurfaceRegistry.h`, and collection setup/lowering
+      helpers under `src/ir_lowerer/`.
+    - Add tests beside existing collection semantics shards and compile-run
+      shards such as `test_compile_run_*collections*`,
+      `test_compile_run_emitters_map_access_and_collection_rewrites.cpp`, and
+      VM/native collection literal tests.
+    - Keep map entry syntax and bracket aliases in the same change only where
+      they share the collection literal rewrite path.
+  - acceptance:
+    - Collection literal rewrites no longer require user-visible
+      constructor-call semantics for value construction.
+    - Legacy `vector<T>(...)`, `map<K, V>(...)`, and similar compatibility
+      helper calls either route through a documented bridge or produce stable
+      diagnostics.
+    - Focused tests cover brace collection construction, bracket aliases,
+      map-entry lowering, and invalid labeled/positional collection cases.
+    - User-facing collection docs prefer brace construction and mark old
+      call-shaped forms as compatibility helpers only.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after collection construction syntax is brace-backed or
+    explicitly bridge-owned; leave non-collection helper compatibility to
+    TODO-4256.
+  - finished_at: 2026-04-28
+  - evidence: The `collections` text transform now preserves brace-backed
+    collection literals, normalizes bracket aliases to braces, and keeps map
+    key/value pair rewriting inside the braces instead of emitting
+    call-shaped construction text. The parser treats single-item collection
+    braces as positional constructor entries, semantic tests lock array,
+    vector, and map literals to `Expr::isBraceConstructor`, and labeled
+    collection entries reject through the builtin named-argument diagnostic.
+    Docs now mark call-shaped collection forms as compatibility helpers and
+    `TODO-4256` is promoted to Ready Now.
+
 - [x] TODO-4254: Migrate generated construction surfaces
   - owner: ai
   - created_at: 2026-04-27

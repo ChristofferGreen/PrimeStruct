@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4255: Migrate collection construction surfaces
+- TODO-4256: Classify constructor-shaped helper compatibility
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4256: Classify constructor-shaped helper compatibility
 - TODO-4257: Add sum declaration metadata and layout
 - TODO-4258: Add explicit sum construction
 - TODO-4259: Add inferred sum variant construction
@@ -81,11 +80,11 @@ Task template:
 - TODO-4263: Design generic and unit sum variants
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
+- TODO-4266: Rewire `?` to the `Result` sum contract
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4255
-  -> TODO-4256 -> TODO-4257
+- Deferred algebraic types and brace-only construction: TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
@@ -96,7 +95,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
 - TODO-4257: Add sum declaration metadata and layout
 - TODO-4258: Add explicit sum construction
@@ -145,7 +143,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -170,7 +168,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -287,41 +285,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4255: Migrate collection construction surfaces
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4254
-  - scope: Move `array<T>`, `vector<T>`, `map<K, V>`, and `soa_vector<T>`
-    literal/builder rewrites toward brace construction without changing
-    unrelated stdlib or hybrid helper calls.
-  - implementation_notes:
-    - Start from `src/semantics/SemanticsValidatorExprCollectionLiterals.cpp`,
-      `src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.h`,
-      `src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h`,
-      `include/primec/StdlibSurfaceRegistry.h`, and collection setup/lowering
-      helpers under `src/ir_lowerer/`.
-    - Add tests beside existing collection semantics shards and compile-run
-      shards such as `test_compile_run_*collections*`,
-      `test_compile_run_emitters_map_access_and_collection_rewrites.cpp`, and
-      VM/native collection literal tests.
-    - Keep map entry syntax and bracket aliases in the same change only where
-      they share the collection literal rewrite path.
-  - acceptance:
-    - Collection literal rewrites no longer require user-visible
-      constructor-call semantics for value construction.
-    - Legacy `vector<T>(...)`, `map<K, V>(...)`, and similar compatibility
-      helper calls either route through a documented bridge or produce stable
-      diagnostics.
-    - Focused tests cover brace collection construction, bracket aliases,
-      map-entry lowering, and invalid labeled/positional collection cases.
-    - User-facing collection docs prefer brace construction and mark old
-      call-shaped forms as compatibility helpers only.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after collection construction syntax is brace-backed or
-    explicitly bridge-owned; leave non-collection helper compatibility to
-    TODO-4256.
 
 - [ ] TODO-4256: Classify constructor-shaped helper compatibility
   - owner: ai

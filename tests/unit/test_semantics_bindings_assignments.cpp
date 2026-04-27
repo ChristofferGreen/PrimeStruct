@@ -6,16 +6,49 @@ TEST_SUITE_BEGIN("primestruct.semantics.bindings.assignments");
 
 TEST_CASE("collections validate") {
   const std::string source = R"(
+[effects(heap_alloc), return<int>]
+main() {
+  array<i32>{1i32, 2i32, 3i32}
+  vector<i32>{1i32, 2i32, 3i32}
+  map<i32, i32>{1i32, 10i32, 2i32, 20i32}
+  return(1i32)
+}
+)";
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults));
+  CHECK(error.empty());
+
+  const primec::Definition *mainDef = nullptr;
+  for (const auto &def : program.definitions) {
+    if (def.fullPath == "/main") {
+      mainDef = &def;
+      break;
+    }
+  }
+  REQUIRE(mainDef != nullptr);
+  REQUIRE(mainDef->statements.size() >= 3);
+  CHECK(mainDef->statements[0].isBraceConstructor);
+  CHECK(mainDef->statements[0].name == "array");
+  CHECK(mainDef->statements[1].isBraceConstructor);
+  CHECK(mainDef->statements[1].name == "vector");
+  CHECK(mainDef->statements[2].isBraceConstructor);
+  CHECK(mainDef->statements[2].name == "map");
+}
+
+TEST_CASE("collection literals reject labeled entries") {
+  const std::string source = R"(
 [return<int>]
 main() {
-  array<i32>(1i32, 2i32, 3i32)
-  map<i32, i32>(1i32, 10i32, 2i32, 20i32)
+  array<i32>{[value] 1i32}
   return(1i32)
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("named arguments not supported for builtin calls") != std::string::npos);
 }
 
 TEST_CASE("array requires one template argument") {

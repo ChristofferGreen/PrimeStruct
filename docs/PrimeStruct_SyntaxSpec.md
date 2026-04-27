@@ -596,8 +596,8 @@ The compiler rewrites surface forms into canonical call syntax. The core uses pr
   - `vector<T>{...}` / `vector<T>[...]`
   - `map<K, V>{...}` / `map<K, V>[...]`
   - Map literals accept `key = value` pairs as shorthand for entry construction (e.g., `map<i32, i32>{1i32=2i32}`).
-  - Current implementation still lowers several collection surfaces through call-shaped compatibility helpers; the
-    planned language contract is brace-only construction, tracked by the construction TODOs.
+  - The text transform preserves brace construction, normalizes bracket aliases to braces, and rewrites map pair
+    shorthand inside the braces; retained call-shaped collection forms are compatibility helpers.
   - Planned stdlib-owned map lowering target: once variadic packs are available for user-defined constructors, the
     intended canonical helper target is `map<K, V>(entry(key1, value1), entry(key2, value2), ...)` rather than
     alternating raw key/value user-defined variadic parameters.

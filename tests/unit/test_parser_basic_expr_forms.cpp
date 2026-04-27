@@ -297,6 +297,30 @@ TEST_CASE("expression parser preserves brace constructor body expressions") {
   CHECK(block.bodyArguments[0].kind == primec::Expr::Kind::Literal);
 }
 
+TEST_CASE("expression parser keeps single collection brace item positional") {
+  std::vector<primec::Token> tokens = {
+      {primec::TokenKind::Identifier, "array", 1, 1},
+      {primec::TokenKind::LAngle, "<", 1, 6},
+      {primec::TokenKind::Identifier, "i32", 1, 7},
+      {primec::TokenKind::RAngle, ">", 1, 10},
+      {primec::TokenKind::LBrace, "{", 1, 11},
+      {primec::TokenKind::Number, "1i32", 1, 12},
+      {primec::TokenKind::RBrace, "}", 1, 16},
+      {primec::TokenKind::End, "", 1, 17},
+  };
+  primec::Parser parser(std::move(tokens));
+  primec::Expr expr;
+  std::string error;
+  CHECK(parser.parseExpression(expr, "", error));
+  CHECK(error.empty());
+  REQUIRE(expr.kind == primec::Expr::Kind::Call);
+  CHECK(expr.name == "array");
+  CHECK(expr.isBraceConstructor);
+  REQUIRE(expr.args.size() == 1);
+  CHECK_FALSE(expr.argNames[0].has_value());
+  CHECK(expr.args[0].kind == primec::Expr::Kind::Literal);
+}
+
 TEST_CASE("expression parser rewrites primitive brace constructor to convert") {
   std::vector<primec::Token> tokens = {
       {primec::TokenKind::Identifier, "i32", 1, 1},

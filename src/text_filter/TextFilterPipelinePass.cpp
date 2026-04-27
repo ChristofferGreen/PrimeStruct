@@ -276,9 +276,9 @@ bool applyPass(const std::string &input,
         return false;
       }
       output.append(input.substr(index, pos - index));
-      output.append("(");
+      output.append("{");
       output.append(filteredInner);
-      output.append(")");
+      output.append("}");
       index = closeBrace;
       return true;
     }

@@ -11,7 +11,7 @@ TEST_CASE("rewrites array literal braces") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("array<i32>(1i32, 2i32)") != std::string::npos);
+  CHECK(output.find("array<i32>{1i32, 2i32}") != std::string::npos);
 }
 
 TEST_CASE("rewrites soa_vector literal braces") {
@@ -21,7 +21,7 @@ TEST_CASE("rewrites soa_vector literal braces") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("soa_vector<i32>(1i32, 2i32)") != std::string::npos);
+  CHECK(output.find("soa_vector<i32>{1i32, 2i32}") != std::string::npos);
 }
 
 TEST_CASE("rewrites soa_vector literal brackets") {
@@ -31,7 +31,7 @@ TEST_CASE("rewrites soa_vector literal brackets") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("soa_vector<i32>(1i32, 2i32)") != std::string::npos);
+  CHECK(output.find("soa_vector<i32>{1i32, 2i32}") != std::string::npos);
 }
 
 TEST_CASE("rewrites map literal equals pairs") {
@@ -41,7 +41,7 @@ TEST_CASE("rewrites map literal equals pairs") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32, i32>(1i32, 2i32, 3i32, 4i32)") != std::string::npos);
+  CHECK(output.find("map<i32, i32>{1i32, 2i32, 3i32, 4i32}") != std::string::npos);
 }
 
 TEST_CASE("map literal preserves equality operator in trailing value") {
@@ -61,7 +61,7 @@ TEST_CASE("map literal preserves nested assignment operators in values") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32, i32>(1i32, assign(value, 2i32))") != std::string::npos);
+  CHECK(output.find("map<i32, i32>{1i32, assign(value, 2i32)}") != std::string::npos);
 }
 
 TEST_CASE("rewrites nested expressions inside array literal") {
@@ -71,7 +71,7 @@ TEST_CASE("rewrites nested expressions inside array literal") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("array<i32>(plus(1i32, 2i32))") != std::string::npos);
+  CHECK(output.find("array<i32>{plus(1i32, 2i32)}") != std::string::npos);
 }
 
 TEST_CASE("rewrites map literal with typed string keys") {
@@ -81,7 +81,7 @@ TEST_CASE("rewrites map literal with typed string keys") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<string, i32>(\"a\"utf8, 1i32, \"b\"utf8, 2i32)") != std::string::npos);
+  CHECK(output.find("map<string, i32>{\"a\"utf8, 1i32, \"b\"utf8, 2i32}") != std::string::npos);
 }
 
 TEST_CASE("map literal handles nested braces") {
@@ -91,7 +91,7 @@ TEST_CASE("map literal handles nested braces") {
   std::string error;
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
-  CHECK(output.find("map<i32, i32>(1i32, plus(2i32, 3i32), 4i32, 5i32)") != std::string::npos);
+  CHECK(output.find("map<i32, i32>{1i32, plus(2i32, 3i32), 4i32, 5i32}") != std::string::npos);
 }
 
 TEST_CASE("fails on unterminated collection literal") {
@@ -122,7 +122,7 @@ TEST_CASE("map literal whitespace pairs handle line comments") {
   CHECK(pipeline.apply(source, output, error));
   CHECK(error.empty());
   CHECK(output.find("// pair comment") != std::string::npos);
-  CHECK(output.find("map<i32,i32>(1i32, 2i32") != std::string::npos);
+  CHECK(output.find("map<i32,i32>{1i32, 2i32") != std::string::npos);
   CHECK(output.find(", 3i32, 4i32") != std::string::npos);
 }
 
