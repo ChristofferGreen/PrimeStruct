@@ -1631,6 +1631,40 @@ main() {
   CHECK(runCommand(runCmd) == 16);
 }
 
+TEST_CASE("vm runs borrowed helper-return soa_vector ref_ref same-path helper") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/experimental_soa_vector/*
+
+[struct reflect]
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<Reference<SoaVector<Particle>>>]
+pickBorrowed([Reference<SoaVector<Particle>>] values) {
+  return(values)
+}
+
+[return<int>]
+/soa_vector/ref_ref([Reference<SoaVector<Particle>>] values, [int] index) {
+  return(19i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
+  return(plus(pickBorrowed(location(values)).ref(0i32),
+              ref_ref(pickBorrowed(location(values)), 0i32)))
+}
+)";
+  const std::string srcPath =
+      writeTemp("vm_experimental_soa_vector_borrowed_return_ref_ref_same_path.prime",
+                source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 38);
+}
+
 TEST_CASE("vm runs borrowed local experimental soa_vector read-only methods") {
   const std::string source = R"(
 import /std/collections/*
