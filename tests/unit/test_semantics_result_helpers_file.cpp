@@ -423,6 +423,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib File camelCase readByte stays valid in nested stdlib namespaces") {
+  const std::string source = R"(
+import /std/file/*
+
+[return<void>]
+ignore_error([FileError] err) {
+  return()
+}
+
+namespace std {
+  namespace image {
+    [effects(file_read), return<int> on_error<FileError, /ignore_error>]
+    read_status([File<Read>] file, [i32 mut] value) {
+      file.readByte(value)?
+      return(0i32)
+    }
+  }
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("exact stdlib file imports keep file and FileError method helpers") {
   const std::string source = R"(
 import /std/file/File

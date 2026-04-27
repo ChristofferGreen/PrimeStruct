@@ -7,6 +7,35 @@
 namespace primec::semantics {
 namespace {
 
+std::string_view fileMethodLeaf(std::string_view path) {
+  const size_t slash = path.find_last_of('/');
+  return slash == std::string_view::npos ? path : path.substr(slash + 1);
+}
+
+std::string_view normalizeFileMethodLeaf(std::string_view methodName) {
+  if (methodName == "readByte") {
+    return "read_byte";
+  }
+  if (methodName == "writeLine") {
+    return "write_line";
+  }
+  if (methodName == "writeByte") {
+    return "write_byte";
+  }
+  if (methodName == "writeBytes") {
+    return "write_bytes";
+  }
+  return methodName;
+}
+
+bool isFileBuiltinMethodLeaf(std::string_view methodName) {
+  methodName = normalizeFileMethodLeaf(methodName);
+  return methodName == "write" || methodName == "write_line" ||
+         methodName == "write_byte" || methodName == "read_byte" ||
+         methodName == "write_bytes" || methodName == "flush" ||
+         methodName == "close";
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprMethodCallTarget(
@@ -342,6 +371,17 @@ bool SemanticsValidator::validateExprMethodCallTarget(
       !hasDeclaredDefinitionPath(resolved)) {
     resolved = "/file/" + expr.name;
     isBuiltinMethod = true;
+  }
+  if (!isBuiltinMethod &&
+      (resolved.rfind("/std/file/File/", 0) == 0 ||
+       resolved.rfind("/File/", 0) == 0) &&
+      !hasDeclaredDefinitionPath(resolved) &&
+      !hasImportedDefinitionPath(resolved)) {
+    const std::string_view helperName = fileMethodLeaf(resolved);
+    if (isFileBuiltinMethodLeaf(helperName)) {
+      resolved = "/file/" + std::string(normalizeFileMethodLeaf(helperName));
+      isBuiltinMethod = true;
+    }
   }
   if (!isBuiltinMethod && defMap_.find(resolved) == defMap_.end() &&
       isVectorBuiltinName(expr, "capacity")) {
