@@ -94,6 +94,10 @@ bool isNamedArgumentCollectionTemporary(const Expr &expr,
 }
 
 std::string normalizedInternalSoaStorageMetadataLeaf(std::string structPath) {
+  const size_t templateStart = structPath.find('<');
+  if (templateStart != std::string::npos) {
+    structPath.erase(templateStart);
+  }
   const size_t leafStart = structPath.find_last_of('/');
   const size_t suffixStart =
       structPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);

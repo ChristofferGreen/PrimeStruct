@@ -143,8 +143,13 @@ TEST_CASE("ir lowerer inline struct arg helper accepts internal soa storage alia
   const std::vector<std::pair<std::string, std::string>> compatiblePaths = {
       {"/std/collections/internal_soa_storage/SoaColumn__ti32", "SoaColumn"},
       {"SoaColumn", "/std/collections/internal_soa_storage/SoaColumn__ti32"},
+      {"/std/collections/internal_soa_storage/SoaColumn__ti32", "SoaColumn<i32>"},
+      {"SoaColumn<i32>", "/std/collections/internal_soa_storage/SoaColumn__ti32"},
       {"/std/collections/internal_soa_storage/SoaColumns2__ti32_i64", "SoaColumns2"},
+      {"/std/collections/internal_soa_storage/SoaColumns2__ti32_i64",
+       "SoaColumns2<i32, i64>"},
       {"SoaFieldView", "/std/collections/internal_soa_storage/SoaFieldView__ti32"},
+      {"SoaFieldView<i32>", "/std/collections/internal_soa_storage/SoaFieldView__ti32"},
   };
 
   for (const auto &[fieldStructPath, argStructPath] : compatiblePaths) {

@@ -305,6 +305,47 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
   CHECK(instructions[2].op == primec::IrOpcode::AddI64);
   CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
+  primec::ir_lowerer::LocalMap genericSoaStorageLocals;
+  primec::ir_lowerer::LocalInfo genericSoaColumnInfo;
+  genericSoaColumnInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  genericSoaColumnInfo.structTypeName = "SoaColumn<i32>";
+  genericSoaStorageLocals.emplace("values", genericSoaColumnInfo);
+
+  instructions.clear();
+  error.clear();
+  callExpr.name = "field_count";
+  int genericSoaFieldCountEmitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitCountAccessCall(
+            callExpr,
+            genericSoaStorageLocals,
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+              return false;
+            },
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++genericSoaFieldCountEmitExprCalls;
+              instructions.push_back({primec::IrOpcode::PushI64, 34});
+              return true;
+            },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            error) == Result::Emitted);
+  CHECK(genericSoaFieldCountEmitExprCalls == 1);
+  REQUIRE(instructions.size() == 4);
+  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
+  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
+  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+
   callExpr.isMethodCall = false;
   instructions.clear();
   error.clear();

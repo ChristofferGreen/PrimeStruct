@@ -29,7 +29,16 @@ std::string stripGeneratedStructSuffix(std::string structPath) {
   return structPath;
 }
 
+std::string stripTemplateArguments(std::string structPath) {
+  const size_t templateStart = structPath.find('<');
+  if (templateStart != std::string::npos) {
+    structPath.erase(templateStart);
+  }
+  return structPath;
+}
+
 std::string normalizedInternalSoaStorageLeaf(std::string structPath) {
+  structPath = stripTemplateArguments(std::move(structPath));
   structPath = stripGeneratedStructSuffix(std::move(structPath));
   if (!structPath.empty() && structPath.front() == '/') {
     structPath.erase(structPath.begin());
