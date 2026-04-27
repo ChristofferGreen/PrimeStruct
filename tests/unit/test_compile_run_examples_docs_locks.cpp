@@ -1138,7 +1138,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4253: Implement brace-only construction semantics") !=
+                  "- TODO-4282: Reject call-shaped struct field construction") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4254: Migrate generated construction surfaces") !=
@@ -1153,10 +1153,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4253: Implement brace-only construction semantics") !=
+                  "- TODO-4282: Reject call-shaped struct field construction") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4253: Implement brace-only construction semantics",
+      "TODO-4282: Reject call-shaped struct field construction",
       "TODO-4254: Migrate generated construction surfaces",
       "TODO-4255: Migrate collection construction surfaces",
       "TODO-4256: Classify constructor-shaped helper compatibility",
@@ -1282,6 +1282,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("TODO-4245") == std::string::npos);
   CHECK(todoFinished.find("TODO-4245: Plan dynamic vector growth and runtime storage support") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4253") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4253: Add brace constructor argument-list path") !=
         std::string::npos);
   CHECK(todo.find("TODO-4246") == std::string::npos);
   CHECK(todoFinished.find("TODO-4246: Define final `soa_vector` promotion contract") !=

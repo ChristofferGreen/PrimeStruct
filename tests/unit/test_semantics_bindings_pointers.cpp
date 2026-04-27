@@ -902,6 +902,97 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("struct brace constructor accepts labeled arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+  [i32] count{2i32}
+}
+
+[return<int>]
+use([thing] item) {
+  return(item.count)
+}
+
+[return<int>]
+main() {
+  return(use(thing{[count] 3i32, [value] 4i32}))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("struct brace constructor accepts multiple positional arguments") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+  [i32] count{2i32}
+}
+
+[return<int>]
+use([thing] item) {
+  return(item.count)
+}
+
+[return<int>]
+main() {
+  return(use(thing{4i32, 3i32}))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("struct brace constructor rejects duplicate labels") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+  [i32] count{2i32}
+}
+
+[return<int>]
+use([thing] item) {
+  return(item.value)
+}
+
+[return<int>]
+main() {
+  return(use(thing{[value] 3i32, [value] 4i32}))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("duplicate named argument: value") != std::string::npos);
+}
+
+TEST_CASE("struct brace constructor rejects too many positional entries") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+use([thing] item) {
+  return(item.value)
+}
+
+[return<int>]
+main() {
+  return(use(thing{1i32, 2i32}))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
 TEST_CASE("struct brace constructor accepts return value blocks") {
   const std::string source = R"(
 [struct]

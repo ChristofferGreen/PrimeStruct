@@ -100,9 +100,14 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
            name == "float" || name == "f32" || name == "f64";
   };
   auto parseBraceConstructor = [&](Expr &call, Expr &out) -> bool {
+    call.isBraceConstructor = true;
     if (call.templateArgs.empty() && isPrimitiveBraceType(call.name)) {
       call.templateArgs.push_back(call.name);
       call.name = "convert";
+    }
+    if (tryParseBraceConstructorArgumentList(call.args, call.argNames, namespacePrefix)) {
+      out = std::move(call);
+      return true;
     }
     Expr block;
     block.kind = Expr::Kind::Call;

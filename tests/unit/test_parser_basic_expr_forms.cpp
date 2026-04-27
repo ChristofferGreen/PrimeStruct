@@ -261,6 +261,7 @@ TEST_CASE("expression parser treats bare call body as brace constructor") {
   CHECK(error.empty());
   REQUIRE(expr.kind == primec::Expr::Kind::Call);
   CHECK(expr.name == "foo");
+  CHECK(expr.isBraceConstructor);
   REQUIRE(expr.args.size() == 1);
   REQUIRE(expr.argNames.size() == 1);
   CHECK_FALSE(expr.argNames[0].has_value());
@@ -286,6 +287,7 @@ TEST_CASE("expression parser preserves brace constructor body expressions") {
   CHECK(error.empty());
   REQUIRE(expr.kind == primec::Expr::Kind::Call);
   CHECK(expr.name == "foo");
+  CHECK(expr.isBraceConstructor);
   REQUIRE(expr.args.size() == 1);
   const auto &block = expr.args[0];
   CHECK(block.kind == primec::Expr::Kind::Call);
@@ -310,6 +312,7 @@ TEST_CASE("expression parser rewrites primitive brace constructor to convert") {
   CHECK(error.empty());
   REQUIRE(expr.kind == primec::Expr::Kind::Call);
   CHECK(expr.name == "convert");
+  CHECK(expr.isBraceConstructor);
   REQUIRE(expr.templateArgs.size() == 1);
   CHECK(expr.templateArgs[0] == "i32");
   REQUIRE(expr.args.size() == 1);
@@ -335,6 +338,7 @@ TEST_CASE("expression parser rewrites empty primitive brace constructor to conve
   CHECK(error.empty());
   REQUIRE(expr.kind == primec::Expr::Kind::Call);
   CHECK(expr.name == "convert");
+  CHECK(expr.isBraceConstructor);
   REQUIRE(expr.templateArgs.size() == 1);
   CHECK(expr.templateArgs[0] == "i32");
   REQUIRE(expr.args.size() == 1);
@@ -364,6 +368,7 @@ TEST_CASE("expression parser normalizes return inside brace constructor body") {
   CHECK(error.empty());
   REQUIRE(expr.kind == primec::Expr::Kind::Call);
   CHECK(expr.name == "foo");
+  CHECK(expr.isBraceConstructor);
   REQUIRE(expr.args.size() == 1);
   const auto &block = expr.args[0];
   CHECK(block.kind == primec::Expr::Kind::Call);

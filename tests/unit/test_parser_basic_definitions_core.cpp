@@ -386,6 +386,7 @@ main() {
   REQUIRE(returnCall.args.size() == 1);
   const auto &pickCall = returnCall.args[0];
   REQUIRE(pickCall.kind == primec::Expr::Kind::Call);
+  CHECK(pickCall.isBraceConstructor);
   REQUIRE(pickCall.args.size() == 1);
   const auto &blockArg = pickCall.args[0];
   REQUIRE(blockArg.kind == primec::Expr::Kind::Call);
@@ -393,6 +394,62 @@ main() {
   CHECK(blockArg.hasBodyArguments);
   REQUIRE(blockArg.bodyArguments.size() == 1);
   CHECK(blockArg.bodyArguments[0].kind == primec::Expr::Kind::Literal);
+}
+
+TEST_CASE("parses brace constructor argument lists") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(Pair{[right] 2i32, [left] 1i32})
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &pairCtor = returnCall.args[0];
+  REQUIRE(pairCtor.kind == primec::Expr::Kind::Call);
+  CHECK(pairCtor.name == "Pair");
+  CHECK(pairCtor.isBraceConstructor);
+  REQUIRE(pairCtor.args.size() == 2);
+  REQUIRE(pairCtor.argNames.size() == 2);
+  REQUIRE(pairCtor.argNames[0].has_value());
+  REQUIRE(pairCtor.argNames[1].has_value());
+  CHECK(*pairCtor.argNames[0] == "right");
+  CHECK(*pairCtor.argNames[1] == "left");
+  CHECK(pairCtor.args[0].kind == primec::Expr::Kind::Literal);
+  CHECK(pairCtor.args[1].kind == primec::Expr::Kind::Literal);
+}
+
+TEST_CASE("parses positional brace constructor argument lists") {
+  const std::string source = R"(
+[return<int>]
+main() {
+  return(Pair{1i32, 2i32})
+}
+)";
+
+  const auto program = parseProgram(source);
+  REQUIRE(program.definitions.size() == 1);
+  const auto &mainDef = program.definitions[0];
+  REQUIRE(mainDef.statements.size() == 1);
+  const auto &returnCall = mainDef.statements[0];
+  REQUIRE(returnCall.kind == primec::Expr::Kind::Call);
+  REQUIRE(returnCall.args.size() == 1);
+  const auto &pairCtor = returnCall.args[0];
+  REQUIRE(pairCtor.kind == primec::Expr::Kind::Call);
+  CHECK(pairCtor.name == "Pair");
+  CHECK(pairCtor.isBraceConstructor);
+  REQUIRE(pairCtor.args.size() == 2);
+  REQUIRE(pairCtor.argNames.size() == 2);
+  CHECK_FALSE(pairCtor.argNames[0].has_value());
+  CHECK_FALSE(pairCtor.argNames[1].has_value());
+  CHECK(pairCtor.args[0].kind == primec::Expr::Kind::Literal);
+  CHECK(pairCtor.args[1].kind == primec::Expr::Kind::Literal);
 }
 
 TEST_CASE("parses primitive brace constructor as convert") {

@@ -70,7 +70,41 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
     }
   }
 
-  if (!validateNamedArgumentsAgainstParams(fieldParams, expr.argNames, error_)) {
+  std::vector<Expr> normalizedBraceArgs;
+  std::vector<std::optional<std::string>> normalizedBraceArgNames;
+  const std::vector<Expr> *constructorArgs = &expr.args;
+  const std::vector<std::optional<std::string>> *constructorArgNames =
+      &expr.argNames;
+  if (expr.isBraceConstructor && expr.args.size() == 1 &&
+      expr.argNames.size() == 1 &&
+      !expr.argNames.front().has_value()) {
+    const Expr &blockArg = expr.args.front();
+    if (blockArg.kind == Expr::Kind::Call && blockArg.name == "block" &&
+        blockArg.hasBodyArguments) {
+      if (blockArg.bodyArguments.empty()) {
+        normalizedBraceArgs.clear();
+        normalizedBraceArgNames.clear();
+        constructorArgs = &normalizedBraceArgs;
+        constructorArgNames = &normalizedBraceArgNames;
+      } else if (blockArg.bodyArguments.size() == 1 &&
+                 !blockArg.bodyArguments.front().isBinding) {
+        normalizedBraceArgs.push_back(blockArg.bodyArguments.front());
+        normalizedBraceArgNames.push_back(std::nullopt);
+        constructorArgs = &normalizedBraceArgs;
+        constructorArgNames = &normalizedBraceArgNames;
+      }
+    }
+  }
+
+  if (hasMissingDefaults && constructorArgs->empty() &&
+      !hasNamedArguments(*constructorArgNames)) {
+    if (hasStructZeroArgConstructor(resolved)) {
+      handledOut = true;
+      return true;
+    }
+  }
+
+  if (!validateNamedArgumentsAgainstParams(fieldParams, *constructorArgNames, error_)) {
     if (error_.find("argument count mismatch") != std::string::npos) {
       return failStructConstructorDiagnostic("argument count mismatch for " +
                                             *context.diagnosticResolved);
@@ -81,7 +115,7 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
 
   std::vector<const Expr *> orderedArgs;
   std::string orderError;
-  if (!buildOrderedArguments(fieldParams, expr.args, expr.argNames, orderedArgs,
+  if (!buildOrderedArguments(fieldParams, *constructorArgs, *constructorArgNames, orderedArgs,
                              orderError)) {
     if (orderError.find("argument count mismatch") != std::string::npos) {
       return failStructConstructorDiagnostic("argument count mismatch for " +
@@ -92,8 +126,8 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   }
 
   std::unordered_set<const Expr *> explicitArgs;
-  explicitArgs.reserve(expr.args.size());
-  for (const auto &arg : expr.args) {
+  explicitArgs.reserve(constructorArgs->size());
+  for (const auto &arg : *constructorArgs) {
     explicitArgs.insert(&arg);
   }
 

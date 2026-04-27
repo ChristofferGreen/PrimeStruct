@@ -428,6 +428,156 @@ bool Parser::parseBindingInitializerList(std::vector<Expr> &out,
   return true;
 }
 
+bool Parser::tryParseBraceConstructorArgumentList(
+    std::vector<Expr> &out,
+    std::vector<std::optional<std::string>> &argNames,
+    const std::string &namespacePrefix) {
+  const size_t savedPos = pos_;
+  std::string ignoredError;
+  std::string *savedError = error_;
+  auto *savedErrorInfos = errorInfos_;
+  const ErrorInfo savedErrorInfo = lastErrorInfo_;
+  error_ = &ignoredError;
+  errorInfos_ = nullptr;
+
+  auto restoreState = [&](bool rewind) {
+    if (rewind) {
+      pos_ = savedPos;
+    }
+    error_ = savedError;
+    errorInfos_ = savedErrorInfos;
+    lastErrorInfo_ = savedErrorInfo;
+  };
+  auto skipCommentsOnly = [&]() {
+    while (tokens_[pos_].kind == TokenKind::Comment) {
+      ++pos_;
+    }
+  };
+  auto matchRaw = [&](TokenKind kind) -> bool {
+    skipCommentsOnly();
+    return tokens_[pos_].kind == kind;
+  };
+  auto expectRaw = [&](TokenKind kind, const std::string &message) -> bool {
+    if (matchRaw(TokenKind::Invalid)) {
+      return fail(describeInvalidToken(tokens_[pos_]));
+    }
+    if (!matchRaw(kind)) {
+      return fail(message);
+    }
+    ++pos_;
+    return true;
+  };
+  auto parseLabel = [&]() -> std::optional<std::string> {
+    const size_t labelStart = pos_;
+    if (!matchRaw(TokenKind::LBracket) || isSimpleSpreadMarker(tokens_, pos_)) {
+      return std::nullopt;
+    }
+    if (!expectRaw(TokenKind::LBracket, "expected '['")) {
+      pos_ = labelStart;
+      return std::nullopt;
+    }
+    skipCommentsOnly();
+    if (!matchRaw(TokenKind::Identifier)) {
+      pos_ = labelStart;
+      return std::nullopt;
+    }
+    Token label = tokens_[pos_++];
+    if (label.text.find('/') != std::string::npos) {
+      pos_ = labelStart;
+      return std::nullopt;
+    }
+    std::string labelError;
+    if (!validateIdentifierText(label.text, labelError)) {
+      pos_ = labelStart;
+      return std::nullopt;
+    }
+    if (!expectRaw(TokenKind::RBracket, "expected ']' after argument label")) {
+      pos_ = labelStart;
+      return std::nullopt;
+    }
+    size_t nextIndex = pos_;
+    while (nextIndex < tokens_.size() && isIgnorableToken(tokens_[nextIndex].kind)) {
+      ++nextIndex;
+    }
+    if (nextIndex >= tokens_.size() ||
+        !isArgumentLabelValueStart(tokens_[nextIndex].kind)) {
+      pos_ = labelStart;
+      return std::nullopt;
+    }
+    return label.text;
+  };
+
+  if (!expectRaw(TokenKind::LBrace, "expected '{'")) {
+    restoreState(true);
+    return false;
+  }
+  if (matchRaw(TokenKind::RBrace)) {
+    restoreState(true);
+    return false;
+  }
+
+  ArgumentLabelGuard labelGuard(*this);
+  std::vector<Expr> parsedArgs;
+  std::vector<std::optional<std::string>> parsedArgNames;
+  bool sawNamedArgument = false;
+  bool sawSeparator = false;
+
+  while (true) {
+    std::optional<std::string> argName = parseLabel();
+    sawNamedArgument = sawNamedArgument || argName.has_value();
+
+    Expr arg;
+    {
+      BareBindingGuard bindingGuard(*this, false);
+      if (!parseExpr(arg, namespacePrefix)) {
+        restoreState(true);
+        return false;
+      }
+    }
+    if (arg.isBinding ||
+        (arg.kind == Expr::Kind::Call && arg.name == "return" &&
+         !arg.isMethodCall && !arg.isFieldAccess)) {
+      restoreState(true);
+      return false;
+    }
+    parsedArgs.push_back(std::move(arg));
+    parsedArgNames.push_back(std::move(argName));
+
+    if (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+      sawSeparator = true;
+      while (matchRaw(TokenKind::Comma) || matchRaw(TokenKind::Semicolon)) {
+        if (matchRaw(TokenKind::Comma)) {
+          expectRaw(TokenKind::Comma, "expected ','");
+        } else {
+          expectRaw(TokenKind::Semicolon, "expected ';'");
+        }
+      }
+      if (matchRaw(TokenKind::RBrace)) {
+        break;
+      }
+      continue;
+    }
+    if (matchRaw(TokenKind::RBrace)) {
+      break;
+    }
+    sawSeparator = true;
+  }
+
+  if (!expectRaw(TokenKind::RBrace, "expected '}'")) {
+    restoreState(true);
+    return false;
+  }
+  if (!sawNamedArgument && !sawSeparator) {
+    restoreState(true);
+    return false;
+  }
+
+  out = std::move(parsedArgs);
+  argNames = std::move(parsedArgNames);
+  restoreState(false);
+  return true;
+}
+
 bool Parser::finalizeBindingInitializer(Expr &binding) {
   bool hasNamed = false;
   for (const auto &name : binding.argNames) {
@@ -483,6 +633,7 @@ bool Parser::finalizeBindingInitializer(Expr &binding) {
   constructorCall.name = typeName;
   constructorCall.namespacePrefix = binding.namespacePrefix;
   constructorCall.templateArgs = std::move(templateArgs);
+  constructorCall.isBraceConstructor = true;
   if (conciseVectorInitializer) {
     Expr block = std::move(binding.args.front());
     constructorCall.args = std::move(block.bodyArguments);

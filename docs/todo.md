@@ -67,7 +67,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4253: Implement brace-only construction semantics
+- TODO-4282: Reject call-shaped struct field construction
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -84,7 +84,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4253
+- Deferred algebraic types and brace-only construction: TODO-4282
   -> TODO-4254 -> TODO-4255 -> TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
@@ -96,7 +96,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4253: Implement brace-only construction semantics
+- TODO-4282: Reject call-shaped struct field construction
 - TODO-4254: Migrate generated construction surfaces
 - TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
@@ -147,7 +147,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4253, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4282, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -172,7 +172,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4253, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4282, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -290,34 +290,33 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4253: Implement brace-only construction semantics
+- [ ] TODO-4282: Reject call-shaped struct field construction
   - owner: ai
-  - created_at: 2026-04-27
+  - created_at: 2026-04-28
   - phase: Deferred algebraic types and brace-only construction
-  - scope: Move user-facing value construction onto `Type{...}` and
-    context-typed `{...}` forms so `Type(...)` remains ordinary execution/call
-    syntax rather than struct construction.
+  - scope: Finish the brace-only struct-construction cutover by making
+    `Type(...)` ordinary execution/call syntax instead of a fallback path for
+    mapping arguments to struct fields.
   - implementation_notes:
-    - Start from `include/primec/Ast.h`, `src/parser/ParserExpr.cpp`,
-      `src/parser/ParserLists.cpp`, `src/semantics/SemanticsValidatorExprStructConstructors.cpp`,
-      `src/semantics/SemanticsValidatorExprBlock.cpp`, and initializer
-      inference helpers under `src/semantics/`.
-    - Add focused coverage near parser tests, `test_semantics_bindings_struct_defaults.cpp`,
-      and the existing struct/manual semantics tests before broad compile-run
-      coverage.
-    - Preserve statement-position `name{...}` binding behavior while adding a
-      canonical value-constructor representation that later TODOs can reuse.
+    - Start from `src/semantics/SemanticsValidatorExprStructConstructors.cpp`,
+      `src/semantics/SemanticsValidatorExpr.cpp`,
+      `src/semantics/SemanticsValidatorBuildInitializerInference*.cpp`, and
+      call-shaped struct-constructor tests that still use `Type(...)`.
+    - The parser now marks brace constructor expressions with
+      `Expr::isBraceConstructor`, supports labeled/direct brace argument
+      lists, and preserves statement-position `name{...}` binding behavior.
+    - Migrate focused semantic, IR, and compile-run sources that still rely on
+      user-authored `Type(...)` field mapping before flipping the diagnostic.
   - acceptance:
-    - Parser and semantic tests cover labeled and positional `Type{...}` struct
-      construction plus context-typed binding initializers.
-    - Binding-vs-constructor disambiguation is explicit: `name{...}` remains a
-      binding in statement position, while value positions and typed
-      initializers can form constructors deterministically.
     - Constructor diagnostics cover unknown labels, duplicate labels, too many
       positional entries, missing required fields, ambiguous context-typed
       `{...}` initializers, and accidental `Type(...)` field-mapping attempts.
     - `Type(...)` no longer maps to struct fields on the migrated path and
       produces deterministic diagnostics or ordinary call behavior.
+    - Focused tests prove `Type{...}` remains valid for labeled and positional
+      struct construction, including context-typed binding initializers.
+    - Statement-position `name{...}` remains a binding unless the grammar has
+      value-expression context.
     - Omitted-initializer rewrites and zero-field/default struct construction
       use brace construction in the canonicalized AST.
     - Docs and user-facing examples use brace construction for structs.
@@ -330,7 +329,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4253
+  - depends_on: TODO-4282
   - scope: Move compiler-generated construction paths onto the brace-only
     contract, limited to enum static values, omitted-default rewrites, and
     reflection-generated `Default`/`Clone`/`Clear` helpers.
@@ -338,7 +337,7 @@ Task template:
     - Start from enum expansion and reflection generation code under
       `src/semantics/SemanticsValidateReflectionGeneratedHelpers*`,
       `src/semantics/SemanticsValidateReflectionMetadata*`, and any omitted
-      initializer rewrite path left after TODO-4253.
+      initializer rewrite path left after TODO-4282.
     - Lock behavior with `test_semantics_enum.cpp`,
       `test_semantics_capabilities_structs_reflect_default.cpp`,
       `test_semantics_capabilities_structs_reflect_clear.cpp`, and
@@ -465,7 +464,7 @@ Task template:
   - scope: Add explicit sum value construction through `[variant] payload`
     entries when the target sum type is known from context.
   - implementation_notes:
-    - Reuse the brace-construction machinery from TODO-4253 and sum metadata
+    - Reuse the brace-construction machinery and sum metadata
       from TODO-4257; add a narrow sum-construction resolver instead of
       special-casing it inside unrelated collection or struct paths.
     - Cover typed local bindings, return values, fields, and `auto`/omitted
@@ -780,7 +779,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4253
+  - depends_on: TODO-4282
   - scope: Add parser, AST, semantic-product, and diagnostic support for
     heterogeneous type-parameter packs such as `tuple<Ts...>` without adding
     pack expansion or tuple implementation yet.

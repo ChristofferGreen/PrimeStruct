@@ -44,6 +44,9 @@ private:
   bool parseBindingInitializerList(std::vector<Expr> &out,
                                    std::vector<std::optional<std::string>> &argNames,
                                    const std::string &namespacePrefix);
+  bool tryParseBraceConstructorArgumentList(std::vector<Expr> &out,
+                                            std::vector<std::optional<std::string>> &argNames,
+                                            const std::string &namespacePrefix);
   bool parseBraceExprList(std::vector<Expr> &out,
                           const std::string &namespacePrefix,
                           bool allowSingleBranchIfStatement);

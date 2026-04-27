@@ -37,6 +37,7 @@ struct Expr {
   std::string namespacePrefix;
   std::vector<Transform> transforms;
   bool isBinding = false;
+  bool isBraceConstructor = false;
   bool isMethodCall = false;
   bool isFieldAccess = false;
   bool isLambda = false;

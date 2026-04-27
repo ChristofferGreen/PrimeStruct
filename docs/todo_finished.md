@@ -6,6 +6,33 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4253: Add brace constructor argument-list path
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Split the oversized brace-only construction workstream and land the
+    parser/semantic production path for user-facing `Type{...}` and
+    context-typed `{...}` struct construction.
+  - acceptance:
+    - Parser coverage records brace constructor expressions separately from
+      ordinary calls.
+    - Direct brace constructors can carry labeled and positional field entries.
+    - Semantics validates direct brace constructor labels, duplicate labels,
+      and too many positional entries through the existing struct-field
+      ordering path.
+    - Statement-position `name{...}` binding behavior is preserved.
+    - Remaining call-shaped `Type(...)` rejection work is tracked separately.
+  - stop_rule: Stop after the brace constructor argument-list path is
+    represented in the AST and validated for ordinary struct constructors;
+    leave strict call-shaped rejection and generated-surface migration to
+    follow-up TODOs.
+  - finished_at: 2026-04-28
+  - evidence: Added `Expr::isBraceConstructor`, parser support for labeled and
+    comma-separated positional `Type{...}` entries, semantic normalization for
+    legacy brace value-block payloads, and focused parser/semantic coverage.
+    Split strict `Type(...)` rejection into `TODO-4282` before the generated
+    and collection construction migrations.
+
 - [x] TODO-4245: Plan dynamic vector growth and runtime storage support
   - owner: ai
   - created_at: 2026-04-27
