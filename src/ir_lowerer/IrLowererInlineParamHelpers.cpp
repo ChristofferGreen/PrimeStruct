@@ -53,6 +53,32 @@ bool isBuiltinSoaToAosStructMatch(const std::string &calleePath,
   return isCanonicalBuiltinSoaBridgePath(calleePath);
 }
 
+bool isKnownStdUiStructAlias(std::string_view bareName) {
+  return bareName == "CommandList" || bareName == "HtmlCommandList" ||
+         bareName == "LayoutTree" || bareName == "LoginFormNodes" ||
+         bareName == "Rgba8" || bareName == "UiEventStream";
+}
+
+bool isStdUiStructAliasMatch(const std::string &expectedStruct,
+                             const std::string &argStruct) {
+  auto matchesBareToQualified = [](const std::string &bare,
+                                   const std::string &qualified) {
+    return bare.find('/') == std::string::npos &&
+           isKnownStdUiStructAlias(bare) &&
+           qualified == std::string("/std/ui/") + bare;
+  };
+  return matchesBareToQualified(expectedStruct, argStruct) ||
+         matchesBareToQualified(argStruct, expectedStruct);
+}
+
+bool isStructParamMatch(const std::string &calleePath,
+                        const std::string &expectedStruct,
+                        const std::string &argStruct) {
+  return expectedStruct == argStruct ||
+         isBuiltinSoaToAosStructMatch(calleePath, expectedStruct, argStruct) ||
+         isStdUiStructAliasMatch(expectedStruct, argStruct);
+}
+
 bool resolveBuiltinSoaToAosStorageField(const StructSlotLayoutInfo &layout,
                                         StructSlotFieldInfo &fieldOut) {
   if (resolveStructSlotFieldByName(layout.fields, "storage", fieldOut)) {
@@ -621,8 +647,7 @@ bool emitInlineDefinitionCallParameters(
       }
       std::string argStruct = inferStructExprPath(*argExprPtr, callerLocals);
       if (argStruct.empty() ||
-          (argStruct != paramInfo.structTypeName &&
-           !isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct))) {
+          !isStructParamMatch(calleePath, paramInfo.structTypeName, argStruct)) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
@@ -667,7 +692,7 @@ bool emitInlineDefinitionCallParameters(
       const bool builtinSoaToAosStructBridge =
           isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct);
       if (argStruct.empty() ||
-          (argStruct != paramInfo.structTypeName && !builtinSoaToAosStructBridge)) {
+          !isStructParamMatch(calleePath, paramInfo.structTypeName, argStruct)) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
@@ -756,8 +781,7 @@ bool emitInlineDefinitionCallParameters(
       }
       std::string argStruct = inferStructExprPath(*orderedArg, callerLocals);
       if (argStruct.empty() ||
-          (argStruct != paramInfo.structTypeName &&
-           !isBuiltinSoaToAosStructMatch(calleePath, paramInfo.structTypeName, argStruct))) {
+          !isStructParamMatch(calleePath, paramInfo.structTypeName, argStruct)) {
         error = "struct parameter type mismatch: expected " + paramInfo.structTypeName + ", got " +
                 (argStruct.empty() ? std::string("<unknown>") : argStruct);
         return false;
