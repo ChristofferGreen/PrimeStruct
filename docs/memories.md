@@ -5,10 +5,10 @@ This file stores durable session-derived facts that are useful in later work. Ke
 ## Active Memories
 
 ### compile-run-tests-shell-out-to-build-binaries
-- Updated: 2026-04-19
+- Updated: 2026-04-28
 - Tags: tests, build, tooling
-- Fact: Compile-run suites invoke `./primec` and `./primevm` from the active build directory, so focused reruns need fresh standalone tool binaries and not just freshly linked test binaries.
-- Evidence: `tests/unit/test_compile_run_smoke_core_basic.cpp` and many other compile-run suites build shell commands like `./primec --emit=...` and `./primevm ...`.
+- Fact: Compile-run suites invoke `./primec` and `./primevm` from the active build directory, so focused reruns need fresh standalone tool binaries and should use release-build helpers such as `scripts/rerun_backend_shard.sh`.
+- Evidence: `tests/unit/test_compile_run_smoke_core_basic.cpp` and many other compile-run suites build shell commands like `./primec --emit=...` and `./primevm ...`; `scripts/rerun_backend_shard.sh vm-math` prints the required `build-release/` cwd, CTest regex, and `PrimeStruct_compile_run_tests` command.
 
 ### cpp-emitter-wrapper-map-direct-count-diagnostics
 - Updated: 2026-04-20

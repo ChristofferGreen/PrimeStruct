@@ -49,6 +49,39 @@ TEST_CASE("contributor doctest guardrails stay source locked") {
   CHECK(agents.find("optimize it or add a brief justification") != std::string::npos);
 }
 
+TEST_CASE("focused backend rerun helper stays documented") {
+  std::filesystem::path agentsPath = std::filesystem::path("..") / "AGENTS.md";
+  std::filesystem::path helperPath =
+      std::filesystem::path("..") / "scripts" / "rerun_backend_shard.sh";
+  if (!std::filesystem::exists(agentsPath)) {
+    agentsPath = std::filesystem::current_path() / "AGENTS.md";
+  }
+  if (!std::filesystem::exists(helperPath)) {
+    helperPath = std::filesystem::current_path() / "scripts" / "rerun_backend_shard.sh";
+  }
+  REQUIRE(std::filesystem::exists(agentsPath));
+  REQUIRE(std::filesystem::exists(helperPath));
+
+  const std::string agents = readFile(agentsPath.string());
+  const std::string helper = readFile(helperPath.string());
+
+  CHECK(agents.find("**Focused backend rerun helper:**") != std::string::npos);
+  CHECK(agents.find("scripts/rerun_backend_shard.sh vm-math") != std::string::npos);
+  CHECK(agents.find("`build-release/` cwd") != std::string::npos);
+  CHECK(agents.find("`PrimeStruct_compile_run_tests` direct command") !=
+        std::string::npos);
+  CHECK(agents.find("add `--run` to execute the focused CTest") != std::string::npos);
+  CHECK(helper.find("vm-math    VM math compile-run backend shard") != std::string::npos);
+  CHECK(helper.find("Build cwd: $build_dir") != std::string::npos);
+  CHECK(helper.find("Release binary: $binary") != std::string::npos);
+  CHECK(helper.find("ctest_regex='^PrimeStruct_primestruct_compile_run_vm_math_math_helpers_'") !=
+        std::string::npos);
+  CHECK(helper.find("binary='PrimeStruct_compile_run_tests'") != std::string::npos);
+  CHECK(helper.find("--test-suite=$suite --order-by=file") != std::string::npos);
+  CHECK(helper.find("exec ctest -R \"$ctest_regex\" --output-on-failure") !=
+        std::string::npos);
+}
+
 TEST_CASE("skipped doctest debt stays absent from unit shards") {
   const std::filesystem::path testsPath = resolveUnitTestsPath();
   REQUIRE(std::filesystem::exists(testsPath));
@@ -832,23 +865,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4243: Improve focused backend rerun ergonomics") !=
+                  "- TODO-4244: Decide the `soa_vector` maturity exit") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4244: Decide the `soa_vector` maturity exit") !=
+                  "- TODO-4246: Define final `soa_vector` promotion contract") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
         std::string::npos);
-  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4243;") !=
+  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4245") !=
         std::string::npos);
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4243: Improve focused backend rerun ergonomics") !=
+                  "- TODO-4244: Decide the `soa_vector` maturity exit") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4243: Improve focused backend rerun ergonomics",
       "TODO-4244: Decide the `soa_vector` maturity exit",
       "TODO-4246: Define final `soa_vector` promotion contract",
       "TODO-4247: Move canonical SoA wrapper off experimental implementation imports",
@@ -859,6 +891,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4252: Promote `soa_vector` docs after compatibility cleanup",
       "TODO-4245: Plan dynamic vector growth and runtime storage support",
       "TODO-4253: Implement brace-only construction semantics",
+      "TODO-4254: Migrate generated construction surfaces",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -966,6 +999,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4242") == std::string::npos);
   CHECK(todoFinished.find("TODO-4242: Inventory repo-wide source-lock replacement candidates") !=
         std::string::npos);
+  CHECK(todo.find("TODO-4243") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4243: Improve focused backend rerun ergonomics") !=
+        std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4244") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4246") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4247") != std::string::npos);
@@ -999,11 +1035,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |") !=
         std::string::npos);
-  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | TODO-4243 |") !=
+  CHECK(todo.find("| Release benchmark/example suite stability and doctest governance | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | TODO-4243 |") !=
+  CHECK(todo.find("| Focused backend rerun ergonomics and suite partitioning | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | TODO-4243 |") !=
+  CHECK(todo.find("| Test-suite audit follow-up and release-gate stability | none |") !=
         std::string::npos);
   CHECK(todo.find("| Stdlib de-experimentalization and public/internal namespace cleanup | none |") !=
         std::string::npos);
@@ -1021,7 +1057,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| IR lowerer compile-unit breakup | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Backend validation/build ergonomics | TODO-4243 |") !=
+  CHECK(todo.find("| Backend validation/build ergonomics | none |") !=
         std::string::npos);
   CHECK(todo.find("| Semantic-product-authority conformance | none |") !=
         std::string::npos);

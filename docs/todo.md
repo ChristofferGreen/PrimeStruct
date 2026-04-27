@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4243: Improve focused backend rerun ergonomics
+- TODO-4244: Decide the `soa_vector` maturity exit
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4244: Decide the `soa_vector` maturity exit
 - TODO-4246: Define final `soa_vector` promotion contract
 - TODO-4247: Move canonical SoA wrapper off experimental implementation imports
 - TODO-4248: Move canonical SoA conversions off experimental conversion imports
@@ -81,11 +80,11 @@ Task template:
 - TODO-4252: Promote `soa_vector` docs after compatibility cleanup
 - TODO-4245: Plan dynamic vector growth and runtime storage support
 - TODO-4253: Implement brace-only construction semantics
+- TODO-4254: Migrate generated construction surfaces
 
 ### Priority Lanes (Current)
 
-- Deferred semantic-product/backend/tooling follow-ups: TODO-4243;
-  TODO-4245
+- Deferred semantic-product/backend/tooling follow-ups: TODO-4245
 - Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
   -> TODO-4248 -> TODO-4249 -> TODO-4250 -> TODO-4251 -> TODO-4252
 - Deferred algebraic types and brace-only construction: TODO-4253
@@ -99,7 +98,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4243: Improve focused backend rerun ergonomics
 - TODO-4244: Decide the `soa_vector` maturity exit
 - TODO-4246: Define final `soa_vector` promotion contract
 - TODO-4247: Move canonical SoA wrapper off experimental implementation imports
@@ -152,13 +150,13 @@ Task template:
 | Semantic-product publication by module and fact family | none |
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
-| Backend validation/build ergonomics | TODO-4243 |
+| Backend validation/build ergonomics | none |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
-| Test-suite audit follow-up and release-gate stability | TODO-4243 |
+| Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | TODO-4253, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
@@ -176,14 +174,14 @@ Task template:
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
 | `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
-| Focused backend rerun ergonomics and suite partitioning | TODO-4243 |
+| Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
 | Emitter map-helper canonicalization parity | none |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
-| Release benchmark/example suite stability and doctest governance | TODO-4243 |
+| Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | TODO-4253, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
@@ -294,23 +292,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4243: Improve focused backend rerun ergonomics
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred semantic-product/backend/tooling follow-up
-  - scope: Add clearer CTest labels, helper output, or documented release-mode
-    rerun commands for focused backend slices so failures do not require broad
-    compile-run reruns to triage.
-  - acceptance:
-    - At least one backend test shard can be rerun through a documented
-      release-mode CTest label or helper command.
-    - The helper or label output names the matching release binary and expected
-      working directory.
-    - Existing full release validation behavior is unchanged.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after one high-value backend slice has ergonomic focused
-    rerun support; leave broader suite partitioning to separate leaves.
 
 - [ ] TODO-4244: Decide the `soa_vector` maturity exit
   - owner: ai

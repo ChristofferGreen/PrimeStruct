@@ -76,6 +76,11 @@ build and layout solidify.
 - **Top-lines helper:** `./scripts/top_lines_of_code.sh` reports the top files by line count across `src/`, `include/`, and `tests/` (default: top 10).
 - **CTest:** prefer running from `build-release/` via `ctest --output-on-failure`; use `build-debug/` when investigating failures in more detail.
 - **Direct test binary runs:** prefer executing the matching release-mode doctest binary from `build-release/` so compile-run suites can resolve `./primec` correctly. Use `PrimeStruct_backend_ir_tests` for IR-lowering contract coverage, `PrimeStruct_backend_runtime_tests` for backend-registry/runtime adapter coverage, `PrimeStruct_compile_run_tests` for compile-run suites, or the corresponding narrower release binary for parser, semantics, text-filter, or misc slices. Switch to the matching `build-debug/` binary only when deeper debugging is needed.
+- **Focused backend rerun helper:** `scripts/rerun_backend_shard.sh vm-math`
+  prints the release-mode `build-release/` cwd, matching
+  `PrimeStruct_compile_run_tests` direct command, and CTest regex for the VM
+  math compile-run backend shard; add `--run` to execute the focused CTest
+  rerun after the release build exists.
 - **Failure triage rule:** if the full release gate fails, diagnose with the smallest relevant release-mode rerun (single `ctest` case or one release test binary slice), fix the issue, then return to the full `./scripts/compile.sh --release` gate instead of camping on long serial debug sweeps.
 
 ## Generated artifacts

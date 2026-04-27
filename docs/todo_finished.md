@@ -5,6 +5,33 @@ Legend:
 
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
+**Todo Completion (April 28, 2026)**
+- [x] TODO-4243: Improve focused backend rerun ergonomics
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred semantic-product/backend/tooling follow-up
+  - scope: Add clearer CTest labels, helper output, or documented release-mode
+    rerun commands for focused backend slices so failures do not require broad
+    compile-run reruns to triage.
+  - acceptance:
+    - At least one backend test shard can be rerun through a documented
+      release-mode CTest label or helper command.
+    - The helper or label output names the matching release binary and expected
+      working directory.
+    - Existing full release validation behavior is unchanged.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after one high-value backend slice has ergonomic focused
+    rerun support; leave broader suite partitioning to separate leaves.
+  - finished_at: 2026-04-28
+  - evidence: Added `scripts/rerun_backend_shard.sh vm-math`, a release-mode
+    focused rerun helper that prints the `build-release/` cwd, matching
+    `PrimeStruct_compile_run_tests` direct command, and CTest regex for the VM
+    math compile-run backend shard, with `--run` executing the focused CTest
+    path. Documented the helper in `AGENTS.md`, source-locked the helper/docs
+    contract in `test_compile_run_examples_docs_locks.cpp`, updated the
+    compile-run rerun memory, and deferred release reruns to CI per the lite
+    workflow.
+
 **Todo Completion (April 27, 2026)**
 - [x] TODO-4242: Inventory repo-wide source-lock replacement candidates
   - owner: ai
