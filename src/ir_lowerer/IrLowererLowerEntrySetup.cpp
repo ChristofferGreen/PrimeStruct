@@ -35,7 +35,7 @@ struct SemanticProductCompletenessCheck {
 
 struct SemanticProductContractManifest {
   uint32_t version = SemanticProductContractVersionCurrent;
-  const std::array<SemanticProductCompletenessCheck, 9> *checks = nullptr;
+  const std::array<SemanticProductCompletenessCheck, 10> *checks = nullptr;
 };
 
 bool validateBindingFactFamily(const SemanticProductCompletenessContext &context,
@@ -46,6 +46,13 @@ bool validateBindingFactFamily(const SemanticProductCompletenessContext &context
 bool validateLocalAutoFactFamily(const SemanticProductCompletenessContext &context,
                                  std::string &error) {
   return validateSemanticProductLocalAutoCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateCollectionSpecializationFactFamily(
+    const SemanticProductCompletenessContext &context,
+    std::string &error) {
+  return validateSemanticProductCollectionSpecializationCoverage(
+      context.program, context.semanticProgram, error);
 }
 
 bool validateStructLayoutFactFamily(const SemanticProductCompletenessContext &context,
@@ -129,11 +136,14 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
   return true;
 }
 
-const std::array<SemanticProductCompletenessCheck, 9> kSemanticProductCompletenessMatrix = {{
+const std::array<SemanticProductCompletenessCheck, 10> kSemanticProductCompletenessMatrix = {{
     {"routing.direct-call", "directCallTargets[].resolvedPathId", validateDirectCallFactFamily},
     {"routing.bridge-path", "bridgePathChoices[].helperNameId", validateBridgePathFactFamily},
     {"routing.method-call", "methodCallTargets[].resolvedPathId", validateMethodCallFactFamily},
     {"type-shape.binding", "bindingFacts[].resolvedPathId", validateBindingFactFamily},
+    {"type-shape.collection-specialization",
+     "collectionSpecializations[].collectionFamily",
+     validateCollectionSpecializationFactFamily},
     {"type-shape.local-auto", "localAutoFacts[].bindingTypeText", validateLocalAutoFactFamily},
     {"type-shape.struct-layout", "typeMetadata[] + structFieldMetadata[]", validateStructLayoutFactFamily},
     {"result-control.entry-args", "entryPath + bindingFacts[]", validateEntryParameterFactFamily},

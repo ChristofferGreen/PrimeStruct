@@ -86,6 +86,22 @@ struct CompilePipelineBackendConformance {
     }
     return nullptr;
   }
+
+  const SemanticProgramCollectionSpecialization *findCollectionSpecialization(
+      std::string_view scopePath,
+      std::string_view name) const {
+    const auto collectionSpecializations =
+        semanticProgramCollectionSpecializationView(output.semanticProgram);
+    for (const auto *entry : collectionSpecializations) {
+      if (entry == nullptr) {
+        continue;
+      }
+      if (entry->scopePath == scopePath && entry->name == name) {
+        return entry;
+      }
+    }
+    return nullptr;
+  }
 };
 
 namespace detail {

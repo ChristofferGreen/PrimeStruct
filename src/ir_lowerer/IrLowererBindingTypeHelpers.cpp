@@ -7,6 +7,8 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
 
+#include <utility>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -70,6 +72,69 @@ bool isLocalAutoBindingCandidate(const Expr &expr) {
     return true;
   }
   return trimTemplateTypeText(typeName) == "auto";
+}
+
+struct ExpectedCollectionSpecialization {
+  std::string family;
+  std::vector<std::string> templateArgs;
+};
+
+bool extractExpectedCollectionSpecialization(std::string typeText,
+                                             ExpectedCollectionSpecialization &out) {
+  typeText = unwrapTopLevelUninitializedTypeText(trimTemplateTypeText(typeText));
+  if (typeText.empty()) {
+    return false;
+  }
+
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(typeText, base, argText)) {
+    const std::string family =
+        normalizeCollectionBindingTypeName(trimTemplateTypeText(typeText));
+    if (family != "vector" && family != "map" && family != "soa_vector") {
+      return false;
+    }
+    out = ExpectedCollectionSpecialization{family, {}};
+    return true;
+  }
+
+  base = normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  argText = trimTemplateTypeText(argText);
+  if (base == "Reference" || base == "Pointer") {
+    return extractExpectedCollectionSpecialization(argText, out);
+  }
+  if (base != "vector" && base != "map" && base != "soa_vector") {
+    return false;
+  }
+
+  std::vector<std::string> args;
+  if (!argText.empty()) {
+    if (!splitTemplateArgs(argText, args)) {
+      args = {argText};
+    }
+    for (auto &arg : args) {
+      arg = trimTemplateTypeText(arg);
+    }
+  }
+  out = ExpectedCollectionSpecialization{base, std::move(args)};
+  return true;
+}
+
+bool collectionSpecializationMatchesExpected(
+    const SemanticProgramCollectionSpecialization &entry,
+    const ExpectedCollectionSpecialization &expected) {
+  if (entry.collectionFamily != expected.family) {
+    return false;
+  }
+  if ((expected.family == "vector" || expected.family == "soa_vector") &&
+      !expected.templateArgs.empty()) {
+    return entry.elementTypeText == expected.templateArgs.front();
+  }
+  if (expected.family == "map" && expected.templateArgs.size() == 2) {
+    return entry.keyTypeText == expected.templateArgs[0] &&
+           entry.valueTypeText == expected.templateArgs[1];
+  }
+  return true;
 }
 
 LocalInfo::Kind bindingKindFromCollectionSpecialization(
@@ -472,6 +537,81 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
   };
 
   for (const auto &def : program.definitions) {
+    if (!validateExprs(def.fullPath, def.statements) ||
+        (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool validateSemanticProductCollectionSpecializationCoverage(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    std::string &error) {
+  if (semanticProgram == nullptr) {
+    return true;
+  }
+
+  const SemanticProductIndex semanticIndex = buildSemanticProductIndex(semanticProgram);
+  auto validateBindingExpr = [&](const std::string &scopePath,
+                                 const std::string &siteKind,
+                                 const Expr &expr) {
+    if (expr.semanticNodeId == 0) {
+      return true;
+    }
+    const SemanticProgramBindingFact *bindingFact =
+        findSemanticProductBindingFact(semanticIndex, expr);
+    if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+      return true;
+    }
+
+    ExpectedCollectionSpecialization expected;
+    if (!extractExpectedCollectionSpecialization(
+            bindingFact->bindingTypeText, expected)) {
+      return true;
+    }
+
+    const SemanticProgramCollectionSpecialization *collectionFact =
+        findSemanticProductCollectionSpecialization(semanticIndex, expr);
+    if (collectionFact == nullptr) {
+      error = "missing semantic-product collection specialization: " +
+              describeBindingSite(scopePath, siteKind, expr);
+      return false;
+    }
+    if (!collectionSpecializationMatchesExpected(*collectionFact, expected)) {
+      error = "stale semantic-product collection specialization: " +
+              describeBindingSite(scopePath, siteKind, expr);
+      return false;
+    }
+    return true;
+  };
+
+  std::function<bool(const std::string &, const Expr &)> validateExpr;
+  auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
+    for (const auto &expr : exprs) {
+      if (!validateExpr(scopePath, expr)) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  validateExpr = [&](const std::string &scopePath, const Expr &expr) {
+    if (expr.isBinding && !validateBindingExpr(scopePath, "local", expr)) {
+      return false;
+    }
+    return validateExprs(scopePath, expr.args) &&
+           validateExprs(scopePath, expr.bodyArguments);
+  };
+
+  for (const auto &def : program.definitions) {
+    for (const auto &param : def.parameters) {
+      if (!validateBindingExpr(def.fullPath, "parameter", param)) {
+        return false;
+      }
+    }
     if (!validateExprs(def.fullPath, def.statements) ||
         (def.returnExpr.has_value() && !validateExpr(def.fullPath, *def.returnExpr))) {
       return false;

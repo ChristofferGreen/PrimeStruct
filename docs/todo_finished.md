@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4240: Add backend semantic-product conformance coverage.
+  Completed: The lowerer semantic-product completeness matrix now validates
+  collection-specialization coverage for vector/map/`soa_vector` bindings and
+  fails closed with a deterministic diagnostic when a collection binding has a
+  binding fact but no matching collection-specialization fact. The shared
+  compile-pipeline backend conformance helper now exposes collection
+  specialization lookup, and the C++ IR, VM, and native backend conformance case
+  asserts the same published vector specialization fact across all three backend
+  paths. Local validation is deferred per the lite workflow.
 - ✓ TODO-4239: Migrate helper-routing template inference onto graph facts.
   Completed: Implicit template-argument fact keys and published testing facts
   now use the current definition path as their semantic scope instead of the

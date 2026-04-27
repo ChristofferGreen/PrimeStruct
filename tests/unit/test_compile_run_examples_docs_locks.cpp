@@ -176,7 +176,9 @@ TEST_CASE("semantic-product docs avoid inactive Group 12 pointers") {
         std::string::npos);
   CHECK(primeStructDoc.find("`TODO-4228` tracks the semantic-product dump/report API factoring") ==
         std::string::npos);
-  CHECK(primeStructDoc.find("`TODO-4240` tracks pipeline-facing/backend semantic-product conformance") !=
+  CHECK(primeStructDoc.find("Pipeline-facing/backend conformance now covers semantic-product facts beyond") !=
+        std::string::npos);
+  CHECK(primeStructDoc.find("Missing collection-specialization facts for\n  collection bindings now fail closed") !=
         std::string::npos);
   CHECK(primeStructDoc.find("remaining live Group 12 work is now") == std::string::npos);
   CHECK(primeStructDoc.find("remaining CLI/runtime plumbing work is limited") == std::string::npos);
@@ -807,23 +809,22 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4240: Add backend semantic-product conformance coverage") !=
+                  "- TODO-4241: Retire semantic-product output compatibility callers") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4241: Retire semantic-product output compatibility callers") !=
+                  "- TODO-4242: Inventory repo-wide source-lock replacement candidates") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
         std::string::npos);
-  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4240") !=
+  CHECK(todo.find("- Deferred semantic-product/backend/tooling follow-ups: TODO-4241") !=
         std::string::npos);
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4240: Add backend semantic-product conformance coverage") !=
+                  "- TODO-4241: Retire semantic-product output compatibility callers") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4240: Add backend semantic-product conformance coverage",
       "TODO-4241: Retire semantic-product output compatibility callers",
       "TODO-4242: Inventory repo-wide source-lock replacement candidates",
       "TODO-4243: Improve focused backend rerun ergonomics",
@@ -930,7 +931,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4228") == std::string::npos);
   CHECK(todoFinished.find("TODO-4228: Factor and version the semantic-product boundary API") !=
         std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4240") != std::string::npos);
+  CHECK(todo.find("TODO-4240") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4240: Add backend semantic-product conformance coverage") !=
+        std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4240") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4244") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4246") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4247") != std::string::npos);
@@ -980,23 +984,23 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("| Validator entrypoint and benchmark-plumbing split | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Semantic-product publication by module and fact family | TODO-4240, TODO-4241 |") !=
+  CHECK(todo.find("| Semantic-product publication by module and fact family | TODO-4241 |") !=
         std::string::npos);
-  CHECK(todo.find("| Semantic-product public API factoring and versioning | TODO-4240, TODO-4241 |") !=
+  CHECK(todo.find("| Semantic-product public API factoring and versioning | TODO-4241 |") !=
         std::string::npos);
   CHECK(todo.find("| IR lowerer compile-unit breakup | none |") !=
         std::string::npos);
   CHECK(todo.find("| Backend validation/build ergonomics | TODO-4243 |") !=
         std::string::npos);
-  CHECK(todo.find("| Semantic-product-authority conformance | TODO-4240, TODO-4241 |") !=
+  CHECK(todo.find("| Semantic-product-authority conformance | TODO-4241 |") !=
         std::string::npos);
   CHECK(todo.find("| AST transform hook conformance | none |") !=
         std::string::npos);
-  CHECK(todo.find("| Compile-pipeline stage handoff conformance | TODO-4240 |") !=
+  CHECK(todo.find("| Compile-pipeline stage handoff conformance | none |") !=
         std::string::npos);
   CHECK(todo.find("| Architecture contract probe migration | TODO-4242 |") !=
         std::string::npos);
-  CHECK(todo.find("| Semantic-product publication parity and deterministic ordering | TODO-4240 |") !=
+  CHECK(todo.find("| Semantic-product publication parity and deterministic ordering | none |") !=
         std::string::npos);
   CHECK(todo.find("| Lowerer/source-composition contract coverage | none |") !=
         std::string::npos);

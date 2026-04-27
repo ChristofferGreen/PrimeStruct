@@ -32,6 +32,10 @@ bool validateSemanticProductBindingCoverage(const Program &program,
 bool validateSemanticProductLocalAutoCoverage(const Program &program,
                                               const SemanticProgram *semanticProgram,
                                               std::string &error);
+bool validateSemanticProductCollectionSpecializationCoverage(
+    const Program &program,
+    const SemanticProgram *semanticProgram,
+    std::string &error);
 BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgram = nullptr);
 
 std::string normalizeCollectionBindingTypeName(const std::string &name);

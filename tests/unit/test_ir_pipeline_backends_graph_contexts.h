@@ -684,6 +684,8 @@ TEST_CASE("backend registry keeps semantic-product negative fixture families cov
   CHECK(registrySource.find("ir lowerer rejects missing semantic-product bridge-path choices") !=
         std::string::npos);
   CHECK(registrySource.find("missing semantic-product binding fact:") != std::string::npos);
+  CHECK(registrySource.find("missing semantic-product collection specialization:") !=
+        std::string::npos);
   CHECK(registrySource.find("missing semantic-product local-auto fact:") != std::string::npos);
   CHECK(registrySource.find("missing semantic-product return fact:") != std::string::npos);
   CHECK(registrySource.find("missing semantic-product callable result metadata:") != std::string::npos);
@@ -1372,6 +1374,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product binding fact: ") != std::string::npos);
   CHECK(bindingTypeHelpersSource.find("missing semantic-product binding resolved path id: ") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find(
+            "bool validateSemanticProductCollectionSpecializationCoverage(") !=
+        std::string::npos);
+  CHECK(bindingTypeHelpersSource.find(
+            "missing semantic-product collection specialization: ") !=
         std::string::npos);
   CHECK(bindingTypeHelpersSource.find("bool validateSemanticProductLocalAutoCoverage(const Program &program,") !=
         std::string::npos);

@@ -1217,6 +1217,54 @@ TEST_CASE("ir lowerer rejects semantic-product binding facts missing resolved pa
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects missing semantic-product collection specializations") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "values";
+  bindingExpr.semanticNodeId = 43;
+  primec::Transform vectorTransform;
+  vectorTransform.name = "vector";
+  vectorTransform.templateArgs = {"i32"};
+  bindingExpr.transforms.push_back(vectorTransform);
+  mainDef.statements.push_back(bindingExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "values",
+      .bindingTypeText = "vector<i32>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 43,
+      .provenanceHandle = 0,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/values"),
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product collection specialization: /main -> local values");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   primec::Program program;
 
@@ -2981,6 +3029,22 @@ main() {
   CHECK(cppLocalAuto->initializerTryValueType == "int");
   CHECK(vmLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
   CHECK(nativeLocalAuto->bindingTypeText == cppLocalAuto->bindingTypeText);
+
+  const auto *cppVector =
+      cppConformance.findCollectionSpecialization("/main", "values");
+  const auto *vmVector =
+      vmConformance.findCollectionSpecialization("/main", "values");
+  const auto *nativeVector =
+      nativeConformance.findCollectionSpecialization("/main", "values");
+  REQUIRE(cppVector != nullptr);
+  REQUIRE(vmVector != nullptr);
+  REQUIRE(nativeVector != nullptr);
+  CHECK(cppVector->collectionFamily == "vector");
+  CHECK(cppVector->elementTypeText == "i32");
+  CHECK(vmVector->collectionFamily == cppVector->collectionFamily);
+  CHECK(nativeVector->collectionFamily == cppVector->collectionFamily);
+  CHECK(vmVector->elementTypeText == cppVector->elementTypeText);
+  CHECK(nativeVector->elementTypeText == cppVector->elementTypeText);
 
   const auto *cppQuery = findSemanticEntry(primec::semanticProgramQueryFactView(cppConformance.output.semanticProgram),
       [&cppConformance](const primec::SemanticProgramQueryFact &entry) {

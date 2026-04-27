@@ -731,7 +731,8 @@ Planned semantic-product unit/golden suite:
 - Current status: the exact semantic-product formatter golden now pins resolved call/helper targets,
   binding/result facts, effect/capability plus struct/layout metadata, and the explicit
   `provenance_handle=<id> source="line:column"` provenance surface carried by lowering-facing semantic-product facts.
-  `TODO-4240` tracks pipeline-facing/backend semantic-product conformance beyond the formatter golden.
+  Pipeline-facing/backend conformance now covers semantic-product facts beyond
+  the formatter golden.
 - Keep one narrow golden corpus focused on exported lowering facts rather than full pipeline behavior.
 - Prefer small representative programs that pin one fact family at a time:
   - resolved call/helper targets
@@ -753,8 +754,9 @@ Planned pipeline-facing semantic-product conformance matrix:
 - Current status: pipeline-facing inspection-order coverage now captures `ast-semantic`, `semantic-product`, and `ir`
   from the same compile-pipeline source and pins that the semantic-product dump is the lowering-facing boundary between
   syntax-shaped AST output and backend-facing IR output. The public pipeline helper now also covers the C++/VM/native
-  lowering paths end to end, and backend-consumer conformance pins direct-call/method-call semantic facts on all three
-  backend families.
+  lowering paths end to end, and backend-consumer conformance pins direct-call/method-call plus
+  collection-specialization semantic facts on all three backend families. Missing collection-specialization facts for
+  collection bindings now fail closed through the lowerer semantic-product completeness matrix.
 - The first pipeline-facing cases should prove inspection-surface order and consistency:
   - `ast-semantic` remains syntax-shaped.
   - the semantic-product dump exposes lowering-facing facts directly.

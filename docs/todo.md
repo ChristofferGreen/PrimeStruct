@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4240: Add backend semantic-product conformance coverage
+- TODO-4241: Retire semantic-product output compatibility callers
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4241: Retire semantic-product output compatibility callers
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
 - TODO-4243: Improve focused backend rerun ergonomics
 - TODO-4244: Decide the `soa_vector` maturity exit
@@ -81,11 +80,12 @@ Task template:
 - TODO-4249: Retire direct experimental SoA public imports
 - TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers
 - TODO-4251: Add full cross-backend SoA parity coverage
+- TODO-4252: Promote `soa_vector` docs after compatibility cleanup
 
 ### Priority Lanes (Current)
 
-- Deferred semantic-product/backend/tooling follow-ups: TODO-4240
-  -> TODO-4241; TODO-4242 -> TODO-4243; TODO-4245
+- Deferred semantic-product/backend/tooling follow-ups: TODO-4241;
+  TODO-4242 -> TODO-4243; TODO-4245
 - Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
   -> TODO-4248 -> TODO-4249 -> TODO-4250 -> TODO-4251 -> TODO-4252
 - Deferred algebraic types and brace-only construction: TODO-4253
@@ -99,7 +99,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4240: Add backend semantic-product conformance coverage
 - TODO-4241: Retire semantic-product output compatibility callers
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
 - TODO-4243: Improve focused backend rerun ergonomics
@@ -152,8 +151,8 @@ Task template:
 | Stdlib de-experimentalization and public/internal namespace cleanup | none |
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | TODO-4240, TODO-4241 |
-| Semantic-product public API factoring and versioning | TODO-4240, TODO-4241 |
+| Semantic-product publication by module and fact family | TODO-4241 |
+| Semantic-product public API factoring and versioning | TODO-4241 |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | TODO-4243 |
 | Emitter/semantics map-helper parity | none |
@@ -170,11 +169,11 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4240, TODO-4241 |
+| Semantic-product-authority conformance | TODO-4241 |
 | AST transform hook conformance | none |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
-| Compile-pipeline stage handoff conformance | TODO-4240 |
-| Semantic-product publication parity and deterministic ordering | TODO-4240 |
+| Compile-pipeline stage handoff conformance | none |
+| Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
@@ -298,29 +297,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4240: Add backend semantic-product conformance coverage
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred semantic-product/backend/tooling follow-up
-  - scope: Add pipeline-facing C++/VM/native conformance coverage proving
-    backend behavior consumes semantic-product facts rather than relying only
-    on semantic-product formatter golden output.
-  - acceptance:
-    - At least one C++ backend case, one VM case, and one native case exercise
-      the same semantic-product-owned fact family through lowering.
-    - The tests compare the semantic-product dump or inspection surface with
-      backend behavior in the same scenario.
-    - Missing or stale semantic-product facts produce deterministic backend or
-      lowering diagnostics in a focused negative case.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after one shared fact family has cross-backend conformance
-    coverage; leave compatibility caller deletion to TODO-4241.
-
 - [ ] TODO-4241: Retire semantic-product output compatibility callers
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred semantic-product/backend/tooling follow-up
-  - depends_on: TODO-4240
   - scope: Replace remaining compatibility callers of legacy semantic-product
     output structs or adapters with explicit success/failure result variants.
   - acceptance:
