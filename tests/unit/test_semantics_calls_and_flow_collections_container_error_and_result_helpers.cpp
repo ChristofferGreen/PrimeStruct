@@ -806,7 +806,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical soa_vector wildcard import leaves templated count helper unresolved") {
+TEST_CASE("canonical soa_vector wildcard import validates without eager template resolution") {
   const std::string source = R"(
 import /std/collections/soa_vector/*
 
@@ -816,9 +816,8 @@ import /std/collections/soa_vector/*
 }
 )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("template arguments required for /std/collections/soa_vector/count") !=
-        std::string::npos);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("experimental soa_vector stdlib helpers reject primitive element types") {
