@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4237: Add graph invalidation fan-out regression tests
+- TODO-4238: Pin the CT-eval graph and semantic-product boundary
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4238: Pin the CT-eval graph and semantic-product boundary
 - TODO-4239: Migrate helper-routing template inference onto graph facts
 - TODO-4240: Add backend semantic-product conformance coverage
 - TODO-4241: Retire semantic-product output compatibility callers
@@ -81,11 +80,11 @@ Task template:
 - TODO-4246: Define final `soa_vector` promotion contract
 - TODO-4247: Move canonical SoA wrapper off experimental implementation imports
 - TODO-4248: Move canonical SoA conversions off experimental conversion imports
+- TODO-4249: Retire direct experimental SoA public imports
 
 ### Priority Lanes (Current)
 
-- Deferred graph and inference hardening: TODO-4237 -> TODO-4238
-  -> TODO-4239
+- Deferred graph and inference hardening: TODO-4238 -> TODO-4239
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4240
   -> TODO-4241; TODO-4242 -> TODO-4243; TODO-4245
 - Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
@@ -101,7 +100,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4237: Add graph invalidation fan-out regression tests
 - TODO-4238: Pin the CT-eval graph and semantic-product boundary
 - TODO-4239: Migrate helper-routing template inference onto graph facts
 - TODO-4240: Add backend semantic-product conformance coverage
@@ -148,7 +146,7 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4237, TODO-4238, TODO-4239 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4238, TODO-4239 |
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
@@ -303,31 +301,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4237: Add graph invalidation fan-out regression tests
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred graph and inference hardening
-  - scope: Add observable graph invalidation fan-out regression coverage for
-    the supported graph invalidation edit families using counters, dumps, or
-    focused helper output.
-  - acceptance:
-    - Tests prove local-binding, control-flow, initializer-shape,
-      definition-signature, import-alias, and receiver-type edits refresh the
-      expected dependent facts.
-    - Negative coverage proves unrelated definitions or modules are not
-      spuriously invalidated for at least two edit families.
-    - Failure output reports enough counter or dump detail to identify the
-      over-invalidated family.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once each contracted edit family has one positive fan-out
-    check and the two highest-risk families have negative scope checks; leave
-    performance tuning to existing semantic budget gates.
-
 - [ ] TODO-4238: Pin the CT-eval graph and semantic-product boundary
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred graph and inference hardening
-  - depends_on: TODO-4237
   - scope: Make CT-eval consumers either consume graph-backed semantic facts
     directly or pass through one documented adapter boundary that cannot invent
     new inference state.

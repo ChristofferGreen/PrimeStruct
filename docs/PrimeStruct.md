@@ -154,13 +154,13 @@ Graph invalidation contract:
 - Cross-definition invalidation preserves deterministic propagation order:
   definition-signature, import-alias, and receiver-type edits revisit dependent
   graph nodes through stable path/node ordering rather than hash iteration.
-- Current coverage pins the contract shape and representative observed counts
-  for one definition-local family (`local_binding`) and one cross-definition
-  family (`definition_signature`). Broader positive/negative fan-out coverage
-  for every family remains owned by TODO-4237.
-- Template inference, CT-eval expansion, and optional parallel solve remain
-  blocked on this contract being explicit and covered, because they would
-  otherwise consume graph state whose invalidation boundaries are undefined.
+- Current coverage pins the contract shape, representative observed counts, and
+  positive fan-out for every supported family. Negative fan-out coverage proves
+  local-binding and definition-signature edits do not invalidate unrelated
+  definition-local or cross-definition facts.
+- Template inference, CT-eval expansion, and optional parallel solve must
+  consume this explicit, covered contract before they reuse graph state whose
+  invalidation boundaries affect correctness.
 
 Planned optional parallel-solve contract:
 - Baseline implementation design note: `docs/Semantics_Multithread_Design.md`.

@@ -46,6 +46,16 @@ struct TypeResolutionGraphInvalidationContract {
   std::string_view diagnosticDiscards;
 };
 
+struct TypeResolutionGraphInvalidationFanout {
+  TypeResolutionGraphInvalidationEditFamily editFamily =
+      TypeResolutionGraphInvalidationEditFamily::LocalBinding;
+  uint32_t triggerNodeId = 0;
+  std::string triggerLabel;
+  std::vector<uint32_t> immediateNodeIds;
+  std::vector<uint32_t> lazyRevisitNodeIds;
+  std::vector<uint32_t> diagnosticNodeIds;
+};
+
 struct TypeResolutionGraphNode {
   uint32_t id = 0;
   TypeResolutionNodeKind kind = TypeResolutionNodeKind::DefinitionReturn;
@@ -77,6 +87,7 @@ struct TypeResolutionGraph {
   uint64_t invalidationDefinitionSignatureCount = 0;
   uint64_t invalidationImportAliasCount = 0;
   uint64_t invalidationReceiverTypeCount = 0;
+  std::vector<TypeResolutionGraphInvalidationFanout> invalidationFanouts;
   uint64_t explicitTemplateArgInferenceFactHitCount = 0;
   uint64_t implicitTemplateArgInferenceFactHitCount = 0;
 };

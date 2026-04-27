@@ -5,6 +5,7 @@
 #include "TypeResolutionGraphPreparation.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <cstdlib>
@@ -41,7 +42,15 @@ struct InvalidationCounts {
   uint64_t definitionSignature = 0;
   uint64_t importAlias = 0;
   uint64_t receiverType = 0;
+  std::vector<std::string> controlFlowScopes;
+  std::vector<std::string> receiverTypeScopes;
 };
+
+void appendUniqueString(std::vector<std::string> &values, std::string value) {
+  if (std::find(values.begin(), values.end(), value) == values.end()) {
+    values.push_back(std::move(value));
+  }
+}
 
 uint64_t &invalidationCountForFamily(InvalidationCounts &counts,
                                      TypeResolutionGraphInvalidationEditFamily editFamily) {
@@ -112,18 +121,24 @@ void setTypeResolutionGraphInvalidationCount(
   }
 }
 
-void countInvalidationExpr(const Expr &expr, InvalidationCounts &counts) {
+void countInvalidationExpr(const Expr &expr,
+                           InvalidationCounts &counts,
+                           const std::string &scopePath) {
   if (isIfCall(expr) || isMatchCall(expr)) {
-    recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::ControlFlow);
+    recordInvalidationObservation(
+        counts, TypeResolutionGraphInvalidationEditFamily::ControlFlow);
+    appendUniqueString(counts.controlFlowScopes, scopePath);
   }
   if (expr.isMethodCall && !expr.isFieldAccess) {
-    recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::ReceiverType);
+    recordInvalidationObservation(
+        counts, TypeResolutionGraphInvalidationEditFamily::ReceiverType);
+    appendUniqueString(counts.receiverTypeScopes, scopePath);
   }
   for (const auto &arg : expr.args) {
-    countInvalidationExpr(arg, counts);
+    countInvalidationExpr(arg, counts, scopePath);
   }
   for (const auto &bodyExpr : expr.bodyArguments) {
-    countInvalidationExpr(bodyExpr, counts);
+    countInvalidationExpr(bodyExpr, counts, scopePath);
   }
 }
 
@@ -134,38 +149,216 @@ InvalidationCounts computeInvalidationCounts(const Program &program) {
         counts, TypeResolutionGraphInvalidationEditFamily::DefinitionSignature);
   }
   for (size_t index = 0; index < program.imports.size(); ++index) {
-    recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::ImportAlias);
+    recordInvalidationObservation(
+        counts, TypeResolutionGraphInvalidationEditFamily::ImportAlias);
   }
   for (const auto &def : program.definitions) {
     for (const auto &param : def.parameters) {
-      countInvalidationExpr(param, counts);
+      countInvalidationExpr(param, counts, def.fullPath);
     }
     for (const auto &stmt : def.statements) {
       if (def.returnExpr.has_value() && isReturnCall(stmt)) {
         continue;
       }
       if (stmt.isBinding) {
-        recordInvalidationObservation(counts, TypeResolutionGraphInvalidationEditFamily::LocalBinding);
+        recordInvalidationObservation(
+            counts, TypeResolutionGraphInvalidationEditFamily::LocalBinding);
         if (!stmt.args.empty() || !stmt.bodyArguments.empty()) {
           recordInvalidationObservation(
               counts, TypeResolutionGraphInvalidationEditFamily::InitializerShape);
         }
       }
-      countInvalidationExpr(stmt, counts);
+      countInvalidationExpr(stmt, counts, def.fullPath);
     }
     if (def.returnExpr.has_value()) {
-      countInvalidationExpr(*def.returnExpr, counts);
+      countInvalidationExpr(*def.returnExpr, counts, def.fullPath);
     }
   }
   for (const auto &exec : program.executions) {
     for (const auto &arg : exec.arguments) {
-      countInvalidationExpr(arg, counts);
+      countInvalidationExpr(arg, counts, exec.fullPath);
     }
     for (const auto &bodyExpr : exec.bodyArguments) {
-      countInvalidationExpr(bodyExpr, counts);
+      countInvalidationExpr(bodyExpr, counts, exec.fullPath);
     }
   }
   return counts;
+}
+
+bool hasScope(const std::vector<std::string> &scopes, const std::string &scopePath) {
+  return std::find(scopes.begin(), scopes.end(), scopePath) != scopes.end();
+}
+
+std::vector<uint32_t> sortedUniqueNodeIds(std::vector<uint32_t> ids) {
+  std::sort(ids.begin(), ids.end());
+  ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+  return ids;
+}
+
+std::vector<uint32_t> mergeNodeIds(std::vector<uint32_t> first,
+                                   const std::vector<uint32_t> &second) {
+  first.insert(first.end(), second.begin(), second.end());
+  return sortedUniqueNodeIds(std::move(first));
+}
+
+std::vector<uint32_t> graphClosure(const TypeResolutionGraph &graph,
+                                   const std::vector<uint32_t> &seeds,
+                                   bool reverse) {
+  std::vector<uint32_t> result;
+  std::vector<uint32_t> worklist;
+  std::vector<bool> visited(graph.nodes.size(), false);
+  for (uint32_t seed : sortedUniqueNodeIds(seeds)) {
+    if (seed >= visited.size() || visited[seed]) {
+      continue;
+    }
+    visited[seed] = true;
+    worklist.push_back(seed);
+  }
+
+  for (size_t index = 0; index < worklist.size(); ++index) {
+    const uint32_t current = worklist[index];
+    for (const auto &edge : graph.edges) {
+      const bool matches =
+          reverse ? edge.targetId == current : edge.sourceId == current;
+      if (!matches) {
+        continue;
+      }
+      const uint32_t next = reverse ? edge.sourceId : edge.targetId;
+      if (next >= visited.size() || visited[next]) {
+        continue;
+      }
+      visited[next] = true;
+      result.push_back(next);
+      worklist.push_back(next);
+    }
+  }
+  return sortedUniqueNodeIds(std::move(result));
+}
+
+std::vector<uint32_t> directGraphTargets(const TypeResolutionGraph &graph,
+                                         uint32_t sourceId) {
+  std::vector<uint32_t> targets;
+  for (const auto &edge : graph.edges) {
+    if (edge.sourceId == sourceId) {
+      targets.push_back(edge.targetId);
+    }
+  }
+  return sortedUniqueNodeIds(std::move(targets));
+}
+
+bool fanoutContainsNodeKind(const TypeResolutionGraph &graph,
+                            const std::vector<uint32_t> &nodeIds,
+                            TypeResolutionNodeKind kind) {
+  for (uint32_t nodeId : nodeIds) {
+    if (nodeId < graph.nodes.size() && graph.nodes[nodeId].kind == kind) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void appendInvalidationFanout(std::vector<TypeResolutionGraphInvalidationFanout> &fanouts,
+                              TypeResolutionGraphInvalidationEditFamily editFamily,
+                              const TypeResolutionGraphNode &trigger,
+                              std::vector<uint32_t> immediateNodeIds,
+                              std::vector<uint32_t> lazyRevisitNodeIds) {
+  immediateNodeIds = sortedUniqueNodeIds(std::move(immediateNodeIds));
+  lazyRevisitNodeIds = sortedUniqueNodeIds(std::move(lazyRevisitNodeIds));
+  fanouts.push_back(TypeResolutionGraphInvalidationFanout{
+      editFamily,
+      trigger.id,
+      trigger.label,
+      immediateNodeIds,
+      lazyRevisitNodeIds,
+      mergeNodeIds(immediateNodeIds, lazyRevisitNodeIds),
+  });
+}
+
+std::vector<TypeResolutionGraphInvalidationFanout>
+buildInvalidationFanouts(const TypeResolutionGraph &graph, const InvalidationCounts &counts) {
+  std::vector<TypeResolutionGraphInvalidationFanout> fanouts;
+  for (const auto &node : graph.nodes) {
+    if (node.kind == TypeResolutionNodeKind::LocalAuto && counts.localBinding > 0) {
+      appendInvalidationFanout(
+          fanouts,
+          TypeResolutionGraphInvalidationEditFamily::LocalBinding,
+          node,
+          {node.id},
+          graphClosure(graph, {node.id}, false));
+    }
+
+    if (node.kind == TypeResolutionNodeKind::LocalAuto && counts.initializerShape > 0) {
+      std::vector<uint32_t> immediate{node.id};
+      immediate = mergeNodeIds(std::move(immediate), directGraphTargets(graph, node.id));
+      appendInvalidationFanout(
+          fanouts,
+          TypeResolutionGraphInvalidationEditFamily::InitializerShape,
+          node,
+          immediate,
+          graphClosure(graph, immediate, false));
+    }
+
+    if (node.kind == TypeResolutionNodeKind::DefinitionReturn &&
+        counts.definitionSignature > 0) {
+      appendInvalidationFanout(
+          fanouts,
+          TypeResolutionGraphInvalidationEditFamily::DefinitionSignature,
+          node,
+          {node.id},
+          graphClosure(graph, {node.id}, true));
+    }
+
+    if (node.kind == TypeResolutionNodeKind::DefinitionReturn &&
+        counts.controlFlow > 0 &&
+        hasScope(counts.controlFlowScopes, node.scopePath)) {
+      const std::vector<uint32_t> lazyRevisits = graphClosure(graph, {node.id}, false);
+      if (fanoutContainsNodeKind(
+              graph, lazyRevisits, TypeResolutionNodeKind::CallConstraint)) {
+        appendInvalidationFanout(
+            fanouts,
+            TypeResolutionGraphInvalidationEditFamily::ControlFlow,
+            node,
+            {node.id},
+            lazyRevisits);
+      }
+    }
+
+    if (node.kind == TypeResolutionNodeKind::CallConstraint && counts.importAlias > 0 &&
+        !node.resolvedPath.empty()) {
+      appendInvalidationFanout(
+          fanouts,
+          TypeResolutionGraphInvalidationEditFamily::ImportAlias,
+          node,
+          {node.id},
+          mergeNodeIds(graphClosure(graph, {node.id}, true),
+                       graphClosure(graph, {node.id}, false)));
+    }
+
+    if (node.kind == TypeResolutionNodeKind::CallConstraint && counts.receiverType > 0 &&
+        hasScope(counts.receiverTypeScopes, node.scopePath)) {
+      appendInvalidationFanout(
+          fanouts,
+          TypeResolutionGraphInvalidationEditFamily::ReceiverType,
+          node,
+          {node.id},
+          mergeNodeIds(graphClosure(graph, {node.id}, true),
+                       graphClosure(graph, {node.id}, false)));
+    }
+  }
+  return fanouts;
+}
+
+std::string formatNodeIdList(const std::vector<uint32_t> &nodeIds) {
+  std::ostringstream out;
+  out << "[";
+  for (size_t index = 0; index < nodeIds.size(); ++index) {
+    if (index > 0) {
+      out << ",";
+    }
+    out << nodeIds[index];
+  }
+  out << "]";
+  return out.str();
 }
 
 bool hasTransformNamed(const std::vector<Transform> &transforms, std::string_view name) {
@@ -736,6 +929,7 @@ bool buildTypeResolutionGraphForProgram(Program program,
         contract.editFamily,
         invalidationCountForFamily(invalidationCounts, contract.editFamily));
   }
+  out.invalidationFanouts = buildInvalidationFanouts(out, invalidationCounts);
   out.explicitTemplateArgInferenceFactHitCount = explicitTemplateArgFactHitCount;
   out.implicitTemplateArgInferenceFactHitCount = implicitTemplateArgFactHitCount;
   if (const auto maxPrepare = readGraphMetricBudget("PRIMESTRUCT_GRAPH_PREPARE_MS_MAX");
@@ -827,6 +1021,15 @@ std::string formatTypeResolutionGraph(const TypeResolutionGraph &graph) {
         << " immediate=\"" << contract.immediateInvalidations << "\""
         << " lazy=\"" << contract.lazyRevisits << "\""
         << " diagnostics=\"" << contract.diagnosticDiscards << "\"\n";
+  }
+  for (const auto &fanout : graph.invalidationFanouts) {
+    out << "  invalidation_fanout family="
+        << typeResolutionGraphInvalidationEditFamilyName(fanout.editFamily)
+        << " trigger=" << fanout.triggerNodeId
+        << " label=\"" << fanout.triggerLabel << "\""
+        << " immediate=" << formatNodeIdList(fanout.immediateNodeIds)
+        << " lazy=" << formatNodeIdList(fanout.lazyRevisitNodeIds)
+        << " diagnostics=" << formatNodeIdList(fanout.diagnosticNodeIds) << "\n";
   }
   for (const auto &node : graph.nodes) {
     out << "  node " << node.id << " kind=" << typeResolutionNodeKindName(node.kind)
@@ -932,6 +1135,17 @@ bool buildTypeResolutionGraphForTesting(Program program,
         std::string(contract.lazyRevisits),
         std::string(contract.diagnosticDiscards),
         typeResolutionGraphInvalidationCount(graph, contract.editFamily),
+    });
+  }
+  out.invalidationFanouts.reserve(graph.invalidationFanouts.size());
+  for (const auto &fanout : graph.invalidationFanouts) {
+    out.invalidationFanouts.push_back(TypeResolutionGraphInvalidationFanoutSnapshot{
+        std::string(typeResolutionGraphInvalidationEditFamilyName(fanout.editFamily)),
+        fanout.triggerNodeId,
+        fanout.triggerLabel,
+        fanout.immediateNodeIds,
+        fanout.lazyRevisitNodeIds,
+        fanout.diagnosticNodeIds,
     });
   }
   return true;

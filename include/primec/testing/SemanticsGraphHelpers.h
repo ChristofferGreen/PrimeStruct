@@ -66,10 +66,20 @@ struct TypeResolutionGraphInvalidationContractSnapshot {
   uint64_t observedCount = 0;
 };
 
+struct TypeResolutionGraphInvalidationFanoutSnapshot {
+  std::string editFamily;
+  uint32_t triggerNodeId = 0;
+  std::string triggerLabel;
+  std::vector<uint32_t> immediateNodeIds;
+  std::vector<uint32_t> lazyRevisitNodeIds;
+  std::vector<uint32_t> diagnosticNodeIds;
+};
+
 struct TypeResolutionGraphSnapshot {
   std::vector<TypeResolutionGraphSnapshotNode> nodes;
   std::vector<TypeResolutionGraphSnapshotEdge> edges;
   std::vector<TypeResolutionGraphInvalidationContractSnapshot> invalidationContracts;
+  std::vector<TypeResolutionGraphInvalidationFanoutSnapshot> invalidationFanouts;
   size_t nodeCount = 0;
   size_t edgeCount = 0;
   size_t definitionReturnCount = 0;

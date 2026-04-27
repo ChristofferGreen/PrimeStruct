@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4237: Add graph invalidation fan-out regression tests.
+  Completed: Type-resolution graph snapshots and dumps now expose
+  deterministic invalidation fan-out entries keyed by edit family and trigger
+  node. Focused regression coverage proves local-binding, control-flow,
+  initializer-shape, definition-signature, import-alias, and receiver-type
+  edits refresh their expected immediate and lazy dependent facts. Negative
+  checks prove local-binding and definition-signature fan-out do not reach
+  unrelated definition-local or cross-definition facts. The language design doc
+  now records that family-wide fan-out coverage owns the graph invalidation
+  contract. Local validation is deferred per the lite workflow.
 - ✓ TODO-4236: Define graph invalidation contracts by edit family.
   Completed: Type-resolution graph invalidation now has an explicit edit-family
   contract API covering local-binding, control-flow, initializer-shape,

@@ -474,6 +474,169 @@ main([bool] flag) {
   CHECK(hasLabel("/leaf"));
 }
 
+TEST_CASE("type resolution graph local and initializer invalidation fanout stays definition-local") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+left() {
+  [auto] value{leaf()}
+  return(value)
+}
+
+[return<auto>]
+right() {
+  [auto] value{leaf()}
+  return(value)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/left", error, graph));
+  CHECK(error.empty());
+
+  const uint32_t leftAutoId = requireGraphNodeId(graph, "/left::auto:value#0");
+  const uint32_t leftCallId = requireGraphNodeId(graph, "/left::call#0");
+  const uint32_t leafId = requireGraphNodeId(graph, "/leaf");
+  const uint32_t rightAutoId = requireGraphNodeId(graph, "/right::auto:value#0");
+  const uint32_t rightCallId = requireGraphNodeId(graph, "/right::call#0");
+  const uint32_t rightId = requireGraphNodeId(graph, "/right");
+
+  const auto &localBinding =
+      requireInvalidationFanout(graph, "local_binding", "/left::auto:value#0");
+  CHECK(nodeIdListContains(localBinding.immediateNodeIds, leftAutoId));
+  CHECK(nodeIdListContains(localBinding.lazyRevisitNodeIds, leftCallId));
+  CHECK(nodeIdListContains(localBinding.lazyRevisitNodeIds, leafId));
+  CHECK_FALSE(nodeIdListContains(localBinding.diagnosticNodeIds, rightAutoId));
+  CHECK_FALSE(nodeIdListContains(localBinding.diagnosticNodeIds, rightCallId));
+  CHECK_FALSE(nodeIdListContains(localBinding.diagnosticNodeIds, rightId));
+
+  const auto &initializerShape =
+      requireInvalidationFanout(graph, "initializer_shape", "/left::auto:value#0");
+  CHECK(nodeIdListContains(initializerShape.immediateNodeIds, leftAutoId));
+  CHECK(nodeIdListContains(initializerShape.immediateNodeIds, leftCallId));
+  CHECK(nodeIdListContains(initializerShape.lazyRevisitNodeIds, leafId));
+  CHECK_FALSE(nodeIdListContains(initializerShape.diagnosticNodeIds, rightAutoId));
+  CHECK_FALSE(nodeIdListContains(initializerShape.diagnosticNodeIds, rightCallId));
+
+  const std::string dump = requireTypeResolutionGraphDump(source, "/left");
+  CHECK(dump.find("invalidation_fanout family=local_binding") != std::string::npos);
+  CHECK(dump.find("label=\"/left::auto:value#0\"") != std::string::npos);
+}
+
+TEST_CASE("type resolution graph control-flow invalidation fanout reports dependent return facts") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+main([bool] flag) {
+  return(if(flag, leaf(), 0i32))
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  const auto &fanout = requireInvalidationFanout(graph, "control_flow", "/main");
+  CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/main")));
+  CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main::call#0")));
+  CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/leaf")));
+}
+
+TEST_CASE("type resolution graph definition signature invalidation fanout reaches callers only") {
+  const std::string source = R"(
+[return<auto>]
+leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+main() {
+  return(leaf())
+}
+
+[return<auto>]
+orphan() {
+  return(2i32)
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  const auto &fanout = requireInvalidationFanout(graph, "definition_signature", "/leaf");
+  CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/leaf")));
+  CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main::call#0")));
+  CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main")));
+  CHECK_FALSE(nodeIdListContains(fanout.diagnosticNodeIds, requireGraphNodeId(graph, "/orphan")));
+}
+
+TEST_CASE("type resolution graph import alias invalidation fanout reaches alias consumers") {
+  const std::string source = R"(
+import /pkg/leaf
+
+[public return<auto>]
+/pkg/leaf() {
+  return(1i32)
+}
+
+[return<auto>]
+main() {
+  return(leaf())
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  const auto &fanout = requireInvalidationFanout(graph, "import_alias", "/main::call#0");
+  CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/main::call#0")));
+  CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main")));
+  CHECK(nodeIdListContains(fanout.diagnosticNodeIds, requireGraphNodeId(graph, "/pkg/leaf")));
+}
+
+TEST_CASE("type resolution graph receiver invalidation fanout reaches method consumers") {
+  const std::string source = R"(
+Box {
+  value{i32}
+}
+
+[return<i32>]
+/Box/get([Box] self) {
+  return(self.value)
+}
+
+[return<i32>]
+main() {
+  [Box] box{Box(1i32)}
+  return(box.get())
+}
+)";
+
+  std::string error;
+  primec::semantics::TypeResolutionGraphSnapshot graph;
+  REQUIRE(primec::semantics::buildTypeResolutionGraphForTesting(parseProgram(source), "/main", error, graph));
+  CHECK(error.empty());
+
+  const auto &fanout = requireInvalidationFanout(graph, "receiver_type", "/main::call#0");
+  CHECK(nodeIdListContains(fanout.immediateNodeIds, requireGraphNodeId(graph, "/main::call#0")));
+  CHECK(nodeIdListContains(fanout.lazyRevisitNodeIds, requireGraphNodeId(graph, "/main")));
+  CHECK(nodeIdListContains(fanout.diagnosticNodeIds, requireGraphNodeId(graph, "/Box/get")));
+}
+
 TEST_CASE("type resolution graph local binding invalidation counts bindings") {
   const std::string source = R"(
 [return<i32>]

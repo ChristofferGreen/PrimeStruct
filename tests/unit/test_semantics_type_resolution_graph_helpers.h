@@ -25,6 +25,35 @@ requireInvalidationContract(const primec::semantics::TypeResolutionGraphSnapshot
   return *it;
 }
 
+[[maybe_unused]] uint32_t requireGraphNodeId(
+    const primec::semantics::TypeResolutionGraphSnapshot &graph,
+    const std::string &label) {
+  const auto it = std::find_if(graph.nodes.begin(), graph.nodes.end(), [&](const auto &node) {
+    return node.label == label;
+  });
+  REQUIRE(it != graph.nodes.end());
+  return it->id;
+}
+
+[[maybe_unused]] const primec::semantics::TypeResolutionGraphInvalidationFanoutSnapshot &
+requireInvalidationFanout(const primec::semantics::TypeResolutionGraphSnapshot &graph,
+                          const std::string &editFamily,
+                          const std::string &triggerLabel) {
+  const auto it = std::find_if(
+      graph.invalidationFanouts.begin(),
+      graph.invalidationFanouts.end(),
+      [&](const auto &fanout) {
+        return fanout.editFamily == editFamily && fanout.triggerLabel == triggerLabel;
+      });
+  REQUIRE(it != graph.invalidationFanouts.end());
+  return *it;
+}
+
+[[maybe_unused]] bool nodeIdListContains(const std::vector<uint32_t> &nodeIds,
+                                         uint32_t nodeId) {
+  return std::find(nodeIds.begin(), nodeIds.end(), nodeId) != nodeIds.end();
+}
+
 [[maybe_unused]] std::string requireTypeResolutionGraphDump(const std::string &source, const std::string &entryPath) {
   std::string error;
   std::string dump;
@@ -46,7 +75,8 @@ requireInvalidationContract(const primec::semantics::TypeResolutionGraphSnapshot
     REQUIRE(lineEnd != std::string::npos);
     const std::string line = dump.substr(lineStart, lineEnd - lineStart);
     if (line.rfind("  metrics ", 0) != 0 &&
-        line.rfind("  invalidation_contract ", 0) != 0) {
+        line.rfind("  invalidation_contract ", 0) != 0 &&
+        line.rfind("  invalidation_fanout ", 0) != 0) {
       break;
     }
     lineStart = lineEnd + 1;
