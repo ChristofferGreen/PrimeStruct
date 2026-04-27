@@ -471,9 +471,11 @@ bool SemanticsValidator::resolveExprCollectionCountCapacityTarget(
     const bool lacksVisibleStdlibMapCountDefinition =
         !hasDeclaredDefinitionPath(stdlibMapCountTargetPath) &&
         !hasImportedDefinitionPath(stdlibMapCountTargetPath);
+    const bool hasVisibleStdlibMapCountDefinition =
+        !lacksVisibleStdlibMapCountDefinition;
     const bool allowsStdlibMapCountFallbackRoute =
         !hasDeclaredDefinitionPath(bareMapCountTargetPath) &&
-        lacksVisibleStdlibMapCountDefinition &&
+        hasVisibleStdlibMapCountDefinition &&
         resolvesMapCountReceiver;
     const bool routesThroughStdlibMapCountFallback =
         routesThroughUnnamespacedMapCountFallbackSurface &&
