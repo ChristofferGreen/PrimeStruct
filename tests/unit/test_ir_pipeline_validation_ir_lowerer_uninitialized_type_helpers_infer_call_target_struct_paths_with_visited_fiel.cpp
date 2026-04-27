@@ -847,4 +847,57 @@ TEST_CASE("ir lowerer uninitialized type helpers infer concrete stdlib map const
   CHECK(intMapStruct != boolMapStruct);
 }
 
+TEST_CASE("ir lowerer uninitialized type helpers infer forwarded stdlib map constructor structs") {
+  primec::Definition wrapDef;
+  wrapDef.fullPath = "/pkg/wrapValues";
+  primec::Expr param;
+  param.kind = primec::Expr::Kind::Name;
+  param.isBinding = true;
+  param.name = "values";
+  wrapDef.parameters.push_back(param);
+  primec::Expr returnedName;
+  returnedName.kind = primec::Expr::Kind::Name;
+  returnedName.name = "values";
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "return";
+  returnExpr.args.push_back(returnedName);
+  wrapDef.statements.push_back(returnExpr);
+
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {wrapDef.fullPath, &wrapDef},
+  };
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) {
+    return false;
+  };
+  auto resolveExprPath = [](const primec::Expr &expr) {
+    if (expr.kind == primec::Expr::Kind::Call && expr.name == "wrapValues") {
+      return std::string("/pkg/wrapValues");
+    }
+    return expr.name;
+  };
+  const primec::ir_lowerer::UninitializedFieldBindingIndex fieldIndex;
+  auto resolveStructFieldSlot = [](const std::string &,
+                                   const std::string &,
+                                   primec::ir_lowerer::StructSlotFieldInfo &) {
+    return false;
+  };
+
+  primec::Expr mapPair;
+  mapPair.kind = primec::Expr::Kind::Call;
+  mapPair.name = "/std/collections/mapPair";
+  mapPair.templateArgs = {"string", "i32"};
+
+  primec::Expr wrapCall;
+  wrapCall.kind = primec::Expr::Kind::Call;
+  wrapCall.name = "wrapValues";
+  wrapCall.args.push_back(mapPair);
+
+  const std::string mapStruct =
+      primec::ir_lowerer::inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
+          wrapCall, {}, defMap, resolveStructTypeName, resolveExprPath, fieldIndex, resolveStructFieldSlot);
+
+  CHECK(mapStruct.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+}
+
 TEST_SUITE_END();

@@ -1,6 +1,7 @@
 #include "IrLowererCallHelpers.h"
 
 #include <sstream>
+#include <utility>
 
 #include "IrLowererHelpers.h"
 #include "IrLowererIndexKindHelpers.h"
@@ -88,6 +89,73 @@ std::string inferExperimentalMapStructPathFromKinds(LocalInfo::ValueKind keyKind
   std::ostringstream specializedPath;
   specializedPath << "/std/collections/experimental_map/Map__t" << std::hex << hash;
   return specializedPath.str();
+}
+
+const Expr *findForwardedReturnValueExpr(const Definition &definition) {
+  if (definition.returnExpr.has_value()) {
+    return &*definition.returnExpr;
+  }
+  const Expr *valueExpr = nullptr;
+  for (const auto &stmt : definition.statements) {
+    if (stmt.isBinding) {
+      continue;
+    }
+    valueExpr = &stmt;
+    if (isReturnCall(stmt) && stmt.args.size() == 1) {
+      return &stmt.args.front();
+    }
+  }
+  return valueExpr;
+}
+
+bool resolveForwardedReturnParameterName(const Definition &definition,
+                                         std::string &parameterNameOut) {
+  parameterNameOut.clear();
+  const Expr *valueExpr = findForwardedReturnValueExpr(definition);
+  if (valueExpr == nullptr) {
+    return false;
+  }
+  if (isReturnCall(*valueExpr) && valueExpr->args.size() == 1) {
+    valueExpr = &valueExpr->args.front();
+  }
+  if (valueExpr->kind != Expr::Kind::Name) {
+    return false;
+  }
+  for (const auto &parameter : definition.parameters) {
+    if (parameter.name == valueExpr->name) {
+      parameterNameOut = valueExpr->name;
+      return true;
+    }
+  }
+  return false;
+}
+
+const Expr *resolveCallArgumentForParameter(const Expr &target,
+                                            const Definition &callee,
+                                            const std::string &parameterName) {
+  for (size_t index = 0; index < target.args.size(); ++index) {
+    if (index < target.argNames.size() &&
+        target.argNames[index].has_value() &&
+        *target.argNames[index] == parameterName) {
+      return &target.args[index];
+    }
+  }
+  for (size_t index = 0; index < callee.parameters.size(); ++index) {
+    if (callee.parameters[index].name != parameterName) {
+      continue;
+    }
+    return index < target.args.size() ? &target.args[index] : nullptr;
+  }
+  return nullptr;
+}
+
+bool isForwardedMapNewConstructor(const Expr &expr) {
+  std::string constructorName;
+  return resolvePublishedStdlibSurfaceConstructorExprMemberName(
+             expr,
+             primec::StdlibSurfaceId::CollectionsMapConstructors,
+             constructorName) &&
+         constructorName == "mapNew";
 }
 
 bool inferDirectMapConstructorTargetInfo(const Expr &target, MapAccessTargetInfo &info) {
@@ -383,6 +451,39 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(
 
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn) {
   return resolveMapAccessTargetInfo(target, localsIn, {});
+}
+
+bool inferForwardedMapAccessTargetInfo(
+    const Expr &target,
+    const Definition &callee,
+    const LocalMap &localsIn,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    MapAccessTargetInfo &targetInfoOut) {
+  targetInfoOut = {};
+  if (target.kind != Expr::Kind::Call || target.isMethodCall || target.isBinding) {
+    return false;
+  }
+
+  std::string parameterName;
+  if (!resolveForwardedReturnParameterName(callee, parameterName)) {
+    return false;
+  }
+  const Expr *forwardedArg =
+      resolveCallArgumentForParameter(target, callee, parameterName);
+  if (forwardedArg == nullptr) {
+    return false;
+  }
+  if (isForwardedMapNewConstructor(*forwardedArg)) {
+    return false;
+  }
+
+  MapAccessTargetInfo forwardedInfo =
+      resolveMapAccessTargetInfo(*forwardedArg, localsIn, resolveCallMapAccessTargetInfo);
+  if (!forwardedInfo.isMapTarget) {
+    return false;
+  }
+  targetInfoOut = std::move(forwardedInfo);
+  return true;
 }
 
 bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,

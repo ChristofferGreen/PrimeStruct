@@ -744,8 +744,30 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     const bool isCanonicalStdMapHelperCall =
         rawPath.rfind("/std/collections/map/", 0) == 0 ||
         rawPath.rfind("std/collections/map/", 0) == 0;
+    const auto inferCallMapTargetInfo = [&](const Expr &targetExpr,
+                                            MapAccessTargetInfo &targetInfoOut) {
+      targetInfoOut = {};
+      const Definition *callee = resolveDefinitionCallFn(targetExpr);
+      if (callee == nullptr) {
+        return false;
+      }
+      std::string collectionName;
+      std::vector<std::string> collectionArgs;
+      if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+          collectionName != "map" ||
+          collectionArgs.size() != 2) {
+        return inferForwardedMapAccessTargetInfo(
+            targetExpr, *callee, localsIn, {}, targetInfoOut);
+      }
+      targetInfoOut.isMapTarget = true;
+      targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs.front());
+      targetInfoOut.mapValueKind = valueKindFromTypeName(collectionArgs.back());
+      return targetInfoOut.mapKeyKind != LocalInfo::ValueKind::Unknown &&
+             targetInfoOut.mapValueKind != LocalInfo::ValueKind::Unknown;
+    };
     if (isCanonicalStdMapHelperCall && !expr.args.empty()) {
-      const auto targetInfo = resolveMapAccessTargetInfo(expr.args.front(), localsIn);
+      const auto targetInfo =
+          resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo);
       std::string directHelperName = rawPath;
       const size_t lastSlash = directHelperName.find_last_of('/');
       if (lastSlash != std::string::npos) {
@@ -762,7 +784,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
     if (!expr.args.empty() &&
         (resolveMapHelperAliasName(expr, mapHelperName) ||
          (getBuiltinArrayAccessName(expr, mapHelperName) && expr.args.size() == 2)) &&
-        resolveMapAccessTargetInfo(expr.args.front(), localsIn).isMapTarget &&
+        resolveMapAccessTargetInfo(expr.args.front(), localsIn, inferCallMapTargetInfo).isMapTarget &&
         !isCanonicalStdMapHelperCall &&
         resolveDefinitionCallFn(expr) == nullptr) {
       return InlineCallDispatchResult::NotHandled;

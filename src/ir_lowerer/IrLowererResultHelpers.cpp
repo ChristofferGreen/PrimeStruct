@@ -436,11 +436,10 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     }
     std::string collectionName;
     std::vector<std::string> collectionArgs;
-    if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs)) {
-      return false;
-    }
-    if (collectionName != "map" || collectionArgs.size() != 2) {
-      return false;
+    if (!inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
+        collectionName != "map" || collectionArgs.size() != 2) {
+      return inferForwardedMapAccessTargetInfo(
+          targetExpr, *callee, localsIn, {}, targetInfoOut);
     }
     targetInfoOut.isMapTarget = true;
     targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs[0]);

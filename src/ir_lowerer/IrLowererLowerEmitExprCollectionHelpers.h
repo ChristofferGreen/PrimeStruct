@@ -695,7 +695,34 @@
             if (isMapAccessValueCall(*receiverExpr)) {
               return std::nullopt;
             }
-            const auto mapTargetInfo = ir_lowerer::resolveMapAccessTargetInfo(*receiverExpr, localsIn);
+            const auto inferCallMapTargetInfo =
+                [&](const Expr &targetExpr, ir_lowerer::MapAccessTargetInfo &out) {
+                  out = {};
+                  const Definition *callee =
+                      resolveCollectionExprDirectDefinition(targetExpr);
+                  if (callee == nullptr) {
+                    return false;
+                  }
+                  std::string inferredCollectionName;
+                  std::vector<std::string> inferredCollectionArgs;
+                  if (!ir_lowerer::inferDeclaredReturnCollection(
+                          *callee, inferredCollectionName, inferredCollectionArgs) ||
+                      inferredCollectionName != "map" ||
+                      inferredCollectionArgs.size() != 2) {
+                    return ir_lowerer::inferForwardedMapAccessTargetInfo(
+                        targetExpr, *callee, localsIn, {}, out);
+                  }
+                  out.isMapTarget = true;
+                  out.mapKeyKind =
+                      ir_lowerer::valueKindFromTypeName(inferredCollectionArgs.front());
+                  out.mapValueKind =
+                      ir_lowerer::valueKindFromTypeName(inferredCollectionArgs.back());
+                  return out.mapKeyKind != ir_lowerer::LocalInfo::ValueKind::Unknown &&
+                         out.mapValueKind != ir_lowerer::LocalInfo::ValueKind::Unknown;
+                };
+            const auto mapTargetInfo =
+                ir_lowerer::resolveMapAccessTargetInfo(
+                    *receiverExpr, localsIn, inferCallMapTargetInfo);
             const auto arrayVectorTargetInfo =
                 ir_lowerer::resolveArrayVectorAccessTargetInfo(*receiverExpr, localsIn);
             if (mapTargetInfo.isMapTarget && arrayVectorTargetInfo.isWrappedMapTarget) {

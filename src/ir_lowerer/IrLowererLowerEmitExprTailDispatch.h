@@ -197,7 +197,8 @@
             if (!ir_lowerer::inferDeclaredReturnCollection(*callee, collectionName, collectionArgs) ||
                 collectionName != "map" ||
                 collectionArgs.size() != 2) {
-              return false;
+              return ir_lowerer::inferForwardedMapAccessTargetInfo(
+                  targetExpr, *callee, localsIn, {}, out);
             }
             out.isMapTarget = true;
             out.mapKeyKind = ir_lowerer::valueKindFromTypeName(collectionArgs.front());

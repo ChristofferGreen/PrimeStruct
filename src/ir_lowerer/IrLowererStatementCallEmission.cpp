@@ -609,7 +609,8 @@ static bool rewriteMapInsertHelperStatementToBuiltin(
       if (!inferDeclaredReturnCollection(*resolvedCallee, collectionName, collectionArgs) ||
           collectionName != "map" ||
           collectionArgs.size() != 2) {
-        return false;
+        return inferForwardedMapAccessTargetInfo(
+            *canonicalReceiverExpr, *resolvedCallee, localsIn, {}, targetInfoOut);
       }
       targetInfoOut.isMapTarget = true;
       targetInfoOut.mapKeyKind = valueKindFromTypeName(collectionArgs.front());

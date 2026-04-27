@@ -2,6 +2,42 @@
 
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
+TEST_CASE("ir lowerer call helpers infer forwarded map access targets") {
+  primec::Definition wrapDef;
+  wrapDef.fullPath = "/pkg/wrapValues";
+  primec::Expr param;
+  param.kind = primec::Expr::Kind::Name;
+  param.isBinding = true;
+  param.name = "values";
+  wrapDef.parameters.push_back(param);
+  primec::Expr returnedName;
+  returnedName.kind = primec::Expr::Kind::Name;
+  returnedName.name = "values";
+  primec::Expr returnExpr;
+  returnExpr.kind = primec::Expr::Kind::Call;
+  returnExpr.name = "return";
+  returnExpr.args.push_back(returnedName);
+  wrapDef.statements.push_back(returnExpr);
+
+  primec::Expr mapPair;
+  mapPair.kind = primec::Expr::Kind::Call;
+  mapPair.name = "/std/collections/mapPair";
+  mapPair.templateArgs = {"string", "i32"};
+
+  primec::Expr wrapCall;
+  wrapCall.kind = primec::Expr::Kind::Call;
+  wrapCall.name = "wrapValues";
+  wrapCall.args.push_back(mapPair);
+
+  primec::ir_lowerer::MapAccessTargetInfo info;
+  CHECK(primec::ir_lowerer::inferForwardedMapAccessTargetInfo(
+      wrapCall, wrapDef, {}, {}, info));
+  CHECK(info.isMapTarget);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.structTypeName.rfind("/std/collections/experimental_map/Map__", 0) == 0);
+}
+
 TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native builtin emission") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;

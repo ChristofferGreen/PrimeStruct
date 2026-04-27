@@ -80,6 +80,73 @@ std::string resolveScopedCallPath(const Expr &expr) {
   return expr.namespacePrefix + "/" + expr.name;
 }
 
+const Expr *findForwardedReturnValueExpr(const Definition &definition) {
+  if (definition.returnExpr.has_value()) {
+    return &*definition.returnExpr;
+  }
+  const Expr *valueExpr = nullptr;
+  for (const auto &stmt : definition.statements) {
+    if (stmt.isBinding) {
+      continue;
+    }
+    valueExpr = &stmt;
+    if (isReturnCall(stmt) && stmt.args.size() == 1) {
+      return &stmt.args.front();
+    }
+  }
+  return valueExpr;
+}
+
+bool resolveForwardedReturnParameterName(const Definition &definition,
+                                         std::string &parameterNameOut) {
+  parameterNameOut.clear();
+  const Expr *valueExpr = findForwardedReturnValueExpr(definition);
+  if (valueExpr == nullptr) {
+    return false;
+  }
+  if (isReturnCall(*valueExpr) && valueExpr->args.size() == 1) {
+    valueExpr = &valueExpr->args.front();
+  }
+  if (valueExpr->kind != Expr::Kind::Name) {
+    return false;
+  }
+  for (const auto &parameter : definition.parameters) {
+    if (parameter.name == valueExpr->name) {
+      parameterNameOut = valueExpr->name;
+      return true;
+    }
+  }
+  return false;
+}
+
+const Expr *resolveCallArgumentForParameter(const Expr &callExpr,
+                                            const Definition &callee,
+                                            const std::string &parameterName) {
+  for (size_t index = 0; index < callExpr.args.size(); ++index) {
+    if (index < callExpr.argNames.size() &&
+        callExpr.argNames[index].has_value() &&
+        *callExpr.argNames[index] == parameterName) {
+      return &callExpr.args[index];
+    }
+  }
+  for (size_t index = 0; index < callee.parameters.size(); ++index) {
+    if (callee.parameters[index].name != parameterName) {
+      continue;
+    }
+    return index < callExpr.args.size() ? &callExpr.args[index] : nullptr;
+  }
+  return nullptr;
+}
+
+bool isForwardedMapNewConstructor(const Expr &expr) {
+  std::string constructorName;
+  return resolvePublishedStdlibSurfaceConstructorExprMemberName(
+             expr,
+             primec::StdlibSurfaceId::CollectionsMapConstructors,
+             constructorName) &&
+         constructorName == "mapNew";
+}
+
 std::string normalizeUninitializedVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
     return "/vector";
@@ -626,6 +693,24 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
               inferExplicitStructReturnPath(*defIt->second);
           if (!explicitReturnStruct.empty()) {
             return explicitReturnStruct;
+          }
+          auto inferForwardedCallArgStruct = [&](const Definition &def) -> std::string {
+            std::string forwardedParamName;
+            if (!resolveForwardedReturnParameterName(def, forwardedParamName)) {
+              return "";
+            }
+            const Expr *forwardedArg =
+                resolveCallArgumentForParameter(exprIn, def, forwardedParamName);
+            if (forwardedArg == nullptr ||
+                isForwardedMapNewConstructor(*forwardedArg)) {
+              return "";
+            }
+            return inferStructExprPath(*forwardedArg, localsInExpr);
+          };
+          if (const std::string forwardedStruct =
+                  inferForwardedCallArgStruct(*defIt->second);
+              !forwardedStruct.empty()) {
+            return forwardedStruct;
           }
           const std::string indexedStruct = inferStructPathFromCallTargetWithFieldBindingIndex(
               exprIn,
