@@ -18,6 +18,7 @@
 #include "primec/IrBackendProfiles.h"
 #include "primec/IrLowerer.h"
 #include "primec/IrPreparation.h"
+#include "primec/SemanticValidationPlan.h"
 #include "primec/testing/CompilePipelineDumpHelpers.h"
 #include "primec/testing/IrLowererHelpers.h"
 
@@ -182,6 +183,30 @@ void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, uint64_t s
       .semanticNodeId = semanticNodeId,
       .definitionPathId = mainPathId,
   });
+}
+
+const primec::semantics::SemanticValidationPassManifestEntry *findSemanticValidationPass(
+    std::string_view name) {
+  const auto &manifest = primec::semantics::semanticValidationPassManifest();
+  const auto it = std::find_if(
+      manifest.begin(),
+      manifest.end(),
+      [name](const primec::semantics::SemanticValidationPassManifestEntry &entry) {
+        return entry.name == name;
+      });
+  return it == manifest.end() ? nullptr : &*it;
+}
+
+const primec::SemanticProgramModuleResolvedArtifacts *findSemanticModuleArtifacts(
+    const primec::SemanticProgram &semanticProgram,
+    std::string_view moduleKey) {
+  const auto it = std::find_if(
+      semanticProgram.moduleResolvedArtifacts.begin(),
+      semanticProgram.moduleResolvedArtifacts.end(),
+      [moduleKey](const primec::SemanticProgramModuleResolvedArtifacts &module) {
+        return module.identity.moduleKey == moduleKey;
+      });
+  return it == semanticProgram.moduleResolvedArtifacts.end() ? nullptr : &*it;
 }
 
 } // namespace
@@ -373,6 +398,115 @@ TEST_CASE("semantic-product contract rejects missing local-auto facts across ent
           "missing semantic-product local-auto fact: /main -> local selected");
     CHECK(failure.diagnosticInfo.message == failure.message);
   }
+}
+
+TEST_CASE("compile pipeline semantic handoff gate reaches lowering and rejects stale facts") {
+  const std::string source =
+      "import /std/math/*\n"
+      "\n"
+      "[i32]\n"
+      "helper([i32] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[i32]\n"
+      "main() {\n"
+      "  [auto] selected{helper(41i32)}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+
+  const auto *validatorPass = findSemanticValidationPass("validator-passes");
+  const auto *publicationPass =
+      findSemanticValidationPass("semantic-product-publication");
+  REQUIRE(validatorPass != nullptr);
+  REQUIRE(publicationPass != nullptr);
+  CHECK(validatorPass->action ==
+        primec::semantics::SemanticValidationPassAction::PublishesFacts);
+  CHECK(publicationPass->kind ==
+        primec::semantics::SemanticValidationPassKind::Publication);
+
+  CHECK(std::find(program.imports.begin(), program.imports.end(), "/std/math/*") !=
+        program.imports.end());
+  const auto *mainDefinition = findSemanticEntry(
+      program.definitions,
+      [](const primec::Definition &definition) {
+        return definition.fullPath == "/main";
+      });
+  REQUIRE(mainDefinition != nullptr);
+  CHECK(std::any_of(mainDefinition->transforms.begin(),
+                    mainDefinition->transforms.end(),
+                    [](const primec::Transform &transform) {
+                      return transform.name == "return" &&
+                             transform.templateArgs ==
+                                 std::vector<std::string>{"i32"};
+                    }));
+
+  const auto *mainModule =
+      findSemanticModuleArtifacts(semanticProgram, "/main");
+  REQUIRE(mainModule != nullptr);
+  CHECK(!mainModule->directCallTargetIndices.empty());
+  CHECK(!mainModule->callableSummaryIndices.empty());
+  CHECK(!mainModule->returnFactIndices.empty());
+  CHECK(!mainModule->localAutoFactIndices.empty());
+  CHECK(!semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.empty());
+  CHECK(!semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.empty());
+  CHECK(!semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.empty());
+
+  const auto directCallTargets =
+      primec::semanticProgramDirectCallTargetView(semanticProgram);
+  const auto *helperCall = findSemanticEntry(
+      directCallTargets,
+      [&semanticProgram](const primec::SemanticProgramDirectCallTarget &entry) {
+        return entry.scopePath == "/main" &&
+               entry.callName == "helper" &&
+               primec::semanticProgramDirectCallTargetResolvedPath(
+                   semanticProgram, entry) == "/helper";
+      });
+  REQUIRE(helperCall != nullptr);
+
+  primec::Options options;
+  options.entryPath = "/main";
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  primec::Program loweringProgram = program;
+  primec::SemanticProgram loweringSemanticProgram = semanticProgram;
+  REQUIRE(primec::prepareIrModule(loweringProgram,
+                                  &loweringSemanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Vm,
+                                  ir,
+                                  failure));
+  CHECK(!ir.functions.empty());
+  CHECK(ir.entryIndex >= 0);
+
+  primec::Program staleProgram = program;
+  primec::SemanticProgram staleSemanticProgram = semanticProgram;
+  staleSemanticProgram.directCallTargets.clear();
+  staleSemanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.clear();
+  staleSemanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.clear();
+  for (auto &moduleArtifacts : staleSemanticProgram.moduleResolvedArtifacts) {
+    moduleArtifacts.directCallTargetIndices.clear();
+  }
+
+  primec::IrModule staleIr;
+  primec::IrPreparationFailure staleFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleProgram,
+                                      &staleSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Vm,
+                                      staleIr,
+                                      staleFailure));
+  CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleFailure.message ==
+        "missing semantic-product direct-call target: /main -> helper");
+  CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
 TEST_CASE("compile pipeline freezes published semantic-product string scratch storage") {

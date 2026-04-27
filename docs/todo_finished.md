@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4220: Add semantic phase handoff conformance gates.
+  Completed: Added a normal release-doctest conformance gate that sends
+  imported, transform-normalized source through compile-pipeline validation,
+  semantic-product publication, published module artifacts/lookups, and IR
+  preparation. The gate checks semantic validation manifest handoff metadata,
+  imported source preservation, transformed return envelopes, merged
+  semantic-product facts, successful lowering, and a focused stale-fact
+  negative path that deletes direct-call handoff facts and expects the lowerer
+  to fail closed with `missing semantic-product direct-call target`. The
+  language design notes now document this gate. Local validation is deferred
+  per the lite workflow.
 - ✓ TODO-4233: Close backend-adapter and source-composition fallbacks.
   Completed: Semantic-product return-fact lookup now treats semantic-node
   facts as the only production authority. The backend adapter still indexes

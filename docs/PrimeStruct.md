@@ -648,6 +648,14 @@ Current semantic validation pass manifest:
   needs another semantic rewrite, add it intentionally rather than assuming it
   inherits the full validation manifest.
 
+Current semantic phase handoff conformance gate:
+- The release doctest suite includes a compile-pipeline handoff gate that runs
+  imported, transform-normalized source through validation, semantic-product
+  publication, published module artifacts/lookups, and IR preparation.
+- The same gate deliberately removes published direct-call handoff facts before
+  IR preparation and expects a deterministic lowerer failure, proving stale or
+  missing semantic-product facts fail closed at the compile-pipeline boundary.
+
 Current semantic-product dump contract:
 - One deterministic module/program view per compile pipeline success, positioned after `ast-semantic` and before `ir`.
 - The dump should expose lowering-facing facts directly: resolved call targets, binding/result types, effects or
