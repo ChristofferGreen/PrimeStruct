@@ -887,7 +887,7 @@ import /std/collections/ContainerError
 [effects(heap_alloc), return<int>]
 main() {
   [map<i32, i32>] values{map<i32, i32>(1i32, 7i32, 2i32, 11i32)}
-  [ContainerError] err{ContainerError.missing_key()}
+  [ContainerError] err{ContainerError.missingKey()}
   return(plus(/std/collections/map/count(values),
       count(Result.why(ContainerError.status(err)))))
 }
