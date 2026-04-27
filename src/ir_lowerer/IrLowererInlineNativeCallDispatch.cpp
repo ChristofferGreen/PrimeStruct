@@ -831,11 +831,16 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   };
 
   bool deferVectorReturningMutatorCall = false;
+  auto isVectorMutatorCallName = [&](const Expr &callExpr) {
+    return isVectorBuiltinName(callExpr, "push") ||
+           isVectorBuiltinName(callExpr, "pop") ||
+           isVectorBuiltinName(callExpr, "reserve") ||
+           isVectorBuiltinName(callExpr, "clear") ||
+           isVectorBuiltinName(callExpr, "remove_at") ||
+           isVectorBuiltinName(callExpr, "remove_swap");
+  };
   auto tryEmitVectorMutatorCallFormExpr = [&]() {
-    const bool isVectorMutatorCall =
-        isVectorBuiltinName(expr, "push") || isVectorBuiltinName(expr, "pop") ||
-        isVectorBuiltinName(expr, "reserve") || isVectorBuiltinName(expr, "clear") ||
-        isVectorBuiltinName(expr, "remove_at") || isVectorBuiltinName(expr, "remove_swap");
+    const bool isVectorMutatorCall = isVectorMutatorCallName(expr);
     if (expr.isMethodCall || !isVectorMutatorCall || expr.args.empty()) {
       return InlineCallDispatchResult::NotHandled;
     }
@@ -946,10 +951,7 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   }
   if (expr.isMethodCall && !expr.args.empty() &&
       isVectorReturningCallTarget(expr.args.front()) &&
-      (isSimpleCallName(expr, "push") || isSimpleCallName(expr, "pop") ||
-       isSimpleCallName(expr, "reserve") || isSimpleCallName(expr, "clear") ||
-       isSimpleCallName(expr, "remove_at") ||
-       isSimpleCallName(expr, "remove_swap"))) {
+      isVectorMutatorCallName(expr)) {
     return InlineCallDispatchResult::NotHandled;
   }
   if (expr.isMethodCall && expr.args.size() == 1 &&

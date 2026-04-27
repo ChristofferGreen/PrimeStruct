@@ -1639,6 +1639,12 @@ TEST_CASE("stdlib surface metadata resolves collection alias paths") {
   CHECK(vectorMetadata->id == primec::StdlibSurfaceId::CollectionsVectorHelpers);
   CHECK(primec::resolveStdlibSurfaceMemberName(
             *vectorMetadata, "/std/collections/experimental_vector/vectorPush") == "push");
+  const auto *vectorWrapperMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
+      "/std/collections/vectorPush");
+  REQUIRE(vectorWrapperMetadata != nullptr);
+  CHECK(vectorWrapperMetadata->id == primec::StdlibSurfaceId::CollectionsVectorHelpers);
+  CHECK(primec::resolveStdlibSurfaceMemberName(
+            *vectorWrapperMetadata, "/std/collections/vectorPush") == "push");
 
   const auto *vectorCtorMetadata = primec::findStdlibSurfaceMetadataByResolvedPath(
       "/std/collections/experimental_vector/vectorPair");
