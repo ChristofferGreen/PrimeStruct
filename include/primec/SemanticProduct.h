@@ -17,8 +17,21 @@
 namespace primec {
 
 inline constexpr uint32_t SemanticProductContractVersionV1 = 1;
+inline constexpr uint32_t SemanticProductContractVersionV2 = 2;
 inline constexpr uint32_t SemanticProductContractVersionCurrent =
-    SemanticProductContractVersionV1;
+    SemanticProductContractVersionV2;
+
+enum class SemanticProgramFactOwnership {
+  AstProvenance,
+  SemanticProduct,
+  DerivedIndex,
+};
+
+struct SemanticProgramFactFamilyInfo {
+  std::string_view name;
+  SemanticProgramFactOwnership ownership = SemanticProgramFactOwnership::SemanticProduct;
+  std::string_view description;
+};
 
 struct SemanticProgramStringHash {
   using is_transparent = void;
@@ -400,6 +413,12 @@ struct SemanticProgram {
   std::vector<SemanticProgramTryFact> tryFacts;
   std::vector<SemanticProgramOnErrorFact> onErrorFacts;
 };
+
+const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos();
+std::optional<SemanticProgramFactOwnership>
+semanticProgramFactFamilyOwnership(std::string_view familyName);
+bool semanticProgramFactFamilyIsSemanticProductOwned(std::string_view familyName);
+bool semanticProgramFactFamilyIsAstProvenanceOwned(std::string_view familyName);
 
 std::vector<const SemanticProgramBridgePathChoice *>
 semanticProgramBridgePathChoiceView(const SemanticProgram &semanticProgram);

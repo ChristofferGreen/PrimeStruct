@@ -1116,6 +1116,21 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("#include \"primec/semantic_product/MethodCallFacts.h\"") !=
         std::string::npos);
+  CHECK(semanticProduct.find("SemanticProductContractVersionV2 = 2") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("SemanticProductContractVersionCurrent =\n"
+                             "    SemanticProductContractVersionV2") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("enum class SemanticProgramFactOwnership") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("SemanticProgramFactOwnership::AstProvenance") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("SemanticProgramFactOwnership::SemanticProduct") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("SemanticProgramFactOwnership::DerivedIndex") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramFactFamilyInfo") !=
+        std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
   CHECK(semanticProduct.find("std::optional<StdlibSurfaceId> stdlibSurfaceId;") !=
         std::string::npos);
@@ -1133,6 +1148,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("struct SemanticProgramExecution") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgram") != std::string::npos);
   CHECK(semanticProduct.find("std::string formatSemanticProgram(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramFactFamilyInfos()") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramFactFamilyOwnership(std::string_view familyName)") !=
+        std::string::npos);
+  CHECK(semanticProduct.find(
+            "semanticProgramFactFamilyIsSemanticProductOwned(std::string_view familyName)") !=
+        std::string::npos);
+  CHECK(semanticProduct.find(
+            "semanticProgramFactFamilyIsAstProvenanceOwned(std::string_view familyName)") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::vector<SemanticProgramDirectCallTarget> directCallTargets;") !=
         std::string::npos);
@@ -1274,6 +1299,10 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irEntrySetupSource.find("validateNoRuntimeReflectionQueries(semanticProgram, error)") ==
         std::string::npos);
   CHECK(irEntrySetupSource.find("kSemanticProductCompletenessMatrix") != std::string::npos);
+  CHECK(irEntrySetupSource.find("kSemanticProductContractManifestV2") !=
+        std::string::npos);
+  CHECK(irEntrySetupSource.find("SemanticProductContractVersionV2") !=
+        std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductCompletenessMatrix(program, *entryDefOut, semanticProgram, error)") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateEntryParameterFactFamily") != std::string::npos);
@@ -2401,6 +2430,12 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticProduct.find("#include \"primec/semantic_product/MethodCallFacts.h\"") !=
         std::string::npos);
+  CHECK(semanticProduct.find("SemanticProductContractVersionV2 = 2") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("enum class SemanticProgramFactOwnership") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("struct SemanticProgramFactFamilyInfo") !=
+        std::string::npos);
   CHECK(directCallFacts.find("struct SemanticProgramDirectCallTarget") != std::string::npos);
   CHECK(methodCallFacts.find("struct SemanticProgramMethodCallTarget") != std::string::npos);
   CHECK(semanticProduct.find("struct SemanticProgramBridgePathChoice") != std::string::npos);
@@ -2471,6 +2506,16 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(semanticProduct.find("semanticProgramPublishedStorageFrozen(const SemanticProgram &semanticProgram);") !=
         std::string::npos);
   CHECK(semanticProduct.find("std::string formatSemanticProgram(const SemanticProgram &semanticProgram);") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramFactFamilyInfos()") !=
+        std::string::npos);
+  CHECK(semanticProduct.find("semanticProgramFactFamilyOwnership(std::string_view familyName)") !=
+        std::string::npos);
+  CHECK(semanticProduct.find(
+            "semanticProgramFactFamilyIsSemanticProductOwned(std::string_view familyName)") !=
+        std::string::npos);
+  CHECK(semanticProduct.find(
+            "semanticProgramFactFamilyIsAstProvenanceOwned(std::string_view familyName)") !=
         std::string::npos);
 
   CHECK(compilePipelineHeader.find("SemanticProgram semanticProgram;") != std::string::npos);
@@ -2600,6 +2645,21 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("normalizeSemanticModulePathKey(") != std::string::npos);
   CHECK(semanticProductSource.find("if (semanticProgram.publishedStorageFrozen) {") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("semanticProgramFactFamilyInfos()") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("\"definitions\",\n"
+                                   "       SemanticProgramFactOwnership::AstProvenance") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("\"directCallTargets\",\n"
+                                   "       SemanticProgramFactOwnership::SemanticProduct") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("\"publishedRoutingLookups\",\n"
+                                   "       SemanticProgramFactOwnership::DerivedIndex") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("semanticProgramFactFamilyIsSemanticProductOwned(") !=
+        std::string::npos);
+  CHECK(semanticProductSource.find("semanticProgramFactFamilyIsAstProvenanceOwned(") !=
         std::string::npos);
   CHECK(primecMain.find("releaseSemanticProgramLookupMap(pipelineOutput.semanticProgram)") ==
         std::string::npos);

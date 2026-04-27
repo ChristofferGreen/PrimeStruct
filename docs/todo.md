@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4228: Factor and version the semantic-product boundary API
+- TODO-4216: Split semantic rewrites into an explicit pass manifest
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4216: Split semantic rewrites into an explicit pass manifest
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 - TODO-4229: Cut over SoA compatibility decisions to surface adapters
@@ -81,10 +80,11 @@ Task template:
 - TODO-4219: Fail closed on residual lowerer AST semantic fallbacks
 - TODO-4225: Close call-target and helper-routing lowerer fallbacks
 - TODO-4232: Close binding/type/effect/layout lowerer fallbacks
+- TODO-4233: Close backend-adapter and source-composition fallbacks
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4228 -> TODO-4216 -> TODO-4217
+- Semantic phase contract hardening: TODO-4216 -> TODO-4217
   -> TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
@@ -105,7 +105,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4228: Factor and version the semantic-product boundary API
 - TODO-4216: Split semantic rewrites into an explicit pass manifest
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
@@ -179,7 +178,7 @@ Task template:
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | TODO-4240, TODO-4241 |
-| Semantic-product public API factoring and versioning | TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
+| Semantic-product public API factoring and versioning | TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
 | IR lowerer compile-unit breakup | TODO-4219, TODO-4225, TODO-4232, TODO-4233 |
 | Backend validation/build ergonomics | TODO-4243 |
 | Emitter/semantics map-helper parity | none |
@@ -196,7 +195,7 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4228, TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
+| Semantic-product-authority conformance | TODO-4219, TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | TODO-4220, TODO-4234, TODO-4240 |
@@ -301,29 +300,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4228: Factor and version the semantic-product boundary API
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Define the narrow post-semantics boundary API, including which facts
-    are semantic-product owned, which provenance remains AST-owned, and how
-    future semantic-product dump/API changes are versioned or documented.
-  - acceptance:
-    - Public or testing helper APIs make semantic-product-owned facts
-      distinguishable from AST-owned provenance/body inventory.
-    - Any semantic-product dump/API shape change is versioned or documented in
-      `docs/PrimeStruct.md` with migration notes.
-    - Existing semantic-product helper and dump tests remain byte-stable unless
-      the versioned migration notes explicitly call out the expected diff.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once consumers can tell from API shape which facts are
-    semantic-product owned; source-lock cleanup remains TODO-4221/TODO-4235.
-
 - [ ] TODO-4216: Split semantic rewrites into an explicit pass manifest
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4228
   - scope: Extract the ordered semantic rewrite chain into a named manifest or
     pipeline table that records pass order, input/output ownership, and whether
     a pass mutates AST, publishes facts, or only validates.
@@ -964,7 +944,6 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4228
   - scope: Move user-facing value construction onto `Type{...}` and
     context-typed `{...}` forms so `Type(...)` remains ordinary execution/call
     syntax rather than struct construction.

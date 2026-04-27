@@ -444,7 +444,7 @@ TEST_CASE("ir lowerer rejects semantic-product contract version mismatch") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   semanticProgram.contractVersion =
-      primec::SemanticProductContractVersionV1 + 1;
+      primec::SemanticProductContractVersionCurrent + 1;
 
   primec::IrLowerer lowerer;
   primec::IrModule module;
@@ -452,7 +452,7 @@ TEST_CASE("ir lowerer rejects semantic-product contract version mismatch") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "semantic-product contract version mismatch: expected 1, got 2");
+  CHECK(error == "semantic-product contract version mismatch: expected 2, got 3");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -2420,7 +2420,20 @@ TEST_CASE("vm backend executes semantic-product prepared IR from compile pipelin
   CHECK(conformance.emitResult.exitCode == 2);
 }
 
-TEST_CASE("vm backend conformance keeps semantic-product contract v1") {
+TEST_CASE("semantic-product fact family ownership is explicit") {
+  CHECK(primec::SemanticProductContractVersionCurrent ==
+        primec::SemanticProductContractVersionV2);
+  CHECK(primec::semanticProgramFactFamilyIsSemanticProductOwned("directCallTargets"));
+  CHECK(primec::semanticProgramFactFamilyIsSemanticProductOwned("bindingFacts"));
+  CHECK(primec::semanticProgramFactFamilyIsSemanticProductOwned("onErrorFacts"));
+  CHECK(primec::semanticProgramFactFamilyIsAstProvenanceOwned("definitions"));
+  CHECK(primec::semanticProgramFactFamilyIsAstProvenanceOwned("executions"));
+  CHECK(primec::semanticProgramFactFamilyOwnership("publishedRoutingLookups") ==
+        primec::SemanticProgramFactOwnership::DerivedIndex);
+  CHECK_FALSE(primec::semanticProgramFactFamilyOwnership("unknownFacts").has_value());
+}
+
+TEST_CASE("vm backend conformance keeps semantic-product contract v2") {
   const std::string source =
       "[return<i32>]\n"
       "main() {\n"
@@ -2434,7 +2447,7 @@ TEST_CASE("vm backend conformance keeps semantic-product contract v1") {
   CHECK(error.empty());
   REQUIRE(conformance.output.hasSemanticProgram);
   CHECK(conformance.output.semanticProgram.contractVersion ==
-        primec::SemanticProductContractVersionV1);
+        primec::SemanticProductContractVersionCurrent);
   CHECK(conformance.emitResult.exitCode == 0);
 }
 

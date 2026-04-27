@@ -120,6 +120,95 @@ bool semanticProgramPublishedStorageFrozen(const SemanticProgram &semanticProgra
   return semanticProgram.publishedStorageFrozen;
 }
 
+const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos() {
+  static const std::vector<SemanticProgramFactFamilyInfo> Families = {
+      {"sourceImports",
+       SemanticProgramFactOwnership::AstProvenance,
+       "syntax-owned import spelling retained for provenance"},
+      {"imports",
+       SemanticProgramFactOwnership::AstProvenance,
+       "syntax-owned resolved import inventory retained for provenance"},
+      {"definitions",
+       SemanticProgramFactOwnership::AstProvenance,
+       "AST-owned callable body and source provenance inventory"},
+      {"executions",
+       SemanticProgramFactOwnership::AstProvenance,
+       "AST-owned execution body and source provenance inventory"},
+      {"callTargetStringTable",
+       SemanticProgramFactOwnership::DerivedIndex,
+       "interned strings backing published semantic-product ids"},
+      {"moduleResolvedArtifacts",
+       SemanticProgramFactOwnership::DerivedIndex,
+       "deterministic per-module indexes over published fact families"},
+      {"publishedRoutingLookups",
+       SemanticProgramFactOwnership::DerivedIndex,
+       "lowerer lookup indexes derived from semantic-product facts"},
+      {"publishedLowererPreflightFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "lowering-facing preflight facts produced by semantics"},
+      {"directCallTargets",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "resolved direct-call targets"},
+      {"methodCallTargets",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "resolved method-call targets"},
+      {"bridgePathChoices",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "resolved collection/helper bridge choices"},
+      {"callableSummaries",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "callable return, effect, capability, and result summaries"},
+      {"typeMetadata",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published type metadata"},
+      {"structFieldMetadata",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published struct-field metadata"},
+      {"collectionSpecializations",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published collection specialization facts"},
+      {"bindingFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published binding facts"},
+      {"returnFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published return facts"},
+      {"localAutoFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published local-auto inference facts"},
+      {"queryFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published query call facts"},
+      {"tryFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published try expression facts"},
+      {"onErrorFacts",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published on_error facts"},
+  };
+  return Families;
+}
+
+std::optional<SemanticProgramFactOwnership>
+semanticProgramFactFamilyOwnership(std::string_view familyName) {
+  for (const SemanticProgramFactFamilyInfo &family : semanticProgramFactFamilyInfos()) {
+    if (family.name == familyName) {
+      return family.ownership;
+    }
+  }
+  return std::nullopt;
+}
+
+bool semanticProgramFactFamilyIsSemanticProductOwned(std::string_view familyName) {
+  return semanticProgramFactFamilyOwnership(familyName) ==
+         SemanticProgramFactOwnership::SemanticProduct;
+}
+
+bool semanticProgramFactFamilyIsAstProvenanceOwned(std::string_view familyName) {
+  return semanticProgramFactFamilyOwnership(familyName) ==
+         SemanticProgramFactOwnership::AstProvenance;
+}
+
 SymbolId semanticProgramInternCallTargetString(SemanticProgram &semanticProgram, std::string_view text) {
   if (text.empty()) {
     return InvalidSymbolId;

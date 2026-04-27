@@ -120,8 +120,8 @@ const std::array<SemanticProductCompletenessCheck, 5> kSemanticProductCompletene
     {"result-control.metadata", "callableSummaries[].fullPathId", validateResultMetadataFactFamily},
 }};
 
-const SemanticProductContractManifest kSemanticProductContractManifestV1 = {
-    .version = SemanticProductContractVersionV1,
+const SemanticProductContractManifest kSemanticProductContractManifestV2 = {
+    .version = SemanticProductContractVersionV2,
     .checks = &kSemanticProductCompletenessMatrix,
 };
 
@@ -205,16 +205,16 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
     return true;
   }
   if (semanticProgram->contractVersion !=
-      kSemanticProductContractManifestV1.version) {
+      kSemanticProductContractManifestV2.version) {
     error = "semantic-product contract version mismatch: expected " +
-            std::to_string(kSemanticProductContractManifestV1.version) + ", got " +
+            std::to_string(kSemanticProductContractManifestV2.version) + ", got " +
             std::to_string(semanticProgram->contractVersion);
     return false;
   }
   if (!validateModuleResolvedArtifactIdentity(*semanticProgram, error)) {
     return false;
   }
-  if (kSemanticProductContractManifestV1.checks == nullptr) {
+  if (kSemanticProductContractManifestV2.checks == nullptr) {
     error = "semantic-product contract manifest missing checks";
     return false;
   }
@@ -224,7 +224,7 @@ bool validateSemanticProductCompletenessMatrix(const Program &program,
       .entryDef = &entryDef,
       .semanticProgram = semanticProgram,
   };
-  for (const auto &check : *kSemanticProductContractManifestV1.checks) {
+  for (const auto &check : *kSemanticProductContractManifestV2.checks) {
     if (check.validate == nullptr) {
       continue;
     }

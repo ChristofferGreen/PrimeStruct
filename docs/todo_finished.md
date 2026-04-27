@@ -6,6 +6,16 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4228: Factor and version the semantic-product boundary API.
+  Completed: `SemanticProductContractVersionCurrent` is now V2, and
+  the public `SemanticProduct` API exposes `SemanticProgramFactOwnership` /
+  `SemanticProgramFactFamilyInfo` plus lookup predicates so consumers can
+  distinguish semantic-product-owned fact families from AST provenance/body
+  inventories and derived lookup/index families. `docs/PrimeStruct.md`
+  documents the V2 migration note and states that the semantic-product dump
+  text remains byte-stable. Focused source-lock/behavior coverage pins the
+  helper API and lowerer contract version. Local validation is deferred per
+  the lite workflow.
 - ✓ TODO-4215: Make semantic-product publication consume merged fact bundles.
   Completed: semantic validation now extracts a publication-ready
   `SemanticPublicationSurface` after final semantic-node-id assignment and

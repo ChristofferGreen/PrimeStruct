@@ -440,9 +440,9 @@ Compile-pipeline publication contract:
   than rebuilding semantic facts ad hoc from the raw `Program`.
 - That success-path handoff is now live for `primec` compile/emit entrypoints, `primevm`, backend registry dispatch,
   and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. The `primevm` result boundary now also uses
-  explicit success/failure variants. `TODO-4241` tracks the remaining compatibility caller migration, while
-  `TODO-4228` tracks the semantic-product dump/report API factoring. Add a separate concrete TODO before changing
-  unrelated CLI/runtime seams.
+  explicit success/failure variants. `TODO-4241` tracks the remaining compatibility caller migration, and the
+  semantic-product dump/report API boundary is now versioned under the contract below. Add a separate concrete TODO
+  before changing unrelated CLI/runtime seams.
 
 CLI/runtime plumbing contract:
 - `primec` and `primevm` should receive the semantic product only through compile-pipeline success artifacts, not
@@ -620,6 +620,24 @@ Current semantic-product dump contract:
   tests can assert semantic facts without falling back to AST snapshots.
 - Once this dump exists, lowering-facing tests should prefer it over `ast-semantic` whenever they are asserting
   resolved targets, inferred types, effects, or helper-routing facts.
+
+Current semantic-product API/version contract:
+- `SemanticProductContractVersionCurrent` is `SemanticProductContractVersionV2`.
+- Version 2 is an API-only contract bump; it does not intentionally change the `semantic-product` text dump shape.
+- Version 2 adds fact-family ownership metadata through `semanticProgramFactFamilyInfos()`,
+  `semanticProgramFactFamilyOwnership(...)`, `semanticProgramFactFamilyIsSemanticProductOwned(...)`, and
+  `semanticProgramFactFamilyIsAstProvenanceOwned(...)`.
+- Fact-family ownership is split into:
+  - `SemanticProduct`: lowering-facing facts owned by the semantic product, including resolved call/method/bridge
+    targets, callable summaries, type/field metadata, collection specializations, binding/return facts, local-auto
+    facts, query/try facts, `on_error` facts, and lowerer preflight facts.
+  - `AstProvenance`: syntax/body/provenance inventory that remains paired with the AST, currently source/import
+    inventories plus definition/execution body inventories.
+  - `DerivedIndex`: indexes and intern tables derived from semantic-product facts for deterministic lookup and
+    module grouping.
+- Consumers should use the ownership helpers before deciding whether a new assertion belongs on the semantic-product
+  surface or on an AST/provenance helper. Future dump/API shape changes must either keep the versioned contract
+  byte-stable or update this section with migration notes and expected golden-output diffs.
 
 Planned semantic-product unit/golden suite:
 - Current status: the exact semantic-product formatter golden now pins resolved call/helper targets,
