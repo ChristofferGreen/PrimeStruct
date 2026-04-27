@@ -1598,6 +1598,43 @@ main() {
   CHECK(ast.find("values./soa_vector/reserve(6)", mainPos) == std::string::npos);
 }
 
+TEST_CASE("dump ast-semantic rewrites vector-target method mutator shadows to direct helper path") {
+  const std::string source = R"(
+[return<int>]
+/soa_vector/push([vector<i32>] values, [i32] value) {
+  return(value)
+}
+
+[return<int>]
+/soa_vector/reserve([vector<i32>] values, [i32] count) {
+  return(count)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32, 3i32)}
+  [int] pushed{values.push(4i32)}
+  [int] reserved{values.reserve(6i32)}
+  return(plus(pushed, reserved))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_dump_ast_semantic_vector_target_soa_mutator_method_shadow.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_dump_ast_semantic_vector_target_soa_mutator_method_shadow.txt").string();
+
+  const std::string dumpCmd =
+      "./primec " + quoteShellArg(srcPath) + " --dump-stage ast-semantic > " + quoteShellArg(outPath);
+  CHECK(runCommand(dumpCmd) == 0);
+  const std::string ast = readFile(outPath);
+  const size_t mainPos = ast.find("/main()");
+  CHECK(mainPos != std::string::npos);
+  CHECK(ast.find("[int] pushed{/soa_vector/push(values, 4)}", mainPos) != std::string::npos);
+  CHECK(ast.find("[int] reserved{/soa_vector/reserve(values, 6)}", mainPos) != std::string::npos);
+  CHECK(ast.find("values.push(4)", mainPos) == std::string::npos);
+  CHECK(ast.find("values.reserve(6)", mainPos) == std::string::npos);
+}
+
 TEST_CASE("dump ast-semantic keeps direct canonical experimental soa_vector to_aos helper path") {
   const std::string source = R"(
 import /std/collections/*
