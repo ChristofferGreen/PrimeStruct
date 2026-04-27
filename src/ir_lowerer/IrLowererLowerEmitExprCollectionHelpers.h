@@ -38,6 +38,18 @@
             }
             return nullptr;
           };
+          auto isExplicitExperimentalVectorConstructorHelper =
+              [](const std::string &path) {
+                return path == "/std/collections/experimental_vector/vector" ||
+                       path == "std/collections/experimental_vector/vector";
+              };
+          const std::string rawPath = resolveCollectionExprDirectPath(candidate);
+          if (isExplicitExperimentalVectorConstructorHelper(rawPath)) {
+            if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
+                rawDef != nullptr) {
+              return rawDef;
+            }
+          }
           std::string experimentalVectorElementType;
           if (getExperimentalVectorConstructorElementTypeAlias(
                   candidate, experimentalVectorElementType)) {
@@ -55,7 +67,6 @@
               callee != nullptr) {
             return callee;
           }
-          const std::string rawPath = resolveCollectionExprDirectPath(candidate);
           if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
               rawDef != nullptr) {
             return rawDef;

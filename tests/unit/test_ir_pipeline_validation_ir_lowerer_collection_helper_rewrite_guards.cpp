@@ -265,6 +265,52 @@ TEST_CASE("ir lowerer collection helper resolves vector aliases before direct de
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer prefers explicit experimental vector helper before struct constructor defs") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path statementsExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+
+  REQUIRE(std::filesystem::exists(statementsExprPath));
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  const std::string statementsSource = readText(statementsExprPath);
+  const std::string collectionSource = readText(collectionHelpersPath);
+
+  const size_t statementsVectorHelperCheck =
+      statementsSource.find("isExplicitExperimentalVectorConstructorHelper(rawPath)");
+  const size_t statementsDirectResolution =
+      statementsSource.find("const Definition *callee = resolveDefinitionCall(targetExpr);");
+  const size_t collectionVectorHelperCheck =
+      collectionSource.find("isExplicitExperimentalVectorConstructorHelper(rawPath)");
+  const size_t collectionDirectResolution =
+      collectionSource.find("const Definition *callee = resolveDefinitionCall(candidate);");
+
+  REQUIRE(statementsVectorHelperCheck != std::string::npos);
+  REQUIRE(statementsDirectResolution != std::string::npos);
+  REQUIRE(collectionVectorHelperCheck != std::string::npos);
+  REQUIRE(collectionDirectResolution != std::string::npos);
+  CHECK(statementsVectorHelperCheck < statementsDirectResolution);
+  CHECK(collectionVectorHelperCheck < collectionDirectResolution);
+  CHECK(statementsSource.find("path == \"/std/collections/experimental_vector/vector\"") !=
+        std::string::npos);
+  CHECK(collectionSource.find("path == \"/std/collections/experimental_vector/vector\"") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before resolving defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
