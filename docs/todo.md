@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4225: Close call-target and helper-routing lowerer fallbacks
+- TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 - TODO-4233: Close backend-adapter and source-composition fallbacks
 - TODO-4220: Add semantic phase handoff conformance gates
 - TODO-4234: Add semantic budget and worker-parity release gates
@@ -81,11 +80,12 @@ Task template:
 - TODO-4237: Add graph invalidation fan-out regression tests
 - TODO-4238: Pin the CT-eval graph and semantic-product boundary
 - TODO-4239: Migrate helper-routing template inference onto graph facts
+- TODO-4240: Add backend semantic-product conformance coverage
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4225 -> TODO-4232 -> TODO-4233
-  -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
+- Semantic phase contract hardening: TODO-4232 -> TODO-4233 -> TODO-4220
+  -> TODO-4234 -> TODO-4221 -> TODO-4235
 - Deferred graph and inference hardening: TODO-4236 -> TODO-4237
   -> TODO-4238 -> TODO-4239
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4240
@@ -103,7 +103,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4225: Close call-target and helper-routing lowerer fallbacks
 - TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 - TODO-4233: Close backend-adapter and source-composition fallbacks
 - TODO-4220: Add semantic phase handoff conformance gates
@@ -168,8 +167,8 @@ Task template:
 | SoA maturity and `soa_vector` promotion | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | TODO-4240, TODO-4241 |
-| Semantic-product public API factoring and versioning | TODO-4225, TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
-| IR lowerer compile-unit breakup | TODO-4225, TODO-4232, TODO-4233 |
+| Semantic-product public API factoring and versioning | TODO-4232, TODO-4233, TODO-4240, TODO-4241 |
+| IR lowerer compile-unit breakup | TODO-4232, TODO-4233 |
 | Backend validation/build ergonomics | TODO-4243 |
 | Emitter/semantics map-helper parity | none |
 | VM debug-session argv ownership | none |
@@ -185,12 +184,12 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | TODO-4225, TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
+| Semantic-product-authority conformance | TODO-4232, TODO-4233, TODO-4220, TODO-4240, TODO-4241 |
 | AST transform hook conformance | TODO-4238, TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | TODO-4220, TODO-4234, TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4240 |
-| Lowerer/source-composition contract coverage | TODO-4225, TODO-4232, TODO-4233 |
+| Lowerer/source-composition contract coverage | TODO-4232, TODO-4233 |
 | Vector/map bridge parity for imports, rewrites, and lowering | TODO-4245 |
 | De-experimentalization surface and namespace parity | none |
 | `soa_vector` maturity and canonical surface parity | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249, TODO-4250, TODO-4251, TODO-4252 |
@@ -313,29 +312,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4225: Close call-target and helper-routing lowerer fallbacks
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Close the completed residual-fallback audit items for call-target
-    and helper-routing fallbacks by deleting or fail-closing production lowerer
-    paths that silently re-derive those decisions from raw AST or import state.
-  - acceptance:
-    - The audited call-target and helper-routing fallback inventory is empty
-      except for documented syntax/provenance-owned paths.
-    - Missing, stale, or contradictory semantic-product facts produce
-      deterministic diagnostics for migrated call/helper fallback families.
-    - C++/VM/native boundary tests prove migrated call/helper families consume
-      the same published semantic-product facts.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop when call-target and helper-routing fallbacks are closed;
-    leave binding/type/effect/layout fallbacks to TODO-4232.
-
 - [ ] TODO-4232: Close binding/type/effect/layout lowerer fallbacks
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4225
   - scope: Close the completed residual-fallback audit items for binding,
     type, effect, and layout fallbacks by deleting or fail-closing production
     lowerer paths that silently re-derive those decisions from raw AST or import

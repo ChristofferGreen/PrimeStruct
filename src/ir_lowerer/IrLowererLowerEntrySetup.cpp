@@ -34,7 +34,7 @@ struct SemanticProductCompletenessCheck {
 
 struct SemanticProductContractManifest {
   uint32_t version = SemanticProductContractVersionCurrent;
-  const std::array<SemanticProductCompletenessCheck, 5> *checks = nullptr;
+  const std::array<SemanticProductCompletenessCheck, 8> *checks = nullptr;
 };
 
 bool validateBindingFactFamily(const SemanticProductCompletenessContext &context,
@@ -45,6 +45,21 @@ bool validateBindingFactFamily(const SemanticProductCompletenessContext &context
 bool validateLocalAutoFactFamily(const SemanticProductCompletenessContext &context,
                                  std::string &error) {
   return validateSemanticProductLocalAutoCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductDirectCallCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateBridgePathFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductBridgePathCoverage(context.program, context.semanticProgram, error);
+}
+
+bool validateMethodCallFactFamily(const SemanticProductCompletenessContext &context,
+                                  std::string &error) {
+  return validateSemanticProductMethodCallCoverage(context.program, context.semanticProgram, error);
 }
 
 bool validateResultMetadataFactFamily(const SemanticProductCompletenessContext &context,
@@ -108,7 +123,10 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
   return true;
 }
 
-const std::array<SemanticProductCompletenessCheck, 5> kSemanticProductCompletenessMatrix = {{
+const std::array<SemanticProductCompletenessCheck, 8> kSemanticProductCompletenessMatrix = {{
+    {"routing.direct-call", "directCallTargets[].resolvedPathId", validateDirectCallFactFamily},
+    {"routing.bridge-path", "bridgePathChoices[].helperNameId", validateBridgePathFactFamily},
+    {"routing.method-call", "methodCallTargets[].resolvedPathId", validateMethodCallFactFamily},
     {"type-shape.binding", "bindingFacts[].resolvedPathId", validateBindingFactFamily},
     {"type-shape.local-auto", "localAutoFacts[].bindingTypeText", validateLocalAutoFactFamily},
     {"result-control.entry-args", "entryPath + bindingFacts[]", validateEntryParameterFactFamily},

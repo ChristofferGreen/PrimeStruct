@@ -314,7 +314,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(callResolutionSource.find("isResidualBridgeHelperPath(resolvedPath)") !=
         std::string::npos);
-  CHECK(callResolutionSource.find("isResidualBridgeHelperPath(fallbackResolvedPath)") !=
+  CHECK(callResolutionSource.find("isResidualBridgeHelperPath(fallbackResolvedPath)") ==
         std::string::npos);
   CHECK(callResolutionSource.find(
             "!isResidualBridgeHelperPath(resolvedPath)) {\n"

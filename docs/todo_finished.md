@@ -6,6 +6,15 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4225: Close call-target and helper-routing lowerer fallbacks.
+  Completed: Production lowerer entry setup now runs the direct-call,
+  bridge-path, and method-call semantic-product coverage validators before
+  helper dispatch can recover through compatibility logic. Missing or stale
+  routing facts now fail closed with deterministic direct-call, method-call, or
+  bridge-path diagnostics during lowering entry setup. Bridge-path coverage no
+  longer reclassifies missing bridge choices through a published-lookup fallback,
+  and focused production-entry tests cover the direct, method, and bridge
+  families. Local validation is deferred per the lite workflow.
 - ✓ TODO-4219: Fail closed on residual lowerer AST semantic fallbacks.
   Completed: Audited residual lowerer/backend-adapter fallbacks and recorded
   ownership/queue routing in `docs/PrimeStruct.md`. The representative
@@ -13,10 +22,9 @@ Finished items are periodically archived here from `docs/todo.md`; section heade
   falls back through raw `defMap` or import aliases when semantic-product
   direct-call/bridge facts are missing; it now uses syntax-only spelling and
   lets semantic-product validation/lowering fail closed with existing
-  diagnostics. Follow-up call/helper, binding/type/effect/layout, and
-  backend/source-composition cleanup remains queued under TODO-4225,
-  TODO-4232, and TODO-4233. Local validation is deferred per the lite
-  workflow.
+  diagnostics. Follow-up binding/type/effect/layout and
+  backend/source-composition cleanup remains queued under TODO-4232 and
+  TODO-4233. Local validation is deferred per the lite workflow.
 - ✓ TODO-4231: Make query/try/on_error graph facts the exclusive authority.
   Completed: query, `try(...)`, and `on_error` lowerer consumption now uses
   semantic-node-id facts as the only production authority. The semantic-product

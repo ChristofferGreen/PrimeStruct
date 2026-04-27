@@ -608,9 +608,10 @@ Current residual semantic fallback audit:
 - Migrated/fail-closed in the initial audit slice: semantic-product direct-call resolution no longer falls
   back through raw `defMap` or import-alias resolution when published direct-call/bridge facts are missing;
   it returns syntax-only spelling and lets downstream semantic-product validation/lowering report missing facts.
-- Queued to TODO-4225: residual call-target and helper-routing fallback checks, including bridge-helper
-  residual path detection, direct/method/call helper fallback candidates, inline/native tail-dispatch helper
-  classifiers, and collection helper dispatch guards.
+- Completed in TODO-4225: production lowerer entry now runs direct-call, bridge-path, and method-call
+  semantic-product coverage checks before helper dispatch, and bridge-path coverage no longer reclassifies
+  missing bridge facts through a published-lookup fallback. Inline/native tail-dispatch classifiers and
+  collection helper dispatch guards are lowering-owned compatibility dispatch after those routing facts validate.
 - Queued to TODO-4232: binding/type/effect/layout fallback inventory, including lowerer-generated temporaries,
   synthetic locals, source-spelled type aliases, import/layout syntax qualifiers, struct field/body traversal,
   and collection/layout classification paths.

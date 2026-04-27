@@ -1266,21 +1266,21 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irEntrySetupSource.find("semantic product entry path mismatch: expected ") != std::string::npos);
   CHECK(irLowererEntry.find("runLowerEntrySetup(program,") != std::string::npos);
   CHECK(irLowererEntry.find("semanticProgram,") != std::string::npos);
-  CHECK(irEntrySetupSource.find("validateSemanticProductDirectCallCoverage(context.program,") ==
+  CHECK(irEntrySetupSource.find("validateSemanticProductDirectCallCoverage(context.program,") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateSemanticProductBridgePathCoverage(context.program,") ==
+  CHECK(irEntrySetupSource.find("validateSemanticProductBridgePathCoverage(context.program,") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("buildDefinitionMapAndStructNames(program.definitions, defMap, unusedStructNames, nullptr);") ==
         std::string::npos);
   CHECK(irEntrySetupSource.find("buildImportAliasesFromProgram(program.imports, program.definitions, defMap);") ==
         std::string::npos);
-  CHECK(irEntrySetupSource.find("{\"routing.direct-call\", \"directCallTargets[].resolvedPathId\"") ==
+  CHECK(irEntrySetupSource.find("{\"routing.direct-call\", \"directCallTargets[].resolvedPathId\"") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("{\"routing.bridge-path\", \"bridgePathChoices[].helperNameId\"") ==
+  CHECK(irEntrySetupSource.find("{\"routing.bridge-path\", \"bridgePathChoices[].helperNameId\"") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("{\"routing.method-call\", \"methodCallTargets[].resolvedPathId\"") ==
+  CHECK(irEntrySetupSource.find("{\"routing.method-call\", \"methodCallTargets[].resolvedPathId\"") !=
         std::string::npos);
-  CHECK(irEntrySetupSource.find("validateSemanticProductMethodCallCoverage(program, semanticProgram, error)") ==
+  CHECK(irEntrySetupSource.find("validateSemanticProductMethodCallCoverage(context.program,") !=
         std::string::npos);
   CHECK(irEntrySetupSource.find("validateSemanticProductBindingCoverage(context.program, context.semanticProgram, error)") !=
         std::string::npos);
@@ -2900,13 +2900,13 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
   CHECK(irCallResolution.find("missing semantic-product bridge helper name id: ") !=
         std::string::npos);
   CHECK(irCallResolution.find("missing semantic-product bridge-path choice: ") != std::string::npos);
-  CHECK(irCallResolution.find("const std::string fallbackResolvedPath =\n          resolveCallPathFromPublishedLookups(expr, semanticProgram);") !=
+  CHECK(irCallResolution.find("const std::string fallbackResolvedPath =\n          resolveCallPathFromPublishedLookups(expr, semanticProgram);") ==
         std::string::npos);
   CHECK(irCallResolution.find("isResidualBridgeHelperPath(resolvedPath)") !=
         std::string::npos);
-  CHECK(irCallResolution.find("isResidualBridgeHelperPath(fallbackResolvedPath) &&") !=
+  CHECK(irCallResolution.find("isResidualBridgeHelperPath(fallbackResolvedPath) &&") ==
         std::string::npos);
-  CHECK(irCallResolution.find("resolvesToPublishedDefinitionFamilyTarget(semanticProgram, fallbackResolvedPath)") !=
+  CHECK(irCallResolution.find("resolvesToPublishedDefinitionFamilyTarget(semanticProgram, fallbackResolvedPath)") ==
         std::string::npos);
   CHECK(irCallResolution.find("bool validateSemanticProductMethodCallCoverage(const Program &program,") !=
         std::string::npos);

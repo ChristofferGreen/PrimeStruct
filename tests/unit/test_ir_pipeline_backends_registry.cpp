@@ -536,6 +536,50 @@ TEST_CASE("semantic-product direct-call coverage conformance rejects missing tar
   CHECK(error == "missing semantic-product direct-call target: /main -> callee");
 }
 
+TEST_CASE("ir lowerer production entry rejects missing semantic-product direct-call targets") {
+  primec::Program program;
+
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  callee.semanticNodeId = 82;
+  program.definitions.push_back(callee);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  callExpr.semanticNodeId = 41;
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+  const auto calleePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
+  semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
+      .name = "callee",
+      .fullPath = "/callee",
+      .namespacePrefix = "",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 82,
+  });
+  semanticProgram.publishedRoutingLookups.definitionIndicesByPathId.insert_or_assign(
+      calleePathId, 0);
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product direct-call target: /main -> callee");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("semantic-product direct-call coverage conformance rejects missing semantic ids") {
   primec::Program program;
 
@@ -728,6 +772,38 @@ TEST_CASE("method-call coverage rejects missing resolved path ids before lookup 
   CHECK(error == "missing semantic-product method-call resolved path id: /main -> count");
 }
 
+TEST_CASE("ir lowerer production entry rejects missing semantic-product method-call targets") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 4200;
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.isMethodCall = true;
+  callExpr.name = "count";
+  callExpr.semanticNodeId = 4201;
+  callExpr.args.push_back(valuesExpr);
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 4200);
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product method-call target: /main -> count");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   primec::Program program;
 
@@ -849,6 +925,51 @@ TEST_CASE("bridge-path coverage rejects helper name ids before direct-call targe
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
       program, &semanticProgram, error));
   CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
+}
+
+TEST_CASE("ir lowerer production entry rejects missing semantic-product bridge-path choices") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 5206;
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "contains";
+  callExpr.semanticNodeId = 5207;
+  callExpr.args.push_back(valuesExpr);
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 5206);
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "contains",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 5207,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/map/contains"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
+  });
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      5207, semanticProgram.directCallTargets.front().resolvedPathId);
+  semanticProgram.publishedRoutingLookups.directCallStdlibSurfaceIdsByExpr.insert_or_assign(
+      5207, primec::StdlibSurfaceId::CollectionsMapHelpers);
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "missing semantic-product bridge-path choice: /main -> contains");
+  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("bridge-path coverage rejects invalid helper name ids before lookup gaps") {

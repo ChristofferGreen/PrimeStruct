@@ -780,14 +780,6 @@ bool validateSemanticProductBridgePathCoverage(
                 describeCallSite(scopePath, expr);
         return false;
       }
-      const std::string fallbackResolvedPath =
-          resolveCallPathFromPublishedLookups(expr, semanticProgram);
-      if (isResidualBridgeHelperPath(fallbackResolvedPath) &&
-          resolvesToPublishedDefinitionFamilyTarget(semanticProgram, fallbackResolvedPath)) {
-        error = "missing semantic-product bridge-path choice: " +
-                describeCallSite(scopePath, expr);
-        return false;
-      }
     }
     return validateExprs(scopePath, expr.args) &&
            validateExprs(scopePath, expr.bodyArguments);
