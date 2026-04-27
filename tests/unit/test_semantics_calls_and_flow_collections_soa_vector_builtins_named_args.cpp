@@ -619,6 +619,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("soa_vector builtin method get_ref supports helper-return field inference") {
+  const std::string source = R"(
+Particle() {
+  [i32] x{1i32}
+}
+
+[return<soa_vector<Particle>>]
+cloneValues() {
+  return(soa_vector<Particle>())
+}
+
+[return<Reference<soa_vector<Particle>>>]
+borrowValues([Reference<soa_vector<Particle>>] values) {
+  return(values)
+}
+
+[return<int>]
+pick([Reference<soa_vector<Particle>>] values) {
+  return(borrowValues(values).get_ref(0i32).x)
+}
+
+[return<int>]
+main() {
+  [soa_vector<Particle>] values{cloneValues()}
+  return(pick(location(values)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("soa_vector helper-return bare count keeps same-path helper across escapes") {
   const std::string source = R"(
 import /std/collections/experimental_soa_vector/*

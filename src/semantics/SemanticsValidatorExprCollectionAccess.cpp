@@ -16,6 +16,17 @@ bool isCanonicalMapAccessHelperName(const std::string &helperName) {
          helperName == "at_unsafe" || helperName == "at_unsafe_ref";
 }
 
+bool isSoaAccessHelperName(const std::string &helperName) {
+  return helperName == "get" || helperName == "get_ref" ||
+         helperName == "ref" || helperName == "ref_ref";
+}
+
+bool isSoaReceiverStructPath(const std::string &structPath) {
+  return structPath == "/soa_vector" ||
+         structPath == "/std/collections/soa_vector" ||
+         structPath.rfind("/std/collections/experimental_soa_vector/SoaVector__", 0) == 0;
+}
+
 bool isStdNamespacedCanonicalMapAccessPath(const std::string &path) {
   return path == "/std/collections/map/at" ||
          path == "/std/collections/map/at_ref" ||
@@ -566,6 +577,17 @@ bool SemanticsValidator::resolveExprCollectionAccessTarget(
           receiverStructPath.insert(receiverStructPath.begin(), '/');
         }
         if (!receiverStructPath.empty() && structNames_.count(receiverStructPath) > 0) {
+          if (isSoaAccessHelperName(accessHelperName) &&
+              isSoaReceiverStructPath(receiverStructPath)) {
+            usedMethodTarget = true;
+            hasMethodReceiverIndex = true;
+            methodReceiverIndex = 0;
+            resolved =
+                preferredSoaHelperTargetForCollectionType(accessHelperName,
+                                                          "/soa_vector");
+            resolvedMethod = true;
+            return true;
+          }
           if (receiverStructPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
             const std::string canonicalVectorMethodTarget =
                 "/std/collections/vector/" + accessHelperName;
