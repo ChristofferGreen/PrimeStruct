@@ -3287,11 +3287,11 @@ TEST_CASE("compiles and runs native experimental map struct fields") {
   expectExperimentalMapStructFieldConformance("native");
 }
 
-TEST_CASE("compiles and runs native inferred experimental map struct fields") {
+TEST_CASE("rejects native inferred experimental map struct field constructor expressions") {
   expectInferredExperimentalMapStructFieldConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped inferred experimental map struct fields") {
+TEST_CASE("rejects native helper-wrapped inferred experimental map struct field constructor expressions") {
   expectWrappedInferredExperimentalMapStructFieldConformance("native");
 }
 
@@ -3299,15 +3299,15 @@ TEST_CASE("compiles and runs native experimental map method parameters") {
   expectExperimentalMapMethodParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native inferred experimental map parameters") {
+TEST_CASE("rejects native inferred experimental map parameter call expressions") {
   expectInferredExperimentalMapParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native inferred experimental map default parameters") {
+TEST_CASE("rejects native inferred experimental map default parameter call expressions") {
   expectInferredExperimentalMapDefaultParameterConformance("native");
 }
 
-TEST_CASE("compiles and runs native helper-wrapped inferred experimental map default parameters") {
+TEST_CASE("rejects native helper-wrapped inferred experimental map default parameter call expressions") {
   expectWrappedInferredExperimentalMapDefaultParameterConformance("native");
 }
 

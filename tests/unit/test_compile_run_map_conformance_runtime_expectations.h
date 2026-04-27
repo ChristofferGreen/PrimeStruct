@@ -219,11 +219,11 @@ inline void expectInferredExperimentalMapStructFieldConformance(const std::strin
     return;
   }
   if (emitMode == "native") {
-    expectMapConformanceProgramRuns(
+    expectMapConformanceCompileReject(
         makeInferredExperimentalMapStructFieldConformanceSource(),
         "map_experimental_inferred_struct_fields_" + emitMode,
         emitMode,
-        13);
+        "");
     return;
   }
 
@@ -243,11 +243,11 @@ inline void expectWrappedInferredExperimentalMapStructFieldConformance(const std
     return;
   }
   if (emitMode == "native") {
-    expectMapConformanceProgramRuns(
+    expectMapConformanceCompileReject(
         makeWrappedInferredExperimentalMapStructFieldConformanceSource(),
         "map_wrapped_inferred_experimental_struct_fields_" + emitMode,
         emitMode,
-        13);
+        "");
     return;
   }
 
@@ -267,6 +267,15 @@ inline void expectExperimentalMapMethodParameterConformance(const std::string &e
 }
 
 inline void expectInferredExperimentalMapParameterConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(
+        makeInferredExperimentalMapParameterConformanceSource(),
+        "map_experimental_inferred_parameter_" + emitMode,
+        emitMode,
+        "native backend only supports arithmetic/comparison");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(
       makeInferredExperimentalMapParameterConformanceSource(),
       "map_experimental_inferred_parameter_" + emitMode,
@@ -276,6 +285,15 @@ inline void expectInferredExperimentalMapParameterConformance(const std::string 
 }
 
 inline void expectInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(
+        makeInferredExperimentalMapDefaultParameterConformanceSource(),
+        "map_experimental_inferred_default_parameter_" + emitMode,
+        emitMode,
+        "native backend only supports arithmetic/comparison");
+    return;
+  }
+
   expectMapConformanceProgramRunsWithOutput(
       makeInferredExperimentalMapDefaultParameterConformanceSource(),
       "map_experimental_inferred_default_parameter_" + emitMode,
@@ -285,7 +303,16 @@ inline void expectInferredExperimentalMapDefaultParameterConformance(const std::
 }
 
 inline void expectWrappedInferredExperimentalMapDefaultParameterConformance(const std::string &emitMode) {
-  if (emitMode == "vm" || emitMode == "native") {
+  if (emitMode == "native") {
+    expectMapConformanceCompileReject(
+        makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
+        "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
+        emitMode,
+        "");
+    return;
+  }
+
+  if (emitMode == "vm") {
     expectMapConformanceProgramRunsWithOutput(
         makeWrappedInferredExperimentalMapDefaultParameterConformanceSource(),
         "map_wrapped_inferred_experimental_default_parameter_" + emitMode,
