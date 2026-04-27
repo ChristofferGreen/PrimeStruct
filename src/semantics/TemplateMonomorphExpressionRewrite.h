@@ -319,6 +319,10 @@ bool rewriteExpr(Expr &expr,
                                                     ctx,
                                                     allowMathBare));
   };
+  auto resolvesSoaReceiverForRewrite = [&](const Expr &receiverExpr) {
+    return inferCollectionReceiverFamilyForRewrite(&receiverExpr) == "soa_vector" ||
+           resolvesExperimentalSoaReceiverForRewrite(receiverExpr);
+  };
   auto resolveExperimentalSoaVectorReceiverTemplateArgs =
       [&](const Expr *receiverExpr, std::vector<std::string> &templateArgsOut) {
         templateArgsOut.clear();
@@ -1098,7 +1102,7 @@ bool rewriteExpr(Expr &expr,
     if (!helperReturnSoaRefHelper.empty() &&
         ctx.sourceDefs.count("/soa_vector/" + helperReturnSoaRefHelper) == 0 &&
         ctx.helperOverloads.count("/soa_vector/" + helperReturnSoaRefHelper) == 0 &&
-        !resolvesExperimentalSoaReceiverForRewrite(expr.args.front())) {
+        !resolvesSoaReceiverForRewrite(expr.args.front())) {
       if (expr.args.size() != 2) {
         error = "argument count mismatch for builtin " + helperReturnSoaRefHelper;
         return false;
