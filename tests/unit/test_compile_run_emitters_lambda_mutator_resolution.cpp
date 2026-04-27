@@ -557,7 +557,7 @@ main() {
   CHECK(runCommand(exePath) == 3);
 }
 
-TEST_CASE("C++ emitter statement mutator named call rejects shadow helper") {
+TEST_CASE("C++ emitter statement mutator named call rejects shadow helper without import") {
   const std::string source = R"(
 /vector/push([vector<i32> mut] values, [vector<i32> mut] value) { }
 
@@ -576,7 +576,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("push requires vector binding") !=
+  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
         std::string::npos);
 }
 
@@ -602,7 +602,7 @@ main() {
   const std::string compileCmd =
       "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown call target: /std/collections/vector/push") !=
+  CHECK(readFile(errPath).find("push requires mutable vector binding") !=
         std::string::npos);
 }
 

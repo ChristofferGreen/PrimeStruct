@@ -60,6 +60,26 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("vector statement push rejects reordered positional call through canonical import") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc)]
+/vector/push([vector<i32> mut] values, [i32] value) { }
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vector<i32>(1i32)}
+  push(2i32, values)
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("push requires mutable vector binding") !=
+        std::string::npos);
+}
+
 TEST_CASE("vector namespaced count-capacity call-form without helpers fails on count first") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]
