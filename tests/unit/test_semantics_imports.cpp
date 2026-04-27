@@ -1038,6 +1038,30 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib-owned definitions keep exact map helper imports visible") {
+  const std::string source = R"(
+import /std/collections/map
+
+namespace std {
+  namespace demo {
+  [public effects(heap_alloc), return<int>]
+  probe() {
+    [map<i32, i32>] pairs{map<i32, i32>(1i32, 7i32)}
+    return(count(pairs))
+  }
+  }
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib-owned definitions keep direct collection shim imports visible") {
   const std::string source = R"(
 import /std/collections/*

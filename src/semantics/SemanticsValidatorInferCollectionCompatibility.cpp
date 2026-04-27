@@ -144,31 +144,42 @@ bool SemanticsValidator::hasImportedDefinitionPath(const std::string &path) cons
   if (canonicalPath.rfind("/File/", 0) == 0 || canonicalPath.rfind("/FileError/", 0) == 0) {
     canonicalPath.insert(0, "/std/file");
   }
-  const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
-  for (const auto &importPath : importPaths) {
-    if (importPath == canonicalPath) {
-      return true;
-    }
-    if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(importPath);
-        metadata != nullptr &&
-        metadata->shape != StdlibSurfaceShape::ConstructorFamily &&
-        canonicalPath.rfind(std::string(metadata->canonicalPath) + "/", 0) == 0) {
-      return true;
-    }
-    if (importPath == "/std/collections/vector" &&
-        canonicalPath.rfind(importPath + "/", 0) == 0) {
-      return true;
-    }
-    if (importPath == "/std/collections/map" &&
-        canonicalPath.rfind(importPath + "/", 0) == 0) {
-      return true;
-    }
-    if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
-      const std::string prefix = importPath.substr(0, importPath.size() - 2);
-      if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
+  auto isImportedBy = [&](const std::vector<std::string> &importPaths) {
+    for (const auto &importPath : importPaths) {
+      if (importPath == canonicalPath) {
         return true;
       }
+      if (const auto *metadata = findStdlibSurfaceMetadataBySpelling(importPath);
+          metadata != nullptr &&
+          metadata->shape != StdlibSurfaceShape::ConstructorFamily &&
+          canonicalPath.rfind(std::string(metadata->canonicalPath) + "/", 0) == 0) {
+        return true;
+      }
+      if (importPath == "/std/collections/vector" &&
+          canonicalPath.rfind(importPath + "/", 0) == 0) {
+        return true;
+      }
+      if (importPath == "/std/collections/map" &&
+          canonicalPath.rfind(importPath + "/", 0) == 0) {
+        return true;
+      }
+      if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
+        const std::string prefix = importPath.substr(0, importPath.size() - 2);
+        if (canonicalPath == prefix || canonicalPath.rfind(prefix + "/", 0) == 0) {
+          return true;
+        }
+      }
     }
+    return false;
+  };
+  const auto &importPaths = program_.sourceImports.empty() ? program_.imports : program_.sourceImports;
+  if (isImportedBy(importPaths)) {
+    return true;
+  }
+  if (!program_.sourceImports.empty() &&
+      currentValidationState_.context.definitionPath.rfind("/std/", 0) == 0 &&
+      isImportedBy(program_.imports)) {
+    return true;
   }
   return false;
 }
