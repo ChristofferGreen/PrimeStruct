@@ -186,6 +186,46 @@ TEST_CASE("ir lowerer temp receiver method access skips builtin array lowering")
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before direct resolution") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path lowerStatementsExprPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerStatementsExpr.h";
+
+  REQUIRE(std::filesystem::exists(lowerStatementsExprPath));
+  const std::string source = readText(lowerStatementsExprPath);
+
+  const size_t aliasRewrite = source.find(
+      "if (getExperimentalVectorConstructorElementTypeAlias(\n"
+      "                  expr, experimentalVectorElementType)) {");
+  const size_t directResolution =
+      source.find("const Definition *directCallee = resolveDefinitionCall(expr);");
+  const size_t structFallback =
+      source.find("directCallee = findDirectStructDefinition(expr);");
+
+  REQUIRE(aliasRewrite != std::string::npos);
+  REQUIRE(directResolution != std::string::npos);
+  REQUIRE(structFallback != std::string::npos);
+  CHECK(aliasRewrite < directResolution);
+  CHECK(aliasRewrite < structFallback);
+  CHECK(source.find("rewrittenVectorCtor.name = \"/std/collections/experimental_vector/vector\";") !=
+        std::string::npos);
+  CHECK(source.find("rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before resolving defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
