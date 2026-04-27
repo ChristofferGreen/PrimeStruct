@@ -13,10 +13,6 @@
         };
         auto resolveCollectionExprDirectDefinition =
             [&](const Expr &candidate) -> const Definition * {
-          if (const Definition *callee = resolveDefinitionCall(candidate);
-              callee != nullptr) {
-            return callee;
-          }
           auto findDirectHelperDefinition = [&](const std::string &path)
               -> const Definition * {
             auto defIt = defMap.find(path);
@@ -42,6 +38,23 @@
             }
             return nullptr;
           };
+          std::string experimentalVectorElementType;
+          if (getExperimentalVectorConstructorElementTypeAlias(
+                  candidate, experimentalVectorElementType)) {
+            Expr rewrittenVectorCtor = candidate;
+            rewrittenVectorCtor.name = "/std/collections/experimental_vector/vector";
+            rewrittenVectorCtor.namespacePrefix.clear();
+            rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};
+            if (const Definition *vectorCtor =
+                    findDirectHelperDefinition(
+                        resolveCollectionExprDirectPath(rewrittenVectorCtor))) {
+              return vectorCtor;
+            }
+          }
+          if (const Definition *callee = resolveDefinitionCall(candidate);
+              callee != nullptr) {
+            return callee;
+          }
           const std::string rawPath = resolveCollectionExprDirectPath(candidate);
           if (const Definition *rawDef = findDirectHelperDefinition(rawPath);
               rawDef != nullptr) {
@@ -958,7 +971,8 @@
                 (receiverCollectionName == "array" || receiverCollectionName == "vector") &&
                 callExpr.args.front().templateArgs.size() == 1) {
               elemTypeName = callExpr.args.front().templateArgs.front();
-            } else if (const Definition *receiverDef = resolveDefinitionCall(callExpr.args.front())) {
+            } else if (const Definition *receiverDef =
+                           resolveCollectionExprDirectDefinition(callExpr.args.front())) {
               std::string receiverCollectionNameFromDef;
               std::vector<std::string> receiverCollectionArgs;
               if (ir_lowerer::inferDeclaredReturnCollection(
@@ -1101,7 +1115,8 @@
             return false;
           }
           ir_lowerer::MapAccessTargetInfo targetInfoOut;
-          const Definition *callee = resolveDefinitionCall(callExpr.args.front());
+          const Definition *callee =
+              resolveCollectionExprDirectDefinition(callExpr.args.front());
           if (callee == nullptr) {
             return false;
           }

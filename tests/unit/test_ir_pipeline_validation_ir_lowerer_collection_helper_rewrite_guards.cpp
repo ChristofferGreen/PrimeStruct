@@ -226,6 +226,45 @@ TEST_CASE("ir lowerer rewrites experimental vector constructor aliases before di
         std::string::npos);
 }
 
+TEST_CASE("ir lowerer collection helper resolves vector aliases before direct definitions") {
+  auto readText = [](const std::filesystem::path &path) {
+    std::ifstream file(path);
+    CHECK(file.is_open());
+    if (!file.is_open()) {
+      return std::string{};
+    }
+    return std::string((std::istreambuf_iterator<char>(file)),
+                       std::istreambuf_iterator<char>());
+  };
+
+  const std::filesystem::path repoRoot =
+      std::filesystem::exists(std::filesystem::path("src"))
+          ? std::filesystem::path(".")
+          : std::filesystem::path("..");
+  const std::filesystem::path collectionHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererLowerEmitExprCollectionHelpers.h";
+
+  REQUIRE(std::filesystem::exists(collectionHelpersPath));
+  const std::string source = readText(collectionHelpersPath);
+
+  const size_t aliasRewrite = source.find(
+      "if (getExperimentalVectorConstructorElementTypeAlias(\n"
+      "                  candidate, experimentalVectorElementType)) {");
+  const size_t directResolution =
+      source.find("const Definition *callee = resolveDefinitionCall(candidate);");
+  const size_t receiverResolution = source.find(
+      "resolveCollectionExprDirectDefinition(callExpr.args.front())");
+
+  REQUIRE(aliasRewrite != std::string::npos);
+  REQUIRE(directResolution != std::string::npos);
+  REQUIRE(receiverResolution != std::string::npos);
+  CHECK(aliasRewrite < directResolution);
+  CHECK(source.find("rewrittenVectorCtor.name = \"/std/collections/experimental_vector/vector\";") !=
+        std::string::npos);
+  CHECK(source.find("rewrittenVectorCtor.templateArgs = {experimentalVectorElementType};") !=
+        std::string::npos);
+}
+
 TEST_CASE("ir lowerer map constructor rewrite checks constructor surface before resolving defs") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
