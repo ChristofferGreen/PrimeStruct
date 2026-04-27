@@ -398,8 +398,12 @@ bool SemanticsValidator::canonicalizeExperimentalMapHelperResolvedPath(const std
 
 bool SemanticsValidator::shouldLogicalCanonicalizeDefinedExperimentalMapHelperPath(
     const std::string &resolvedPath) const {
-  (void)resolvedPath;
-  return false;
+  if (resolvedPath.rfind("/std/collections/experimental_map/", 0) != 0) {
+    return false;
+  }
+  const std::string &definitionPath =
+      currentValidationState_.context.definitionPath;
+  return definitionPath.rfind("/std/collections/map/", 0) == 0;
 }
 
 bool SemanticsValidator::shouldBuiltinValidateCurrentMapWrapperHelper(std::string_view helperName) const {

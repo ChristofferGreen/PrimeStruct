@@ -866,6 +866,64 @@ TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {
         std::string::npos);
 }
 
+TEST_CASE("canonical map count wrapper ignores removed alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/map/count<K, V>([map<K, V>] values) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/experimental_map/mapCount<K, V>([map<K, V>] values) {
+  return(2i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/count<K, V>([map<K, V>] values) {
+  return(/std/collections/experimental_map/mapCount<K, V>(values))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/count(values))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("canonical map access wrapper ignores removed alias helper") {
+  const std::string source = R"(
+[effects(heap_alloc), return<bool>]
+/map/at<K, V>([map<K, V>] values, [K] key) {
+  return(false)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/experimental_map/mapAt<K, V>([map<K, V>] values, [K] key) {
+  return(4i32)
+}
+
+[effects(heap_alloc), return<int>]
+/std/collections/map/at<K, V>([map<K, V>] values, [K] key) {
+  return(/std/collections/experimental_map/mapAt<K, V>(values, key))
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [map<i32, i32>] values{map<i32, i32>(1i32, 4i32)}
+  return(/std/collections/map/at(values, 1i32))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
 TEST_CASE("experimental map Ref helpers route through borrowed implementations") {
   auto readText = [](const std::filesystem::path &path) {
     std::ifstream file(path);
