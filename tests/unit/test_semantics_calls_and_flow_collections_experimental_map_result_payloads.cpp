@@ -18,7 +18,7 @@ void checkMapPairTemplateConflict(const std::string &error) {
 
 TEST_SUITE_BEGIN("primestruct.semantics.calls_flow.collections");
 
-TEST_CASE("helper-wrapped map constructors keep mismatch diagnostics on explicit experimental map parameters") {
+TEST_CASE("helper-wrapped map constructors keep template conflict diagnostics on explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -41,7 +41,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairMismatchDiagnostic(error);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("helper-wrapped Result.ok payloads accept explicit experimental map parameters") {
@@ -81,7 +81,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("helper-wrapped Result.ok payloads keep mismatch diagnostics on explicit experimental map parameters") {
+TEST_CASE("helper-wrapped Result.ok payloads keep template conflict diagnostics on explicit experimental map parameters") {
   const std::string source = R"(
 import /std/collections/*
 import /std/collections/experimental_map/*
@@ -114,7 +114,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   INFO(error);
-  checkMapPairMismatchDiagnostic(error);
+  checkMapPairTemplateConflict(error);
 }
 
 TEST_CASE("stdlib wrapper mapPair constructor accepts explicit experimental map bindings") {
