@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4238: Pin the CT-eval graph and semantic-product boundary
+- TODO-4239: Migrate helper-routing template inference onto graph facts
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4239: Migrate helper-routing template inference onto graph facts
 - TODO-4240: Add backend semantic-product conformance coverage
 - TODO-4241: Retire semantic-product output compatibility callers
 - TODO-4242: Inventory repo-wide source-lock replacement candidates
@@ -81,10 +80,11 @@ Task template:
 - TODO-4247: Move canonical SoA wrapper off experimental implementation imports
 - TODO-4248: Move canonical SoA conversions off experimental conversion imports
 - TODO-4249: Retire direct experimental SoA public imports
+- TODO-4250: Normalize raw builtin `soa_vector` bridges onto canonical wrappers
 
 ### Priority Lanes (Current)
 
-- Deferred graph and inference hardening: TODO-4238 -> TODO-4239
+- Deferred graph and inference hardening: TODO-4239
 - Deferred semantic-product/backend/tooling follow-ups: TODO-4240
   -> TODO-4241; TODO-4242 -> TODO-4243; TODO-4245
 - Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247
@@ -100,7 +100,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4238: Pin the CT-eval graph and semantic-product boundary
 - TODO-4239: Migrate helper-routing template inference onto graph facts
 - TODO-4240: Add backend semantic-product conformance coverage
 - TODO-4241: Retire semantic-product output compatibility callers
@@ -146,9 +145,9 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | TODO-4238, TODO-4239 |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4239 |
 | Compile-pipeline stage and publication-boundary contracts | none |
-| Compile-time macro hooks and AST transform ownership | TODO-4238, TODO-4239 |
+| Compile-time macro hooks and AST transform ownership | TODO-4239 |
 | Stdlib surface-style alignment and public helper readability | none |
 | Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4244, TODO-4246, TODO-4247, TODO-4248, TODO-4249 |
 | Vector/map stdlib ownership cutover and collection surface authority | TODO-4245 |
@@ -174,7 +173,7 @@ Task template:
 | Validation area | Primary TODO IDs |
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4240, TODO-4241 |
-| AST transform hook conformance | TODO-4238, TODO-4239 |
+| AST transform hook conformance | TODO-4239 |
 | CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
 | Compile-pipeline stage handoff conformance | TODO-4240 |
 | Semantic-product publication parity and deterministic ordering | TODO-4240 |
@@ -301,29 +300,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4238: Pin the CT-eval graph and semantic-product boundary
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred graph and inference hardening
-  - scope: Make CT-eval consumers either consume graph-backed semantic facts
-    directly or pass through one documented adapter boundary that cannot invent
-    new inference state.
-  - acceptance:
-    - At least one CT-eval receiver/call-target path consumes graph or
-      semantic-product facts through the chosen boundary.
-    - The adapter rejects missing or contradictory graph-backed dependencies
-      deterministically instead of falling back to a private CT-eval cache.
-    - Focused CT-eval parity tests cover one success case and one unresolved or
-      contradictory diagnostic.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after the CT-eval boundary is explicit and one consumer is
-    migrated; leave template inference migration to TODO-4239.
-
 - [ ] TODO-4239: Migrate helper-routing template inference onto graph facts
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred graph and inference hardening
-  - depends_on: TODO-4238
   - scope: Move one helper-routing or call-target template-inference slice onto
     graph-backed facts instead of a local ad hoc inference cache.
   - acceptance:

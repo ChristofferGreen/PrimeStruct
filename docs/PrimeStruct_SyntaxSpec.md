@@ -61,8 +61,12 @@ main() {
 }
 ```
 
-Executable v1 hooks use one `FunctionAst` input and return a replacement `FunctionAst` through the checked helper
-`replace_body_with_return_i32`:
+Executable v1 hooks use one `FunctionAst` input and return a replacement
+`FunctionAst` through the syntax-owned `ct-eval ast-transform adapter`. The
+adapter currently maps only the checked helper
+`replace_body_with_return_i32(fn, value)` to
+`/ct_eval/replace_body_with_return_i32` and rejects unknown helper targets or
+contradictory helper inputs deterministically:
 
 ```
 [ast return<FunctionAst>]

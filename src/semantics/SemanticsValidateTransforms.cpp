@@ -257,6 +257,89 @@ bool isExecutableAstTransformHook(const Definition &def) {
          def.parameters.size() == 1;
 }
 
+std::string astTransformCtEvalUnsupportedShapeError(const Definition &hookDef,
+                                                    const Definition &targetDef,
+                                                    const std::string &reason) {
+  return "ast transform hook returned unsupported FunctionAst shape on " +
+         targetDef.fullPath + " via " + hookDef.fullPath +
+         " (ct-eval ast-transform adapter: " + reason + ")";
+}
+
+bool astTransformCtEvalResolveHelperTarget(const Expr &result,
+                                           const Definition &hookDef,
+                                           const Definition &targetDef,
+                                           std::string &resolvedPathOut,
+                                           std::string &error) {
+  if (result.kind != Expr::Kind::Call) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef, targetDef, "expected a FunctionAst helper call");
+    return false;
+  }
+  if (result.isMethodCall || result.isFieldAccess) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef, targetDef, "method and field helper targets are not supported");
+    return false;
+  }
+  if (result.name != "replace_body_with_return_i32") {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef,
+        targetDef,
+        "unresolved FunctionAst helper target " + result.name);
+    return false;
+  }
+  if (!result.namespacePrefix.empty()) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef,
+        targetDef,
+        "FunctionAst helper target must be unqualified: " + result.namespacePrefix + "/" +
+            result.name);
+    return false;
+  }
+  if (!result.templateArgs.empty()) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef, targetDef, "FunctionAst helper target must not be templated");
+    return false;
+  }
+  if (result.hasBodyArguments || !result.bodyArguments.empty()) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef, targetDef, "FunctionAst helper target must not use body arguments");
+    return false;
+  }
+  resolvedPathOut = "/ct_eval/replace_body_with_return_i32";
+  return true;
+}
+
+bool astTransformCtEvalReadReplacementLiteral(const Expr &result,
+                                              const Definition &hookDef,
+                                              const Definition &targetDef,
+                                              const std::string &paramName,
+                                              Expr &returnValueOut,
+                                              std::string &error) {
+  if (result.args.size() != 2) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef, targetDef, "replace_body_with_return_i32 expects two arguments");
+    return false;
+  }
+  if (result.args[0].kind != Expr::Kind::Name || result.args[0].name != paramName) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef,
+        targetDef,
+        "first FunctionAst helper argument must be the hook parameter " + paramName);
+    return false;
+  }
+  if (result.args[1].kind != Expr::Kind::Literal ||
+      result.args[1].intWidth != 32 ||
+      result.args[1].isUnsigned) {
+    error = astTransformCtEvalUnsupportedShapeError(
+        hookDef,
+        targetDef,
+        "second FunctionAst helper argument must be a signed i32 literal");
+    return false;
+  }
+  returnValueOut = result.args[1];
+  return true;
+}
+
 Expr makeReturnCallForExpr(const Definition &def, Expr returnValue) {
   Expr returnCall;
   returnCall.kind = Expr::Kind::Call;
@@ -280,23 +363,18 @@ bool applyExecutableAstTransformHook(const Definition &hookDef,
 
   const Expr &result = *hookDef.returnExpr;
   const std::string &paramName = hookDef.parameters.front().name;
-  if (result.kind != Expr::Kind::Call ||
-      result.name != "replace_body_with_return_i32" ||
-      result.args.size() != 2 ||
-      !result.templateArgs.empty() ||
-      result.hasBodyArguments ||
-      !result.bodyArguments.empty() ||
-      result.args[0].kind != Expr::Kind::Name ||
-      result.args[0].name != paramName ||
-      result.args[1].kind != Expr::Kind::Literal ||
-      result.args[1].intWidth != 32 ||
-      result.args[1].isUnsigned) {
-    error = "ast transform hook returned unsupported FunctionAst shape on " +
-            targetDef.fullPath + " via " + hookDef.fullPath;
+  std::string resolvedHelperPath;
+  if (!astTransformCtEvalResolveHelperTarget(
+          result, hookDef, targetDef, resolvedHelperPath, error)) {
     return false;
   }
+  (void)resolvedHelperPath;
 
-  Expr returnValue = result.args[1];
+  Expr returnValue;
+  if (!astTransformCtEvalReadReplacementLiteral(
+          result, hookDef, targetDef, paramName, returnValue, error)) {
+    return false;
+  }
   returnValue.namespacePrefix = targetDef.namespacePrefix;
   targetDef.returnExpr = returnValue;
   targetDef.statements.clear();

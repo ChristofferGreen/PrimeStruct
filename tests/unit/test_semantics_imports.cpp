@@ -185,6 +185,42 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("definition ast transform ct-eval adapter rejects unknown helper targets") {
+  const std::string source = R"(
+[ast return<FunctionAst>]
+unknown_rewrite([FunctionAst] fn) {
+  return(unknown_function_ast_helper(fn))
+}
+
+[unknown_rewrite return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ct-eval ast-transform adapter: unresolved FunctionAst helper target "
+                   "unknown_function_ast_helper") != std::string::npos);
+}
+
+TEST_CASE("definition ast transform ct-eval adapter rejects contradictory helper input") {
+  const std::string source = R"(
+[ast return<FunctionAst>]
+bad_rewrite([FunctionAst] fn) {
+  return(replace_body_with_return_i32(other, 7i32))
+}
+
+[bad_rewrite return<int>]
+main() {
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("ct-eval ast-transform adapter: first FunctionAst helper argument "
+                   "must be the hook parameter fn") != std::string::npos);
+}
+
 TEST_CASE("definition ast transform hook rejects imported private symbol") {
   const std::string source = R"(
 import /tools

@@ -118,6 +118,17 @@ Planned CT-eval boundary on the graph path:
 - Each CT-eval consumer should do exactly one of two things:
   - consume graph-backed query/binding/result facts directly, or
   - stop at one explicit adapter boundary that is documented and tested as syntax-owned or semantic-product-owned.
+- Current executable AST transform hook evaluation is the first pinned
+  CT-eval boundary slice. It is syntax-owned because it runs before semantic
+  validation publishes the semantic product, but it must still fail closed
+  through the `ct-eval ast-transform adapter` instead of rediscovering call
+  targets or accepting unsupported helper shapes from private cache state.
+- The syntax-owned adapter currently exposes exactly one supported FunctionAst
+  helper target, `/ct_eval/replace_body_with_return_i32`, mapped from
+  `replace_body_with_return_i32(fn, value)`. Unknown helper targets, method or
+  field helper targets, templated helper calls, body-argument helper calls, and
+  helper inputs that do not use the hook's `FunctionAst` parameter are
+  deterministic CT-eval diagnostics.
 - The preferred end-state is direct graph consumption for:
   - compile-time receiver classification
   - call-target and template-argument resolution needed by CT-eval
@@ -1584,10 +1595,12 @@ module {
   source. A definition attaches the hook by spelling `[hook_name return<T>]` or `semantic(hook_name)` in its transform
   list. Resolution records the hook's full path on the transform metadata, rejects ambiguous imports, rejects private
   imported hooks, and rejects `text(hook_name)` because AST hooks are semantic-phase metadata. Executable v1 hooks are
-  compile-time only: the semantic pipeline evaluates the single supported `FunctionAst` result helper,
-  `replace_body_with_return_i32`, rewrites the touched definition body before downstream validation/lowering, and removes
-  hook definitions from the runtime program. The checked-in example module and consumer live under
-  `examples/4.Transforms/`.
+  compile-time only: the semantic pipeline evaluates the single supported `FunctionAst` result helper through the
+  syntax-owned `ct-eval ast-transform adapter`, rewrites the touched definition body before downstream
+  validation/lowering, and removes hook definitions from the runtime program. The adapter maps only
+  `replace_body_with_return_i32(fn, value)` to `/ct_eval/replace_body_with_return_i32` and emits deterministic
+  diagnostics for unknown helper targets or contradictory helper inputs. The checked-in example module and consumer live
+  under `examples/4.Transforms/`.
 
 ### Example function syntax
 ```

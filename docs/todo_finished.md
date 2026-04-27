@@ -6,6 +6,18 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4238: Pin the CT-eval graph and semantic-product boundary.
+  Completed: Executable AST transform hooks now evaluate through an explicit
+  syntax-owned `ct-eval ast-transform adapter` boundary instead of matching the
+  supported FunctionAst helper with one raw shape check. The adapter maps only
+  `replace_body_with_return_i32(fn, value)` to
+  `/ct_eval/replace_body_with_return_i32`, rewrites the target definition
+  through that resolved helper target, and emits deterministic diagnostics for
+  unknown helper targets or contradictory helper inputs. Focused semantic tests
+  keep the existing success path covered and add fail-closed checks for both
+  unresolved and contradictory CT-eval adapter inputs. The design doc now
+  records the pinned CT-eval boundary slice. Local validation is deferred per
+  the lite workflow.
 - ✓ TODO-4237: Add graph invalidation fan-out regression tests.
   Completed: Type-resolution graph snapshots and dumps now expose
   deterministic invalidation fan-out entries keyed by edit family and trigger

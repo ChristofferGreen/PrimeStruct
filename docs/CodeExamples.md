@@ -89,7 +89,9 @@ Mixed-directory rule:
 User-authored AST transform hooks can be metadata-only with `[ast return<void>]`,
 or executable with one `FunctionAst` input and a narrow checked rewrite helper.
 Executable hooks are compile-time only and are removed from the runtime program
-after rewriting the touched definition.
+after rewriting the touched definition. The checked rewrite helper is resolved
+through the syntax-owned `ct-eval ast-transform adapter`, so examples should
+use the direct `replace_body_with_return_i32(fn, value)` helper shape.
 The checked-in module pair lives in `examples/4.Transforms/`.
 
 ```prime
