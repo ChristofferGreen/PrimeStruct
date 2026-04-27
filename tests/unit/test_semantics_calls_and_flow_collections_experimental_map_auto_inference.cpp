@@ -471,8 +471,8 @@ unexpectedExperimentalMapStructFieldError([ContainerError] err) {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapStructFieldError>]
 main() {
-  [Holder] holder{Holder(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32),
-                        /std/collections/mapPair("other"raw_utf8, 2i32, "extra"raw_utf8, 9i32))}
+  [Holder] holder{Holder{/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32),
+                        /std/collections/mapPair("other"raw_utf8, 2i32, "extra"raw_utf8, 9i32)}}
   [i32] left{try(/std/collections/map/tryAt<string, i32>(holder.primary, "left"raw_utf8))}
   [i32] extra{try(/std/collections/map/tryAt<string, i32>(holder.secondary, "extra"raw_utf8))}
   return(Result.ok(plus(left, extra)))
@@ -495,7 +495,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder(/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))}
+  [Holder] holder{Holder{/std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false)}}
   return(0i32)
 }
 )";
@@ -517,7 +517,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder mut] holder{Holder(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
+  [Holder mut] holder{Holder{/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}}
   assign(holder.secondary, /std/collections/mapPair("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32))
   return(plus(/std/collections/map/at(holder.primary, "left"raw_utf8),
               /std/collections/map/at(holder.secondary, "extra"raw_utf8)))
@@ -540,7 +540,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder mut] holder{Holder()}
+  [Holder mut] holder{Holder{}}
   assign(holder.values, /std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))
   return(0i32)
 }
@@ -568,7 +568,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder mut] holder{Holder(/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32))}
+  [Holder mut] holder{Holder{/std/collections/map/map("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}}
   assign(holder.secondary, /std/collections/mapPair("extra"raw_utf8, 9i32, "other"raw_utf8, 2i32))
   return(plus(/std/collections/map/at(holder.primary, "left"raw_utf8),
               /std/collections/map/at(holder.secondary, "extra"raw_utf8)))
@@ -597,7 +597,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder mut] holder{Holder()}
+  [Holder mut] holder{Holder{}}
   assign(holder.values, /std/collections/mapPair("left"raw_utf8, 4i32, "wrong"raw_utf8, false))
   return(0i32)
 }
@@ -625,8 +625,8 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
-                                                                      "right"raw_utf8, 7i32))))}
+  [Holder] holder{Holder{wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                      "right"raw_utf8, 7i32)))}}
   return(0i32)
 }
 )";
@@ -653,8 +653,8 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder(wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
-                                                                      "wrong"raw_utf8, false))))}
+  [Holder] holder{Holder{wrapStatus(Result.ok(/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                                      "wrong"raw_utf8, false)))}}
   return(0i32)
 }
 )";

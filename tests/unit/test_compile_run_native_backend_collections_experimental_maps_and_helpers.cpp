@@ -1039,7 +1039,7 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [Particle] value{Particle(31i32)}
   return(plus(holder.cloneValues().count(),
               plus(holder.cloneValues().get(0i32).x,
@@ -1198,7 +1198,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [SoaVector<Particle>] values{holder.cloneValues()}
   return(plus(plus(plus(holder.cloneValues().count(), holder.cloneValues().get(0i32).x),
                     values.ref(0i32).x),
@@ -1267,7 +1267,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [vector<Particle>] items{holder.cloneValues().to_aos()}
   return(plus(plus(plus(plus(plus(holder.cloneValues().count(),
                                   holder.cloneValues().get(0i32).x),
@@ -1314,7 +1314,7 @@ Holder() {}
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [vector<Particle>] values{holder.cloneValues().to_aos()}
   return(count(values))
 }
@@ -1629,7 +1629,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   assign(holder.pickBorrowed(location(values)).y()[1i32], 17i32)
   assign(y(holder.pickBorrowed(location(values)))[0i32], 19i32)
   assign(location(holder.pickBorrowed(location(values))).y()[0i32], 23i32)
@@ -2281,7 +2281,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [Particle] first{holder.pickBorrowed(location(values)).get(0i32)}
   [Reference<Particle>] second{holder.pickBorrowed(location(values)).ref(1i32)}
   [Particle] firstBare{get(holder.pickBorrowed(location(values)), 1i32)}
@@ -2380,7 +2380,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   return(
     plus(count(holder.pickBorrowed(location(values))),
          plus(count(holder.pickBorrowed(location(values)).to_aos()),
@@ -2474,7 +2474,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [Particle] firstA{location(holder.pickBorrowed(location(values))).get(0i32)}
   [Reference<Particle>] secondA{location(holder.pickBorrowed(location(values))).ref(1i32)}
   [Particle] firstC{get(location(holder.pickBorrowed(location(values))), 1i32)}
@@ -2547,7 +2547,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   return(
     plus(location(holder.pickBorrowed(location(values))).count(),
          plus(count(location(holder.pickBorrowed(location(values))).to_aos()),
@@ -3465,11 +3465,11 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapPair<Key, i32>(Key(2i32), 7i32, Key(5i32), 11i32)}
+  [Map<Key, i32>] values{mapPair<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
   [i32 mut] total{mapCount<Key, i32>(values)}
-  assign(total, plus(total, mapAt<Key, i32>(values, Key(2i32))))
-  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key(5i32))))
-  if(mapContains<Key, i32>(values, Key(2i32)),
+  assign(total, plus(total, mapAt<Key, i32>(values, Key{2i32})))
+  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key{5i32})))
+  if(mapContains<Key, i32>(values, Key{2i32}),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
   return(total)

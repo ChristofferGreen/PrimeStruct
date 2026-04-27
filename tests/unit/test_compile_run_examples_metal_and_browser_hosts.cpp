@@ -491,8 +491,8 @@ TEST_CASE("spinning cube vertexcolored snippets stay source locked") {
   const std::string guidelines = readFile(docsPath.string());
   const std::string cubeSource = readFile(cubePath.string());
 
-  CHECK(guidelines.find("VertexColored([position] Vec4(-1.0, -1.0, -1.0, 1.0),") != std::string::npos);
-  CHECK(guidelines.find("VertexColored([position] Vec4( 1.0,  1.0,  1.0, 1.0),") != std::string::npos);
+  CHECK(guidelines.find("VertexColored{[position] Vec4{-1.0, -1.0, -1.0, 1.0},") != std::string::npos);
+  CHECK(guidelines.find("VertexColored{[position] Vec4{ 1.0,  1.0,  1.0, 1.0},") != std::string::npos);
   CHECK(guidelines.find("[vertex_type] VertexColored,") != std::string::npos);
   CHECK(cubeSource.find("positionStrideBytes{16i32}") != std::string::npos);
   CHECK(cubeSource.find("colorStrideBytes{16i32}") != std::string::npos);

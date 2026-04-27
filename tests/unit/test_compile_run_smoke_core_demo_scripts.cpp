@@ -431,7 +431,7 @@ Foo() {
 
 [return<int>]
 main() {
-  return(Foo().ping())
+  return(Foo{}.ping())
 }
 )";
   const std::string srcPath = writeTemp("compile_constructor_method.prime", source);

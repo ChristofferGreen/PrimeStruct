@@ -335,7 +335,7 @@ Marker() {}
 
 [effects(io_out), return<int>]
 main() {
-  [Marker] marker{Marker()}
+  [Marker] marker{Marker{}}
   print_line(/helper/value(9i32))
   print_line(/helper/value(9i32, true))
   print_line(marker.mark(7i32))
@@ -520,7 +520,7 @@ count_values([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(count_values(Pair(), Pair()))
+  return(count_values(Pair{}, Pair{}))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_count.prime", source);
@@ -555,7 +555,7 @@ forward([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(forward(Pair(), Pair()))
+  return(forward(Pair{}, Pair{}))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_spread.prime", source);
@@ -585,12 +585,12 @@ count_values([args<Pair>] values) {
 
 [return<int>]
 forward([args<Pair>] values) {
-  return(count_values(Pair(), [spread] values))
+  return(count_values(Pair{}, [spread] values))
 }
 
 [return<int>]
 main() {
-  return(forward(Pair(), Pair()))
+  return(forward(Pair{}, Pair{}))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_mixed.prime", source);
@@ -627,7 +627,7 @@ score_pairs([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(score_pairs(Pair(7i32), Pair(9i32)))
+  return(score_pairs(Pair{7i32}, Pair{9i32}))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_index.prime", source);

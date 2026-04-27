@@ -26,12 +26,12 @@ Vec2() {
 
 [return<Vec2>]
 /Vec2/plus([Vec2] left, [Vec2] right) {
-  return(Vec2())
+  return(Vec2{})
 }
 
 [return<Vec2> Multiplicative<Vec2>]
 main() {
-  return(Vec2())
+  return(Vec2{})
 }
 )";
   std::string error;

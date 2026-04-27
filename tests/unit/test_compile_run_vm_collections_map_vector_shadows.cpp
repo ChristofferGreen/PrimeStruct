@@ -342,8 +342,8 @@ Mover() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Mover> mut] values{vector<Mover>(Mover())}
-  push(values, Mover())
+  [vector<Mover> mut] values{vector<Mover>(Mover{})}
+  push(values, Mover{})
   return(0i32)
 }
 )";
@@ -374,7 +374,7 @@ Mover() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Mover>] values{vector<Mover>(Mover(), Mover())}
+  [vector<Mover>] values{vector<Mover>(Mover{}, Mover{})}
   return(0i32)
 }
 )";

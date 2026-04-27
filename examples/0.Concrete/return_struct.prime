@@ -6,7 +6,7 @@ Point() {
 
 [return<Point>]
 make_point([i32] x, [i32] y) {
-  return(Point(x, y))
+  return(Point{x, y})
 }
 
 [return<i32>]

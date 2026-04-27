@@ -390,7 +390,7 @@ Key() {
 [effects(heap_alloc), return<int>]
 main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
-  if(/std/collections/map/contains(values, Key(1i32)),
+  if(/std/collections/map/contains(values, Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
 }

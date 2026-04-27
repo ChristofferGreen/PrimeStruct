@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4282: Reject call-shaped struct field construction
+- TODO-4254: Migrate generated construction surfaces
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4254: Migrate generated construction surfaces
 - TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
 - TODO-4257: Add sum declaration metadata and layout
@@ -81,11 +80,12 @@ Task template:
 - TODO-4261: Lower and execute `pick` matches
 - TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
+- TODO-4264: Add stdlib-owned `Maybe<T>` sum
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4282
-  -> TODO-4254 -> TODO-4255 -> TODO-4256 -> TODO-4257
+- Deferred algebraic types and brace-only construction: TODO-4254
+  -> TODO-4255 -> TODO-4256 -> TODO-4257
   -> TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
@@ -96,7 +96,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4282: Reject call-shaped struct field construction
 - TODO-4254: Migrate generated construction surfaces
 - TODO-4255: Migrate collection construction surfaces
 - TODO-4256: Classify constructor-shaped helper compatibility
@@ -147,7 +146,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4282, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -172,7 +171,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4282, TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4254, TODO-4255, TODO-4256, TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -290,41 +289,6 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4282: Reject call-shaped struct field construction
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Deferred algebraic types and brace-only construction
-  - scope: Finish the brace-only struct-construction cutover by making
-    `Type(...)` ordinary execution/call syntax instead of a fallback path for
-    mapping arguments to struct fields.
-  - implementation_notes:
-    - Start from `src/semantics/SemanticsValidatorExprStructConstructors.cpp`,
-      `src/semantics/SemanticsValidatorExpr.cpp`,
-      `src/semantics/SemanticsValidatorBuildInitializerInference*.cpp`, and
-      call-shaped struct-constructor tests that still use `Type(...)`.
-    - The parser now marks brace constructor expressions with
-      `Expr::isBraceConstructor`, supports labeled/direct brace argument
-      lists, and preserves statement-position `name{...}` binding behavior.
-    - Migrate focused semantic, IR, and compile-run sources that still rely on
-      user-authored `Type(...)` field mapping before flipping the diagnostic.
-  - acceptance:
-    - Constructor diagnostics cover unknown labels, duplicate labels, too many
-      positional entries, missing required fields, ambiguous context-typed
-      `{...}` initializers, and accidental `Type(...)` field-mapping attempts.
-    - `Type(...)` no longer maps to struct fields on the migrated path and
-      produces deterministic diagnostics or ordinary call behavior.
-    - Focused tests prove `Type{...}` remains valid for labeled and positional
-      struct construction, including context-typed binding initializers.
-    - Statement-position `name{...}` remains a binding unless the grammar has
-      value-expression context.
-    - Omitted-initializer rewrites and zero-field/default struct construction
-      use brace construction in the canonicalized AST.
-    - Docs and user-facing examples use brace construction for structs.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once ordinary struct construction has a brace-only
-    production path and old call-shaped struct construction is not silently used
-    for field mapping; leave generated-surface migration to TODO-4254.
-
 - [ ] TODO-4254: Migrate generated construction surfaces
   - owner: ai
   - created_at: 2026-04-27
@@ -411,7 +375,7 @@ Task template:
       calls to named helpers, not constructor/value forms.
   - acceptance:
     - Remaining surfaces such as `File<Mode>(path)`, `Buffer<T>(count)`,
-      `Window(...)`, `Device()`, `Maybe()`/`none<T>()`, and imported
+      `Window(...)`, `Device()`, `Maybe{}`/`none<T>()`, and imported
       collection aliases are listed with their intended status.
     - Each retained compatibility form has focused tests proving it is a helper
       call, not value construction.

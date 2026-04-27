@@ -133,7 +133,7 @@ Marker() {}
 
 [return<void>]
 main() {
-  [Marker] marker{Marker()}
+  [Marker] marker{Marker{}}
   [i32] directOne{/helper/value(7i32)}
   [i32] directTwo{/helper/value(7i32, true)}
   [i32] methodOne{marker.mark(9i32)}

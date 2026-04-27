@@ -463,29 +463,29 @@ forward([args<Reference<Pair>>] values) {
 
 [return<int>]
 forward_mixed([args<Reference<Pair>>] values) {
-  [Pair] extra{Pair(5i32)}
+  [Pair] extra{Pair{5i32}}
   [Reference<Pair>] extra_ref{location(extra)}
   return(score_refs(location(borrow_ref(extra_ref)), [spread] values))
 }
 
 [return<int>]
 main() {
-  [Pair] a0{Pair(7i32)}
-  [Pair] a1{Pair(8i32)}
-  [Pair] a2{Pair(9i32)}
+  [Pair] a0{Pair{7i32}}
+  [Pair] a1{Pair{8i32}}
+  [Pair] a2{Pair{9i32}}
   [Reference<Pair>] r0{location(a0)}
   [Reference<Pair>] r1{location(a1)}
   [Reference<Pair>] r2{location(a2)}
 
-  [Pair] b0{Pair(11i32)}
-  [Pair] b1{Pair(12i32)}
-  [Pair] b2{Pair(13i32)}
+  [Pair] b0{Pair{11i32}}
+  [Pair] b1{Pair{12i32}}
+  [Pair] b2{Pair{13i32}}
   [Reference<Pair>] s0{location(b0)}
   [Reference<Pair>] s1{location(b1)}
   [Reference<Pair>] s2{location(b2)}
 
-  [Pair] c0{Pair(15i32)}
-  [Pair] c1{Pair(17i32)}
+  [Pair] c0{Pair{15i32}}
+  [Pair] c1{Pair{17i32}}
   [Reference<Pair>] t0{location(c0)}
   [Reference<Pair>] t1{location(c1)}
 
@@ -540,29 +540,29 @@ forward([args<Pointer<Pair>>] values) {
 
 [return<int>]
 forward_mixed([args<Pointer<Pair>>] values) {
-  [Pair] extra{Pair(5i32)}
+  [Pair] extra{Pair{5i32}}
   [Reference<Pair>] extra_ref{location(extra)}
   return(score_ptrs(location(borrow_ref(extra_ref)), [spread] values))
 }
 
 [return<int>]
 main() {
-  [Pair] a0{Pair(7i32)}
-  [Pair] a1{Pair(8i32)}
-  [Pair] a2{Pair(9i32)}
+  [Pair] a0{Pair{7i32}}
+  [Pair] a1{Pair{8i32}}
+  [Pair] a2{Pair{9i32}}
   [Reference<Pair>] r0{location(a0)}
   [Reference<Pair>] r1{location(a1)}
   [Reference<Pair>] r2{location(a2)}
 
-  [Pair] b0{Pair(11i32)}
-  [Pair] b1{Pair(12i32)}
-  [Pair] b2{Pair(13i32)}
+  [Pair] b0{Pair{11i32}}
+  [Pair] b1{Pair{12i32}}
+  [Pair] b2{Pair{13i32}}
   [Reference<Pair>] s0{location(b0)}
   [Reference<Pair>] s1{location(b1)}
   [Reference<Pair>] s2{location(b2)}
 
-  [Pair] c0{Pair(15i32)}
-  [Pair] c1{Pair(17i32)}
+  [Pair] c0{Pair{15i32}}
+  [Pair] c1{Pair{17i32}}
   [Reference<Pair>] t0{location(c0)}
   [Reference<Pair>] t1{location(c1)}
 

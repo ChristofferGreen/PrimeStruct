@@ -1215,11 +1215,11 @@ main() {
   [auto] selected{
     if(true,
       then(){
-        [auto] left{Vec3()}
+        [auto] left{Vec3{}}
         return(left)
       },
       else(){
-        [auto] right{Vec3()}
+        [auto] right{Vec3{}}
         return(right)
       })
   }
@@ -1256,11 +1256,11 @@ main() {
   [auto] selected{
     if(true,
       then(){
-        [auto] left{Vec2()}
+        [auto] left{Vec2{}}
         return(left)
       },
       else(){
-        [auto] right{Vec3()}
+        [auto] right{Vec3{}}
         return(right)
       })
   }
@@ -1284,12 +1284,12 @@ Vec3() {
 
 [struct]
 Sphere() {
-  center{Vec3()}
+  center{Vec3{}}
 }
 
 [return<i32>]
 main() {
-  [Sphere] sphere{Sphere()}
+  [Sphere] sphere{Sphere{}}
   return(sphere.center.x)
 }
 )";
@@ -1322,8 +1322,8 @@ Vec3() {
 Shape() {
   center{
     if(true,
-      then(){ return(Vec2()) },
-      else(){ return(Vec3()) })
+      then(){ return(Vec2{}) },
+      else(){ return(Vec3{}) })
   }
 }
 

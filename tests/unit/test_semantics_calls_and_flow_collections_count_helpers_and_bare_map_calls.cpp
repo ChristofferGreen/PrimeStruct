@@ -267,11 +267,11 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapPair<Key, i32>(Key(2i32), 7i32, Key(5i32), 11i32)}
+  [Map<Key, i32>] values{mapPair<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
   [i32 mut] total{mapCount<Key, i32>(values)}
-  assign(total, plus(total, mapAt<Key, i32>(values, Key(2i32))))
-  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key(5i32))))
-  if(mapContains<Key, i32>(values, Key(2i32)),
+  assign(total, plus(total, mapAt<Key, i32>(values, Key{2i32})))
+  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key{5i32})))
+  if(mapContains<Key, i32>(values, Key{2i32}),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
   return(total)
@@ -407,11 +407,11 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned(4i32))}
-  mapInsert<string, Owned>(values, "right"raw_utf8, Owned(7i32))
-  mapInsert<string, Owned>(values, "left"raw_utf8, Owned(9i32))
+  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned{4i32})}
+  mapInsert<string, Owned>(values, "right"raw_utf8, Owned{7i32})
+  mapInsert<string, Owned>(values, "left"raw_utf8, Owned{9i32})
   [Reference<Map<string, Owned>> mut] ref{location(values)}
-  mapInsertRef<string, Owned>(ref, "third"raw_utf8, Owned(11i32))
+  mapInsertRef<string, Owned>(ref, "third"raw_utf8, Owned{11i32})
   return(plus(mapCount<string, Owned>(values),
               plus(mapAt<string, Owned>(values, "left"raw_utf8).value,
                    plus(mapAtRef<string, Owned>(ref, "right"raw_utf8).value,
@@ -444,9 +444,9 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned(4i32))}
-  /std/collections/map/insert<string, Owned>(values, "right"raw_utf8, Owned(7i32))
-  /std/collections/map/insert<string, Owned>(values, "left"raw_utf8, Owned(9i32))
+  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned{4i32})}
+  /std/collections/map/insert<string, Owned>(values, "right"raw_utf8, Owned{7i32})
+  /std/collections/map/insert<string, Owned>(values, "left"raw_utf8, Owned{9i32})
   return(plus(/std/collections/map/count<string, Owned>(values),
               plus(/std/collections/map/at<string, Owned>(values, "left"raw_utf8).value,
                    /std/collections/map/at_unsafe<string, Owned>(values, "right"raw_utf8).value)))
@@ -478,9 +478,9 @@ Owned() {
 [effects(heap_alloc), return<int>]
 main() {
   [map<string, Owned> mut] values{map<string, Owned>()}
-  values.insert("left"raw_utf8, Owned(4i32))
-  values.insert("right"raw_utf8, Owned(7i32))
-  values.insert("left"raw_utf8, Owned(9i32))
+  values.insert("left"raw_utf8, Owned{4i32})
+  values.insert("right"raw_utf8, Owned{7i32})
+  values.insert("left"raw_utf8, Owned{9i32})
   return(values.count())
 }
 )";
@@ -572,10 +572,10 @@ unexpectedExperimentalMapValueMethodError([ContainerError] err) {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapValueMethodError>]
 main() {
-  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned(4i32))}
-  values.insert("right"raw_utf8, Owned(7i32))
-  values.insert("left"raw_utf8, Owned(9i32))
-  values.insert("third"raw_utf8, Owned(11i32))
+  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned{4i32})}
+  values.insert("right"raw_utf8, Owned{7i32})
+  values.insert("left"raw_utf8, Owned{9i32})
+  values.insert("third"raw_utf8, Owned{11i32})
   [Owned] found{try(values.tryAt("left"raw_utf8))}
   [Result<Owned, ContainerError>] missing{values.tryAt("missing"raw_utf8)}
   [i32 mut] total{plus(values.count(), found.value)}
@@ -627,11 +627,11 @@ unexpectedExperimentalMapReferenceMethodError([ContainerError] err) {
 
 [return<Result<int, ContainerError>> effects(io_out, heap_alloc) on_error<ContainerError, /unexpectedExperimentalMapReferenceMethodError>]
 main() {
-  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned(4i32))}
+  [Map<string, Owned> mut] values{mapSingle<string, Owned>("left"raw_utf8, Owned{4i32})}
   [Reference<Map<string, Owned>> mut] ref{borrowExperimentalMap(location(values))}
-  ref.insert("right"raw_utf8, Owned(7i32))
-  ref.insert("left"raw_utf8, Owned(9i32))
-  ref.insert("third"raw_utf8, Owned(11i32))
+  ref.insert("right"raw_utf8, Owned{7i32})
+  ref.insert("left"raw_utf8, Owned{9i32})
+  ref.insert("third"raw_utf8, Owned{11i32})
   [Owned] found{try(ref.tryAt("left"raw_utf8))}
   [Result<Owned, ContainerError>] missing{ref.tryAt("missing"raw_utf8)}
   [i32 mut] total{plus(ref.count(), found.value)}
@@ -668,7 +668,7 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [map<string, Owned>] values{mapPair<string, Owned>("left"raw_utf8, Owned(4i32), "right"raw_utf8, Owned(7i32))}
+  [map<string, Owned>] values{mapPair<string, Owned>("left"raw_utf8, Owned{4i32}, "right"raw_utf8, Owned{7i32})}
   return(mapCount<string, Owned>(values))
 }
 )";
@@ -1111,7 +1111,7 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapSingle<Key, i32>(Key(1i32), 4i32)}
+  [Map<Key, i32>] values{mapSingle<Key, i32>(Key{1i32}, 4i32)}
   return(mapCount<Key, i32>(values))
 }
 )";
@@ -1138,7 +1138,7 @@ Key() {
 [effects(heap_alloc), return<int>]
 main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
-  if(values.contains(Key(1i32)),
+  if(values.contains(Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
 }
@@ -1167,7 +1167,7 @@ Key() {
 main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
   [Reference<Map<Key, i32>>] ref{location(values)}
-  if(mapContainsRef<Key, i32>(ref, Key(1i32)),
+  if(mapContainsRef<Key, i32>(ref, Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
 }
@@ -1201,7 +1201,7 @@ borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
 main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
   [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
-  if(ref.contains(Key(1i32)),
+  if(ref.contains(Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
 }
@@ -1229,7 +1229,7 @@ Key() {
 [effects(heap_alloc), return<int>]
 main() {
   [Map<Key, i32> mut] values{mapNew<Key, i32>()}
-  mapInsert<Key, i32>(values, Key(1i32), 4i32)
+  mapInsert<Key, i32>(values, Key{1i32}, 4i32)
   return(0i32)
 }
 )";
@@ -1257,7 +1257,7 @@ Key() {
 main() {
   [Map<Key, i32> mut] values{mapNew<Key, i32>()}
   [Reference<Map<Key, i32>> mut] ref{location(values)}
-  ref.insert(Key(1i32), 4i32)
+  ref.insert(Key{1i32}, 4i32)
   return(0i32)
 }
 )";

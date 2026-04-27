@@ -283,12 +283,12 @@ Mover() {
 
 [struct]
 Wrapper() {
-  [Mover] value{Mover()}
+  [Mover] value{Mover{}}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper())}
+  [vector<Wrapper> mut] values{vector<Wrapper>(Wrapper{})}
   reserve(values, 4i32)
   return(0i32)
 }
@@ -325,7 +325,7 @@ Mover() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Mover>] values{vector<Mover>(Mover(), Mover())}
+  [vector<Mover>] values{vector<Mover>(Mover{}, Mover{})}
   return(0i32)
 }
 )";

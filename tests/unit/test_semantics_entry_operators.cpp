@@ -50,8 +50,8 @@ TEST_CASE("arithmetic plus accepts matching matrix operands") {
 import /std/math/*
 [return<Mat2>]
 main() {
-  [Mat2] a{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat2] b{Mat2(5.0f32, 6.0f32, 7.0f32, 8.0f32)}
+  [Mat2] a{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat2] b{Mat2{5.0f32, 6.0f32, 7.0f32, 8.0f32}}
   return(plus(plus(a, b), a))
 }
 )";
@@ -65,8 +65,8 @@ TEST_CASE("arithmetic plus accepts matching quaternion operands") {
 import /std/math/*
 [return<Quat>]
 main() {
-  [Quat] a{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
-  [Quat] b{Quat(1.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] a{Quat{0.0f32, 1.0f32, 0.0f32, 0.0f32}}
+  [Quat] b{Quat{1.0f32, 0.0f32, 0.0f32, 0.0f32}}
   [Quat] sum{plus(a, b)}
   return(sum)
 }
@@ -81,12 +81,12 @@ TEST_CASE("arithmetic plus rejects mismatched matrix shapes") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat3] rhs{Mat3(
+  [Mat2] lhs{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat3] rhs{Mat3{
     5.0f32, 6.0f32, 7.0f32,
     8.0f32, 9.0f32, 10.0f32,
     11.0f32, 12.0f32, 13.0f32
-  )}
+  }}
   [Mat2] sum{plus(lhs, rhs)}
   return(convert<int>(sum.m00))
 }
@@ -101,8 +101,8 @@ TEST_CASE("arithmetic plus rejects mixed matrix quaternion operands") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Quat] rhs{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Mat2] lhs{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Quat] rhs{Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
   [Mat2] sum{plus(lhs, rhs)}
   return(convert<int>(sum.m00))
 }
@@ -117,8 +117,8 @@ TEST_CASE("arithmetic minus accepts matching matrix operands") {
 import /std/math/*
 [return<Mat2>]
 main() {
-  [Mat2] a{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat2] b{Mat2(5.0f32, 6.0f32, 7.0f32, 8.0f32)}
+  [Mat2] a{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat2] b{Mat2{5.0f32, 6.0f32, 7.0f32, 8.0f32}}
   return(minus(minus(a, b), a))
 }
 )";
@@ -132,8 +132,8 @@ TEST_CASE("arithmetic minus accepts matching quaternion operands") {
 import /std/math/*
 [return<Quat>]
 main() {
-  [Quat] a{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
-  [Quat] b{Quat(1.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] a{Quat{0.0f32, 1.0f32, 0.0f32, 0.0f32}}
+  [Quat] b{Quat{1.0f32, 0.0f32, 0.0f32, 0.0f32}}
   [Quat] diff{minus(a, b)}
   return(diff)
 }
@@ -148,12 +148,12 @@ TEST_CASE("arithmetic minus rejects mismatched matrix shapes") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat3] rhs{Mat3(
+  [Mat2] lhs{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat3] rhs{Mat3{
     5.0f32, 6.0f32, 7.0f32,
     8.0f32, 9.0f32, 10.0f32,
     11.0f32, 12.0f32, 13.0f32
-  )}
+  }}
   [Mat2] diff{minus(lhs, rhs)}
   return(convert<int>(diff.m00))
 }
@@ -168,8 +168,8 @@ TEST_CASE("arithmetic minus rejects mixed matrix quaternion operands") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Quat] rhs{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Mat2] lhs{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Quat] rhs{Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
   [Mat2] diff{minus(lhs, rhs)}
   return(convert<int>(diff.m00))
 }
@@ -184,7 +184,7 @@ TEST_CASE("arithmetic multiply accepts matrix scalar scaling") {
 import /std/math/*
 [return<Mat2>]
 main() {
-  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat2] value{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
   return(multiply(value, 2i32))
 }
 )";
@@ -198,7 +198,7 @@ TEST_CASE("arithmetic multiply accepts scalar quaternion scaling") {
 import /std/math/*
 [return<Quat>]
 main() {
-  [Quat] value{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  [Quat] value{Quat{0.0f32, 1.0f32, 0.0f32, 0.0f32}}
   return(multiply(2.0f32, value))
 }
 )";
@@ -212,12 +212,12 @@ TEST_CASE("arithmetic multiply accepts matrix vector products") {
 import /std/math/*
 [return<Vec3>]
 main() {
-  [Mat3] basis{Mat3(
+  [Mat3] basis{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
-  [Vec3] value{Vec3(1.0f32, 2.0f32, 3.0f32)}
+  }}
+  [Vec3] value{Vec3{1.0f32, 2.0f32, 3.0f32}}
   return(multiply(basis, value))
 }
 )";
@@ -231,12 +231,12 @@ TEST_CASE("arithmetic multiply accepts matrix matrix products") {
 import /std/math/*
 [return<Mat4>]
 main() {
-  [Mat4] left{Mat4(
+  [Mat4] left{Mat4{
     1.0f32, 0.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   [Mat4] right{left}
   return(multiply(left, right))
 }
@@ -251,8 +251,8 @@ TEST_CASE("arithmetic multiply accepts quaternion quaternion products") {
 import /std/math/*
 [return<Quat>]
 main() {
-  [Quat] left{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
-  [Quat] right{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  [Quat] left{Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
+  [Quat] right{Quat{0.0f32, 1.0f32, 0.0f32, 0.0f32}}
   return(multiply(left, right))
 }
 )";
@@ -266,8 +266,8 @@ TEST_CASE("arithmetic multiply accepts quaternion vector rotation shape") {
 import /std/math/*
 [return<Vec3>]
 main() {
-  [Quat] rotation{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
-  [Vec3] value{Vec3(1.0f32, 0.0f32, 0.0f32)}
+  [Quat] rotation{Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
+  [Vec3] value{Vec3{1.0f32, 0.0f32, 0.0f32}}
   return(multiply(rotation, value))
 }
 )";
@@ -281,12 +281,12 @@ TEST_CASE("arithmetic multiply rejects mismatched matrix shapes") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] left{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat3] right{Mat3(
+  [Mat2] left{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat3] right{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   [Mat2] value{multiply(left, right)}
   return(convert<int>(value.m00))
 }
@@ -301,12 +301,12 @@ TEST_CASE("arithmetic multiply rejects vector matrix ordering") {
 import /std/math/*
 [return<int>]
 main() {
-  [Vec3] left{Vec3(1.0f32, 2.0f32, 3.0f32)}
-  [Mat3] right{Mat3(
+  [Vec3] left{Vec3{1.0f32, 2.0f32, 3.0f32}}
+  [Mat3] right{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   [Vec3] value{multiply(left, right)}
   return(convert<int>(value.x))
 }
@@ -321,8 +321,8 @@ TEST_CASE("arithmetic multiply rejects quaternion vec4 operands") {
 import /std/math/*
 [return<int>]
 main() {
-  [Quat] left{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
-  [Vec4] right{Vec4(1.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Quat] left{Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
+  [Vec4] right{Vec4{1.0f32, 0.0f32, 0.0f32, 1.0f32}}
   [Vec4] value{multiply(left, right)}
   return(convert<int>(value.x))
 }
@@ -337,7 +337,7 @@ TEST_CASE("arithmetic divide accepts matrix scalar division") {
 import /std/math/*
 [return<Mat2>]
 main() {
-  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat2] value{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
   return(divide(value, 2.0f32))
 }
 )";
@@ -351,7 +351,7 @@ TEST_CASE("arithmetic divide accepts quaternion scalar division") {
 import /std/math/*
 [return<Quat>]
 main() {
-  [Quat] value{Quat(0.0f32, 2.0f32, 0.0f32, 0.0f32)}
+  [Quat] value{Quat{0.0f32, 2.0f32, 0.0f32, 0.0f32}}
   return(divide(value, 2i32))
 }
 )";
@@ -365,7 +365,7 @@ TEST_CASE("arithmetic divide rejects matrix matrix operands") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] left{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat2] left{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
   [Mat2] right{left}
   [Mat2] value{divide(left, right)}
   return(convert<int>(value.m00))
@@ -381,7 +381,7 @@ TEST_CASE("arithmetic divide rejects scalar quaternion operands") {
 import /std/math/*
 [return<int>]
 main() {
-  [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Quat] value{Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
   [Quat] scaled{divide(2.0f32, value)}
   return(convert<int>(scaled.w))
 }

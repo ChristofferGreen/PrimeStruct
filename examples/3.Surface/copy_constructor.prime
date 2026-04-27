@@ -10,7 +10,7 @@ Widget() {
 
 [return<i32>]
 main() {
-  [Widget mut] a{Widget()}
-  [Widget] b{Widget()}
+  [Widget mut] a{Widget{}}
+  [Widget] b{Widget{}}
   return(0i32)
 }

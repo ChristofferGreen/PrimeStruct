@@ -66,7 +66,7 @@ Thing() {
 
 [return<int>]
 main() {
-  [Thing] item{Thing()}
+  [Thing] item{Thing{}}
   item.do() {
     [i32] temp{2i32}
   }

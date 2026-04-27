@@ -123,7 +123,7 @@ Pair() {
 
 [return<Pair>]
 makePair() {
-  return(Pair())
+  return(Pair{})
 }
 
 [return<i32>]
@@ -409,7 +409,7 @@ Pair() {
 
 [return<Pair>]
 makePair() {
-  return(Pair())
+  return(Pair{})
 }
 
 [return<i32>]
@@ -466,8 +466,8 @@ Vec3() {
 Shape() {
   center{
     if(true,
-      then(){ return(Vec2()) },
-      else(){ return(Vec3()) })
+      then(){ return(Vec2{}) },
+      else(){ return(Vec3{}) })
   }
 }
 

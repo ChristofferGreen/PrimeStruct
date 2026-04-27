@@ -180,7 +180,7 @@ borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
 main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
   [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
-  if(/std/collections/map/contains<Key, i32>(ref, Key(1i32)),
+  if(/std/collections/map/contains<Key, i32>(ref, Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
 }
@@ -215,7 +215,7 @@ borrowExperimentalMap([Reference<Map<Key, i32>>] values) {
 main() {
   [Map<Key, i32>] values{mapNew<Key, i32>()}
   [Reference<Map<Key, i32>>] ref{borrowExperimentalMap(location(values))}
-  if(/std/collections/map/contains_ref<Key, i32>(ref, Key(1i32)),
+  if(/std/collections/map/contains_ref<Key, i32>(ref, Key{1i32}),
      then() { return(1i32) },
      else() { return(0i32) })
 }

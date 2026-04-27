@@ -1133,7 +1133,7 @@ Holder() {}
 
 [effects(heap_alloc), return<i32>]
 main() {
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [auto] pushed{holder.cloneValues().push(Particle(7i32))}
   [auto] reserved{holder.cloneValues().reserve(4i32)}
   return(plus(pushed, reserved))
@@ -1241,7 +1241,7 @@ Holder() {}
 
 [effects(heap_alloc), return<i32>]
 main() {
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [auto] picked{holder.cloneValues().get(1i32)}
   [auto] pickedRef{holder.cloneValues().ref(0i32)}
   [auto] unpacked{holder.cloneValues().to_aos()}
@@ -1545,7 +1545,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32))
   values.push(Particle(9i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [auto] picked{holder.pickBorrowed(location(values)).get(1i32)}
   [auto] pickedRef{holder.pickBorrowed(location(values)).ref(0i32)}
   [auto] unpacked{holder.pickBorrowed(location(values)).to_aos()}
@@ -1810,7 +1810,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   return(
     plus(count(holder.pickBorrowed(location(values))),
          plus(count(holder.pickBorrowed(location(values)).to_aos()),
@@ -1872,7 +1872,7 @@ Particle() {
 
 [return<SoaVector<Particle>>]
 cloneValues() {
-  return(SoaVector<Particle>())
+  return(SoaVector<Particle>{})
 }
 
 [return<i32>]
@@ -2259,7 +2259,7 @@ main() {
   [SoaVector<Particle> mut] values{soaVectorNew<Particle>()}
   values.push(Particle(7i32, 8i32))
   values.push(Particle(9i32, 12i32))
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [auto] fieldMethod{holder.pickBorrowed(location(values)).y()[1i32]}
   [auto] fieldCall{y(holder.pickBorrowed(location(values)))[0i32]}
   return(plus(fieldMethod, fieldCall))
@@ -2563,7 +2563,7 @@ Holder() {}
 
 [effects(heap_alloc), return<i32>]
 main() {
-  [Holder] holder{Holder()}
+  [Holder] holder{Holder{}}
   [auto] picked{/soa_vector/get(holder.cloneValues(), 1i32)}
   [auto] pickedRef{/soa_vector/ref(holder.cloneValues(), 1i32)}
   [auto] unpacked{/to_aos(holder.cloneValues())}

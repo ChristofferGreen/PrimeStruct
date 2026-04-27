@@ -324,7 +324,7 @@ namespace util {
 }
 [return<int>]
 main() {
-  [Widget] item{Widget()}
+  [Widget] item{Widget{}}
   return(1i32)
 }
 )";
@@ -337,7 +337,7 @@ TEST_CASE("import resolves methods on struct types") {
   const std::string source = R"(
 import /util
 [public struct]
-/util/Widget() {
+/util/Widget{} {
   [i32] value{1i32}
 }
 [public return<int>]
@@ -346,7 +346,7 @@ import /util
 }
 [return<int>]
 main() {
-  [Widget] item{Widget()}
+  [Widget] item{Widget{}}
   return(item.get(5i32))
 }
 )";
@@ -1138,7 +1138,7 @@ import /std/gfx/GfxError
 
 [return<int>]
 main() {
-  [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
+  [Buffer<i32>] buffer{Buffer<i32>{[token] 2i32, [elementCount] 4i32}}
   [GfxError] err{GfxError.queue_submit_failed()}
   [string] whyText{GfxError.why(err)}
   return(plus(buffer.count(), count(whyText)))

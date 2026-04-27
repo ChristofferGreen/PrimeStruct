@@ -8,7 +8,7 @@ Thing() {
 
 [return<void>]
 main() {
-  Thing()
+  Thing{}
 }
 )";
   std::string error;
@@ -49,7 +49,7 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Mat2] value{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
   return(convert<int>(value.m10))
 }
 )";
@@ -93,7 +93,7 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] value{Quat{0.0f32, 0.0f32, 0.0f32, 2.0f32}}
   [Quat] normalized{value.toNormalized()}
   return(convert<int>(normalized.w))
 }
@@ -143,7 +143,7 @@ Vec3() {
 
 [return<Vec3>]
 makeCenter() {
-  return(Vec3())
+  return(Vec3{})
 }
 
 [struct]
@@ -154,7 +154,7 @@ Sphere() {
 
 [return<void>]
 main() {
-  Sphere()
+  Sphere{}
 }
 )";
   std::string error;
@@ -187,7 +187,7 @@ Widget() {
 
 [return<void>]
 main() {
-  Widget()
+  Widget{}
 }
 )";
   std::string error;
@@ -253,7 +253,7 @@ Payload() {
 
 [return<void>]
 main() {
-  Payload()
+  Payload{}
 }
 )";
   std::string error;

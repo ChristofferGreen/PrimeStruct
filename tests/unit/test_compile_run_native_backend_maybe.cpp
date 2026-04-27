@@ -89,7 +89,7 @@ Widget() {
 [return<int>]
 main() {
   [Maybe<Widget> mut] item{none<Widget>()}
-  item.set(Widget())
+  item.set(Widget{})
   return(item.take().value)
 }
 )";

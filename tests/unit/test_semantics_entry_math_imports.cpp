@@ -33,7 +33,7 @@ TEST_CASE("math matrix stdlib constructor requires import") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [auto] value{Mat2()}
+  [auto] value{Mat2{}}
   return(0i32)
 }
 )";
@@ -47,18 +47,18 @@ TEST_CASE("math matrix stdlib constructor resolves with import") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat3] m3{Mat3(
+  [Mat2] m2{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat3] m3{Mat3{
     5.0f32, 6.0f32, 7.0f32,
     8.0f32, 9.0f32, 10.0f32,
     11.0f32, 12.0f32, 13.0f32
-  )}
-  [Mat4] m4{Mat4(
+  }}
+  [Mat4] m4{Mat4{
     14.0f32, 15.0f32, 16.0f32, 17.0f32,
     18.0f32, 19.0f32, 20.0f32, 21.0f32,
     22.0f32, 23.0f32, 24.0f32, 25.0f32,
     26.0f32, 27.0f32, 28.0f32, 29.0f32
-  )}
+  }}
   return(convert<int>(m2.m00 + m2.m11 + m3.m12 + m4.m33))
 }
   )";
@@ -72,7 +72,7 @@ TEST_CASE("math matrix stdlib constructor supports trailing defaults") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat2] value{Mat2(1.0f32, 2.0f32, 3.0f32)}
+  [Mat2] value{Mat2{1.0f32, 2.0f32, 3.0f32}}
   return(convert<int>(value.m10 + value.m11))
 }
   )";
@@ -85,7 +85,7 @@ TEST_CASE("math quaternion stdlib constructor requires import") {
   const std::string source = R"(
 [return<int>]
 main() {
-  [auto] value{Quat()}
+  [auto] value{Quat{}}
   return(0i32)
 }
 )";
@@ -99,9 +99,9 @@ TEST_CASE("math quaternion stdlib constructor resolves with import") {
 import /std/math/*
 [return<int>]
 main() {
-  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] raw{Quat{0.0f32, 0.0f32, 0.0f32, 2.0f32}}
   [Quat] normalized{raw.toNormalized()}
-  [Quat] zero{Quat(0.0f32, 0.0f32, 0.0f32, 0.0f32).normalize()}
+  [Quat] zero{Quat{0.0f32, 0.0f32, 0.0f32, 0.0f32}.normalize()}
   return(convert<int>(normalized.w + zero.x + zero.y + zero.z + zero.w))
 }
 )";
@@ -115,7 +115,7 @@ TEST_CASE("math quaternion stdlib constructor supports trailing defaults") {
 import /std/math/*
 [return<int>]
 main() {
-  [Quat] value{Quat(0.0f32, 0.0f32, 1.0f32)}
+  [Quat] value{Quat{0.0f32, 0.0f32, 1.0f32}}
   return(convert<int>(value.z + value.w))
 }
 )";
@@ -142,7 +142,7 @@ TEST_CASE("math quat_to_mat3 helper resolves with import") {
 import /std/math/*
 [return<int>]
 main() {
-  [Quat] raw{Quat(2.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] raw{Quat{2.0f32, 0.0f32, 0.0f32, 0.0f32}}
   [Mat3] basis{quat_to_mat3(raw)}
   return(convert<int>(basis.m00 - basis.m11 - basis.m22))
 }
@@ -158,7 +158,7 @@ import /std/math/quat_to_mat3
 import /std/math/Quat
 [return<int>]
 main() {
-  [auto] basis{quat_to_mat3(Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32))}
+  [auto] basis{quat_to_mat3(Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32})}
   return(convert<int>(basis.m00 + basis.m11 + basis.m22))
 }
 )";
@@ -185,7 +185,7 @@ TEST_CASE("math quat_to_mat4 helper resolves with import") {
 import /std/math/*
 [return<int>]
 main() {
-  [Quat] raw{Quat(2.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] raw{Quat{2.0f32, 0.0f32, 0.0f32, 0.0f32}}
   [Mat4] basis{quat_to_mat4(raw)}
   return(convert<int>(basis.m00 - basis.m11 - basis.m22 + basis.m33))
 }
@@ -201,7 +201,7 @@ import /std/math/quat_to_mat4
 import /std/math/Quat
 [return<int>]
 main() {
-  [auto] basis{quat_to_mat4(Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32))}
+  [auto] basis{quat_to_mat4(Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32})}
   return(convert<int>(basis.m00 + basis.m11 + basis.m22 + basis.m33))
 }
 )";
@@ -228,11 +228,11 @@ TEST_CASE("math mat3_to_quat helper resolves with import") {
 import /std/math/*
 [return<int>]
 main() {
-  [Mat3] basis{Mat3(
+  [Mat3] basis{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   [Quat] value{mat3_to_quat(basis)}
   return(convert<int>(value.w + value.x + value.y + value.z))
 }
@@ -248,11 +248,11 @@ import /std/math/mat3_to_quat
 import /std/math/Mat3
 [return<int>]
 main() {
-  [auto] value{mat3_to_quat(Mat3(
+  [auto] value{mat3_to_quat(Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  ))}
+  })}
   return(convert<int>(value.w + value.x + value.y + value.z))
 }
 )";
@@ -266,11 +266,11 @@ TEST_CASE("math binding accepts implicit matrix quaternion conversion") {
 import /std/math/*
 [return<int>]
 main() {
-  [Quat] value{Mat3(
+  [Quat] value{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   return(0i32)
 }
 )";
@@ -284,11 +284,11 @@ TEST_CASE("math helper rejects implicit matrix quaternion conversion with stable
 import /std/math/*
 [return<int>]
 main() {
-  [Mat3] basis{Mat3(
+  [Mat3] basis{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   [auto] value{quat_to_mat3(basis)}
   return(convert<int>(value.m00))
 }
@@ -306,11 +306,11 @@ TEST_CASE("math return rejects implicit matrix quaternion conversion with stable
 import /std/math/*
 [return<Quat>]
 main() {
-  return(Mat3(
+  return(Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  ))
+  })
 }
 )";
   std::string error;

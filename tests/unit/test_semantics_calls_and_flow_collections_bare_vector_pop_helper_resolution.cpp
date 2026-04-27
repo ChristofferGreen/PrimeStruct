@@ -129,12 +129,12 @@ Owned() {
 
 [struct]
 Wrapper() {
-  [Owned] value{Owned()}
+  [Owned] value{Owned{}}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Wrapper> mut] values{/std/collections/vectorPair<Wrapper>(Wrapper(Owned()), Wrapper(Owned()))}
+  [Vector<Wrapper> mut] values{/std/collections/vectorPair<Wrapper>(Wrapper{Owned{}}, Wrapper{Owned{}})}
   /std/collections/vector/clear<Wrapper>(values)
   return(/std/collections/vector/count<Wrapper>(values))
 }
@@ -332,8 +332,8 @@ Owned() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Owned> mut] values{vector<Owned>()}
-  push(values, Owned())
-  push(values, Owned(9i32))
+  push(values, Owned{})
+  push(values, Owned{9i32})
   remove_at(values, 0i32)
   return(plus(count(values), at(values, 0i32).value))
 }
@@ -359,14 +359,14 @@ Mover() {
 
 [struct]
 Wrapper() {
-  [Mover] value{Mover()}
+  [Mover] value{Mover{}}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Wrapper> mut] values{vector<Wrapper>()}
-  push(values, Wrapper(Mover(1i32)))
-  push(values, Wrapper(Mover(7i32)))
+  push(values, Wrapper{Mover{1i32}})
+  push(values, Wrapper{Mover{7i32}})
   remove_at(values, 0i32)
   return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }
@@ -508,8 +508,8 @@ Owned() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Owned> mut] values{vector<Owned>()}
-  push(values, Owned())
-  push(values, Owned(9i32))
+  push(values, Owned{})
+  push(values, Owned{9i32})
   remove_swap(values, 0i32)
   return(plus(count(values), at(values, 0i32).value))
 }
@@ -535,14 +535,14 @@ Mover() {
 
 [struct]
 Wrapper() {
-  [Mover] value{Mover()}
+  [Mover] value{Mover{}}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Wrapper> mut] values{vector<Wrapper>()}
-  push(values, Wrapper(Mover(1i32)))
-  push(values, Wrapper(Mover(7i32)))
+  push(values, Wrapper{Mover{1i32}})
+  push(values, Wrapper{Mover{7i32}})
   remove_swap(values, 0i32)
   return(plus(count(values), at_unsafe(values, 0i32).value.value))
 }

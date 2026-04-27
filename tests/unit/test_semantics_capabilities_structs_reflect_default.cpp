@@ -398,7 +398,7 @@ Nested() {
 
 [struct reflect generate(DebugPrint)]
 Container() {
-  [Nested] nested{Nested()}
+  [Nested] nested{Nested{}}
 }
 
 [return<int>]

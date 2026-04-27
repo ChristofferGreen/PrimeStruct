@@ -5916,6 +5916,7 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     }
     Expr call;
     call.kind = Expr::Kind::Call;
+    call.isBraceConstructor = true;
     call.name = info.typeName;
     call.namespacePrefix = expr.namespacePrefix;
     expr.args.clear();

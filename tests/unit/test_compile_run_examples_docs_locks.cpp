@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4282: Reject call-shaped struct field construction") !=
+                  "- TODO-4254: Migrate generated construction surfaces") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4254: Migrate generated construction surfaces") !=
+                  "- TODO-4255: Migrate collection construction surfaces") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,10 +1153,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4282: Reject call-shaped struct field construction") !=
+                  "- TODO-4254: Migrate generated construction surfaces") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4282: Reject call-shaped struct field construction",
       "TODO-4254: Migrate generated construction surfaces",
       "TODO-4255: Migrate collection construction surfaces",
       "TODO-4256: Classify constructor-shaped helper compatibility",
@@ -1167,6 +1166,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4261: Lower and execute `pick` matches",
       "TODO-4262: Add public sum-type examples",
       "TODO-4263: Design generic and unit sum variants",
+      "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1181,6 +1181,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4227: Move semantic-product fact families into worker bundles") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4214: Introduce deterministic worker result bundles") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4282: Reject call-shaped struct field construction") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4282: Reject call-shaped struct field construction") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4227") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4215") == std::string::npos);
@@ -1642,7 +1646,7 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("can upload a deterministic BGRA8 software surface into a shared Metal") !=
         std::string::npos);
   CHECK(graphicsDoc.find("`--software-surface-demo`") != std::string::npos);
-  CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList()}") != std::string::npos);
+  CHECK(graphicsDoc.find("[CommandList mut] commands{CommandList{}}") != std::string::npos);
   CHECK(graphicsDoc.find("tree.append_root_column(2i32, 3i32, 10i32, 4i32)") != std::string::npos);
   CHECK(graphicsDoc.find("layout.append_label(root, 10i32, \"Hi\"utf8)") != std::string::npos);
   CHECK(graphicsDoc.find("commands.draw_button(") != std::string::npos);
@@ -1650,9 +1654,9 @@ TEST_CASE("software renderer command list docs stay source locked") {
   CHECK(graphicsDoc.find("commands.begin_panel(layout, panel, 4i32") != std::string::npos);
   CHECK(graphicsDoc.find("layout.append_login_form(") != std::string::npos);
   CHECK(graphicsDoc.find("commands.draw_login_form(") != std::string::npos);
-  CHECK(graphicsDoc.find("[HtmlCommandList mut] html{HtmlCommandList()}") != std::string::npos);
+  CHECK(graphicsDoc.find("[HtmlCommandList mut] html{HtmlCommandList{}}") != std::string::npos);
   CHECK(graphicsDoc.find("html.emit_login_form(") != std::string::npos);
-  CHECK(graphicsDoc.find("[UiEventStream mut] events{UiEventStream()}") != std::string::npos);
+  CHECK(graphicsDoc.find("[UiEventStream mut] events{UiEventStream{}}") != std::string::npos);
   CHECK(graphicsDoc.find("events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)") !=
         std::string::npos);
   CHECK(graphicsDoc.find("events.push_key_down(login.usernameInput, 13i32, 3i32, 1i32)") !=
@@ -1755,9 +1759,9 @@ TEST_CASE("image api docs and stdlib stay source locked") {
       imageStdlib.substr(resetReadOutputsStart, imageRgbWritePixelCountStart - resetReadOutputsStart);
 
   CHECK(imageStdlib.find("[public struct]\n  ImageError()") != std::string::npos);
-  CHECK(imageStdlib.find("ImageError(1i32)") != std::string::npos);
-  CHECK(imageStdlib.find("ImageError(2i32)") != std::string::npos);
-  CHECK(imageStdlib.find("ImageError(3i32)") != std::string::npos);
+  CHECK(imageStdlib.find("ImageError{1i32}") != std::string::npos);
+  CHECK(imageStdlib.find("ImageError{2i32}") != std::string::npos);
+  CHECK(imageStdlib.find("ImageError{3i32}") != std::string::npos);
   CHECK(imageStdlib.find("\"image_read_unsupported\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("\"image_write_unsupported\"utf8") != std::string::npos);
   CHECK(imageStdlib.find("\"image_invalid_operation\"utf8") != std::string::npos);
@@ -2061,15 +2065,15 @@ TEST_CASE("container error docs and helpers stay source locked") {
   CHECK(collectionErrors.find(
             "/ContainerError/capacity_exceeded() {\n  return(/ContainerError/capacityExceeded())\n}") !=
         std::string::npos);
-  CHECK(collectionErrors.find("missingKey() {\n      return(ContainerError(1i32))\n    }") !=
+  CHECK(collectionErrors.find("missingKey() {\n      return(ContainerError{1i32})\n    }") !=
         std::string::npos);
   CHECK(collectionErrors.find("missing_key() {\n      return(missingKey())\n    }") !=
         std::string::npos);
-  CHECK(collectionErrors.find("indexOutOfBounds() {\n      return(ContainerError(2i32))\n    }") !=
+  CHECK(collectionErrors.find("indexOutOfBounds() {\n      return(ContainerError{2i32})\n    }") !=
         std::string::npos);
   CHECK(collectionErrors.find("index_out_of_bounds() {\n      return(indexOutOfBounds())\n    }") !=
         std::string::npos);
-  CHECK(collectionErrors.find("capacityExceeded() {\n      return(ContainerError(4i32))\n    }") !=
+  CHECK(collectionErrors.find("capacityExceeded() {\n      return(ContainerError{4i32})\n    }") !=
         std::string::npos);
   CHECK(collectionErrors.find("capacity_exceeded() {\n      return(capacityExceeded())\n    }") !=
         std::string::npos);
@@ -2233,10 +2237,10 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
   CHECK(codeExamples.find("return(left == right)") != std::string::npos);
 
   CHECK(maybeStdlib.find("out{take(this.value)}") != std::string::npos);
-  CHECK(maybeStdlib.find("[mut] out{Maybe<T>()}") != std::string::npos);
+  CHECK(maybeStdlib.find("[mut] out{Maybe<T>{}}") != std::string::npos);
   CHECK(maybeStdlib.find("[mut] ref{location(out)}") != std::string::npos);
   CHECK(maybeStdlib.find("[T] out{take(this.value)}") == std::string::npos);
-  CHECK(maybeStdlib.find("[Maybe<T> mut] out{Maybe<T>()}") == std::string::npos);
+  CHECK(maybeStdlib.find("[Maybe<T> mut] out{Maybe<T>{}}") == std::string::npos);
   CHECK(maybeStdlib.find("[Reference<Maybe<T>> mut] ref{location(out)}") == std::string::npos);
 
   CHECK(vectorStdlib.find(
@@ -2741,7 +2745,7 @@ TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
 
   const std::string gfxStdlib = readFile(gfxStdlibPath.string());
 
-  CHECK(gfxStdlib.find("config{\n        SubstrateSwapchainConfig(") != std::string::npos);
+  CHECK(gfxStdlib.find("config{\n        SubstrateSwapchainConfig{") != std::string::npos);
   CHECK(gfxStdlib.find("swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") != std::string::npos);
   CHECK(gfxStdlib.find("vertexCount{count(vertices)}") != std::string::npos);
   CHECK(gfxStdlib.find("indexCount{count(indices)}") != std::string::npos);
@@ -2751,7 +2755,7 @@ TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
   CHECK(gfxStdlib.find("renderPassToken{GraphicsSubstrate.openRenderPass(config)}") != std::string::npos);
   CHECK(gfxStdlib.find("drawToken{GraphicsSubstrate.drawMesh(config)}") != std::string::npos);
   CHECK(gfxStdlib.find("endToken{GraphicsSubstrate.endRenderPass(config)}") != std::string::npos);
-  CHECK(gfxStdlib.find("window{Window([token] 1i32, [width] 1i32, [height] 1i32)}") != std::string::npos);
+  CHECK(gfxStdlib.find("window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") != std::string::npos);
   CHECK(gfxStdlib.find("deviceToken{GraphicsSubstrate.createDevice(config)?}") != std::string::npos);
   CHECK(gfxStdlib.find("queueToken{GraphicsSubstrate.createQueue(config)?}") != std::string::npos);
 
@@ -2775,7 +2779,7 @@ TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
   CHECK(gfxStdlib.find("[i32] drawToken{GraphicsSubstrate.drawMesh(config)}") == std::string::npos);
   CHECK(gfxStdlib.find("[SubstrateRenderPassEndConfig] config{") == std::string::npos);
   CHECK(gfxStdlib.find("[i32] endToken{GraphicsSubstrate.endRenderPass(config)}") == std::string::npos);
-  CHECK(gfxStdlib.find("[Window] window{Window([token] 1i32, [width] 1i32, [height] 1i32)}") ==
+  CHECK(gfxStdlib.find("[Window] window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") ==
         std::string::npos);
   CHECK(gfxStdlib.find("[SubstrateDeviceConfig] config{") == std::string::npos);
   CHECK(gfxStdlib.find("[i32] deviceToken{GraphicsSubstrate.createDevice(config)?}") ==
@@ -2887,7 +2891,7 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
         std::string::npos);
   CHECK(gfxExperimental.find("New public gfx code should import /std/gfx/*; this namespace remains only") !=
         std::string::npos);
-  CHECK(gfxStdlib.find("return(Queue([token] this.token + 1i32))") != std::string::npos);
+  CHECK(gfxStdlib.find("return(Queue{[token] this.token + 1i32})") != std::string::npos);
   CHECK(gfxStdlib.find("return(this.token > 0i32)") != std::string::npos);
   CHECK(gfxStdlib.find("if(this.height < 1i32)") != std::string::npos);
   CHECK(gfxStdlib.find("if(this.token < 1i32 || window.token < 1i32)") != std::string::npos);
@@ -2917,14 +2921,14 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   CHECK(gfxExperimental.find("Route behavior through the canonical helper surface whenever the old type") !=
         std::string::npos);
   CHECK(gfxExperimental.find("return(greater_than(this.token, 0i32))") != std::string::npos);
-  CHECK(gfxExperimental.find("return(Queue([token] plus(this.token, 1i32)))") != std::string::npos);
-  CHECK(gfxExperimental.find("return(RenderPass([token] renderPassToken))") != std::string::npos);
-  CHECK(gfxExperimental.find("SubstrateDrawMeshConfig(") != std::string::npos);
+  CHECK(gfxExperimental.find("return(Queue{[token] plus(this.token, 1i32)})") != std::string::npos);
+  CHECK(gfxExperimental.find("return(RenderPass{[token] renderPassToken})") != std::string::npos);
+  CHECK(gfxExperimental.find("SubstrateDrawMeshConfig{") != std::string::npos);
   CHECK(gfxExperimental.find("return(/std/gfx/Buffer/readback<T>(canonical))") !=
         std::string::npos);
   CHECK(gfxExperimental.find("canonical{/std/gfx/Buffer/upload<T>(values)}") !=
         std::string::npos);
-  CHECK(gfxExperimental.find("return(Buffer<T>([token] canonical.token, [elementCount] canonical.elementCount))") !=
+  CHECK(gfxExperimental.find("return(Buffer<T>{[token] canonical.token, [elementCount] canonical.elementCount})") !=
         std::string::npos);
   CHECK(gfxExperimental.find("return(canonicalWindow(this).is_open())") == std::string::npos);
   CHECK(gfxExperimental.find("return(experimentalQueue(canonicalDevice(this).default_queue()))") ==

@@ -16,11 +16,11 @@ semantics after canonicalization.
 - Prefer snake_case function names for user code and standard APIs.
 - Prefer snake_case local binding names in surface examples.
 - Prefer omitted local envelopes when initializer inference is unambiguous
-  (`value{Type(...)}` instead of `[Type] value{Type(...)}`); use `[mut]` when
+  (`value{Type{...}}` instead of `[Type] value{Type{...}}`); use `[mut]` when
   a local must be writable.
   This is the default preferred local-binding style for surface examples.
-  Example: `pass{RenderPass(...)}` is preferred over
-  `[RenderPass] pass{RenderPass(...)}`.
+  Example: `pass{RenderPass{...}}` is preferred over
+  `[RenderPass] pass{RenderPass{...}}`.
 - Prefer object-owned methods and constructors over free-function style APIs
   (`window.is_open()`, `pass.draw_mesh(...)`, `swapchain.present(...)`).
 - For collection examples, prefer C++-style member/index syntax:
@@ -173,12 +173,12 @@ wrap_angle(angle) {
 
 [Mat4]
 cube_mvp(angle, aspect) {
-  model{mat4_from_axis_angle(Vec3(0.0, 1.0, 0.0), angle)}
+  model{mat4_from_axis_angle(Vec3{0.0, 1.0, 0.0}, angle)}
   view{
     mat4_look_at(
-      [eye] Vec3(2.4, 1.7, 2.7),
-      [target] Vec3(0.0, 0.0, 0.0),
-      [up] Vec3(0.0, 1.0, 0.0)
+      [eye] Vec3{2.4, 1.7, 2.7},
+      [target] Vec3{0.0, 0.0, 0.0},
+      [up] Vec3{0.0, 1.0, 0.0}
     )
   }
   proj{mat4_perspective(0.7853982, aspect, 0.01, 100.0)}
@@ -188,14 +188,14 @@ cube_mvp(angle, aspect) {
 [array<VertexColored>]
 cube_vertices() {
   return(array<VertexColored>{
-    VertexColored([position] Vec4(-1.0, -1.0, -1.0, 1.0), [color] ColorRGBA(0.0, 0.0, 0.0, 1.0)),
-    VertexColored([position] Vec4( 1.0, -1.0, -1.0, 1.0), [color] ColorRGBA(1.0, 0.0, 0.0, 1.0)),
-    VertexColored([position] Vec4( 1.0,  1.0, -1.0, 1.0), [color] ColorRGBA(1.0, 1.0, 0.0, 1.0)),
-    VertexColored([position] Vec4(-1.0,  1.0, -1.0, 1.0), [color] ColorRGBA(0.0, 1.0, 0.0, 1.0)),
-    VertexColored([position] Vec4(-1.0, -1.0,  1.0, 1.0), [color] ColorRGBA(0.0, 0.0, 1.0, 1.0)),
-    VertexColored([position] Vec4( 1.0, -1.0,  1.0, 1.0), [color] ColorRGBA(1.0, 0.0, 1.0, 1.0)),
-    VertexColored([position] Vec4( 1.0,  1.0,  1.0, 1.0), [color] ColorRGBA(1.0, 1.0, 1.0, 1.0)),
-    VertexColored([position] Vec4(-1.0,  1.0,  1.0, 1.0), [color] ColorRGBA(0.0, 1.0, 1.0, 1.0))
+    VertexColored{[position] Vec4{-1.0, -1.0, -1.0, 1.0}, [color] ColorRGBA{0.0, 0.0, 0.0, 1.0}},
+    VertexColored{[position] Vec4{ 1.0, -1.0, -1.0, 1.0}, [color] ColorRGBA{1.0, 0.0, 0.0, 1.0}},
+    VertexColored{[position] Vec4{ 1.0,  1.0, -1.0, 1.0}, [color] ColorRGBA{1.0, 1.0, 0.0, 1.0}},
+    VertexColored{[position] Vec4{-1.0,  1.0, -1.0, 1.0}, [color] ColorRGBA{0.0, 1.0, 0.0, 1.0}},
+    VertexColored{[position] Vec4{-1.0, -1.0,  1.0, 1.0}, [color] ColorRGBA{0.0, 0.0, 1.0, 1.0}},
+    VertexColored{[position] Vec4{ 1.0, -1.0,  1.0, 1.0}, [color] ColorRGBA{1.0, 0.0, 1.0, 1.0}},
+    VertexColored{[position] Vec4{ 1.0,  1.0,  1.0, 1.0}, [color] ColorRGBA{1.0, 1.0, 1.0, 1.0}},
+    VertexColored{[position] Vec4{-1.0,  1.0,  1.0, 1.0}, [color] ColorRGBA{0.0, 1.0, 1.0, 1.0}}
   })
 }
 
@@ -270,7 +270,7 @@ main() {
 
     pass{
       frame.render_pass(
-        [clear_color] ColorRGBA(0.05, 0.07, 0.10, 1.0),
+        [clear_color] ColorRGBA{0.05, 0.07, 0.10, 1.0},
         [clear_depth] 1.0
       )
     }

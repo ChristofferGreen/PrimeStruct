@@ -234,12 +234,12 @@ Widget() {
 
 [static return<Widget>]
 /Widget/Convert([i32] raw) {
-  return(Widget([value] raw))
+  return(Widget{[value] raw})
 }
 
 [static return<Widget>]
 /Widget/Convert__tdeadbeef([i32] raw) {
-  return(Widget([value] raw))
+  return(Widget{[value] raw})
 }
 
 [return<Widget>]
@@ -262,7 +262,7 @@ Widget() {
 
   [static return<Other>]
   Convert([i32] raw) {
-    return(Other())
+    return(Other{})
   }
 }
 
@@ -289,7 +289,7 @@ Widget() {
 
   [static return<Widget>]
   Convert() {
-    return(Widget())
+    return(Widget{})
   }
 }
 

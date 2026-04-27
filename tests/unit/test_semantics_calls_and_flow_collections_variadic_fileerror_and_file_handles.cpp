@@ -808,7 +808,7 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder mut] holder{Holder()}
+  [Holder mut] holder{Holder{}}
   /std/collections/map/insert<i32, i32>(holder.values, 1i32, 4i32)
   holder.values.insert(2i32, 7i32)
   [Reference<map<i32, i32>> mut] ref{location(holder.values)}
@@ -833,7 +833,7 @@ Holder() {
 
 [struct]
 Outer() {
-  [Holder mut] holder{Holder()}
+  [Holder mut] holder{Holder{}}
 }
 
 [return<Reference<map<i32, i32>>>]
@@ -843,7 +843,7 @@ borrowValues([Reference<map<i32, i32>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Outer mut] outer{Outer()}
+  [Outer mut] outer{Outer{}}
   /std/collections/map/insert<i32, i32>(outer.holder.values, 1i32, 4i32)
   /std/collections/map/insert<i32, i32>(outer.holder.values, 2i32, 7i32)
   [Reference<map<i32, i32>> mut] ref{borrowValues(location(outer.holder.values))}
@@ -873,7 +873,7 @@ borrowValues([Reference<map<i32, i32>>] values) {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Holder mut] holder{Holder()}
+  [Holder mut] holder{Holder{}}
   [Reference<map<i32, i32>> mut] ref{borrowValues(location(holder.values))}
   ref.insert(1i32, 4i32)
   ref.insert(2i32, 7i32)

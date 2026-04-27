@@ -58,17 +58,17 @@ namespace std {
 
     [public return<ImageError>]
     read_unsupported() {
-      return(ImageError(1i32))
+      return(ImageError{1i32})
     }
 
     [public return<ImageError>]
     write_unsupported() {
-      return(ImageError(2i32))
+      return(ImageError{2i32})
     }
 
     [public return<ImageError>]
     invalid_operation() {
-      return(ImageError(3i32))
+      return(ImageError{3i32})
     }
 
     [public return<Result<T, ImageError>>]

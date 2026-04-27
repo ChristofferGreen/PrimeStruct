@@ -63,7 +63,7 @@ namespace std {
 
   [public return<Maybe<T>>]
   some<T>([T] value) {
-    [mut] out{Maybe<T>()}
+    [mut] out{Maybe<T>{}}
     [mut] ref{location(out)}
     init(ref.value, value)
     ref.empty = false
@@ -72,7 +72,7 @@ namespace std {
 
   [public return<Maybe<T>>]
   none<T>() {
-    return(Maybe<T>())
+    return(Maybe<T>{})
   }
   }
 }

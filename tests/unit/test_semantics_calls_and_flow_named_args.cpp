@@ -212,7 +212,7 @@ Collector() {
 
 [return<i32>]
 main() {
-  [Collector] collector{Collector(7i32)}
+  [Collector] collector{Collector{7i32}}
   return(collector.collect(1i32, 2i32, 3i32))
 }
 )";
@@ -254,7 +254,7 @@ Collector() {
 
 [return<i32>]
 main() {
-  [Collector] collector{Collector(7i32)}
+  [Collector] collector{Collector{7i32}}
   return(collector.collect(1i32, "wrong"raw_utf8))
 }
 )";

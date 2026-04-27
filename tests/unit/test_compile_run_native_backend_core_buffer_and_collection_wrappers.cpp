@@ -459,8 +459,8 @@ import /std/gfx/experimental/*
 
 [return<int>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
-  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 4i32)}
+  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
+  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 4i32}}
   if(not(emptyBuffer.empty())) {
     return(90i32)
   }
@@ -491,8 +491,8 @@ import /std/gfx/*
 
 [return<int>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>([token] 0i32, [elementCount] 0i32)}
-  [Buffer<i32>] fullBuffer{Buffer<i32>([token] 7i32, [elementCount] 5i32)}
+  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
+  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 5i32}}
   if(not(emptyBuffer.empty())) {
     return(90i32)
   }

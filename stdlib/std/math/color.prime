@@ -28,50 +28,50 @@ namespace std {
   namespace ColorRGB {
     [public return<ColorRGB>]
     add([ColorRGB] self, [ColorRGB] other) {
-      return(ColorRGB(self.r + other.r, self.g + other.g, self.b + other.b))
+      return(ColorRGB{self.r + other.r, self.g + other.g, self.b + other.b})
     }
 
     [public return<ColorRGB>]
     sub([ColorRGB] self, [ColorRGB] other) {
-      return(ColorRGB(self.r - other.r, self.g - other.g, self.b - other.b))
+      return(ColorRGB{self.r - other.r, self.g - other.g, self.b - other.b})
     }
 
     [public return<ColorRGB>]
     mul([ColorRGB] self, [ColorRGB] other) {
-      return(ColorRGB(self.r * other.r, self.g * other.g, self.b * other.b))
+      return(ColorRGB{self.r * other.r, self.g * other.g, self.b * other.b})
     }
 
     [public return<ColorRGB>]
     mulScalar([ColorRGB] self, [f32] s) {
-      return(ColorRGB(self.r * s, self.g * s, self.b * s))
+      return(ColorRGB{self.r * s, self.g * s, self.b * s})
     }
 
     [public return<ColorRGB>]
     mix([ColorRGB] self, [ColorRGB] other, [f32] t) {
       [f32] inv{1.0 - t}
-      return(ColorRGB(
+      return(ColorRGB{
         self.r * inv + other.r * t,
         self.g * inv + other.g * t,
         self.b * inv + other.b * t
-      ))
+      })
     }
 
     [public return<ColorRGB>]
     clamp([ColorRGB] self, [f32] minValue, [f32] maxValue) {
-      return(ColorRGB(
+      return(ColorRGB{
         /std/math/clamp(self.r, minValue, maxValue),
         /std/math/clamp(self.g, minValue, maxValue),
         /std/math/clamp(self.b, minValue, maxValue)
-      ))
+      })
     }
 
     [public return<ColorSRGB>]
     toSRGB([ColorRGB] self) {
-      return(ColorSRGB(
+      return(ColorSRGB{
         linearToSrgbChannel(self.r),
         linearToSrgbChannel(self.g),
         linearToSrgbChannel(self.b)
-      ))
+      })
     }
   }
 
@@ -86,43 +86,43 @@ namespace std {
   namespace ColorRGBA {
     [public return<ColorRGBA>]
     add([ColorRGBA] self, [ColorRGBA] other) {
-      return(ColorRGBA(self.r + other.r, self.g + other.g, self.b + other.b, self.a + other.a))
+      return(ColorRGBA{self.r + other.r, self.g + other.g, self.b + other.b, self.a + other.a})
     }
 
     [public return<ColorRGBA>]
     mulScalar([ColorRGBA] self, [f32] s) {
-      return(ColorRGBA(self.r * s, self.g * s, self.b * s, self.a * s))
+      return(ColorRGBA{self.r * s, self.g * s, self.b * s, self.a * s})
     }
 
     [public return<ColorRGBA>]
     mix([ColorRGBA] self, [ColorRGBA] other, [f32] t) {
       [f32] inv{1.0 - t}
-      return(ColorRGBA(
+      return(ColorRGBA{
         self.r * inv + other.r * t,
         self.g * inv + other.g * t,
         self.b * inv + other.b * t,
         self.a * inv + other.a * t
-      ))
+      })
     }
 
     [public return<ColorRGBA>]
     clamp([ColorRGBA] self, [f32] minValue, [f32] maxValue) {
-      return(ColorRGBA(
+      return(ColorRGBA{
         /std/math/clamp(self.r, minValue, maxValue),
         /std/math/clamp(self.g, minValue, maxValue),
         /std/math/clamp(self.b, minValue, maxValue),
         /std/math/clamp(self.a, minValue, maxValue)
-      ))
+      })
     }
 
     [public return<ColorSRGBA>]
     toSRGBA([ColorRGBA] self) {
-      return(ColorSRGBA(
+      return(ColorSRGBA{
         linearToSrgbChannel(self.r),
         linearToSrgbChannel(self.g),
         linearToSrgbChannel(self.b),
         linearToSrgbChannel(self.a)
-      ))
+      })
     }
   }
 
@@ -136,11 +136,11 @@ namespace std {
   namespace ColorSRGB {
     [public return<ColorRGB>]
     toLinear([ColorSRGB] self) {
-      return(ColorRGB(
+      return(ColorRGB{
         srgbToLinearChannel(self.r),
         srgbToLinearChannel(self.g),
         srgbToLinearChannel(self.b)
-      ))
+      })
     }
   }
 
@@ -155,12 +155,12 @@ namespace std {
   namespace ColorSRGBA {
     [public return<ColorRGBA>]
     toLinear([ColorSRGBA] self) {
-      return(ColorRGBA(
+      return(ColorRGBA{
         srgbToLinearChannel(self.r),
         srgbToLinearChannel(self.g),
         srgbToLinearChannel(self.b),
         srgbToLinearChannel(self.a)
-      ))
+      })
     }
   }
   }

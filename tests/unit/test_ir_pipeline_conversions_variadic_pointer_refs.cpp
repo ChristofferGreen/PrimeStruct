@@ -183,7 +183,7 @@ forward([args<Reference<Pair>>] values) {
 
 [return<int>]
 forward_mixed([args<Reference<Pair>>] values) {
-  [Pair] extra{Pair(5i32)}
+  [Pair] extra{Pair{5i32}}
   [Reference<Pair>] extra_ref{location(extra)}
   return(score_ptrs(location(values.at(0i32)),
                     location(extra_ref),
@@ -192,22 +192,22 @@ forward_mixed([args<Reference<Pair>>] values) {
 
 [return<int>]
 main() {
-  [Pair] a0{Pair(7i32)}
-  [Pair] a1{Pair(8i32)}
-  [Pair] a2{Pair(9i32)}
+  [Pair] a0{Pair{7i32}}
+  [Pair] a1{Pair{8i32}}
+  [Pair] a2{Pair{9i32}}
   [Reference<Pair>] r0{location(a0)}
   [Reference<Pair>] r1{location(a1)}
   [Reference<Pair>] r2{location(a2)}
 
-  [Pair] b0{Pair(11i32)}
-  [Pair] b1{Pair(12i32)}
-  [Pair] b2{Pair(13i32)}
+  [Pair] b0{Pair{11i32}}
+  [Pair] b1{Pair{12i32}}
+  [Pair] b2{Pair{13i32}}
   [Reference<Pair>] s0{location(b0)}
   [Reference<Pair>] s1{location(b1)}
   [Reference<Pair>] s2{location(b2)}
 
-  [Pair] c0{Pair(15i32)}
-  [Pair] c1{Pair(17i32)}
+  [Pair] c0{Pair{15i32}}
+  [Pair] c1{Pair{17i32}}
   [Reference<Pair>] t0{location(c0)}
   [Reference<Pair>] t1{location(c1)}
 
@@ -325,7 +325,7 @@ forward([args<Reference<Pair>>] values) {
 
 [return<int>]
 forward_mixed([args<Reference<Pair>>] values) {
-  [Pair] extra{Pair(5i32)}
+  [Pair] extra{Pair{5i32}}
   [Reference<Pair>] extra_ref{location(extra)}
   return(score_refs(location(values.at(0i32)),
                     location(extra_ref),
@@ -334,22 +334,22 @@ forward_mixed([args<Reference<Pair>>] values) {
 
 [return<int>]
 main() {
-  [Pair] a0{Pair(7i32)}
-  [Pair] a1{Pair(8i32)}
-  [Pair] a2{Pair(9i32)}
+  [Pair] a0{Pair{7i32}}
+  [Pair] a1{Pair{8i32}}
+  [Pair] a2{Pair{9i32}}
   [Reference<Pair>] r0{location(a0)}
   [Reference<Pair>] r1{location(a1)}
   [Reference<Pair>] r2{location(a2)}
 
-  [Pair] b0{Pair(11i32)}
-  [Pair] b1{Pair(12i32)}
-  [Pair] b2{Pair(13i32)}
+  [Pair] b0{Pair{11i32}}
+  [Pair] b1{Pair{12i32}}
+  [Pair] b2{Pair{13i32}}
   [Reference<Pair>] s0{location(b0)}
   [Reference<Pair>] s1{location(b1)}
   [Reference<Pair>] s2{location(b2)}
 
-  [Pair] c0{Pair(15i32)}
-  [Pair] c1{Pair(17i32)}
+  [Pair] c0{Pair{15i32}}
+  [Pair] c1{Pair{17i32}}
   [Reference<Pair>] t0{location(c0)}
   [Reference<Pair>] t1{location(c1)}
 
@@ -396,7 +396,7 @@ forward([args<Reference<Holder>>] values) {
 
 [return<int>]
 forward_mixed([args<Reference<Holder>>] values) {
-  [Holder] extra{Holder(1i32)}
+  [Holder] extra{Holder{1i32}}
   return(score_ptrs(location(values.at(0i32).value),
                     location(extra.value),
                     location(at(values, 1i32).value)))
@@ -404,22 +404,22 @@ forward_mixed([args<Reference<Holder>>] values) {
 
 [return<int>]
 main() {
-  [Holder] a0{Holder(1i32)}
-  [Holder] a1{Holder(2i32)}
-  [Holder] a2{Holder(3i32)}
+  [Holder] a0{Holder{1i32}}
+  [Holder] a1{Holder{2i32}}
+  [Holder] a2{Holder{3i32}}
   [Reference<Holder>] r0{location(a0)}
   [Reference<Holder>] r1{location(a1)}
   [Reference<Holder>] r2{location(a2)}
 
-  [Holder] b0{Holder(4i32)}
-  [Holder] b1{Holder(5i32)}
-  [Holder] b2{Holder(6i32)}
+  [Holder] b0{Holder{4i32}}
+  [Holder] b1{Holder{5i32}}
+  [Holder] b2{Holder{6i32}}
   [Reference<Holder>] s0{location(b0)}
   [Reference<Holder>] s1{location(b1)}
   [Reference<Holder>] s2{location(b2)}
 
-  [Holder] c0{Holder(7i32)}
-  [Holder] c1{Holder(8i32)}
+  [Holder] c0{Holder{7i32}}
+  [Holder] c1{Holder{8i32}}
   [Reference<Holder>] t0{location(c0)}
   [Reference<Holder>] t1{location(c1)}
 
@@ -454,7 +454,7 @@ Pair() {
 
 [struct]
 Holder() {
-  [Pair] pair{Pair()}
+  [Pair] pair{Pair{}}
 }
 
 [return<int>]
@@ -476,7 +476,7 @@ forward([args<Reference<Holder>>] values) {
 
 [return<int>]
 forward_mixed([args<Reference<Holder>>] values) {
-  [Holder] extra{Holder(Pair(5i32))}
+  [Holder] extra{Holder{Pair{5i32}}}
   return(score_ptrs(location(values.at(0i32).pair),
                     location(extra.pair),
                     location(at(values, 1i32).pair)))
@@ -484,22 +484,22 @@ forward_mixed([args<Reference<Holder>>] values) {
 
 [return<int>]
 main() {
-  [Holder] a0{Holder(Pair(7i32))}
-  [Holder] a1{Holder(Pair(8i32))}
-  [Holder] a2{Holder(Pair(9i32))}
+  [Holder] a0{Holder{Pair{7i32}}}
+  [Holder] a1{Holder{Pair{8i32}}}
+  [Holder] a2{Holder{Pair{9i32}}}
   [Reference<Holder>] r0{location(a0)}
   [Reference<Holder>] r1{location(a1)}
   [Reference<Holder>] r2{location(a2)}
 
-  [Holder] b0{Holder(Pair(11i32))}
-  [Holder] b1{Holder(Pair(12i32))}
-  [Holder] b2{Holder(Pair(13i32))}
+  [Holder] b0{Holder{Pair{11i32}}}
+  [Holder] b1{Holder{Pair{12i32}}}
+  [Holder] b2{Holder{Pair{13i32}}}
   [Reference<Holder>] s0{location(b0)}
   [Reference<Holder>] s1{location(b1)}
   [Reference<Holder>] s2{location(b2)}
 
-  [Holder] c0{Holder(Pair(15i32))}
-  [Holder] c1{Holder(Pair(17i32))}
+  [Holder] c0{Holder{Pair{15i32}}}
+  [Holder] c1{Holder{Pair{17i32}}}
   [Reference<Holder>] t0{location(c0)}
   [Reference<Holder>] t1{location(c1)}
 

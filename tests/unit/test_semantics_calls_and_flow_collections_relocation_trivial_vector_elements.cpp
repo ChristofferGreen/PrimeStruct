@@ -19,7 +19,7 @@ Mover() {
 [effects(heap_alloc), return<int>]
 main() {
   [vector<Mover> mut] values{vector<Mover>()}
-  push(values, Mover())
+  push(values, Mover{})
   return(0i32)
 }
 )";
@@ -44,7 +44,7 @@ Mover() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Mover>] values{vector<Mover>(Mover(), Mover())}
+  [vector<Mover>] values{vector<Mover>(Mover{}, Mover{})}
   return(0i32)
 }
 )";
@@ -91,8 +91,8 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Owned> mut] values{vectorPair<Owned>(Owned(10i32), Owned(20i32))}
-  vectorPush<Owned>(values, Owned(30i32))
+  [Vector<Owned> mut] values{vectorPair<Owned>(Owned{10i32}, Owned{20i32})}
+  vectorPush<Owned>(values, Owned{30i32})
   vectorReserve<Owned>(values, 6i32)
   [i32] picked{plus(vectorAt<Owned>(values, 0i32).value, vectorAtUnsafe<Owned>(values, 2i32).value)}
   vectorPop<Owned>(values)
@@ -128,19 +128,19 @@ Owned() {
 
 [effects(heap_alloc), return<Vector<Owned>>]
 wrapValues() {
-  return(vectorPair<Owned>(Owned(10i32), Owned(20i32)))
+  return(vectorPair<Owned>(Owned{10i32}, Owned{20i32}))
 }
 
 [effects(heap_alloc), return<int>]
 main() {
   [Vector<Owned> mut] values{wrapValues()}
-  /std/collections/vectorPush<Owned>(values, Owned(30i32))
+  /std/collections/vectorPush<Owned>(values, Owned{30i32})
   /std/collections/vectorReserve<Owned>(values, 6i32)
   [i32 mut] total{/std/collections/vectorCount<Owned>(values)}
   assign(total, plus(total, /std/collections/vectorCapacity<Owned>(values)))
   assign(total, plus(total, /std/collections/vectorAt<Owned>(values, 0i32).value))
   assign(total, plus(total, /std/collections/vectorAtUnsafe<Owned>(values, 2i32).value))
-  /std/collections/vector/push<Owned>(values, Owned(40i32))
+  /std/collections/vector/push<Owned>(values, Owned{40i32})
   assign(total, plus(total, /std/collections/vector/count<Owned>(values)))
   assign(total, plus(total, /std/collections/vector/at<Owned>(values, 3i32).value))
   /std/collections/vector/remove_at<Owned>(values, 1i32)
@@ -173,7 +173,7 @@ Owned() {
 
 [effects(heap_alloc), return<Vector<Owned>>]
 wrapValues() {
-  return(vectorPair<Owned>(Owned(10i32), Owned(20i32)))
+  return(vectorPair<Owned>(Owned{10i32}, Owned{20i32}))
 }
 
 [effects(heap_alloc), return<int>]
@@ -203,17 +203,17 @@ Owned() {
 
 [struct]
 Wrapper() {
-  [Owned] value{Owned()}
+  [Owned] value{Owned{}}
 }
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Owned> mut] removed{/std/collections/vectorPair<Owned>(Owned(4i32), Owned(9i32))}
+  [Vector<Owned> mut] removed{/std/collections/vectorPair<Owned>(Owned{4i32}, Owned{9i32})}
   remove_at(removed, 0i32)
   [Vector<Wrapper> mut] swapped{/std/collections/vectorTriple<Wrapper>(
-      Wrapper(Owned(1i32)),
-      Wrapper(Owned(7i32)),
-      Wrapper(Owned(11i32)))}
+      Wrapper{Owned{1i32}},
+      Wrapper{Owned{7i32}},
+      Wrapper{Owned{11i32}})}
   remove_swap(swapped, 0i32)
   return(plus(
       plus(/std/collections/vector/count<Owned>(removed), /std/collections/vector/at<Owned>(removed, 0i32).value),
@@ -259,7 +259,7 @@ namespace Buffer {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Buffer mut] buffer{Buffer()}
+  [Buffer mut] buffer{Buffer{}}
   buffer.append(2i32)
   return(0i32)
 }
@@ -545,7 +545,7 @@ Mover() {
 
 [struct]
 Wrapper() {
-  [Mover] value{Mover()}
+  [Mover] value{Mover{}}
 }
 
 [effects(heap_alloc), return<int>]
@@ -711,7 +711,7 @@ Owned() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Vector<Owned> mut] values{/std/collections/vectorSingle<Owned>(Owned())}
+  [Vector<Owned> mut] values{/std/collections/vectorSingle<Owned>(Owned{})}
   /std/collections/vector/pop<Owned>(values)
   return(/std/collections/vector/count<Owned>(values))
 }

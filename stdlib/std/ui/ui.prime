@@ -721,13 +721,13 @@ namespace std {
       usernameNode{self.append_input(panel, textSizePx, inputPaddingPx, inputMinWidth, usernameText)}
       passwordNode{self.append_input(panel, textSizePx, inputPaddingPx, inputMinWidth, passwordText)}
       submitNode{self.append_button(panel, textSizePx, buttonPaddingPx, buttonText)}
-      return(LoginFormNodes(
+      return(LoginFormNodes{
         [panel] panel,
         [title] titleNode,
         [usernameInput] usernameNode,
         [passwordInput] passwordNode,
         [submitButton] submitNode
-      ))
+      })
     }
 
     [public effects(heap_alloc), return<i32>]

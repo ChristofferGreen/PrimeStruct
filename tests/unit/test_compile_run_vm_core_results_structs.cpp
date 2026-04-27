@@ -16,7 +16,7 @@ Label() {
 
 [return<Result<Label, FileError>>]
 make_label([i32] code) {
-  return(Result.ok(Label([code] code)))
+  return(Result.ok(Label{[code] code}))
 }
 
 [effects(io_err)]
@@ -27,15 +27,15 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [Label] mapped{try(Result.map(make_label(2i32), []([Label] value) {
-    return(Label([code] plus(value.code, 5i32)))
+    return(Label{[code] plus(value.code, 5i32)})
   }))}
   print_line(mapped.code)
   [Label] chained{try(Result.and_then(make_label(2i32), []([Label] value) {
-    return(Result.ok(Label([code] plus(value.code, 3i32))))
+    return(Result.ok(Label{[code] plus(value.code, 3i32)}))
   }))}
   print_line(chained.code)
   [Label] summed{try(Result.map2(make_label(2i32), make_label(5i32), []([Label] left, [Label] right) {
-    return(Label([code] plus(left.code, right.code)))
+    return(Label{[code] plus(left.code, right.code)})
   }))}
   print_line(summed.code)
   return(19i32)
@@ -170,7 +170,7 @@ Pair() {
 
 [return<Result<Pair, FileError>>]
 make_pair([i32] left, [i32] right) {
-  return(Result.ok(Pair([left] left, [right] right)))
+  return(Result.ok(Pair{[left] left, [right] right}))
 }
 
 [effects(io_err)]
@@ -182,13 +182,13 @@ log_file_error([FileError] err) {
 main() {
   [Pair] direct{try(make_pair(1i32, 2i32))}
   [Pair] mapped{try(Result.map(make_pair(2i32, 3i32), []([Pair] value) {
-    return(Pair([left] plus(value.left, 5i32), [right] plus(value.right, 7i32)))
+    return(Pair{[left] plus(value.left, 5i32), [right] plus(value.right, 7i32)})
   }))}
   [Pair] chained{try(Result.and_then(make_pair(2i32, 3i32), []([Pair] value) {
-    return(Result.ok(Pair([left] plus(value.left, value.right), [right] 9i32)))
+    return(Result.ok(Pair{[left] plus(value.left, value.right), [right] 9i32}))
   }))}
   [Pair] summed{try(Result.map2(make_pair(1i32, 4i32), make_pair(2i32, 5i32), []([Pair] left, [Pair] right) {
-    return(Pair([left] plus(left.left, right.left), [right] plus(left.right, right.right)))
+    return(Pair{[left] plus(left.left, right.left), [right] plus(left.right, right.right)})
   }))}
   print_line(direct.left)
   print_line(direct.right)

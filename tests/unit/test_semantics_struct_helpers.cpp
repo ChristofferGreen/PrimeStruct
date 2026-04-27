@@ -18,7 +18,7 @@ Thing() {
 
 [return<i32>]
 main() {
-  [Thing] t{Thing()}
+  [Thing] t{Thing{}}
   return(t.get())
 }
 )";
@@ -41,7 +41,7 @@ Thing() {
 
 [return<i32>]
 main() {
-  [Thing] t{Thing()}
+  [Thing] t{Thing{}}
   return(/Thing/get(t))
 }
 )";
@@ -64,7 +64,7 @@ Thing() {
 
 [return<i32>]
 main() {
-  [Thing] t{Thing()}
+  [Thing] t{Thing{}}
   return(t.id())
 }
 )";
@@ -87,7 +87,7 @@ Box() {
 
 [return<i32>]
 main() {
-  [Box] box{Box()}
+  [Box] box{Box{}}
   return(box.echo(7i32))
 }
 )";
@@ -137,7 +137,7 @@ Counter() {
 
 [return<i32>]
 main() {
-  [Counter] counter{Counter()}
+  [Counter] counter{Counter{}}
   return(plus(counter.doubled(), Counter.defaultStep()))
 }
 )";
@@ -162,7 +162,7 @@ VecLike<T>() {
 
 [return<int>]
 main() {
-  [VecLike<i32>] values{VecLike<i32>()}
+  [VecLike<i32>] values{VecLike<i32>{}}
   values.check()
   return(0i32)
 }
@@ -180,13 +180,13 @@ Thing() {
 
   [mut return<void>]
   set([i32] v) {
-    assign(this, Thing(v))
+    assign(this, Thing{v})
   }
 }
 
 [return<i32>]
 main() {
-  [Thing] t{Thing()}
+  [Thing] t{Thing{}}
   t.set(7i32)
   return(0i32)
 }

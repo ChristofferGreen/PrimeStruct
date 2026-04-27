@@ -9,9 +9,9 @@ main() {
   [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
   [PresentMode] presentMode{PresentMode.Fifo}
   [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
-  [Texture2D<i32>] texture{Texture2D<i32>([token] 3i32, [width] 64i32, [height] 32i32)}
+  [Texture2D<i32>] texture{Texture2D<i32>{[token] 3i32, [width] 64i32, [height] 32i32}}
   [VertexColored] vertex{
-    VertexColored(
+    VertexColored{
       [px] 1.0f32,
       [py] 2.0f32,
       [pz] 3.0f32,
@@ -20,7 +20,7 @@ main() {
       [g] 0.50f32,
       [b] 0.75f32,
       [a] 1.0f32
-    )
+    }
   }
   [GfxError] err{deviceCreateFailed()}
   [string] whyText{GfxError.why(err)}
@@ -41,9 +41,9 @@ main() {
   [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
   [PresentMode] presentMode{PresentMode.Fifo}
   [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
-  [Texture2D<i32>] texture{Texture2D<i32>([token] 3i32, [width] 64i32, [height] 32i32)}
+  [Texture2D<i32>] texture{Texture2D<i32>{[token] 3i32, [width] 64i32, [height] 32i32}}
   [VertexColored] vertex{
-    VertexColored(
+    VertexColored{
       [px] 1.0f32,
       [py] 2.0f32,
       [pz] 3.0f32,
@@ -52,7 +52,7 @@ main() {
       [g] 0.50f32,
       [b] 0.75f32,
       [a] 1.0f32
-    )
+    }
   }
   [GfxError] err{deviceCreateFailed()}
   [string] whyText{GfxError.why(err)}
@@ -90,56 +90,56 @@ log_gfx_error([GfxError] err) {
 [return<int> on_error<GfxError, /log_gfx_error>]
 main() {
   [SubstrateWindowConfig] windowConfig{
-    SubstrateWindowConfig([hostToken] 11i32, [width] 1280i32, [height] 720i32)
+    SubstrateWindowConfig{[hostToken] 11i32, [width] 1280i32, [height] 720i32}
   }
   [i32] windowToken{GraphicsSubstrate.createWindow(windowConfig)?}
   [Window] window{Window([token] windowToken, [width] windowConfig.width, [height] windowConfig.height)}
   [SubstrateDeviceConfig] deviceConfig{
-    SubstrateDeviceConfig([window] window, [deviceToken] 13i32, [queueToken] 17i32)
+    SubstrateDeviceConfig{[window] window, [deviceToken] 13i32, [queueToken] 17i32}
   }
   [i32] deviceToken{GraphicsSubstrate.createDevice(deviceConfig)?}
   [i32] queueToken{GraphicsSubstrate.createQueue(deviceConfig)?}
   [Device] device{Device([token] deviceToken)}
-  [Queue] queue{Queue([token] queueToken)}
+  [Queue] queue{Queue{[token] queueToken}}
   [SubstrateSwapchainConfig] swapchainConfig{
-    SubstrateSwapchainConfig(
+    SubstrateSwapchainConfig{
       [window] window,
       [device] device,
       [swapchainToken] 19i32,
       [colorFormat] ColorFormat.Bgra8Unorm,
       [depthFormat] DepthFormat.Depth32F,
       [presentMode] PresentMode.Fifo
-    )
+    }
   }
   [i32] swapchainToken{GraphicsSubstrate.createSwapchain(swapchainConfig)?}
   [Swapchain] swapchain{
-    Swapchain(
+    Swapchain{
       [token] swapchainToken,
       [colorFormat] swapchainConfig.colorFormat,
       [depthFormat] swapchainConfig.depthFormat,
       [presentMode] swapchainConfig.presentMode
-    )
+    }
   }
-  [SubstrateFrameConfig] frameConfig{SubstrateFrameConfig([swapchain] swapchain, [frameToken] 23i32)}
+  [SubstrateFrameConfig] frameConfig{SubstrateFrameConfig{[swapchain] swapchain, [frameToken] 23i32}}
   [i32] frameToken{GraphicsSubstrate.acquireFrame(frameConfig)?}
-  [Frame] frame{Frame([token] frameToken)}
+  [Frame] frame{Frame{[token] frameToken}}
   [SubstrateRenderPassConfig] renderPassConfig{
-    SubstrateRenderPassConfig(
+    SubstrateRenderPassConfig{
       [frame] frame,
       [renderPassToken] 29i32,
-      [clearColor] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clearColor] ColorRGBA{0.05f32, 0.07f32, 0.10f32, 1.0f32},
       [clearDepth] 1.0f32
-    )
+    }
   }
   [i32] renderPassToken{GraphicsSubstrate.beginRenderPass(renderPassConfig)?}
-  [RenderPass] renderPass{RenderPass([token] renderPassToken)}
-  [Material] material{Material([token] 31i32)}
+  [RenderPass] renderPass{RenderPass{[token] renderPassToken}}
+  [Material] material{Material{[token] 31i32}}
   [SubstrateDrawMeshConfig] drawMeshConfig{
-    SubstrateDrawMeshConfig([renderPass] renderPass, [mesh] Mesh([token] 27i32, [vertexCount] 3i32, [indexCount] 3i32), [material] material, [drawToken] 41i32)
+    SubstrateDrawMeshConfig{[renderPass] renderPass, [mesh] Mesh{[token] 27i32, [vertexCount] 3i32, [indexCount] 3i32}, [material] material, [drawToken] 41i32}
   }
   [i32] drawToken{GraphicsSubstrate.drawMesh(drawMeshConfig)}
   [SubstrateRenderPassEndConfig] endConfig{
-    SubstrateRenderPassEndConfig([renderPass] renderPass, [endToken] 43i32)
+    SubstrateRenderPassEndConfig{[renderPass] renderPass, [endToken] 43i32}
   }
   [i32] endToken{GraphicsSubstrate.endRenderPass(endConfig)}
   GraphicsSubstrate.submitFrame(frame.token, queue.token)?
@@ -177,9 +177,9 @@ main() {
   }
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
@@ -198,7 +198,7 @@ main() {
   [Frame] frame{swapchain.frame()?}
   [RenderPass] pass{
     frame.render_pass(
-      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_color] ColorRGBA{0.05f32, 0.07f32, 0.10f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }
@@ -239,9 +239,9 @@ main() {
   }
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
@@ -260,7 +260,7 @@ main() {
   [Frame] frame{swapchain.frame()?}
   [RenderPass] pass{
     frame.render_pass(
-      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_color] ColorRGBA{0.05f32, 0.07f32, 0.10f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }

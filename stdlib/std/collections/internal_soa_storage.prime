@@ -360,11 +360,11 @@ namespace std {
         /std/collections/internal_buffer_unchecked/bufferOffsetBytesUnsafe(baseBytes, fieldOffset)}
     [Pointer<uninitialized<Field>>] fieldBase{
         /std/collections/internal_buffer_unchecked/bufferReinterpretFromBytes<uninitialized<Field>>(fieldBytes)}
-    return(SoaFieldView<Field>(
+    return(SoaFieldView<Field>{
         values.field_count(),
         values.field_capacity(),
         fieldBase,
-        stride))
+        stride})
   }
 
   [return<void>]
@@ -448,11 +448,11 @@ namespace std {
   [public return<SoaColumn<T>>]
   soaColumnBorrowedView<T>([SoaColumn<T>] values) {
     soaColumnCheckShape<T>(values)
-    return(SoaColumn<T>(
+    return(SoaColumn<T>{
         values.field_count(),
         values.field_capacity(),
         values.data,
-        false))
+        false})
   }
 
   [return<void>]
@@ -489,11 +489,11 @@ namespace std {
     if(equal(allocCount, 0i32),
        then() { assign(allocCount, 1i32) },
        else() { })
-    return(SoaColumn<T>(
+    return(SoaColumn<T>{
         count,
         capacity,
         /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
-        true))
+        true})
   }
 
   [return<void>]
@@ -1219,77 +1219,77 @@ namespace std {
 
   [public effects(heap_alloc), return<SoaColumns2<T0, T1>>]
   soaColumns2New<T0, T1>() {
-    return(SoaColumns2<T0, T1>())
+    return(SoaColumns2<T0, T1>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns3<T0, T1, T2>>]
   soaColumns3New<T0, T1, T2>() {
-    return(SoaColumns3<T0, T1, T2>())
+    return(SoaColumns3<T0, T1, T2>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns4<T0, T1, T2, T3>>]
   soaColumns4New<T0, T1, T2, T3>() {
-    return(SoaColumns4<T0, T1, T2, T3>())
+    return(SoaColumns4<T0, T1, T2, T3>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns5<T0, T1, T2, T3, T4>>]
   soaColumns5New<T0, T1, T2, T3, T4>() {
-    return(SoaColumns5<T0, T1, T2, T3, T4>())
+    return(SoaColumns5<T0, T1, T2, T3, T4>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns6<T0, T1, T2, T3, T4, T5>>]
   soaColumns6New<T0, T1, T2, T3, T4, T5>() {
-    return(SoaColumns6<T0, T1, T2, T3, T4, T5>())
+    return(SoaColumns6<T0, T1, T2, T3, T4, T5>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns7<T0, T1, T2, T3, T4, T5, T6>>]
   soaColumns7New<T0, T1, T2, T3, T4, T5, T6>() {
-    return(SoaColumns7<T0, T1, T2, T3, T4, T5, T6>())
+    return(SoaColumns7<T0, T1, T2, T3, T4, T5, T6>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>>]
   soaColumns8New<T0, T1, T2, T3, T4, T5, T6, T7>() {
-    return(SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>())
+    return(SoaColumns8<T0, T1, T2, T3, T4, T5, T6, T7>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>>]
   soaColumns9New<T0, T1, T2, T3, T4, T5, T6, T7, T8>() {
-    return(SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>())
+    return(SoaColumns9<T0, T1, T2, T3, T4, T5, T6, T7, T8>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>>]
   soaColumns10New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>() {
-    return(SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>())
+    return(SoaColumns10<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>>]
   soaColumns11New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>() {
-    return(SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>())
+    return(SoaColumns11<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>>]
   soaColumns12New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>() {
-    return(SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>())
+    return(SoaColumns12<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>>]
   soaColumns13New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>() {
-    return(SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>())
+    return(SoaColumns13<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>>]
   soaColumns14New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>() {
-    return(SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>())
+    return(SoaColumns14<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>>]
   soaColumns15New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>() {
-    return(SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>())
+    return(SoaColumns15<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>{})
   }
 
   [public effects(heap_alloc), return<SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>>]
   soaColumns16New<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>() {
-    return(SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>())
+    return(SoaColumns16<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>{})
   }
 
   [public return<i32>]

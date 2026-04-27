@@ -63,7 +63,7 @@ take() {
 
 [public return<Maybe<T>>]
 some<T>([T] value) {
-  [Maybe<T> mut] out{Maybe<T>()}
+  [Maybe<T> mut] out{Maybe<T>{}}
   [Reference<Maybe<T>> mut] ref{location(out)}
   init(ref.value, value)
   assign(ref.empty, false)
@@ -72,7 +72,7 @@ some<T>([T] value) {
 
 [public return<Maybe<T>>]
 none<T>() {
-  return(Maybe<T>())
+  return(Maybe<T>{})
 }
 )";
 } // namespace
@@ -112,7 +112,7 @@ Widget() {
 
 [return<int>]
 main() {
-  [Maybe<Widget>] value{some<Widget>(Widget())}
+  [Maybe<Widget>] value{some<Widget>(Widget{})}
   if(value.empty) { return(0i32) } else { return(1i32) }
 }
 )";
@@ -252,7 +252,7 @@ TEST_CASE("maybe direct constructor rejects payload shorthand without some") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
-  [Maybe<i32>] value{Maybe(1i32)}
+  [Maybe<i32>] value{Maybe{1i32}}
   if(value.empty) { return(0i32) } else { return(1i32) }
 }
 )";
@@ -265,7 +265,7 @@ TEST_CASE("maybe direct constructor rejects payload shorthand with explicit temp
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
-  [Maybe<i32>] value{Maybe<i32>(1i32)}
+  [Maybe<i32>] value{Maybe<i32>{1i32}}
   if(value.empty) { return(0i32) } else { return(1i32) }
 }
 )";

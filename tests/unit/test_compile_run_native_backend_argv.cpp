@@ -248,7 +248,7 @@ Box() {
 
 [return<int>]
 main([array<string>] args) {
-  [Box] box{Box([value] args[1i32])}
+  [Box] box{Box{[value] args[1i32]}}
   return(box.value.count())
 }
 )";

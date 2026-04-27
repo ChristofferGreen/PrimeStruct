@@ -1876,8 +1876,8 @@ Holder() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [SoaVector<Particle>] values{Holder().cloneValues()}
-  return(plus(plus(plus(Holder().cloneValues().count(), Holder().cloneValues().get(0i32).x),
+  [SoaVector<Particle>] values{Holder{}.cloneValues()}
+  return(plus(plus(plus(Holder{}.cloneValues().count(), Holder{}.cloneValues().get(0i32).x),
                     values.ref(0i32).x),
               count(values.to_aos())))
 }

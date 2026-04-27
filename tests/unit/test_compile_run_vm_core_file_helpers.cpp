@@ -287,7 +287,7 @@ Marker() {}
 
 [effects(io_out), return<int>]
 main() {
-  [Marker] marker{Marker()}
+  [Marker] marker{Marker{}}
   print_line(/helper/value(9i32))
   print_line(/helper/value(9i32, true))
   print_line(marker.mark(7i32))
@@ -471,7 +471,7 @@ swallow_parse_error([ParseError] err) {}
 
 [return<int> effects(io_out) on_error<ParseError, /swallow_parse_error>]
 main() {
-  [Reader] reader{Reader()}
+  [Reader] reader{Reader{}}
   print_line(try(Result.map(greeting(), []([string] value) { return(value) })))
   print_line(try(Result.and_then(reader.read(), []([string] value) { return(Result.ok(value)) })))
   print_line(try(Result.map2(greeting(), reader.read(), []([string] left, [string] right) { return(left) })))

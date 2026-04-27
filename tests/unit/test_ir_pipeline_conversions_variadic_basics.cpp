@@ -271,7 +271,7 @@ count_values([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(count_values(Pair(), Pair()))
+  return(count_values(Pair{}, Pair{}))
 }
   )";
   std::string error;
@@ -299,7 +299,7 @@ forward([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(forward(Pair(), Pair()))
+  return(forward(Pair{}, Pair{}))
 }
   )";
   std::string error;
@@ -322,12 +322,12 @@ count_values([args<Pair>] values) {
 
 [return<int>]
 forward([args<Pair>] values) {
-  return(count_values(Pair(), [spread] values))
+  return(count_values(Pair{}, [spread] values))
 }
 
 [return<int>]
 main() {
-  return(forward(Pair(), Pair()))
+  return(forward(Pair{}, Pair{}))
 }
   )";
   std::string error;
@@ -357,7 +357,7 @@ score_pairs([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(score_pairs(Pair(7i32), Pair(9i32)))
+  return(score_pairs(Pair{7i32}, Pair{9i32}))
 }
   )";
   std::string error;
@@ -390,7 +390,7 @@ forward([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(forward(Pair(7i32), Pair(9i32)))
+  return(forward(Pair{7i32}, Pair{9i32}))
 }
   )";
   std::string error;
@@ -418,12 +418,12 @@ score_pairs([args<Pair>] values) {
 
 [return<int>]
 forward([args<Pair>] values) {
-  return(score_pairs(Pair(5i32), [spread] values))
+  return(score_pairs(Pair{5i32}, [spread] values))
 }
 
 [return<int>]
 main() {
-  return(forward(Pair(7i32), Pair(9i32)))
+  return(forward(Pair{7i32}, Pair{9i32}))
 }
   )";
   std::string error;

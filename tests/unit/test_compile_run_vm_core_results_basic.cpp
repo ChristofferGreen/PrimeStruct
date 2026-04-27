@@ -323,8 +323,8 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [ContainerError] container{try(Result.ok(ContainerError(4i32)))}
-  [ImageError] image{try(Result.ok(ImageError(3i32)))}
+  [ContainerError] container{try(Result.ok(ContainerError{4i32}))}
+  [ImageError] image{try(Result.ok(ImageError{3i32}))}
   return(plus(container.code, image.code))
 }
 )";
@@ -351,14 +351,14 @@ log_file_error([FileError] err) {
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
   [ContainerError] mapped{
-    try(Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError(value)) }))
+    try(Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError{value}) }))
   }
   [ImageError] chained{
-    try(Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError(value))) }))
+    try(Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError{value})) }))
   }
   [GfxError] summed{
     try(Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
-      return(GfxError(plus(left, right)))
+      return(GfxError{plus(left, right)})
     }))
   }
   return(plus(mapped.code, plus(chained.code, summed.code)))
@@ -384,7 +384,7 @@ Label() {
 
 [return<Result<Label, FileError>>]
 make_label() {
-  return(Result.ok(Label([code] 7i32)))
+  return(Result.ok(Label{[code] 7i32}))
 }
 
 [effects(io_err)]

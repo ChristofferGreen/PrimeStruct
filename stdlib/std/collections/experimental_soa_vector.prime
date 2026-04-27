@@ -52,7 +52,7 @@ namespace std {
   [public effects(heap_alloc), return<SoaVector<T>>]
   soaVectorNew<T>() {
     soaVectorValidateType<T>()
-    return(SoaVector<T>())
+    return(SoaVector<T>{})
   }
 
   [public effects(heap_alloc), return<SoaVector<T>>]

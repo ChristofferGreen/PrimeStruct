@@ -604,8 +604,8 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [ContainerError] container{try(Result.ok(ContainerError(4i32)))}
-  [ImageError] image{try(Result.ok(ImageError(3i32)))}
+  [ContainerError] container{try(Result.ok(ContainerError{4i32}))}
+  [ImageError] image{try(Result.ok(ImageError{3i32}))}
   return(plus(container.code, image.code))
 }
 )";

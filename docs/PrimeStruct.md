@@ -3203,7 +3203,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 
   [return<Maybe<T>>]
   some<T>([T] v) {
-    [Maybe<T> mut] out{Maybe<T>()}
+    [Maybe<T> mut] out{Maybe<T>{}}
     [Reference<Maybe<T>> mut] ref{location(out)}
     init(ref.value, v)
     ref.empty = false
@@ -3212,7 +3212,7 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 
   [return<Maybe<T>>]
   none<T>() {
-    return(Maybe<T>())
+    return(Maybe<T>{})
   }
   ```
 

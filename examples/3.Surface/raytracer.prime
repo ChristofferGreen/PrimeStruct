@@ -21,9 +21,9 @@ Surface {
 
 [struct]
 Sphere {
-  [public Vec3] center{Vec3(0.0, 0.0, 0.0)}
+  [public Vec3] center{Vec3{0.0, 0.0, 0.0}}
   [public f32] radius{0.0}
-  [public ColorRGB] base{ColorRGB(1.0, 1.0, 1.0)}
+  [public ColorRGB] base{ColorRGB{1.0, 1.0, 1.0}}
   [public f32] reflectivity{0.0}
   [public f32] isGlass{0.0}
 }
@@ -33,7 +33,7 @@ Scene {
   [public Sphere] s1{Sphere()}
   [public Sphere] s2{Sphere()}
   [public Sphere] s3{Sphere()}
-  [public Vec3] planeNormal{Vec3(0.0, 1.0, 0.0)}
+  [public Vec3] planeNormal{Vec3{0.0, 1.0, 0.0}}
   [public f32] planeY{-0.6}
 }
 
@@ -41,27 +41,27 @@ Scene {
 main() {
   [Scene] scene{Scene(
     [s1] Sphere(
-      [center] Vec3(0.0, -0.1, -1.0),
+      [center] Vec3{0.0, -0.1, -1.0},
       [radius] 0.5,
-      [base] ColorRGB(0.8, 0.2, 0.2),
+      [base] ColorRGB{0.8, 0.2, 0.2},
       [reflectivity] 0.75,
       [isGlass] 0.0
     ),
     [s2] Sphere(
-      [center] Vec3(1.1, -0.1, -1.6),
+      [center] Vec3{1.1, -0.1, -1.6},
       [radius] 0.5,
-      [base] ColorRGB(0.2, 0.2, 0.85),
+      [base] ColorRGB{0.2, 0.2, 0.85},
       [reflectivity] 0.85,
       [isGlass] 0.0
     ),
     [s3] Sphere(
-      [center] Vec3(-1.2, -0.2, -1.4),
+      [center] Vec3{-1.2, -0.2, -1.4},
       [radius] 0.4,
-      [base] ColorRGB(1.0, 1.0, 1.0),
+      [base] ColorRGB{1.0, 1.0, 1.0},
       [reflectivity] 0.0,
       [isGlass] 1.0
     ),
-    [planeNormal] Vec3(0.0, 1.0, 0.0),
+    [planeNormal] Vec3{0.0, 1.0, 0.0},
     [planeY] -0.6
   )}
   [i32] width{128}
@@ -69,7 +69,7 @@ main() {
   [i32] samples{2}
   [f32] samplesF{f32{samples}}
   [f32] sampleScale{1.0 / samplesF / samplesF}
-  [Vec3] origin{Vec3(0.0, 0.8, 2.5)}
+  [Vec3] origin{Vec3{0.0, 0.8, 2.5}}
 
   print_line("P3")
   print(width)
@@ -104,7 +104,7 @@ pixel_color([Scene] scene,
             [i32] height,
             [i32] samples,
             [f32] sampleScale) {
-  [ColorRGB mut] accum{ColorRGB(0.0, 0.0, 0.0)}
+  [ColorRGB mut] accum{ColorRGB{0.0, 0.0, 0.0}}
   [f32] samplesF{f32{samples}}
   [i32] widthMinus{width - 1}
   [i32] heightMinus{height - 1}
@@ -120,7 +120,7 @@ pixel_color([Scene] scene,
       [f32] jitterY{(syF + 0.5) / samplesF}
       [f32] u{((xF + jitterX) / widthMinusF) * 2.0 - 1.0}
       [f32] v{((yF + jitterY) / heightMinusF) * 2.0 - 1.0}
-      [Vec3] dir{Vec3(u, -v, -1.5).toNormalized()}
+      [Vec3] dir{Vec3{u, -v, -1.5}.toNormalized()}
       [ColorRGB] sample{trace(scene, origin, dir, 4)}
       accum = accum.add(sample)
     }
@@ -272,8 +272,8 @@ occluded([Scene] scene, [Vec3] origin, [Vec3] dir, [f32] maxDist) {
 
 [f32]
 ambient_occlusion([Scene] scene, [Vec3] point, [Vec3] normal) {
-  [Vec3] up{Vec3(0.0, 1.0, 0.0)}
-  [Vec3] fallbackAxis{Vec3(1.0, 0.0, 0.0)}
+  [Vec3] up{Vec3{0.0, 1.0, 0.0}}
+  [Vec3] fallbackAxis{Vec3{1.0, 0.0, 0.0}}
   [Vec3 mut] tangent{/std/math/Vec3/cross(up, normal)}
   if(tangent.dot(tangent) <= 0.0001) {
     assign(tangent, /std/math/Vec3/cross(fallbackAxis, normal))
@@ -313,7 +313,7 @@ ambient_occlusion([Scene] scene, [Vec3] point, [Vec3] normal) {
 
 [ColorRGB]
 shade([Scene] scene, [ColorRGB] base, [Vec3] normal, [Vec3] point) {
-  [Vec3] light{Vec3(1.0, 1.0, -0.5).toNormalized()}
+  [Vec3] light{Vec3{1.0, 1.0, -0.5}.toNormalized()}
   [f32] diff{max(0.0, normal.dot(light))}
   [f32] level{0.2 + 0.8 * diff}
   [f32] ao{ambient_occlusion(scene, point, normal)}
@@ -341,21 +341,21 @@ refract_dir([Vec3] dir, [Vec3] normal, [f32] ior) {
   } else {
     [Vec3] t1{dir.mulScalar(eta)}
     [Vec3] t2{nn.mulScalar(eta * cosi - /sqrt(k))}
-    return(Vec3(t1.x + t2.x, t1.y + t2.y, t1.z + t2.z))
+    return(Vec3{t1.x + t2.x, t1.y + t2.y, t1.z + t2.z})
   }
 }
 
 [ColorRGB]
 sky_color([Vec3] dir) {
   [f32] t{0.5 * (dir.y + 1.0)}
-  [ColorRGB] base{ColorRGB(0.2, 0.2, 0.2).mix(ColorRGB(0.5, 0.7, 1.0), t)}
+  [ColorRGB] base{ColorRGB{0.2, 0.2, 0.2}.mix(ColorRGB{0.5, 0.7, 1.0}, t)}
   [ColorRGB] scaled{base.mulScalar(1.5)}
   [ColorRGB] clamped{
-    ColorRGB(
+    ColorRGB{
       min(1.0, max(0.0, scaled.r)),
       min(1.0, max(0.0, scaled.g)),
       min(1.0, max(0.0, scaled.b))
-    )
+    }
   }
   return(clamped)
 }
@@ -371,8 +371,8 @@ trace_direct([Scene] scene, [Vec3] origin, [Vec3] dir) {
   [Vec3] hitStep{dir.mulScalar(hit.t)}
   [Vec3] hitPoint{origin.add(hitStep)}
   [Surface] surface{scene_surface(scene, hit.id, hitPoint)}
-  [Vec3] normal{Vec3(surface.normalX, surface.normalY, surface.normalZ)}
-  [ColorRGB] base{ColorRGB(surface.baseR, surface.baseG, surface.baseB)}
+  [Vec3] normal{Vec3{surface.normalX, surface.normalY, surface.normalZ}}
+  [ColorRGB] base{ColorRGB{surface.baseR, surface.baseG, surface.baseB}}
   return(shade(scene, base, normal, hitPoint))
 }
 
@@ -387,18 +387,18 @@ trace_direct_skip_glass([Scene] scene, [Vec3] origin, [Vec3] dir) {
   [Vec3] hitStep{dir.mulScalar(hit.t)}
   [Vec3] hitPoint{origin.add(hitStep)}
   [Surface] surface{scene_surface(scene, hit.id, hitPoint)}
-  [Vec3] normal{Vec3(surface.normalX, surface.normalY, surface.normalZ)}
-  [ColorRGB] base{ColorRGB(surface.baseR, surface.baseG, surface.baseB)}
+  [Vec3] normal{Vec3{surface.normalX, surface.normalY, surface.normalZ}}
+  [ColorRGB] base{ColorRGB{surface.baseR, surface.baseG, surface.baseB}}
   return(shade(scene, base, normal, hitPoint))
 }
 
 [ColorRGB]
 trace([Scene] scene, [Vec3] origin, [Vec3] dir, [i32] depth) {
-  [ColorRGB mut] result{ColorRGB(0.0, 0.0, 0.0)}
+  [ColorRGB mut] result{ColorRGB{0.0, 0.0, 0.0}}
   [Vec3 mut] currentOrigin{origin}
   [Vec3 mut] currentDir{dir}
   [f32 mut] weight{1.0}
-  [ColorRGB mut] filter{ColorRGB(1.0, 1.0, 1.0)}
+  [ColorRGB mut] filter{ColorRGB{1.0, 1.0, 1.0}}
 
   for([i32 mut] bounce{0}; bounce < depth; ++bounce) {
     [ColorRGB] sky{sky_color(currentDir)}
@@ -414,8 +414,8 @@ trace([Scene] scene, [Vec3] origin, [Vec3] dir, [i32] depth) {
     [Vec3] hitStep{currentDir.mulScalar(hit.t)}
     [Vec3] hitPoint{currentOrigin.add(hitStep)}
     [Surface] surface{scene_surface(scene, hit.id, hitPoint)}
-    [Vec3] hitNormal{Vec3(surface.normalX, surface.normalY, surface.normalZ)}
-    [ColorRGB] hitBase{ColorRGB(surface.baseR, surface.baseG, surface.baseB)}
+    [Vec3] hitNormal{Vec3{surface.normalX, surface.normalY, surface.normalZ}}
+    [ColorRGB] hitBase{ColorRGB{surface.baseR, surface.baseG, surface.baseB}}
     [f32] reflectivity{surface.reflectivity}
     [f32] isGlass{surface.isGlass}
 
@@ -470,7 +470,7 @@ trace([Scene] scene, [Vec3] origin, [Vec3] dir, [i32] depth) {
       [Vec3] refrOrigin{hitPoint.add(refractOffset)}
 
       [ColorRGB] reflColor{trace_direct_skip_glass(scene, reflOrigin, reflectDir)}
-      [ColorRGB mut] refrColor{ColorRGB(0.0, 0.0, 0.0)}
+      [ColorRGB mut] refrColor{ColorRGB{0.0, 0.0, 0.0}}
       if(fresnel < 1.0) {
         refrColor = trace_direct_skip_glass(scene, refrOrigin, refrDir)
       } else {

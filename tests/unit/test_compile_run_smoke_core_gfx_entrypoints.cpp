@@ -145,9 +145,9 @@ main() {
   }
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
@@ -237,9 +237,9 @@ main() {
   }
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
@@ -311,19 +311,19 @@ import /std/gfx/experimental/*
 
 [return<int>]
 main() {
-  [Frame] frame{Frame([token] 31i32)}
-  [Mesh] mesh{Mesh([token] 37i32, [vertexCount] 3i32, [indexCount] 3i32)}
-  [Material] material{Material([token] 41i32)}
+  [Frame] frame{Frame{[token] 31i32}}
+  [Mesh] mesh{Mesh{[token] 37i32, [vertexCount] 3i32, [indexCount] 3i32}}
+  [Material] material{Material{[token] 41i32}}
   [RenderPass] pass{
     frame.render_pass(
-      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_color] ColorRGBA{0.05f32, 0.07f32, 0.10f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }
-  [Frame] badFrame{Frame([token] 0i32)}
+  [Frame] badFrame{Frame{[token] 0i32}}
   [RenderPass] badPass{
     badFrame.render_pass(
-      [clear_color] ColorRGBA(0.0f32, 0.0f32, 0.0f32, 1.0f32),
+      [clear_color] ColorRGBA{0.0f32, 0.0f32, 0.0f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }
@@ -377,19 +377,19 @@ import /std/gfx/*
 
 [return<int>]
 main() {
-  [Frame] frame{Frame([token] 31i32)}
-  [Mesh] mesh{Mesh([token] 37i32, [vertexCount] 3i32, [indexCount] 3i32)}
-  [Material] material{Material([token] 41i32)}
+  [Frame] frame{Frame{[token] 31i32}}
+  [Mesh] mesh{Mesh{[token] 37i32, [vertexCount] 3i32, [indexCount] 3i32}}
+  [Material] material{Material{[token] 41i32}}
   [RenderPass] pass{
     frame.render_pass(
-      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_color] ColorRGBA{0.05f32, 0.07f32, 0.10f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }
-  [Frame] badFrame{Frame([token] 0i32)}
+  [Frame] badFrame{Frame{[token] 0i32}}
   [RenderPass] badPass{
     badFrame.render_pass(
-      [clear_color] ColorRGBA(0.0f32, 0.0f32, 0.0f32, 1.0f32),
+      [clear_color] ColorRGBA{0.0f32, 0.0f32, 0.0f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }
@@ -443,10 +443,10 @@ import /std/gfx/experimental/*
 
 [return<int>]
 main() {
-  [Device] device{Device([token] 0i32)}
+  [Device] device{Device{[token] 0i32}}
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32)}
@@ -497,10 +497,10 @@ import /std/gfx/*
 
 [return<int>]
 main() {
-  [Device] device{Device([token] 0i32)}
+  [Device] device{Device{[token] 0i32}}
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32)}

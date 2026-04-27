@@ -524,7 +524,7 @@ Thing() {
 
 [return<int>]
 main() {
-  Thing(3i32)
+  Thing{3i32}
   return(0i32)
 }
 )";

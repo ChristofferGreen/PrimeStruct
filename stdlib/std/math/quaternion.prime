@@ -25,12 +25,12 @@ namespace std {
       if(len <= 0.0) {
         return(self)
       } else {
-        return(Quat(
+        return(Quat{
           self.x / len,
           self.y / len,
           self.z / len,
           self.w / len
-        ))
+        })
       }
     }
 
@@ -42,33 +42,33 @@ namespace std {
 
   [return<Quat>]
   quat_add_internal([Quat] left, [Quat] right) {
-    return(Quat(
+    return(Quat{
       left.x + right.x,
       left.y + right.y,
       left.z + right.z,
       left.w + right.w
-    ))
+    })
   }
 
   [return<Quat>]
   quat_sub_internal([Quat] left, [Quat] right) {
-    return(Quat(
+    return(Quat{
       left.x - right.x,
       left.y - right.y,
       left.z - right.z,
       left.w - right.w
-    ))
+    })
   }
 
   [return<Quat>]
   quat_scale_internal([Quat] value, [auto] scale) {
     [f32] scalar{convert<f32>(scale)}
-    return(Quat(
+    return(Quat{
       value.x * scalar,
       value.y * scalar,
       value.z * scalar,
       value.w * scalar
-    ))
+    })
   }
 
   [return<Quat>]
@@ -79,32 +79,32 @@ namespace std {
   [return<Quat>]
   quat_div_scalar_internal([Quat] value, [auto] scale) {
     [f32] scalar{convert<f32>(scale)}
-    return(Quat(
+    return(Quat{
       value.x / scalar,
       value.y / scalar,
       value.z / scalar,
       value.w / scalar
-    ))
+    })
   }
 
   [return<Quat>]
   quat_multiply_internal([Quat] left, [Quat] right) {
-    return(Quat(
+    return(Quat{
       left.w * right.x + left.x * right.w + left.y * right.z - left.z * right.y,
       left.w * right.y - left.x * right.z + left.y * right.w + left.z * right.x,
       left.w * right.z + left.x * right.y - left.y * right.x + left.z * right.w,
       left.w * right.w - left.x * right.x - left.y * right.y - left.z * right.z
-    ))
+    })
   }
 
   [return<Vec3>]
   quat_rotate_vec3_internal([Quat] rotation, [Vec3] value) {
     [Mat3] basis{quat_to_mat3(rotation)}
-    return(Vec3(
+    return(Vec3{
       basis.m00 * value.x + basis.m01 * value.y + basis.m02 * value.z,
       basis.m10 * value.x + basis.m11 * value.y + basis.m12 * value.z,
       basis.m20 * value.x + basis.m21 * value.y + basis.m22 * value.z
-    ))
+    })
   }
 
   [public return<Mat3>]
@@ -119,7 +119,7 @@ namespace std {
     [f32] wx{q.w * q.x}
     [f32] wy{q.w * q.y}
     [f32] wz{q.w * q.z}
-    return(Mat3(
+    return(Mat3{
       1.0 - 2.0 * (yy + zz),
       2.0 * (xy - wz),
       2.0 * (xz + wy),
@@ -129,18 +129,18 @@ namespace std {
       2.0 * (xz - wy),
       2.0 * (yz + wx),
       1.0 - 2.0 * (xx + yy)
-    ))
+    })
   }
 
   [public return<Mat4>]
   quat_to_mat4([Quat] value) {
     [Mat3] basis{quat_to_mat3(value)}
-    return(Mat4(
+    return(Mat4{
       basis.m00, basis.m01, basis.m02, 0.0,
       basis.m10, basis.m11, basis.m12, 0.0,
       basis.m20, basis.m21, basis.m22, 0.0,
       0.0, 0.0, 0.0, 1.0
-    ))
+    })
   }
 
   [public return<Quat>]
@@ -148,48 +148,48 @@ namespace std {
     [f32] trace{value.m00 + value.m11 + value.m22}
     if(trace > 0.0) {
       [f32] s{/std/math/sqrt(trace + 1.0) * 2.0}
-      return(Quat(
+      return(Quat{
         (value.m21 - value.m12) / s,
         (value.m02 - value.m20) / s,
         (value.m10 - value.m01) / s,
         0.25 * s
-      ).toNormalized())
+      }.toNormalized())
     } else {
       if(value.m00 > value.m11) {
         if(value.m00 > value.m22) {
           [f32] s{/std/math/sqrt(1.0 + value.m00 - value.m11 - value.m22) * 2.0}
-          return(Quat(
+          return(Quat{
             0.25 * s,
             (value.m01 + value.m10) / s,
             (value.m02 + value.m20) / s,
             (value.m21 - value.m12) / s
-          ).toNormalized())
+          }.toNormalized())
         } else {
           [f32] s{/std/math/sqrt(1.0 + value.m22 - value.m00 - value.m11) * 2.0}
-          return(Quat(
+          return(Quat{
             (value.m02 + value.m20) / s,
             (value.m12 + value.m21) / s,
             0.25 * s,
             (value.m10 - value.m01) / s
-          ).toNormalized())
+          }.toNormalized())
         }
       } else {
         if(value.m11 > value.m22) {
           [f32] s{/std/math/sqrt(1.0 + value.m11 - value.m00 - value.m22) * 2.0}
-          return(Quat(
+          return(Quat{
             (value.m01 + value.m10) / s,
             0.25 * s,
             (value.m12 + value.m21) / s,
             (value.m02 - value.m20) / s
-          ).toNormalized())
+          }.toNormalized())
         } else {
           [f32] s{/std/math/sqrt(1.0 + value.m22 - value.m00 - value.m11) * 2.0}
-          return(Quat(
+          return(Quat{
             (value.m02 + value.m20) / s,
             (value.m12 + value.m21) / s,
             0.25 * s,
             (value.m10 - value.m01) / s
-          ).toNormalized())
+          }.toNormalized())
         }
       }
     }

@@ -29,7 +29,7 @@ forward([args<Pair>] values) {
 
 [return<int>]
 main() {
-  return(forward(Pair(7i32), Pair(9i32)))
+  return(forward(Pair{7i32}, Pair{9i32}))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_spread.prime", source);
@@ -64,12 +64,12 @@ score_pairs([args<Pair>] values) {
 
 [return<int>]
 forward([args<Pair>] values) {
-  return(score_pairs(Pair(5i32), [spread] values))
+  return(score_pairs(Pair{5i32}, [spread] values))
 }
 
 [return<int>]
 main() {
-  return(forward(Pair(7i32), Pair(9i32)))
+  return(forward(Pair{7i32}, Pair{9i32}))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_struct_access_mixed.prime", source);

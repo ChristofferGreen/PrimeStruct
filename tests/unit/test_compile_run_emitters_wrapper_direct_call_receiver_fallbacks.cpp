@@ -467,17 +467,17 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Vec2] v2{Vec2(1.0f32, 2.0f32)}
-  [Vec3] v3{Vec3(3.0f32, 4.0f32, 0.0f32)}
-  [Vec4] v4{Vec4(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Vec2] v2{Vec2{1.0f32, 2.0f32}}
+  [Vec3] v3{Vec3{3.0f32, 4.0f32, 0.0f32}}
+  [Vec4] v4{Vec4{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
   [f32] len2{v3.lengthSquared()}
 
-  [ColorRGB] base{ColorRGB(0.5f32, 0.5f32, 0.5f32)}
-  [ColorRGB] mixed{base.add(ColorRGB(0.5f32, 0.5f32, 0.5f32))}
-  [ColorRGBA] rgba{ColorRGBA(0.5f32, 0.5f32, 0.5f32, 1.0f32)}
+  [ColorRGB] base{ColorRGB{0.5f32, 0.5f32, 0.5f32}}
+  [ColorRGB] mixed{base.add(ColorRGB{0.5f32, 0.5f32, 0.5f32})}
+  [ColorRGBA] rgba{ColorRGBA{0.5f32, 0.5f32, 0.5f32, 1.0f32}}
   [ColorRGBA] mixedA{rgba.mulScalar(2.0f32)}
-  [ColorSRGB] srgb{ColorSRGB(0.0f32, 0.0f32, 0.0f32)}
-  [ColorSRGBA] srgba{ColorSRGBA(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [ColorSRGB] srgb{ColorSRGB{0.0f32, 0.0f32, 0.0f32}}
+  [ColorSRGBA] srgba{ColorSRGBA{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
 
   [f32] total{len2 + mixed.r + mixed.g + mixed.b + mixedA.a + v2.x + v4.w + srgb.r + srgba.a}
   return(convert<int>(total))
@@ -497,18 +497,18 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat3] m3{Mat3(
+  [Mat2] m2{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat3] m3{Mat3{
     5.0f32, 6.0f32, 7.0f32,
     8.0f32, 9.0f32, 10.0f32,
     11.0f32, 12.0f32, 13.0f32
-  )}
-  [Mat4] m4{Mat4(
+  }}
+  [Mat4] m4{Mat4{
     14.0f32, 15.0f32, 16.0f32, 17.0f32,
     18.0f32, 19.0f32, 20.0f32, 21.0f32,
     22.0f32, 23.0f32, 24.0f32, 25.0f32,
     26.0f32, 27.0f32, 28.0f32, 29.0f32
-  )}
+  }}
 
   [f32] total{m2.m00 + m2.m11 + m3.m12 + m4.m33}
   return(convert<int>(total))
@@ -528,9 +528,9 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Quat] raw{Quat{0.0f32, 0.0f32, 0.0f32, 2.0f32}}
   [Quat] normalized{raw.toNormalized()}
-  [Quat] zero{Quat(0.0f32, 0.0f32, 0.0f32, 0.0f32).normalize()}
+  [Quat] zero{Quat{0.0f32, 0.0f32, 0.0f32, 0.0f32}.normalize()}
   [f32] total{normalized.w + zero.x + zero.y + zero.z + zero.w}
   return(convert<int>(total))
 }
@@ -549,7 +549,7 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Quat] raw{Quat(2.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] raw{Quat{2.0f32, 0.0f32, 0.0f32, 0.0f32}}
   [Mat3] basis{quat_to_mat3(raw)}
   return(convert<int>(basis.m00 - basis.m11 - basis.m22))
 }
@@ -568,7 +568,7 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Quat] raw{Quat(2.0f32, 0.0f32, 0.0f32, 0.0f32)}
+  [Quat] raw{Quat{2.0f32, 0.0f32, 0.0f32, 0.0f32}}
   [Mat4] basis{quat_to_mat4(raw)}
   return(convert<int>(basis.m00 - basis.m11 - basis.m22 + basis.m33))
 }
@@ -587,11 +587,11 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat3] basis{Mat3(
+  [Mat3] basis{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, -1.0f32, 0.0f32,
     0.0f32, 0.0f32, -1.0f32
-  )}
+  }}
   [Quat] value{mat3_to_quat(basis)}
   return(convert<int>(value.x - value.y - value.z + value.w))
 }
@@ -610,16 +610,16 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Quat] raw{Quat(0.0f32, 0.0f32, 0.0f32, 2.0f32)}
+  [Mat2] m2{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Quat] raw{Quat{0.0f32, 0.0f32, 0.0f32, 2.0f32}}
   [Quat] normalized{raw.toNormalized()}
   [Mat3] basis3{quat_to_mat3(raw)}
   [Mat4] basis4{quat_to_mat4(raw)}
-  [Quat] restored{mat3_to_quat(Mat3(
+  [Quat] restored{mat3_to_quat(Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, -1.0f32, 0.0f32,
     0.0f32, 0.0f32, -1.0f32
-  ))}
+  })}
   [f32] total{m2.m00 + m2.m11 + normalized.w + basis3.m00 + basis4.m33 + restored.x + restored.w}
   return(convert<int>(total))
 }
@@ -639,10 +639,10 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Quat] turnX{Quat(1.0f32, 0.0f32, 0.0f32, 0.0f32)}
-  [Quat] turnY{Quat(0.0f32, 1.0f32, 0.0f32, 0.0f32)}
+  [Quat] turnX{Quat{1.0f32, 0.0f32, 0.0f32, 0.0f32}}
+  [Quat] turnY{Quat{0.0f32, 1.0f32, 0.0f32, 0.0f32}}
   [Quat] product{multiply(turnX, turnY)}
-  [Vec3] input{Vec3(1.0f32, 2.0f32, 3.0f32)}
+  [Vec3] input{Vec3{1.0f32, 2.0f32, 3.0f32}}
   [Vec3] rotated{multiply(product, input)}
   [f32] total{product.z - product.x - product.y - product.w + rotated.z - rotated.x - rotated.y}
   return(convert<int>(total))
@@ -663,17 +663,17 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat3] rotate{Mat3(
+  [Mat3] rotate{Mat3{
     0.0f32, -1.0f32, 0.0f32,
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
-  [Mat3] scale{Mat3(
+  }}
+  [Mat3] scale{Mat3{
     2.0f32, 0.0f32, 0.0f32,
     0.0f32, 3.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
-  [Vec3] input{Vec3(1.0f32, 2.0f32, 4.0f32)}
+  }}
+  [Vec3] input{Vec3{1.0f32, 2.0f32, 4.0f32}}
   [Vec3] rotatedInput{multiply(rotate, input)}
   [Vec3] nested{multiply(scale, rotatedInput)}
   [Mat3] combined{multiply(scale, rotate)}

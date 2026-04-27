@@ -218,7 +218,7 @@ Point() {
 }
 
 make_point([i32] x, [i32] y) {
-  return(Point([x] x, [y] y))
+  return(Point{[x] x, [y] y})
 }
 
 [return<int>]
@@ -242,7 +242,7 @@ Point() {
 
 [return<auto>]
 make_point([i32] x, [i32] y) {
-  return(Point([x] x, [y] y))
+  return(Point{[x] x, [y] y})
 }
 
 [return<int>]
@@ -272,7 +272,7 @@ Other() {
 
 [return<Point>]
 make_point() {
-  return(Other())
+  return(Other{})
 }
 
 [return<int>]

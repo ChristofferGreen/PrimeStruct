@@ -66,7 +66,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing([count] 3i32)
+  thing{[count] 3i32}
   return(1i32)
 }
 )";
@@ -86,7 +86,7 @@ Point() {
 
 [return<Point>]
 make_point([i32] x, [i32] y) {
-  return(Point([x] x, [y] y))
+  return(Point{[x] x, [y] y})
 }
 
 [return<int>]
@@ -112,12 +112,12 @@ Vec3() {
 
 [return<Vec3>]
 makeVec3([i32] x, [i32] y, [i32] z) {
-  return(Vec3([x] x, [y] y, [z] z))
+  return(Vec3{[x] x, [y] y, [z] z})
 }
 
 [return<int>]
 main() {
-  [Vec3 mut] sample{Vec3()}
+  [Vec3 mut] sample{Vec3{}}
   assign(sample, makeVec3(4i32, 5i32, 6i32))
   return(sample.z)
 }
@@ -143,12 +143,12 @@ Vec3() {
 
 [return<Vec3>]
 makeVec3([i32] x, [i32] y, [i32] z) {
-  return(Vec3([x] x, [y] y, [z] z))
+  return(Vec3{[x] x, [y] y, [z] z})
 }
 
 [return<int>]
 main() {
-  [Vec3] sample{Vec3()}
+  [Vec3] sample{Vec3{}}
   assign(sample, makeVec3(4i32, 5i32, 6i32))
   return(0i32)
 }

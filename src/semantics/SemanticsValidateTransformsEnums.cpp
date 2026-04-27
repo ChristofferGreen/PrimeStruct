@@ -305,6 +305,7 @@ bool rewriteEnumDefinition(Definition &def, EnumValueMap &enumValues, std::strin
 
     Expr constructorCall;
     constructorCall.kind = Expr::Kind::Call;
+    constructorCall.isBraceConstructor = true;
     constructorCall.name = def.fullPath;
     constructorCall.namespacePrefix = def.namespacePrefix;
     constructorCall.args.push_back(std::move(enumValue));
@@ -377,6 +378,7 @@ bool rewriteEnumDefinitions(Program &program, std::string &error) {
                                     : makeEnumLiteralSigned(value.signedValue, value.width, expr.namespacePrefix);
     Expr call;
     call.kind = Expr::Kind::Call;
+    call.isBraceConstructor = true;
     call.name = structPath;
     call.namespacePrefix = expr.namespacePrefix;
     call.args.push_back(std::move(literal));

@@ -145,11 +145,11 @@ namespace std {
     if(equal(allocCount, 0i32),
        then() { assign(allocCount, 1i32) },
        else() { })
-    return(Vector<T>(
+    return(Vector<T>{
         count,
         capacity,
         /std/collections/internal_buffer_checked/bufferAlloc<uninitialized<T>>(allocCount),
-        true))
+        true})
   }
 
   [return<void>]

@@ -56,7 +56,7 @@ use() {
 TEST_CASE("struct transform rejects parameters") {
   const std::string source = R"(
 [struct]
-main([i32] x) {
+main{[i32] x} {
   [i32] value{1i32}
 }
 )";
@@ -245,8 +245,8 @@ thing() {
 
 [return<int>]
 main() {
-  [thing mut] a{thing()}
-  [thing] b{thing()}
+  [thing mut] a{thing{}}
+  [thing] b{thing{}}
   /thing/Copy(a, b)
   return(0i32)
 }
@@ -269,8 +269,8 @@ thing() {
 
 [return<int>]
 main() {
-  [thing mut] a{thing()}
-  [thing] b{thing()}
+  [thing mut] a{thing{}}
+  [thing] b{thing{}}
   /thing/Copy(a, b)
   return(0i32)
 }

@@ -405,7 +405,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] value{Foo()}
+  [Foo] value{Foo{}}
   [Pointer<Foo>] ptr{location(value)}
   return(1i32)
 }
@@ -438,7 +438,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] value{Foo()}
+  [Foo] value{Foo{}}
   [Reference<Foo>] ref{location(value)}
   return(1i32)
 }
@@ -702,7 +702,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{thing([value] 2i32)}
+  [thing] item{thing{[value] 2i32}}
   return(1i32)
 }
 )";
@@ -711,7 +711,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("struct constructor accepts named arguments") {
+TEST_CASE("struct brace constructor accepts named arguments") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -721,7 +721,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing([count] 3i32, [value] 4i32)
+  thing{[count] 3i32, [value] 4i32}
   return(1i32)
 }
 )";
@@ -730,7 +730,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("struct constructor allows positional after labels") {
+TEST_CASE("struct brace constructor allows positional after labels") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -740,7 +740,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing([count] 3i32, 4i32)
+  thing{[count] 3i32, 4i32}
   return(1i32)
 }
 )";
@@ -749,7 +749,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("struct constructor allows defaulted fields") {
+TEST_CASE("struct brace constructor allows defaulted fields") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -759,7 +759,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing([value] 5i32)
+  thing{[value] 5i32}
   return(1i32)
 }
 )";
@@ -768,7 +768,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("struct constructor accepts named arguments while skipping static fields") {
+TEST_CASE("struct brace constructor accepts named arguments while skipping static fields") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -779,7 +779,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing([count] 4i32, [value] 5i32)
+  thing{[count] 4i32, [value] 5i32}
   return(1i32)
 }
 )";
@@ -788,7 +788,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("struct constructor rejects extra arguments") {
+TEST_CASE("struct brace constructor rejects extra arguments") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -797,7 +797,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing(1i32, 2i32)
+  thing{1i32, 2i32}
   return(1i32)
 }
 )";
@@ -806,7 +806,7 @@ main() {
   CHECK(error.find("argument count mismatch") != std::string::npos);
 }
 
-TEST_CASE("struct constructor keeps argument mismatch when static fields are skipped") {
+TEST_CASE("struct brace constructor keeps argument mismatch when static fields are skipped") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -816,13 +816,32 @@ thing() {
 
 [return<int>]
 main() {
-  thing(1i32, 2i32)
+  thing{1i32, 2i32}
   return(1i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("argument count mismatch") != std::string::npos);
+}
+
+TEST_CASE("struct call-shaped constructor rejects field mapping") {
+  const std::string source = R"(
+[struct]
+thing() {
+  [i32] value{1i32}
+}
+
+[return<int>]
+main() {
+  thing([value] 2i32)
+  return(1i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("struct construction requires braces: /thing") !=
+        std::string::npos);
 }
 
 TEST_CASE("wrapper-returned struct constructor validates in resolved helper arguments") {
@@ -835,7 +854,7 @@ thing() {
 
 [return<thing>]
 buildThing() {
-  return(thing([count] 4i32, [value] 3i32))
+  return(thing{[count] 4i32, [value] 3i32})
 }
 
 [return<int>]
@@ -862,7 +881,7 @@ thing() {
 
 [return<thing>]
 buildThing() {
-  return(thing([value] 3i32))
+  return(thing{[value] 3i32})
 }
 
 [return<int>]
@@ -1052,7 +1071,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{thing([count] 3i32 [value] 4i32)}
+  [thing] item{thing{[count] 3i32, [value] 4i32}}
   return(1i32)
 }
 )";
@@ -1131,7 +1150,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{block(){ thing() }}
+  [thing] item{block(){ thing{} }}
   return(1i32)
 }
 )";
@@ -1149,7 +1168,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{if(true, then(){ thing() }, else(){ thing() })}
+  [thing] item{if(true, then(){ thing{} }, else(){ thing{} })}
   return(1i32)
 }
 )";
@@ -1167,7 +1186,7 @@ thing() {
 
 [return<int>]
 main() {
-  thing([missing] 2i32)
+  thing{[missing] 2i32}
   return(1i32)
 }
 )";

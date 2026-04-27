@@ -80,7 +80,7 @@ namespace std {
 
     [public return<ContainerError>]
     missingKey() {
-      return(ContainerError(1i32))
+      return(ContainerError{1i32})
     }
 
     [public return<ContainerError>]
@@ -90,7 +90,7 @@ namespace std {
 
     [public return<ContainerError>]
     indexOutOfBounds() {
-      return(ContainerError(2i32))
+      return(ContainerError{2i32})
     }
 
     [public return<ContainerError>]
@@ -100,12 +100,12 @@ namespace std {
 
     [public return<ContainerError>]
     empty() {
-      return(ContainerError(3i32))
+      return(ContainerError{3i32})
     }
 
     [public return<ContainerError>]
     capacityExceeded() {
-      return(ContainerError(4i32))
+      return(ContainerError{4i32})
     }
 
     [public return<ContainerError>]

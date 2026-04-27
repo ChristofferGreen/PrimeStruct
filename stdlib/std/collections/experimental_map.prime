@@ -217,12 +217,12 @@ namespace std {
 
   [public effects(heap_alloc), return<Map<K, V>>]
   mapNew<K, V>() {
-    return(Map<K, V>())
+    return(Map<K, V>{})
   }
 
   [public return<Entry<K, V>>]
   entry<K, V>([K] key, [V] value) {
-    return(Entry<K, V>(key, value))
+    return(Entry<K, V>{key, value})
   }
 
   [public effects(heap_alloc), return<Map<K, V>> Comparable<K>]

@@ -25,7 +25,7 @@ dump_words([vector<i32>] words) {
 
 [effects(heap_alloc, io_out), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -43,7 +43,7 @@ main() {
   layout.measure()
   layout.arrange(6i32, 7i32, 40i32, 57i32)
 
-  [CommandList mut] commands{CommandList()}
+  [CommandList mut] commands{CommandList{}}
   commands.draw_login_form(
     layout,
     login,
@@ -52,12 +52,12 @@ main() {
     2i32,
     4i32,
     3i32,
-    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
-    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    Rgba8{[r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32},
+    Rgba8{[r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32},
+    Rgba8{[r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32},
+    Rgba8{[r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32},
+    Rgba8{[r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32},
+    Rgba8{[r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32},
     "Login"utf8,
     "alice"utf8,
     "secret"utf8,
@@ -95,7 +95,7 @@ dump_words([vector<i32>] words) {
 
 [effects(heap_alloc, io_out), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -113,7 +113,7 @@ main() {
   layout.measure()
   layout.arrange(6i32, 7i32, 40i32, 57i32)
 
-  [HtmlCommandList mut] html{HtmlCommandList()}
+  [HtmlCommandList mut] html{HtmlCommandList{}}
   html.emit_login_form(
     layout,
     login,
@@ -122,12 +122,12 @@ main() {
     2i32,
     4i32,
     3i32,
-    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
-    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    Rgba8{[r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32},
+    Rgba8{[r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32},
+    Rgba8{[r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32},
+    Rgba8{[r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32},
+    Rgba8{[r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32},
+    Rgba8{[r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32},
     "Login"utf8,
     "alice"utf8,
     "secret"utf8,
@@ -168,7 +168,7 @@ dump_words([vector<i32>] words) {
 
 [effects(heap_alloc, io_out), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -184,7 +184,7 @@ main() {
     "Go"utf8
   )}
 
-  [UiEventStream mut] events{UiEventStream()}
+  [UiEventStream mut] events{UiEventStream{}}
   events.push_pointer_move(login.usernameInput, 7i32, 20i32, 30i32)
   events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)
   events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)
@@ -222,7 +222,7 @@ dump_words([vector<i32>] words) {
 
 [effects(heap_alloc, io_out), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -238,7 +238,7 @@ main() {
     "Go"utf8
   )}
 
-  [UiEventStream mut] events{UiEventStream()}
+  [UiEventStream mut] events{UiEventStream{}}
   events.push_ime_preedit(login.usernameInput, 1i32, 4i32, "al|"utf8)
   events.push_ime_commit(login.usernameInput, "alice"utf8)
   dump_words(events.serialize())
@@ -273,7 +273,7 @@ dump_words([vector<i32>] words) {
 
 [effects(heap_alloc, io_out), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -289,7 +289,7 @@ main() {
     "Go"utf8
   )}
 
-  [UiEventStream mut] events{UiEventStream()}
+  [UiEventStream mut] events{UiEventStream{}}
   events.push_resize(login.panel, 40i32, 57i32)
   events.push_focus_gained(login.usernameInput)
   events.push_focus_lost(login.usernameInput)

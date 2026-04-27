@@ -120,6 +120,7 @@ Expr makeReturnStatementExpr(Expr valueExpr) {
 Expr makeConstructorCall(const std::string &typeName) {
   Expr call;
   call.kind = Expr::Kind::Call;
+  call.isBraceConstructor = true;
   std::string typeBase;
   std::string typeArgText;
   if (splitTemplateTypeName(typeName, typeBase, typeArgText) && !typeBase.empty() && !typeArgText.empty()) {

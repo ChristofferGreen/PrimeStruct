@@ -28,6 +28,10 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   if (!context.zeroArgDiagnostic->empty()) {
     return failStructConstructorDiagnostic(*context.zeroArgDiagnostic);
   }
+  if (!expr.isBraceConstructor) {
+    return failStructConstructorDiagnostic(
+        "struct construction requires braces: " + *context.diagnosticResolved);
+  }
 
   std::vector<ParameterInfo> fieldParams;
   fieldParams.reserve(context.resolvedDefinition->statements.size());

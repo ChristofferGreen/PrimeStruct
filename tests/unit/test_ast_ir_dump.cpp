@@ -301,7 +301,7 @@ data() {
   const std::string dump = printer.print(program);
   const std::string expected =
       "ast {\n"
-      "  [struct] /data() {\n"
+      "  [struct] /data{} {\n"
       "    [i32] value{1}\n"
       "  }\n"
       "}\n";
@@ -320,7 +320,7 @@ data() {
   const std::string dump = printer.print(program);
   const std::string expected =
       "module {\n"
-      "  def /data(): void {\n"
+      "  def /data{}: void {\n"
       "    let value: i32 = 1\n"
       "    return\n"
       "  }\n"
@@ -340,7 +340,7 @@ data() {
   const std::string dump = printer.print(program);
   const std::string expected =
       "module {\n"
-      "  def /data(): void {\n"
+      "  def /data{}: void {\n"
       "    let value: i32 = 1\n"
       "    return\n"
       "  }\n"

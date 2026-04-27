@@ -605,12 +605,12 @@ Vec2() {
 
 [return<Vec2>]
 /Vec2/plus([Vec2] left, [Vec2] right) {
-  return(Vec2())
+  return(Vec2{})
 }
 
 [return<Vec2>]
 /Vec2/multiply([Vec2] left, [Vec2] right) {
-  return(Vec2())
+  return(Vec2{})
 }
 
 [return<bool>]
@@ -706,11 +706,11 @@ TEST_CASE("unsupported reflection metadata queries are rejected") {
     CAPTURE(scenario.label);
     const std::string source =
         std::string("[struct reflect]\n"
-                    "Item() {\n"
+                    "Item{} {\n"
                     "  [i32] value{1i32}\n"
                     "}\n\n"
                     "[return<int>]\n"
-                    "main() {\n"
+                    "main{} {\n"
                     "  [bool] has{") +
         scenario.query + "}\n  return(0i32)\n}\n";
     std::string error;
@@ -739,11 +739,11 @@ TEST_CASE("runtime reflection object queries are rejected") {
     CAPTURE(scenario.label);
     const std::string source =
         std::string("[struct reflect]\n"
-                    "Item() {\n"
+                    "Item{} {\n"
                     "  [i32] value{1i32}\n"
                     "}\n\n"
                     "[return<int>]\n"
-                    "main() {\n  ") +
+                    "main{} {\n  ") +
         scenario.query + "\n  return(0i32)\n}\n";
     std::string error;
     CHECK_FALSE(validateProgram(source, "/main", error));
@@ -782,7 +782,7 @@ TEST_CASE("placement transforms are rejected") {
     const std::string source =
         std::string("[") + placement +
         "]\n"
-        "main() {\n"
+        "main{} {\n"
         "  [i32] value{1i32}\n"
         "}\n";
     std::string error;
@@ -833,12 +833,12 @@ Vec3() {
 
 [struct]
 Sphere() {
-  [mut] center{Vec3()}
+  [mut] center{Vec3{}}
 }
 
 [return<i32>]
 main() {
-  [Sphere] s{Sphere()}
+  [Sphere] s{Sphere{}}
   return(s.center.getX())
 }
 )";
@@ -861,7 +861,7 @@ Vec3() {
 
 [struct]
 Shape() {
-  center{if(true, then() { Vec2() }, else() { Vec3() })}
+  center{if(true, then() { Vec2{} }, else() { Vec3{} })}
 }
 
 [return<i32>]
@@ -878,7 +878,7 @@ TEST_CASE("recursive struct layouts are rejected") {
   const std::string source = R"(
 [struct]
 Node() {
-  [Node] next{Node()}
+  [Node] next{Node{}}
 }
 
 [return<int>]

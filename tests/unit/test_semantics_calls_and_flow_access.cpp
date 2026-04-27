@@ -467,7 +467,7 @@ Foo() {
 
 [return<int>]
 main() {
-  [Foo] item{Foo()}
+  [Foo] item{Foo{}}
   return(item.missing())
 }
 )";
@@ -490,7 +490,7 @@ Foo() {
 
 [return<int>]
 main() {
-  return(Foo().ping())
+  return(Foo{}.ping())
 }
 )";
   std::string error;

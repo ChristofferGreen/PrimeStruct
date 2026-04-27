@@ -106,7 +106,7 @@ Pair() {
 [effects(heap_alloc), return<int>]
 main() {
   [Pointer<uninitialized<Pair>>] ptr{/std/intrinsics/memory/alloc<uninitialized<Pair>>(1i32)}
-  init(dereference(ptr), Pair(3i32, 9i32))
+  init(dereference(ptr), Pair{3i32, 9i32})
   [Pair] value{take(dereference(ptr))}
   /std/intrinsics/memory/free(ptr)
   return(value.right)
@@ -136,7 +136,7 @@ Box() {
 
 [return<int>]
 main() {
-  [Box mut] box{Box()}
+  [Box mut] box{Box{}}
   [Reference<Box> mut] ref{location(box)}
   init(ref.value, 7i32)
   [i32] out{take(ref.value)}

@@ -12,34 +12,34 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat2] base2{Mat2(
+  [Mat2] base2{Mat2{
     1.0f32, 2.0f32,
     3.0f32, 4.0f32
-  )}
-  [Mat2] delta2{Mat2(
+  }}
+  [Mat2] delta2{Mat2{
     0.5f32, -1.0f32,
     1.5f32, 2.0f32
-  )}
+  }}
   [Mat2] sum2{plus(base2, delta2)}
   [Mat2] div2{divide(sum2, 2.0f32)}
-  [Mat3] base3{Mat3(
+  [Mat3] base3{Mat3{
     1.0f32, 2.0f32, 3.0f32,
     4.0f32, 5.0f32, 6.0f32,
     7.0f32, 8.0f32, 9.0f32
-  )}
-  [Mat3] delta3{Mat3(
+  }}
+  [Mat3] delta3{Mat3{
     0.5f32, 1.0f32, 1.5f32,
     2.0f32, 2.5f32, 3.0f32,
     3.5f32, 4.0f32, 4.5f32
-  )}
+  }}
   [Mat3] diff3{minus(base3, delta3)}
   [Mat3] scaledLeft3{multiply(2i32, base3)}
-  [Mat4] base4{Mat4(
+  [Mat4] base4{Mat4{
     1.0f32, 2.0f32, 3.0f32, 4.0f32,
     5.0f32, 6.0f32, 7.0f32, 8.0f32,
     9.0f32, 10.0f32, 11.0f32, 12.0f32,
     13.0f32, 14.0f32, 15.0f32, 16.0f32
-  )}
+  }}
   [Mat4] scaledRight4{multiply(base4, 0.5f32)}
   [Mat4] doubled4{multiply(base4, 2.0f32)}
   [Mat4] restored4{divide(doubled4, 2i32)}
@@ -86,8 +86,8 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Quat] base{Quat(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Quat] delta{Quat(0.5f32, -1.0f32, 1.5f32, 2.0f32)}
+  [Quat] base{Quat{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Quat] delta{Quat{0.5f32, -1.0f32, 1.5f32, 2.0f32}}
   [Quat] sum{plus(base, delta)}
   [Quat] diff{minus(base, delta)}
   [Quat] scaledLeft{multiply(2i32, base)}
@@ -137,12 +137,12 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat2] lhs{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat3] rhs{Mat3(
+  [Mat2] lhs{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat3] rhs{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   [Mat2] value{plus(lhs, rhs)}
   return(convert<int>(value.m00))
 }
@@ -163,11 +163,11 @@ import /std/math/*
 
 [return<int>]
 main() {
-  [Mat3] basis{Mat3(
+  [Mat3] basis{Mat3{
     1.0f32, 0.0f32, 0.0f32,
     0.0f32, 1.0f32, 0.0f32,
     0.0f32, 0.0f32, 1.0f32
-  )}
+  }}
   [auto] value{quat_to_mat3(basis)}
   return(convert<int>(value.m00))
 }
@@ -601,7 +601,7 @@ Mover() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Mover> mut] values{vector<Mover>(Mover())}
+  [vector<Mover> mut] values{vector<Mover>(Mover{})}
   reserve(values, 4i32)
   return(0i32)
 }
@@ -638,7 +638,7 @@ Mover() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [vector<Mover>] values{vector<Mover>(Mover(), Mover())}
+  [vector<Mover>] values{vector<Mover>(Mover{}, Mover{})}
   return(0i32)
 }
 )";

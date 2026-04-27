@@ -951,15 +951,15 @@ import /std/math/*
 
 [return<void>]
 main() {
-  [Quat] raw{Quat(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Quat] other{Quat(0.5f32, 1.5f32, 0.25f32, 2.0f32)}
+  [Quat] raw{Quat{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Quat] other{Quat{0.5f32, 1.5f32, 0.25f32, 2.0f32}}
   [Quat] normalized{raw.toNormalized()}
   [Quat] sum{plus(raw, other)}
   [Quat] diff{minus(raw, other)}
   [Quat] scaled{multiply(2i32, raw)}
   [Quat] divided{divide(other, 2.0f32)}
   [Quat] product{multiply(raw, other)}
-  [Vec3] rotated{multiply(raw, Vec3(1.0f32, 0.0f32, 0.0f32))}
+  [Vec3] rotated{multiply(raw, Vec3{1.0f32, 0.0f32, 0.0f32})}
   [f32] sample{plus(normalized.x, plus(sum.w, plus(diff.y, plus(scaled.z, plus(divided.w, plus(product.x, rotated.y))))))}
   [i32 mut] sink{0i32}
   if(true, then() { assign(sink, convert<int>(sample)) }, else() { })
@@ -1003,11 +1003,11 @@ import /std/math/*
 
 [return<void>]
 main() {
-  [Quat] raw{Quat(0.0f32, 0.0f32, 0.70710677f32, 0.70710677f32)}
+  [Quat] raw{Quat{0.0f32, 0.0f32, 0.70710677f32, 0.70710677f32}}
   [Mat3] basis3{quat_to_mat3(raw)}
   [Mat4] basis4{quat_to_mat4(raw)}
   [Quat] restored{mat3_to_quat(basis3)}
-  [Quat] zero{Quat(0.0f32, 0.0f32, 0.0f32, 0.0f32).normalize()}
+  [Quat] zero{Quat{0.0f32, 0.0f32, 0.0f32, 0.0f32}.normalize()}
   [f32] sample{plus(basis3.m01, plus(basis4.m33, plus(restored.w, zero.x)))}
   [i32 mut] sink{0i32}
   if(true, then() { assign(sink, convert<int>(sample)) }, else() { })
@@ -1046,8 +1046,8 @@ import /std/math/*
 
 [return<void>]
 main() {
-  [Quat] value{Quat(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
-  [Vec4] wrong{Vec4(1.0f32, 0.0f32, 0.0f32, 1.0f32)}
+  [Quat] value{Quat{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
+  [Vec4] wrong{Vec4{1.0f32, 0.0f32, 0.0f32, 1.0f32}}
   [auto] bad{multiply(value, wrong)}
   return()
 }
@@ -1070,24 +1070,24 @@ import /std/math/*
 
 [return<void>]
 main() {
-  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat2] sum2{plus(m2, Mat2(5.0f32, 6.0f32, 7.0f32, 8.0f32))}
+  [Mat2] m2{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat2] sum2{plus(m2, Mat2{5.0f32, 6.0f32, 7.0f32, 8.0f32})}
   [Mat2] scaled2{multiply(sum2, 2i32)}
   [Mat2] div2{divide(scaled2, 2.0f32)}
   [Mat2] prod2{multiply(m2, sum2)}
   [f32] sample2{plus(div2.m01, prod2.m10)}
-  [Mat3] m3{Mat3(
+  [Mat3] m3{Mat3{
     1.0f32, 2.0f32, 3.0f32,
     4.0f32, 5.0f32, 6.0f32,
     7.0f32, 8.0f32, 9.0f32
-  )}
+  }}
   [f32] sample3{m3.m21}
-  [Mat4] m4{Mat4(
+  [Mat4] m4{Mat4{
     1.0f32, 2.0f32, 3.0f32, 4.0f32,
     5.0f32, 6.0f32, 7.0f32, 8.0f32,
     9.0f32, 10.0f32, 11.0f32, 12.0f32,
     13.0f32, 14.0f32, 15.0f32, 16.0f32
-  )}
+  }}
   [f32] sample4{m4.m32}
   [i32 mut] sink{0i32}
   if(true, then() { assign(sink, convert<int>(plus(sample2, plus(sample3, sample4)))) }, else() { })
@@ -1125,21 +1125,21 @@ import /std/math/*
 
 [return<void>]
 main() {
-  [Vec2] v2{Vec2(1.0f32, 2.0f32)}
-  [Vec3] v3{Vec3(3.0f32, 4.0f32, 5.0f32)}
-  [Vec4] v4{Vec4(6.0f32, 7.0f32, 8.0f32, 9.0f32)}
-  [Mat2] m2{Mat2(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
-  [Mat3] m3{Mat3(
+  [Vec2] v2{Vec2{1.0f32, 2.0f32}}
+  [Vec3] v3{Vec3{3.0f32, 4.0f32, 5.0f32}}
+  [Vec4] v4{Vec4{6.0f32, 7.0f32, 8.0f32, 9.0f32}}
+  [Mat2] m2{Mat2{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
+  [Mat3] m3{Mat3{
     1.0f32, 2.0f32, 3.0f32,
     4.0f32, 5.0f32, 6.0f32,
     7.0f32, 8.0f32, 9.0f32
-  )}
-  [Mat4] m4{Mat4(
+  }}
+  [Mat4] m4{Mat4{
     1.0f32, 2.0f32, 3.0f32, 4.0f32,
     5.0f32, 6.0f32, 7.0f32, 8.0f32,
     9.0f32, 10.0f32, 11.0f32, 12.0f32,
     13.0f32, 14.0f32, 15.0f32, 16.0f32
-  )}
+  }}
   [Vec2] out2{multiply(m2, v2)}
   [Vec3] out3{multiply(m3, v3)}
   [Vec4] out4{multiply(m4, v4)}
@@ -1184,18 +1184,18 @@ import /std/math/*
 
 [return<void>]
 main() {
-  [Vec2] base2{Vec2(1.0f32, 2.0f32)}
-  [Vec2] delta2{Vec2(3.0f32, 4.0f32)}
+  [Vec2] base2{Vec2{1.0f32, 2.0f32}}
+  [Vec2] delta2{Vec2{3.0f32, 4.0f32}}
   [Vec2] sum2{plus(base2, delta2)}
   [Vec2] diff2{minus(base2, delta2)}
   [Vec2] scaledLeft2{multiply(2i32, base2)}
   [Vec2] scaledRight2{multiply(delta2, 0.5f32)}
   [Vec2] div2{divide(scaledLeft2, 2.0f32)}
-  [Vec3] base3{Vec3(5.0f32, 6.0f32, 7.0f32)}
+  [Vec3] base3{Vec3{5.0f32, 6.0f32, 7.0f32}}
   [Vec3] scaled3{multiply(base3, 3i32)}
   [Vec3] div3{divide(scaled3, 3.0f32)}
-  [Vec4] base4{Vec4(8.0f32, 9.0f32, 10.0f32, 11.0f32)}
-  [Vec4] delta4{Vec4(1.0f32, 2.0f32, 3.0f32, 4.0f32)}
+  [Vec4] base4{Vec4{8.0f32, 9.0f32, 10.0f32, 11.0f32}}
+  [Vec4] delta4{Vec4{1.0f32, 2.0f32, 3.0f32, 4.0f32}}
   [Vec4] sum4{plus(base4, delta4)}
   [Vec4] diff4{minus(base4, delta4)}
   [f32] sample{plus(sum2.x, plus(diff2.y, plus(scaledRight2.x, plus(div2.y, plus(div3.z, plus(sum4.w, diff4.z))))))}

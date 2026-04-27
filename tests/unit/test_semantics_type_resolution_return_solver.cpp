@@ -114,7 +114,7 @@ Pair() {
 
 [return<Pair>]
 makePair() {
-  return(Pair())
+  return(Pair{})
 }
 
 [return<i32>]
@@ -173,7 +173,7 @@ Pair() {
 
 [return<Pair>]
 makePair() {
-  return(Pair())
+  return(Pair{})
 }
 
 [return<i32>]
@@ -267,7 +267,7 @@ Vec3() {
 
 [return<Vec3>]
 makeCenter() {
-  return(Vec3())
+  return(Vec3{})
 }
 
 [struct]
@@ -281,7 +281,7 @@ Sphere() {
 
 [return<i32>]
 main() {
-  [Sphere] shape{Sphere()}
+  [Sphere] shape{Sphere{}}
   return(shape.center.getX())
 }
 )";
@@ -304,12 +304,12 @@ Vec3() {
 
 [return<Vec3>]
 leftCenter() {
-  return(Vec3())
+  return(Vec3{})
 }
 
 [return<Vec3>]
 rightCenter() {
-  return(Vec3())
+  return(Vec3{})
 }
 
 [struct]
@@ -323,7 +323,7 @@ Sphere() {
 
 [return<i32>]
 main() {
-  [Sphere] shape{Sphere()}
+  [Sphere] shape{Sphere{}}
   return(shape.center.getX())
 }
 )";
@@ -348,8 +348,8 @@ Vec3() {
 Shape() {
   center{
     if(true,
-      then(){ return(Vec2()) },
-      else(){ return(Vec3()) })
+      then(){ return(Vec2{}) },
+      else(){ return(Vec3{}) })
   }
 }
 

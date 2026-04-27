@@ -640,7 +640,7 @@ namespace std {
   namespace demo {
   [public struct]
   Swatch() {
-    [public ColorRGBA] clear{ColorRGBA(0.0f32, 0.0f32, 0.0f32, 1.0f32)}
+    [public ColorRGBA] clear{ColorRGBA{0.0f32, 0.0f32, 0.0f32, 1.0f32}}
   }
   }
 }

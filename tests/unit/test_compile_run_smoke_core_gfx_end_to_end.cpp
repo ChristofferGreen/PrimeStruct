@@ -33,9 +33,9 @@ main() {
   }
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
@@ -52,7 +52,7 @@ main() {
   [Frame] frame{swapchain.frame()?}
   [RenderPass] pass{
     frame.render_pass(
-      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_color] ColorRGBA{0.05f32, 0.07f32, 0.10f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }
@@ -169,9 +169,9 @@ main() {
   }
   [array<VertexColored>] vertices{
     array<VertexColored>(
-      VertexColored([px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32),
-      VertexColored([px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32)
+      VertexColored{[px] 0.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 1.0f32, [g] 0.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 1.0f32, [py] 0.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 1.0f32, [b] 0.0f32, [a] 1.0f32},
+      VertexColored{[px] 0.0f32, [py] 1.0f32, [pz] 0.0f32, [pw] 1.0f32, [r] 0.0f32, [g] 0.0f32, [b] 1.0f32, [a] 1.0f32}
     )
   }
   [array<i32>] indices{array<i32>(0i32, 1i32, 2i32)}
@@ -188,7 +188,7 @@ main() {
   [Frame] frame{swapchain.frame()?}
   [RenderPass] pass{
     frame.render_pass(
-      [clear_color] ColorRGBA(0.05f32, 0.07f32, 0.10f32, 1.0f32),
+      [clear_color] ColorRGBA{0.05f32, 0.07f32, 0.10f32, 1.0f32},
       [clear_depth] 1.0f32
     )
   }

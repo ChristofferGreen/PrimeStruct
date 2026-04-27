@@ -27,7 +27,7 @@ Pair() {
 
 [struct]
 Holder() {
-  [mut Pair] pair_storage{Pair()}
+  [mut Pair] pair_storage{Pair{}}
   [Reference<Pair>] pair_ref{location(pair_storage)}
 }
 
@@ -50,7 +50,7 @@ forward([args<Reference<Holder>>] values) {
 
 [return<int>]
 forward_mixed([args<Reference<Holder>>] values) {
-  [Pair] extra_value{Pair(5i32)}
+  [Pair] extra_value{Pair{5i32}}
   [Holder] extra
   assign(extra.pair_storage, extra_value)
   return(score_ptrs(location(values.at(0i32).pair_ref),
@@ -60,9 +60,9 @@ forward_mixed([args<Reference<Holder>>] values) {
 
 [return<int>]
 main() {
-  [Pair] a0{Pair(7i32)}
-  [Pair] a1{Pair(8i32)}
-  [Pair] a2{Pair(9i32)}
+  [Pair] a0{Pair{7i32}}
+  [Pair] a1{Pair{8i32}}
+  [Pair] a2{Pair{9i32}}
   [Holder] h0
   [Holder] h1
   [Holder] h2
@@ -73,9 +73,9 @@ main() {
   [Reference<Holder>] r1{location(h1)}
   [Reference<Holder>] r2{location(h2)}
 
-  [Pair] b0{Pair(11i32)}
-  [Pair] b1{Pair(12i32)}
-  [Pair] b2{Pair(13i32)}
+  [Pair] b0{Pair{11i32}}
+  [Pair] b1{Pair{12i32}}
+  [Pair] b2{Pair{13i32}}
   [Holder] i0
   [Holder] i1
   [Holder] i2
@@ -86,8 +86,8 @@ main() {
   [Reference<Holder>] s1{location(i1)}
   [Reference<Holder>] s2{location(i2)}
 
-  [Pair] c0{Pair(15i32)}
-  [Pair] c1{Pair(17i32)}
+  [Pair] c0{Pair{15i32}}
+  [Pair] c1{Pair{17i32}}
   [Holder] j0
   [Holder] j1
   assign(j0.pair_storage, c0)

@@ -947,7 +947,7 @@ use_layout([LayoutTree mut] layout) {
 
 [return<int>]
 main([array<string>] args) {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   return(use_layout(layout))
 }
 )";
@@ -1121,7 +1121,7 @@ Holder() {
 
 [return<int>]
 main() {
-  [Holder mut] holder{Holder()}
+  [Holder mut] holder{Holder{}}
   return(0i32)
 }
 )";

@@ -6,6 +6,52 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4282: Reject call-shaped struct field construction
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Finish the brace-only struct-construction cutover by making
+    `Type(...)` ordinary execution/call syntax instead of a fallback path for
+    mapping arguments to struct fields.
+  - implementation_notes:
+    - Start from `src/semantics/SemanticsValidatorExprStructConstructors.cpp`,
+      `src/semantics/SemanticsValidatorExpr.cpp`,
+      `src/semantics/SemanticsValidatorBuildInitializerInference*.cpp`, and
+      call-shaped struct-constructor tests that still use `Type(...)`.
+    - The parser now marks brace constructor expressions with
+      `Expr::isBraceConstructor`, supports labeled/direct brace argument
+      lists, and preserves statement-position `name{...}` binding behavior.
+    - Migrate focused semantic, IR, and compile-run sources that still rely on
+      user-authored `Type(...)` field mapping before flipping the diagnostic.
+  - acceptance:
+    - Constructor diagnostics cover unknown labels, duplicate labels, too many
+      positional entries, missing required fields, ambiguous context-typed
+      `{...}` initializers, and accidental `Type(...)` field-mapping attempts.
+    - `Type(...)` no longer maps to struct fields on the migrated path and
+      produces deterministic diagnostics or ordinary call behavior.
+    - Focused tests prove `Type{...}` remains valid for labeled and positional
+      struct construction, including context-typed binding initializers.
+    - Statement-position `name{...}` remains a binding unless the grammar has
+      value-expression context.
+    - Omitted-initializer rewrites and zero-field/default struct construction
+      use brace construction in the canonicalized AST.
+    - Docs and user-facing examples use brace construction for structs.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once ordinary struct construction has a brace-only
+    production path and old call-shaped struct construction is not silently used
+    for field mapping; leave generated-surface migration to TODO-4254.
+  - finished_at: 2026-04-28
+  - evidence: `SemanticsValidatorExprStructConstructors` now rejects resolved
+    non-brace struct field mapping with a deterministic diagnostic, focused
+    semantic coverage keeps the old `Type(...)` form as a negative case, and
+    stdlib, examples, docs, IR, semantic, and compile-run source snippets moved
+    true struct value construction to `Type{...}` while preserving
+    constructor-shaped helper compatibility calls for later classification.
+    Generated enum, reflection, and omitted-default struct materializations are
+    marked as brace constructors in the AST so the semantic gate applies only
+    to ordinary call-shaped field mapping. Promoted `TODO-4254` to Ready Now
+    and deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4253: Add brace constructor argument-list path
   - owner: ai
   - created_at: 2026-04-27

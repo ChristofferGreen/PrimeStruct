@@ -389,7 +389,7 @@ Thing() {
 
 [return<int>]
 main() {
-  [Thing] value{Thing()}
+  [Thing] value{Thing{}}
   return(1i32)
 }
 )";
@@ -411,7 +411,7 @@ Thing() {
 
 [return<int>]
 main() {
-  [Thing] value{Thing()}
+  [Thing] value{Thing{}}
   return(1i32)
 }
 )";

@@ -60,11 +60,11 @@ Key() {
 
 [effects(heap_alloc), return<int>]
 main() {
-  [Map<Key, i32>] values{mapPair<Key, i32>(Key(2i32), 7i32, Key(5i32), 11i32)}
+  [Map<Key, i32>] values{mapPair<Key, i32>(Key{2i32}, 7i32, Key{5i32}, 11i32)}
   [i32 mut] total{mapCount<Key, i32>(values)}
-  assign(total, plus(total, mapAt<Key, i32>(values, Key(2i32))))
-  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key(5i32))))
-  if(mapContains<Key, i32>(values, Key(2i32)),
+  assign(total, plus(total, mapAt<Key, i32>(values, Key{2i32})))
+  assign(total, plus(total, mapAtUnsafe<Key, i32>(values, Key{5i32})))
+  if(mapContains<Key, i32>(values, Key{2i32}),
      then() { assign(total, plus(total, 1i32)) },
      else() { })
   return(total)
@@ -127,7 +127,7 @@ Thing() {
 
 [return<int>]
 main() {
-  Thing()
+  Thing{}
   return(0i32)
 }
 )";
@@ -154,7 +154,7 @@ Point() {
 
 [return<Point>]
 make_point([i32] x, [i32] y) {
-  return(Point([x] x, [y] y))
+  return(Point{[x] x, [y] y})
 }
 
 [return<int>]
@@ -185,7 +185,7 @@ Point() {
 
 [return<int>]
 main() {
-  [Point] value{Point([x] 9i32)}
+  [Point] value{Point{[x] 9i32}}
   return(plus(value.x, value.y))
 }
 )";

@@ -506,20 +506,20 @@ import /std/ui/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [CommandList mut] commands{CommandList()}
+  [CommandList mut] commands{CommandList{}}
   commands.draw_rounded_rect(
     2i32,
     4i32,
     30i32,
     40i32,
     6i32,
-    Rgba8([r] 12i32, [g] 34i32, [b] 56i32, [a] 255i32)
+    Rgba8{[r] 12i32, [g] 34i32, [b] 56i32, [a] 255i32}
   )
   commands.draw_text(
     7i32,
     9i32,
     14i32,
-    Rgba8([r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32),
+    Rgba8{[r] 255i32, [g] 240i32, [b] 0i32, [a] 255i32},
     "Hi!"utf8
   )
   [vector<i32>] words{commands.serialize()}
@@ -534,7 +534,7 @@ import /std/ui/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [LayoutTree mut] tree{LayoutTree()}
+  [LayoutTree mut] tree{LayoutTree{}}
   [i32] root{tree.append_root_column(2i32, 3i32, 10i32, 4i32)}
   [i32] header{tree.append_leaf(root, 20i32, 5i32)}
   [i32] body{tree.append_column(root, 1i32, 2i32, 12i32, 8i32)}
@@ -555,7 +555,7 @@ import /std/ui/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
   [i32] title{layout.append_label(root, 10i32, "Hi"utf8)}
   [i32] action{layout.append_button(root, 10i32, 3i32, "Go"utf8)}
@@ -563,16 +563,16 @@ main() {
   layout.measure()
   layout.arrange(5i32, 6i32, 30i32, 46i32)
 
-  [CommandList mut] commands{CommandList()}
-  commands.draw_label(layout, title, 10i32, Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32), "Hi"utf8)
+  [CommandList mut] commands{CommandList{}}
+  commands.draw_label(layout, title, 10i32, Rgba8{[r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32}, "Hi"utf8)
   commands.draw_button(
     layout,
     action,
     10i32,
     3i32,
     4i32,
-    Rgba8([r] 10i32, [g] 20i32, [b] 30i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    Rgba8{[r] 10i32, [g] 20i32, [b] 30i32, [a] 255i32},
+    Rgba8{[r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32},
     "Go"utf8
   )
   commands.draw_input(
@@ -581,8 +581,8 @@ main() {
     10i32,
     2i32,
     3i32,
-    Rgba8([r] 40i32, [g] 50i32, [b] 60i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 210i32, [b] 220i32, [a] 255i32),
+    Rgba8{[r] 40i32, [g] 50i32, [b] 60i32, [a] 255i32},
+    Rgba8{[r] 200i32, [g] 210i32, [b] 220i32, [a] 255i32},
     "abc"utf8
   )
   return(commands.command_count())
@@ -596,7 +596,7 @@ import /std/ui/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 2i32, 0i32, 0i32)}
   [i32] panel{layout.append_panel(root, 2i32, 1i32, 20i32, 12i32)}
   [i32] action{layout.append_button(panel, 10i32, 2i32, "Go"utf8)}
@@ -604,16 +604,16 @@ main() {
   layout.measure()
   layout.arrange(4i32, 5i32, 28i32, 60i32)
 
-  [CommandList mut] commands{CommandList()}
-  commands.begin_panel(layout, panel, 4i32, Rgba8([r] 8i32, [g] 9i32, [b] 10i32, [a] 255i32))
+  [CommandList mut] commands{CommandList{}}
+  commands.begin_panel(layout, panel, 4i32, Rgba8{[r] 8i32, [g] 9i32, [b] 10i32, [a] 255i32})
   commands.draw_button(
     layout,
     action,
     10i32,
     2i32,
     3i32,
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
+    Rgba8{[r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32},
+    Rgba8{[r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32},
     "Go"utf8
   )
   commands.draw_input(
@@ -622,8 +622,8 @@ main() {
     10i32,
     1i32,
     2i32,
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 210i32, [g] 211i32, [b] 212i32, [a] 255i32),
+    Rgba8{[r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32},
+    Rgba8{[r] 210i32, [g] 211i32, [b] 212i32, [a] 255i32},
     "abc"utf8
   )
   commands.end_panel()
@@ -638,7 +638,7 @@ import /std/ui/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -656,7 +656,7 @@ main() {
   layout.measure()
   layout.arrange(6i32, 7i32, 40i32, 57i32)
 
-  [CommandList mut] commands{CommandList()}
+  [CommandList mut] commands{CommandList{}}
   commands.draw_login_form(
     layout,
     login,
@@ -665,12 +665,12 @@ main() {
     2i32,
     4i32,
     3i32,
-    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
-    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    Rgba8{[r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32},
+    Rgba8{[r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32},
+    Rgba8{[r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32},
+    Rgba8{[r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32},
+    Rgba8{[r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32},
+    Rgba8{[r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32},
     "Login"utf8,
     "alice"utf8,
     "secret"utf8,
@@ -687,7 +687,7 @@ import /std/ui/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -705,7 +705,7 @@ main() {
   layout.measure()
   layout.arrange(6i32, 7i32, 40i32, 57i32)
 
-  [HtmlCommandList mut] html{HtmlCommandList()}
+  [HtmlCommandList mut] html{HtmlCommandList{}}
   html.emit_login_form(
     layout,
     login,
@@ -714,12 +714,12 @@ main() {
     2i32,
     4i32,
     3i32,
-    Rgba8([r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32),
-    Rgba8([r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32),
-    Rgba8([r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32),
-    Rgba8([r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32),
-    Rgba8([r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32),
-    Rgba8([r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32),
+    Rgba8{[r] 9i32, [g] 8i32, [b] 7i32, [a] 255i32},
+    Rgba8{[r] 1i32, [g] 2i32, [b] 3i32, [a] 255i32},
+    Rgba8{[r] 20i32, [g] 30i32, [b] 40i32, [a] 255i32},
+    Rgba8{[r] 200i32, [g] 201i32, [b] 202i32, [a] 255i32},
+    Rgba8{[r] 50i32, [g] 60i32, [b] 70i32, [a] 255i32},
+    Rgba8{[r] 250i32, [g] 251i32, [b] 252i32, [a] 255i32},
     "Login"utf8,
     "alice"utf8,
     "secret"utf8,
@@ -739,7 +739,7 @@ import /std/ui/*
 
 [effects(heap_alloc), return<int>]
 main() {
-  [LayoutTree mut] layout{LayoutTree()}
+  [LayoutTree mut] layout{LayoutTree{}}
   [i32] root{layout.append_root_column(1i32, 0i32, 0i32, 0i32)}
   [LoginFormNodes] login{layout.append_login_form(
     root,
@@ -755,7 +755,7 @@ main() {
     "Go"utf8
   )}
 
-  [UiEventStream mut] events{UiEventStream()}
+  [UiEventStream mut] events{UiEventStream{}}
   events.push_pointer_move(login.usernameInput, 7i32, 20i32, 30i32)
   events.push_pointer_down(login.submitButton, 7i32, 1i32, 20i32, 30i32)
   events.push_pointer_up(login.submitButton, 7i32, 1i32, 21i32, 31i32)

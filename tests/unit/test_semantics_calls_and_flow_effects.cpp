@@ -1203,7 +1203,7 @@ vector<T>([T] value) {
 
 [return<Thing>]
 at([i32] value, [i32] index) {
-  return(Thing())
+  return(Thing{})
 }
 
 [effects(io_out) return<int>]
@@ -1227,7 +1227,7 @@ Thing() {
 [effects(io_out)]
 main() {
   print_line(block(){
-    [Thing] item{Thing()}
+    [Thing] item{Thing{}}
     item
   })
 }
@@ -1661,7 +1661,7 @@ Frame() {
 
 [return<Result<Frame, GfxError>>]
 acquire_frame() {
-  return(Result.ok(Frame([token] 9i32)))
+  return(Result.ok(Frame{[token] 9i32}))
 }
 
 namespace Frame {
@@ -1704,7 +1704,7 @@ namespace Foo {
 
 [return<int>]
 main() {
-  [Foo] foo{Foo([value] 7i32)}
+  [Foo] foo{Foo{[value] 7i32}}
   return(Foo.project(foo))
 }
 )";
@@ -1729,7 +1729,7 @@ namespace Foo {
 
 [return<int>]
 main() {
-  [Foo] foo{Foo([value] 7i32)}
+  [Foo] foo{Foo{[value] 7i32}}
   [auto] inferred{Foo.project(foo)}
   return(inferred)
 }
