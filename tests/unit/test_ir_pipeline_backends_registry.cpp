@@ -3291,29 +3291,29 @@ main() {
   options.collectDiagnostics = true;
   primec::addDefaultStdlibInclude(options.inputPath, options.importPaths);
 
-  primec::CompilePipelineOutput output;
   primec::CompilePipelineDiagnosticInfo diagnosticInfo;
   primec::CompilePipelineErrorStage errorStage = primec::CompilePipelineErrorStage::None;
   std::string error;
-  const bool ok = primec::runCompilePipeline(options, output, errorStage, error, &diagnosticInfo);
+  primec::CompilePipelineResult result =
+      primec::runCompilePipelineResult(options, errorStage, error, &diagnosticInfo);
 
   std::error_code ec;
   std::filesystem::remove(tempPath, ec);
 
-  CHECK_FALSE(ok);
+  const auto *failure = std::get_if<primec::CompilePipelineFailureResult>(&result);
+  REQUIRE(failure != nullptr);
   CHECK(errorStage == primec::CompilePipelineErrorStage::Semantic);
-  REQUIRE(output.hasFailure);
-  CHECK(output.failure.stage == primec::CompilePipelineErrorStage::Semantic);
-  CHECK_FALSE(output.failure.message.empty());
-  CHECK(output.failure.message == error);
-  REQUIRE_FALSE(output.failure.diagnosticInfo.records.empty());
-  CHECK(output.failure.diagnosticInfo.records.front().message == error);
-  REQUIRE(output.hasSemanticProgram);
-  CHECK(output.semanticProgram.entryPath == "/main");
-  CHECK(std::find(output.semanticProgram.imports.begin(),
-                  output.semanticProgram.imports.end(),
-                  "/std/gfx/experimental/*") != output.semanticProgram.imports.end());
-  CHECK(diagnosticInfo.message == output.failure.diagnosticInfo.message);
+  CHECK(failure->failure.stage == primec::CompilePipelineErrorStage::Semantic);
+  CHECK_FALSE(failure->failure.message.empty());
+  CHECK(failure->failure.message == error);
+  REQUIRE_FALSE(failure->failure.diagnosticInfo.records.empty());
+  CHECK(failure->failure.diagnosticInfo.records.front().message == error);
+  REQUIRE(failure->hasSemanticProgram);
+  CHECK(failure->semanticProgram.entryPath == "/main");
+  CHECK(std::find(failure->semanticProgram.imports.begin(),
+                  failure->semanticProgram.imports.end(),
+                  "/std/gfx/experimental/*") != failure->semanticProgram.imports.end());
+  CHECK(diagnosticInfo.message == failure->failure.diagnosticInfo.message);
   REQUIRE_FALSE(diagnosticInfo.records.empty());
   CHECK(diagnosticInfo.records.front().message == error);
 }

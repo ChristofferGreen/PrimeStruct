@@ -441,9 +441,10 @@ Compile-pipeline publication contract:
 - Failure paths should continue to report diagnostics against AST-backed provenance, but post-semantics compile-pipeline
   failures should still preserve the published semantic product plus a first-class failure object rather than dropping
   back to raw string/error-stage side channels.
-- The `primec` and `primevm` runtime entrypoints now consume explicit compile-pipeline success/failure variants for
-  that preserved failure object, while the legacy output struct remains as the compatibility surface for
-  unmigrated helper/test callers.
+- The `primec` and `primevm` runtime entrypoints, plus focused post-semantics failure preservation coverage, now
+  consume explicit compile-pipeline success/failure variants for that preserved failure object. The legacy output
+  struct remains only as the compatibility surface for success-only dump and conformance helpers that still need the
+  full compile artifact but do not inspect failure objects.
   Post-semantics diagnostics may explicitly note that a semantic product is already available even though later target
   validation failed.
 - The current published shell is still intentionally narrow, but it now includes the resolved call-target surface:

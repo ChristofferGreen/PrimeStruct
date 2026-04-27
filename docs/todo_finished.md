@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- [x] TODO-4279: Retire compile-pipeline helper compatibility callers
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred semantic-product/backend/tooling follow-up
+  - scope: Replace remaining test/helper compatibility callers of legacy
+    compile-pipeline output structs or adapters with explicit success/failure
+    result variants where they exercise failure reporting or post-semantics
+    semantic-product availability.
+  - implementation_notes: Start with tests and helper APIs that still call
+    `runCompilePipeline(...)` only to inspect success/failure state or
+    `CompilePipelineOutput::failure`; keep success-only dump and conformance
+    helpers on the legacy API until they need failure-object preservation.
+  - acceptance:
+    - At least one remaining test/helper compatibility caller is deleted or
+      migrated to the explicit result variant.
+    - Success and failure paths remain covered by focused tests.
+    - `docs/PrimeStruct.md` accurately describes any remaining legacy output
+      callers as helper/test compatibility seams.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after one remaining helper/test compatibility caller is
+    retired and the replacement result API is covered; split additional
+    callers into follow-up leaves if more remain.
+  - finished_at: 2026-04-27
+  - evidence: Migrated the post-semantics failure-preservation registry test
+    from legacy `runCompilePipeline(...)` / `CompilePipelineOutput` failure
+    inspection to the explicit `runCompilePipelineResult(...)`
+    `CompilePipelineFailureResult` path while preserving the semantic-product
+    availability assertions. `docs/PrimeStruct.md` now describes the remaining
+    legacy output callers as success-only dump and conformance helper seams.
+    Removed `TODO-4279` from the live queue, promoted `TODO-4242` to Ready
+    Now, and deferred release reruns to CI per the lite workflow.
+
 - ✓ TODO-4241: Retire semantic-product output compatibility callers.
   Completed: The `primec` entrypoint now uses the explicit
   `CompilePipelineResult` success/failure variant instead of the legacy
