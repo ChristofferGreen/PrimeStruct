@@ -275,7 +275,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     };
     const bool isBareMapAccessBuiltinSurface =
         getBuiltinArrayAccessName(expr, builtinAccessName) &&
-        isSimpleCallName(expr, builtinAccessName);
+        isSimpleCallName(expr, builtinAccessName.c_str());
     if (!builtinAccessName.empty() &&
         hasVisibleStdlibMapAccessDefinition(builtinAccessName) &&
         (isBareMapAccessBuiltinSurface ||

@@ -561,6 +561,16 @@ std::string SemanticsValidator::directMapHelperCompatibilityPath(
   }
   const std::string canonicalPath = canonicalCollectionHelperPath(
       StdlibSurfaceId::CollectionsMapHelpers, helperName);
+  std::string resolvedExperimentalHelperName;
+  if (currentValidationState_.context.definitionPath.rfind(
+          "/std/collections/map/", 0) == 0 &&
+      resolvedPath.rfind("/std/collections/experimental_map/", 0) == 0 &&
+      resolvePublishedCollectionHelperResolvedPath(
+          resolvedPath,
+          StdlibSurfaceId::CollectionsMapHelpers,
+          resolvedExperimentalHelperName)) {
+    return "";
+  }
   if (resolvedCompatibilityHelper &&
       matchesResolvedPath(resolvedPath, canonicalPath)) {
     return "";

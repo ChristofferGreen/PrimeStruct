@@ -4,6 +4,12 @@ MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target,
                                                const LocalMap &localsIn,
                                                const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo);
 MapAccessTargetInfo resolveMapAccessTargetInfo(const Expr &target, const LocalMap &localsIn);
+bool inferForwardedMapAccessTargetInfo(
+    const Expr &target,
+    const Definition &callee,
+    const LocalMap &localsIn,
+    const ResolveCallMapAccessTargetInfoFn &resolveCallMapAccessTargetInfo,
+    MapAccessTargetInfo &targetInfoOut);
 bool validateMapAccessTargetInfo(const MapAccessTargetInfo &targetInfo,
                                  const std::string &accessName,
                                  std::string &error);

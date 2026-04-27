@@ -214,23 +214,42 @@ bool SemanticsValidator::hasDefinitionFamilyPath(std::string_view path) const {
   if (defMap_.count(pathText) > 0 || paramsByDef_.count(pathText) > 0) {
     return true;
   }
-  const std::string templatedPrefix = pathText + "<";
-  const std::string specializedPrefix = pathText + "__t";
-  const std::string overloadPrefix = pathText + "__ov";
-  auto matchesFamilyPath = [&](std::string_view candidate) {
-    return candidate == path ||
+  auto matchesFamilyPath = [](std::string_view candidate,
+                              const std::string &familyPath) {
+    const std::string templatedPrefix = familyPath + "<";
+    const std::string specializedPrefix = familyPath + "__t";
+    const std::string overloadPrefix = familyPath + "__ov";
+    return candidate == familyPath ||
            candidate.rfind(templatedPrefix, 0) == 0 ||
            candidate.rfind(specializedPrefix, 0) == 0 ||
            candidate.rfind(overloadPrefix, 0) == 0;
   };
+  const std::string baseFamilyPath = [&]() {
+    const size_t lastSlash = pathText.find_last_of('/');
+    const size_t nameStart = lastSlash == std::string::npos ? 0 : lastSlash + 1;
+    const size_t specializationSuffix = pathText.find("__t", nameStart);
+    if (specializationSuffix == std::string::npos) {
+      return pathText;
+    }
+    return pathText.substr(0, specializationSuffix);
+  }();
+  if (baseFamilyPath != pathText &&
+      (defMap_.count(baseFamilyPath) > 0 ||
+       paramsByDef_.count(baseFamilyPath) > 0)) {
+    return true;
+  }
   for (const auto &[resolvedPath, params] : paramsByDef_) {
     (void)params;
-    if (matchesFamilyPath(resolvedPath)) {
+    if (matchesFamilyPath(resolvedPath, pathText) ||
+        (baseFamilyPath != pathText &&
+         matchesFamilyPath(resolvedPath, baseFamilyPath))) {
       return true;
     }
   }
   for (const auto &def : program_.definitions) {
-    if (matchesFamilyPath(def.fullPath)) {
+    if (matchesFamilyPath(def.fullPath, pathText) ||
+        (baseFamilyPath != pathText &&
+         matchesFamilyPath(def.fullPath, baseFamilyPath))) {
       return true;
     }
   }

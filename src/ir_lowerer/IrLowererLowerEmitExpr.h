@@ -20,7 +20,7 @@
     return false;
   }
 
-  emitExpr = [&](const Expr &expr, const LocalMap &localsIn) -> bool {
+  emitExpr = [&, semanticProgram](const Expr &expr, const LocalMap &localsIn) -> bool {
     if (expr.isLambda) {
       error = "IR backends do not support lambdas";
       return false;

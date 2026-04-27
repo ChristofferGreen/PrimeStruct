@@ -919,6 +919,9 @@ bool rewriteExpr(Expr &expr,
               mapHelperReceiverExpr(expr), params, locals, allowMathBare, namespacePrefix, ctx)) {
         return true;
       }
+      if (path.rfind("/std/collections/map/", 0) == 0) {
+        return true;
+      }
       return false;
     }
     if (isCanonicalBuiltinMapHelperPath(path)) {
@@ -1725,6 +1728,22 @@ bool rewriteExpr(Expr &expr,
           resolvesExperimentalSoaVectorReceiver(mapHelperReceiverExpr(expr))) {
         std::vector<std::string> receiverTemplateArgs;
         if (resolveExperimentalSoaVectorReceiverTemplateArgs(mapHelperReceiverExpr(expr), receiverTemplateArgs)) {
+          expr.templateArgs = std::move(receiverTemplateArgs);
+          allConcrete = true;
+        }
+      }
+      if (expr.templateArgs.empty() &&
+          methodPath.rfind("/std/collections/map/", 0) == 0 &&
+          hasVisibleStdCollectionsImportForPath(ctx, methodPath)) {
+        std::vector<std::string> receiverTemplateArgs;
+        if (resolveExperimentalMapValueReceiverTemplateArgs(
+                mapHelperReceiverExpr(expr),
+                params,
+                locals,
+                allowMathBare,
+                namespacePrefix,
+                ctx,
+                receiverTemplateArgs)) {
           expr.templateArgs = std::move(receiverTemplateArgs);
           allConcrete = true;
         }

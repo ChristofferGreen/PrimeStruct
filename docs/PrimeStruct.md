@@ -440,8 +440,9 @@ Compile-pipeline publication contract:
   than rebuilding semantic facts ad hoc from the raw `Program`.
 - That success-path handoff is now live for `primec` compile/emit entrypoints, `primevm`, backend registry dispatch,
   and the shared `prepareIrModule(...)` / `IrLowerer::lower(...)` seam. The `primevm` result boundary now also uses
-  explicit success/failure variants. No active TODO currently targets compatibility caller migration or
-  semantic-product dump/report surface changes; add a concrete TODO before changing those CLI/runtime seams.
+  explicit success/failure variants. `TODO-4241` tracks the remaining compatibility caller migration, while
+  `TODO-4228` tracks the semantic-product dump/report API factoring. Add a separate concrete TODO before changing
+  unrelated CLI/runtime seams.
 
 CLI/runtime plumbing contract:
 - `primec` and `primevm` should receive the semantic product only through compile-pipeline success artifacts, not
@@ -623,9 +624,8 @@ Current semantic-product dump contract:
 Planned semantic-product unit/golden suite:
 - Current status: the exact semantic-product formatter golden now pins resolved call/helper targets,
   binding/result facts, effect/capability plus struct/layout metadata, and the explicit
-  `provenance_handle=<id> source="line:column"` provenance surface carried by lowering-facing
-  semantic-product facts. No active TODO currently tracks pipeline-facing/backend semantic-product conformance beyond
-  the formatter golden; add a concrete TODO before expanding that coverage lane.
+  `provenance_handle=<id> source="line:column"` provenance surface carried by lowering-facing semantic-product facts.
+  `TODO-4240` tracks pipeline-facing/backend semantic-product conformance beyond the formatter golden.
 - Keep one narrow golden corpus focused on exported lowering facts rather than full pipeline behavior.
 - Prefer small representative programs that pin one fact family at a time:
   - resolved call/helper targets
@@ -2028,8 +2028,8 @@ for(
     values.
   - String indexing in **`VM/native (limited)`** requires string literals or bindings backed by literals.
   - `vector<T>` is specified as a C++-style dynamic contiguous sequence (`push`/`reserve` may grow capacity). VM/native
-    currently still enforce fixed-capacity growth limits. No active TODO currently tracks full dynamic vector
-    semantics; add a concrete dynamic-storage migration TODO before changing that runtime contract.
+    currently still enforce fixed-capacity growth limits. `TODO-4245` tracks the first dynamic vector runtime/storage
+    design slice; add a separate concrete TODO before changing runtime semantics outside that scope.
   - Stdlib collection helpers now share `ContainerError` for deterministic error payloads: `containerMissingKey()`
     (`1`), `containerIndexOutOfBounds()` (`2`), `containerEmpty()` (`3`), and `containerCapacityExceeded()` (`4`).
     `containerErrorStatus(err)` packs a status-only `Result<ContainerError>`, `containerErrorResult<T>(err)` packs a
@@ -2676,8 +2676,8 @@ Current `stdlib/std` experimental module classification:
 | `/std/collections/experimental_vector/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/vector/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/collections/experimental_map/*` | Internal substrate/helper namespace | Internal implementation module behind the canonical `/std/collections/map/*` public contract; direct imports remain only for targeted compatibility or conformance coverage. | none |
 | `/std/gfx/experimental/*` | Temporary compatibility namespace | Legacy compatibility shim over canonical `/std/gfx/*`; no longer part of the public gfx contract and retained only for targeted compatibility coverage while the residual seam remains importable. | none |
-| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports remain only for targeted compatibility or conformance coverage. | none active; add a concrete TODO only before retiring, accepting, or reclassifying this compatibility seam. |
-| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Internal conversion module behind canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/*` conversion helpers; direct imports remain only for targeted compatibility or conformance coverage. | none active; add a concrete TODO only before retiring, accepting, or reclassifying this conversion seam. |
+| `/std/collections/experimental_soa_vector/*` | Temporary compatibility namespace | Internal implementation module behind the canonical `/std/collections/soa_vector/*` experiment surface; direct imports remain only for targeted compatibility or conformance coverage. | `TODO-4246` through `TODO-4252` track the concrete promotion, retirement, parity, and documentation exit path. |
+| `/std/collections/experimental_soa_vector_conversions/*` | Temporary compatibility namespace | Internal conversion module behind canonical `/std/collections/soa_vector_conversions/*` and `/std/collections/soa_vector/*` conversion helpers; direct imports remain only for targeted compatibility or conformance coverage. | `TODO-4248` and `TODO-4249` track conversion-wrapper migration and direct experimental import retirement. |
 | `/std/collections/internal_buffer_checked/*` | Internal substrate/helper namespace | Explicitly internal checked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_buffer_unchecked/*` | Internal substrate/helper namespace | Explicitly internal unchecked buffer plumbing for container conformance and memory-wrapper flows, not a stable user-facing stdlib API. | none |
 | `/std/collections/internal_soa_storage/*` | Internal substrate/helper namespace | Explicitly internal SoA storage/layout plumbing used by wrappers and lowering bridges, not a canonical surface contract. | none |
@@ -3330,9 +3330,9 @@ bad_use_after_take() {
     canonical stdlib shim, and imported plus no-import root builtin bare/direct/method/slash-method
     `to_aos` forms now also materialize the canonical `/std/collections/soa_vector/to_aos__...`
     helper path and run through that same bridged substrate on native instead of trapping. These compiler-owned
-    `soa_vector` paths are compatibility scaffolding rather than the intended end-state. No active TODO currently
-    tracks their cleanup, so add a concrete SoA cleanup TODO before changing the remaining semantics
-    method/builtin fallbacks, IR-lowerer special cases, or emitter/backend special cases.
+    `soa_vector` paths are compatibility scaffolding rather than the intended end-state. The deferred SoA finish
+    chain tracks their cleanup, with `TODO-4250` covering the remaining semantics method/builtin fallbacks,
+    IR-lowerer special cases, and emitter/backend special cases.
   - **Compile-time schema substrate status:** the minimum field-schema introspection needed for a `.prime`
     `soa_vector<T>` implementation already exists through compile-time reflection metadata queries:
     `meta.field_count<T>()`, `meta.field_name<T>(i)`, `meta.field_type<T>(i)`, and
@@ -3477,9 +3477,9 @@ after rewrite. The no-shadow path still keeps that same canonical
 `/std/collections/soa_vector/to_aos` reject contract instead of the old builtin
 `to_aos requires soa_vector target` diagnostic, while struct-vector literal/runtime limits remain
 tracked separately from that helper-routing boundary.
-No active TODO currently tracks the remaining compiler-owned builtin semantics or lowering cleanup; add a concrete
-SoA cleanup TODO before changing root `get`, root `ref`, root `to_aos`, field-view diagnostics, helper-call,
-conversion, field-view, direct-call, or wildcard-import fallback seams. Dedicated inline-dispatch builtin
+`TODO-4250` tracks the remaining compiler-owned builtin semantics and lowering cleanup for root `get`, root `ref`,
+root `to_aos`, field-view diagnostics, helper-call, conversion, field-view, direct-call, and wildcard-import fallback
+seams; add a separate concrete SoA cleanup TODO before changing behavior outside that scope. Dedicated inline-dispatch builtin
 `soa_vector` count/get/ref
 helper bridging is now gone as well, so those helper shapes flow through the shared
 definition-resolution plus count/access fallback path instead of a one-off SoA branch. Root
@@ -4148,8 +4148,9 @@ read-only path.
   lowering.
 - **Memory/GC:** there is no GC in the VM today. Arrays are inline locals with count metadata plus contiguous element
   slots. Vectors are specified as dynamic contiguous storage (heap-backed semantics), but VM/native currently implement
-  vectors as inline fixed-capacity locals. No active TODO currently tracks migration to dynamic storage; add a concrete
-  dynamic-storage migration TODO before changing that runtime contract. No reference counting is performed.
+  vectors as inline fixed-capacity locals. `TODO-4245` tracks the first dynamic vector runtime/storage design slice;
+  add a separate concrete dynamic-storage TODO before changing runtime behavior outside that scope. No reference
+  counting is performed.
 - **Errors:** guard rails emit errors by printing to stderr and returning error codes (e.g., bounds checks), while VM
   runtime faults (stack underflow, invalid addresses) surface as `VM error:` with exit code 3.
 - **Deployment target:** the VM serves as the sandboxed runtime for user-supplied scripts (e.g., on iOS) where native
