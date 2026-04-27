@@ -3,6 +3,7 @@
 #include "primec/SemanticValidationPlan.h"
 #include "primec/SemanticsDefinitionPrepass.h"
 
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -42,7 +43,102 @@ std::vector<std::string> diagnosticMessages(const primec::SemanticDiagnosticInfo
   return messages;
 }
 
+std::vector<std::string> manifestPassNames() {
+  std::vector<std::string> names;
+  const auto &manifest = primec::semantics::semanticValidationPassManifest();
+  names.reserve(manifest.size());
+  for (const auto &entry : manifest) {
+    names.emplace_back(entry.name);
+  }
+  return names;
+}
+
+const primec::semantics::SemanticValidationPassManifestEntry *findManifestPass(
+    std::string_view name) {
+  const auto &manifest = primec::semantics::semanticValidationPassManifest();
+  const auto it = std::find_if(
+      manifest.begin(),
+      manifest.end(),
+      [name](const primec::semantics::SemanticValidationPassManifestEntry &entry) {
+        return entry.name == name;
+      });
+  return it == manifest.end() ? nullptr : &*it;
+}
+
 } // namespace
+
+TEST_CASE("semantic validation pass manifest pins ordered pipeline phases") {
+  const std::vector<std::string> expectedNames = {
+      "semantic-transform-rules",
+      "experimental-gfx-constructors",
+      "reflection-generated-helpers",
+      "builtin-soa-conversion-methods",
+      "builtin-soa-to-aos-calls",
+      "builtin-soa-helper-return-metadata",
+      "builtin-soa-access-calls",
+      "builtin-soa-count-calls",
+      "builtin-soa-mutator-calls",
+      "experimental-soa-inline-borrow-methods",
+      "experimental-soa-same-path-helper-methods",
+      "experimental-soa-to-aos-methods",
+      "experimental-soa-field-view-indexes",
+      "experimental-soa-field-view-helpers",
+      "experimental-soa-field-view-carrier-indexes",
+      "experimental-soa-field-view-assign-targets",
+      "borrowed-experimental-map-methods",
+      "experimental-map-value-methods",
+      "builtin-map-insert-methods",
+      "template-monomorphization",
+      "reflection-metadata-queries",
+      "convert-constructors",
+      "validator-passes",
+      "omitted-struct-initializers",
+      "semantic-node-id-assignment",
+      "semantic-product-publication",
+  };
+  CHECK(manifestPassNames() == expectedNames);
+
+  const auto *first = findManifestPass("semantic-transform-rules");
+  REQUIRE(first != nullptr);
+  CHECK(first->inputOwnership ==
+        primec::semantics::SemanticValidationPassOwnership::AstSyntax);
+  CHECK(first->outputOwnership ==
+        primec::semantics::SemanticValidationPassOwnership::SemanticCanonicalAst);
+  CHECK(first->action ==
+        primec::semantics::SemanticValidationPassAction::MutatesAst);
+}
+
+TEST_CASE("semantic validation pass manifest classifies compatibility and facts") {
+  const auto *compat = findManifestPass("experimental-map-value-methods");
+  REQUIRE(compat != nullptr);
+  CHECK(compat->kind ==
+        primec::semantics::SemanticValidationPassKind::CompatibilityRewrite);
+  CHECK(compat->compatibilityRewrite);
+  CHECK(compat->action ==
+        primec::semantics::SemanticValidationPassAction::MutatesAst);
+
+  const auto *metadata = findManifestPass("builtin-soa-helper-return-metadata");
+  REQUIRE(metadata != nullptr);
+  CHECK_FALSE(metadata->compatibilityRewrite);
+  CHECK(metadata->action ==
+        primec::semantics::SemanticValidationPassAction::ValidatesOnly);
+
+  const auto *validator = findManifestPass("validator-passes");
+  REQUIRE(validator != nullptr);
+  CHECK(validator->kind ==
+        primec::semantics::SemanticValidationPassKind::Validation);
+  CHECK(validator->outputOwnership ==
+        primec::semantics::SemanticValidationPassOwnership::SemanticProductFacts);
+  CHECK(validator->action ==
+        primec::semantics::SemanticValidationPassAction::PublishesFacts);
+
+  const auto *publication = findManifestPass("semantic-product-publication");
+  REQUIRE(publication != nullptr);
+  CHECK(publication->kind ==
+        primec::semantics::SemanticValidationPassKind::Publication);
+  CHECK(publication->outputOwnership ==
+        primec::semantics::SemanticValidationPassOwnership::SemanticProductFacts);
+}
 
 TEST_CASE("definition prepass indexes declarations and records duplicates deterministically") {
   const std::string source = R"(

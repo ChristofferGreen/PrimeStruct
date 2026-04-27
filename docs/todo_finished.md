@@ -6,6 +6,17 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 27, 2026)**
+- ✓ TODO-4216: Split semantic rewrites into an explicit pass manifest.
+  Completed: semantic validation now exposes an ordered
+  `semanticValidationPassManifest()` on the public validation-plan surface,
+  recording pass kind, AST/semantic-product ownership, mutation/publication
+  action, and compatibility-rewrite status for the full `Semantics::validate`
+  pipeline. The pre-validator AST pass runner consumes that manifest through
+  the `validator-passes` boundary, so pre-validator rewrite ordering is pinned
+  by the manifest rather than a separate hand-written sequence. Focused
+  semantics coverage locks the manifest order and ownership classifications,
+  while docs and contributor guidance now point future semantic-order changes
+  at the manifest. Local validation is deferred per the lite workflow.
 - ✓ TODO-4228: Factor and version the semantic-product boundary API.
   Completed: `SemanticProductContractVersionCurrent` is now V2, and
   the public `SemanticProduct` API exposes `SemanticProgramFactOwnership` /

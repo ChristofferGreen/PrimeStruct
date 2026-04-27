@@ -782,13 +782,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4216: Split semantic rewrites into an explicit pass manifest") !=
-        std::string::npos);
-  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4217: Move stdlib compatibility rewrites behind surface adapters") !=
         std::string::npos);
+  CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
+                  "- TODO-4224: Cut over vector/map compatibility decisions to surface adapters") !=
+        std::string::npos);
   CHECK(todo.find("### Priority Lanes (Current)\n\n"
-                  "- Semantic phase contract hardening: TODO-4216 -> TODO-4217") !=
+                  "- Semantic phase contract hardening: TODO-4217") !=
         std::string::npos);
   CHECK(todo.find("  -> TODO-4224 -> TODO-4229 -> TODO-4230") !=
         std::string::npos);
@@ -801,10 +801,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4244 -> TODO-4246 -> TODO-4247") !=
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4216: Split semantic rewrites into an explicit pass manifest") !=
+                  "- TODO-4217: Move stdlib compatibility rewrites behind surface adapters") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4216: Split semantic rewrites into an explicit pass manifest",
       "TODO-4217: Move stdlib compatibility rewrites behind surface adapters",
       "TODO-4224: Cut over vector/map compatibility decisions to surface adapters",
       "TODO-4229: Cut over SoA compatibility decisions to surface adapters",
@@ -854,7 +853,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("  - depends_on: TODO-4227") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4215") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4228") == std::string::npos);
-  CHECK(todo.find("  - depends_on: TODO-4216") != std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4216") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4217") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4224") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4229") != std::string::npos);
@@ -869,6 +868,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("  - depends_on: TODO-4234") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4235") != std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4236") != std::string::npos);
+  CHECK(todo.find("TODO-4216") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4216: Split semantic rewrites into an explicit pass manifest") !=
+        std::string::npos);
   CHECK(todo.find("TODO-4228") == std::string::npos);
   CHECK(todoFinished.find("TODO-4228: Factor and version the semantic-product boundary API") !=
         std::string::npos);

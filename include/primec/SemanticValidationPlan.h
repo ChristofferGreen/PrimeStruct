@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace primec::semantics {
@@ -54,7 +55,41 @@ struct SemanticValidationPlan {
   SemanticValidationExecutionSlice executionSlice;
 };
 
+enum class SemanticValidationPassKind {
+  CoreCanonicalization,
+  CompatibilityRewrite,
+  TemplateMonomorphization,
+  Validation,
+  Publication,
+};
+
+enum class SemanticValidationPassOwnership {
+  AstSyntax,
+  SemanticCanonicalAst,
+  SemanticProductFacts,
+};
+
+enum class SemanticValidationPassAction {
+  MutatesAst,
+  ValidatesOnly,
+  PublishesFacts,
+};
+
+struct SemanticValidationPassManifestEntry {
+  std::string_view name;
+  SemanticValidationPassKind kind =
+      SemanticValidationPassKind::CoreCanonicalization;
+  SemanticValidationPassOwnership inputOwnership =
+      SemanticValidationPassOwnership::AstSyntax;
+  SemanticValidationPassOwnership outputOwnership =
+      SemanticValidationPassOwnership::SemanticCanonicalAst;
+  SemanticValidationPassAction action = SemanticValidationPassAction::MutatesAst;
+  bool compatibilityRewrite = false;
+  std::string_view description;
+};
+
 SemanticValidationPlan buildSemanticValidationPlan(const Program &program,
                                                    const std::string &entryPath);
+const std::vector<SemanticValidationPassManifestEntry> &semanticValidationPassManifest();
 
 } // namespace primec::semantics

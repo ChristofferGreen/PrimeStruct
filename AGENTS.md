@@ -84,10 +84,11 @@ build and layout solidify.
 - Coverage artifacts live in `build-debug/coverage/` (`coverage.txt`, `html/`, and `PrimeStruct.profdata`).
 
 ## Semantics pipeline note
-- `Semantics::validate` runs in this order: apply semantic transforms → template
-  monomorphization → convert-constructor rewrite → validator passes → omitted struct
-  initializer rewrite. When changing diagnostics, keep in mind template inference runs before the
-  main validator.
+- `Semantics::validate` pass order and ownership metadata are declared by
+  `semanticValidationPassManifest()` in `include/primec/SemanticValidationPlan.h`.
+  Update that manifest whenever semantic validation order, AST mutation ownership,
+  compatibility-rewrite status, or semantic-product publication boundaries change.
+  When changing diagnostics, keep in mind template inference runs before the main validator.
 - Rewrites that depend on implicit template inference (e.g., sugar that introduces templated calls)
   must run before template monomorphization.
 

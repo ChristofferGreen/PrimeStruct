@@ -2630,6 +2630,14 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticsValidate.find("semantics::publishSemanticProgramAfterValidation(program,") !=
         std::string::npos);
+  CHECK(semanticsValidate.find("#include \"primec/SemanticValidationPlan.h\"") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("runSemanticValidationManifestAstPasses(") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("semantics::semanticValidationPassManifest()") !=
+        std::string::npos);
+  CHECK(semanticsValidate.find("pass.name == \"validator-passes\"") !=
+        std::string::npos);
   CHECK(semanticsValidate.find("#include \"SemanticsValidationPublicationOrchestration.h\"") !=
         std::string::npos);
   CHECK(semanticsValidate.find("#include \"SemanticPublicationBuilders.h\"") ==

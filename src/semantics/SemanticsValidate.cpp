@@ -1,5 +1,6 @@
 #include "primec/Semantics.h"
 #include "primec/SemanticsBenchmark.h"
+#include "primec/SemanticValidationPlan.h"
 #include "primec/testing/SemanticsGraphHelpers.h"
 #include "primec/testing/SemanticsValidationHelpers.h"
 
@@ -5935,6 +5936,113 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
 
 namespace {
 
+bool runSemanticValidationManifestAstPass(
+    const semantics::SemanticValidationPassManifestEntry &pass,
+    Program &program,
+    const std::string &entryPath,
+    const std::vector<std::string> &semanticTransforms,
+    std::string &error) {
+  if (pass.name == "semantic-transform-rules") {
+    return semantics::applySemanticTransforms(program, semanticTransforms, error);
+  }
+  if (pass.name == "experimental-gfx-constructors") {
+    return semantics::rewriteExperimentalGfxConstructors(program, error);
+  }
+  if (pass.name == "reflection-generated-helpers") {
+    return semantics::rewriteReflectionGeneratedHelpers(program, error);
+  }
+  if (pass.name == "builtin-soa-conversion-methods") {
+    return rewriteBuiltinSoaConversionMethods(program, error);
+  }
+  if (pass.name == "builtin-soa-to-aos-calls") {
+    return rewriteBuiltinSoaToAosCalls(program, error);
+  }
+  if (pass.name == "builtin-soa-helper-return-metadata") {
+    return validateBuiltinSoaHelperReturnMetadataRequirements(program, error);
+  }
+  if (pass.name == "builtin-soa-access-calls") {
+    return rewriteBuiltinSoaAccessCalls(program, error);
+  }
+  if (pass.name == "builtin-soa-count-calls") {
+    return rewriteBuiltinSoaCountCalls(program, error);
+  }
+  if (pass.name == "builtin-soa-mutator-calls") {
+    return rewriteBuiltinSoaMutatorCalls(program, error);
+  }
+  if (pass.name == "experimental-soa-inline-borrow-methods") {
+    return rewriteExperimentalSoaInlineBorrowMethods(program, error);
+  }
+  if (pass.name == "experimental-soa-same-path-helper-methods") {
+    return rewriteExperimentalSoaSamePathHelperMethods(program, error);
+  }
+  if (pass.name == "experimental-soa-to-aos-methods") {
+    return rewriteExperimentalSoaToAosMethods(program, error);
+  }
+  if (pass.name == "experimental-soa-field-view-indexes") {
+    return rewriteExperimentalSoaFieldViewIndexes(program, error);
+  }
+  if (pass.name == "experimental-soa-field-view-helpers") {
+    return rewriteExperimentalSoaFieldViewHelpers(program, error);
+  }
+  if (pass.name == "experimental-soa-field-view-carrier-indexes") {
+    return rewriteExperimentalSoaFieldViewCarrierIndexes(program, error);
+  }
+  if (pass.name == "experimental-soa-field-view-assign-targets") {
+    return rewriteExperimentalSoaFieldViewAssignTargets(program, error);
+  }
+  if (pass.name == "borrowed-experimental-map-methods") {
+    return rewriteBorrowedExperimentalMapMethods(program, error);
+  }
+  if (pass.name == "experimental-map-value-methods") {
+    return rewriteExperimentalMapValueMethods(program, error);
+  }
+  if (pass.name == "builtin-map-insert-methods") {
+    return rewriteBuiltinMapInsertMethods(program, error);
+  }
+  if (pass.name == "template-monomorphization") {
+    try {
+      return semantics::monomorphizeTemplates(program, entryPath, error);
+    } catch (const std::exception &ex) {
+      error = std::string("template monomorphization exception: ") + ex.what();
+      return false;
+    }
+  }
+  if (pass.name == "reflection-metadata-queries") {
+    return semantics::rewriteReflectionMetadataQueries(program, error);
+  }
+  if (pass.name == "convert-constructors") {
+    return semantics::rewriteConvertConstructors(program, error);
+  }
+
+  error = "semantic validation manifest has no pre-validator runner for pass: " +
+          std::string(pass.name);
+  return false;
+}
+
+bool runSemanticValidationManifestAstPasses(
+    Program &program,
+    const std::string &entryPath,
+    const std::vector<std::string> &semanticTransforms,
+    std::string &error) {
+  for (const auto &pass : semantics::semanticValidationPassManifest()) {
+    if (pass.name == "validator-passes") {
+      return true;
+    }
+    if (pass.kind == semantics::SemanticValidationPassKind::Validation ||
+        pass.kind == semantics::SemanticValidationPassKind::Publication) {
+      error = "semantic validation manifest reached unexpected boundary before validator: " +
+              std::string(pass.name);
+      return false;
+    }
+    if (!runSemanticValidationManifestAstPass(
+            pass, program, entryPath, semanticTransforms, error)) {
+      return false;
+    }
+  }
+  error = "semantic validation manifest is missing validator-passes";
+  return false;
+}
+
 bool runSemanticValidation(Program &program,
                            const std::string &entryPath,
                            std::string &error,
@@ -5970,75 +6078,8 @@ bool runSemanticValidation(Program &program,
   } validationDiagnosticScope{diagnosticSink, error, validationSucceeded};
   const semantics::ScopedSemanticAllocatorReliefDisable scopedBenchmarkAllocatorReliefDisable(
       benchmarkRuntime.usesAllocatorSampling());
-  if (!semantics::applySemanticTransforms(program, semanticTransforms, error)) {
-    return false;
-  }
-  if (!semantics::rewriteExperimentalGfxConstructors(program, error)) {
-    return false;
-  }
-  if (!semantics::rewriteReflectionGeneratedHelpers(program, error)) {
-    return false;
-  }
-  if (!rewriteBuiltinSoaConversionMethods(program, error)) {
-    return false;
-  }
-  if (!rewriteBuiltinSoaToAosCalls(program, error)) {
-    return false;
-  }
-  if (!validateBuiltinSoaHelperReturnMetadataRequirements(program, error)) {
-    return false;
-  }
-  if (!rewriteBuiltinSoaAccessCalls(program, error)) {
-    return false;
-  }
-  if (!rewriteBuiltinSoaCountCalls(program, error)) {
-    return false;
-  }
-  if (!rewriteBuiltinSoaMutatorCalls(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalSoaInlineBorrowMethods(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalSoaSamePathHelperMethods(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalSoaToAosMethods(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalSoaFieldViewIndexes(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalSoaFieldViewHelpers(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalSoaFieldViewCarrierIndexes(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalSoaFieldViewAssignTargets(program, error)) {
-    return false;
-  }
-  if (!rewriteBorrowedExperimentalMapMethods(program, error)) {
-    return false;
-  }
-  if (!rewriteExperimentalMapValueMethods(program, error)) {
-    return false;
-  }
-  if (!rewriteBuiltinMapInsertMethods(program, error)) {
-    return false;
-  }
-  try {
-    if (!semantics::monomorphizeTemplates(program, entryPath, error)) {
-      return false;
-    }
-  } catch (const std::exception &ex) {
-    error = std::string("template monomorphization exception: ") + ex.what();
-    return false;
-  }
-  if (!semantics::rewriteReflectionMetadataQueries(program, error)) {
-    return false;
-  }
-  if (!semantics::rewriteConvertConstructors(program, error)) {
+  if (!runSemanticValidationManifestAstPasses(
+          program, entryPath, semanticTransforms, error)) {
     return false;
   }
   auto validatorLifetimeBenchmark = semantics::SemanticValidatorLifetimeBenchmark::fromEnvironment();

@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4216: Split semantic rewrites into an explicit pass manifest
+- TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 - TODO-4229: Cut over SoA compatibility decisions to surface adapters
 - TODO-4230: Cut over gfx compatibility decisions to surface adapters
@@ -81,10 +80,11 @@ Task template:
 - TODO-4225: Close call-target and helper-routing lowerer fallbacks
 - TODO-4232: Close binding/type/effect/layout lowerer fallbacks
 - TODO-4233: Close backend-adapter and source-composition fallbacks
+- TODO-4220: Add semantic phase handoff conformance gates
 
 ### Priority Lanes (Current)
 
-- Semantic phase contract hardening: TODO-4216 -> TODO-4217
+- Semantic phase contract hardening: TODO-4217
   -> TODO-4224 -> TODO-4229 -> TODO-4230
   -> TODO-4218 -> TODO-4231 -> TODO-4219 -> TODO-4225 -> TODO-4232
   -> TODO-4233 -> TODO-4220 -> TODO-4234 -> TODO-4221 -> TODO-4235
@@ -105,7 +105,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4216: Split semantic rewrites into an explicit pass manifest
 - TODO-4217: Move stdlib compatibility rewrites behind surface adapters
 - TODO-4224: Cut over vector/map compatibility decisions to surface adapters
 - TODO-4229: Cut over SoA compatibility decisions to surface adapters
@@ -300,29 +299,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4216: Split semantic rewrites into an explicit pass manifest
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Semantic phase contract hardening
-  - scope: Extract the ordered semantic rewrite chain into a named manifest or
-    pipeline table that records pass order, input/output ownership, and whether
-    a pass mutates AST, publishes facts, or only validates.
-  - acceptance:
-    - The current ordered rewrite behavior is preserved and covered by focused
-      pass-order tests.
-    - The manifest makes compatibility rewrites distinguishable from core
-      semantic canonicalization rewrites.
-    - Diagnostics remain stable for representative reflection, SoA, map, and
-      constructor rewrite failures.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after pass order is explicit and tested; do not change the
-    compatibility behavior itself until TODO-4217.
-
 - [ ] TODO-4217: Move stdlib compatibility rewrites behind surface adapters
   - owner: ai
   - created_at: 2026-04-27
   - phase: Semantic phase contract hardening
-  - depends_on: TODO-4216
   - scope: Inventory vector/map/SoA/gfx compatibility decisions that currently
     live in broad semantic rewrite, validation, template-monomorph, or lowering
     paths, then move the first high-churn family behind an explicit

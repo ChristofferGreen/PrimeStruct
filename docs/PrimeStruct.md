@@ -607,6 +607,23 @@ Current inspection-surface relationship:
 - `semantic-product`: lowering-facing resolved facts, types, targets, effects, and provenance handles
 - `ir`: canonical lowered IR after semantic-product consumption
 
+Current semantic validation pass manifest:
+- The authoritative `Semantics::validate` pass order is
+  `semanticValidationPassManifest()` in `include/primec/SemanticValidationPlan.h`.
+  The manifest records each pass name, pass kind, input/output ownership, action
+  (`MutatesAst`, `ValidatesOnly`, or `PublishesFacts`), and whether the pass is
+  a compatibility rewrite.
+- The pre-validator AST pass runner consumes the manifest through the
+  `validator-passes` boundary, so adding, removing, or reordering a semantic AST
+  rewrite requires changing the manifest and the matching runner together.
+- Compatibility rewrites are explicitly marked in the manifest. Core
+  canonicalization passes, template monomorphization, validator fact collection,
+  omitted-struct initializer rewriting, semantic-node-id assignment, and final
+  semantic-product publication are distinct pass kinds/ownership boundaries.
+- Type-resolution analysis still uses its smaller preparation path; if that path
+  needs another semantic rewrite, add it intentionally rather than assuming it
+  inherits the full validation manifest.
+
 Current semantic-product dump contract:
 - One deterministic module/program view per compile pipeline success, positioned after `ast-semantic` and before `ir`.
 - The dump should expose lowering-facing facts directly: resolved call targets, binding/result types, effects or
