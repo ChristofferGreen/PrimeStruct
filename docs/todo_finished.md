@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4249: Retire direct experimental SoA public imports
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred SoA finish
+  - scope: Retire, gate, or explicitly reclassify direct public imports of
+    `/std/collections/experimental_soa_vector/*` and
+    `/std/collections/experimental_soa_vector_conversions/*` now that canonical
+    wrapper and conversion paths own ordinary use.
+  - acceptance:
+    - Ordinary public examples and non-compatibility tests no longer import
+      experimental SoA namespaces.
+    - Direct experimental imports either reject with deterministic migration
+      diagnostics or remain only as explicitly documented compatibility shims.
+    - Compatibility coverage proves any retained experimental import path maps
+      to the canonical behavior.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after direct experimental public import behavior is
+    retired or reclassified and covered; leave raw builtin bridge cleanup to
+    TODO-4250.
+  - finished_at: 2026-04-28
+  - evidence: Reclassified direct
+    `/std/collections/experimental_soa_vector/*` and
+    `/std/collections/experimental_soa_vector_conversions/*` imports as
+    targeted compatibility shims rather than ordinary public imports. Updated
+    `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`,
+    `docs/CodeExamples.md`, and `docs/todo.md` to make canonical
+    `/std/collections/soa_vector/*` and
+    `/std/collections/soa_vector_conversions/*` the only ordinary example
+    imports while retaining direct experimental imports only for compatibility
+    and conformance tests. Expanded docs/source-lock coverage to pin the
+    canonical ECS example, C++/VM/native retained compatibility tests, and the
+    live queue handoff to `TODO-4250`; deferred release reruns to CI per the
+    lite workflow.
+
 - [x] TODO-4248: Move canonical SoA conversions off experimental conversion imports
   - owner: ai
   - created_at: 2026-04-27

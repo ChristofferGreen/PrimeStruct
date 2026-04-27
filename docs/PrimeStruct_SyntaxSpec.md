@@ -918,7 +918,8 @@ model is a stdlib `.prime` container on top of generic SoA substrate; `soa_vecto
 remain a permanent compiler-owned collection. The current public spellings are
 the canonical `/std/collections/soa_vector/*` and
 `/std/collections/soa_vector_conversions/*` surfaces; the experimental SoA
-namespaces remain compatibility seams rather than ordinary public imports.
+namespaces are retained compatibility shims for targeted tests rather than
+ordinary public imports.
 
 Draft surface shape:
 - `soa_vector<T>{}`

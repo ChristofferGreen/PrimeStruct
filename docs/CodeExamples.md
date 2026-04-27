@@ -66,9 +66,10 @@ Current SoA compatibility exception: direct imports of
 compatibility and conformance coverage while `soa_vector<T>` remains
 incubating. Ordinary public examples should use
 `/std/collections/soa_vector/*` and
-`/std/collections/soa_vector_conversions/*`; direct imports of
-`/std/collections/experimental_soa_vector_conversions/*` remain pending cleanup
-under the SoA finish TODOs.
+`/std/collections/soa_vector_conversions/*`. Direct imports of
+`/std/collections/experimental_soa_vector/*` and
+`/std/collections/experimental_soa_vector_conversions/*` are compatibility
+shims for targeted tests only, not ordinary example style.
 
 Final SoA promotion contract for examples: user-facing examples may treat
 `soa_vector<T>` as promoted only after construction/read/ref/mutator helpers,
