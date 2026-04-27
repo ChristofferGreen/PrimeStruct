@@ -479,6 +479,9 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "";
   }();
+  const bool isBareUnqualifiedVectorMutatorCall =
+      !stmt.isMethodCall && normalizedStatementNamespacePrefix.empty() &&
+      normalizedStatementName == vectorHelper;
   const bool shouldAllowStdNamespacedVectorHelperCompatibilityFallback = false;
   if (!bareBuiltinVectorMutatorPreferredPath.empty()) {
     vectorHelperResolved = bareBuiltinVectorMutatorPreferredPath;
@@ -673,6 +676,12 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
       vectorHelperResolved == "/std/collections/vector/clear" ||
       vectorHelperResolved == "/std/collections/vector/remove_at" ||
       vectorHelperResolved == "/std/collections/vector/remove_swap";
+  if (isBareUnqualifiedVectorMutatorCall &&
+      isResolvedStdNamespacedVectorMutatorHelper &&
+      hasResolvedReceiverIndex && resolvedReceiverIndex < stmt.args.size() &&
+      stmt.args[resolvedReceiverIndex].isFieldAccess) {
+    return failStatementDiagnostic("unknown call target: " + vectorHelperResolved);
+  }
   const bool canonicalBuiltinCompatibilityHelper =
       (isStdNamespacedCanonicalBuiltinHelperCall ||
        isResolvedStdNamespacedVectorMutatorHelper) &&

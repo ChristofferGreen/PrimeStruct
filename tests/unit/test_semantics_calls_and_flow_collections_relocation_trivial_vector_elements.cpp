@@ -267,6 +267,7 @@ main() {
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
   CHECK(error.find("unknown call target: /std/collections/vector/push") != std::string::npos);
+  CHECK(error.find("requires vector binding") == std::string::npos);
 }
 
 TEST_CASE("push validates on mutable soa_vector parameter") {
