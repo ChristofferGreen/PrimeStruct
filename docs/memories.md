@@ -88,6 +88,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: The wrapper-temporary collect-diagnostics coverage in `tests/unit/test_compile_run_text_filters_diagnostics_c.cpp` currently locks the stdlib fallback messages `unknown call target: /std/collections/map/at` and `unknown method: /vector/capacity` rather than the older user-helper arg-mismatch wording.
 - Evidence: Release reruns from `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_text_filters_diagnostics_c.cpp` plus direct `./primec --emit-diagnostics --collect-diagnostics` reproductions against the same sources emitted those messages.
 
+### vector-args-pack-elements-are-handles
+- Updated: 2026-04-28
+- Tags: ir, collections, variadic
+- Fact: `args<vector<T>>` pack elements are single-slot vector handles, not inline vector struct payloads, so indexed access and binding initialization must not classify them as inline struct args-pack storage.
+- Evidence: `PrimeStruct_primestruct_ir_pipeline_conversions_variadic_collection_refs` failed until `IrLowererAccessTargetResolution`, `IrLowererIndexedAccessEmit`, and statement binding initialization all preserved vector args-pack handle semantics.
+
 ## Maintenance Notes
 
 - Keep entries sorted by slug within the section.

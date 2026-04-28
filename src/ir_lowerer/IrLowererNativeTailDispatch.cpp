@@ -222,8 +222,8 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     error = "native backend does not support math builtin: " + mathName;
     return NativeCallTailDispatchResult::Error;
   }
-  if ((isExplicitDirectVectorCountCall(semanticProgram, expr) ||
-       (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count"))) &&
+  if (!isExplicitDirectVectorCountCall(semanticProgram, expr) &&
+      !expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") &&
       expr.args.size() == 1 &&
       !isNamedArgumentVectorTemporary(expr.args.front())) {
     if (isVectorCountTarget(expr.args.front(), localsIn)) {

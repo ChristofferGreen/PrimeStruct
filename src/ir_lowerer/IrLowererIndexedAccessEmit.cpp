@@ -366,11 +366,15 @@ bool emitArrayVectorIndexedAccess(
       arrayVectorTargetInfo.isArgsPackTarget &&
       (arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Pointer ||
        arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Reference);
+  const bool isVectorArgsPackTarget =
+      arrayVectorTargetInfo.isArgsPackTarget &&
+      arrayVectorTargetInfo.argsPackElementKind == LocalInfo::Kind::Vector;
   const bool isInlineStructArgsPackTarget =
       arrayVectorTargetInfo.isArgsPackTarget &&
       !arrayVectorTargetInfo.structTypeName.empty() &&
       arrayVectorTargetInfo.elemSlotCount > 0 &&
-      !isWrappedStructArgsPackTarget;
+      !isWrappedStructArgsPackTarget &&
+      !isVectorArgsPackTarget;
   const bool isInlineMapArgsPackTarget =
       arrayVectorTargetInfo.isArgsPackTarget &&
       arrayVectorTargetInfo.isMapTarget &&
@@ -384,6 +388,7 @@ bool emitArrayVectorIndexedAccess(
       (arrayVectorTargetInfo.structTypeName.empty() ||
        arrayVectorTargetInfo.isMapTarget ||
        arrayVectorTargetInfo.isWrappedMapTarget ||
+       isVectorArgsPackTarget ||
        usesBuiltinVectorValueStorage(arrayVectorTargetInfo) ||
        isWrappedStructArgsPackTarget);
 

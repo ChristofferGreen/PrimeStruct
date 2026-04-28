@@ -676,9 +676,13 @@
             getBuiltinArrayAccessName(init, accessName) &&
             init.args.size() == 2) {
           const auto targetInfo = ir_lowerer::resolveArrayVectorAccessTargetInfo(init.args.front(), localsIn);
+          const bool isVectorArgsPackAccess =
+              targetInfo.isArgsPackTarget &&
+              targetInfo.argsPackElementKind == LocalInfo::Kind::Vector;
           const bool isStructArgsPackAccess =
               targetInfo.isArgsPackTarget &&
               !targetInfo.isVectorTarget &&
+              !isVectorArgsPackAccess &&
               !targetInfo.structTypeName.empty() &&
               targetInfo.elemSlotCount > 0;
           if (isStructArgsPackAccess) {

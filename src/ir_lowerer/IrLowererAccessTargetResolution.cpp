@@ -579,6 +579,16 @@ ArrayVectorAccessTargetInfo resolveArrayVectorAccessTargetInfo(
       info.isMapTarget = true;
       return true;
     }
+    if (localInfo.argsPackElementKind == LocalInfo::Kind::Value &&
+        !localInfo.isSoaVector &&
+        isExperimentalVectorStructPath(localInfo.structTypeName)) {
+      info.isArrayOrVectorTarget = true;
+      info.isVectorTarget = true;
+      info.isSoaVector = false;
+      info.argsPackElementKind = LocalInfo::Kind::Vector;
+      info.elemSlotCount = 1;
+      return true;
+    }
     if (!localInfo.structTypeName.empty() &&
         (localInfo.argsPackElementKind == LocalInfo::Kind::Value ||
          localInfo.argsPackElementKind == LocalInfo::Kind::Map)) {
