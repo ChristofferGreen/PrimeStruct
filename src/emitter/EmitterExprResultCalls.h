@@ -1,4 +1,65 @@
   const std::string sourceResultValueCppType = sourceResultCppType(true);
+  auto isEmptyBraceBlockArgument = [](const Expr &candidate) {
+    return candidate.kind == Expr::Kind::Call && candidate.name.empty() &&
+           candidate.args.empty() && candidate.argNames.empty() &&
+           candidate.bodyArguments.empty() && candidate.templateArgs.empty() &&
+           candidate.isBraceConstructor && !candidate.isMethodCall &&
+           !candidate.isFieldAccess && !candidate.isLambda;
+  };
+  auto isUnitOkVariantArgument = [](const Expr &candidate) {
+    return candidate.kind == Expr::Kind::Name && candidate.name == "ok" &&
+           candidate.args.empty() && candidate.argNames.empty() &&
+           candidate.bodyArguments.empty() && candidate.templateArgs.empty();
+  };
+  auto emitResultConstructorPayload = [&](const Expr &payloadExpr) {
+    return "static_cast<uint32_t>(" +
+           emitExpr(payloadExpr, nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
+                    resultInfos, returnStructs, allowMathBare) +
+           ")";
+  };
+  if (expr.kind == Expr::Kind::Call && !expr.isMethodCall && !expr.isFieldAccess &&
+      expr.isBraceConstructor) {
+    std::string resultBase = expr.name;
+    std::vector<std::string> resultArgs = expr.templateArgs;
+    if (resultArgs.empty()) {
+      std::string argText;
+      if (splitTemplateTypeName(expr.name, resultBase, argText)) {
+        splitTopLevelTemplateArgs(argText, resultArgs);
+      }
+    }
+    if (isResultBindingTypeName(resultBase) && (resultArgs.size() == 1 || resultArgs.size() == 2)) {
+      const bool hasValue = resultArgs.size() == 2;
+      const std::vector<Expr> *constructorArgs = &expr.args;
+      const std::vector<std::optional<std::string>> *constructorArgNames = &expr.argNames;
+      std::vector<Expr> normalizedArgs;
+      std::vector<std::optional<std::string>> normalizedArgNames;
+      if (expr.args.size() == 1 && expr.argNames.size() == 1 &&
+          !expr.argNames.front().has_value() && isEmptyBraceBlockArgument(expr.args.front())) {
+        constructorArgs = &normalizedArgs;
+        constructorArgNames = &normalizedArgNames;
+      }
+      if (constructorArgs->empty() && constructorArgNames->empty()) {
+        return hasValue ? "0" : sourceResultStatusOkExpr();
+      }
+      if (!hasValue && constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
+          !constructorArgNames->front().has_value() &&
+          isUnitOkVariantArgument(constructorArgs->front())) {
+        return sourceResultStatusOkExpr();
+      }
+      if (constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
+          constructorArgNames->front().has_value()) {
+        const std::string &variantName = *constructorArgNames->front();
+        const std::string payloadExpr = emitResultConstructorPayload(constructorArgs->front());
+        if (hasValue && variantName == "ok") {
+          return sourceResultValueOkExpr(payloadExpr);
+        }
+        if (variantName == "error") {
+          return hasValue ? sourceResultValueErrorExpr(payloadExpr)
+                          : sourceResultStatusErrorExpr(payloadExpr);
+        }
+      }
+    }
+  }
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "ok") {
     if (expr.args.size() == 1) {

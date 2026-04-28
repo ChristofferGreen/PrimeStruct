@@ -325,9 +325,12 @@ Task template:
       source C++ Result storage now emits the tagged `ps_result_status` bridge
       type instead of raw `uint32_t` return/binding types, uses the same named
       ok/error tag constants, and wraps low-level file helper status codes at
-      the source Result boundary. Remaining
-      cleanup should retarget broader bridge construction to the stdlib Result
-      sum contract.
+      the source Result boundary. Explicit source C++ constructors for
+      supported `Result<T, E>{[ok] value}`,
+      `Result<T, E>{[error] err}`, `Result<E>{}`, `Result<E>{ok}`, and
+      `Result<E>{[error] err}` shapes now route through the same bridge
+      helper constructors. Remaining cleanup should retarget broader bridge
+      construction and propagation to the stdlib Result sum contract.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

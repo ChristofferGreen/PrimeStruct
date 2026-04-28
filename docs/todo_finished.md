@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4327: Lower source Result sum constructors
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that routes explicit
+    stdlib Result sum constructor syntax through the named source Result
+    bridge helpers.
+  - implementation_notes:
+    - Recognize explicit source C++ `Result<T, E>{[ok] value}` and
+      `Result<T, E>{[error] err}` constructors.
+    - Recognize explicit source C++ `Result<E>{}`,
+      `Result<E>{ok}`, and `Result<E>{[error] err}` status-only
+      constructors.
+    - Keep legacy `Result.ok(...)` compatibility helpers in place until the
+      remaining broader bridge migration lands.
+  - acceptance:
+    - Supported explicit value-carrying Result sum constructors lower through
+      `ps_result_value_ok(...)` and `ps_result_value_error(...)`.
+    - Supported explicit status-only Result sum constructors lower through
+      `ps_result_status_ok()` and `ps_result_status_error(...)`.
+    - C++ emitter coverage checks emitted source text for those bridge helper
+      calls and rejects leaked source `Result<...>{[error] ...}` spelling.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the source C++ emitter routes supported explicit
+    Result sum constructor syntax through the existing bridge helpers without
+    changing malformed-constructor diagnostics.
+  - finished_at: 2026-04-28
+  - evidence: Added source C++ emitter handling for supported explicit
+    value-carrying and status-only Result sum constructors, added C++ emitter
+    source-text coverage for the bridge helper calls, and documented the
+    remaining broader bridge retargeting work. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4326: Name source Result variant storage
   - owner: ai
   - created_at: 2026-04-28

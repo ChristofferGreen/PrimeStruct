@@ -2311,7 +2311,9 @@ for(
     packed-integer construction, conversion, generic `ps_result_*` value accessors, or `ps_result_pack(...)`
     compatibility. Status-only source C++ Result storage emits the tagged `ps_result_status` bridge type instead of
     raw `uint32_t` return/binding types, with the same named ok/error tag constants and low-level file helper status
-    codes wrapped at the source Result boundary.
+    codes wrapped at the source Result boundary. Explicit source C++ `Result<T, E>{[ok] value}`,
+    `Result<T, E>{[error] err}`, `Result<E>{}`, `Result<E>{ok}`, and `Result<E>{[error] err}` constructors route
+    through those bridge helpers for supported scalar-compatible payloads.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
@@ -2326,7 +2328,8 @@ for(
     Source C++ Result bridge construction and checks now share named ok/error tag constants, and value-carrying
     storage uses an `ok` field for the success payload. Status-only source C++ Result storage is named through the
     tagged `ps_result_status` bridge type, uses tag-based error checks, and wraps raw low-level file helper status
-    codes at the source Result boundary. The remaining migration work can focus on
+    codes at the source Result boundary. Explicit source C++ Result sum constructors for supported scalar-compatible
+    ok/error payloads now lower through the same bridge helpers. The remaining migration work can focus on
     retargeting broader bridge construction to the stdlib Result sum contract.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.

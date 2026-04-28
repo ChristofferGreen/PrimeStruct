@@ -808,7 +808,9 @@ accessor helpers, named ok/error tag constants, and an `ok` success field, with 
 conversion, generic `ps_result_*` value accessors, or `ps_result_pack(...)` compatibility. Status-only source C++
 Result storage emits the tagged `ps_result_status` bridge type instead of raw `uint32_t` return/binding types, uses
 the same named ok/error tag constants, and wraps raw low-level file helper status codes at the source Result boundary;
-broader result shapes and full bridge retargeting remain compatibility work until their dedicated migration tasks land.
+explicit source C++ `Result<T, E>{[ok] value}`, `Result<T, E>{[error] err}`, `Result<E>{}`, `Result<E>{ok}`, and
+`Result<E>{[error] err}` constructors route through the bridge helpers for supported scalar-compatible payloads.
+Broader result shapes and full bridge retargeting remain compatibility work until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1434,8 +1436,9 @@ Draft constraints:
   raw packed-integer construction, conversion, generic `ps_result_*` value accessors, or `ps_result_pack(...)`
   compatibility. Status-only source C++ Result storage is named through the tagged `ps_result_status` bridge type,
   uses the same named ok/error tag constants for tag-based error checks, and wraps raw low-level file helper status
-  codes at the source Result boundary. Unsupported broader result shapes and full bridge retargeting remain migration
-  work.
+  codes at the source Result boundary. Explicit source C++ Result sum constructors for supported scalar-compatible
+  ok/error payloads lower through the same bridge helpers. Unsupported broader result shapes and full bridge
+  retargeting remain migration work.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

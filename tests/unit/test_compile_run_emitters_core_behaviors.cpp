@@ -38,6 +38,56 @@ main() {
   CHECK(runCommand(exePath) == 4);
 }
 
+TEST_CASE("C++ emitter lowers explicit Result sum constructors through bridge helpers") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_value_ok() {
+  return(Result<i32, i32>{[ok] 7i32})
+}
+
+[return<Result<i32, i32>>]
+make_value_error() {
+  return(Result<i32, i32>{[error] 4i32})
+}
+
+[return<Result<i32>>]
+make_status_ok() {
+  return(Result<i32>{ok})
+}
+
+[return<Result<i32>>]
+make_status_default() {
+  return(Result<i32>{})
+}
+
+[return<Result<i32>>]
+make_status_error() {
+  return(Result<i32>{[error] 5i32})
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_explicit_result_sum_constructors.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_explicit_result_sum_constructors.cpp").string();
+
+  const std::string compileCmd =
+      "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_result_value_ok(static_cast<uint32_t>(") != std::string::npos);
+  CHECK(output.find("ps_result_value_error(static_cast<uint32_t>(") != std::string::npos);
+  CHECK(output.find("ps_result_status_error(static_cast<uint32_t>(") != std::string::npos);
+  CHECK(output.find("return ps_result_status_ok();") != std::string::npos);
+  CHECK(output.find("return Result<") == std::string::npos);
+  CHECK(output.find("{[error]") == std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*
