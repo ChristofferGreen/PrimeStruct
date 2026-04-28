@@ -2222,7 +2222,10 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
   CHECK(prelude.find("return \" << FileReadEofCode << \"u;") != std::string::npos);
   CHECK(prelude.find("std::string_view(\\\"EOF\\\")") != std::string::npos);
-  CHECK(prelude.find("using ps_legacy_result_value = uint64_t;") != std::string::npos);
+  CHECK(prelude.find("struct ps_legacy_result_value") != std::string::npos);
+  CHECK(prelude.find("uint32_t error = 0;") != std::string::npos);
+  CHECK(prelude.find("uint32_t payload = 0;") != std::string::npos);
+  CHECK(prelude.find("using ps_legacy_result_value = uint64_t;") == std::string::npos);
   CHECK(prelude.find("ps_legacy_result_pack") != std::string::npos);
   CHECK(prelude.find("ps_legacy_result_error") != std::string::npos);
   CHECK(prelude.find("ps_legacy_result_payload") != std::string::npos);

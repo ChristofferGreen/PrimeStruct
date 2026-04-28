@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4319: Field source C++ Result value storage
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that replaces the
+    `ps_legacy_result_value` alias backing with a fielded generated struct
+    while preserving current source C++ compatibility behavior.
+  - implementation_notes:
+    - Keep the existing helper, try, file-open, and generated call sites
+      stable by retaining compatibility construction from the old packed
+      integer form.
+    - Store value-carrying Result bridge state as named `error` and `payload`
+      fields so helper extraction no longer depends on bit shifts.
+    - Leave deletion of raw packed-integer compatibility conversion for a
+      later TODO-4266 slice.
+  - acceptance:
+    - The generated prelude defines `struct ps_legacy_result_value` with named
+      `error` and `payload` fields.
+    - `ps_legacy_result_pack`, `ps_legacy_result_error`, and
+      `ps_legacy_result_payload` use the fielded representation.
+    - Source-lock coverage rejects the previous raw `uint64_t` alias.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once source C++ value-carrying Result bridge storage is
+    fielded without changing generated helper behavior.
+  - finished_at: 2026-04-28
+  - evidence: Replaced the `ps_legacy_result_value` raw alias with a generated
+    struct containing `error` and `payload` fields, updated pack/error/payload
+    helpers to use those fields, pinned the prelude source shape in tests, and
+    updated TODO-4266 docs. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4318: Name source C++ Result value storage
   - owner: ai
   - created_at: 2026-04-28
