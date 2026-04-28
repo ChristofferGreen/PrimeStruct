@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Require Result ok name binding facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes
+    semantic-product-addressed direct `Result.ok(name)` payload metadata
+    depend on published binding facts before local maps or recursive
+    expression-kind fallback can infer the payload type.
+  - implementation_notes:
+    - Apply the authority boundary only to direct name payloads with semantic
+      node ids when a semantic product and index are present.
+    - Preserve legacy reconstruction for syntax-only or no-semantic-product
+      compatibility contexts.
+    - Keep the existing query-payload and args-pack slices unchanged.
+  - acceptance:
+    - Published semantic binding facts still recover direct `Result.ok(name)`
+      payload metadata.
+    - Missing semantic-product binding facts do not fall back to local maps.
+    - Missing semantic-product binding facts do not call recursive
+      expression-kind fallback.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once semantic-product-addressed direct `Result.ok(name)`
+    payload metadata requires published binding facts without changing
+    syntax-only compatibility behavior.
+  - finished_at: 2026-04-28
+  - evidence: Tightened `IrLowererResultMetadataHelpers.cpp` so direct
+    semantic-product `Result.ok(name)` payloads consume published binding
+    facts before local-map or recursive fallback inference, added lowerer
+    metadata coverage for published and missing binding facts, and documented
+    the remaining TODO-4298 work. Local test execution was skipped per the
+    lite workflow.
+
 - [x] TODO-4298: Require args-pack binding facts
   - owner: ai
   - created_at: 2026-04-28

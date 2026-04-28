@@ -693,6 +693,98 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
   CHECK_FALSE(fallbackCalled);
 }
 
+TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Result ok name payloads") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr payloadExpr;
+  payloadExpr.kind = primec::Expr::Kind::Name;
+  payloadExpr.name = "payload";
+  payloadExpr.semanticNodeId = 364;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, payloadExpr};
+
+  const auto resolveMethodCall = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "payload",
+      .bindingTypeText = "i32",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 12,
+      .sourceColumn = 5,
+      .semanticNodeId = 364,
+      .resolvedPathId = primec::InvalidSymbolId,
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo localPayload;
+  localPayload.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  localPayload.valueKind = ValueKind::Int64;
+  const primec::ir_lowerer::LocalMap locals{{"payload", localPayload}};
+
+  bool fallbackCalled = false;
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind =
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        fallbackCalled = true;
+        return ValueKind::Int64;
+      };
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(okExpr,
+                                                            locals,
+                                                            resolveMethodCall,
+                                                            resolveDefinitionCall,
+                                                            lookupReturnInfo,
+                                                            inferExprKind,
+                                                            out,
+                                                            &semanticTargets));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int32);
+  CHECK_FALSE(fallbackCalled);
+
+  primec::SemanticProgram missingSemanticProgram;
+  const auto missingTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
+  out = {};
+  fallbackCalled = false;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(okExpr,
+                                                            locals,
+                                                            resolveMethodCall,
+                                                            resolveDefinitionCall,
+                                                            lookupReturnInfo,
+                                                            inferExprKind,
+                                                            out,
+                                                            &missingTargets));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Unknown);
+  CHECK_FALSE(fallbackCalled);
+}
+
 TEST_CASE("ir lowerer result helpers reject resolved-path semantic query fallback in production mode") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;

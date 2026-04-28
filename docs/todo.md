@@ -350,8 +350,9 @@ Task template:
     with local-auto, `on_error`, or another uncovered query/control-flow
     consumer. The lowerer-side unresolved Result-combinator metadata slice is
     complete for `Result.map`, `Result.and_then`, and `Result.map2`. The
-    lowerer-side args-pack parameter metadata slice is also complete; continue
-    with local-auto, `on_error`, or a different control-flow/query consumer.
+    lowerer-side args-pack parameter metadata slice and direct
+    `Result.ok(name)` payload metadata slice are also complete; continue with
+    local-auto, `on_error`, or a different control-flow/query consumer.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -382,6 +383,10 @@ Task template:
       metadata now requires the published binding fact when syntax does not
       carry the element type, instead of leaving variadic element metadata
       unknown for later lowering.
+    - Completed slice: semantic-product-addressed direct `Result.ok(name)`
+      payload metadata now requires the published binding fact instead of
+      asking local maps or recursive expression-kind fallback to reconstruct
+      the payload type.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

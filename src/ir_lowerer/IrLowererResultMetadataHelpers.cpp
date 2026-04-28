@@ -842,6 +842,15 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const SemanticProgram *semanticProgram,
                                     const SemanticProductIndex *semanticIndex,
                                     ResultExprInfo &out) {
+  if (semanticProgram != nullptr && semanticIndex != nullptr && valueExpr.semanticNodeId != 0 &&
+      valueExpr.kind == Expr::Kind::Name) {
+    if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, valueExpr);
+        bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
+        applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
+      return;
+    }
+    return;
+  }
   if (valueExpr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(valueExpr.name);
     if (localIt != localsIn.end() && localIt->second.isFileHandle) {

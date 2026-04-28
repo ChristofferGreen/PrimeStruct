@@ -228,6 +228,11 @@ Planned non-template inference migration contract:
   parameter element metadata now uses the published binding fact when the syntax shape does not carry
   the element type. Missing or incomplete binding facts fail closed with semantic-product args-pack
   diagnostics instead of leaving the element kind unresolved for later lowering.
+- Completed lowerer-side direct name payload slice: semantic-product-addressed direct
+  `Result.ok(name)` payload metadata now uses the published binding fact before local maps or
+  recursive expression-kind fallback can answer. Missing binding facts leave the payload kind
+  unresolved on the semantic-product path while syntax-only compatibility keeps the legacy local
+  reconstruction behavior.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
