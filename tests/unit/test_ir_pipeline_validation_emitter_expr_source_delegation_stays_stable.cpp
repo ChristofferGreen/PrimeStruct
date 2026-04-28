@@ -2596,22 +2596,26 @@ TEST_CASE("template monomorph source delegation stays stable") {
             "canonicalizeLegacySoaRefHelperPath(path)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, \"get\")") !=
+            "auto preferredExperimentalSoaHelper = [](const std::string &candidatePath)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaGetPath, \"get_ref\")") !=
+            "primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,\n"
+            "        candidatePath,\n"
+            "        \"/std/collections/experimental_soa_vector/\");") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, \"ref\")") !=
+            "preferredExperimentalSoaHelper(canonicalSoaCountPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaRefPath, \"ref_ref\")") !=
+            "preferredExperimentalSoaHelper(canonicalSoaGetPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"reserve\")") !=
+            "preferredExperimentalSoaHelper(canonicalSoaRefPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
-            "isLegacyOrCanonicalSoaHelperPath(canonicalSoaCountPath, \"push\")") !=
+            "mapsToBorrowedSoaHelper(canonicalSoaCountPath) ||\n"
+            "      mapsToBorrowedSoaHelper(canonicalSoaGetPath) ||\n"
+            "      mapsToBorrowedSoaHelper(canonicalSoaRefPath)") !=
         std::string::npos);
   CHECK(templateMonomorphExperimentalCollectionReceiverResolutionSource.find(
             "matchesPath(\"/std/collections/soa_vector/to_aos_ref\")") ==
