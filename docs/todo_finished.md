@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4310: Lower direct status-only stdlib Result try
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 runtime slice by making IR-backed
+    `try(...)` consume direct calls returning imported status-only
+    `/std/result/Result<E>` sums.
+  - implementation_notes:
+    - Resolve a direct call operand's declared return sum before falling back
+      to the existing candidate scan, so status-only overloads use the same
+      return-contract path as value-carrying imported Result sums.
+    - Preserve borrowed/pointer status-only operands, `Result.error(...)`,
+      `Result.why(...)`, C++ emitter cleanup, and broader bridge deletion for
+      later TODO-4266 slices.
+  - acceptance:
+    - `try(makeStatus())` branches on the lowered stdlib sum tag for
+      status-code returns when `makeStatus()` returns imported `Result<E>`.
+    - Result-returning functions propagate direct-call imported status-only
+      Result sum errors by copying the source `error` payload into the
+      declared return Result sum.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once direct-call imported status-only Result sum
+    `try(...)` lowering works without widening into borrowed/pointer operands
+    or helper-call lowering.
+  - finished_at: 2026-04-28
+  - evidence: Taught the stdlib Result sum `try(...)` resolver to prefer a
+    direct callee's declared return sum for call operands, preserving the
+    existing payload-match guard while avoiding fallback ambiguity. Added IR/VM
+    coverage for direct status-only ok/error flows and Result-return error
+    propagation. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4309: Lower local status-only stdlib Result try
   - owner: ai
   - created_at: 2026-04-28

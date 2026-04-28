@@ -643,6 +643,24 @@
                 return nullptr;
               }
 
+              if (const Definition *calleeDef = resolveDefinitionCall(operandExpr);
+                  calleeDef != nullptr) {
+                for (const auto &transform : calleeDef->transforms) {
+                  if (transform.name != "return" ||
+                      transform.templateArgs.size() != 1) {
+                    continue;
+                  }
+                  const Definition *returnSumDef =
+                      resolveSumDefinitionForTypeText(
+                          trimTemplateTypeText(transform.templateArgs.front()),
+                          calleeDef->namespacePrefix);
+                  if (returnSumDef != nullptr &&
+                      stdlibResultSumMatchesResultInfo(*returnSumDef)) {
+                    return returnSumDef;
+                  }
+                }
+              }
+
               std::vector<const Definition *> candidates;
               for (const auto &entry : defMap) {
                 const Definition *candidateDef = entry.second;

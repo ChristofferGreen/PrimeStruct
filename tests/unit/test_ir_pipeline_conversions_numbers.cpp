@@ -1023,6 +1023,117 @@ main() {
   CHECK(result == 9);
 }
 
+TEST_CASE("ir lowerer supports try on direct imported status-only Result sums") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<Result<MyError>>]
+make_ok() {
+  return(Result<MyError>{})
+}
+
+[return<Result<MyError>>]
+make_error() {
+  return(Result<MyError>{[error] MyError{[code] 11i32}})
+}
+
+[return<int> on_error<MyError, /swallow>]
+ok_flow() {
+  return(try(make_ok()))
+}
+
+[return<int> on_error<MyError, /swallow>]
+error_flow() {
+  return(try(make_error()))
+}
+
+[return<int>]
+main() {
+  return(plus(ok_flow(), error_flow()))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 11);
+}
+
+TEST_CASE("ir lowerer propagates direct imported status-only Result sum errors") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<Result<MyError>>]
+make_error() {
+  return(Result<MyError>{[error] MyError{[code] 13i32}})
+}
+
+[return<Result<MyError>> on_error<MyError, /swallow>]
+forward_error() {
+  try(make_error())
+  return(Result<MyError>{})
+}
+
+[return<int>]
+main() {
+  [Result<MyError>] status{forward_error()}
+  return(pick(status) {
+    ok {
+      0i32
+    }
+    error(err) {
+      err.code
+    }
+  })
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 13);
+}
+
 TEST_CASE("ir lowerer supports Result.and_then f32 payloads") {
   const std::string source = R"(
 import /std/file/*

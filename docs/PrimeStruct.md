@@ -2295,16 +2295,16 @@ for(
     `Result.error(value)` already reads the imported value-carrying sum tag on those paths, so it returns `false` for
     `ok` and `true` for `error` values from `/std/result/*`.
     `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
-    error payload type's `why` helper for `error`. IR-backed `try(...)` also consumes local imported status-only
-    `Result<E>` sums for status-code returns and Result-return error propagation. Direct-call status-only sources plus
-    imported status-only `Result.error(...)` / `Result.why(...)` lowering still use the legacy packed-status bridge.
+    error payload type's `why` helper for `error`. IR-backed `try(...)` also consumes local and direct-call imported
+    status-only `Result<E>` sums for status-code returns and Result-return error propagation. Imported status-only
+    `Result.error(...)` / `Result.why(...)` lowering still uses the legacy packed-status bridge.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
     value-result type spellings, and the IR-backed VM/native paths already branch on local stdlib Result sums for
-    status-code returns, Result-return error propagation, direct-call postfix `?` operands, and local imported
-    status-only `try(...)` operands, so the remaining migration work can focus on broader operand/result shapes,
-    status-only helper calls, and legacy bridge cleanup.
+    status-code returns, Result-return error propagation, direct-call postfix `?` operands, and imported status-only
+    `try(...)` operands, so the remaining migration work can focus on broader operand/result shapes, status-only
+    helper calls, and legacy bridge cleanup.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
@@ -2746,10 +2746,9 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   `Result.map2(left, right, fn)` have typed value-carrying sum compatibility
   paths on IR-backed VM/native. Those paths accept local imported Result sum
   sources and direct calls returning imported Result sums. Imported
-  status-only `Result<Error>` construction, `pick`, and local `try(...)`
-  operands now live in stdlib, while direct-call status-only sources,
-  `Result.error(...)`, and `Result.why(...)` still use the hybrid
-  packed-status bridge for status-only results.
+  status-only `Result<Error>` construction, `pick`, and `try(...)` operands
+  now live in stdlib, while `Result.error(...)` and `Result.why(...)` still
+  use the hybrid packed-status bridge for status-only results.
   `?` propagation still uses the hybrid bridge.
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
