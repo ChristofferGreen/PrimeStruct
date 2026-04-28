@@ -208,6 +208,12 @@ Planned non-template inference migration contract:
   - the current ad hoc inference island being removed
   - the graph-backed facts that replace it
   - the exact fallback/compatibility behavior that must remain unchanged during the cutover
+- Completed lowerer-side query payload slice: semantic-product-addressed direct `Result.ok(query())`
+  payloads and base-kind `try(Result.ok(query()))` inference now use published binding/query facts as
+  the authority. When those facts are absent on the semantic-product path, the lowerer leaves the value
+  kind unresolved instead of asking recursive expression-kind fallback to reconstruct the query result.
+  The recursive fallback remains available only for syntax-only or no-semantic-product compatibility
+  contexts.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

@@ -145,6 +145,68 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
   CHECK(kindOut == primec::ir_lowerer::LocalInfo::ValueKind::Bool);
 }
 
+TEST_CASE("ir lowerer inference expr-kind call-base setup does not infer missing query facts from fallback") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticIndex = primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
+  state.semanticProgram = &semanticProgram;
+  state.semanticIndex = &semanticIndex;
+
+  std::string error;
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindCallBaseSetup(
+      {
+          .inferStructExprPath = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+          .resolveStructFieldSlot =
+              [](const std::string &, const std::string &, primec::ir_lowerer::StructSlotFieldInfo &) { return false; },
+          .resolveUninitializedStorage =
+              [](const primec::Expr &,
+                 const primec::ir_lowerer::LocalMap &,
+                 primec::ir_lowerer::UninitializedStorageAccessInfo &,
+                 bool &resolved) {
+                resolved = false;
+                return true;
+              },
+      },
+      state,
+      error));
+  CHECK(error.empty());
+  REQUIRE(static_cast<bool>(state.inferCallExprBaseKind));
+
+  bool fallbackCalled = false;
+  state.inferExprKind = [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    fallbackCalled = true;
+    return ValueKind::Int64;
+  };
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr queryExpr;
+  queryExpr.kind = primec::Expr::Kind::Call;
+  queryExpr.name = "lookup";
+  queryExpr.semanticNodeId = 701;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, queryExpr};
+
+  primec::Expr tryExpr;
+  tryExpr.kind = primec::Expr::Kind::Call;
+  tryExpr.name = "try";
+  tryExpr.args = {okExpr};
+
+  ValueKind kindOut = ValueKind::Unknown;
+  CHECK(state.inferCallExprBaseKind(tryExpr, primec::ir_lowerer::LocalMap{}, kindOut));
+  CHECK(kindOut == ValueKind::Unknown);
+  CHECK_FALSE(fallbackCalled);
+}
+
 TEST_CASE("ir lowerer inference expr-kind call-base setup leaves builtin comparison kind unresolved without semantic facts") {
   primec::ir_lowerer::LowerInferenceSetupBootstrapState state;
   std::string error;

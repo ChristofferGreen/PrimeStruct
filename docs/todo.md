@@ -340,10 +340,12 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: Semantic ownership authority
-  - scope: Migrate one remaining non-template inference island among
+  - scope: Migrate the next remaining non-template inference island among
     local-auto, query, `try(...)`, or `on_error` onto graph-owned semantic
     facts, then delete or quarantine the old validator-local/recomputed branch
-    for that surface.
+    for that surface. The lowerer-side `Result.ok(query())` payload and
+    `try(Result.ok(query()))` base-kind fallback slice is complete; continue
+    with another adjacent island rather than reopening that fallback.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -357,6 +359,10 @@ Task template:
       facts, and `on_error` facts. Pick one, document why it is the first
       slice, and keep broader template inference, tuple, and vector work out of
       scope.
+    - Completed slice: semantic-product-addressed direct `Result.ok(query())`
+      payloads and base-kind `try(Result.ok(query()))` inference now consume
+      published binding/query facts and leave the value kind unresolved when
+      the fact is absent, rather than consulting recursive fallback inference.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

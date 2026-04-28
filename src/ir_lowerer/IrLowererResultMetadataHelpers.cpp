@@ -842,8 +842,6 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
                                     const SemanticProgram *semanticProgram,
                                     const SemanticProductIndex *semanticIndex,
                                     ResultExprInfo &out) {
-  (void)semanticProgram;
-
   if (valueExpr.kind == Expr::Kind::Name) {
     auto localIt = localsIn.find(valueExpr.name);
     if (localIt != localsIn.end() && localIt->second.isFileHandle) {
@@ -897,6 +895,9 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
           applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
         return;
       }
+    }
+    if (semanticProgram != nullptr && semanticIndex != nullptr && valueExpr.kind == Expr::Kind::Call) {
+      return;
     }
   }
   if (inferExprKind) {

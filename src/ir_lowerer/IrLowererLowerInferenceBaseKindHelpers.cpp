@@ -172,7 +172,10 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
           resultInfo.hasValue) {
         return resultInfo.valueKind;
       }
-      if (fallbackInferExprKind != nullptr && *fallbackInferExprKind && !isBaseSetupResultOrTryCall(expr)) {
+      const bool hasSemanticProductQuerySite =
+          semanticProgram != nullptr && semanticIndex != nullptr && expr.semanticNodeId != 0;
+      if (!hasSemanticProductQuerySite && fallbackInferExprKind != nullptr && *fallbackInferExprKind &&
+          !isBaseSetupResultOrTryCall(expr)) {
         kindOut = (*fallbackInferExprKind)(expr, localsIn);
         if (kindOut != LocalInfo::ValueKind::Unknown) {
           return kindOut;
