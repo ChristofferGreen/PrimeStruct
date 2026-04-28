@@ -3219,7 +3219,7 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   CHECK(gfxExperimental.find("SubstrateDrawMeshConfig{") != std::string::npos);
   CHECK(gfxExperimental.find("return(/std/gfx/Buffer/readback<T>(canonical))") !=
         std::string::npos);
-  CHECK(gfxExperimental.find("canonical{/std/gfx/Buffer/upload<T>(values)}") !=
+  CHECK(gfxExperimental.find("[/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer/upload<T>(values)}") !=
         std::string::npos);
   CHECK(gfxExperimental.find("return(Buffer<T>{[token] canonical.token, [elementCount] canonical.elementCount})") !=
         std::string::npos);
