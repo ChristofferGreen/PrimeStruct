@@ -1310,6 +1310,143 @@ TEST_CASE("ir lowerer rejects missing semantic-product collection specialization
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+
+  primec::Expr bindingExpr;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "pairs";
+  bindingExpr.semanticNodeId = 43;
+  primec::Transform mapTransform;
+  mapTransform.name = "map";
+  mapTransform.templateArgs = {"i32", "i64"};
+  bindingExpr.transforms.push_back(mapTransform);
+  mainDef.statements.push_back(bindingExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "pairs",
+      .bindingTypeText = "map<i32, i64>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 43,
+      .provenanceHandle = 0,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main/pairs"),
+  });
+  semanticProgram.collectionSpecializations.push_back(
+      primec::SemanticProgramCollectionSpecialization{
+          .scopePath = "/main",
+          .siteKind = "local",
+          .name = "pairs",
+          .collectionFamily = "map",
+          .bindingTypeText = "map<i32, i64>",
+          .elementTypeText = "",
+          .keyTypeText = "i32",
+          .valueTypeText = "i64",
+          .isReference = false,
+          .isPointer = false,
+          .sourceLine = 0,
+          .sourceColumn = 0,
+          .semanticNodeId = 43,
+          .provenanceHandle = 0,
+          .scopePathId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+          .siteKindId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "local"),
+          .nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "pairs"),
+      });
+
+  auto refreshCollectionIds = [&]() {
+    auto &collectionFact = semanticProgram.collectionSpecializations.back();
+    collectionFact.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "map");
+    collectionFact.bindingTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "map<i32, i64>");
+    collectionFact.keyTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+    collectionFact.valueTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  };
+
+  auto lowerWithSemanticProduct = [&](std::string &error,
+                                      primec::DiagnosticSinkReport &diagnosticInfo) {
+    primec::IrLowerer lowerer;
+    primec::IrModule module;
+    return lowerer.lower(program,
+                         &semanticProgram,
+                         "/main",
+                         {},
+                         {},
+                         module,
+                         error,
+                         &diagnosticInfo);
+  };
+
+  std::string error;
+  primec::DiagnosticSinkReport diagnosticInfo;
+
+  refreshCollectionIds();
+  semanticProgram.collectionSpecializations.back().collectionFamilyId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  CHECK_FALSE(lowerWithSemanticProduct(error, diagnosticInfo));
+  CHECK(error == "missing semantic-product collection specialization family id: /main -> local pairs");
+  CHECK(diagnosticInfo.message == error);
+
+  refreshCollectionIds();
+  semanticProgram.collectionSpecializations.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "map<i32, i32>");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product collection specialization binding type metadata: /main -> local pairs");
+  CHECK(diagnosticInfo.message == error);
+
+  refreshCollectionIds();
+  semanticProgram.collectionSpecializations.back().elementTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product collection specialization element type metadata: /main -> local pairs");
+  CHECK(diagnosticInfo.message == error);
+
+  refreshCollectionIds();
+  semanticProgram.collectionSpecializations.back().keyTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product collection specialization key type metadata: /main -> local pairs");
+  CHECK(diagnosticInfo.message == error);
+
+  refreshCollectionIds();
+  semanticProgram.collectionSpecializations.back().valueTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product collection specialization value type metadata: /main -> local pairs");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product local binding facts") {
   primec::Program program;
 

@@ -303,6 +303,11 @@ Planned non-template inference migration contract:
   checks interned query type, binding type, and receiver binding type metadata before lowerer
   consumers can read query fact text fields. Missing or contradictory type ids fail closed with
   deterministic query metadata diagnostics.
+- Completed collection specialization metadata diagnostic slice: semantic-product collection
+  specialization completeness validation now checks interned family, binding type, element type, and
+  key/value type metadata before lowerer collection consumers can read collection fact text fields.
+  Missing or contradictory present ids fail closed with deterministic collection specialization
+  metadata diagnostics.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

@@ -457,24 +457,29 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
   }
 }
 
-bool validateInternedBindingTextMetadata(const SemanticProgram &semanticProgram,
-                                         SymbolId textId,
-                                         std::string_view expectedText,
-                                         std::string_view fieldLabel,
-                                         const std::string &siteDescription,
-                                         std::string &error) {
+bool validateInternedSemanticTextMetadata(const SemanticProgram &semanticProgram,
+                                          SymbolId textId,
+                                          std::string_view expectedText,
+                                          std::string_view factLabel,
+                                          std::string_view fieldLabel,
+                                          const std::string &siteDescription,
+                                          std::string &error,
+                                          bool allowEmptyExpectedText = true) {
   if (textId == InvalidSymbolId) {
     return true;
   }
   const std::string_view resolvedText =
       semanticProgramResolveCallTargetString(semanticProgram, textId);
   if (resolvedText.empty()) {
-    error = "missing semantic-product binding " + std::string(fieldLabel) +
+    error = "missing semantic-product " + std::string(factLabel) + " " +
+            std::string(fieldLabel) +
             " id: " + siteDescription;
     return false;
   }
-  if (!expectedText.empty() && resolvedText != expectedText) {
-    error = "stale semantic-product binding " + std::string(fieldLabel) +
+  if ((expectedText.empty() && !allowEmptyExpectedText) ||
+      (!expectedText.empty() && resolvedText != expectedText)) {
+    error = "stale semantic-product " + std::string(factLabel) + " " +
+            std::string(fieldLabel) +
             " metadata: " + siteDescription;
     return false;
   }
@@ -505,18 +510,20 @@ bool validateSemanticProductBindingCoverage(const Program &program,
       return false;
     }
     const std::string siteDescription = describeBindingSite(scopePath, siteKind, expr);
-    if (!validateInternedBindingTextMetadata(*semanticProgram,
-                                             bindingFact->bindingTypeTextId,
-                                             bindingFact->bindingTypeText,
-                                             "type",
-                                             siteDescription,
-                                             error) ||
-        !validateInternedBindingTextMetadata(*semanticProgram,
-                                             bindingFact->referenceRootId,
-                                             bindingFact->referenceRoot,
-                                             "reference root",
-                                             siteDescription,
-                                             error)) {
+    if (!validateInternedSemanticTextMetadata(*semanticProgram,
+                                              bindingFact->bindingTypeTextId,
+                                              bindingFact->bindingTypeText,
+                                              "binding",
+                                              "type",
+                                              siteDescription,
+                                              error) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              bindingFact->referenceRootId,
+                                              bindingFact->referenceRoot,
+                                              "binding",
+                                              "reference root",
+                                              siteDescription,
+                                              error)) {
       return false;
     }
     if (bindingFact->resolvedPathId == InvalidSymbolId ||
@@ -711,9 +718,52 @@ bool validateSemanticProductCollectionSpecializationCoverage(
               describeBindingSite(scopePath, siteKind, expr);
       return false;
     }
+    const std::string siteDescription = describeBindingSite(scopePath, siteKind, expr);
+    if (!validateInternedSemanticTextMetadata(*semanticProgram,
+                                              collectionFact->collectionFamilyId,
+                                              collectionFact->collectionFamily,
+                                              "collection specialization",
+                                              "family",
+                                              siteDescription,
+                                              error,
+                                              false) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              collectionFact->bindingTypeTextId,
+                                              collectionFact->bindingTypeText,
+                                              "collection specialization",
+                                              "binding type",
+                                              siteDescription,
+                                              error,
+                                              false) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              collectionFact->elementTypeTextId,
+                                              collectionFact->elementTypeText,
+                                              "collection specialization",
+                                              "element type",
+                                              siteDescription,
+                                              error,
+                                              false) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              collectionFact->keyTypeTextId,
+                                              collectionFact->keyTypeText,
+                                              "collection specialization",
+                                              "key type",
+                                              siteDescription,
+                                              error,
+                                              false) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              collectionFact->valueTypeTextId,
+                                              collectionFact->valueTypeText,
+                                              "collection specialization",
+                                              "value type",
+                                              siteDescription,
+                                              error,
+                                              false)) {
+      return false;
+    }
     if (!collectionSpecializationMatchesExpected(*collectionFact, expected)) {
       error = "stale semantic-product collection specialization: " +
-              describeBindingSite(scopePath, siteKind, expr);
+              siteDescription;
       return false;
     }
     return true;
