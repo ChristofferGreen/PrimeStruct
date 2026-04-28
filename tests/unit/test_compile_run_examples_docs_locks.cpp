@@ -2229,23 +2229,25 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
   CHECK(prelude.find("return \" << FileReadEofCode << \"u;") != std::string::npos);
   CHECK(prelude.find("std::string_view(\\\"EOF\\\")") != std::string::npos);
-  CHECK(prelude.find("struct ps_legacy_result_value") != std::string::npos);
+  CHECK(prelude.find("struct ps_result_value") != std::string::npos);
+  CHECK(prelude.find("uint32_t tag = 0;") != std::string::npos);
   CHECK(prelude.find("uint32_t error = 0;") != std::string::npos);
   CHECK(prelude.find("uint32_t payload = 0;") != std::string::npos);
   CHECK(prelude.find("operator uint64_t()") == std::string::npos);
   CHECK(prelude.find("ps_legacy_result_value(uint64_t raw)") == std::string::npos);
   CHECK(prelude.find("using ps_legacy_result_value = uint64_t;") == std::string::npos);
-  CHECK(prelude.find("ps_legacy_result_pack") != std::string::npos);
-  CHECK(prelude.find("ps_legacy_result_error") != std::string::npos);
-  CHECK(prelude.find("ps_legacy_result_payload") != std::string::npos);
+  CHECK(prelude.find("ps_result_pack") != std::string::npos);
+  CHECK(prelude.find("ps_result_is_error") != std::string::npos);
+  CHECK(prelude.find("ps_result_error_payload") != std::string::npos);
+  CHECK(prelude.find("ps_result_payload") != std::string::npos);
   CHECK(prelude.find("static inline uint64_t ps_legacy_result_pack") == std::string::npos);
   CHECK(prelude.find("static inline uint64_t ps_file_open_read") == std::string::npos);
-  CHECK(prelude.find("ps_result_pack") == std::string::npos);
-  CHECK(prelude.find("ps_result_error") == std::string::npos);
-  CHECK(prelude.find("ps_result_value") == std::string::npos);
-  CHECK(resultCalls.find("static_cast<\" << legacyPackedResultValueCppType << \">(ps_next)") ==
+  CHECK(prelude.find("ps_legacy_result_pack") == std::string::npos);
+  CHECK(prelude.find("ps_legacy_result_error") == std::string::npos);
+  CHECK(prelude.find("ps_legacy_result_payload") == std::string::npos);
+  CHECK(resultCalls.find("static_cast<\" << sourceResultValueCppType << \">(ps_next)") ==
         std::string::npos);
-  CHECK(resultCalls.find("static_cast<\" + legacyPackedResultValueCppType + \">(0)") ==
+  CHECK(resultCalls.find("static_cast<\" + sourceResultValueCppType + \">(0)") ==
         std::string::npos);
 
   CHECK(lowerer.find("read_byte requires exactly one argument") != std::string::npos);

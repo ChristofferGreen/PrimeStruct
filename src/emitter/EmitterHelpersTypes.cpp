@@ -200,33 +200,37 @@ bool isResultBindingTypeName(const std::string &name) {
          normalized == "std/result/Result";
 }
 
-std::string legacyPackedResultCppType(bool hasValue) {
-  return hasValue ? "ps_legacy_result_value" : "uint32_t";
+std::string sourceResultCppType(bool hasValue) {
+  return hasValue ? "ps_result_value" : "uint32_t";
 }
 
-std::string legacyPackedResultPackExpr(const std::string &errorExpr,
-                                       const std::string &valueExpr) {
-  return "ps_legacy_result_pack(" + errorExpr + ", " + valueExpr + ")";
+std::string sourceResultPackExpr(const std::string &errorExpr,
+                                 const std::string &valueExpr) {
+  return "ps_result_pack(" + errorExpr + ", " + valueExpr + ")";
 }
 
-std::string legacyPackedResultErrorExpr(const std::string &resultExpr) {
-  return "ps_legacy_result_error(" + resultExpr + ")";
+std::string sourceResultIsErrorExpr(const std::string &resultExpr) {
+  return "ps_result_is_error(" + resultExpr + ")";
 }
 
-std::string legacyPackedResultValueExpr(const std::string &resultExpr) {
-  return "ps_legacy_result_payload(" + resultExpr + ")";
+std::string sourceResultErrorPayloadExpr(const std::string &resultExpr) {
+  return "ps_result_error_payload(" + resultExpr + ")";
 }
 
-std::optional<std::string> tryLegacyPackedResultCppType(const std::string &base,
-                                                        const std::string &argText) {
+std::string sourceResultValuePayloadExpr(const std::string &resultExpr) {
+  return "ps_result_payload(" + resultExpr + ")";
+}
+
+std::optional<std::string> trySourceResultCppType(const std::string &base,
+                                                  const std::string &argText) {
   if (!isResultBindingTypeName(base)) {
     return std::nullopt;
   }
   std::vector<std::string> args;
   if (!splitTopLevelTemplateArgs(argText, args)) {
-    return legacyPackedResultCppType(false);
+    return sourceResultCppType(false);
   }
-  return legacyPackedResultCppType(args.size() == 2);
+  return sourceResultCppType(args.size() == 2);
 }
 
 bool isBindingQualifierName(const std::string &name) {
@@ -363,7 +367,7 @@ std::string bindingTypeToCpp(const std::string &typeName) {
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (auto resultType = tryLegacyPackedResultCppType(base, arg)) {
+    if (auto resultType = trySourceResultCppType(base, arg)) {
       return *resultType;
     }
     if (base == "uninitialized") {
@@ -444,7 +448,7 @@ std::string bindingTypeToCpp(const BindingInfo &info) {
   if (typeName == "FileError") {
     return "uint32_t";
   }
-  if (auto resultType = tryLegacyPackedResultCppType(typeName, info.typeTemplateArg)) {
+  if (auto resultType = trySourceResultCppType(typeName, info.typeTemplateArg)) {
     return *resultType;
   }
   if (typeName == "map") {

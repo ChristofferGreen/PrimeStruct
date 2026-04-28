@@ -311,19 +311,17 @@ Task template:
       migration work. The legacy source C++ emitter now preserves nested
       `Result<T...>` types under `Reference` / `Pointer` and recognizes
       dereferenced local/indexed borrowed Result operands for `try(...)`,
-      `Result.error(...)`, and `Result.why(...)` while it still uses the
-      packed bridge. Its packed C++ storage-width decisions are now
-      quarantined behind named emitter helpers, and source C++ pack/unpack
-      expression emission now goes through named helper functions. The
-      generated C++ prelude helper names now use explicit
-      `ps_legacy_result_*` spellings instead of the older `ps_result_*`
-      names, and value-carrying source C++ Result storage now emits the named
-      `ps_legacy_result_value` alias instead of raw `uint64_t` return/binding
-      types. The alias has been replaced with a fielded generated
-      `ps_legacy_result_value` struct, its raw packed-integer conversion
-      operator has been removed, and raw packed-integer construction
-      compatibility has been deleted; remaining cleanup should retarget the
-      source C++ bridge to the stdlib Result sum contract.
+      `Result.error(...)`, and `Result.why(...)` while it still uses a
+      compatibility bridge. Its source C++ Result storage-width decisions and
+      pack/unpack expression emission are quarantined behind named emitter
+      helpers. Value-carrying source C++ Result storage now emits the tagged
+      `ps_result_value` bridge type instead of raw `uint64_t` return/binding
+      types or legacy `ps_legacy_result_*` helper names; the bridge exposes
+      separate tag, error-payload, and success-payload accessors. Raw
+      packed-integer conversion and construction compatibility have been
+      deleted. Remaining cleanup should retarget status-only source C++ Result
+      storage and broader bridge construction to the stdlib Result sum
+      contract.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

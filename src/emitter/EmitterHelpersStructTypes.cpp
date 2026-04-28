@@ -84,7 +84,7 @@ std::string bindingTypeToCpp(const std::string &typeName,
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (auto resultType = tryLegacyPackedResultCppType(base, arg)) {
+    if (auto resultType = trySourceResultCppType(base, arg)) {
       return *resultType;
     }
     if (base == "uninitialized") {
@@ -172,7 +172,7 @@ std::string bindingTypeToCpp(const BindingInfo &info,
   if (typeName == "FileError") {
     return "uint32_t";
   }
-  if (auto resultType = tryLegacyPackedResultCppType(typeName, info.typeTemplateArg)) {
+  if (auto resultType = trySourceResultCppType(typeName, info.typeTemplateArg)) {
     return *resultType;
   }
   if (typeName == "map") {

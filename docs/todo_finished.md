@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4322: Tag source C++ Result values
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that moves
+    value-carrying Result bridge storage from the legacy packed helper
+    contract to a tagged helper contract.
+  - implementation_notes:
+    - Rename the source C++ value-result bridge type from
+      `ps_legacy_result_value` to `ps_result_value`.
+    - Store an explicit `tag` field beside error and success payload fields so
+      generated `Result.error(...)`, `try(...)`, combinator propagation, and
+      entry-point unpacking can branch on the tag instead of treating the
+      error payload as the discriminant.
+    - Keep status-only `Result<E>` source C++ storage as the next bridge
+      retargeting slice.
+  - acceptance:
+    - Value-carrying source C++ Result helpers emit `ps_result_value`,
+      `ps_result_pack`, `ps_result_is_error`,
+      `ps_result_error_payload`, and `ps_result_payload`.
+    - Source C++ value-result try/combinator/entry flows use tag-based error
+      checks.
+    - Source-lock coverage rejects the retired `ps_legacy_result_*` helper
+      names in the generated prelude.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once value-carrying source C++ Result bridge storage has
+    an explicit tag and no generated legacy helper names remain.
+  - finished_at: 2026-04-28
+  - evidence: Replaced generated value-result bridge storage with tagged
+    `ps_result_value`, added explicit tag/error/value helper accessors,
+    retargeted value-result source C++ try/combinator/entry checks to the
+    tag, updated source-lock coverage, and documented the remaining
+    status-only source C++ bridge boundary. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4321: Drop Result packed construction
   - owner: ai
   - created_at: 2026-04-28

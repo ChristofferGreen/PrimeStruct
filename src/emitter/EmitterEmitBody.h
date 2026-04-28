@@ -528,7 +528,7 @@
       }
       out << "  } catch (const ps_result_unwind &ps_unwind) {\n";
       if (resultHasValue) {
-        out << "    return " << legacyPackedResultPackExpr("ps_unwind.error", "0u") << ";\n";
+        out << "    return " << sourceResultPackExpr("ps_unwind.error", "0u") << ";\n";
       } else {
         out << "    return ps_unwind.error;\n";
       }
@@ -595,9 +595,10 @@
     if (entryIsResult) {
       out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "(ps_args);\n";
       if (entryResultHasValue) {
-        out << "  uint32_t ps_entry_err = " << legacyPackedResultErrorExpr("ps_entry_result") << ";\n";
-        out << "  if (ps_entry_err != 0) { return static_cast<int>(ps_entry_err); }\n";
-        out << "  return static_cast<int>(" << legacyPackedResultValueExpr("ps_entry_result") << ");\n";
+        out << "  if (" << sourceResultIsErrorExpr("ps_entry_result") << ") {\n";
+        out << "    return static_cast<int>(" << sourceResultErrorPayloadExpr("ps_entry_result") << ");\n";
+        out << "  }\n";
+        out << "  return static_cast<int>(" << sourceResultValuePayloadExpr("ps_entry_result") << ");\n";
       } else {
         out << "  return static_cast<int>(ps_entry_result);\n";
       }
@@ -615,9 +616,10 @@
       out << "int main() {\n";
       out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "();\n";
       if (entryResultHasValue) {
-        out << "  uint32_t ps_entry_err = " << legacyPackedResultErrorExpr("ps_entry_result") << ";\n";
-        out << "  if (ps_entry_err != 0) { return static_cast<int>(ps_entry_err); }\n";
-        out << "  return static_cast<int>(" << legacyPackedResultValueExpr("ps_entry_result") << ");\n";
+        out << "  if (" << sourceResultIsErrorExpr("ps_entry_result") << ") {\n";
+        out << "    return static_cast<int>(" << sourceResultErrorPayloadExpr("ps_entry_result") << ");\n";
+        out << "  }\n";
+        out << "  return static_cast<int>(" << sourceResultValuePayloadExpr("ps_entry_result") << ");\n";
       } else {
         out << "  return static_cast<int>(ps_entry_result);\n";
       }

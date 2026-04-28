@@ -2300,13 +2300,13 @@ for(
     status-code returns and Result-return error propagation. IR-backed `Result.error(...)` / `Result.why(...)` also
     inspect imported status-only `Result<E>` sums from locals, direct calls, and dereferenced local
     `Reference<Result<E>>` / `Pointer<Result<E>>` sources instead of falling back to the legacy packed-status bridge.
-    The legacy source C++ emitter still uses the packed Result bridge, but it now preserves nested `Result<T...>`
-    types under `Reference` / `Pointer` and recognizes dereferenced local/indexed borrowed Result operands for
-    `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its packed C++ storage-width decisions and source C++
-    pack/unpack expression emission are quarantined behind named emitter helpers. The generated source C++ prelude now
-    uses explicit `ps_legacy_result_*` helper names instead of the older `ps_result_*` names, and value-carrying Result
-    storage emits the named `ps_legacy_result_value` type instead of raw `uint64_t` return/binding types. That generated
-    type is now a fielded struct without raw packed-integer construction or conversion compatibility.
+    The legacy source C++ emitter still uses a compatibility Result bridge, but it now preserves nested
+    `Result<T...>` types under `Reference` / `Pointer` and recognizes dereferenced local/indexed borrowed Result
+    operands for `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its source C++ Result storage-width decisions
+    and pack/unpack expression emission are quarantined behind named emitter helpers. Value-carrying Result storage
+    emits the tagged `ps_result_value` bridge type instead of raw `uint64_t` return/binding types or legacy
+    `ps_legacy_result_*` helper names. That generated type has separate tag, error-payload, and success-payload fields
+    and does not retain raw packed-integer construction or conversion compatibility.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
@@ -2314,11 +2314,11 @@ for(
     status-code returns, Result-return error propagation, direct-call postfix `?` operands, and imported status-only
     `try(...)` operands across local, direct-call, and dereferenced local pointer/reference sources, plus status-only
     `Result.error(...)` / `Result.why(...)` helpers on those same operand families. The source C++ emitter now mirrors
-    the borrowed/pointer helper operand inference while still using the packed bridge; storage-width decisions and
-    pack/unpack expression emission are quarantined behind named emitter helpers, and generated prelude helper names
-    are explicitly marked `ps_legacy_result_*`. Value-carrying Result storage is named through the fielded
-    `ps_legacy_result_value` type, and it no longer accepts or converts back to a raw packed integer. The remaining
-    migration work can focus on retargeting the source C++ bridge to the stdlib Result sum contract.
+    the borrowed/pointer helper operand inference while still using a compatibility bridge; storage-width decisions and
+    pack/unpack expression emission are quarantined behind named emitter helpers. Value-carrying Result storage is
+    named through the tagged `ps_result_value` bridge type, uses tag-based error checks, and no longer accepts or
+    converts back to a raw packed integer. The remaining migration work can focus on retargeting status-only source C++
+    Result storage and broader bridge construction to the stdlib Result sum contract.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).

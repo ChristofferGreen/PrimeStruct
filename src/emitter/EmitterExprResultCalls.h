@@ -1,9 +1,9 @@
-  const std::string legacyPackedResultStatusCppType = legacyPackedResultCppType(false);
-  const std::string legacyPackedResultValueCppType = legacyPackedResultCppType(true);
+  const std::string sourceResultStatusCppType = sourceResultCppType(false);
+  const std::string sourceResultValueCppType = sourceResultCppType(true);
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "ok") {
     if (expr.args.size() == 1) {
-      return "static_cast<" + legacyPackedResultStatusCppType + ">(0)";
+      return "static_cast<" + sourceResultStatusCppType + ">(0)";
     }
     if (expr.args.size() == 2) {
       const std::string valueExpr =
@@ -11,7 +11,7 @@
           emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                    resultInfos, returnStructs, allowMathBare) +
           ")";
-      return legacyPackedResultPackExpr("0u", valueExpr);
+      return sourceResultPackExpr("0u", valueExpr);
     }
     return "0";
   }
@@ -28,7 +28,7 @@
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     if (resultInfo.hasValue) {
-      return "(" + legacyPackedResultErrorExpr(argText) + " != 0u)";
+      return sourceResultIsErrorExpr(argText);
     }
     return "(" + argText + " != 0u)";
   }
@@ -45,8 +45,8 @@
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     const std::string errorExpr =
-        resultInfo.hasValue ? legacyPackedResultErrorExpr(argText)
-                            : "static_cast<" + legacyPackedResultStatusCppType + ">(" + argText + ")";
+        resultInfo.hasValue ? sourceResultErrorPayloadExpr(argText)
+                            : "static_cast<" + sourceResultStatusCppType + ">(" + argText + ")";
     if (resultInfo.errorType == "FileError") {
       return "ps_file_error_why(" + errorExpr + ")";
     }
@@ -158,11 +158,11 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map") {
     if (expr.args.size() != 3) {
-      return legacyPackedResultPackExpr("0u", "0u");
+      return sourceResultPackExpr("0u", "0u");
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return legacyPackedResultPackExpr("0u", "0u");
+      return sourceResultPackExpr("0u", "0u");
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -176,25 +176,26 @@
         emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
-    out << "([&]() -> " << legacyPackedResultValueCppType << " {";
+    out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
-    out << " uint32_t ps_err = " << legacyPackedResultErrorExpr("ps_result") << ";";
-    out << " if (ps_err != 0u) { return " << legacyPackedResultPackExpr("ps_err", "0u") << "; }";
+    out << " if (" << sourceResultIsErrorExpr("ps_result") << ") {";
+    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_result"), "0u") << ";";
+    out << " }";
     out << " auto ps_value = static_cast<" << valueType << ">("
-        << legacyPackedResultValueExpr("ps_result") << ");";
+        << sourceResultValuePayloadExpr("ps_result") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_value);";
-    out << " return " << legacyPackedResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
+    out << " return " << sourceResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
     return out.str();
   }
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "and_then") {
     if (expr.args.size() != 3) {
-      return legacyPackedResultPackExpr("0u", "0u");
+      return sourceResultPackExpr("0u", "0u");
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return legacyPackedResultPackExpr("0u", "0u");
+      return sourceResultPackExpr("0u", "0u");
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -208,12 +209,13 @@
         emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
-    out << "([&]() -> " << legacyPackedResultValueCppType << " {";
+    out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
-    out << " uint32_t ps_err = " << legacyPackedResultErrorExpr("ps_result") << ";";
-    out << " if (ps_err != 0u) { return " << legacyPackedResultPackExpr("ps_err", "0u") << "; }";
+    out << " if (" << sourceResultIsErrorExpr("ps_result") << ") {";
+    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_result"), "0u") << ";";
+    out << " }";
     out << " auto ps_value = static_cast<" << valueType << ">("
-        << legacyPackedResultValueExpr("ps_result") << ");";
+        << sourceResultValuePayloadExpr("ps_result") << ");";
     out << " auto ps_next = (" << lambdaExpr << ")(ps_value);";
     out << " return ps_next;";
     out << " }())";
@@ -222,13 +224,13 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map2") {
     if (expr.args.size() != 4) {
-      return legacyPackedResultPackExpr("0u", "0u");
+      return sourceResultPackExpr("0u", "0u");
     }
     ResultInfo leftInfo;
     ResultInfo rightInfo;
     if (!resolveResultExprInfo(expr.args[1], leftInfo) || !leftInfo.isResult || !leftInfo.hasValue ||
         !resolveResultExprInfo(expr.args[2], rightInfo) || !rightInfo.isResult || !rightInfo.hasValue) {
-      return legacyPackedResultPackExpr("0u", "0u");
+      return sourceResultPackExpr("0u", "0u");
     }
     std::string leftType =
         bindingTypeToCpp(leftInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -250,19 +252,21 @@
         emitExpr(expr.args[3], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
-    out << "([&]() -> " << legacyPackedResultValueCppType << " {";
+    out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_left = " << leftExpr << ";";
-    out << " uint32_t ps_left_err = " << legacyPackedResultErrorExpr("ps_left") << ";";
-    out << " if (ps_left_err != 0u) { return " << legacyPackedResultPackExpr("ps_left_err", "0u") << "; }";
+    out << " if (" << sourceResultIsErrorExpr("ps_left") << ") {";
+    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_left"), "0u") << ";";
+    out << " }";
     out << " auto ps_right = " << rightExpr << ";";
-    out << " uint32_t ps_right_err = " << legacyPackedResultErrorExpr("ps_right") << ";";
-    out << " if (ps_right_err != 0u) { return " << legacyPackedResultPackExpr("ps_right_err", "0u") << "; }";
+    out << " if (" << sourceResultIsErrorExpr("ps_right") << ") {";
+    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_right"), "0u") << ";";
+    out << " }";
     out << " auto ps_left_value = static_cast<" << leftType << ">("
-        << legacyPackedResultValueExpr("ps_left") << ");";
+        << sourceResultValuePayloadExpr("ps_left") << ");";
     out << " auto ps_right_value = static_cast<" << rightType << ">("
-        << legacyPackedResultValueExpr("ps_right") << ");";
+        << sourceResultValuePayloadExpr("ps_right") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_left_value, ps_right_value);";
-    out << " return " << legacyPackedResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
+    out << " return " << sourceResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
     return out.str();
   }

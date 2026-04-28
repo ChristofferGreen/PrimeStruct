@@ -552,48 +552,50 @@ TEST_CASE("emitter helpers types normalize slashless map import aliases") {
   CHECK(primec::emitter::bindingTypeToCpp("NonMapAlias", "/pkg", importAliases, structTypeMap) == "int");
 }
 
-TEST_CASE("emitter helpers quarantine legacy packed Result cpp types") {
+TEST_CASE("emitter helpers expose source Result cpp bridge types") {
   CHECK(primec::emitter::isResultBindingTypeName("Result"));
   CHECK(primec::emitter::isResultBindingTypeName("/std/result/Result"));
   CHECK(primec::emitter::isResultBindingTypeName("std/result/Result"));
   CHECK_FALSE(primec::emitter::isResultBindingTypeName("ResultLike"));
 
-  CHECK(primec::emitter::legacyPackedResultCppType(false) == "uint32_t");
-  CHECK(primec::emitter::legacyPackedResultCppType(true) == "ps_legacy_result_value");
-  CHECK(primec::emitter::legacyPackedResultPackExpr("err", "value") ==
-        "ps_legacy_result_pack(err, value)");
-  CHECK(primec::emitter::legacyPackedResultErrorExpr("result") ==
-        "ps_legacy_result_error(result)");
-  CHECK(primec::emitter::legacyPackedResultValueExpr("result") ==
-        "ps_legacy_result_payload(result)");
+  CHECK(primec::emitter::sourceResultCppType(false) == "uint32_t");
+  CHECK(primec::emitter::sourceResultCppType(true) == "ps_result_value");
+  CHECK(primec::emitter::sourceResultPackExpr("err", "value") ==
+        "ps_result_pack(err, value)");
+  CHECK(primec::emitter::sourceResultIsErrorExpr("result") ==
+        "ps_result_is_error(result)");
+  CHECK(primec::emitter::sourceResultErrorPayloadExpr("result") ==
+        "ps_result_error_payload(result)");
+  CHECK(primec::emitter::sourceResultValuePayloadExpr("result") ==
+        "ps_result_payload(result)");
 
   const auto statusType =
-      primec::emitter::tryLegacyPackedResultCppType("Result", "FileError");
+      primec::emitter::trySourceResultCppType("Result", "FileError");
   REQUIRE(statusType.has_value());
-  CHECK(*statusType == primec::emitter::legacyPackedResultCppType(false));
+  CHECK(*statusType == primec::emitter::sourceResultCppType(false));
 
   const auto valueType =
-      primec::emitter::tryLegacyPackedResultCppType("/std/result/Result", "i32, FileError");
+      primec::emitter::trySourceResultCppType("/std/result/Result", "i32, FileError");
   REQUIRE(valueType.has_value());
-  CHECK(*valueType == primec::emitter::legacyPackedResultCppType(true));
+  CHECK(*valueType == primec::emitter::sourceResultCppType(true));
 
-  CHECK_FALSE(primec::emitter::tryLegacyPackedResultCppType("ResultLike", "i32").has_value());
+  CHECK_FALSE(primec::emitter::trySourceResultCppType("ResultLike", "i32").has_value());
   CHECK(primec::emitter::bindingTypeToCpp("Result<FileError>") ==
-        primec::emitter::legacyPackedResultCppType(false));
+        primec::emitter::sourceResultCppType(false));
   CHECK(primec::emitter::bindingTypeToCpp("/std/result/Result<i32, FileError>") ==
-        primec::emitter::legacyPackedResultCppType(true));
+        primec::emitter::sourceResultCppType(true));
 
   primec::emitter::BindingInfo statusBinding;
   statusBinding.typeName = "std/result/Result";
   statusBinding.typeTemplateArg = "FileError";
   CHECK(primec::emitter::bindingTypeToCpp(statusBinding) ==
-        primec::emitter::legacyPackedResultCppType(false));
+        primec::emitter::sourceResultCppType(false));
 
   primec::emitter::BindingInfo valueBinding;
   valueBinding.typeName = "/std/result/Result";
   valueBinding.typeTemplateArg = "i32, FileError";
   CHECK(primec::emitter::bindingTypeToCpp(valueBinding) ==
-        primec::emitter::legacyPackedResultCppType(true));
+        primec::emitter::sourceResultCppType(true));
 }
 
 TEST_CASE("emitter helper path preference normalizes slashless map helper candidates") {
