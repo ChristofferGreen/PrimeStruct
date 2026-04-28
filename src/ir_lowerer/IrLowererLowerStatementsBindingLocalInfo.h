@@ -287,7 +287,7 @@
         if (normalizeCollectionBindingTypeName(transform.name) == "File") {
           info.isFileHandle = true;
           info.valueKind = LocalInfo::ValueKind::Int64;
-        } else if (transform.name == "Result") {
+        } else if (isResultTemplateTypeBaseName(transform.name)) {
           info.isResult = true;
           info.resultHasValue = (transform.templateArgs.size() == 2);
           info.resultValueKind = LocalInfo::ValueKind::Unknown;

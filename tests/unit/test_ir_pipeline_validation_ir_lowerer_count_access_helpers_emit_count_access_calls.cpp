@@ -1147,6 +1147,15 @@ TEST_CASE("ir lowerer template type parse helper parses Result return type names
   CHECK(valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(errorType == "FileError");
 
+  REQUIRE(primec::ir_lowerer::parseResultTypeName(
+      "/std/result/Result< i32 , MyError >",
+      hasValue,
+      valueKind,
+      errorType));
+  CHECK(hasValue);
+  CHECK(valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(errorType == "MyError");
+
   CHECK_FALSE(primec::ir_lowerer::parseResultTypeName("array<i64>", hasValue, valueKind, errorType));
   CHECK_FALSE(primec::ir_lowerer::parseResultTypeName("Result<i64, FileError, Extra>", hasValue, valueKind, errorType));
 }

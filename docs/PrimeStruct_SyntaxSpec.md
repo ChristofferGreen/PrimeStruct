@@ -784,8 +784,9 @@ value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or `Re
 source is a local imported stdlib Result sum, and may use legacy `Result.map2(left, right, fn)` when both sources are
 local imported stdlib Result sums. `Result.error(value)` / `Result.why(value)` can inspect that imported sum shape.
 Status-only `Result<E>` remains a packed-status compatibility bridge and is not pickable as a stdlib Result sum;
-`pick(status)` on status-only `Result<E>` reports a deterministic compatibility diagnostic. `?` propagation stays a
-compatibility surface until its dedicated migration task lands.
+`pick(status)` on status-only `Result<E>` reports a deterministic compatibility diagnostic. `try(...)` semantic
+validation and semantic-product metadata accept both `Result<T, E>` and `/std/result/Result<T, E>` value-result
+spellings, while `?` propagation stays a compatibility surface until its dedicated migration task lands.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first

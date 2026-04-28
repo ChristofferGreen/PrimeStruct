@@ -224,6 +224,15 @@ TEST_CASE("templated fallback adapter seam classifies Result value and error env
   CHECK(snapshot.resultValueType == "i32");
   CHECK(snapshot.resultErrorType == "MyError");
   CHECK(snapshot.mismatchDiagnostic.empty());
+
+  primec::semantics::classifyTemplatedFallbackQueryTypeTextForTesting(
+      "/std/result/Result<int, MyError>", snapshot);
+
+  CHECK(snapshot.hasResultType);
+  CHECK(snapshot.resultTypeHasValue);
+  CHECK(snapshot.resultValueType == "i32");
+  CHECK(snapshot.resultErrorType == "MyError");
+  CHECK(snapshot.mismatchDiagnostic.empty());
 }
 
 TEST_CASE("templated fallback adapter seam rejects missing Result envelope arguments") {
@@ -3101,6 +3110,59 @@ main() {
   checkTextId(tryEntry->contextReturnKind, tryEntry->contextReturnKindId);
   checkTextId(tryEntry->onErrorHandlerPath, tryEntry->onErrorHandlerPathId);
   checkTextId(tryEntry->onErrorErrorType, tryEntry->onErrorErrorTypeId);
+}
+
+TEST_CASE("semantic product try facts accept qualified stdlib Result spelling") {
+  const std::string source = R"(
+MyError {
+}
+
+[return<void>]
+unexpectedError([MyError] err) {
+}
+
+[return</std/result/Result<i32, MyError>>]
+lookup() {
+  return(Result.ok(4i32))
+}
+
+[return</std/result/Result<i32, MyError>> on_error<MyError, /unexpectedError>]
+main() {
+  [auto] selected{try(lookup())}
+  return(Result.ok(selected))
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *queryEntry = findSemanticEntry(
+      primec::semanticProgramQueryFactView(semanticProgram),
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.callName == "lookup";
+      });
+  REQUIRE(queryEntry != nullptr);
+  CHECK(queryEntry->queryTypeText == "/std/result/Result<i32, MyError>");
+  CHECK(queryEntry->hasResultType);
+  CHECK(queryEntry->resultTypeHasValue);
+  CHECK(queryEntry->resultValueType == "i32");
+  CHECK(queryEntry->resultErrorType == "MyError");
+
+  const auto *tryEntry = findSemanticEntry(
+      primec::semanticProgramTryFactView(semanticProgram),
+      [](const primec::SemanticProgramTryFact &entry) { return entry.scopePath == "/main"; });
+  REQUIRE(tryEntry != nullptr);
+  CHECK(tryEntry->operandQueryTypeText == "/std/result/Result<i32, MyError>");
+  CHECK(tryEntry->valueType == "i32");
+  CHECK(tryEntry->errorType == "MyError");
+  CHECK(tryEntry->contextReturnKind == "return");
+  CHECK(tryEntry->onErrorHandlerPath == "/unexpectedError");
+  CHECK(tryEntry->onErrorErrorType == "MyError");
 }
 
 TEST_CASE("semantic product on_error facts carry interned text ids") {

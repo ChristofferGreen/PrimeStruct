@@ -149,7 +149,12 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     infoOut = ResultInfo{};
     std::string base;
     std::string arg;
-    if (!splitTemplateTypeName(typeName, base, arg) || base != "Result") {
+    if (!splitTemplateTypeName(typeName, base, arg)) {
+      return false;
+    }
+    const std::string normalizedBase = normalizeBindingTypeName(base);
+    if (normalizedBase != "Result" && normalizedBase != "/std/result/Result" &&
+        normalizedBase != "std/result/Result") {
       return false;
     }
     std::vector<std::string> args;

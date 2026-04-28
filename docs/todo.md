@@ -280,6 +280,10 @@ Task template:
   - implementation_notes:
     - Start from result/try/on_error semantic validation, result metadata in
       `include/primec/SemanticProduct.h`, and IR lowerer result helpers.
+    - Semantic validation, semantic-product `try(...)`/query facts, and IR
+      Result type parsing now recognize both `Result<T, E>` and the qualified
+      `/std/result/Result<T, E>` spelling for value-carrying results. The
+      remaining work is the actual sum-backed propagation/lowering contract.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

@@ -187,7 +187,7 @@ void assignDeclaredResultCollectionInfo(const std::string &typeText,
 
 void applyDeclaredResultBindingMetadata(const Expr &bindingExpr, LocalInfo &bindingInfo) {
   for (const auto &transform : bindingExpr.transforms) {
-    if (transform.name == "Result") {
+    if (isResultTemplateTypeBaseName(transform.name)) {
       bindingInfo.isResult = true;
       bindingInfo.resultHasValue = (transform.templateArgs.size() == 2);
       bindingInfo.resultValueKind = LocalInfo::ValueKind::Unknown;

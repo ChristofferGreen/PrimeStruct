@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4300: Recognize qualified Result sums in try metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the first TODO-4266 metadata slice by making semantic
+    validation, semantic-product `try(...)`/query facts, and IR Result type
+    parsing recognize the qualified stdlib-owned `/std/result/Result<T, E>`
+    spelling in addition to the legacy unqualified `Result<T, E>` spelling.
+  - implementation_notes:
+    - Keep runtime propagation on the current hybrid bridge in this slice.
+    - Preserve status-only `Result<E>` as the packed compatibility path.
+    - Leave actual sum-backed `?`/`try(...)` lowering for TODO-4266.
+  - acceptance:
+    - `try(...)` accepts a local value-carrying stdlib Result whose type is
+      spelled `/std/result/Result<T, E>`.
+    - `try(...)` still validates the qualified Result error type against the
+      active `on_error` context.
+    - Semantic-product query and `try(...)` facts publish the qualified Result
+      text while exposing the same success/error decomposition.
+    - IR Result type parsing and declared binding metadata accept the
+      qualified spelling for later lowering consumers.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once qualified stdlib Result spellings are visible to
+    semantic metadata and lowerer type parsing, without attempting runtime
+    propagation rewrites.
+  - finished_at: 2026-04-28
+  - evidence: Added qualified Result recognition in semantics and IR metadata
+    parsing, added focused semantic and semantic-product coverage for
+    `/std/result/Result<i32, MyError>` `try(...)`, and documented the
+    remaining TODO-4266 runtime propagation boundary. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4293: Bridge legacy `Result` helpers to the result sum
   - owner: ai
   - created_at: 2026-04-28

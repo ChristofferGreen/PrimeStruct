@@ -48,13 +48,19 @@ bool splitTemplateArgs(const std::string &text, std::vector<std::string> &out) {
   return true;
 }
 
+bool isResultTemplateTypeBaseName(const std::string &base) {
+  const std::string trimmed = trimTemplateTypeText(base);
+  return trimmed == "Result" || trimmed == "/std/result/Result" ||
+         trimmed == "std/result/Result";
+}
+
 bool parseResultTypeName(const std::string &typeName,
                          bool &hasValue,
                          LocalInfo::ValueKind &valueKind,
                          std::string &errorType) {
   std::string base;
   std::string arg;
-  if (!splitTemplateTypeName(typeName, base, arg) || base != "Result") {
+  if (!splitTemplateTypeName(typeName, base, arg) || !isResultTemplateTypeBaseName(base)) {
     return false;
   }
   std::vector<std::string> args;

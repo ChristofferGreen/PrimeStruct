@@ -176,6 +176,61 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("qualified stdlib Result sum participates in try") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+[return<void>]
+ignore([MyError] err) {
+}
+
+[return</std/result/Result<i32, MyError>> on_error<MyError, /ignore>]
+main() {
+  [/std/result/Result<i32, MyError>] status{ok<i32, MyError>(7i32)}
+  [i32] value{try(status)}
+  return(ok<i32, MyError>(value))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("qualified stdlib Result try checks error type") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+[struct]
+OtherError() {
+  [i32] code{6i32}
+}
+
+[return<void>]
+ignore([MyError] err) {
+}
+
+[return</std/result/Result<i32, MyError>> on_error<MyError, /ignore>]
+main() {
+  [/std/result/Result<i32, OtherError>] status{error<i32, OtherError>(OtherError{})}
+  [i32] value{try(status)}
+  return(ok<i32, MyError>(value))
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("try error type mismatch") != std::string::npos);
+}
+
 TEST_CASE("stdlib result value sum accepts legacy Result.map") {
   const std::string source = R"(
 import /std/result/*

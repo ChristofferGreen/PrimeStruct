@@ -297,21 +297,24 @@ void populateTemplatedFallbackQueryStateAdapterFromQueryTypeText(
   out.resultErrorType.clear();
   out.mismatchDiagnostic.clear();
 
+  const auto isResultQueryTypeBase = [](std::string typeText) {
+    typeText = normalizeBindingTypeName(typeText);
+    if (!typeText.empty() && typeText.front() == '/') {
+      typeText.erase(typeText.begin());
+    }
+    return typeText == "Result" || typeText == "std/result/Result";
+  };
   std::string normalizedQueryType = normalizeBindingTypeName(queryTypeText);
   std::string resultBase;
   std::string resultArgText;
   if (!splitTemplateTypeName(normalizedQueryType, resultBase, resultArgText)) {
-    if (normalizeBindingTypeName(normalizedQueryType) == "Result") {
+    if (isResultQueryTypeBase(normalizedQueryType)) {
       out.mismatchDiagnostic = "result query type missing template arguments: " + queryTypeText;
     }
     return;
   }
 
-  resultBase = normalizeBindingTypeName(resultBase);
-  if (!resultBase.empty() && resultBase.front() == '/') {
-    resultBase.erase(resultBase.begin());
-  }
-  if (resultBase != "Result") {
+  if (!isResultQueryTypeBase(resultBase)) {
     return;
   }
 

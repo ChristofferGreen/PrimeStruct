@@ -25,6 +25,12 @@ std::string trimText(const std::string &text) {
   return text.substr(start, end - start);
 }
 
+bool isResultTypeBaseName(const std::string &base) {
+  const std::string normalized = normalizeBindingTypeName(trimText(base));
+  return normalized == "Result" || normalized == "/std/result/Result" ||
+         normalized == "std/result/Result";
+}
+
 std::string_view normalizeFileResultMethodName(std::string_view methodName) {
   if (methodName == "readByte") {
     return "read_byte";
@@ -76,7 +82,7 @@ bool SemanticsValidator::resolveResultTypeFromTypeName(const std::string &typeNa
   out = ResultTypeInfo{};
   std::string base;
   std::string arg;
-  if (!splitTemplateTypeName(typeName, base, arg) || base != "Result") {
+  if (!splitTemplateTypeName(typeName, base, arg) || !isResultTypeBaseName(base)) {
     return false;
   }
   return resolveResultTypeFromTemplateArg(arg, out);
@@ -628,13 +634,13 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
   };
   if (expr.kind == Expr::Kind::Name) {
     if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
-      if (paramBinding->typeName == "Result") {
-        return resolveResultTypeFromTemplateArg(paramBinding->typeTemplateArg, out);
+      if (resolveResultTypeFromTypeName(bindingTypeText(*paramBinding), out)) {
+        return true;
       }
     }
     auto it = locals.find(expr.name);
-    if (it != locals.end() && it->second.typeName == "Result") {
-      return resolveResultTypeFromTemplateArg(it->second.typeTemplateArg, out);
+    if (it != locals.end() && resolveResultTypeFromTypeName(bindingTypeText(it->second), out)) {
+      return true;
     }
     return false;
   }
@@ -834,10 +840,14 @@ bool SemanticsValidator::errorTypesMatch(const std::string &left,
     const std::string normalized = normalizeBindingTypeName(trimmed);
     std::string base;
     std::string arg;
-    if (splitTemplateTypeName(normalized, base, arg) &&
-        (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa_vector" ||
-         base == "map" || base == "Result" || base == "File")) {
-      return stripInnerWhitespace(normalized);
+    if (splitTemplateTypeName(normalized, base, arg)) {
+      if (isResultTypeBaseName(base)) {
+        return "Result<" + stripInnerWhitespace(arg) + ">";
+      }
+      if (isBuiltinTemplateTypeName(base) || base == "array" || base == "vector" || base == "soa_vector" ||
+          base == "map" || base == "File") {
+        return stripInnerWhitespace(normalized);
+      }
     }
     if (normalized != trimmed || isPrimitiveBindingTypeName(trimmed)) {
       return stripInnerWhitespace(normalized);

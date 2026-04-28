@@ -2275,9 +2275,10 @@ for(
   - **ADT migration note:** `/std/result/*` now exposes an importable value-carrying `Result<T, E>` sum with `ok` and
     `error` variants plus explicit `ok<T, E>(value)` / `error<T, E>(err)` construction helpers. The legacy
     status-only `Result<Error>` remains a packed-status compiler/runtime bridge and is not pickable as a stdlib
-    Result sum; using `pick(status)` on `Result<Error>` produces a deterministic compatibility diagnostic. `?`
-    propagation remains a hybrid compiler/runtime bridge until the remaining Result migration TODO lands. Typed
-    imported value-carrying sum
+    Result sum; using `pick(status)` on `Result<Error>` produces a deterministic compatibility diagnostic. `try(...)`
+    semantic validation and semantic-product metadata accept both `Result<T, E>` and the qualified
+    `/std/result/Result<T, E>` spelling for value-carrying results, but runtime propagation remains a hybrid
+    compiler/runtime bridge until the remaining Result migration TODO lands. Typed imported value-carrying sum
     locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed
     VM/native paths, and typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or
     `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum; `Result.map2(left, right, fn)`
@@ -2289,7 +2290,8 @@ for(
     variant plus an error payload variant rather than an empty payload struct.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
-    implemented.
+    implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
+    value-result type spellings so the remaining migration work can focus on sum-backed lowering/runtime behavior.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
