@@ -296,8 +296,12 @@ Task template:
       that return imported stdlib Result sums. Dereferenced local
       `Reference<Result<T, E>>` and `Pointer<Result<T, E>>` values now feed
       `try(...)`, `Result.error(...)`, and `Result.why(...)` when they point at
-      imported stdlib Result sums. Remaining work covers status-only results
-      and non-VM/native bridge cleanup.
+      imported stdlib Result sums. The status-only `Result<E>` sum shape is now
+      blocked explicitly on same-path generic sum overloads by template arity;
+      declaring both `Result<E>` and `Result<T, E>` at `/std/result/Result`
+      reports a deterministic substrate diagnostic. Remaining work covers that
+      generic sum arity substrate, status-only lowering after it exists, and
+      non-VM/native bridge cleanup.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

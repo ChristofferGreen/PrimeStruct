@@ -6,6 +6,36 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4306: Diagnose status-only Result sum arity blocker
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 status-only slice by making the missing
+    same-path generic sum arity substrate explicit before attempting to add a
+    real stdlib-owned `Result<E>` sum beside `Result<T, E>`.
+  - implementation_notes:
+    - Keep this slice limited to deterministic diagnostics and documentation;
+      do not introduce the status-only sum representation until the generic
+      type/sum overload substrate can select by template arity.
+    - Preserve current packed status-only `Result<E>` behavior and the existing
+      value-carrying stdlib `Result<T, E>` sum.
+  - acceptance:
+    - Declaring both `Result<E>` and `Result<T, E>` at the same sum path
+      reports a deterministic substrate diagnostic instead of a generic
+      duplicate-definition message.
+    - Result migration docs identify same-path generic sum overloads by
+      template arity as the status-only stdlib sum blocker.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the blocker is observable in semantics coverage and
+    TODO-4266 records that status-only lowering should follow the generic sum
+    arity substrate, without changing packed status-only runtime behavior.
+  - finished_at: 2026-04-28
+  - evidence: Added a monomorphizer diagnostic for same-path sum definitions
+    that differ only by template arity, covered the intended `Result<E>` plus
+    `Result<T, E>` shape in semantics tests, and documented the remaining
+    status-only Result migration blocker. Local test execution was skipped per
+    the lite workflow.
+
 - [x] TODO-4305: Support borrowed stdlib Result sum helpers
   - owner: ai
   - created_at: 2026-04-28

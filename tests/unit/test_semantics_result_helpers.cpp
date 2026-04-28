@@ -70,6 +70,35 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("status-only stdlib Result sum arity shape reports substrate blocker") {
+  const std::string source = R"(
+namespace std {
+  namespace result {
+    [sum]
+    Result<E> {
+      ok
+      [E] error
+    }
+
+    [sum]
+    Result<T, E> {
+      [T] ok
+      [E] error
+    }
+  }
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("sum overloads by template arity are not supported: /std/result/Result") !=
+        std::string::npos);
+}
+
 TEST_CASE("stdlib result value sum participates in Result.error") {
   const std::string source = R"(
 import /std/result/*

@@ -2293,7 +2293,9 @@ for(
     `ok` and `true` for `error` values from `/std/result/*`.
     `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
     error payload type's `why` helper for `error`. The future status-only sum contract should use a unit success
-    variant plus an error payload variant rather than an empty payload struct.
+    variant plus an error payload variant rather than an empty payload struct. That status-only shape still needs
+    same-path generic sum overloads by template arity, because today's generic substrate intentionally diagnoses
+    declaring both `Result<E>` and `Result<T, E>` at `/std/result/Result`.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned

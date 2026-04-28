@@ -794,7 +794,9 @@ propagate local imported stdlib value-result sum errors by copying the `error` p
 can also be consumed through postfix `?` on those same VM/native sum-backed paths, and dereferenced local
 `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values can feed `try(...)`, `Result.error(...)`, and
 `Result.why(...)` when they point at imported stdlib Result sums. Broader result shapes and status-only results remain
-compatibility surfaces until their dedicated migration tasks land.
+compatibility surfaces until their dedicated migration tasks land. A real status-only stdlib sum needs same-path
+generic sum overloads by template arity, because the current substrate diagnoses attempts to declare both
+`Result<E>` and `Result<T, E>` at `/std/result/Result`.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first

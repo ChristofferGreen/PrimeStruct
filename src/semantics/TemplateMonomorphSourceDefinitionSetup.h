@@ -24,6 +24,38 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
       continue;
     }
 
+    auto isSumDefinitionForOverloadDiagnostic = [](const Definition &def) {
+      for (const auto &transform : def.transforms) {
+        if (transform.name == "sum") {
+          return true;
+        }
+      }
+      return false;
+    };
+    bool allSumDefinitions = true;
+    for (const Definition *def : family) {
+      if (def == nullptr || !isSumDefinitionForOverloadDiagnostic(*def)) {
+        allSumDefinitions = false;
+        break;
+      }
+    }
+    if (allSumDefinitions) {
+      std::unordered_set<size_t> seenTemplateCounts;
+      bool differsOnlyByTemplateArity = true;
+      for (const Definition *def : family) {
+        if (!seenTemplateCounts.insert(def->templateArgs.size()).second) {
+          differsOnlyByTemplateArity = false;
+          break;
+        }
+      }
+      if (differsOnlyByTemplateArity) {
+        error = "sum overloads by template arity are not supported: " + publicPath;
+      } else {
+        error = "duplicate definition: " + publicPath;
+      }
+      return false;
+    }
+
     bool allowHelperOverloadFamily = true;
     std::unordered_set<size_t> seenParameterCounts;
     std::vector<HelperOverloadEntry> overloads;
