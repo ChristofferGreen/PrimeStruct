@@ -15,7 +15,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] value{Pair([x] 2i32, [ok] true)}
+  [Pair] value{Pair{[x] 2i32, [ok] true}}
   /Pair/Validate(value)
   return(0i32)
 }

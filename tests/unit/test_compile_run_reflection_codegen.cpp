@@ -46,7 +46,7 @@ TEST_CASE("reflection codegen ir dump keeps generated helper call sites") {
   const std::string ir = readFile(outPath);
 
   const size_t equalPos = ir.find("/Pair/Equal(copy, baseline)");
-  const size_t notEqualPos = ir.find("/Pair/NotEqual(copy, Pair([x] 9, [y] 2))");
+  const size_t notEqualPos = ir.find("/Pair/NotEqual(copy, Pair{[x] 9, [y] 2})");
   const size_t defaultPos = ir.find("/Pair/Default()");
   const size_t isDefaultPos = ir.find("/Pair/IsDefault(baseline)");
   const size_t clonePos = ir.find("/Pair/Clone(baseline)");
@@ -76,8 +76,8 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] left{Pair([x] 1i32, [y] 2i32)}
-  [Pair] right{Pair([x] 2i32, [y] 3i32)}
+  [Pair] left{Pair{[x] 1i32, [y] 2i32}}
+  [Pair] right{Pair{[x] 2i32, [y] 3i32}}
   return(/Pair/Compare(left, right))
 }
 )";
@@ -111,7 +111,7 @@ Pair() {
 
 [return<u64>]
 main() {
-  [Pair] value{Pair([x] 1i32, [y] 2i32)}
+  [Pair] value{Pair{[x] 1i32, [y] 2i32}}
   return(/Pair/Hash64(value))
 }
 )";
@@ -192,7 +192,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair mut] value{Pair([x] 9i32, [y] 8i32)}
+  [Pair mut] value{Pair{[x] 9i32, [y] 8i32}}
   /Pair/Clear(value)
   return(0i32)
 }
@@ -227,8 +227,8 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair mut] target{Pair([x] 9i32, [y] 8i32)}
-  [Pair] source{Pair([x] 3i32, [y] 5i32)}
+  [Pair mut] target{Pair{[x] 9i32, [y] 8i32}}
+  [Pair] source{Pair{[x] 3i32, [y] 5i32}}
   /Pair/CopyFrom(target, source)
   return(0i32)
 }
@@ -263,7 +263,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] value{Pair([x] 9i32, [ok] true)}
+  [Pair] value{Pair{[x] 9i32, [ok] true}}
   /Pair/Validate(value)
   return(0i32)
 }
@@ -326,9 +326,9 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] input{Pair([x] 7i32, [ok] true)}
+  [Pair] input{Pair{[x] 7i32, [ok] true}}
   [array<u64>] payload{/Pair/Serialize(input)}
-  [Pair mut] output{Pair([x] 0i32, [ok] false)}
+  [Pair mut] output{Pair{[x] 0i32, [ok] false}}
   /Pair/Deserialize(output, payload)
   return(0i32)
 }

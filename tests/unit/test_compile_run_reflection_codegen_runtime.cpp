@@ -45,9 +45,9 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] low{Pair([x] 1i32, [y] 2i32)}
-  [Pair] mid{Pair([x] 1i32, [y] 5i32)}
-  [Pair] high{Pair([x] 2i32, [y] 0i32)}
+  [Pair] low{Pair{[x] 1i32, [y] 2i32}}
+  [Pair] mid{Pair{[x] 1i32, [y] 5i32}}
+  [Pair] high{Pair{[x] 2i32, [y] 0i32}}
   [i32 mut] score{0i32}
   if(less_than(/Pair/Compare(low, mid), 0i32), then() { assign(score, plus(score, 1i32)) }, else() { })
   if(greater_than(/Pair/Compare(high, mid), 0i32), then() { assign(score, plus(score, 2i32)) }, else() { })
@@ -83,9 +83,9 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] first{Pair([x] 3i32, [y] 5i32)}
-  [Pair] same{Pair([x] 3i32, [y] 5i32)}
-  [Pair] swapped{Pair([x] 5i32, [y] 3i32)}
+  [Pair] first{Pair{[x] 3i32, [y] 5i32}}
+  [Pair] same{Pair{[x] 3i32, [y] 5i32}}
+  [Pair] swapped{Pair{[x] 5i32, [y] 3i32}}
   [u64] firstHash{/Pair/Hash64(first)}
   [u64] sameHash{/Pair/Hash64(same)}
   [u64] swappedHash{/Pair/Hash64(swapped)}
@@ -122,7 +122,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair mut] value{Pair([x] 9i32, [y] 8i32)}
+  [Pair mut] value{Pair{[x] 9i32, [y] 8i32}}
   /Pair/Clear(value)
   return(if(equal(/Pair/Compare(value, /Pair/Default()), 0i32), then() { 7i32 }, else() { 3i32 }))
 }
@@ -155,7 +155,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] value{Pair([x] 1i32, [y] 2i32)}
+  [Pair] value{Pair{[x] 1i32, [y] 2i32}}
   return(if(Result.error(/Pair/Validate(value)), then() { 3i32 }, else() { 7i32 }))
 }
 )";
@@ -187,9 +187,9 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] source{Pair([x] 4i32, [y] 9i32)}
+  [Pair] source{Pair{[x] 4i32, [y] 9i32}}
   [array<u64>] encoded{/Pair/Serialize(source)}
-  [Pair mut] decoded{Pair()}
+  [Pair mut] decoded{Pair{}}
   [bool] decodeFailed{Result.error(/Pair/Deserialize(decoded, encoded))}
   return(if(or(decodeFailed, not(/Pair/Equal(source, decoded))), then() { 3i32 }, else() { 7i32 }))
 }

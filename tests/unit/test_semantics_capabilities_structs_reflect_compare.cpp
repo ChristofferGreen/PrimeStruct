@@ -15,8 +15,8 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] left{Pair([x] 1i32, [y] 2i32)}
-  [Pair] right{Pair([x] 1i32, [y] 3i32)}
+  [Pair] left{Pair{[x] 1i32, [y] 2i32}}
+  [Pair] right{Pair{[x] 1i32, [y] 3i32}}
   return(/Pair/Compare(left, right))
 }
 )";
@@ -160,7 +160,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] value{Pair([x] 2i32, [ok] true)}
+  [Pair] value{Pair{[x] 2i32, [ok] true}}
   [u64] hash{/Pair/Hash64(value)}
   return(if(greater_than(hash, 0u64), then() { 0i32 }, else() { 1i32 }))
 }

@@ -15,7 +15,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair] value{Pair([x] 2i32, [ok] true)}
+  [Pair] value{Pair{[x] 2i32, [ok] true}}
   [array<u64>] payload{/Pair/Serialize(value)}
   return(0i32)
 }
@@ -194,7 +194,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair mut] value{Pair([x] 0i32, [ok] false)}
+  [Pair mut] value{Pair{[x] 0i32, [ok] false}}
   [array<u64>] payload{array<u64>(1u64, 9u64, 1u64)}
   /Pair/Deserialize(value, payload)
   return(0i32)

@@ -15,7 +15,7 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair mut] value{Pair([x] 9i32, [y] 8i32)}
+  [Pair mut] value{Pair{[x] 9i32, [y] 8i32}}
   /Pair/Clear(value)
   return(0i32)
 }
@@ -223,8 +223,8 @@ Pair() {
 
 [return<int>]
 main() {
-  [Pair mut] target{Pair([x] 9i32, [y] 8i32)}
-  [Pair] source{Pair([x] 3i32, [y] 5i32)}
+  [Pair mut] target{Pair{[x] 9i32, [y] 8i32}}
+  [Pair] source{Pair{[x] 3i32, [y] 5i32}}
   /Pair/CopyFrom(target, source)
   return(0i32)
 }
