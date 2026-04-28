@@ -353,6 +353,43 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
   auto finalizeResolvedPath = [&](const std::string &resolvedPath) -> std::string {
     return selectHelperOverloadPath(expr, rewriteCanonicalCollectionConstructorPath(resolvedPath), ctx);
   };
+  auto resolveStdlibSurfaceCompatibilityAlias = [&]() -> std::string {
+    if (expr.isMethodCall || !usesStdlibScopedImportAliases(namespacePrefix, ctx)) {
+      return {};
+    }
+    for (const StdlibSurfaceMetadata &metadata : stdlibSurfaceRegistry()) {
+      if (metadata.shape == StdlibSurfaceShape::ConstructorFamily) {
+        continue;
+      }
+      auto findVisibleSpelling = [&](std::span<const std::string_view> spellings) {
+        for (const std::string_view spelling : spellings) {
+          const size_t slash = spelling.find_last_of('/');
+          const std::string_view spellingLeaf =
+              slash == std::string_view::npos ? spelling : spelling.substr(slash + 1);
+          if (spelling.empty() || spelling.front() != '/' ||
+              (spellingLeaf != expr.name &&
+               resolveStdlibSurfaceMemberName(metadata, spelling) != expr.name)) {
+            continue;
+          }
+          const std::string path(spelling);
+          if (ctx.sourceDefs.count(path) > 0 ||
+              ctx.helperOverloads.count(path) > 0) {
+            return path;
+          }
+        }
+        return std::string{};
+      };
+      if (std::string path = findVisibleSpelling(metadata.compatibilitySpellings);
+          !path.empty()) {
+        return path;
+      }
+      if (std::string path = findVisibleSpelling(metadata.loweringSpellings);
+          !path.empty()) {
+        return path;
+      }
+    }
+    return {};
+  };
   if (expr.name.empty()) {
     return "";
   }
@@ -393,6 +430,10 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
         importAlias != nullptr) {
       return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(*importAlias));
     }
+    if (std::string stdlibSurfaceAlias = resolveStdlibSurfaceCompatibilityAlias();
+        !stdlibSurfaceAlias.empty()) {
+      return finalizeResolvedPath(stdlibSurfaceAlias);
+    }
     return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(namespacePrefix + "/" + expr.name));
   }
   std::string root = "/" + expr.name;
@@ -403,6 +444,10 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
           lookupScopedImportAliasForNamespace(expr.name, namespacePrefix, ctx);
       importAlias != nullptr) {
     return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(*importAlias));
+  }
+  if (std::string stdlibSurfaceAlias = resolveStdlibSurfaceCompatibilityAlias();
+      !stdlibSurfaceAlias.empty()) {
+    return finalizeResolvedPath(stdlibSurfaceAlias);
   }
   return finalizeResolvedPath(rewriteBuiltinCollectionImportAlias(root));
 }
