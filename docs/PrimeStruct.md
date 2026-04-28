@@ -321,6 +321,11 @@ Planned non-template inference migration contract:
   lookup metadata before lowerer routing consumers can dispatch through method-call target facts.
   Missing or contradictory present ids fail closed with deterministic method-call metadata
   diagnostics.
+- Completed bridge-path metadata diagnostic slice: semantic-product bridge-path completeness
+  validation now checks interned scope, collection family, chosen path, and published lookup
+  metadata before lowerer bridge-routing consumers can dispatch through bridge-path choice facts.
+  Missing or contradictory present ids fail closed with deterministic bridge-path metadata
+  diagnostics.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

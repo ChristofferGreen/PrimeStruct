@@ -1369,6 +1369,91 @@ TEST_CASE("bridge-path coverage rejects invalid helper name ids before lookup ga
   CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product bridge-path metadata") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 5210;
+  primec::Expr valuesExpr;
+  valuesExpr.kind = primec::Expr::Kind::Name;
+  valuesExpr.name = "values";
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "count";
+  callExpr.semanticNodeId = 5211;
+  callExpr.args.push_back(valuesExpr);
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 5210);
+  semanticProgram.bridgePathChoices.push_back(primec::SemanticProgramBridgePathChoice{
+      .scopePath = "/main",
+      .collectionFamily = "vector",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 5211,
+      .provenanceHandle = 0,
+      .scopePathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .collectionFamilyId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector"),
+      .helperNameId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .chosenPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
+  });
+
+  auto resetBridgeMetadata = [&]() {
+    auto &bridgeChoice = semanticProgram.bridgePathChoices.back();
+    bridgeChoice.scopePathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    bridgeChoice.collectionFamilyId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "vector");
+    bridgeChoice.helperNameId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "count");
+    bridgeChoice.chosenPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count");
+    semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.clear();
+  };
+
+  std::string error;
+
+  resetBridgeMetadata();
+  semanticProgram.bridgePathChoices.back().chosenPathId = primec::InvalidSymbolId;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "missing semantic-product bridge chosen path id: /main -> count");
+
+  resetBridgeMetadata();
+  semanticProgram.bridgePathChoices.back().scopePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/other");
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product bridge scope metadata: /main -> count");
+
+  resetBridgeMetadata();
+  semanticProgram.bridgePathChoices.back().collectionFamilyId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "map");
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, error));
+  CHECK(error ==
+        "stale semantic-product bridge collection family metadata: /main -> count");
+
+  resetBridgeMetadata();
+  semanticProgram.publishedRoutingLookups.bridgePathChoiceIdsByExpr.insert_or_assign(
+      5211, primec::semanticProgramInternCallTargetString(semanticProgram, "/stale"));
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductBridgePathCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product bridge target metadata: /main -> count");
+}
+
 TEST_CASE("ir lowerer rejects missing semantic-product binding facts") {
   primec::Program program;
 

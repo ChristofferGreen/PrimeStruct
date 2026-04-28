@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Reject stale bridge-path metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    bridge-path completeness validation reject missing or stale interned
+    scope, collection family, chosen path, and published lookup metadata
+    before lowerer bridge-routing consumers dispatch through inconsistent
+    bridge-path choice facts.
+  - implementation_notes:
+    - Preserve existing missing bridge-path choice and missing bridge helper
+      name diagnostics.
+    - Apply scope and collection-family consistency checks only when those
+      interned ids are present so string-only manual fixtures keep their
+      existing compatibility path.
+    - Keep broader control-flow, template inference, and stdlib collection
+      migration out of scope.
+  - acceptance:
+    - Missing bridge chosen-path ids fail before lowerer routing can consume
+      incomplete bridge-path choice metadata.
+    - Stale bridge scope, collection-family, and published target lookup ids
+      fail before lowerer routing can dispatch through inconsistent
+      bridge-path metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once bridge-path semantic-product completeness rejects
+    missing or contradictory routing metadata without changing syntax-only or
+    no-semantic-product behavior.
+  - finished_at: 2026-04-29
+  - evidence: Tightened bridge-path semantic-product completeness checks,
+    added lowerer handoff regressions for missing chosen path ids and stale
+    scope/family/published target metadata, and documented the remaining
+    TODO-4298 work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Reject stale method-call metadata
   - owner: ai
   - created_at: 2026-04-28

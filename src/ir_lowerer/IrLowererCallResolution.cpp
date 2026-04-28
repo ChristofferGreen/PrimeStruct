@@ -821,12 +821,65 @@ bool validateSemanticProductBridgePathCoverage(
       if (const auto it = bridgePathChoicesByExpr.find(expr.semanticNodeId);
           it != bridgePathChoicesByExpr.end()) {
         const auto &entry = *it->second;
+        const std::string siteDescription = describeCallSite(scopePath, expr);
         const std::string_view helperName =
             semanticProgramBridgePathChoiceHelperName(*semanticProgram, entry);
         if (entry.helperNameId == InvalidSymbolId || helperName.empty()) {
           error = "missing semantic-product bridge helper name id: " +
-                  describeCallSite(scopePath, expr);
+                  siteDescription;
           return false;
+        }
+        const std::string_view chosenPath =
+            semanticProgramResolveCallTargetString(*semanticProgram, entry.chosenPathId);
+        if (entry.chosenPathId == InvalidSymbolId || chosenPath.empty()) {
+          error = "missing semantic-product bridge chosen path id: " +
+                  siteDescription;
+          return false;
+        }
+        if (entry.scopePathId != InvalidSymbolId) {
+          const std::string_view resolvedScope =
+              semanticProgramResolveCallTargetString(*semanticProgram, entry.scopePathId);
+          if (resolvedScope.empty()) {
+            error = "missing semantic-product bridge scope id: " +
+                    siteDescription;
+            return false;
+          }
+          if (resolvedScope != entry.scopePath) {
+            error = "stale semantic-product bridge scope metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
+        if (entry.collectionFamilyId != InvalidSymbolId) {
+          const std::string_view resolvedCollectionFamily =
+              semanticProgramResolveCallTargetString(*semanticProgram, entry.collectionFamilyId);
+          if (resolvedCollectionFamily.empty()) {
+            error = "missing semantic-product bridge collection family id: " +
+                    siteDescription;
+            return false;
+          }
+          if (resolvedCollectionFamily != entry.collectionFamily) {
+            error = "stale semantic-product bridge collection family metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
+        if (const auto publishedChoiceId =
+                semanticProgramLookupPublishedBridgePathChoiceId(*semanticProgram,
+                                                                 expr.semanticNodeId);
+            publishedChoiceId.has_value()) {
+          const std::string_view publishedChoice =
+              semanticProgramResolveCallTargetString(*semanticProgram, *publishedChoiceId);
+          if (publishedChoice.empty()) {
+            error = "missing semantic-product bridge chosen path id: " +
+                    siteDescription;
+            return false;
+          }
+          if (publishedChoice != chosenPath) {
+            error = "stale semantic-product bridge target metadata: " +
+                    siteDescription;
+            return false;
+          }
         }
       }
       if (!findSemanticProductBridgePathChoice(semanticProgram, expr).empty()) {
