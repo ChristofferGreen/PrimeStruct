@@ -1692,6 +1692,46 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   CHECK(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
   CHECK(error.empty());
   CHECK(diagnosticInfo.message.empty());
+
+  semanticProgram.localAutoFacts.back().initializerResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
+  semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "missing semantic-product local-auto direct-call path id: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/stale_callee");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product local-auto direct-call fact: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
+      primec::InvalidSymbolId;
+  semanticProgram.localAutoFacts.back().initializerMethodCallResolvedPathId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "missing semantic-product local-auto method-call path id: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().initializerMethodCallResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/stale_callee");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product local-auto method-call fact: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in production mode") {

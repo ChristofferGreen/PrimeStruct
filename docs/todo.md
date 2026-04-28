@@ -409,6 +409,10 @@ Task template:
     - Completed slice: semantic-product query completeness validation now
       rejects stale query facts whose resolved target path contradicts the
       published direct or method call target for the same semantic node.
+    - Completed slice: semantic-product local-auto completeness validation
+      now rejects missing or stale initializer direct-call/method-call path
+      facts that contradict the published initializer path before lowering can
+      consume the inconsistent local-auto metadata.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

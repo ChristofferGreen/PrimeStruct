@@ -557,6 +557,35 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                 describeBindingSite(scopePath, "local", expr);
         return false;
       }
+      auto validateInitializerCallPath = [&](SymbolId pathId,
+                                             const char *missingLabel,
+                                             const char *staleLabel) {
+        if (pathId == InvalidSymbolId) {
+          return true;
+        }
+        if (semanticProgramResolveCallTargetString(*semanticProgram, pathId).empty()) {
+          error = std::string("missing semantic-product local-auto ") + missingLabel +
+                  " path id: " + describeBindingSite(scopePath, "local", expr);
+          return false;
+        }
+        if (localAutoFact->initializerResolvedPathId != InvalidSymbolId &&
+            pathId != localAutoFact->initializerResolvedPathId) {
+          error = std::string("stale semantic-product local-auto ") + staleLabel +
+                  " fact: " + describeBindingSite(scopePath, "local", expr);
+          return false;
+        }
+        return true;
+      };
+      if (!validateInitializerCallPath(localAutoFact->initializerDirectCallResolvedPathId,
+                                       "direct-call",
+                                       "direct-call")) {
+        return false;
+      }
+      if (!validateInitializerCallPath(localAutoFact->initializerMethodCallResolvedPathId,
+                                       "method-call",
+                                       "method-call")) {
+        return false;
+      }
       const SemanticProgramBindingFact *bindingFact =
           findSemanticProductBindingFact(semanticIndex, expr);
       if (bindingFact != nullptr &&
