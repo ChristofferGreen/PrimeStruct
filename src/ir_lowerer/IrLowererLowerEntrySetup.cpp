@@ -35,7 +35,7 @@ struct SemanticProductCompletenessCheck {
 
 struct SemanticProductContractManifest {
   uint32_t version = SemanticProductContractVersionCurrent;
-  const std::array<SemanticProductCompletenessCheck, 10> *checks = nullptr;
+  const std::array<SemanticProductCompletenessCheck, 7> *checks = nullptr;
 };
 
 bool validateBindingFactFamily(const SemanticProductCompletenessContext &context,
@@ -58,21 +58,6 @@ bool validateCollectionSpecializationFactFamily(
 bool validateStructLayoutFactFamily(const SemanticProductCompletenessContext &context,
                                     std::string &error) {
   return validateSemanticProductStructLayoutCoverage(context.program, context.semanticProgram, error);
-}
-
-bool validateDirectCallFactFamily(const SemanticProductCompletenessContext &context,
-                                  std::string &error) {
-  return validateSemanticProductDirectCallCoverage(context.program, context.semanticProgram, error);
-}
-
-bool validateBridgePathFactFamily(const SemanticProductCompletenessContext &context,
-                                  std::string &error) {
-  return validateSemanticProductBridgePathCoverage(context.program, context.semanticProgram, error);
-}
-
-bool validateMethodCallFactFamily(const SemanticProductCompletenessContext &context,
-                                  std::string &error) {
-  return validateSemanticProductMethodCallCoverage(context.program, context.semanticProgram, error);
 }
 
 bool validateResultMetadataFactFamily(const SemanticProductCompletenessContext &context,
@@ -136,10 +121,7 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
   return true;
 }
 
-const std::array<SemanticProductCompletenessCheck, 10> kSemanticProductCompletenessMatrix = {{
-    {"routing.direct-call", "directCallTargets[].resolvedPathId", validateDirectCallFactFamily},
-    {"routing.bridge-path", "bridgePathChoices[].helperNameId", validateBridgePathFactFamily},
-    {"routing.method-call", "methodCallTargets[].resolvedPathId", validateMethodCallFactFamily},
+const std::array<SemanticProductCompletenessCheck, 7> kSemanticProductCompletenessMatrix = {{
     {"type-shape.binding", "bindingFacts[].resolvedPathId", validateBindingFactFamily},
     {"type-shape.collection-specialization",
      "collectionSpecializations[].collectionFamily",
