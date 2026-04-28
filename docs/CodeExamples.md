@@ -402,6 +402,70 @@ Why this is good:
 - The call site stays focused on the one field that changes.
 - The helper demonstrates a distinct struct-construction rule without extra syntax.
 
+### Sum Values with Exhaustive Pick
+
+When a value can be one of a small set of named alternatives, use a `[sum]`
+with payload-carrying variants and handle every variant with `pick(...)`.
+
+```prime
+[struct]
+Circle {
+  [int] radius{0}
+}
+
+[struct]
+Rectangle {
+  [int] width{0}
+  [int] height{0}
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[int]
+shape_score([Shape] shape) {
+  return(pick(shape) {
+    circle(c) {
+      c.radius * c.radius
+    }
+    rectangle(r) {
+      r.width * r.height
+    }
+  })
+}
+
+[int]
+sum_shape_scores() {
+  [Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}
+  [Shape] labeled_shape{[rectangle] Rectangle{[width] 4, [height] 5}}
+  [Shape] inferred_shape{Circle{[radius] 6}}
+
+  return(shape_score(explicit_shape) + shape_score(labeled_shape) + shape_score(inferred_shape))
+}
+```
+
+Why this is good:
+- The sum declares its closed set of alternatives in one place.
+- The three construction forms stay distinct: explicit sum constructor,
+  target-typed variant label, and unambiguous inferred payload.
+- `pick(...)` makes every handled variant visible at the call site.
+
+Inferred payload construction is only valid when exactly one variant accepts
+that payload type.
+
+```prime
+[sum]
+AmbiguousShape {
+  [Circle] primary
+  [Circle] secondary
+}
+
+[AmbiguousShape] bad{Circle{[radius] 2}} // error: ambiguous inferred sum construction
+```
+
 ### Labeled Function Arguments
 
 When a call has multiple parameters with related meanings, labeled arguments can

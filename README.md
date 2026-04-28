@@ -145,6 +145,47 @@ area_with_default_height() {
 }
 ```
 
+Algebraic sum values:
+
+```prime
+[struct]
+Circle {
+  [int] radius{0}
+}
+
+[struct]
+Rectangle {
+  [int] width{0}
+  [int] height{0}
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[int]
+shape_score([Shape] shape) {
+  return(pick(shape) {
+    circle(c) {
+      c.radius * c.radius
+    }
+    rectangle(r) {
+      r.width * r.height
+    }
+  })
+}
+
+[int]
+main() {
+  [Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}
+  [Shape] inferred_shape{Circle{[radius] 4}}
+
+  return(shape_score(explicit_shape) + shape_score(inferred_shape))
+}
+```
+
 Initializer-first local bindings:
 
 ```prime

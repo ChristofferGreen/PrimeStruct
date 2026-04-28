@@ -6,6 +6,44 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4262: Add public sum-type examples
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Add runnable algebraic sum examples to `README.md` and
+    `docs/CodeExamples.md` once `[sum]` construction and `pick` matching are
+    implemented.
+  - implementation_notes:
+    - Update `README.md`, `docs/CodeExamples.md`, and any example locks or
+      documentation tests that read snippets, especially
+      `test_compile_run_examples_docs.cpp` and
+      `test_compile_run_examples_docs_locks.cpp`.
+    - Keep examples minimal and runnable; do not add tutorial prose that is not
+      enforced by tests.
+    - Prefer a compact `Shape` example in README and a broader style example in
+      `CodeExamples.md` that includes the ambiguity rule.
+  - acceptance:
+    - `README.md` includes a compact `Shape`-style example using `[sum]`,
+      brace-only construction, inferred variant construction where
+      unambiguous, and exhaustive `pick`.
+    - `docs/CodeExamples.md` includes a style-aligned example that demonstrates
+      all three valid sum construction forms plus an exhaustive `pick`.
+    - The examples include a short ambiguity note or negative snippet for the
+      inferred payload form when two variants accept the same payload envelope.
+    - The examples are runnable or covered by the existing example/style
+      validation path.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop after the public examples are added and validated; leave
+    broader tutorial or cookbook material for a separate docs task.
+  - finished_at: 2026-04-28
+  - evidence: Added a compact `Shape` sum example to `README.md` and a broader
+    `CodeExamples.md` style example covering explicit sum construction,
+    target-typed variant labels, unambiguous inferred payload construction,
+    exhaustive `pick`, and the duplicate-payload ambiguity rule. Added
+    docs-example locks plus runnable VM and negative diagnostic snippets to
+    `test_compile_run_examples_docs.cpp`. Promoted `TODO-4263` to Ready Now
+    and deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4286: Route sum drop through active payload destroy helpers
   - owner: ai
   - created_at: 2026-04-28

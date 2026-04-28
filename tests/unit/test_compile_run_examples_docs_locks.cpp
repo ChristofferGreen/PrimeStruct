@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4262: Add public sum-type examples") !=
+                  "- TODO-4263: Design generic and unit sum variants") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4263: Design generic and unit sum variants") !=
+                  "- TODO-4264: Add stdlib-owned `Maybe<T>` sum") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,10 +1153,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4262: Add public sum-type examples") !=
+                  "- TODO-4263: Design generic and unit sum variants") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4262: Add public sum-type examples",
       "TODO-4263: Design generic and unit sum variants",
       "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
       "TODO-4265: Add stdlib-owned `Result<T, E>` sum",
@@ -1215,6 +1214,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4260") == std::string::npos);
   CHECK(todoFinished.find("TODO-4260: Add `pick` semantic validation") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4262:") == std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4262") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4262: Add public sum-type examples") !=
         std::string::npos);
   CHECK(todo.find("TODO-4284:") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4284") == std::string::npos);

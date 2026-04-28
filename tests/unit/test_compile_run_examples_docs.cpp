@@ -189,6 +189,113 @@ main() {
   }
 }
 
+TEST_CASE("sum docs snippets stay public style and executable") {
+  auto resolveRepoPath = [](const std::string &name) -> std::filesystem::path {
+    std::filesystem::path path = std::filesystem::path("..") / name;
+    if (!std::filesystem::exists(path)) {
+      path = std::filesystem::current_path() / name;
+    }
+    return path;
+  };
+
+  const std::filesystem::path readmePath = resolveRepoPath("README.md");
+  const std::filesystem::path codeExamplesPath = resolveRepoPath("docs/CodeExamples.md");
+  REQUIRE(std::filesystem::exists(readmePath));
+  REQUIRE(std::filesystem::exists(codeExamplesPath));
+
+  const std::string readme = readFile(readmePath.string());
+  const std::string codeExamples = readFile(codeExamplesPath.string());
+  const std::vector<std::string> requiredReadmeSnippets = {
+      "Algebraic sum values:",
+      "[sum]\nShape",
+      "[Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}",
+      "[Shape] inferred_shape{Circle{[radius] 4}}"};
+  for (const std::string &snippet : requiredReadmeSnippets) {
+    CAPTURE(snippet);
+    CHECK(readme.find(snippet) != std::string::npos);
+  }
+
+  const std::vector<std::string> requiredCodeExamplesSnippets = {
+      "### Sum Values with Exhaustive Pick",
+      "[Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}",
+      "[Shape] labeled_shape{[rectangle] Rectangle{[width] 4, [height] 5}}",
+      "[Shape] inferred_shape{Circle{[radius] 6}}",
+      "ambiguous inferred sum construction"};
+  for (const std::string &snippet : requiredCodeExamplesSnippets) {
+    CAPTURE(snippet);
+    CHECK(codeExamples.find(snippet) != std::string::npos);
+  }
+
+  const std::string source = R"(
+[struct]
+Circle {
+  [int] radius{0}
+}
+
+[struct]
+Rectangle {
+  [int] width{0}
+  [int] height{0}
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[int]
+shape_score([Shape] shape) {
+  return(pick(shape) {
+    circle(c) {
+      c.radius * c.radius
+    }
+    rectangle(r) {
+      r.width * r.height
+    }
+  })
+}
+
+[int]
+main() {
+  [Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}
+  [Shape] labeled_shape{[rectangle] Rectangle{[width] 4, [height] 5}}
+  [Shape] inferred_shape{Circle{[radius] 6}}
+
+  return(shape_score(explicit_shape) + shape_score(labeled_shape) + shape_score(inferred_shape))
+}
+)";
+  const std::string srcPath = writeTemp("docs_sum_public_examples.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + quoteShellArg(srcPath) + " --entry /main";
+  CHECK(runCommand(runCmd) == 65);
+
+  const std::string ambiguousSource = R"(
+[struct]
+Circle {
+  [int] radius{0}
+}
+
+[sum]
+AmbiguousShape {
+  [Circle] primary
+  [Circle] secondary
+}
+
+[int]
+main() {
+  [AmbiguousShape] bad{Circle{[radius] 2}}
+  return(0)
+}
+)";
+  const std::string ambiguousSrcPath = writeTemp("docs_sum_ambiguous_payload_negative.prime", ambiguousSource);
+  const std::string errPath =
+      (testScratchPath("") / "primec_docs_sum_ambiguous_payload_negative.err.txt").string();
+  const std::string compileCmd =
+      "./primec --emit=vm " + quoteShellArg(ambiguousSrcPath) + " --entry /main 2> " + quoteShellArg(errPath);
+  CHECK(runCommand(compileCmd) == 2);
+  CHECK(readFile(errPath).find("ambiguous inferred sum construction") != std::string::npos);
+}
+
 TEST_CASE("collection docs snippets reject mutators in value position") {
   const std::string source = R"(
 import /std/collections/*

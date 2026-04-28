@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4262: Add public sum-type examples
+- TODO-4263: Design generic and unit sum variants
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4263: Design generic and unit sum variants
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
@@ -82,7 +81,6 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -92,7 +90,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
@@ -134,7 +131,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4262 |
+| Algebraic sum types and brace-only construction | none |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -144,7 +141,7 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | none |
 | AST transform hook conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4262 |
+| CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | none |
@@ -159,7 +156,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4262 |
+| Sum-type and brace-construction conformance | none |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -277,41 +274,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4262: Add public sum-type examples
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - scope: Add runnable algebraic sum examples to `README.md` and
-    `docs/CodeExamples.md` once `[sum]` construction and `pick` matching are
-    implemented.
-  - implementation_notes:
-    - Update `README.md`, `docs/CodeExamples.md`, and any example locks or
-      documentation tests that read snippets, especially
-      `test_compile_run_examples_docs.cpp` and
-      `test_compile_run_examples_docs_locks.cpp`.
-    - Keep examples minimal and runnable; do not add tutorial prose that is not
-      enforced by tests.
-    - Prefer a compact `Shape` example in README and a broader style example in
-      `CodeExamples.md` that includes the ambiguity rule.
-  - acceptance:
-    - `README.md` includes a compact `Shape`-style example using `[sum]`,
-      brace-only construction, inferred variant construction where
-      unambiguous, and exhaustive `pick`.
-    - `docs/CodeExamples.md` includes a style-aligned example that demonstrates
-      all three valid sum construction forms plus an exhaustive `pick`.
-    - The examples include a short ambiguity note or negative snippet for the
-      inferred payload form when two variants accept the same payload envelope.
-    - The examples are runnable or covered by the existing example/style
-      validation path.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop after the public examples are added and validated; leave
-    broader tutorial or cookbook material for a separate docs task.
-
 - [ ] TODO-4263: Design generic and unit sum variants
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4262
   - scope: Extend the sum-type design for the features needed to express
     stdlib `Maybe<T>` and `Result<T, E>` as ordinary algebraic data types:
     generic sums and unit/no-payload variants.
