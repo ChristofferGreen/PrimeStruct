@@ -364,25 +364,36 @@
       function.instructions.push_back({IrOpcode::CmpEqI32, 0});
     };
 
-    auto bindPickPayload =
+    auto makePickPayloadLocalInfo =
         [&](const Definition &sumDef,
             const SumVariant &variant,
-            const Expr &binderExpr,
-            int32_t sumPtrLocal,
-            LocalMap &branchLocals) -> bool {
+            LocalInfo &payloadInfoOut) -> bool {
       const LocalInfo::ValueKind payloadKind = sumPayloadKind(variant);
       LoweredSumPayloadStorageInfo payloadStorage;
       if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadStorage)) {
         error = unsupportedSumPayloadError(sumDef, variant);
         return false;
       }
+      payloadInfoOut = {};
+      payloadInfoOut.kind = LocalInfo::Kind::Value;
+      payloadInfoOut.valueKind = payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadKind;
+      payloadInfoOut.structTypeName = payloadStorage.structPath;
+      payloadInfoOut.structSlotCount = payloadStorage.slotCount;
+      return true;
+    };
+
+    auto bindPickPayload =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            const Expr &binderExpr,
+            int32_t sumPtrLocal,
+            LocalMap &branchLocals) -> bool {
       LocalInfo payloadInfo;
-      payloadInfo.kind = LocalInfo::Kind::Value;
-      payloadInfo.valueKind = payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadKind;
-      payloadInfo.structTypeName = payloadStorage.structPath;
-      payloadInfo.structSlotCount = payloadStorage.slotCount;
+      if (!makePickPayloadLocalInfo(sumDef, variant, payloadInfo)) {
+        return false;
+      }
       payloadInfo.index = nextLocal++;
-      if (payloadStorage.isAggregate) {
+      if (!payloadInfo.structTypeName.empty()) {
         function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
         function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
         function.instructions.push_back({IrOpcode::AddI64, 0});
@@ -440,6 +451,61 @@
       return true;
     };
 
+    auto inferPickAggregateResult =
+        [&](const Expr &expr,
+            const Definition &sumDef,
+            const LocalMap &valueLocals,
+            std::string &structPathOut,
+            StructSlotLayout &layoutOut) -> bool {
+      structPathOut.clear();
+      bool sawAggregateResult = false;
+      for (const Expr &arm : expr.bodyArguments) {
+        if (!isPickArmEnvelope(arm)) {
+          error = "native backend requires pick arms as variant(payload) blocks";
+          return false;
+        }
+        const SumVariant *variant = findSumVariantByName(sumDef, arm.name);
+        if (variant == nullptr) {
+          error = "native backend unknown pick variant on " + sumDef.fullPath + ": " + arm.name;
+          return false;
+        }
+        LocalMap branchLocals = valueLocals;
+        LocalInfo payloadInfo;
+        if (!makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)) {
+          return false;
+        }
+        branchLocals.emplace(arm.args.front().name, payloadInfo);
+        const Expr *valueExpr = findPickArmValueExpr(arm);
+        if (valueExpr == nullptr) {
+          error = "native backend requires pick arms to produce a value";
+          return false;
+        }
+        const std::string branchStructPath = inferStructExprPath(*valueExpr, branchLocals);
+        if (branchStructPath.empty()) {
+          structPathOut.clear();
+          return true;
+        }
+        if (!sawAggregateResult) {
+          structPathOut = branchStructPath;
+          sawAggregateResult = true;
+          continue;
+        }
+        if (branchStructPath != structPathOut) {
+          error = "native backend requires pick aggregate arms to produce the same struct type";
+          return false;
+        }
+      }
+      if (!sawAggregateResult) {
+        structPathOut.clear();
+        return true;
+      }
+      if (!resolveStructSlotLayout(structPathOut, layoutOut)) {
+        error = "native backend could not resolve pick aggregate result layout: " + structPathOut;
+        return false;
+      }
+      return true;
+    };
+
     auto tryEmitPickExpr = [&](const Expr &expr, const LocalMap &valueLocals) -> LoweredSumPickEmitResult {
       if (!isPickCall(expr)) {
         return LoweredSumPickEmitResult::NotMatched;
@@ -461,7 +527,27 @@
         return LoweredSumPickEmitResult::Error;
       }
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sumPtrLocal)});
-      const int32_t resultLocal = allocTempLocal();
+      std::string aggregateResultStructPath;
+      StructSlotLayout aggregateResultLayout;
+      if (!inferPickAggregateResult(expr,
+                                    *sumDef,
+                                    valueLocals,
+                                    aggregateResultStructPath,
+                                    aggregateResultLayout)) {
+        return LoweredSumPickEmitResult::Error;
+      }
+      const bool emitsAggregateResult = !aggregateResultStructPath.empty();
+      int32_t resultBaseLocal = -1;
+      int32_t resultLocal = allocTempLocal();
+      if (emitsAggregateResult) {
+        resultBaseLocal = nextLocal;
+        nextLocal += aggregateResultLayout.totalSlots;
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(aggregateResultLayout.totalSlots - 1))});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultBaseLocal)});
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(resultBaseLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+      }
       std::vector<size_t> endJumps;
       for (const Expr &arm : expr.bodyArguments) {
         if (!isPickArmEnvelope(arm)) {
@@ -489,7 +575,21 @@
             !emitExpr(*valueExpr, branchLocals)) {
           return LoweredSumPickEmitResult::Error;
         }
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+        if (emitsAggregateResult) {
+          const int32_t srcPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (!emitStructCopyFromPtrs(resultLocal, srcPtrLocal, aggregateResultLayout.totalSlots)) {
+            return LoweredSumPickEmitResult::Error;
+          }
+          if (valueExpr->kind == Expr::Kind::Call) {
+            ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+                [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+                srcPtrLocal,
+                aggregateResultStructPath);
+          }
+        } else {
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
+        }
         endJumps.push_back(function.instructions.size());
         function.instructions.push_back({IrOpcode::Jump, 0});
         function.instructions[nextArmJump].imm =

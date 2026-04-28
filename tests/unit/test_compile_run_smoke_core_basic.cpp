@@ -192,6 +192,65 @@ main() {
   CHECK(runCommand(nativePath) == 43);
 }
 
+TEST_CASE("aggregate sum pick results copy active payloads before escape") {
+  const std::string source = R"(
+[struct]
+Payload {
+  [i32] value
+  [i32] bonus
+}
+
+[sum]
+Choice {
+  [Payload] left
+  [Payload] right
+}
+
+[return<int>]
+score([Payload] payload) {
+  return(plus(payload.value, payload.bonus))
+}
+
+[return<int>]
+main() {
+  [Choice] choice{[right] Payload{40i32 3i32}}
+  [Payload] picked{pick(choice) {
+    left(payload) {
+      Payload{1i32 2i32}
+    }
+    right(payload) {
+      payload
+    }
+  }}
+  [i32] fromBinding{score(picked)}
+  [i32] fromDirect{score(pick(choice) {
+    left(payload) {
+      Payload{10i32 20i32}
+    }
+    right(payload) {
+      payload
+    }
+  })}
+  return(plus(fromBinding, fromDirect))
+}
+)";
+  const std::string srcPath = writeTemp("compile_aggregate_sum_pick_escape.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_aggregate_sum_pick_escape_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_aggregate_sum_pick_escape_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 86);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 86);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 86);
+}
+
 TEST_CASE("nested sum payloads report deterministic lowerer diagnostic") {
   const std::string source = R"(
 [sum]

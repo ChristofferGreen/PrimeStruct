@@ -1138,7 +1138,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4284: Add active sum payload lifecycle hooks") !=
+                  "- TODO-4285: Route sum move/drop through active payload helpers") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4262: Add public sum-type examples") !=
@@ -1153,10 +1153,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4284: Add active sum payload lifecycle hooks") !=
+                  "- TODO-4285: Route sum move/drop through active payload helpers") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4284: Add active sum payload lifecycle hooks",
+      "TODO-4285: Route sum move/drop through active payload helpers",
       "TODO-4262: Add public sum-type examples",
       "TODO-4263: Design generic and unit sum variants",
       "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
@@ -1216,6 +1216,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4260") == std::string::npos);
   CHECK(todoFinished.find("TODO-4260: Add `pick` semantic validation") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4284:") == std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4284") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4284: Stabilize aggregate sum pick result copies") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4227") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4215") == std::string::npos);

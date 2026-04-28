@@ -3360,8 +3360,10 @@ bad_use_after_take() {
   native, and exe lowering currently execute scalar and struct-payload sums with an inline aggregate convention: slot 0
   stores the payload-slot header, slot 1 stores the active variant tag, and slot 2 starts the active payload storage.
   Scalar payloads occupy one slot; struct payloads occupy their ordinary struct slot layout inline and `pick` arms bind a
-  branch-local view of the selected payload only. Nested sum payloads and explicit active-payload lifecycle hooks for
-  move/drop remain follow-ups before public examples should rely on ownership-heavy struct-payload sums.
+  branch-local view of the selected payload only. Aggregate-valued `pick(...)` expressions copy the selected active
+  payload into stable result storage before the value can be bound, returned, or passed to a helper, so inactive payload
+  storage stays unobserved by the escape path. Nested sum payloads and explicit active-payload `Move`/`Destroy` helper
+  routing remain follow-ups before public examples should rely on ownership-heavy struct-payload sums.
 - **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on
   executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries.
   Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.

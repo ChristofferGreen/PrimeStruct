@@ -491,6 +491,88 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
         return scopedCallPath == "/" + helperText ||
                scopedCallPath == "/std/collections/internal_soa_storage/" + helperText;
       };
+      if (!exprIn.isMethodCall && !exprIn.isFieldAccess &&
+          isSimpleCallName(exprIn, "pick") && exprIn.args.size() == 1 &&
+          (exprIn.hasBodyArguments || !exprIn.bodyArguments.empty())) {
+        const std::string sumStructPath = inferStructExprPath(exprIn.args.front(), localsInExpr);
+        auto sumIt = defMap.find(sumStructPath);
+        if (sumIt == defMap.end() || sumIt->second == nullptr ||
+            !definitionHasTransform(*sumIt->second, "sum")) {
+          return "";
+        }
+        const Definition &sumDef = *sumIt->second;
+        std::string resultStructPath;
+        bool sawAggregateResult = false;
+        for (const Expr &arm : exprIn.bodyArguments) {
+          const bool hasNamedArgs = std::any_of(
+              arm.argNames.begin(), arm.argNames.end(), [](const auto &argName) { return argName.has_value(); });
+          if (arm.kind != Expr::Kind::Call || arm.isBinding ||
+              arm.isMethodCall || arm.isFieldAccess || !arm.hasBodyArguments ||
+              arm.templateArgs.size() != 0 || hasNamedArgs || arm.args.size() != 1 ||
+              arm.args.front().kind != Expr::Kind::Name) {
+            return "";
+          }
+          const SumVariant *variant = nullptr;
+          for (const SumVariant &candidate : sumDef.sumVariants) {
+            if (candidate.name == arm.name) {
+              variant = &candidate;
+              break;
+            }
+          }
+          if (variant == nullptr) {
+            return "";
+          }
+          std::string payloadType = !variant->payloadTypeText.empty()
+                                        ? trimTemplateTypeText(variant->payloadTypeText)
+                                        : trimTemplateTypeText(variant->payloadType);
+          if (variant->payloadTypeText.empty() && !variant->payloadTemplateArgs.empty()) {
+            payloadType += "<" + joinTemplateArgsText(variant->payloadTemplateArgs) + ">";
+          }
+          std::string payloadStructPath;
+          resolveStructTypeName(payloadType, sumDef.namespacePrefix, payloadStructPath);
+          LocalMap branchLocals = localsInExpr;
+          LocalInfo payloadInfo;
+          payloadInfo.kind = LocalInfo::Kind::Value;
+          payloadInfo.valueKind =
+              payloadStructPath.empty() ? LocalInfo::ValueKind::Unknown : LocalInfo::ValueKind::Int64;
+          payloadInfo.structTypeName = payloadStructPath;
+          branchLocals.emplace(arm.args.front().name, payloadInfo);
+          const Expr *valueExpr = nullptr;
+          bool sawReturn = false;
+          for (const Expr &bodyExpr : arm.bodyArguments) {
+            if (bodyExpr.isBinding) {
+              continue;
+            }
+            if (isSimpleCallName(bodyExpr, "return")) {
+              if (bodyExpr.args.size() != 1) {
+                return "";
+              }
+              valueExpr = &bodyExpr.args.front();
+              sawReturn = true;
+              continue;
+            }
+            if (!sawReturn) {
+              valueExpr = &bodyExpr;
+            }
+          }
+          if (valueExpr == nullptr) {
+            return "";
+          }
+          const std::string branchStructPath = inferStructExprPath(*valueExpr, branchLocals);
+          if (branchStructPath.empty()) {
+            return "";
+          }
+          if (!sawAggregateResult) {
+            resultStructPath = branchStructPath;
+            sawAggregateResult = true;
+            continue;
+          }
+          if (branchStructPath != resultStructPath) {
+            return "";
+          }
+        }
+        return sawAggregateResult ? resultStructPath : std::string{};
+      }
       if (!exprIn.isMethodCall && exprIn.args.empty() && exprIn.templateArgs.empty() &&
           exprIn.bodyArguments.empty()) {
         Expr syntheticNameExpr;

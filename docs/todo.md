@@ -67,7 +67,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4284: Add active sum payload lifecycle hooks
+- TODO-4285: Route sum move/drop through active payload helpers
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -83,7 +83,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4284 ->
+- Deferred algebraic types and brace-only construction: TODO-4285 ->
   TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
@@ -94,7 +94,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4284: Add active sum payload lifecycle hooks
+- TODO-4285: Route sum move/drop through active payload helpers
 - TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
@@ -137,7 +137,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4284, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4285, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -162,7 +162,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4284, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4285, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -280,14 +280,14 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4284: Add active sum payload lifecycle hooks
+- [ ] TODO-4285: Route sum move/drop through active payload helpers
   - owner: ai
   - created_at: 2026-04-28
   - phase: Deferred algebraic types and brace-only construction
-  - scope: Complete sum payload ownership by routing move, borrow, and drop
-    behavior through the active payload only.
+  - scope: Complete the remaining sum payload ownership work by routing
+    explicit move/drop helper behavior through the active payload only.
   - implementation_notes:
-    - Start from `TODO-4261` and `TODO-4283`: slot 0 stores the aggregate
+    - Start from `TODO-4261`, `TODO-4283`, and `TODO-4284`: slot 0 stores the aggregate
       header, slot 1 stores the active tag, and slot 2 starts the active payload
       storage. Scalar payloads occupy one slot; aggregate payloads occupy their
       struct slot layout inline.
@@ -297,23 +297,23 @@ Task template:
     - Keep nested sum payloads unsupported until recursive sum layout is
       designed; they currently produce deterministic lowerer diagnostics.
   - acceptance:
-    - Move, borrow, and drop behavior only applies to the active payload and is
+    - Explicit move/drop behavior only applies to the active payload and is
       covered by focused lowerer plus compile-run tests.
-    - Taking, returning, or passing an aggregate payload out of a `pick` arm
-      cannot leave double-destroyed temporary storage.
+    - Active aggregate payload helper calls cannot leave double-destroyed
+      temporary storage.
     - Inactive aggregate payload storage remains unobservable in IR and runtime
       tests.
-    - `docs/PrimeStruct.md` records the active-payload lifecycle rule and the
+    - `docs/PrimeStruct.md` records the active-payload helper lifecycle rule and the
       nested-sum deferral.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once active-payload lifecycle behavior is implemented and
-    covered, without pulling generic/unit sums into the same change.
+  - stop_rule: Stop once active-payload move/drop helper behavior is implemented
+    and covered, without pulling generic/unit sums into the same change.
 
 - [ ] TODO-4262: Add public sum-type examples
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4284
+  - depends_on: TODO-4285
   - scope: Add runnable algebraic sum examples to `README.md` and
     `docs/CodeExamples.md` once `[sum]` construction and `pick` matching are
     implemented.

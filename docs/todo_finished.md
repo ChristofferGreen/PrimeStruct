@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4284: Stabilize aggregate sum pick result copies
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Complete the active-payload escape slice from the original lifecycle
+    task by making aggregate-valued `pick(...)` expressions copy only the
+    selected payload into stable result storage before the value is bound,
+    returned, or passed to a helper.
+  - implementation_notes:
+    - Start from `TODO-4261` and `TODO-4283`: slot 0 stores the aggregate
+      header, slot 1 stores the active tag, and slot 2 starts the active payload
+      storage. Scalar payloads occupy one slot; aggregate payloads occupy their
+      struct slot layout inline.
+    - Keep inactive payload storage unobserved when an aggregate `pick(...)`
+      result escapes the selected arm.
+    - Split explicit `Move`/`Destroy` helper routing to `TODO-4285`.
+  - acceptance:
+    - Taking, returning, or passing an aggregate payload out of a `pick` arm
+      copies only the active payload into stable result storage.
+    - Inactive aggregate payload storage remains unobservable in IR and runtime
+      tests for the escape path.
+    - `docs/PrimeStruct.md` records the active-payload escape rule and the
+      remaining nested-sum plus helper-lifecycle deferrals.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once aggregate pick result escapes are stabilized and the
+    remaining explicit move/drop helper work is split into a follow-up.
+  - finished_at: 2026-04-28
+  - evidence: Aggregate-valued `pick(...)` expressions now infer a common
+    struct result across arms, allocate stable result storage, and copy the
+    selected active payload into that storage before the value escapes. Added
+    compile-run coverage for binding and direct helper-call escapes from an
+    aggregate `pick(...)` result. Promoted `TODO-4285` to Ready Now for the
+    remaining explicit active-payload `Move`/`Destroy` helper routing and
+    deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4257: Add sum declaration metadata and layout
   - owner: ai
   - created_at: 2026-04-27
