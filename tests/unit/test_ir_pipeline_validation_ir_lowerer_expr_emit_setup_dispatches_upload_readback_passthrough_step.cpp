@@ -569,8 +569,10 @@ TEST_CASE("emitter helpers expose source Result cpp bridge types") {
         "ps_result_status_is_error(result)");
   CHECK(primec::emitter::sourceResultStatusErrorPayloadExpr("result") ==
         "ps_result_status_error_payload(result)");
-  CHECK(primec::emitter::sourceResultPackExpr("err", "value") ==
-        "ps_result_pack(err, value)");
+  CHECK(primec::emitter::sourceResultValueOkExpr("value") ==
+        "ps_result_value_ok(value)");
+  CHECK(primec::emitter::sourceResultValueErrorExpr("err") ==
+        "ps_result_value_error(err)");
   CHECK(primec::emitter::sourceResultIsErrorExpr("result") ==
         "ps_result_is_error(result)");
   CHECK(primec::emitter::sourceResultErrorPayloadExpr("result") ==

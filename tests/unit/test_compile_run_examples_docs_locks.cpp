@@ -2258,10 +2258,12 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(prelude.find("operator uint64_t()") == std::string::npos);
   CHECK(prelude.find("ps_legacy_result_value(uint64_t raw)") == std::string::npos);
   CHECK(prelude.find("using ps_legacy_result_value = uint64_t;") == std::string::npos);
-  CHECK(prelude.find("ps_result_pack") != std::string::npos);
+  CHECK(prelude.find("ps_result_value_ok") != std::string::npos);
+  CHECK(prelude.find("ps_result_value_error") != std::string::npos);
   CHECK(prelude.find("ps_result_is_error") != std::string::npos);
   CHECK(prelude.find("ps_result_error_payload") != std::string::npos);
   CHECK(prelude.find("ps_result_payload") != std::string::npos);
+  CHECK(prelude.find("ps_result_pack") == std::string::npos);
   CHECK(prelude.find("static inline uint64_t ps_legacy_result_pack") == std::string::npos);
   CHECK(prelude.find("static inline uint64_t ps_file_open_read") == std::string::npos);
   CHECK(prelude.find("ps_legacy_result_pack") == std::string::npos);
@@ -2271,6 +2273,9 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
         std::string::npos);
   CHECK(resultCalls.find("static_cast<\" + sourceResultValueCppType + \">(0)") ==
         std::string::npos);
+  CHECK(resultCalls.find("sourceResultValueOkExpr(") != std::string::npos);
+  CHECK(resultCalls.find("sourceResultValueErrorExpr(") != std::string::npos);
+  CHECK(resultCalls.find("sourceResultPackExpr") == std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusOkExpr()") != std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusIsErrorExpr(argText)") != std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusErrorPayloadExpr(argText)") !=

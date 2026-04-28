@@ -35,8 +35,8 @@ std::string sourceResultStatusErrorExpr(const std::string &errorExpr);
 std::string sourceResultStatusFromErrorExpr(const std::string &errorExpr);
 std::string sourceResultStatusIsErrorExpr(const std::string &resultExpr);
 std::string sourceResultStatusErrorPayloadExpr(const std::string &resultExpr);
-std::string sourceResultPackExpr(const std::string &errorExpr,
-                                 const std::string &valueExpr);
+std::string sourceResultValueOkExpr(const std::string &valueExpr);
+std::string sourceResultValueErrorExpr(const std::string &errorExpr);
 std::string sourceResultIsErrorExpr(const std::string &resultExpr);
 std::string sourceResultErrorPayloadExpr(const std::string &resultExpr);
 std::string sourceResultValuePayloadExpr(const std::string &resultExpr);

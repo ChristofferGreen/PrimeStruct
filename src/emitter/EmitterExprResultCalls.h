@@ -10,7 +10,7 @@
           emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                    resultInfos, returnStructs, allowMathBare) +
           ")";
-      return sourceResultPackExpr("0u", valueExpr);
+      return sourceResultValueOkExpr(valueExpr);
     }
     return "0";
   }
@@ -157,11 +157,11 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map") {
     if (expr.args.size() != 3) {
-      return sourceResultPackExpr("0u", "0u");
+      return sourceResultValueOkExpr("0u");
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return sourceResultPackExpr("0u", "0u");
+      return sourceResultValueOkExpr("0u");
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -178,23 +178,23 @@
     out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
     out << " if (" << sourceResultIsErrorExpr("ps_result") << ") {";
-    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_result"), "0u") << ";";
+    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_result")) << ";";
     out << " }";
     out << " auto ps_value = static_cast<" << valueType << ">("
         << sourceResultValuePayloadExpr("ps_result") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_value);";
-    out << " return " << sourceResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
+    out << " return " << sourceResultValueOkExpr("static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
     return out.str();
   }
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "and_then") {
     if (expr.args.size() != 3) {
-      return sourceResultPackExpr("0u", "0u");
+      return sourceResultValueOkExpr("0u");
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return sourceResultPackExpr("0u", "0u");
+      return sourceResultValueOkExpr("0u");
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -211,7 +211,7 @@
     out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
     out << " if (" << sourceResultIsErrorExpr("ps_result") << ") {";
-    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_result"), "0u") << ";";
+    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_result")) << ";";
     out << " }";
     out << " auto ps_value = static_cast<" << valueType << ">("
         << sourceResultValuePayloadExpr("ps_result") << ");";
@@ -223,13 +223,13 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map2") {
     if (expr.args.size() != 4) {
-      return sourceResultPackExpr("0u", "0u");
+      return sourceResultValueOkExpr("0u");
     }
     ResultInfo leftInfo;
     ResultInfo rightInfo;
     if (!resolveResultExprInfo(expr.args[1], leftInfo) || !leftInfo.isResult || !leftInfo.hasValue ||
         !resolveResultExprInfo(expr.args[2], rightInfo) || !rightInfo.isResult || !rightInfo.hasValue) {
-      return sourceResultPackExpr("0u", "0u");
+      return sourceResultValueOkExpr("0u");
     }
     std::string leftType =
         bindingTypeToCpp(leftInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -254,18 +254,18 @@
     out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_left = " << leftExpr << ";";
     out << " if (" << sourceResultIsErrorExpr("ps_left") << ") {";
-    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_left"), "0u") << ";";
+    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_left")) << ";";
     out << " }";
     out << " auto ps_right = " << rightExpr << ";";
     out << " if (" << sourceResultIsErrorExpr("ps_right") << ") {";
-    out << " return " << sourceResultPackExpr(sourceResultErrorPayloadExpr("ps_right"), "0u") << ";";
+    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_right")) << ";";
     out << " }";
     out << " auto ps_left_value = static_cast<" << leftType << ">("
         << sourceResultValuePayloadExpr("ps_left") << ");";
     out << " auto ps_right_value = static_cast<" << rightType << ">("
         << sourceResultValuePayloadExpr("ps_right") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_left_value, ps_right_value);";
-    out << " return " << sourceResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
+    out << " return " << sourceResultValueOkExpr("static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
     return out.str();
   }

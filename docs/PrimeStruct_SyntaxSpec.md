@@ -801,13 +801,13 @@ paths, and dereferenced local
 `Pointer<Result<E>>` status-only imported sums. The legacy source C++ emitter keeps using a compatibility Result
 bridge, but it now preserves nested `Result<T...>` types under `Reference` / `Pointer` and recognizes dereferenced
 borrowed Result operands for `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its source C++ Result
-storage-width decisions and pack/unpack expression emission are quarantined behind named emitter helpers, and
+storage-width decisions and construction/accessor expression emission are quarantined behind named emitter helpers, and
 value-carrying Result storage emits the tagged `ps_result_value` bridge type instead of raw `uint64_t`
 return/binding types or legacy `ps_legacy_result_*` helper names. The bridge uses tag-based error checks and has no
-raw packed-integer construction or conversion compatibility. Status-only source C++ Result storage emits the tagged
-`ps_result_status` bridge type instead of raw `uint32_t` return/binding types and wraps raw low-level file helper status
-codes at the source Result boundary; broader result shapes and full bridge retargeting remain compatibility work until
-their dedicated migration tasks land.
+raw packed-integer construction, conversion, or `ps_result_pack(...)` compatibility. Status-only source C++ Result
+storage emits the tagged `ps_result_status` bridge type instead of raw `uint32_t` return/binding types and wraps raw
+low-level file helper status codes at the source Result boundary; broader result shapes and full bridge retargeting
+remain compatibility work until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1426,12 +1426,13 @@ Draft constraints:
   when used as a `pick` target. Imported status-only `Result<Error>` is pickable, and IR-backed `try(...)`, postfix
   `?`, `Result.error(...)`, and `Result.why(...)` consume the supported local/direct/dereferenced status-only sum
   sources. The legacy source C++ emitter mirrors borrowed/pointer helper operand inference while still using a
-  compatibility bridge, with source C++ Result storage-width decisions and pack/unpack expression emission quarantined
+  compatibility bridge, with source C++ Result storage-width decisions and construction/accessor expression emission
+  quarantined
   behind named emitter helpers. Value-carrying Result storage is named through the tagged `ps_result_value` bridge type,
-  uses tag-based error checks, and has no raw packed-integer construction or conversion compatibility. Status-only
-  source C++ Result storage is named through the tagged `ps_result_status` bridge type, uses tag-based error checks,
-  and wraps raw low-level file helper status codes at the source Result boundary. Unsupported broader result shapes and
-  full bridge retargeting remain migration work.
+  uses tag-based error checks, and has no raw packed-integer construction, conversion, or `ps_result_pack(...)`
+  compatibility. Status-only source C++ Result storage is named through the tagged `ps_result_status` bridge type, uses
+  tag-based error checks, and wraps raw low-level file helper status codes at the source Result boundary. Unsupported
+  broader result shapes and full bridge retargeting remain migration work.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

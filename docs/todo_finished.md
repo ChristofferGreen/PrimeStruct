@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4324: Split source Result value construction
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that replaces the
+    remaining generic value-result pack construction helper with explicit
+    ok/error construction helpers.
+  - implementation_notes:
+    - Replace `ps_result_pack(err, value)` with generated
+      `ps_result_value_ok(value)` and `ps_result_value_error(err)` helpers.
+    - Route source C++ `Result.ok(value)`, map/and_then/map2 propagation,
+      `on_error` unwind rebuilding, and file-open result construction through
+      the explicit value-result helpers.
+    - Leave broader source C++ bridge retargeting to the next TODO-4266
+      slice.
+  - acceptance:
+    - Source C++ value-result helper emission exposes
+      `sourceResultValueOkExpr(...)` and `sourceResultValueErrorExpr(...)`.
+    - The generated prelude emits `ps_result_value_ok` and
+      `ps_result_value_error` instead of `ps_result_pack`.
+    - Result combinator and file-open source C++ paths no longer emit or call
+      `ps_result_pack(...)`.
+    - Source-lock coverage rejects the removed pack helper spelling.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once generated value-carrying Result construction has
+    explicit ok/error helper names and no source C++ generation path references
+    `ps_result_pack(...)`.
+  - finished_at: 2026-04-28
+  - evidence: Replaced source C++ value-result pack construction with
+    explicit ok/error helper expressions, retargeted Result.ok,
+    map/and_then/map2 error propagation, on_error unwinding, and file-open
+    bridge construction, updated source-lock coverage, and documented the
+    remaining broader bridge retargeting work. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4323: Tag source C++ Result status
   - owner: ai
   - created_at: 2026-04-28

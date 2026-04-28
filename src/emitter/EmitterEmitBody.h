@@ -528,7 +528,7 @@
       }
       out << "  } catch (const ps_result_unwind &ps_unwind) {\n";
       if (resultHasValue) {
-        out << "    return " << sourceResultPackExpr("ps_unwind.error", "0u") << ";\n";
+        out << "    return " << sourceResultValueErrorExpr("ps_unwind.error") << ";\n";
       } else {
         out << "    return " << sourceResultStatusErrorExpr("ps_unwind.error") << ";\n";
       }

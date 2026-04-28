@@ -224,9 +224,12 @@ std::string sourceResultStatusErrorPayloadExpr(const std::string &resultExpr) {
   return "ps_result_status_error_payload(" + resultExpr + ")";
 }
 
-std::string sourceResultPackExpr(const std::string &errorExpr,
-                                 const std::string &valueExpr) {
-  return "ps_result_pack(" + errorExpr + ", " + valueExpr + ")";
+std::string sourceResultValueOkExpr(const std::string &valueExpr) {
+  return "ps_result_value_ok(" + valueExpr + ")";
+}
+
+std::string sourceResultValueErrorExpr(const std::string &errorExpr) {
+  return "ps_result_value_error(" + errorExpr + ")";
 }
 
 std::string sourceResultIsErrorExpr(const std::string &resultExpr) {
