@@ -23,14 +23,19 @@ forward([args<Buffer<i32>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 forward_mixed([args<Buffer<i32>>] values) {
-  return(score_buffers(Buffer<i32>(1i32), [spread] values))
+  return(score_buffers(/std/gfx/Buffer/allocate<i32>(1i32), [spread] values))
 }
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  return(plus(score_buffers(Buffer<i32>(3i32), Buffer<i32>(1i32), Buffer<i32>(2i32)),
-              plus(forward(Buffer<i32>(4i32), Buffer<i32>(1i32), Buffer<i32>(5i32)),
-                   forward_mixed(Buffer<i32>(6i32), Buffer<i32>(2i32)))))
+  return(plus(score_buffers(/std/gfx/Buffer/allocate<i32>(3i32),
+                            /std/gfx/Buffer/allocate<i32>(1i32),
+                            /std/gfx/Buffer/allocate<i32>(2i32)),
+              plus(forward(/std/gfx/Buffer/allocate<i32>(4i32),
+                           /std/gfx/Buffer/allocate<i32>(1i32),
+                           /std/gfx/Buffer/allocate<i32>(5i32)),
+                   forward_mixed(/std/gfx/Buffer/allocate<i32>(6i32),
+                                 /std/gfx/Buffer/allocate<i32>(2i32)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_native_variadic_args_buffer_count.prime", source);
@@ -60,20 +65,20 @@ forward_reference([args<Reference<Buffer<i32>>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 forward_reference_mixed([args<Reference<Buffer<i32>>>] values) {
-  [Buffer<i32>] extra{Buffer<i32>(10i32)}
+  [Buffer<i32>] extra{/std/gfx/Buffer/allocate<i32>(10i32)}
   return(score_buffers_reference(location(extra), [spread] values))
 }
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  [Buffer<i32>] d0Value{Buffer<i32>(3i32)}
-  [Buffer<i32>] d1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] d2Value{Buffer<i32>(2i32)}
-  [Buffer<i32>] f0Value{Buffer<i32>(4i32)}
-  [Buffer<i32>] f1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] f2Value{Buffer<i32>(5i32)}
-  [Buffer<i32>] m0Value{Buffer<i32>(6i32)}
-  [Buffer<i32>] m1Value{Buffer<i32>(2i32)}
+  [Buffer<i32>] d0Value{/std/gfx/Buffer/allocate<i32>(3i32)}
+  [Buffer<i32>] d1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] d2Value{/std/gfx/Buffer/allocate<i32>(2i32)}
+  [Buffer<i32>] f0Value{/std/gfx/Buffer/allocate<i32>(4i32)}
+  [Buffer<i32>] f1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] f2Value{/std/gfx/Buffer/allocate<i32>(5i32)}
+  [Buffer<i32>] m0Value{/std/gfx/Buffer/allocate<i32>(6i32)}
+  [Buffer<i32>] m1Value{/std/gfx/Buffer/allocate<i32>(2i32)}
   [Reference<Buffer<i32>>] d0{location(d0Value)}
   [Reference<Buffer<i32>>] d1{location(d1Value)}
   [Reference<Buffer<i32>>] d2{location(d2Value)}
@@ -117,20 +122,20 @@ forward_pointer([args<Pointer<Buffer<i32>>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 forward_pointer_mixed([args<Pointer<Buffer<i32>>>] values) {
-  [Buffer<i32>] extra{Buffer<i32>(10i32)}
+  [Buffer<i32>] extra{/std/gfx/Buffer/allocate<i32>(10i32)}
   return(score_buffers_pointer(location(extra), [spread] values))
 }
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  [Buffer<i32>] d0Value{Buffer<i32>(3i32)}
-  [Buffer<i32>] d1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] d2Value{Buffer<i32>(2i32)}
-  [Buffer<i32>] f0Value{Buffer<i32>(4i32)}
-  [Buffer<i32>] f1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] f2Value{Buffer<i32>(5i32)}
-  [Buffer<i32>] m0Value{Buffer<i32>(6i32)}
-  [Buffer<i32>] m1Value{Buffer<i32>(2i32)}
+  [Buffer<i32>] d0Value{/std/gfx/Buffer/allocate<i32>(3i32)}
+  [Buffer<i32>] d1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] d2Value{/std/gfx/Buffer/allocate<i32>(2i32)}
+  [Buffer<i32>] f0Value{/std/gfx/Buffer/allocate<i32>(4i32)}
+  [Buffer<i32>] f1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] f2Value{/std/gfx/Buffer/allocate<i32>(5i32)}
+  [Buffer<i32>] m0Value{/std/gfx/Buffer/allocate<i32>(6i32)}
+  [Buffer<i32>] m1Value{/std/gfx/Buffer/allocate<i32>(2i32)}
   [Pointer<Buffer<i32>>] d0{location(d0Value)}
   [Pointer<Buffer<i32>>] d1{location(d1Value)}
   [Pointer<Buffer<i32>>] d2{location(d2Value)}
@@ -492,8 +497,8 @@ import /std/gfx/experimental/*
 
 [return<int>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
-  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 4i32}}
+  [Buffer<i32>] emptyBuffer{[token] 0i32, [elementCount] 0i32}
+  [Buffer<i32>] fullBuffer{[token] 7i32, [elementCount] 4i32}
   if(not(emptyBuffer.empty())) {
     return(90i32)
   }
@@ -524,8 +529,8 @@ import /std/gfx/*
 
 [return<int>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
-  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 5i32}}
+  [Buffer<i32>] emptyBuffer{[token] 0i32, [elementCount] 0i32}
+  [Buffer<i32>] fullBuffer{[token] 7i32, [elementCount] 5i32}
   if(not(emptyBuffer.empty())) {
     return(90i32)
   }
@@ -632,40 +637,42 @@ main() {
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("native uses stdlib experimental Buffer constructor entry point") {
+TEST_CASE("native uses stdlib experimental Buffer allocation readback path") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
 [effects(gpu_dispatch), return<int>]
 main() {
-  [Buffer<i32>] data{Buffer<i32>(3i32)}
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
   return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_experimental_gfx_buffer_constructor.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_native_experimental_gfx_buffer_allocation_readback.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_experimental_gfx_buffer_constructor").string();
+      (testScratchPath("") / "primec_native_experimental_gfx_buffer_allocation_readback").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);
   CHECK(runCommand(exePath) == 6);
 }
 
-TEST_CASE("native uses canonical stdlib Buffer constructor entry point") {
+TEST_CASE("native uses canonical stdlib Buffer allocation readback path") {
   const std::string source = R"(
 import /std/gfx/*
 
 [effects(gpu_dispatch), return<int>]
 main() {
-  [Buffer<i32>] data{Buffer<i32>(3i32)}
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
   return(plus(/std/gfx/Buffer/count(data), out.count()))
 }
 )";
-  const std::string srcPath = writeTemp("compile_native_canonical_gfx_buffer_constructor.prime", source);
+  const std::string srcPath =
+      writeTemp("compile_native_canonical_gfx_buffer_allocation_readback.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_canonical_gfx_buffer_constructor").string();
+      (testScratchPath("") / "primec_native_canonical_gfx_buffer_allocation_readback").string();
 
   const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
   CHECK(runCommand(compileCmd) == 0);

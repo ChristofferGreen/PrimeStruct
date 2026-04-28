@@ -52,7 +52,7 @@ import /std/gfx/*
 main() {
   [array<i32>] values{array<i32>(4i32)}
   [Buffer<i32>] input{/std/gfx/Buffer/upload(values)}
-  [Buffer<i32>] output{Buffer<i32>(2i32)}
+  [Buffer<i32>] output{/std/gfx/Buffer/allocate<i32>(2i32)}
   /std/gpu/dispatch(/copy_values, 1i32, 1i32, 1i32, input, output)
   [array<i32>] result{output.readback()}
   return(plus(result[0i32], result[1i32]))
@@ -80,7 +80,7 @@ import /std/gfx/experimental/*
 main() {
   [array<i32>] values{array<i32>(5i32)}
   [Buffer<i32>] input{/std/gfx/experimental/Buffer/upload(values)}
-  [Buffer<i32>] output{Buffer<i32>(2i32)}
+  [Buffer<i32>] output{/std/gfx/experimental/Buffer/allocate<i32>(2i32)}
   /std/gpu/dispatch(/copy_values, 1i32, 1i32, 1i32, input, output)
   [array<i32>] result{output.readback()}
   return(plus(result[0i32], result[1i32]))

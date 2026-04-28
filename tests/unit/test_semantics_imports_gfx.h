@@ -8,8 +8,8 @@ main() {
   [Window] window{Window([token] 1i32, [width] 1280i32, [height] 720i32)}
   [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
   [PresentMode] presentMode{PresentMode.Fifo}
-  [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
-  [Texture2D<i32>] texture{Texture2D<i32>{[token] 3i32, [width] 64i32, [height] 32i32}}
+  [Buffer<i32>] buffer{[token] 2i32, [elementCount] 4i32}
+  [Texture2D<i32>] texture{[token] 3i32, [width] 64i32, [height] 32i32}
   [VertexColored] vertex{
     VertexColored{
       [px] 1.0f32,
@@ -40,8 +40,8 @@ main() {
   [Window] window{Window([token] 1i32, [width] 1280i32, [height] 720i32)}
   [ColorFormat] colorFormat{ColorFormat.Bgra8Unorm}
   [PresentMode] presentMode{PresentMode.Fifo}
-  [Buffer<i32>] buffer{Buffer<i32>([token] 2i32, [elementCount] 4i32)}
-  [Texture2D<i32>] texture{Texture2D<i32>{[token] 3i32, [width] 64i32, [height] 32i32}}
+  [Buffer<i32>] buffer{[token] 2i32, [elementCount] 4i32}
+  [Texture2D<i32>] texture{[token] 3i32, [width] 64i32, [height] 32i32}
   [VertexColored] vertex{
     VertexColored{
       [px] 1.0f32,
@@ -482,13 +482,13 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("experimental gfx Buffer constructor entry point validates through builtin rewrite") {
+TEST_CASE("experimental gfx Buffer allocation helper validates through builtin rewrite") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
 [effects(gpu_dispatch), return<int>]
 main() {
-  [Buffer<i32>] data{Buffer<i32>(2i32)}
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(2i32)}
   [array<i32>] out{data.readback()}
   return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
 }
@@ -498,13 +498,13 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("canonical gfx Buffer constructor entry point validates through builtin rewrite") {
+TEST_CASE("canonical gfx Buffer allocation helper validates through builtin rewrite") {
   const std::string source = R"(
 import /std/gfx/*
 
 [effects(gpu_dispatch), return<int>]
 main() {
-  [Buffer<i32>] data{Buffer<i32>(2i32)}
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(2i32)}
   [array<i32>] out{data.readback()}
   return(plus(/std/gfx/Buffer/count(data), out.count()))
 }

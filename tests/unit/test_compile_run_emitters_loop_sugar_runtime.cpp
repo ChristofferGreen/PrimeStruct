@@ -637,14 +637,19 @@ forward([args<Buffer<i32>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 forward_mixed([args<Buffer<i32>>] values) {
-  return(score_buffers(Buffer<i32>(1i32), [spread] values))
+  return(score_buffers(/std/gfx/Buffer/allocate<i32>(1i32), [spread] values))
 }
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  return(plus(score_buffers(Buffer<i32>(3i32), Buffer<i32>(1i32), Buffer<i32>(2i32)),
-              plus(forward(Buffer<i32>(4i32), Buffer<i32>(1i32), Buffer<i32>(5i32)),
-                   forward_mixed(Buffer<i32>(6i32), Buffer<i32>(2i32)))))
+  return(plus(score_buffers(/std/gfx/Buffer/allocate<i32>(3i32),
+                            /std/gfx/Buffer/allocate<i32>(1i32),
+                            /std/gfx/Buffer/allocate<i32>(2i32)),
+              plus(forward(/std/gfx/Buffer/allocate<i32>(4i32),
+                           /std/gfx/Buffer/allocate<i32>(1i32),
+                           /std/gfx/Buffer/allocate<i32>(5i32)),
+                   forward_mixed(/std/gfx/Buffer/allocate<i32>(6i32),
+                                 /std/gfx/Buffer/allocate<i32>(2i32)))))
 }
 )";
   const std::string srcPath = writeTemp("compile_cpp_variadic_args_buffer_count.prime", source);

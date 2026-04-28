@@ -232,8 +232,8 @@ import /std/gfx/experimental/*
 
 [return<int>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
-  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 4i32}}
+  [Buffer<i32>] emptyBuffer{[token] 0i32, [elementCount] 0i32}
+  [Buffer<i32>] fullBuffer{[token] 7i32, [elementCount] 4i32}
   if(not(emptyBuffer.empty())) {
     return(90i32)
   }
@@ -260,8 +260,8 @@ import /std/gfx/*
 
 [return<int>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
-  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 5i32}}
+  [Buffer<i32>] emptyBuffer{[token] 0i32, [elementCount] 0i32}
+  [Buffer<i32>] fullBuffer{[token] 7i32, [elementCount] 5i32}
   if(not(emptyBuffer.empty())) {
     return(90i32)
   }
@@ -348,34 +348,34 @@ main() {
   CHECK(runCommand(runCmd) == 6);
 }
 
-TEST_CASE("vm uses stdlib experimental Buffer constructor entry point") {
+TEST_CASE("vm uses stdlib experimental Buffer allocation readback path") {
   const std::string source = R"(
 import /std/gfx/experimental/*
 
 [effects(gpu_dispatch), return<int>]
 main() {
-  [Buffer<i32>] data{Buffer<i32>(3i32)}
+  [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
   return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
 }
 )";
-  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_constructor.prime", source);
+  const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_allocation_readback.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 6);
 }
 
-TEST_CASE("vm uses canonical stdlib Buffer constructor entry point") {
+TEST_CASE("vm uses canonical stdlib Buffer allocation readback path") {
   const std::string source = R"(
 import /std/gfx/*
 
 [effects(gpu_dispatch), return<int>]
 main() {
-  [Buffer<i32>] data{Buffer<i32>(3i32)}
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
   return(plus(/std/gfx/Buffer/count(data), out.count()))
 }
 )";
-  const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_constructor.prime", source);
+  const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_allocation_readback.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 6);
 }

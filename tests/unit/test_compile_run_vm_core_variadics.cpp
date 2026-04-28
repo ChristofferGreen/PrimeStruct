@@ -264,9 +264,9 @@ score([args<Reference<Buffer<i32>>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  [Buffer<i32>] b0{Buffer<i32>(0i32)}
-  [Buffer<i32>] b1{Buffer<i32>(3i32)}
-  [Buffer<i32>] b2{Buffer<i32>(2i32)}
+  [Buffer<i32>] b0{/std/gfx/Buffer/allocate<i32>(0i32)}
+  [Buffer<i32>] b1{/std/gfx/Buffer/allocate<i32>(3i32)}
+  [Buffer<i32>] b2{/std/gfx/Buffer/allocate<i32>(2i32)}
   return(score(location(b0), location(b1), location(b2)))
 }
 )";
@@ -292,9 +292,9 @@ score([args<Pointer<Buffer<i32>>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  [Buffer<i32>] b0{Buffer<i32>(0i32)}
-  [Buffer<i32>] b1{Buffer<i32>(3i32)}
-  [Buffer<i32>] b2{Buffer<i32>(2i32)}
+  [Buffer<i32>] b0{/std/gfx/Buffer/allocate<i32>(0i32)}
+  [Buffer<i32>] b1{/std/gfx/Buffer/allocate<i32>(3i32)}
+  [Buffer<i32>] b2{/std/gfx/Buffer/allocate<i32>(2i32)}
   return(score(location(b0), location(b1), location(b2)))
 }
 )";

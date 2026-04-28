@@ -49,7 +49,7 @@ import /std/gfx/*
 main() {
   [array<i32>] values{array<i32>(4i32)}
   [Buffer<i32>] input{/std/gfx/Buffer/upload(values)}
-  [Buffer<i32>] output{Buffer<i32>(2i32)}
+  [Buffer<i32>] output{/std/gfx/Buffer/allocate<i32>(2i32)}
   /std/gpu/dispatch(/copy_values, 1i32, 1i32, 1i32, input, output)
   [array<i32>] result{output.readback()}
   return(plus(result[0i32], result[1i32]))
@@ -76,7 +76,7 @@ import /std/gfx/experimental/*
 main() {
   [array<i32>] values{array<i32>(5i32)}
   [Buffer<i32>] input{/std/gfx/experimental/Buffer/upload(values)}
-  [Buffer<i32>] output{Buffer<i32>(2i32)}
+  [Buffer<i32>] output{/std/gfx/experimental/Buffer/allocate<i32>(2i32)}
   /std/gpu/dispatch(/copy_values, 1i32, 1i32, 1i32, input, output)
   [array<i32>] result{output.readback()}
   return(plus(result[0i32], result[1i32]))
@@ -168,20 +168,20 @@ forward_reference([args<Reference<Buffer<i32>>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 forward_reference_mixed([args<Reference<Buffer<i32>>>] values) {
-  [Buffer<i32>] extra{Buffer<i32>(10i32)}
+  [Buffer<i32>] extra{/std/gfx/Buffer/allocate<i32>(10i32)}
   return(score_buffers_reference(location(extra), [spread] values))
 }
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  [Buffer<i32>] d0Value{Buffer<i32>(3i32)}
-  [Buffer<i32>] d1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] d2Value{Buffer<i32>(2i32)}
-  [Buffer<i32>] f0Value{Buffer<i32>(4i32)}
-  [Buffer<i32>] f1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] f2Value{Buffer<i32>(5i32)}
-  [Buffer<i32>] m0Value{Buffer<i32>(6i32)}
-  [Buffer<i32>] m1Value{Buffer<i32>(2i32)}
+  [Buffer<i32>] d0Value{/std/gfx/Buffer/allocate<i32>(3i32)}
+  [Buffer<i32>] d1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] d2Value{/std/gfx/Buffer/allocate<i32>(2i32)}
+  [Buffer<i32>] f0Value{/std/gfx/Buffer/allocate<i32>(4i32)}
+  [Buffer<i32>] f1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] f2Value{/std/gfx/Buffer/allocate<i32>(5i32)}
+  [Buffer<i32>] m0Value{/std/gfx/Buffer/allocate<i32>(6i32)}
+  [Buffer<i32>] m1Value{/std/gfx/Buffer/allocate<i32>(2i32)}
   [Reference<Buffer<i32>>] d0{location(d0Value)}
   [Reference<Buffer<i32>>] d1{location(d1Value)}
   [Reference<Buffer<i32>>] d2{location(d2Value)}
@@ -221,20 +221,20 @@ forward_pointer([args<Pointer<Buffer<i32>>>] values) {
 
 [return<int> effects(gpu_dispatch)]
 forward_pointer_mixed([args<Pointer<Buffer<i32>>>] values) {
-  [Buffer<i32>] extra{Buffer<i32>(10i32)}
+  [Buffer<i32>] extra{/std/gfx/Buffer/allocate<i32>(10i32)}
   return(score_buffers_pointer(location(extra), [spread] values))
 }
 
 [return<int> effects(gpu_dispatch)]
 main() {
-  [Buffer<i32>] d0Value{Buffer<i32>(3i32)}
-  [Buffer<i32>] d1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] d2Value{Buffer<i32>(2i32)}
-  [Buffer<i32>] f0Value{Buffer<i32>(4i32)}
-  [Buffer<i32>] f1Value{Buffer<i32>(1i32)}
-  [Buffer<i32>] f2Value{Buffer<i32>(5i32)}
-  [Buffer<i32>] m0Value{Buffer<i32>(6i32)}
-  [Buffer<i32>] m1Value{Buffer<i32>(2i32)}
+  [Buffer<i32>] d0Value{/std/gfx/Buffer/allocate<i32>(3i32)}
+  [Buffer<i32>] d1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] d2Value{/std/gfx/Buffer/allocate<i32>(2i32)}
+  [Buffer<i32>] f0Value{/std/gfx/Buffer/allocate<i32>(4i32)}
+  [Buffer<i32>] f1Value{/std/gfx/Buffer/allocate<i32>(1i32)}
+  [Buffer<i32>] f2Value{/std/gfx/Buffer/allocate<i32>(5i32)}
+  [Buffer<i32>] m0Value{/std/gfx/Buffer/allocate<i32>(6i32)}
+  [Buffer<i32>] m1Value{/std/gfx/Buffer/allocate<i32>(2i32)}
   [Pointer<Buffer<i32>>] d0{location(d0Value)}
   [Pointer<Buffer<i32>>] d1{location(d1Value)}
   [Pointer<Buffer<i32>>] d2{location(d2Value)}

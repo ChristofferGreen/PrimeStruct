@@ -1138,7 +1138,7 @@ import /std/gfx/GfxError
 
 [return<int>]
 main() {
-  [Buffer<i32>] buffer{Buffer<i32>{[token] 2i32, [elementCount] 4i32}}
+  [Buffer<i32>] buffer{[token] 2i32, [elementCount] 4i32}
   [GfxError] err{GfxError.queue_submit_failed()}
   [string] whyText{GfxError.why(err)}
   return(plus(buffer.count(), count(whyText)))

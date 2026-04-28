@@ -301,7 +301,7 @@ import /std/gfx/*
 
 [effects(gpu_dispatch) return<i32>]
 main() {
-  [Buffer<i32>] data{ Buffer<i32>(1i32) }
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(1i32)}
   return(data.load(0i32))
 }
 )";
@@ -522,7 +522,7 @@ import /std/gfx/*
 
 [effects(gpu_dispatch) return<int>]
 main() {
-  [Buffer<i32>] data{ Buffer<i32>(1i32) }
+  [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(1i32)}
   data.store(0i32, 1i32)
   return(0i32)
 }

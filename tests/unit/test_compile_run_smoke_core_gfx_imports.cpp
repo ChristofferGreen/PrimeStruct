@@ -15,8 +15,8 @@ main() {
   [DepthFormat] depthFormat{DepthFormat{[value] 0i32}}
   [PresentMode] presentMode{PresentMode{[value] 0i32}}
   [ShaderLibrary] shader{ShaderLibrary{[value] 0i32}}
-  [Buffer<i32>] buffer{Buffer<i32>{[token] 3i32, [elementCount] 4i32}}
-  [Texture2D<i32>] texture{Texture2D<i32>{[token] 5i32, [width] 64i32, [height] 32i32}}
+  [Buffer<i32>] buffer{[token] 3i32, [elementCount] 4i32}
+  [Texture2D<i32>] texture{[token] 5i32, [width] 64i32, [height] 32i32}
   [Swapchain] swapchain{Swapchain{[token] 11i32}}
   [Mesh] mesh{Mesh{[token] 13i32, [vertexCount] 8i32, [indexCount] 36i32}}
   [VertexColored] vertex{
@@ -115,8 +115,8 @@ main() {
   [DepthFormat] depthFormat{DepthFormat{[value] 0i32}}
   [PresentMode] presentMode{PresentMode{[value] 0i32}}
   [ShaderLibrary] shader{ShaderLibrary{[value] 0i32}}
-  [Buffer<i32>] buffer{Buffer<i32>{[token] 3i32, [elementCount] 4i32}}
-  [Texture2D<i32>] texture{Texture2D<i32>{[token] 5i32, [width] 64i32, [height] 32i32}}
+  [Buffer<i32>] buffer{[token] 3i32, [elementCount] 4i32}
+  [Texture2D<i32>] texture{[token] 5i32, [width] 64i32, [height] 32i32}
   [Swapchain] swapchain{Swapchain{[token] 11i32}}
   [Mesh] mesh{Mesh{[token] 13i32, [vertexCount] 8i32, [indexCount] 36i32}}
   [VertexColored] vertex{

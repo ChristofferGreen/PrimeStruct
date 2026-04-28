@@ -278,8 +278,8 @@ import /std/gfx/experimental/*
 
 [return<void>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
-  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 3i32}}
+  [Buffer<i32>] emptyBuffer{[token] 0i32, [elementCount] 0i32}
+  [Buffer<i32>] fullBuffer{[token] 7i32, [elementCount] 3i32}
   [i32] methodCount{fullBuffer.count()}
   [i32] directCount{/std/gfx/experimental/Buffer/count(emptyBuffer)}
   [bool] methodEmpty{emptyBuffer.empty()}
@@ -300,8 +300,8 @@ import /std/gfx/*
 
 [return<void>]
 main() {
-  [Buffer<i32>] emptyBuffer{Buffer<i32>{[token] 0i32, [elementCount] 0i32}}
-  [Buffer<i32>] fullBuffer{Buffer<i32>{[token] 7i32, [elementCount] 3i32}}
+  [Buffer<i32>] emptyBuffer{[token] 0i32, [elementCount] 0i32}
+  [Buffer<i32>] fullBuffer{[token] 7i32, [elementCount] 3i32}
   [i32] methodCount{fullBuffer.count()}
   [i32] directCount{/std/gfx/Buffer/count(emptyBuffer)}
   [bool] methodEmpty{emptyBuffer.empty()}

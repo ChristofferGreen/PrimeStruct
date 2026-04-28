@@ -237,19 +237,19 @@ namespace std {
 
   [public effects(gpu_dispatch), return<array<T>>]
   /Buffer/readback<T>([Buffer<T>] self) {
-    [/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer<T>{[token] self.token, [elementCount] self.elementCount}}
+    [/std/gfx/Buffer<T>] canonical{[token] self.token, [elementCount] self.elementCount}
     return(/std/gfx/Buffer/readback<T>(canonical))
   }
 
   [public return<T>]
   /Buffer/load<T>([Buffer<T>] self, [i32] index) {
-    [/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer<T>{[token] self.token, [elementCount] self.elementCount}}
+    [/std/gfx/Buffer<T>] canonical{[token] self.token, [elementCount] self.elementCount}
     return(/std/gfx/Buffer/load<T>(canonical, index))
   }
 
   [public return<void>]
   /Buffer/store<T>([Buffer<T>] self, [i32] index, [T] value) {
-    [/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer<T>{[token] self.token, [elementCount] self.elementCount}}
+    [/std/gfx/Buffer<T>] canonical{[token] self.token, [elementCount] self.elementCount}
     /std/gfx/Buffer/store<T>(canonical, index, value)
     return()
   }
@@ -257,13 +257,15 @@ namespace std {
   [public effects(gpu_dispatch), return<Buffer<T>>]
   /Buffer/allocate<T>([i32] count) {
     [/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer/allocate<T>(count)}
-    return(Buffer<T>{[token] canonical.token, [elementCount] canonical.elementCount})
+    [Buffer<T>] result{[token] canonical.token, [elementCount] canonical.elementCount}
+    return(result)
   }
 
   [public effects(gpu_dispatch), return<Buffer<T>>]
   /Buffer/upload<T>([array<T>] values) {
     [/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer/upload<T>(values)}
-    return(Buffer<T>{[token] canonical.token, [elementCount] canonical.elementCount})
+    [Buffer<T>] result{[token] canonical.token, [elementCount] canonical.elementCount}
+    return(result)
   }
 
   [public struct]

@@ -1691,8 +1691,8 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
   CHECK(gfxSemantics.find("TEST_CASE(\"canonical gfx device constructor entry "
                           "point validates through stdlib helper\")") !=
         std::string::npos);
-  CHECK(gfxSemantics.find("TEST_CASE(\"canonical gfx Buffer constructor entry "
-                          "point validates through builtin rewrite\")") !=
+  CHECK(gfxSemantics.find("TEST_CASE(\"canonical gfx Buffer allocation helper "
+                          "validates through builtin rewrite\")") !=
         std::string::npos);
   CHECK(maybeSemantics.find("TEST_CASE(\"maybe helpers report empty and some\")") !=
         std::string::npos);
@@ -3234,7 +3234,7 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
         std::string::npos);
   CHECK(gfxExperimental.find("[/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer/upload<T>(values)}") !=
         std::string::npos);
-  CHECK(gfxExperimental.find("return(Buffer<T>{[token] canonical.token, [elementCount] canonical.elementCount})") !=
+  CHECK(gfxExperimental.find("[Buffer<T>] result{[token] canonical.token, [elementCount] canonical.elementCount}") !=
         std::string::npos);
   CHECK(gfxExperimental.find("return(canonicalWindow(this).is_open())") == std::string::npos);
   CHECK(gfxExperimental.find("return(experimentalQueue(canonicalDevice(this).default_queue()))") ==
