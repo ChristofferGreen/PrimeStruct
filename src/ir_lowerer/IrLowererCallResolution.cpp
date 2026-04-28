@@ -669,6 +669,14 @@ bool validateSemanticProductDirectCallCoverage(
       bridgePathChoicesByExpr.insert_or_assign(entry->semanticNodeId, entry);
     }
   }
+  const auto directCallTargets = semanticProgramDirectCallTargetView(*semanticProgram);
+  std::unordered_map<uint64_t, const SemanticProgramDirectCallTarget *> directCallTargetsByExpr;
+  directCallTargetsByExpr.reserve(directCallTargets.size());
+  for (const auto *entry : directCallTargets) {
+    if (entry->semanticNodeId != 0) {
+      directCallTargetsByExpr.insert_or_assign(entry->semanticNodeId, entry);
+    }
+  }
   std::function<bool(const std::string &, const Expr &)> validateExpr;
   auto validateExprs = [&](const std::string &scopePath, const std::vector<Expr> &exprs) {
     for (const auto &expr : exprs) {
@@ -689,6 +697,63 @@ bool validateSemanticProductDirectCallCoverage(
       if (bridgePathChoicesByExpr.contains(expr.semanticNodeId)) {
         return validateExprs(scopePath, expr.args) &&
                validateExprs(scopePath, expr.bodyArguments);
+      }
+      if (const auto it = directCallTargetsByExpr.find(expr.semanticNodeId);
+          it != directCallTargetsByExpr.end()) {
+        const auto &entry = *it->second;
+        const std::string siteDescription = describeCallSite(scopePath, expr);
+        const std::string_view resolvedPath =
+            semanticProgramDirectCallTargetResolvedPath(*semanticProgram, entry);
+        if (entry.resolvedPathId == InvalidSymbolId || resolvedPath.empty()) {
+          error = "missing semantic-product direct-call resolved path id: " +
+                  siteDescription;
+          return false;
+        }
+        if (entry.scopePathId != InvalidSymbolId) {
+          const std::string_view resolvedScope =
+              semanticProgramResolveCallTargetString(*semanticProgram, entry.scopePathId);
+          if (resolvedScope.empty()) {
+            error = "missing semantic-product direct-call scope id: " +
+                    siteDescription;
+            return false;
+          }
+          if (resolvedScope != entry.scopePath) {
+            error = "stale semantic-product direct-call scope metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
+        if (entry.callNameId != InvalidSymbolId) {
+          const std::string_view resolvedCallName =
+              semanticProgramResolveCallTargetString(*semanticProgram, entry.callNameId);
+          if (resolvedCallName.empty()) {
+            error = "missing semantic-product direct-call name id: " +
+                    siteDescription;
+            return false;
+          }
+          if (resolvedCallName != entry.callName) {
+            error = "stale semantic-product direct-call name metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
+        if (const auto publishedTargetId =
+                semanticProgramLookupPublishedDirectCallTargetId(*semanticProgram,
+                                                                 expr.semanticNodeId);
+            publishedTargetId.has_value()) {
+          const std::string_view publishedTarget =
+              semanticProgramResolveCallTargetString(*semanticProgram, *publishedTargetId);
+          if (publishedTarget.empty()) {
+            error = "missing semantic-product direct-call resolved path id: " +
+                    siteDescription;
+            return false;
+          }
+          if (publishedTarget != resolvedPath) {
+            error = "stale semantic-product direct-call target metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
       }
       if (findSemanticProductBridgePathChoice(semanticProgram, expr).empty() &&
           findSemanticProductDirectCallTarget(semanticProgram, expr).empty()) {

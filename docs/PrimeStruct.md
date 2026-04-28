@@ -312,6 +312,10 @@ Planned non-template inference migration contract:
   key/value type metadata before lowerer collection consumers can read collection fact text fields.
   Missing or contradictory present ids fail closed with deterministic collection specialization
   metadata diagnostics.
+- Completed direct-call metadata diagnostic slice: semantic-product direct-call completeness
+  validation now checks interned scope, call name, resolved target, and published lookup metadata
+  before lowerer routing consumers can dispatch through direct-call target facts. Missing or
+  contradictory present ids fail closed with deterministic direct-call metadata diagnostics.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

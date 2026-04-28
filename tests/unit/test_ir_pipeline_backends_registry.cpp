@@ -785,6 +785,87 @@ TEST_CASE("semantic-product direct-call coverage conformance rejects missing sem
   CHECK(error == "missing semantic-product direct-call semantic id: /main -> callee");
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product direct-call metadata") {
+  primec::Program program;
+
+  primec::Definition callee;
+  callee.fullPath = "/callee";
+  callee.semanticNodeId = 82;
+  program.definitions.push_back(callee);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 81;
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "callee";
+  callExpr.semanticNodeId = 41;
+  mainDef.statements.push_back(callExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 81);
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "callee",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 41,
+      .provenanceHandle = 0,
+      .scopePathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .callNameId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "callee"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/callee"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+
+  auto resetDirectCallMetadata = [&]() {
+    auto &directCallTarget = semanticProgram.directCallTargets.back();
+    directCallTarget.scopePathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    directCallTarget.callNameId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "callee");
+    directCallTarget.resolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
+    semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.clear();
+  };
+
+  std::string error;
+
+  resetDirectCallMetadata();
+  semanticProgram.directCallTargets.back().resolvedPathId = primec::InvalidSymbolId;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "missing semantic-product direct-call resolved path id: /main -> callee");
+
+  resetDirectCallMetadata();
+  semanticProgram.directCallTargets.back().scopePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/other");
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product direct-call scope metadata: /main -> callee");
+
+  resetDirectCallMetadata();
+  semanticProgram.directCallTargets.back().callNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "other");
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product direct-call name metadata: /main -> callee");
+
+  resetDirectCallMetadata();
+  semanticProgram.publishedRoutingLookups.directCallTargetIdsByExpr.insert_or_assign(
+      41, primec::semanticProgramInternCallTargetString(semanticProgram, "/stale"));
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductDirectCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product direct-call target metadata: /main -> callee");
+}
+
 TEST_CASE("ir lowerer keeps semantic-product direct-call targets authoritative over rooted rewritten expr names") {
   primec::Program program;
 
