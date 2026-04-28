@@ -6,6 +6,34 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4313: Align status-only Result bridge docs
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 documentation cleanup slice for the status-only
+    stdlib Result bridge after IR-backed `try(...)`, postfix `?`,
+    `Result.error(...)`, and `Result.why(...)` support landed.
+  - implementation_notes:
+    - Keep the legacy source C++ emitter bridge called out as remaining
+      migration work instead of presenting TODO-4266 as fully complete.
+    - Source-lock the public syntax spec wording so the landed status-only
+      helper support does not regress back to future-tense bridge language.
+  - acceptance:
+    - `docs/PrimeStruct_SyntaxSpec.md` documents imported status-only
+      `Result<E>` support for local, direct-call, and dereferenced local
+      borrowed/pointer `try(...)`, postfix `?`, `Result.error(...)`, and
+      `Result.why(...)` operands.
+    - The syntax spec no longer says imported status-only `Result.error(...)`
+      / `Result.why(...)` lowering remains future TODO-4266 work.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the landed status-only bridge surface is documented
+    and source-locked without widening into legacy source-emitter cleanup.
+  - finished_at: 2026-04-28
+  - evidence: Aligned SyntaxSpec with the status-only Result helper and
+    propagation support that already landed for IR-backed paths, updated the
+    TODO-4266 remaining-work note, and added a docs-lock regression. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4312: Lower status-only stdlib Result helpers
   - owner: ai
   - created_at: 2026-04-28

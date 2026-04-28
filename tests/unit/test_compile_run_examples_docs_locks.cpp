@@ -1101,6 +1101,43 @@ TEST_CASE("source lock inventory keeps replacement surfaces explicit") {
   CHECK(inventory.find("direct variant contract test") != std::string::npos);
 }
 
+TEST_CASE("status-only result bridge docs stay source locked") {
+  const std::filesystem::path syntaxSpecPath =
+      resolveRepoPath("docs/PrimeStruct_SyntaxSpec.md");
+  const std::filesystem::path todoPath = resolveRepoPath("docs/todo.md");
+  const std::filesystem::path todoFinishedPath =
+      resolveRepoPath("docs/todo_finished.md");
+  REQUIRE(std::filesystem::exists(syntaxSpecPath));
+  REQUIRE(std::filesystem::exists(todoPath));
+  REQUIRE(std::filesystem::exists(todoFinishedPath));
+
+  const std::string syntaxSpec = readFile(syntaxSpecPath.string());
+  const std::string todo = readFile(todoPath.string());
+  const std::string todoFinished = readFile(todoFinishedPath.string());
+
+  CHECK(syntaxSpec.find("IR-backed `Result.error(...)` /\n"
+                        "`Result.why(...)` also inspect local, direct-call, "
+                        "and dereferenced local") != std::string::npos);
+  CHECK(syntaxSpec.find("Imported status-only `Result<Error>` is pickable, "
+                        "and IR-backed `try(...)`, postfix") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("IR-backed local, direct-call, and dereferenced local\n"
+                        "    borrowed/pointer imported status-only "
+                        "`Result<Error>` sums preserve") !=
+        std::string::npos);
+  CHECK(syntaxSpec.find("imported status-only\n"
+                        "`Result.error(...)` / `Result.why(...)` lowering "
+                        "remain compatibility surfaces") ==
+        std::string::npos);
+  CHECK(syntaxSpec.find("propagation remains a hybrid compiler/runtime bridge "
+                        "until its migration TODO lands") ==
+        std::string::npos);
+  CHECK(todo.find("SyntaxSpec now documents the landed IR-backed status-only\n"
+                  "      `try(...)`, postfix") != std::string::npos);
+  CHECK(todoFinished.find("TODO-4313: Align status-only Result bridge docs") !=
+        std::string::npos);
+}
+
 TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   std::filesystem::path todoPath = std::filesystem::path("..") / "docs" / "todo.md";
   std::filesystem::path todoFinishedPath = std::filesystem::path("..") / "docs" / "todo_finished.md";

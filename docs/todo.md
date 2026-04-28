@@ -305,7 +305,10 @@ Task template:
       returns and Result-return error propagation. IR-backed
       `Result.error(...)` / `Result.why(...)` now inspect those same imported
       status-only operand families. Remaining work covers non-VM/native bridge
-      cleanup.
+      cleanup. SyntaxSpec now documents the landed IR-backed status-only
+      `try(...)`, postfix `?`, `Result.error(...)`, and `Result.why(...)`
+      operand families and leaves only the broader/non-IR bridge cleanup as
+      migration work.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

@@ -796,9 +796,10 @@ into the declared return `Result` sum after running the active `on_error` handle
 stdlib value-result or status-only sums can also be consumed through postfix `?` on those same VM/native sum-backed
 paths, and dereferenced local
 `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values can feed `try(...)`, `Result.error(...)`, and
-`Result.why(...)` when they point at imported stdlib Result sums. Broader result shapes and imported status-only
-`Result.error(...)` / `Result.why(...)` lowering remain compatibility surfaces until
-their dedicated migration tasks land.
+`Result.why(...)` when they point at imported stdlib Result sums. IR-backed `Result.error(...)` /
+`Result.why(...)` also inspect local, direct-call, and dereferenced local `Reference<Result<E>>` /
+`Pointer<Result<E>>` status-only imported sums. Broader result shapes and legacy source C++ emitter packed
+status-only helpers remain compatibility surfaces until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -878,9 +879,9 @@ Architectural direction for type ownership:
   should converge on stdlib `.prime` implementations over generic substrate.
 - `soa_vector<T>` is a promoted stdlib-owned public collection surface over
   generic SoA substrate.
-- `Maybe<T>` is stdlib-owned, imported value-carrying `Result<T, Error>` construction has a stdlib sum surface, and
-  legacy `Result` propagation/helpers, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*` remain hybrid surfaces with minimal
-  builtin/runtime substrate.
+- `Maybe<T>` is stdlib-owned, imported `Result<Error>` and value-carrying `Result<T, Error>` construction have stdlib
+  sum surfaces, and legacy source C++ emitter `Result` helpers, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*` remain
+  hybrid surfaces with minimal builtin/runtime substrate.
 
 ### 8.2 Vectors
 
@@ -1411,10 +1412,12 @@ Draft constraints:
   compatibility initializer, typed value-carrying locals/returns may use legacy `Result.map(result, fn)` or
   `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum or a direct call returning one,
   and may use legacy `Result.map2(left, right, fn)` when both sources are local imported stdlib Result sums or direct
-  calls returning them. `Result.error(value)` / `Result.why(value)` can read value-carrying imported sums on IR-backed
-  VM/native paths. Legacy packed status-only `Result<Error>` values without the stdlib import report a deterministic
-  compatibility diagnostic when used as a `pick` target. Imported status-only `Result<Error>` is pickable, but `?`
-  propagation remains a hybrid compiler/runtime bridge until its migration TODO lands.
+  calls returning them. `Result.error(value)` / `Result.why(value)` can read value-carrying imported sums and local,
+  direct-call, or dereferenced local borrowed/pointer imported status-only sums on IR-backed VM/native paths. Legacy
+  packed status-only `Result<Error>` values without the stdlib import report a deterministic compatibility diagnostic
+  when used as a `pick` target. Imported status-only `Result<Error>` is pickable, and IR-backed `try(...)`, postfix
+  `?`, `Result.error(...)`, and `Result.why(...)` consume the supported local/direct/dereferenced status-only sum
+  sources. Unsupported broader result shapes and legacy non-IR/source-emitter bridges remain migration work.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches
@@ -1487,8 +1490,10 @@ Draft constraints:
     `[args<Pointer<Result<T, Error>>>]` packs preserve indexed `try(...)`, `Result.error(...)`, and `Result.why(...)`
     access across direct, pure-spread, and mixed variadic forwarding when `T` already fits that same payload
     contract; local dereferenced `Reference<Result<T, Error>>` and `Pointer<Result<T, Error>>` values also preserve
-    those helpers when they point at imported stdlib Result sums. Downstream `try(...)`, `Result.error(...)`, and
-    success/error `Result.why(...)` preserve those
+    those helpers when they point at imported stdlib Result sums. IR-backed local, direct-call, and dereferenced local
+    borrowed/pointer imported status-only `Result<Error>` sums preserve `try(...)`, postfix `?`,
+    `Result.error(...)`, and `Result.why(...)` on those same supported operand families. Downstream `try(...)`,
+    `Result.error(...)`, and success/error `Result.why(...)` preserve those
     handle/error-struct payloads, rebuild single-slot struct payloads, and keep multi-slot struct payloads on that
     same pointer-backed path on VM/native; other remaining wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.
