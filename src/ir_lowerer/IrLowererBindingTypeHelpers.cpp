@@ -7,6 +7,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "primec/SoaPathHelpers.h"
 
+#include <cctype>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -72,6 +73,30 @@ bool isLocalAutoBindingCandidate(const Expr &expr) {
     return true;
   }
   return trimTemplateTypeText(typeName) == "auto";
+}
+
+std::string compactTypeTextForComparison(const std::string &typeText) {
+  std::string compact;
+  for (unsigned char ch : trimTemplateTypeText(typeText)) {
+    if (std::isspace(ch) == 0) {
+      compact.push_back(static_cast<char>(ch));
+    }
+  }
+  return compact;
+}
+
+bool semanticTypeTextsMatchForLocalAuto(const std::string &localAutoTypeText,
+                                        const std::string &bindingTypeText) {
+  const std::string localAutoType = compactTypeTextForComparison(localAutoTypeText);
+  const std::string bindingType = compactTypeTextForComparison(bindingTypeText);
+  if (localAutoType == bindingType) {
+    return true;
+  }
+  const LocalInfo::ValueKind localAutoKind = valueKindFromTypeName(localAutoType);
+  const LocalInfo::ValueKind bindingKind = valueKindFromTypeName(bindingType);
+  return localAutoKind != LocalInfo::ValueKind::Unknown &&
+         bindingKind != LocalInfo::ValueKind::Unknown &&
+         localAutoKind == bindingKind;
 }
 
 struct ExpectedCollectionSpecialization {
@@ -529,6 +554,16 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
           localAutoFact->initializerResolvedPathId != InvalidSymbolId &&
           semanticProgramLocalAutoFactInitializerResolvedPath(*semanticProgram, *localAutoFact).empty()) {
         error = "missing semantic-product local-auto initializer path id: " +
+                describeBindingSite(scopePath, "local", expr);
+        return false;
+      }
+      const SemanticProgramBindingFact *bindingFact =
+          findSemanticProductBindingFact(semanticIndex, expr);
+      if (bindingFact != nullptr &&
+          !bindingFact->bindingTypeText.empty() &&
+          !semanticTypeTextsMatchForLocalAuto(localAutoFact->bindingTypeText,
+                                              bindingFact->bindingTypeText)) {
+        error = "stale semantic-product local-auto fact: " +
                 describeBindingSite(scopePath, "local", expr);
         return false;
       }

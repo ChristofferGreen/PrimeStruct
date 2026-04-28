@@ -401,6 +401,50 @@ TEST_CASE("semantic-product contract rejects missing local-auto facts across ent
   }
 }
 
+TEST_CASE("semantic-product contract rejects stale local-auto binding types") {
+  const std::string source =
+      "[return<T>]\n"
+      "id<T>([T] value) {\n"
+      "  return(value)\n"
+      "}\n"
+      "\n"
+      "[return<i32>]\n"
+      "main() {\n"
+      "  [auto] selected{id(21i32)}\n"
+      "  return(selected)\n"
+      "}\n";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+  REQUIRE(!semanticProgram.localAutoFacts.empty());
+
+  primec::SemanticProgramLocalAutoFact *selectedFact = nullptr;
+  for (auto &entry : semanticProgram.localAutoFacts) {
+    if (entry.scopePath == "/main" && entry.bindingName == "selected") {
+      selectedFact = &entry;
+      break;
+    }
+  }
+  REQUIRE(selectedFact != nullptr);
+  selectedFact->bindingTypeText = "f64";
+
+  primec::Options options;
+  options.entryPath = "/main";
+
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK_FALSE(primec::prepareIrModule(
+      program, &semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
+  CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(failure.message ==
+        "stale semantic-product local-auto fact: /main -> local selected");
+  CHECK(failure.diagnosticInfo.message == failure.message);
+}
+
 TEST_CASE("compile pipeline semantic handoff gate reaches lowering and rejects stale facts") {
   const std::string source =
       "import /std/math/*\n"

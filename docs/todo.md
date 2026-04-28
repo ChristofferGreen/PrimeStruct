@@ -354,8 +354,9 @@ Task template:
     `Result.ok(name)` payload metadata slice, and statement initializer
     binding-type slice are also complete. The statement name-initializer
     final LocalInfo metadata slice is complete for scalar, pointer/reference,
-    and array/vector fallbacks; continue with local-auto, `on_error`, or a
-    different control-flow/query consumer.
+    and array/vector fallbacks. The local-auto stale binding-type diagnostic
+    slice is complete; continue with `on_error`, or a different
+    control-flow/query consumer.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -398,6 +399,9 @@ Task template:
       through the final scalar, pointer/reference, and array/vector LocalInfo
       fallback branches instead of letting stale local-map metadata overwrite
       the graph-owned fact.
+    - Completed slice: semantic-product local-auto completeness validation now
+      rejects stale local-auto binding type facts that contradict the
+      published binding fact before lowering can use the stale graph entry.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
