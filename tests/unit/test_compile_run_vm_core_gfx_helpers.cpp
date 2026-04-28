@@ -291,7 +291,9 @@ main() {
   if(not(fullBuffer.is_valid())) {
     return(93i32)
   }
-  return(plus(fullBuffer.count(), /std/gfx/experimental/Buffer/count(emptyBuffer)))
+  [i32] fullCount{fullBuffer.count()}
+  [i32] emptyCount{/std/gfx/experimental/Buffer/count(emptyBuffer)}
+  return(plus(fullCount, emptyCount))
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_helpers.prime", source);
@@ -319,7 +321,9 @@ main() {
   if(not(fullBuffer.is_valid())) {
     return(93i32)
   }
-  return(plus(fullBuffer.count(), /std/gfx/Buffer/count(emptyBuffer)))
+  [i32] fullCount{fullBuffer.count()}
+  [i32] emptyCount{/std/gfx/Buffer/count(emptyBuffer)}
+  return(plus(fullCount, emptyCount))
 }
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_helpers.prime", source);
@@ -336,7 +340,13 @@ main() {
   [Buffer<i32>] data{/std/gpu/buffer<i32>(3i32)}
   [array<i32>] viaMethod{data.readback()}
   [array<i32>] viaDirect{/std/gfx/experimental/Buffer/readback(data)}
-  return(plus(plus(viaMethod.count(), viaDirect.count()), plus(viaMethod[0i32], viaDirect[2i32])))
+  [i32] methodCount{viaMethod.count()}
+  [i32] directCount{viaDirect.count()}
+  [i32] methodFirst{viaMethod[0i32]}
+  [i32] directLast{viaDirect[2i32]}
+  [i32] countTotal{plus(methodCount, directCount)}
+  [i32] valueTotal{plus(methodFirst, directLast)}
+  return(plus(countTotal, valueTotal))
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_readback_helpers.prime", source);
@@ -353,7 +363,13 @@ main() {
   [Buffer<i32>] data{/std/gpu/buffer<i32>(3i32)}
   [array<i32>] viaMethod{data.readback()}
   [array<i32>] viaDirect{/std/gfx/Buffer/readback(data)}
-  return(plus(plus(viaMethod.count(), viaDirect.count()), plus(viaMethod[0i32], viaDirect[2i32])))
+  [i32] methodCount{viaMethod.count()}
+  [i32] directCount{viaDirect.count()}
+  [i32] methodFirst{viaMethod[0i32]}
+  [i32] directLast{viaDirect[2i32]}
+  [i32] countTotal{plus(methodCount, directCount)}
+  [i32] valueTotal{plus(methodFirst, directLast)}
+  return(plus(countTotal, valueTotal))
 }
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_readback_helpers.prime", source);
@@ -369,7 +385,9 @@ import /std/gfx/experimental/*
 main() {
   [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
+  [i32] bufferCount{/std/gfx/experimental/Buffer/count(data)}
+  [i32] outputCount{out.count()}
+  return(plus(bufferCount, outputCount))
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_allocate_helpers.prime", source);
@@ -385,7 +403,9 @@ import /std/gfx/*
 main() {
   [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(/std/gfx/Buffer/count(data), out.count()))
+  [i32] bufferCount{/std/gfx/Buffer/count(data)}
+  [i32] outputCount{out.count()}
+  return(plus(bufferCount, outputCount))
 }
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_allocate_helpers.prime", source);
@@ -401,7 +421,9 @@ import /std/gfx/experimental/*
 main() {
   [Buffer<i32>] data{/std/gfx/experimental/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(/std/gfx/experimental/Buffer/count(data), out.count()))
+  [i32] bufferCount{/std/gfx/experimental/Buffer/count(data)}
+  [i32] outputCount{out.count()}
+  return(plus(bufferCount, outputCount))
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_allocation_readback.prime", source);
@@ -417,7 +439,9 @@ import /std/gfx/*
 main() {
   [Buffer<i32>] data{/std/gfx/Buffer/allocate<i32>(3i32)}
   [array<i32>] out{data.readback()}
-  return(plus(/std/gfx/Buffer/count(data), out.count()))
+  [i32] bufferCount{/std/gfx/Buffer/count(data)}
+  [i32] outputCount{out.count()}
+  return(plus(bufferCount, outputCount))
 }
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_allocation_readback.prime", source);
@@ -434,7 +458,11 @@ main() {
   [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
   [Buffer<i32>] data{/std/gfx/experimental/Buffer/upload(values)}
   [array<i32>] out{data.readback()}
-  return(plus(plus(out.count(), out[0i32]), out[2i32]))
+  [i32] outputCount{out.count()}
+  [i32] first{out[0i32]}
+  [i32] last{out[2i32]}
+  [i32] headTotal{plus(outputCount, first)}
+  return(plus(headTotal, last))
 }
 )";
   const std::string srcPath = writeTemp("vm_experimental_gfx_buffer_upload_helpers.prime", source);
@@ -451,7 +479,11 @@ main() {
   [array<i32>] values{array<i32>(1i32, 2i32, 3i32)}
   [Buffer<i32>] data{/std/gfx/Buffer/upload(values)}
   [array<i32>] out{data.readback()}
-  return(plus(plus(out.count(), out[0i32]), out[2i32]))
+  [i32] outputCount{out.count()}
+  [i32] first{out[0i32]}
+  [i32] last{out[2i32]}
+  [i32] headTotal{plus(outputCount, first)}
+  return(plus(headTotal, last))
 }
 )";
   const std::string srcPath = writeTemp("vm_canonical_gfx_buffer_upload_helpers.prime", source);
