@@ -459,7 +459,7 @@ TEST_CASE("ir lowerer setup type helper rejects array compatibility slash-method
   CHECK(error == "unknown method target for tag");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vector slash-method count receivers") {
+TEST_CASE("ir lowerer setup type helper preserves wrapper vector slash-method count diagnostics") {
   primec::Definition wrapVectorDef;
   wrapVectorDef.fullPath = "/wrapVector";
   primec::Transform returnVector;
@@ -543,10 +543,10 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vec
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /vector/count");
 }
 
-TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vector slash-method capacity receivers") {
+TEST_CASE("ir lowerer setup type helper preserves wrapper vector slash-method capacity diagnostics") {
   primec::Definition wrapVectorDef;
   wrapVectorDef.fullPath = "/wrapVector";
   primec::Transform returnVector;
@@ -630,7 +630,7 @@ TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper vec
       defMap,
       error);
   CHECK(resolved == nullptr);
-  CHECK(error == "unknown method target for tag");
+  CHECK(error == "unknown method: /vector/capacity");
 }
 
 TEST_CASE("ir lowerer setup type helper keeps reject diagnostics for wrapper-returned explicit slash-method map access") {
