@@ -12,9 +12,9 @@ void expectCollectDiagnosticsFailure(const std::string& emitKind,
                                      std::initializer_list<const char*> messages) {
   const std::string srcPath = writeTemp(std::string(fileStem) + ".prime", source);
   const std::string errPath = (testScratchPath("") / (std::string(fileStem) + ".json")).string();
-  const std::string cmd = "./primec --emit=" + emitKind + " " + srcPath +
-                          " --entry /main --emit-diagnostics --collect-diagnostics 2> " +
-                          quoteShellArg(errPath);
+  const std::string cmd = "./primec --emit=" + emitKind + " " + quoteShellArg(srcPath) +
+                          " --entry /main --emit-diagnostics --collect-diagnostics > " +
+                          quoteShellArg(errPath) + " 2>&1";
 
   CHECK(runCommand(cmd) == 2);
 
