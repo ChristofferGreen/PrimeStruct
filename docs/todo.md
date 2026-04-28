@@ -81,7 +81,7 @@ Task template:
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
 - TODO-4297: Add zero C++ vector-surface audit
-- TODO-4268: Add heterogeneous type-pack syntax and metadata
+- TODO-4299: Promote and style canonical `.prime` map implementation
 
 ### Priority Lanes (Current)
 
@@ -90,6 +90,10 @@ Task template:
   -> TODO-4291
 - Vector stdlib ownership cutover: TODO-4292 -> TODO-4293 -> TODO-4294
   -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
+- Map stdlib ownership cutover: TODO-4299 -> TODO-4300 -> TODO-4301
+  -> TODO-4302 -> TODO-4303 -> TODO-4304
+- SoA public surface rename and ownership cutover: TODO-4305 -> TODO-4306
+  -> TODO-4307 -> TODO-4308 -> TODO-4309 -> TODO-4310
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -107,6 +111,18 @@ Task template:
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
 - TODO-4297: Add zero C++ vector-surface audit
+- TODO-4299: Promote and style canonical `.prime` map implementation
+- TODO-4300: Stabilize map lookup and insertion substrate
+- TODO-4301: Lower map helpers through ordinary `.prime`
+- TODO-4302: Move map surface metadata out of C++
+- TODO-4303: Delete map compatibility seams
+- TODO-4304: Add zero C++ map-surface audit
+- TODO-4305: Rename and style canonical `.prime` SoA surface
+- TODO-4306: Stabilize generic SoA substrate boundaries
+- TODO-4307: Lower SoA helpers through ordinary `.prime`
+- TODO-4308: Move SoA surface metadata out of C++
+- TODO-4309: Delete `soa_vector` compatibility seams
+- TODO-4310: Add zero C++ SoA collection-surface audit
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
 - TODO-4270: Add compile-time integer template arguments
@@ -126,17 +142,17 @@ Task template:
 | Semantic ownership boundary and graph/local-auto authority | TODO-4298 |
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
-| Stdlib surface-style alignment and public helper readability | TODO-4292 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4292, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4292, TODO-4296, TODO-4297 |
-| SoA maturity and `soa_vector` promotion | none |
+| Stdlib surface-style alignment and public helper readability | TODO-4292, TODO-4299, TODO-4305 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297, TODO-4302, TODO-4303, TODO-4304, TODO-4308, TODO-4309, TODO-4310 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4292, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4292, TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| SoA maturity and `soa` public-surface rename | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Validator entrypoint and benchmark-plumbing split | none |
 | Semantic-product publication by module and fact family | TODO-4298 |
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
-| Emitter/semantics map-helper parity | none |
+| Emitter/semantics map-helper parity | TODO-4299, TODO-4300, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | VM debug-session argv ownership | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay robustness | none |
@@ -152,16 +168,16 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4298 |
 | AST transform hook conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | TODO-4292 |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4292, TODO-4299, TODO-4305 |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | TODO-4298 |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4292, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297 |
-| De-experimentalization surface and namespace parity | TODO-4292, TODO-4296, TODO-4297 |
-| `soa_vector` maturity and canonical surface parity | none |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4292, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297, TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
+| De-experimentalization surface and namespace parity | TODO-4292, TODO-4296, TODO-4297, TODO-4299, TODO-4303, TODO-4304, TODO-4305, TODO-4309, TODO-4310 |
+| `soa` maturity and canonical surface parity | TODO-4305, TODO-4306, TODO-4307, TODO-4308, TODO-4309, TODO-4310 |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
-| Emitter map-helper canonicalization parity | none |
+| Emitter map-helper canonicalization parity | TODO-4299, TODO-4301, TODO-4302, TODO-4303, TODO-4304 |
 | VM debug-session argv lifetime coverage | none |
 | Debugger/source-map provenance parity | none |
 | Debug trace replay malformed-input coverage | none |
@@ -181,12 +197,13 @@ Task template:
   `vectorCount` / `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
-  template-monomorph helper decisions. TODO-4292 through TODO-4297 now split
-  the vector half of that remaining seam into canonical implementation
-  promotion, generic storage/lifecycle substrate, ordinary `.prime` lowering,
-  metadata extraction, compatibility deletion, and a final zero-C++-vector
-  audit. Add a separate map follow-up before changing `/map/*`, `mapCount`-style, or
-  `/std/collections/experimental_map/*` public status.
+  template-monomorph helper decisions. TODO-4292 through TODO-4297 split the
+  vector half of that remaining seam into canonical implementation promotion,
+  generic storage/lifecycle substrate, ordinary `.prime` lowering, metadata
+  extraction, compatibility deletion, and a final zero-C++-vector audit.
+  TODO-4299 through TODO-4304 apply the same ownership model to map while
+  keeping map-specific lookup, insertion, `Result<ContainerError>`, and key
+  comparability policy explicit.
 - Compatibility adapter inventory: map insert helper compatibility is migrated
   through `StdlibSurfaceRegistry::CollectionsMapHelpers` for canonical
   `/std/collections/map/insert(_ref)`, compatibility `/map/insert(_ref)`,
@@ -208,17 +225,36 @@ Task template:
   import spellings, wildcard expansion, user-defined helper precedence,
   field-view field-name lowering, gfx constructor sugar, and lowerer raw-path
   dispatch checks are syntax/provenance-owned or lowering-owned.
-- Outside this lane: `array<T>` core ownership, promoted `soa_vector<T>`, and
-  map public-status changes remain separate boundaries. Generic
+- Outside this lane: `array<T>` core ownership and the `soa<T>` public-surface
+  rename remain separate boundaries tracked by TODO-4305 through TODO-4310. Generic
   contiguous-storage work that is required to make vector ordinary `.prime`
   code is tracked explicitly in TODO-4293 instead of being folded into
-  TODO-4281.
+  TODO-4281. Map-specific lookup/insertion substrate work is tracked in
+  TODO-4300 instead of being folded into vector storage work.
 - End-state rule for vector: after TODO-4297, production C++ under `src/` and
   `include/` must not contain PrimeStruct-vector-specific paths, helper names,
   type names, diagnostics, parser/lowering branches, or metadata tables.
   `std::vector` as the C++ standard-library container remains allowed; tests,
   docs, generated source-lock fixtures, and stdlib `.prime` files may still
   mention the PrimeStruct vector surface.
+- End-state rule for map: after TODO-4304, production C++ under `src/` and
+  `include/` must not contain PrimeStruct-map-specific paths, helper names,
+  type names, diagnostics, parser/lowering branches, or metadata tables.
+  Ordinary C++ words or containers such as `std::map`, generic mapping
+  variables, and source-map infrastructure remain allowed; tests, docs,
+  generated source-lock fixtures, and stdlib `.prime` files may still mention
+  the PrimeStruct map surface.
+- End-state rule for SoA: after TODO-4310, the public collection name is
+  `soa<T>` under `/std/collections/soa/*`. The old `soa_vector<T>`,
+  `/std/collections/soa_vector/*`, `/soa_vector/*`, `SoaVector<T>`, and
+  `soaVector*` names are compatibility-only until TODO-4309 deletes or
+  intentionally rejects them. Production C++ under `src/` and `include/` must
+  not contain PrimeStruct-SoA-collection surface paths, helper names, type
+  names, diagnostics, parser/lowering branches, or metadata tables after the
+  TODO-4310 audit. Generic SoA substrate terms remain allowed where they do not
+  encode the public collection surface: field-layout/codegen/introspection,
+  `SoaColumn`, `SoaFieldView`, `SoaSchema*`, field-view borrowing/invalidation,
+  and allocation primitives.
 
 ### Stdlib De-Experimentalization Policy Summary
 
@@ -256,10 +292,14 @@ Task template:
 
 ### SoA Public Collection Summary
 
-- `soa_vector<T>` is a promoted stdlib-owned public collection surface.
-- Canonical public spellings for current docs/examples are
-  `/std/collections/soa_vector/*` and
-  `/std/collections/soa_vector_conversions/*`.
+- Rename direction: `soa_vector<T>` is being retired as the public collection
+  name in favor of `soa<T>`. The target canonical public spellings are
+  `/std/collections/soa/*` plus conversion helpers under the same public
+  surface unless TODO-4305 deliberately chooses a separate
+  `/std/collections/soa_conversions/*` namespace.
+- Current compatibility spellings are `/std/collections/soa_vector/*` and
+  `/std/collections/soa_vector_conversions/*`; ordinary new public examples
+  should move to the `soa` spelling once TODO-4305 lands.
 - Accepted compatibility seams: `/std/collections/experimental_soa_vector/*`
   and `/std/collections/experimental_soa_vector_conversions/*` remain importable
   only for targeted compatibility and conformance coverage; C++/VM/native
@@ -863,6 +903,11 @@ Task template:
       helper-call noise, and lowerCamelCase member helpers. Do not copy the
       current `vectorPair`/`vectorTriple`/manual-forwarding style into the
       canonical implementation except as isolated compatibility shims.
+    - Canonical helper ownership should be path/module based, not encoded into
+      function names: prefer `/std/collections/vector/count`,
+      `/std/collections/vector/push`, `/std/collections/vector/remove_at`,
+      and namespace-owned `count`/`push`/`remove_at` helper definitions over
+      `vectorCount`, `vectorPush`, `vectorRemoveAt`, or similar prefixed names.
     - Preserve exact `import /std/collections/vector`, wildcard
       `import /std/collections/*`, constructor/literal rewrite, method sugar,
       and fixed-arity compatibility behavior while moving the implementation
@@ -881,6 +926,9 @@ Task template:
       wrapper over experimental helpers; its public code follows the
       `docs/CodeExamples.md` style boundary or delegates only to an explicitly
       internal implementation module.
+    - The canonical public vector implementation and examples use
+      `/std/collections/vector/<helper>` / namespace-owned helper names rather
+      than `vectorCount` / `vectorPush` / `vectorPair`-style prefixed names.
     - Any remaining low-level buffer, slot, ownership, or compatibility code is
       quarantined in `internal_*` or compatibility-shim files and is not used as
       the public style reference.
@@ -1047,6 +1095,13 @@ Task template:
       `vectorPush`-style wrapper names, fixed-arity constructor wrappers that no
       longer have a public compatibility reason, and direct
       `/std/collections/experimental_vector/*` imports.
+    - Preserve the canonical helper shape as path/module ownership:
+      `/std/collections/vector/count`, `/std/collections/vector/capacity`,
+      `/std/collections/vector/push`, `/std/collections/vector/pop`,
+      `/std/collections/vector/reserve`, `/std/collections/vector/clear`,
+      `/std/collections/vector/remove_at`,
+      `/std/collections/vector/remove_swap`, `/std/collections/vector/at`, and
+      `/std/collections/vector/at_unsafe`.
     - Start from `StdlibSurfaceRegistry`, semantic helper rewrites,
       template-monomorph compatibility adapters, lowerer raw-path dispatch
       checks, `stdlib/std/collections/collections.prime`, vector import tests,
@@ -1061,6 +1116,9 @@ Task template:
     - Rooted `/vector/*`, `vectorCount`-style names, and direct
       `experimental_vector` imports are either removed from tests/docs or reject
       with stable, intentional compatibility diagnostics.
+    - No public docs, examples, or canonical stdlib vector source use prefixed
+      helper names to encode the module path; they use slash paths,
+      namespaces, imports, and method sugar instead.
     - Production C++ contains no PrimeStruct-vector-specific compatibility
       handling, compatibility diagnostics, removed-helper adapters, parser/text
       transform branches, lowerer raw-path checks, or surface metadata entries.
@@ -1108,3 +1166,527 @@ Task template:
   - stop_rule: Stop once the release gate mechanically enforces that vector is
     fully stdlib-owned and no PrimeStruct-vector-specific production C++ traces
     remain.
+
+- [ ] TODO-4299: Promote and style canonical `.prime` map implementation
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4297, TODO-4291
+  - scope: Move the real `Map<K, V>` and `Entry<K, V>` implementation out of
+    the public `/std/collections/experimental_map/*` namespace and make the
+    canonical `/std/collections/map/*` surface, or a non-public
+    `/std/collections/internal_map/*` module behind that surface, own the
+    implementation while bringing the public map `.prime` source up to the
+    readability bar in `docs/CodeExamples.md`.
+  - implementation_notes:
+    - Start from `stdlib/std/collections/map.prime`,
+      `stdlib/std/collections/experimental_map.prime`,
+      `stdlib/std/collections/collections.prime`,
+      `src/StdlibSurfaceRegistry.cpp`, collection import tests, map
+      compile-run suites, and docs/source-lock tests that mention
+      `experimental_map`.
+    - Cross-check `docs/CodeExamples.md`: `map.prime` is listed as
+      style-aligned surface code, while `experimental_map.prime` and
+      `internal_*` collection files are bridge/substrate-oriented. Keep
+      low-level storage, slot overwrite, lookup loops, and compatibility
+      scaffolding out of the public style-facing file when possible.
+    - Prefer CodeExamples surface style in public map code where the current
+      language supports it: descriptive names, shallow control flow, concise
+      inferred locals, method-style calls, operator syntax instead of canonical
+      helper-call noise, and lowerCamelCase member helpers.
+    - Canonical helper ownership should be path/module based, not encoded into
+      function names: prefer `/std/collections/map/count`,
+      `/std/collections/map/contains`, `/std/collections/map/tryAt` or the
+      documented final miss-result spelling, `/std/collections/map/at`,
+      `/std/collections/map/at_unsafe`, and `/std/collections/map/insert` over
+      `mapCount`, `mapContains`, `mapTryAt`, `mapAt`, or `mapInsert`.
+    - Preserve exact `import /std/collections/map`, wildcard
+      `import /std/collections/*`, constructor/literal rewrite, method sugar,
+      and fixed-arity compatibility behavior while moving the implementation
+      owner.
+    - Keep `/std/collections/experimental_map/*` only as a compatibility shim
+      for targeted tests; do not change vector or SoA public status in this
+      task.
+  - acceptance:
+    - Canonical map imports exercise a non-experimental implementation owner in
+      `.prime`, not a public wrapper whose primary body lives in
+      `experimental_map`.
+    - Direct experimental-map imports either continue through a documented shim
+      or are limited to explicitly named compatibility/conformance tests.
+    - Public docs and examples no longer present `experimental_map` as the map
+      implementation namespace.
+    - `stdlib/std/collections/map.prime` is no longer a thin low-quality wrapper
+      over experimental helpers; its public code follows the
+      `docs/CodeExamples.md` style boundary or delegates only to an explicitly
+      internal implementation module.
+    - The canonical public map implementation and examples use
+      `/std/collections/map/<helper>` / namespace-owned helper names rather than
+      `mapCount` / `mapContains` / `mapTryAt` / `mapInsert`-style prefixed
+      names.
+    - Any remaining low-level lookup, storage, overwrite, ownership, or
+      compatibility code is quarantined in `internal_*` or compatibility-shim
+      files and is not used as the public style reference.
+    - Existing map construction, lookup, insertion, Result/ContainerError,
+      lifecycle, and import conformance remains behavior-compatible.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the implementation owner is canonical/internal and
+    compatibility imports are only shims; leave lookup/insertion substrate and
+    lowering extraction to TODO-4300 and TODO-4301.
+
+- [ ] TODO-4300: Stabilize map lookup and insertion substrate
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4299
+  - scope: Make map lookup, miss reporting, overwrite, and insertion behavior
+    expressible as ordinary `.prime` code over canonical vector/generic storage
+    plus the stdlib `Result<ContainerError>` contract.
+  - implementation_notes:
+    - Start from `stdlib/std/collections/experimental_map.prime`,
+      `stdlib/std/collections/errors.prime`, canonical vector helpers after
+      TODO-4297, Result migration notes from TODO-4266/TODO-4291, and
+      map compile-run tests covering `contains`, `tryAt`, `at`, `at_unsafe`,
+      and `insert`.
+    - Keep key comparability policy explicit: `Comparable<K>` or its successor
+      should be a documented requirement of lookup/insertion, not a hidden C++
+      classifier.
+    - Decide and document whether the canonical miss-result helper remains
+      `tryAt` for compatibility or migrates to a CodeExamples-aligned spelling
+      such as `try_at`; keep any old spelling as a compatibility shim until
+      TODO-4303.
+    - Map may reuse vector/generic storage substrate, but map-specific policy
+      such as duplicate-key overwrite, key equality, checked missing-key
+      behavior, and `ContainerError` payloads belongs in this task.
+  - acceptance:
+    - Map lookup and insertion fixtures execute through `.prime` helpers over
+      canonical vector/generic storage without relying on experimental vector
+      or experimental map public imports.
+    - Duplicate-key insertion overwrites the payload with ownership-sensitive
+      drop/init behavior and keeps key/value counts aligned.
+    - `contains`, miss-result lookup, checked `at`, unchecked `at_unsafe`, and
+      `insert` behavior are documented for supported key/value kinds.
+    - `Result<ContainerError>` miss behavior is stdlib-owned and covered on the
+      supported VM/native paths without map-specific C++ result shims.
+    - Existing map behavior and diagnostics remain stable unless the task
+      intentionally updates them with docs and tests.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once map lookup/insertion policy is executable through
+    ordinary `.prime` substrate and documented; leave semantic/lowering
+    fast-path deletion to TODO-4301.
+
+- [ ] TODO-4301: Lower map helpers through ordinary `.prime`
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4300
+  - scope: Route canonical map helper behavior through imported `.prime`
+    helper bodies over the map/vector/generic storage substrate instead of
+    map-specific semantic/lowering fast paths.
+  - implementation_notes:
+    - Start from `src/semantics/SemanticsValidatorExprVectorHelpers.cpp`,
+      `src/semantics/SemanticsValidatorInferPreDispatchCalls.cpp`,
+      `src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h`,
+      `src/semantics/TemplateMonomorphExperimentalCollectionConstructorRewrites.h`,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
+      `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`,
+      `src/ir_lowerer/IrLowererPackedResultHelpers.cpp`,
+      `src/ir_lowerer/IrLowererSetupTypeStructPathHelpers.cpp`, and map
+      import/lookup/insert/source-lock tests.
+    - Preserve user-visible canonical helper behavior while shrinking
+      production C++ to generic call resolution, field/layout metadata,
+      storage/lifecycle primitives, Result/sum primitives, and compatibility
+      diagnostics.
+    - Keep rooted `/map/*`, `mapCount`-style names, and direct experimental
+      imports working only as temporary compatibility paths until TODO-4303.
+  - acceptance:
+    - Canonical `/std/collections/map/*` `entry`, `map`, `count`,
+      `count_ref`, `contains`, `contains_ref`, miss-result lookup,
+      `at`, `at_ref`, `at_unsafe`, `at_unsafe_ref`, `insert`, and `insert_ref`
+      run through ordinary `.prime` helper lowering on VM/native for supported
+      key/value kinds.
+    - Production C++ no longer emits map lookup, insertion, miss-result, or
+      checked-access semantics by matching map helper paths or builtin map
+      names.
+    - Map layout used by lowering comes from ordinary struct metadata and
+      canonical vector/generic storage, not a hard-coded experimental map type
+      recognizer.
+    - Any remaining map strings in production C++ are declarative surface
+      metadata or compatibility diagnostics, and are listed for removal in
+      TODO-4302/TODO-4303.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once canonical map helpers no longer depend on map-specific
+    semantic/lowering emission; leave metadata and compatibility deletion to
+    TODO-4302 and TODO-4303.
+
+- [ ] TODO-4302: Move map surface metadata out of C++
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4301
+  - scope: Remove map-specific public-surface knowledge from handwritten C++
+    and generated production C++ by moving canonical map
+    helper/import/constructor metadata into a stdlib-owned manifest or
+    equivalent data-driven source consumed through generic collection-surface
+    APIs.
+  - implementation_notes:
+    - Start from `include/primec/StdlibSurfaceRegistry.h`,
+      `src/StdlibSurfaceRegistry.cpp`,
+      `src/semantics/TemplateMonomorph*.h`, collection import resolution,
+      wildcard import tests, and source locks that currently assert map
+      registry spellings.
+    - Avoid generated C++ tables that still contain PrimeStruct map strings;
+      prefer a non-C++ manifest or stdlib metadata read through generic code.
+  - acceptance:
+    - Canonical map import, wildcard import, constructor, and method-helper
+      metadata is loaded from stdlib-owned data rather than handwritten or
+      generated map lists in production C++.
+    - Existing canonical map behavior and diagnostics stay stable across
+      repeated builds.
+    - Production `src/` and `include/` C++ no longer contain canonical map
+      surface tables, path aliases, import aliases, constructor spellings, or
+      helper-name lists; temporary compatibility traces are limited to the
+      deletion work tracked by TODO-4303.
+    - Docs describe the map surface metadata ownership boundary.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once canonical map surface metadata no longer requires
+    PrimeStruct-map-specific C++ entries; leave removal of compatibility
+    spellings and the final zero-trace audit to TODO-4303 and TODO-4304.
+
+- [ ] TODO-4303: Delete map compatibility seams
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4302
+  - scope: Remove or intentionally reject the old map compatibility spellings
+    once the canonical `.prime` implementation, generic lowering path, and
+    data-driven surface metadata are in place.
+  - implementation_notes:
+    - Target rooted `/map/*`, `mapCount` / `mapContains` / `mapTryAt` /
+      `mapAt` / `mapInsert`-style wrapper names, fixed-arity constructor
+      wrappers that no longer have a public compatibility reason, and direct
+      `/std/collections/experimental_map/*` imports.
+    - Preserve the canonical helper shape as path/module ownership:
+      `/std/collections/map/entry`, `/std/collections/map/map`,
+      `/std/collections/map/count`, `/std/collections/map/count_ref`,
+      `/std/collections/map/contains`, `/std/collections/map/contains_ref`,
+      the documented miss-result lookup helper spelling,
+      `/std/collections/map/at`, `/std/collections/map/at_ref`,
+      `/std/collections/map/at_unsafe`,
+      `/std/collections/map/at_unsafe_ref`, `/std/collections/map/insert`, and
+      `/std/collections/map/insert_ref`.
+    - Start from `StdlibSurfaceRegistry`, semantic helper rewrites,
+      template-monomorph compatibility adapters, lowerer raw-path dispatch
+      checks, `stdlib/std/collections/collections.prime`, map import tests,
+      diagnostics snapshots, and docs/source locks.
+    - Do not change vector or SoA compatibility spellings in this task.
+  - acceptance:
+    - Ordinary user code can use only canonical `/std/collections/map/*`, exact
+      `import /std/collections/map`, wildcard `import /std/collections/*`, and
+      documented map construction syntax.
+    - Rooted `/map/*`, `mapCount`-style names, fixed-arity bridge names, and
+      direct `experimental_map` imports are either removed from tests/docs or
+      reject with stable, intentional compatibility diagnostics.
+    - No public docs, examples, or canonical stdlib map source use prefixed
+      helper names to encode the module path; they use slash paths,
+      namespaces, imports, and method sugar instead.
+    - Production C++ contains no PrimeStruct-map-specific compatibility
+      handling, compatibility diagnostics, removed-helper adapters, parser/text
+      transform branches, lowerer raw-path checks, or surface metadata entries.
+    - The de-experimentalization policy and vector/map bridge summary record
+      the final map status.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once map compatibility spellings are deleted or
+    intentionally rejected and the only supported public map surface is the
+    canonical stdlib one; leave the mechanical C++ trace audit to TODO-4304.
+
+- [ ] TODO-4304: Add zero C++ map-surface audit
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Map stdlib ownership cutover
+  - depends_on: TODO-4303
+  - scope: Add a deterministic validation gate that proves the PrimeStruct map
+    surface is fully `.prime`/stdlib-owned and absent from production C++
+    source.
+  - implementation_notes:
+    - Add a script or CTest-integrated check that scans production C++ under
+      `src/` and `include/` for PrimeStruct-map-specific traces such as
+      `/map`, `/std/collections/map`, `experimental_map`, `mapCount`,
+      `mapContains`, `mapTryAt`, `mapAt`, `mapInsert`, `Map<K`, map-specific
+      diagnostics, and map-specific parser/semantic/lowering branch names.
+    - The check must allow ordinary C++ library usage such as `std::map`,
+      generic mapping variable names, source-map infrastructure, and test/docs
+      files outside production `src/` and `include/`.
+    - If generic collection code needs examples or fixtures, place them in
+      tests/docs or stdlib-owned manifests rather than production C++ strings.
+  - acceptance:
+    - The audit runs in the release validation path and fails when a
+      PrimeStruct-map-specific production C++ trace is reintroduced.
+    - The audit passes with canonical map construction, imports, helper calls,
+      lookup, insertion, miss-result handling, destruction, and direct `.prime`
+      implementation behavior covered by existing tests.
+    - Production C++ under `src/` and `include/` contains no PrimeStruct map
+      paths, helper aliases, type-name recognizers, diagnostics, special
+      parser/text-transform cases, semantic rewrites, lowering dispatches, or
+      metadata tables.
+    - The only allowed map mentions after the audit are ordinary C++ `std::map`
+      or source-map/generic mapping usage, stdlib `.prime` source, tests, docs,
+      and explicitly non-production generated source-lock fixtures.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the release gate mechanically enforces that map is
+    fully stdlib-owned and no PrimeStruct-map-specific production C++ traces
+    remain.
+
+- [ ] TODO-4305: Rename and style canonical `.prime` SoA surface
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4297
+  - scope: Rename the public SoA collection surface from `soa_vector<T>` to
+    `soa<T>` and from `/std/collections/soa_vector/*` to
+    `/std/collections/soa/*`, while keeping the public `.prime` source aligned
+    with `docs/CodeExamples.md`.
+  - implementation_notes:
+    - Start from `stdlib/std/collections/soa_vector.prime`,
+      `stdlib/std/collections/soa_vector_conversions.prime`,
+      `stdlib/std/collections/internal_soa_vector.prime`,
+      `stdlib/std/collections/internal_soa_vector_conversions.prime`,
+      `stdlib/std/collections/experimental_soa_vector.prime`,
+      `stdlib/std/collections/experimental_soa_vector_conversions.prime`,
+      `docs/PrimeStruct.md`, `docs/PrimeStruct_SyntaxSpec.md`,
+      `docs/CodeExamples.md`, SoA compile-run suites, ECS examples, and
+      source-lock tests.
+    - Decide whether conversions live directly under `/std/collections/soa/*`
+      or under `/std/collections/soa_conversions/*`; document the final shape
+      before changing tests.
+    - Prefer CodeExamples surface style in public SoA code where the current
+      language supports it: descriptive names, shallow control flow, concise
+      inferred locals, method-style calls, operator syntax instead of canonical
+      helper-call noise, and lowerCamelCase member helpers.
+    - Canonical helper ownership should be path/module based, not encoded into
+      function names: prefer `/std/collections/soa/count`,
+      `/std/collections/soa/get`, `/std/collections/soa/ref`,
+      `/std/collections/soa/push`, `/std/collections/soa/reserve`,
+      field-view helpers, and conversion helpers over `soaVectorCount`,
+      `soaVectorGet`, `soaVectorRef`, `soaVectorPush`,
+      `soaVectorReserve`, or `soaVectorToAos`.
+    - Keep `soa_vector<T>`, `/std/collections/soa_vector/*`, `/soa_vector/*`,
+      `SoaVector<T>`, and `soaVector*` only as compatibility shims until
+      TODO-4309.
+  - acceptance:
+    - Docs define `soa<T>` and `/std/collections/soa/*` as the target canonical
+      public SoA collection surface, with `soa_vector` documented as a
+      compatibility spelling only.
+    - Canonical public SoA examples and style-aligned stdlib code use `soa<T>`
+      and `/std/collections/soa/<helper>` / namespace-owned helper names rather
+      than `soa_vector<T>` or `soaVector*` prefixed helper names.
+    - Existing `soa_vector` imports and examples either continue through
+      compatibility shims or are limited to explicitly named compatibility
+      tests.
+    - Low-level column storage, field-view, schema, conversion, and
+      compatibility mechanics are quarantined in `internal_*` or
+      compatibility-shim files and are not used as the public style reference.
+    - Existing SoA construction, count/get/ref, push/reserve, field-view,
+      conversion, invalidation, and import behavior remains behavior-compatible
+      unless deliberately updated with docs and tests.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the target public spelling is `soa<T>` /
+    `/std/collections/soa/*` with `soa_vector` isolated as compatibility; leave
+    generic substrate and lowering extraction to TODO-4306 and TODO-4307.
+
+- [ ] TODO-4306: Stabilize generic SoA substrate boundaries
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4305
+  - scope: Make the remaining compiler/runtime-owned SoA behavior explicit as
+    generic substrate rather than public `soa` collection semantics.
+  - implementation_notes:
+    - Start from `stdlib/std/collections/internal_soa_storage.prime`,
+      generated `SoaSchema*` helpers, `SoaColumn<T>`, `SoaFieldView<T>`,
+      field-view borrow-root invalidation tests, and the C++ helper paths that
+      currently mention builtin `soa_vector` storage or field-view behavior.
+    - Keep generic SoA substrate allowed in C++ where necessary:
+      field-layout/codegen/introspection, column storage, field-view
+      borrowing/invalidation, schema metadata, and allocation primitives.
+    - Move public collection policy such as construction, count/get/ref,
+      push/reserve, conversion naming, helper routing, and compatibility names
+      out of compiler-owned substrate.
+  - acceptance:
+    - Docs separate generic SoA substrate from the public `soa<T>` collection
+      surface and identify which pieces may remain compiler/runtime-owned.
+    - Internal `.prime` fixtures cover `SoaColumn`, `SoaFieldView`, and
+      `SoaSchema*` behavior without spelling public `soa_vector` collection
+      helpers.
+    - Field-view borrow-root invalidation and structural mutation boundaries
+      are documented and covered for the canonical `soa<T>` surface.
+    - Existing SoA behavior and diagnostics remain stable unless the task
+      intentionally updates them with docs and tests.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once generic SoA substrate boundaries are documented and
+    covered independently of the old `soa_vector` public surface; leave helper
+    lowering extraction to TODO-4307.
+
+- [ ] TODO-4307: Lower SoA helpers through ordinary `.prime`
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4306
+  - scope: Route canonical `/std/collections/soa/*` helper and conversion
+    behavior through imported `.prime` helper bodies over the generic SoA
+    substrate instead of `soa_vector`-specific semantic/lowering fast paths.
+  - implementation_notes:
+    - Start from `include/primec/SoaPathHelpers.h`,
+      `src/semantics/TemplateMonomorphCollectionCompatibilityPaths.h`,
+      SoA helper/field-view semantic validators,
+      `src/ir_lowerer/IrLowererInlineNativeCallDispatch.cpp`,
+      `src/ir_lowerer/IrLowererInlineParamHelpers.cpp`,
+      `src/ir_lowerer/IrLowererStatementBindingHelpers.cpp`,
+      `src/ir_lowerer/IrLowererNativeTailDispatch.cpp`, and SoA
+      helper/conversion/source-lock tests.
+    - Preserve user-visible canonical behavior while shrinking production C++
+      to generic call resolution, struct/field metadata, generic SoA substrate,
+      borrow/invalidation primitives, and compatibility diagnostics.
+    - Keep `/soa_vector/*`, `/std/collections/soa_vector/*`, `soaVector*`, and
+      direct experimental imports working only as temporary compatibility paths
+      until TODO-4309.
+  - acceptance:
+    - Canonical `/std/collections/soa/*` construction, count/get/ref,
+      push/reserve, field-view, and conversion helpers run through ordinary
+      `.prime` helper lowering on VM/native for supported element kinds.
+    - Production C++ no longer emits public SoA collection helper behavior by
+      matching `soa_vector` helper paths, `soaVector*` names, or builtin
+      `soa_vector` receiver names.
+    - Any remaining C++ SoA code is classified as generic substrate rather than
+      public collection-surface behavior.
+    - Any remaining old public-surface strings in production C++ are
+      compatibility diagnostics or metadata listed for removal in
+      TODO-4308/TODO-4309.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once canonical `soa` helpers no longer depend on
+    `soa_vector`-specific semantic/lowering emission; leave metadata and
+    compatibility deletion to TODO-4308 and TODO-4309.
+
+- [ ] TODO-4308: Move SoA surface metadata out of C++
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4307
+  - scope: Remove public SoA collection-surface knowledge from handwritten C++
+    and generated production C++ by moving canonical `soa`
+    helper/import/constructor/conversion metadata into stdlib-owned data
+    consumed through generic collection-surface APIs.
+  - implementation_notes:
+    - Start from `include/primec/StdlibSurfaceRegistry.h`,
+      `src/StdlibSurfaceRegistry.cpp`, `include/primec/SoaPathHelpers.h`,
+      template-monomorph compatibility paths, collection import resolution,
+      wildcard import tests, and source locks that currently assert
+      `soa_vector` registry spellings.
+    - Avoid generated C++ tables that still contain PrimeStruct `soa` or
+      `soa_vector` public-surface strings; prefer a non-C++ manifest or stdlib
+      metadata read through generic code.
+    - Keep generic SoA substrate metadata separate from public collection
+      surface metadata.
+  - acceptance:
+    - Canonical `soa` import, wildcard import, constructor, method-helper,
+      field-view, and conversion metadata is loaded from stdlib-owned data
+      rather than handwritten or generated public SoA surface lists in
+      production C++.
+    - Existing canonical SoA behavior and diagnostics stay stable across
+      repeated builds.
+    - Production `src/` and `include/` C++ no longer contain public SoA
+      collection-surface tables, path aliases, import aliases, constructor
+      spellings, conversion spellings, or helper-name lists; temporary
+      compatibility traces are limited to the deletion work tracked by
+      TODO-4309.
+    - Docs describe the boundary between public `soa` surface metadata and
+      generic SoA substrate metadata.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once canonical SoA surface metadata no longer requires
+    PrimeStruct-SoA-public-surface C++ entries; leave removal of compatibility
+    spellings and the final zero-trace audit to TODO-4309 and TODO-4310.
+
+- [ ] TODO-4309: Delete `soa_vector` compatibility seams
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4308
+  - scope: Remove or intentionally reject the old `soa_vector` compatibility
+    spellings once the canonical `soa<T>` implementation, generic substrate
+    boundary, `.prime` lowering path, and data-driven surface metadata are in
+    place.
+  - implementation_notes:
+    - Target `soa_vector<T>`, `/std/collections/soa_vector/*`,
+      `/std/collections/soa_vector_conversions/*`, rooted `/soa_vector/*`,
+      rooted `/to_aos` / `/to_aos_ref` compatibility spellings when they encode
+      the old surface, `SoaVector<T>`, `soaVector*` wrappers, and direct
+      `/std/collections/experimental_soa_vector*` imports.
+    - Preserve the canonical helper shape as path/module ownership:
+      `/std/collections/soa/soa`, `/std/collections/soa/count`,
+      `/std/collections/soa/get`, `/std/collections/soa/ref`,
+      `/std/collections/soa/count_ref`, `/std/collections/soa/get_ref`,
+      `/std/collections/soa/ref_ref`, `/std/collections/soa/push`,
+      `/std/collections/soa/reserve`, field-view helpers, and the documented
+      conversion helper paths.
+    - Start from `StdlibSurfaceRegistry`, `SoaPathHelpers`, semantic helper
+      rewrites, template-monomorph compatibility adapters, lowerer raw-path
+      dispatch checks, SoA stdlib files, SoA import tests, diagnostics
+      snapshots, ECS examples, and docs/source locks.
+  - acceptance:
+    - Ordinary user code can use only canonical `soa<T>`,
+      `/std/collections/soa/*`, wildcard `import /std/collections/*`, and
+      documented SoA construction/conversion syntax.
+    - `soa_vector<T>`, `/soa_vector/*`, `soaVector*` names, and direct
+      `experimental_soa_vector*` imports are either removed from tests/docs or
+      reject with stable, intentional compatibility diagnostics.
+    - No public docs, examples, or canonical stdlib SoA source use prefixed
+      helper names to encode the module path; they use slash paths,
+      namespaces, imports, and method sugar instead.
+    - Production C++ contains no PrimeStruct-SoA-public-surface compatibility
+      handling, compatibility diagnostics, removed-helper adapters, parser/text
+      transform branches, lowerer raw-path checks, or public surface metadata
+      entries.
+    - The de-experimentalization policy and SoA public collection summary record
+      the final `soa` status.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once old `soa_vector` compatibility spellings are deleted
+    or intentionally rejected and the only supported public SoA collection
+    surface is `soa<T>`; leave the mechanical C++ trace audit to TODO-4310.
+
+- [ ] TODO-4310: Add zero C++ SoA collection-surface audit
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: SoA public surface rename and ownership cutover
+  - depends_on: TODO-4309
+  - scope: Add a deterministic validation gate that proves the PrimeStruct SoA
+    public collection surface is fully `.prime`/stdlib-owned and absent from
+    production C++ source while allowing generic SoA substrate code.
+  - implementation_notes:
+    - Add a script or CTest-integrated check that scans production C++ under
+      `src/` and `include/` for PrimeStruct-SoA-public-surface traces such as
+      `/soa_vector`, `/std/collections/soa_vector`, `/std/collections/soa`,
+      `experimental_soa_vector`, `SoaVector`, `soaVector`, old `to_aos`
+      compatibility shims, SoA public-surface diagnostics, and
+      collection-surface parser/semantic/lowering branch names.
+    - The check must allow generic SoA substrate terms where they are not public
+      collection surface names: `SoaColumn`, `SoaFieldView`, `SoaSchema`,
+      field-layout/codegen/introspection helpers, field-view borrow/invalidation
+      machinery, and allocation primitives.
+    - The check must also allow tests/docs/source-lock files outside production
+      `src/` and `include/`.
+  - acceptance:
+    - The audit runs in the release validation path and fails when a
+      PrimeStruct-SoA-public-surface production C++ trace is reintroduced.
+    - The audit passes with canonical `soa<T>` construction, imports, helper
+      calls, field views, conversion, mutation, invalidation, destruction, and
+      direct `.prime` implementation behavior covered by existing tests.
+    - Production C++ under `src/` and `include/` contains no PrimeStruct SoA
+      public collection paths, helper aliases, type-name recognizers,
+      diagnostics, special parser/text-transform cases, semantic rewrites,
+      lowering dispatches, or metadata tables.
+    - The only allowed SoA mentions after the audit are generic SoA substrate
+      terms, stdlib `.prime` source, tests, docs, and explicitly
+      non-production generated source-lock fixtures.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the release gate mechanically enforces that the public
+    SoA collection surface is `soa<T>`, fully stdlib-owned, and has no
+    PrimeStruct-SoA-public-surface production C++ traces.
