@@ -162,6 +162,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("assign to indexed inferred vector element succeeds") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [mut] values{vector<i32>()}
+  /std/collections/vector/push(values, 1i32)
+  /std/collections/vector/push(values, 2i32)
+  [i32] index{1i32}
+  assign(values[index], 7i32)
+  return(values[1i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("assign to indexed vector field succeeds") {
   const std::string source = R"(
 import /std/collections/*

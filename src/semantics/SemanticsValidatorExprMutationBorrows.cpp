@@ -48,6 +48,11 @@ bool SemanticsValidator::validateExprMutationBorrowBuiltins(
           !binding.typeTemplateArg.empty()) {
         return true;
       }
+      std::string experimentalVectorElemType;
+      if (extractExperimentalVectorElementType(binding,
+                                               experimentalVectorElemType)) {
+        return true;
+      }
       if ((normalizedTypeName != "Reference" &&
            normalizedTypeName != "Pointer") ||
           binding.typeTemplateArg.empty()) {
