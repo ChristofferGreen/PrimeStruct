@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Preserve initializer LocalInfo facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that keeps statement
+    bindings initialized from semantic-product-addressed names from letting
+    final scalar, pointer/reference, or array/vector LocalInfo fallback
+    branches overwrite published initializer binding facts with stale local-map
+    metadata.
+  - implementation_notes:
+    - Apply the authority boundary only when a semantic binding fact is
+      available for the initializer expression and matches the inferred binding
+      shape.
+    - Preserve syntax-only and no-semantic-product compatibility behavior.
+    - Keep broader local-auto and control-flow migration out of scope.
+  - acceptance:
+    - Published semantic initializer binding facts recover scalar value kinds.
+    - Published semantic initializer binding facts recover pointer struct paths.
+    - Published semantic initializer binding facts recover array/vector element
+      value kinds.
+    - Conflicting local-map metadata no longer overrides the published
+      semantic initializer binding fact in those final fallback branches.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once final statement binding LocalInfo metadata for
+    semantic-product-addressed name initializers preserves published facts
+    without changing syntax-only compatibility behavior.
+  - finished_at: 2026-04-28
+  - evidence: Tightened `IrLowererStatementBindingHelpers.cpp` so scalar,
+    pointer/reference, and array/vector final fallback branches reuse semantic
+    initializer facts before stale local maps, added lowerer coverage for each
+    conflicting path, and documented the remaining TODO-4298 work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Prefer initializer binding facts
   - owner: ai
   - created_at: 2026-04-28

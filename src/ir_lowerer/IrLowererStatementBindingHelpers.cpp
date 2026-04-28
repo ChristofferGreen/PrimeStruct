@@ -981,7 +981,24 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
     return info;
   }
 
+  auto applySemanticInitializerInfo = [&]() {
+    if (!hasSemanticInitBindingInfo || semanticInitInfo.kind != info.kind) {
+      return false;
+    }
+    info.valueKind = semanticInitInfo.valueKind;
+    info.mapKeyKind = semanticInitInfo.mapKeyKind;
+    info.mapValueKind = semanticInitInfo.mapValueKind;
+    info.structTypeName = semanticInitInfo.structTypeName;
+    info.usesBuiltinCollectionLayout =
+        info.usesBuiltinCollectionLayout || semanticInitInfo.usesBuiltinCollectionLayout;
+    mergeStatementBindingAuxTypeInfo(semanticInitInfo, info);
+    return true;
+  };
+
   if (info.kind == LocalInfo::Kind::Value) {
+    if (applySemanticInitializerInfo()) {
+      return info;
+    }
     const LocalInfo::ValueKind specialInitValueKind = inferSpecialCallValueKind(init);
     info.valueKind = (specialInitValueKind != LocalInfo::ValueKind::Unknown)
                          ? specialInitValueKind
@@ -998,6 +1015,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   }
 
   if (info.kind == LocalInfo::Kind::Pointer || info.kind == LocalInfo::Kind::Reference) {
+    if (applySemanticInitializerInfo()) {
+      return info;
+    }
     if (init.kind == Expr::Kind::Name) {
       auto it = localsIn.find(init.name);
       if (it != localsIn.end() &&
@@ -1014,6 +1034,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   }
 
   if (info.kind == LocalInfo::Kind::Array || info.kind == LocalInfo::Kind::Vector) {
+    if (applySemanticInitializerInfo()) {
+      return info;
+    }
     if (init.kind == Expr::Kind::Name) {
       auto it = localsIn.find(init.name);
       if (it != localsIn.end() &&

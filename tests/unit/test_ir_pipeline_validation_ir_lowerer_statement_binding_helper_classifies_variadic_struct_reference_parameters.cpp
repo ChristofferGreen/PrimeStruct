@@ -29,6 +29,36 @@ const primec::Expr *findBindingStatementByName(const primec::Definition &definit
   return nullptr;
 }
 
+void addSemanticBindingFact(primec::SemanticProgram &semanticProgram,
+                            uint64_t semanticNodeId,
+                            std::string bindingTypeText) {
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "source",
+      .bindingTypeText = bindingTypeText,
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 3,
+      .sourceColumn = 7,
+      .semanticNodeId = semanticNodeId,
+      .resolvedPathId = primec::InvalidSymbolId,
+  });
+}
+
+primec::ir_lowerer::LocalInfo::ValueKind inferValueKindFromLocals(
+    const primec::Expr &expr,
+    const primec::ir_lowerer::LocalMap &locals) {
+  if (expr.kind != primec::Expr::Kind::Name) {
+    return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  }
+  const auto it = locals.find(expr.name);
+  return it == locals.end() ? primec::ir_lowerer::LocalInfo::ValueKind::Unknown
+                            : it->second.valueKind;
+}
+
 } // namespace
 
 TEST_CASE("ir lowerer statement binding helper tolerates missing parameter callbacks") {
@@ -1377,6 +1407,163 @@ TEST_CASE(
   CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Value);
   CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::Int64);
   CHECK(info.structTypeName.empty());
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper keeps semantic scalar initializer "
+    "facts ahead of locals") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo staleSourceInfo;
+  staleSourceInfo.kind = LocalInfo::Kind::Value;
+  staleSourceInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("source", staleSourceInfo);
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "selected";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Name;
+  init.name = "source";
+  init.semanticNodeId = 9201;
+
+  primec::SemanticProgram semanticProgram;
+  addSemanticBindingFact(semanticProgram, init.semanticNodeId, "i64");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          locals,
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::bindingKindFromTransforms(expr);
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          inferValueKindFromLocals,
+          {},
+          &semanticProgram,
+          &semanticIndex);
+
+  CHECK(info.kind == LocalInfo::Kind::Value);
+  CHECK(info.valueKind == LocalInfo::ValueKind::Int64);
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper keeps semantic pointer initializer "
+    "facts ahead of locals") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo staleSourceInfo;
+  staleSourceInfo.kind = LocalInfo::Kind::Pointer;
+  staleSourceInfo.valueKind = LocalInfo::ValueKind::Int32;
+  staleSourceInfo.structTypeName = "/pkg/StalePair";
+  locals.emplace("source", staleSourceInfo);
+
+  primec::Definition pairDef;
+  pairDef.fullPath = "/pkg/Pair";
+  primec::Transform structTransform;
+  structTransform.name = "struct";
+  pairDef.transforms.push_back(structTransform);
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "selected";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Name;
+  init.name = "source";
+  init.semanticNodeId = 9202;
+
+  primec::SemanticProgram semanticProgram;
+  addSemanticBindingFact(semanticProgram, init.semanticNodeId, "Pointer<Pair>");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          locals,
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::bindingKindFromTransforms(expr);
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          inferValueKindFromLocals,
+          [&](const primec::Expr &expr) -> const primec::Definition * {
+            return expr.name == "Pair" || expr.name == "/pkg/Pair" ? &pairDef : nullptr;
+          },
+          &semanticProgram,
+          &semanticIndex);
+
+  CHECK(info.kind == LocalInfo::Kind::Pointer);
+  CHECK(info.valueKind == LocalInfo::ValueKind::Unknown);
+  CHECK(info.structTypeName == "/pkg/Pair");
+}
+
+TEST_CASE(
+    "ir lowerer statement binding helper keeps semantic collection "
+    "initializer facts ahead of locals") {
+  using LocalInfo = primec::ir_lowerer::LocalInfo;
+
+  primec::ir_lowerer::LocalMap locals;
+  LocalInfo staleSourceInfo;
+  staleSourceInfo.kind = LocalInfo::Kind::Vector;
+  staleSourceInfo.valueKind = LocalInfo::ValueKind::Int32;
+  locals.emplace("source", staleSourceInfo);
+
+  primec::Expr stmt;
+  stmt.kind = primec::Expr::Kind::Call;
+  stmt.isBinding = true;
+  stmt.name = "selected";
+
+  primec::Expr init;
+  init.kind = primec::Expr::Kind::Name;
+  init.name = "source";
+  init.semanticNodeId = 9203;
+
+  primec::SemanticProgram semanticProgram;
+  addSemanticBindingFact(semanticProgram, init.semanticNodeId, "vector<f64>");
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          stmt,
+          init,
+          locals,
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+          },
+          [](const primec::Expr &expr) {
+            return primec::ir_lowerer::bindingKindFromTransforms(expr);
+          },
+          [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+            return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+          },
+          inferValueKindFromLocals,
+          {},
+          &semanticProgram,
+          &semanticIndex);
+
+  CHECK(info.kind == LocalInfo::Kind::Vector);
+  CHECK(info.valueKind == LocalInfo::ValueKind::Float64);
 }
 
 TEST_CASE("ir lowerer statement binding helper classifies variadic map parameters") {

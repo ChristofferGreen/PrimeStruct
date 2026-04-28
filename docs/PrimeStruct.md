@@ -237,6 +237,11 @@ Planned non-template inference migration contract:
   bindings initialized from names now prefer the published initializer binding fact before local-map
   metadata can decide the collection shape. Syntax-only or no-semantic-product contexts keep the
   legacy locals-based compatibility path.
+- Completed lowerer-side statement initializer LocalInfo slice: after a statement initializer binding
+  fact has selected the scalar, pointer/reference, or array/vector shape, final lowerer fallback
+  branches preserve the published fact instead of letting stale local-map metadata overwrite value
+  kinds or struct paths. Syntax-only or no-semantic-product contexts keep the legacy locals-based
+  compatibility path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
