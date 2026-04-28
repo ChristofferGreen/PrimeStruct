@@ -447,7 +447,95 @@
             valueResultInfo.valueStructType.clear();
           };
           normalizeSpecializedMapResultInfo(resultInfo);
-          if (!emitExpr(expr.args.front(), localsIn)) {
+          auto stdlibResultSumMatchesTryInfo = [&](const Definition &candidateDef) -> bool {
+            if (!isStdlibResultSumDefinition(candidateDef)) {
+              return false;
+            }
+            const SumVariant *candidateOk = findSumVariantByName(candidateDef, "ok");
+            const SumVariant *candidateError = findSumVariantByName(candidateDef, "error");
+            if (candidateOk == nullptr || candidateError == nullptr ||
+                !candidateError->hasPayload ||
+                candidateOk->hasPayload != resultInfo.hasValue) {
+              return false;
+            }
+            LoweredSumPayloadStorageInfo candidateOkPayload;
+            LoweredSumPayloadStorageInfo candidateErrorPayload;
+            if (candidateOk->hasPayload &&
+                !resolveSumPayloadStorageInfo(candidateDef, *candidateOk, candidateOkPayload)) {
+              return false;
+            }
+            if (!resolveSumPayloadStorageInfo(candidateDef, *candidateError, candidateErrorPayload)) {
+              return false;
+            }
+            auto payloadMatchesValue = [&](const LoweredSumPayloadStorageInfo &payload) {
+              if (resultInfo.valueCollectionKind != LocalInfo::Kind::Value ||
+                  resultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown ||
+                  resultInfo.valueIsFileHandle) {
+                return false;
+              }
+              if (payload.isAggregate) {
+                return !resultInfo.valueStructType.empty() &&
+                       payload.structPath == resultInfo.valueStructType;
+              }
+              return resultInfo.valueStructType.empty() &&
+                     payload.valueKind == resultInfo.valueKind;
+            };
+            auto payloadMatchesError = [&](const LoweredSumPayloadStorageInfo &payload) {
+              const LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
+              if (errorKind != LocalInfo::ValueKind::Unknown) {
+                return !payload.isAggregate && payload.valueKind == errorKind;
+              }
+              std::string errorStructPath;
+              if (!resolveStructTypeName(resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
+                return false;
+              }
+              return payload.isAggregate && payload.structPath == errorStructPath;
+            };
+            return (!resultInfo.hasValue || payloadMatchesValue(candidateOkPayload)) &&
+                   payloadMatchesError(candidateErrorPayload);
+          };
+          auto hasSingleStdlibResultSumForTryInfo = [&]() -> bool {
+            std::vector<const Definition *> candidates;
+            for (const auto &entry : defMap) {
+              const Definition *candidateDef = entry.second;
+              if (candidateDef == nullptr || !stdlibResultSumMatchesTryInfo(*candidateDef)) {
+                continue;
+              }
+              candidates.push_back(candidateDef);
+            }
+            std::sort(candidates.begin(),
+                      candidates.end(),
+                      [](const Definition *left, const Definition *right) {
+                        return left->fullPath < right->fullPath;
+                      });
+            candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+            return candidates.size() == 1;
+          };
+          auto tryEmitDereferencedStdlibResultPointerOperand = [&]() -> bool {
+            const Expr &operandExpr = expr.args.front();
+            if (!(operandExpr.kind == Expr::Kind::Call &&
+                  isSimpleCallName(operandExpr, "dereference") &&
+                  operandExpr.args.size() == 1 &&
+                  operandExpr.args.front().kind == Expr::Kind::Name)) {
+              return false;
+            }
+            auto localIt = localsIn.find(operandExpr.args.front().name);
+            if (localIt == localsIn.end() ||
+                (localIt->second.kind != LocalInfo::Kind::Reference &&
+                 localIt->second.kind != LocalInfo::Kind::Pointer) ||
+                !localIt->second.isResult ||
+                localIt->second.resultHasValue != resultInfo.hasValue ||
+                trimTemplateTypeText(localIt->second.resultErrorType) !=
+                    trimTemplateTypeText(resultInfo.errorType) ||
+                !hasSingleStdlibResultSumForTryInfo()) {
+              return false;
+            }
+            function.instructions.push_back(
+                {IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
+            return true;
+          };
+          if (!tryEmitDereferencedStdlibResultPointerOperand() &&
+              !emitExpr(expr.args.front(), localsIn)) {
             return false;
           }
           const int32_t resultLocal = allocTempLocal();

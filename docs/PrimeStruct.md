@@ -2295,16 +2295,17 @@ for(
     `Result.error(value)` already reads the imported value-carrying sum tag on those paths, so it returns `false` for
     `ok` and `true` for `error` values from `/std/result/*`.
     `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
-    error payload type's `why` helper for `error`. IR-backed `try(...)` also consumes local and direct-call imported
-    status-only `Result<E>` sums for status-code returns and Result-return error propagation. Imported status-only
-    `Result.error(...)` / `Result.why(...)` lowering still uses the legacy packed-status bridge.
+    error payload type's `why` helper for `error`. IR-backed `try(...)` also consumes local, direct-call, and
+    dereferenced local `Reference<Result<E>>` / `Pointer<Result<E>>` imported status-only `Result<E>` sums for
+    status-code returns and Result-return error propagation. Imported status-only `Result.error(...)` /
+    `Result.why(...)` lowering still uses the legacy packed-status bridge.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
     value-result type spellings, and the IR-backed VM/native paths already branch on local stdlib Result sums for
     status-code returns, Result-return error propagation, direct-call postfix `?` operands, and imported status-only
-    `try(...)` operands, so the remaining migration work can focus on broader operand/result shapes, status-only
-    helper calls, and legacy bridge cleanup.
+    `try(...)` operands across local, direct-call, and dereferenced local pointer/reference sources, so the remaining
+    migration work can focus on status-only helper calls and legacy bridge cleanup.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
@@ -3363,10 +3364,10 @@ bad_set() {
   Legacy `Result.ok(value)`, `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` can initialize typed imported value-carrying sum locals/returns on IR-backed VM/native
   paths with local imported Result sum sources or direct calls returning them. `try(...)`, `Result.error(...)`, and
-  `Result.why(...)` can inspect imported sum values directly or through dereferenced local
+  `Result.why(...)` can inspect imported value-carrying sum values directly or through dereferenced local
   `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values. Imported status-only `Result<E>` values can be
-  constructed and used as `pick` targets, while status-only propagation stays a compatibility surface until TODO-4266
-  lands.
+  constructed, used as `pick` targets, and consumed by IR-backed `try(...)` from locals, direct calls, and
+  dereferenced local `Reference<Result<E>>` / `Pointer<Result<E>>` sources.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on

@@ -1134,6 +1134,141 @@ main() {
   CHECK(result == 13);
 }
 
+TEST_CASE("ir lowerer supports try on borrowed imported status-only Result sums") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_reference_ok() {
+  [Result<MyError>] status{Result<MyError>{}}
+  [Reference<Result<MyError>>] ref{location(status)}
+  return(try(dereference(ref)))
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_reference_error() {
+  [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 17i32}}}
+  [Reference<Result<MyError>>] ref{location(status)}
+  return(try(dereference(ref)))
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_pointer_ok() {
+  [Result<MyError>] status{Result<MyError>{}}
+  [Pointer<Result<MyError>>] ptr{location(status)}
+  return(try(dereference(ptr)))
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_pointer_error() {
+  [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 19i32}}}
+  [Pointer<Result<MyError>>] ptr{location(status)}
+  return(try(dereference(ptr)))
+}
+
+[return<int>]
+main() {
+  return(plus(plus(read_reference_ok(), read_reference_error()),
+              plus(read_pointer_ok(), read_pointer_error())))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 36);
+}
+
+TEST_CASE("ir lowerer propagates borrowed imported status-only Result sum errors") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<Result<MyError>> on_error<MyError, /swallow>]
+forward_reference_error() {
+  [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 23i32}}}
+  [Reference<Result<MyError>>] ref{location(status)}
+  try(dereference(ref))
+  return(Result<MyError>{})
+}
+
+[return<Result<MyError>> on_error<MyError, /swallow>]
+forward_pointer_error() {
+  [Result<MyError>] status{Result<MyError>{[error] MyError{[code] 29i32}}}
+  [Pointer<Result<MyError>>] ptr{location(status)}
+  try(dereference(ptr))
+  return(Result<MyError>{})
+}
+
+[return<int>]
+main() {
+  [Result<MyError>] left{forward_reference_error()}
+  [Result<MyError>] right{forward_pointer_error()}
+  [i32] leftCode{pick(left) {
+    ok {
+      0i32
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  [i32] rightCode{pick(right) {
+    ok {
+      0i32
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  return(plus(leftCode, rightCode))
+}
+)";
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidate(source, program, semanticProgram, error));
+  CHECK(error.empty());
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  REQUIRE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
+  CHECK(error.empty());
+
+  primec::Vm vm;
+  uint64_t result = 0;
+  REQUIRE(vm.execute(module, result, error));
+  CHECK(error.empty());
+  CHECK(result == 52);
+}
+
 TEST_CASE("ir lowerer supports Result.and_then f32 payloads") {
   const std::string source = R"(
 import /std/file/*

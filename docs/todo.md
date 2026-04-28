@@ -300,10 +300,10 @@ Task template:
       status-only `Result<E>` sum beside `Result<T, E>` at the same public path,
       with a unit `ok` variant, an `error(E)` payload variant, default `ok`
       construction, `ok<E>()`, and semantic `pick` coverage. IR-backed
-      `try(...)` now consumes local and direct-call imported status-only
-      `Result<E>` sums for status-code returns and Result-return error
-      propagation. Remaining work covers borrowed/pointer status-only operands,
-      status-only helper-call lowering, and non-VM/native bridge cleanup.
+      `try(...)` now consumes local, direct-call, and dereferenced local
+      borrowed/pointer imported status-only `Result<E>` sums for status-code
+      returns and Result-return error propagation. Remaining work covers
+      status-only helper-call lowering and non-VM/native bridge cleanup.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the
