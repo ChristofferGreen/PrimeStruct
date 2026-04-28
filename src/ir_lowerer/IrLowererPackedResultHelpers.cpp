@@ -500,6 +500,35 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     return ResultErrorMethodCallEmitResult::Error;
   }
 
+  auto isStdlibResultSumValue = [&]() {
+    const Expr &valueExpr = expr.args[1];
+    if (valueExpr.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto localIt = localsIn.find(valueExpr.name);
+    if (localIt == localsIn.end()) {
+      return false;
+    }
+    const std::string &structType = localIt->second.structTypeName;
+    return structType == "/std/result/Result" ||
+           structType.rfind("/std/result/Result__", 0) == 0;
+  };
+
+  if (isStdlibResultSumValue()) {
+    if (!emitExpr(expr.args[1], localsIn)) {
+      return ResultErrorMethodCallEmitResult::Error;
+    }
+    const int32_t resultLocal = allocTempLocal();
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    emitInstruction(IrOpcode::PushI32, 1);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    return ResultErrorMethodCallEmitResult::Emitted;
+  }
+
   int32_t errorLocal = 0;
   if (!emitResultWhyLocalsFromValueExpr(
           expr.args[1],

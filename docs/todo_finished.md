@@ -6,6 +6,36 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4294: Bridge `Result.error` to the result sum tag
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the first legacy helper bridge by making `Result.error(value)`
+    inspect imported value-carrying `/std/result/*` sum values on IR-backed
+    VM/native paths instead of treating them as legacy packed Results.
+  - implementation_notes:
+    - Detect local values whose lowered aggregate type is the monomorphized
+      stdlib result sum.
+    - Emit the `Result.error` boolean from the sum tag slot (`0` for `ok`,
+      `1` for `error`) before falling back to the legacy packed Result path.
+    - Left `Result.ok(...)`, `Result.why(...)`, combinators, status-only
+      `Result<Error>`, and `?` propagation in TODO-4293/TODO-4266.
+  - acceptance:
+    - `Result.error(success)` returns `false` for imported sum-backed
+      value-carrying Result values.
+    - `Result.error(failure)` returns `true` for imported sum-backed
+      value-carrying Result values.
+    - Existing packed Result helper behavior stays on the previous fallback
+      path.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `Result.error` can inspect imported value-carrying
+    stdlib Result sums and the remaining helper bridge work is still tracked.
+  - finished_at: 2026-04-28
+  - evidence: Added IR-backed `Result.error` tag inspection for
+    `/std/result/*` sum locals plus semantic, VM, and native fixtures for
+    success/error sum values. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4292: Add importable stdlib `Result<T, E>` sum
   - owner: ai
   - created_at: 2026-04-28

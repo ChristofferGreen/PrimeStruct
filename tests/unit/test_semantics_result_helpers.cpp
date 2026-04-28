@@ -70,6 +70,33 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result value sum participates in Result.error") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+[return<int>]
+main() {
+  [Result<i32, MyError>] success{ok<i32, MyError>(7i32)}
+  [Result<i32, MyError>] failure{error<i32, MyError>(MyError{})}
+  if(Result.error(success)) {
+    return(1i32)
+  }
+  if(not(Result.error(failure))) {
+    return(2i32)
+  }
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib result value sum rejects default construction") {
   const std::string source = R"(
 import /std/result/*

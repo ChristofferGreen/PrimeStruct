@@ -276,15 +276,17 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: Deferred stdlib ADT migration
-  - scope: Route the legacy `Result.ok(...)`, `Result.error(...)`,
-    `Result.why(...)`, `Result.map(...)`, `Result.and_then(...)`, and
-    `Result.map2(...)` helper bridge onto the stdlib result sum contract while
-    preserving current source compatibility and leaving `?` rewiring to
-    TODO-4266.
+  - scope: Route the remaining legacy `Result.ok(...)`, `Result.why(...)`,
+    `Result.map(...)`, `Result.and_then(...)`, and `Result.map2(...)` helper
+    bridge onto the stdlib result sum contract while preserving current source
+    compatibility and leaving `?` rewiring to TODO-4266.
   - implementation_notes:
     - Start from `stdlib/std/result/result.prime`, Result helper semantics,
-      `Result.ok/error/why`, `Result.map/and_then/map2`, result payload
-      metadata, and VM/native/C++ result compile-run tests.
+      `Result.ok/why`, `Result.map/and_then/map2`, result payload metadata,
+      and VM/native/C++ result compile-run tests.
+    - `Result.error(value)` now reads imported value-carrying stdlib Result
+      sum tags on IR-backed VM/native paths; keep that behavior covered while
+      bridging the remaining helpers.
     - Status-only `Result<Error>` still needs either a supported same-name
       one-argument sum spelling or an explicit compatibility bridge before
       TODO-4266 can consume it as a sum.
@@ -298,9 +300,10 @@ Task template:
       supported payload matrix.
     - Diagnostics remain deterministic for unsupported payloads and ambiguous
       generic inference.
-    - Focused tests cover `Result.ok`, error construction, `Result.error`,
-      `Result.why`, map/and_then/map2, and representative error domains
-      (`FileError`, `ContainerError`, `GfxError`).
+    - Focused tests cover `Result.ok`, error construction, `Result.why`,
+      map/and_then/map2, and representative error domains (`FileError`,
+      `ContainerError`, `GfxError`) without regressing sum-backed
+      `Result.error`.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once legacy Result helpers are bridged onto the stdlib sum
     contract or intentionally split into narrower helper/status follow-ups.
