@@ -46,20 +46,35 @@ void populateParsedSumVariants(Definition &def) {
   def.sumVariants.clear();
   def.sumVariants.reserve(def.statements.size());
   for (const auto &stmt : def.statements) {
-    if (!stmt.isBinding || stmt.transforms.size() != 1) {
-      continue;
+    if (stmt.isBinding && stmt.transforms.size() == 1) {
+      const Transform &payload = stmt.transforms.front();
+      def.sumVariants.push_back(SumVariant{
+          stmt.name,
+          true,
+          payload.name,
+          payload.templateArgs,
+          sumPayloadTypeText(payload),
+          def.sumVariants.size(),
+          stmt.sourceLine,
+          stmt.sourceColumn,
+          stmt.semanticNodeId,
+      });
+    } else if (stmt.kind == Expr::Kind::Name && !stmt.name.empty() &&
+               stmt.args.empty() && stmt.argNames.empty() &&
+               stmt.bodyArguments.empty() && !stmt.hasBodyArguments &&
+               stmt.transforms.empty() && stmt.templateArgs.empty()) {
+      def.sumVariants.push_back(SumVariant{
+          stmt.name,
+          false,
+          {},
+          {},
+          {},
+          def.sumVariants.size(),
+          stmt.sourceLine,
+          stmt.sourceColumn,
+          stmt.semanticNodeId,
+      });
     }
-    const Transform &payload = stmt.transforms.front();
-    def.sumVariants.push_back(SumVariant{
-        stmt.name,
-        payload.name,
-        payload.templateArgs,
-        sumPayloadTypeText(payload),
-        def.sumVariants.size(),
-        stmt.sourceLine,
-        stmt.sourceColumn,
-        stmt.semanticNodeId,
-    });
   }
 }
 

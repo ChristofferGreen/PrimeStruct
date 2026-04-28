@@ -92,6 +92,7 @@ TEST_CASE("parses sum declaration variants in source order") {
   const std::string source = R"(
 [sum]
 Shape {
+  none
   [Circle] circle
   [Rectangle] rectangle
   [Result<i32, string>] labeled
@@ -104,16 +105,21 @@ Shape {
   CHECK(shape.fullPath == "/Shape");
   REQUIRE(shape.transforms.size() == 1);
   CHECK(shape.transforms[0].name == "sum");
-  REQUIRE(shape.sumVariants.size() == 3);
-  CHECK(shape.sumVariants[0].name == "circle");
-  CHECK(shape.sumVariants[0].payloadTypeText == "Circle");
+  REQUIRE(shape.sumVariants.size() == 4);
+  CHECK(shape.sumVariants[0].name == "none");
+  CHECK_FALSE(shape.sumVariants[0].hasPayload);
+  CHECK(shape.sumVariants[0].payloadTypeText.empty());
   CHECK(shape.sumVariants[0].variantIndex == 0);
-  CHECK(shape.sumVariants[1].name == "rectangle");
-  CHECK(shape.sumVariants[1].payloadTypeText == "Rectangle");
+  CHECK(shape.sumVariants[1].name == "circle");
+  CHECK(shape.sumVariants[1].hasPayload);
+  CHECK(shape.sumVariants[1].payloadTypeText == "Circle");
   CHECK(shape.sumVariants[1].variantIndex == 1);
-  CHECK(shape.sumVariants[2].name == "labeled");
-  CHECK(shape.sumVariants[2].payloadTypeText == "Result<i32, string>");
+  CHECK(shape.sumVariants[2].name == "rectangle");
+  CHECK(shape.sumVariants[2].payloadTypeText == "Rectangle");
   CHECK(shape.sumVariants[2].variantIndex == 2);
+  CHECK(shape.sumVariants[3].name == "labeled");
+  CHECK(shape.sumVariants[3].payloadTypeText == "Result<i32, string>");
+  CHECK(shape.sumVariants[3].variantIndex == 3);
 }
 
 TEST_CASE("parses void return without transform") {

@@ -2275,8 +2275,8 @@ for(
   - **ADT migration note:** `Result<T, Error>` and status-only `Result<Error>` are intended to become stdlib-owned sum
     types after generic/unit sums, stdlib `Maybe<T>`, and core `pick` lowering are implemented. Status-only results use
     a unit success variant plus an error payload variant rather than an empty payload struct. The migration is gated by
-    `TODO-4263` through `TODO-4267`; `?` propagation must not be rewritten onto sums until the Result sum contract is
-    implemented and covered.
+    `TODO-4288`, `TODO-4289`, and `TODO-4264` through `TODO-4267`; `?` propagation must not be rewritten onto sums
+    until the Result sum contract is implemented and covered.
   - `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract stay
     language-defined, while constructors, helper combinators, and domain-specific error policy should keep moving into
     stdlib `.prime`.
@@ -3152,8 +3152,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Maybe/Result migration:** `Maybe{}` remains the current empty value construction form for the existing `Maybe<T>`
   representation, while `none<T>()` and `some<T>(value)` are helper calls. Present-value shorthand
   `Maybe{value}` / `Maybe<T>{value}` stays rejected until the stdlib-owned sum migration lands. The full Maybe/Result
-  representation migration is intentionally tracked by TODO-4263 through TODO-4267, not by file/gfx/collection
-  compatibility.
+  representation migration is intentionally tracked by TODO-4288, TODO-4289, and TODO-4264 through TODO-4267, not by
+  file/gfx/collection compatibility.
 - **Follow-up policy:** do not add new constructor-shaped compatibility surfaces. Existing retained forms must either
   route through named helpers with focused coverage or get a dedicated migration TODO with scope, acceptance, and
   stop_rule before their status changes.
@@ -3163,8 +3163,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Naming:** `Maybe<T>` is the canonical optional type in PrimeStruct; there is no separate `Option<T>`.
 - **ADT migration note:** `Maybe<T>` is intended to become a stdlib-owned sum type with a unit `none` variant and a
   payload-carrying `some` variant after generic sums and unit variants are supported. That migration is explicitly
-  deferred behind the core `[sum]` / `pick` implementation and tracked by `TODO-4263` and `TODO-4264`; until then, the
-  existing representation and helpers remain the supported surface.
+  deferred behind the core `[sum]` / `pick` implementation and tracked by `TODO-4288`, `TODO-4289`, and
+  `TODO-4264`; until then, the existing representation and helpers remain the supported surface.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)`
   to destroy.
@@ -3318,14 +3318,16 @@ bad_use_after_take() {
     still produce one value via `return(value)` or the final expression when they are not parsed as a constructor entry
     list.
 - **Algebraic sum types (partial):** `[sum]` definitions declare named, field-like variants. Payload-carrying variants
-  have one payload envelope; explicit `[variant] payload` construction is validated for typed bindings, return values,
-  fields, and `auto` bindings when the sum type is named. Target-typed inferred construction is also validated for
-  bindings, call/field arguments, and returns when exactly one variant accepts the payload. Unit/no-payload variants are
-  a planned follow-up using bare
-  lowerCamelCase names such as `none`. A sum value has exactly one active variant at runtime.
+  have one payload envelope; unit/no-payload variants use bare lowerCamelCase names such as `none`. The parser,
+  validator, and semantic product preserve source-order tag metadata for both forms; unit variant metadata records
+  `has_payload=false` and an empty payload type. Explicit `[variant] payload` construction is validated for typed
+  bindings, return values, fields, and `auto` bindings when the sum type is named. Target-typed inferred construction
+  is also validated for bindings, call/field arguments, and returns when exactly one payload-carrying variant accepts
+  the payload. A sum value has exactly one active variant at runtime.
   ```prime
   [sum]
   Shape {
+    none
     [Circle] circle
     [Rectangle] rectangle
     [Text] text
@@ -3338,7 +3340,7 @@ bad_use_after_take() {
   The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{Circle{3.4}}`) is valid only
   when exactly one `Shape` variant accepts a `Circle` payload. Zero matches are type errors and multiple matches are
   ambiguity errors requiring an explicit `[variant]` label.
-  Generic/unit sums are required for the planned stdlib `Maybe<T>` shape:
+  Generic sums plus executable unit construction/matching are required for the planned stdlib `Maybe<T>` shape:
   ```prime
   [sum]
   Maybe<T> {
@@ -3350,14 +3352,16 @@ bad_use_after_take() {
   [Maybe<i32>] b{none}
   [Maybe<i32>] c{[some] 1i32}
   ```
-  Default sum construction is valid only when the first declared variant is a unit variant; the default active variant
-  is tag `0` in source order. Payload variants are not default-constructed implicitly, so `[Shape] value{}` is rejected
-  when the first `Shape` variant carries a payload. Variant order is therefore layout/serialization-sensitive and should
-  be treated as version-sensitive API surface.
+  Generic sum declarations and executable unit construction/defaulting are still deferred. The intended default sum
+  construction rule is valid only when the first declared variant is a unit variant; the default active variant is tag
+  `0` in source order. Payload variants are not default-constructed implicitly, so `[Shape] value{}` is rejected when
+  the first `Shape` variant carries a payload. Variant order is therefore layout/serialization-sensitive and should be
+  treated as version-sensitive API surface.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
-  branch value types are diagnostics. Unit variant arm syntax is planned with unit variant support. IR-backed VM,
-  native, and exe lowering currently execute scalar and struct-payload sums with an inline aggregate convention: slot 0
+  branch value types are diagnostics. Until executable unit matching lands, payload binders on unit variants are
+  rejected and unit arm syntax is deferred. IR-backed VM, native, and exe lowering currently execute scalar and
+  struct-payload sums with an inline aggregate convention: slot 0
   stores the payload-slot header, slot 1 stores the active variant tag, and slot 2 starts the active payload storage.
   Scalar payloads occupy one slot; struct payloads occupy their ordinary struct slot layout inline and `pick` arms bind a
   branch-local view of the selected payload only. Aggregate-valued `pick(...)` expressions copy the selected active

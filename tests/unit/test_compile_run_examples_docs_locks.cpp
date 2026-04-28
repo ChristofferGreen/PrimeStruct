@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4263: Design generic and unit sum variants") !=
+                  "- TODO-4288: Add executable unit sum variants") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4264: Add stdlib-owned `Maybe<T>` sum") !=
+                  "- TODO-4289: Add generic sum declarations and monomorphization") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,10 +1153,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4263: Design generic and unit sum variants") !=
+                  "- TODO-4288: Add executable unit sum variants") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4263: Design generic and unit sum variants",
+      "TODO-4288: Add executable unit sum variants",
+      "TODO-4289: Add generic sum declarations and monomorphization",
       "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
       "TODO-4265: Add stdlib-owned `Result<T, E>` sum",
       "TODO-4266: Rewire `?` to the `Result` sum contract",
@@ -1174,6 +1175,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4215") == std::string::npos);
   CHECK(todo.find("TODO-4214") == std::string::npos);
   CHECK(todoFinished.find("TODO-4215: Make semantic-product publication consume merged fact bundles") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4263: Design generic and unit sum variants") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4287: Add unit sum declaration metadata") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4227: Move semantic-product fact families into worker bundles") !=
         std::string::npos);

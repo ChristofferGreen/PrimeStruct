@@ -1063,6 +1063,7 @@ void publishSumVariantMetadataFacts(
         entry.variantName,
         entry.variantIndex,
         entry.tagValue,
+        entry.hasPayload,
         entry.payloadTypeText,
         entry.sourceLine,
         entry.sourceColumn,

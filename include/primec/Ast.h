@@ -51,6 +51,7 @@ struct Expr {
 
 struct SumVariant {
   std::string name;
+  bool hasPayload = true;
   std::string payloadType;
   std::vector<std::string> payloadTemplateArgs;
   std::string payloadTypeText;

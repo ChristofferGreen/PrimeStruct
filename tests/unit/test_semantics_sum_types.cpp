@@ -67,11 +67,13 @@ main() {
   CHECK(semanticProgram.sumVariantMetadata[0].variantName == "circle");
   CHECK(semanticProgram.sumVariantMetadata[0].variantIndex == 0);
   CHECK(semanticProgram.sumVariantMetadata[0].tagValue == 0);
+  CHECK(semanticProgram.sumVariantMetadata[0].hasPayload);
   CHECK(semanticProgram.sumVariantMetadata[0].payloadTypeText == "Circle");
   CHECK(semanticProgram.sumVariantMetadata[1].sumPath == "/Shape");
   CHECK(semanticProgram.sumVariantMetadata[1].variantName == "rectangle");
   CHECK(semanticProgram.sumVariantMetadata[1].variantIndex == 1);
   CHECK(semanticProgram.sumVariantMetadata[1].tagValue == 1);
+  CHECK(semanticProgram.sumVariantMetadata[1].hasPayload);
   CHECK(semanticProgram.sumVariantMetadata[1].payloadTypeText == "Rectangle");
 
   const std::string dump = primec::formatSemanticProgram(semanticProgram);
@@ -107,11 +109,50 @@ main() {
   CHECK(error.find("duplicate sum variant: circle on /Shape") != std::string::npos);
 }
 
-TEST_CASE("sum declarations reject missing payload envelopes") {
+TEST_CASE("sum declarations publish unit variant metadata") {
   const std::string source = R"(
 [sum]
 Maybe {
   none
+  [i32] some
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(validateProgramWithSemanticProduct(source, semanticProgram, error));
+  CHECK(error.empty());
+
+  REQUIRE(semanticProgram.sumVariantMetadata.size() == 2);
+  CHECK(semanticProgram.sumVariantMetadata[0].sumPath == "/Maybe");
+  CHECK(semanticProgram.sumVariantMetadata[0].variantName == "none");
+  CHECK(semanticProgram.sumVariantMetadata[0].variantIndex == 0);
+  CHECK(semanticProgram.sumVariantMetadata[0].tagValue == 0);
+  CHECK_FALSE(semanticProgram.sumVariantMetadata[0].hasPayload);
+  CHECK(semanticProgram.sumVariantMetadata[0].payloadTypeText.empty());
+  CHECK(semanticProgram.sumVariantMetadata[1].variantName == "some");
+  CHECK(semanticProgram.sumVariantMetadata[1].hasPayload);
+  CHECK(semanticProgram.sumVariantMetadata[1].payloadTypeText == "i32");
+
+  const std::string dump = primec::formatSemanticProgram(semanticProgram);
+  CHECK(dump.find("sum_variant_metadata[0]: sum_path=\"/Maybe\" variant_name=\"none\" "
+                  "variant_index=0 tag_value=0 payload_type_text=\"\" has_payload=false") !=
+        std::string::npos);
+  CHECK(dump.find("sum_variant_metadata[1]: sum_path=\"/Maybe\" variant_name=\"some\" "
+                  "variant_index=1 tag_value=1 payload_type_text=\"i32\" has_payload=true") !=
+        std::string::npos);
+}
+
+TEST_CASE("sum declarations reject call-shaped unit variants") {
+  const std::string source = R"(
+[sum]
+Maybe {
+  none()
 }
 
 [return<i32>]
@@ -122,7 +163,8 @@ main() {
 
   std::string error;
   CHECK_FALSE(validateProgramExpectingError(source, error));
-  CHECK(error.find("sum variants require one payload envelope on /Maybe") != std::string::npos);
+  CHECK(error.find("sum variants require one payload envelope or bare unit variant on /Maybe") !=
+        std::string::npos);
 }
 
 TEST_CASE("sum declarations reject field-like variant modifiers") {
@@ -399,6 +441,48 @@ main() {
 }
 
 TEST_CASE("explicit sum construction rejects payload and target mismatches") {
+  SUBCASE("unit variant payload") {
+    const std::string source = R"(
+[sum]
+Maybe {
+  none
+  [i32] some
+}
+
+[return<i32>]
+main() {
+  [Maybe] bad{[none] 0i32}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("unit sum variant does not accept payload: /Maybe/none") !=
+          std::string::npos);
+  }
+
+  SUBCASE("payload variant while unit execution is deferred") {
+    const std::string source = R"(
+[sum]
+Maybe {
+  none
+  [i32] some
+}
+
+[return<i32>]
+main() {
+  [Maybe] bad{[some] 1i32}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("sum construction with unit variants is not supported yet: /Maybe") !=
+          std::string::npos);
+  }
+
   SUBCASE("payload type mismatch") {
     const std::string source = R"(
 [struct]
@@ -539,6 +623,38 @@ main() {
     CHECK(error.find("no inferred sum variant for /Shape accepts payload; candidates: count") !=
           std::string::npos);
   }
+}
+
+TEST_CASE("pick rejects payload binders on unit variants") {
+  const std::string source = R"(
+[sum]
+Maybe {
+  none
+  [i32] some
+}
+
+[return<i32>]
+measure([Maybe] value) {
+  return(pick(value) {
+    none(n) {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramExpectingError(source, error));
+  CHECK(error.find("pick unit variant arm does not accept payload binder: /Maybe/none") !=
+        std::string::npos);
 }
 
 TEST_CASE("pick validates exhaustive sum arms and payload binders") {

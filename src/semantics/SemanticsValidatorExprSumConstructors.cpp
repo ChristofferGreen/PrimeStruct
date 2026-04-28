@@ -46,6 +46,15 @@ std::string allVariantNamesList(const Definition &sumDef) {
   return out;
 }
 
+bool hasUnitSumVariant(const Definition &sumDef) {
+  for (const auto &variant : sumDef.sumVariants) {
+    if (!variant.hasPayload) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace
 
 bool SemanticsValidator::isSumDefinition(const Definition &def) const {
@@ -264,6 +273,21 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
         "sum construction target mismatch for " + sumDef->fullPath +
         ": got " + explicitSumBinding.typeName);
   }
+  if (initializer.argNames.size() == 1 && initializer.argNames.front().has_value()) {
+    const std::string &variantName = *initializer.argNames.front();
+    for (const auto &variant : sumDef->sumVariants) {
+      if (variant.name == variantName && !variant.hasPayload) {
+        return failInferredSumDiagnostic(
+            "unit sum variant does not accept payload: " +
+            sumDef->fullPath + "/" + variant.name);
+      }
+    }
+  }
+  if (hasUnitSumVariant(*sumDef)) {
+    return failInferredSumDiagnostic(
+        "sum construction with unit variants is not supported yet: " +
+        sumDef->fullPath);
+  }
   auto resolvesToTargetSum = [&](const std::string &typeText,
                                  const std::string &typeNamespace) -> bool {
     const Definition *actualSum =
@@ -354,6 +378,9 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
   };
 
   auto payloadMatchesVariant = [&](const SumVariant &variant) -> bool {
+    if (!variant.hasPayload) {
+      return false;
+    }
     const std::string expectedTypeText = payloadTypeText(variant);
     BindingInfo inferredBinding;
     if (inferExplicitSumConstructorBinding(initializer, inferredBinding) ||
@@ -544,6 +571,16 @@ bool SemanticsValidator::validateExplicitSumConstructorExpr(
   }
 
   const Expr &payloadExpr = constructorArgs->front();
+  if (!selectedVariant->hasPayload) {
+    return failSumConstructorDiagnostic(
+        "unit sum variant does not accept payload: " +
+        sumDef->fullPath + "/" + selectedVariant->name);
+  }
+  if (hasUnitSumVariant(*sumDef)) {
+    return failSumConstructorDiagnostic(
+        "sum construction with unit variants is not supported yet: " +
+        sumDef->fullPath);
+  }
   if (!validateExpr(params, locals, payloadExpr)) {
     return false;
   }

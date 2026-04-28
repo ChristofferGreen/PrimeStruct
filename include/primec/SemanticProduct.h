@@ -162,6 +162,7 @@ struct SemanticProgramSumVariantMetadata {
   std::string variantName;
   std::size_t variantIndex = 0;
   uint32_t tagValue = 0;
+  bool hasPayload = true;
   std::string payloadTypeText;
   int sourceLine = 0;
   int sourceColumn = 0;

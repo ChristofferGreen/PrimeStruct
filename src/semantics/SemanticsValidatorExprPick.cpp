@@ -141,6 +141,12 @@ bool SemanticsValidator::validatePickExpr(
           arm,
           "duplicate pick variant on " + sumDef->fullPath + ": " + arm.name);
     }
+    if (!variant->hasPayload) {
+      return failPickDiagnostic(
+          arm,
+          "pick unit variant arm does not accept payload binder: " +
+              sumDef->fullPath + "/" + variant->name);
+    }
     arms.push_back(PickArm{&arm, variant, arm.args.front().name});
   }
 
@@ -401,6 +407,13 @@ bool SemanticsValidator::validatePickStatement(
       return failPickStatementDiagnostic(
           arm,
           "duplicate pick variant on " + sumDef->fullPath + ": " + arm.name);
+    }
+    if (const SumVariant *variant = findVariantByName(*sumDef, arm.name);
+        variant != nullptr && !variant->hasPayload) {
+      return failPickStatementDiagnostic(
+          arm,
+          "pick unit variant arm does not accept payload binder: " +
+              sumDef->fullPath + "/" + variant->name);
     }
     if (isParam(params, arm.args.front().name) ||
         locals.count(arm.args.front().name) > 0) {

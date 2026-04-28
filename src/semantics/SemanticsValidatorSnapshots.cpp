@@ -1559,6 +1559,7 @@ SemanticsValidator::sumVariantMetadataSnapshotForSemanticProduct() const {
           variant.name,
           variant.variantIndex,
           static_cast<uint32_t>(variant.variantIndex),
+          variant.hasPayload,
           variant.payloadTypeText,
           sourceLine,
           sourceColumn,

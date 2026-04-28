@@ -67,10 +67,11 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4263: Design generic and unit sum variants
+- TODO-4288: Add executable unit sum variants
 
 ### Immediate Next 10 (After Ready Now)
 
+- TODO-4289: Add generic sum declarations and monomorphization
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
@@ -81,8 +82,8 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
-  -> TODO-4266 -> TODO-4267
+- Deferred stdlib ADT migration: TODO-4288 -> TODO-4289 -> TODO-4264
+  -> TODO-4265 -> TODO-4266 -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -90,7 +91,8 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4263: Design generic and unit sum variants
+- TODO-4288: Add executable unit sum variants
+- TODO-4289: Add generic sum declarations and monomorphization
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
@@ -132,7 +134,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
+| Stdlib ADT migration for `Maybe` and `Result` | TODO-4288, TODO-4289, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Validation Coverage Snapshot
@@ -157,7 +159,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
+| Maybe/Result sum migration conformance | TODO-4288, TODO-4289, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Vector/Map Bridge Contract Summary
@@ -274,55 +276,74 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4263: Design generic and unit sum variants
+- [ ] TODO-4288: Add executable unit sum variants
   - owner: ai
-  - created_at: 2026-04-27
+  - created_at: 2026-04-28
   - phase: Deferred stdlib ADT migration
-  - scope: Extend the sum-type design for the features needed to express
-    stdlib `Maybe<T>` and `Result<T, E>` as ordinary algebraic data types:
-    generic sums and unit/no-payload variants.
+  - scope: Complete unit/no-payload variant behavior now that bare unit
+    variants parse, validate, and publish semantic-product metadata.
   - implementation_notes:
-    - This is a gated design/implementation slice after core `[sum]` and
-      `pick` lowering are complete; do not pull it into TODO-4257 through
-      TODO-4261.
-    - Start from the sum parser/metadata/resolver introduced by TODO-4257
-      through TODO-4259 and template monomorphization paths under
-      `src/semantics/TemplateMonomorph*.h`.
-    - Unit variants must support bare lowerCamelCase names such as `none`;
-      document how bare variants are represented in the semantic product and
-      IR alongside payload-carrying variants.
+    - Start from `SumVariant::hasPayload`, semantic-product
+      `has_payload=false` metadata, `SemanticsValidatorExprSumConstructors`,
+      `SemanticsValidatorExprPick`, and `src/ir_lowerer/IrLowererLowerSumHelpers.h`.
+    - Preserve the source-order tag model already published for unit and
+      payload variants; unit variants must not allocate or observe hidden
+      payload storage.
     - Default construction must follow the source-order tag model: `[Sum] s{}`
       is valid only when the first variant is unit, and it selects that
       variant/tag without constructing hidden payloads.
   - acceptance:
-    - Generic sum declarations such as `Maybe<T>` and `Result<T, E>` parse,
-      validate, monomorphize, and expose deterministic semantic-product
-      metadata.
-    - Unit variants are supported with bare names, including `none`, and can be
-      constructed, matched, serialized in IR, and diagnosed without an empty
-      struct payload workaround.
+    - Unit variants can be explicitly constructed without payloads using the
+      accepted unit syntax selected for sums.
     - `pick` supports unit arms such as `none { ... }` and rejects payload
       binders on unit variants.
     - Default construction accepts sums whose first variant is unit and rejects
       sums whose first variant has a payload, even if that payload type is
       default-constructible.
-    - Docs note that variant order controls tag order/default behavior and is
-      layout/serialization-sensitive.
-    - Negative tests cover duplicate generic variants, invalid unit payload
-      syntax, unsupported recursive inline payloads, and template inference
-      ambiguity.
-    - `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` record the
-      generic/unit-variant contract and note that Maybe/Result migration is
-      still deferred to TODO-4264 and TODO-4265.
+    - IR serialization/lowering represents unit variants by tag only and never
+      requires an empty struct payload workaround.
+    - Negative tests cover invalid unit payload syntax, invalid unit pick
+      binders, and non-unit first-variant default construction.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once generic and unit sum syntax is specified, implemented,
-    and covered well enough for stdlib `Maybe`/`Result` migration.
+  - stop_rule: Stop once unit variants can be constructed, matched, lowered,
+    and defaulted well enough for stdlib `Maybe` and status-only `Result`.
+
+- [ ] TODO-4289: Add generic sum declarations and monomorphization
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - depends_on: TODO-4288
+  - scope: Extend `[sum]` definitions so generic sums such as `Maybe<T>` and
+    `Result<T, E>` parse, validate, monomorphize, and publish deterministic
+    semantic-product metadata.
+  - implementation_notes:
+    - Start from the sum parser/metadata/resolver introduced by TODO-4257
+      through TODO-4288 and template monomorphization paths under
+      `src/semantics/TemplateMonomorph*.h`.
+    - Preserve source-order tag assignment after monomorphization; generic
+      variants must not reorder or duplicate variant metadata per backend.
+    - Keep Maybe/Result stdlib migration deferred to TODO-4264 and TODO-4265;
+      this item only makes generic sums available as a language substrate.
+  - acceptance:
+    - Generic sum declarations such as `Maybe<T>` and `Result<T, E>` parse,
+      validate, monomorphize, and expose deterministic semantic-product
+      metadata with substituted payload type text.
+    - Duplicate generic variants, invalid template arity, unsupported
+      recursive inline payloads, and template inference ambiguity produce
+      deterministic diagnostics.
+    - `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` record the
+      generic sum contract and note that Maybe/Result migration is still
+      deferred to TODO-4264 and TODO-4265.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once generic sum syntax and monomorphized metadata are
+    implemented and covered well enough for stdlib `Maybe<T>` and
+    `Result<T, E>` migration.
 
 - [ ] TODO-4264: Add stdlib-owned `Maybe<T>` sum
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4263
+  - depends_on: TODO-4289
   - scope: Re-express `Maybe<T>` as a stdlib-owned sum type while preserving
     the existing public optional-value helper surface.
   - implementation_notes:
@@ -366,7 +387,7 @@ Task template:
       error payload variant instead of a synthetic empty struct payload.
   - acceptance:
     - Value-carrying and status-only `Result` forms are represented through the
-      sum contract from TODO-4263, including a unit success variant for
+      sum contract from TODO-4288 and TODO-4289, including a unit success variant for
       status-only results.
     - Status-only `Result<Error>{}` defaults to the unit success variant, while
       value-carrying `Result<T, Error>{}` is rejected unless an explicit

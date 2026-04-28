@@ -1380,7 +1380,8 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(entry.variantName) + " variant_index=" +
                                   std::to_string(entry.variantIndex) + " tag_value=" +
                                   std::to_string(entry.tagValue) + " payload_type_text=" +
-                                  quoteSemanticString(entry.payloadTypeText) + " provenance_handle=" +
+                                  quoteSemanticString(entry.payloadTypeText) + " has_payload=" +
+                                  formatSemanticBool(entry.hasPayload) + " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

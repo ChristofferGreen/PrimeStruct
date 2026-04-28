@@ -498,8 +498,14 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
 
     std::unordered_set<std::string> seenVariants;
     for (const auto &stmt : def.statements) {
-      if (!stmt.isBinding) {
-        if (addTransformDiagnostic("sum variants require one payload envelope on " + def.fullPath)) {
+      const bool isUnitVariant =
+          stmt.kind == Expr::Kind::Name && !stmt.name.empty() &&
+          !stmt.isBinding && stmt.args.empty() && stmt.argNames.empty() &&
+          stmt.bodyArguments.empty() && !stmt.hasBodyArguments &&
+          stmt.transforms.empty() && stmt.templateArgs.empty();
+      if (!stmt.isBinding && !isUnitVariant) {
+        if (addTransformDiagnostic("sum variants require one payload envelope or bare unit variant on " +
+                                   def.fullPath)) {
           return false;
         }
         return true;
@@ -521,6 +527,9 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
           return false;
         }
         return true;
+      }
+      if (isUnitVariant) {
+        continue;
       }
       if (stmt.transforms.size() != 1) {
         if (addTransformDiagnostic("sum variants require exactly one payload envelope on " + def.fullPath + "/" +

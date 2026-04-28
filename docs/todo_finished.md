@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4287: Add unit sum declaration metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Split the oversized generic/unit sum workstream and land the
+    declaration-level unit variant substrate needed before executable unit
+    construction, `pick`, defaulting, and generic sum monomorphization.
+  - implementation_notes:
+    - Start from the payload-only `[sum]` parser and semantic-product metadata
+      added for TODO-4257 through TODO-4261.
+    - Represent bare unit variants explicitly instead of using an empty struct
+      payload workaround.
+  - acceptance:
+    - Bare lowerCamelCase unit variants such as `none` parse inside `[sum]`
+      declarations and preserve source-order tag indexes beside
+      payload-carrying variants.
+    - Semantic-product sum variant metadata distinguishes unit variants from
+      payload variants and publishes deterministic unit metadata.
+    - Invalid call-shaped unit declarations, payloads passed to unit variants,
+      and payload binders on unit `pick` arms produce deterministic
+      diagnostics until executable unit support lands.
+    - Remaining executable unit behavior and generic sum monomorphization are
+      split into active follow-up TODOs.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once declaration-level unit variants are represented as
+    first-class parser and semantic-product facts with focused diagnostics.
+  - finished_at: 2026-04-28
+  - evidence: Added `SumVariant::hasPayload` plus semantic-product
+    `has_payload` publication, taught the parser and sum-definition validator
+    to accept bare unit variants, documented the declaration-level unit
+    contract, and added parser/semantic coverage for unit metadata plus
+    invalid unit payload and `pick` binder diagnostics. Split the remaining
+    executable unit and generic-sum work into TODO-4288 and TODO-4289, and
+    deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4262: Add public sum-type examples
   - owner: ai
   - created_at: 2026-04-27
