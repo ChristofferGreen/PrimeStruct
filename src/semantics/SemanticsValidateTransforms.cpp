@@ -287,7 +287,7 @@ bool astTransformCtEvalResolveHelperTarget(const Expr &result,
         "unresolved FunctionAst helper target " + result.name);
     return false;
   }
-  if (!result.namespacePrefix.empty()) {
+  if (!result.namespacePrefix.empty() && result.namespacePrefix != hookDef.namespacePrefix) {
     error = astTransformCtEvalUnsupportedShapeError(
         hookDef,
         targetDef,

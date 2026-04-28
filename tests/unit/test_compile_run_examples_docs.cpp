@@ -58,6 +58,7 @@ TEST_CASE("checked-in ast transform example runs in VM") {
   const std::string consumerSource = readFile(consumerPath.string());
   CHECK(hookSource.find("[public ast return<FunctionAst>]") != std::string::npos);
   CHECK(hookSource.find("trace_calls([FunctionAst] fn)") != std::string::npos);
+  CHECK(hookSource.find("return(replace_body_with_return_i32(fn, 42i32))") != std::string::npos);
   CHECK(consumerSource.find("import<\"./trace_calls_transform.prime\">") != std::string::npos);
   CHECK(consumerSource.find("import /ast_hooks") != std::string::npos);
   CHECK(consumerSource.find("[trace_calls return<int>]") != std::string::npos);
