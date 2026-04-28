@@ -2272,10 +2272,13 @@ for(
     `or`, `not`.
   - **Result helpers (draft):**
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
-  - **ADT migration note:** `/std/result/*` now exposes an importable value-carrying `Result<T, E>` sum with `ok` and
-    `error` variants plus explicit `ok<T, E>(value)` / `error<T, E>(err)` construction helpers. The legacy
-    status-only `Result<Error>` remains a packed-status compiler/runtime bridge and is not pickable as a stdlib
-    Result sum; using `pick(status)` on `Result<Error>` produces a deterministic compatibility diagnostic. `try(...)`
+  - **ADT migration note:** `/std/result/*` now exposes importable `Result<E>` and value-carrying `Result<T, E>` sums
+    at the same public path. `Result<E>` has a unit `ok` variant, an `error(E)` payload variant, default construction
+    to `ok`, and an `ok<E>()` helper; error construction currently uses explicit sum construction such as
+    `Result<E>{[error] err}`. `Result<T, E>` has `ok` and `error` payload variants plus explicit
+    `ok<T, E>(value)` / `error<T, E>(err)` construction helpers. Legacy packed status-only `Result<Error>` values
+    without the stdlib import remain a compiler/runtime bridge and produce a deterministic compatibility diagnostic
+    if used as a `pick` target. `try(...)`
     semantic validation and semantic-product metadata accept both `Result<T, E>` and the qualified
     `/std/result/Result<T, E>` spelling for value-carrying results. IR-backed `try(...)` now consumes local imported
     stdlib value-result sums for `return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag,
@@ -2292,11 +2295,9 @@ for(
     `Result.error(value)` already reads the imported value-carrying sum tag on those paths, so it returns `false` for
     `ok` and `true` for `error` values from `/std/result/*`.
     `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
-    error payload type's `why` helper for `error`. Same-path generic sums can now overload by template arity, so the
-    future status-only sum contract can share `/std/result/Result` as `Result<E>` with a unit `ok` variant and an
-    `error(E)` payload variant beside the existing `Result<T, E>` value-carrying shape. Status-only stdlib Result
-    lowering is still pending, so the checked-in `/std/result/*` surface continues to expose only the value-carrying
-    sum for now.
+    error payload type's `why` helper for `error`. Status-only stdlib Result lowering is still pending, so imported
+    `Result<E>` is available for construction and `pick` validation while `try(...)`, `?`, `Result.error(...)`, and
+    `Result.why(...)` still use the legacy packed-status bridge for status-only results.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
@@ -2743,9 +2744,10 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` have typed value-carrying sum compatibility
   paths on IR-backed VM/native. Those paths accept local imported Result sum
-  sources and direct calls returning imported Result sums, while status-only
-  `Result<Error>` still uses the hybrid packed-status bridge and is diagnosed
-  if used as a `pick` target.
+  sources and direct calls returning imported Result sums. Imported
+  status-only `Result<Error>` construction and `pick` now live in stdlib, while
+  `try(...)`, `?`, `Result.error(...)`, and `Result.why(...)` still use the
+  hybrid packed-status bridge for status-only results.
   `?` propagation still uses the hybrid bridge.
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
@@ -3361,8 +3363,9 @@ bad_set() {
   `Result.map2(left, right, fn)` can initialize typed imported value-carrying sum locals/returns on IR-backed VM/native
   paths with local imported Result sum sources or direct calls returning them. `try(...)`, `Result.error(...)`, and
   `Result.why(...)` can inspect imported sum values directly or through dereferenced local
-  `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values; status-only Result remains a packed-status compatibility
-  surface that cannot be used as a `pick` target, and propagation stays a compatibility surface until TODO-4266 lands.
+  `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values. Imported status-only `Result<E>` values can be
+  constructed and used as `pick` targets, while status-only propagation stays a compatibility surface until TODO-4266
+  lands.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on

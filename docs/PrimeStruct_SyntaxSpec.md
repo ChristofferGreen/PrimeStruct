@@ -778,26 +778,25 @@ Template parameters may appear in payload envelopes. Concrete uses monomorphize 
 sum metadata publishes substituted payload type text while preserving source-order variant indices and tag values.
 Invalid template arity is diagnosed. Recursive inline payloads such as `Bad<T> { [Bad<T>] again }` are rejected until
 recursive sum layout is designed. The stdlib `Maybe<T>` surface consumes this generic substrate, and `/std/result/*`
-now exposes an imported value-carrying `Result<T, E>` sum. Typed imported value-carrying sum locals/returns may use
-legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed VM/native paths, typed imported
-value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or `Result.and_then(result, fn)` when the
-source is a local imported stdlib Result sum or a direct call returning one, and may use legacy
-`Result.map2(left, right, fn)` when both sources are local imported stdlib Result sums or direct calls returning them.
-`Result.error(value)` / `Result.why(value)` can inspect that imported sum shape.
-Status-only `Result<E>` remains a packed-status compatibility bridge and is not pickable as a stdlib Result sum;
-`pick(status)` on status-only `Result<E>` reports a deterministic compatibility diagnostic. `try(...)` semantic
-validation and semantic-product metadata accept both `Result<T, E>` and `/std/result/Result<T, E>` value-result
-spellings. IR-backed `try(...)` can now consume local imported stdlib value-result sums for
+now exposes imported `Result<E>` and value-carrying `Result<T, E>` sums at the same public path. `Result<E>` has a
+unit `ok` variant, an `error(E)` payload variant, default construction to `ok`, and an `ok<E>()` helper; error
+construction currently uses explicit sum construction such as `Result<E>{[error] err}`. Typed imported value-carrying
+sum locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed
+VM/native paths, typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or
+`Result.and_then(result, fn)` when the source is a local imported stdlib Result sum or a direct call returning one, and
+may use legacy `Result.map2(left, right, fn)` when both sources are local imported stdlib Result sums or direct calls
+returning them. `Result.error(value)` / `Result.why(value)` can inspect the imported value-carrying sum shape. Legacy
+packed status-only `Result<E>` values without the stdlib import remain a compatibility bridge and report a deterministic
+diagnostic when used as a `pick` target. `try(...)` semantic validation and semantic-product metadata accept both
+`Result<T, E>` and `/std/result/Result<T, E>` value-result spellings. IR-backed `try(...)` can now consume local
+imported stdlib value-result sums for
 `return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag, and Result-returning functions can
 propagate local imported stdlib value-result sum errors by copying the `error` payload into the declared return
 `Result` sum after running the active `on_error` handler. Direct calls that return imported stdlib value-result sums
 can also be consumed through postfix `?` on those same VM/native sum-backed paths, and dereferenced local
 `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values can feed `try(...)`, `Result.error(...)`, and
-`Result.why(...)` when they point at imported stdlib Result sums. Broader result shapes and status-only results remain
-compatibility surfaces until their dedicated migration tasks land. Same-path generic sums can now overload by template
-arity, so a real status-only stdlib sum can share `/std/result/Result` as `Result<E>` with a unit `ok` variant and
-an `error(E)` payload variant beside `Result<T, E>`. Status-only stdlib Result lowering is still pending, so the
-checked-in `/std/result/*` surface continues to expose only the value-carrying sum for now.
+`Result.why(...)` when they point at imported stdlib Result sums. Broader result shapes and imported status-only
+`Result<E>` lowering remain compatibility surfaces until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1405,15 +1404,15 @@ Draft constraints:
 ## 10. Error Handling (Draft)
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
-- Imported value-carrying `Result<T, Error>` construction has a stdlib sum surface under `/std/result/*`; typed
-  locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer, typed locals/returns
-  may use legacy `Result.map(result, fn)` or `Result.and_then(result, fn)` when the source is a local imported stdlib
-  Result sum or a direct call returning one, and may use legacy `Result.map2(left, right, fn)` when both sources are
-  local imported stdlib Result sums or direct calls returning them. `Result.error(value)` / `Result.why(value)` can
-  read that sum shape on IR-backed VM/native paths.
-  Status-only `Result<Error>` remains a packed-status bridge and reports a deterministic compatibility diagnostic
-  when used as a `pick` target. `?` propagation remains a hybrid compiler/runtime bridge until its migration TODO
-  lands.
+- Imported `Result<Error>` and value-carrying `Result<T, Error>` constructions have stdlib sum surfaces under
+  `/std/result/*`; typed value-carrying locals/returns may use legacy `Result.ok(value)` as an `ok`-variant
+  compatibility initializer, typed value-carrying locals/returns may use legacy `Result.map(result, fn)` or
+  `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum or a direct call returning one,
+  and may use legacy `Result.map2(left, right, fn)` when both sources are local imported stdlib Result sums or direct
+  calls returning them. `Result.error(value)` / `Result.why(value)` can read value-carrying imported sums on IR-backed
+  VM/native paths. Legacy packed status-only `Result<Error>` values without the stdlib import report a deterministic
+  compatibility diagnostic when used as a `pick` target. Imported status-only `Result<Error>` is pickable, but `?`
+  propagation remains a hybrid compiler/runtime bridge until its migration TODO lands.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

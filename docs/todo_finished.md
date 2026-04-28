@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4308: Add status-only stdlib Result sum surface
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 surface slice by adding imported
+    `/std/result/Result<E>` beside `/std/result/Result<T, E>` now that generic
+    sums can overload by template arity.
+  - implementation_notes:
+    - Keep this slice limited to stdlib construction and semantic validation;
+      do not change status-only `try(...)`, postfix `?`, `Result.error(...)`,
+      or `Result.why(...)` lowering yet.
+    - Preserve the legacy packed status-only Result diagnostic for programs
+      that use `pick` without importing the stdlib Result sum.
+  - acceptance:
+    - `/std/result/*` imports both `Result<E>` and `Result<T, E>` through the
+      same public `Result` name.
+    - Imported status-only `Result<E>` supports default `ok` construction,
+      `ok<E>()`, explicit `[error]` construction, and exhaustive `pick`.
+    - Legacy packed status-only `Result<E>` without the stdlib import still
+      reports a deterministic `pick` compatibility diagnostic.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the status-only stdlib Result surface is documented
+    and semantically pickable, with runtime lowering still tracked by
+    TODO-4266.
+  - finished_at: 2026-04-28
+  - evidence: Added the `.prime` status-only `Result<E>` sum and `ok<E>()`
+    helper, updated pick diagnostics for the imported-versus-legacy boundary,
+    covered imported status-only construction/pick and legacy diagnostic
+    behavior in semantic tests, and documented the remaining status-only
+    lowering boundary. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4307: Support generic sum overloads by template arity
   - owner: ai
   - created_at: 2026-04-28

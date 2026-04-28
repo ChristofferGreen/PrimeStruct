@@ -1,9 +1,20 @@
 namespace std {
   namespace result {
   [public sum]
+  Result<E> {
+    ok
+    [E] error
+  }
+
+  [public sum]
   Result<T, E> {
     [T] ok
     [E] error
+  }
+
+  [public return<Result<E>>]
+  ok<E>() {
+    return(Result<E>{})
   }
 
   [public return<Result<T, E>>]

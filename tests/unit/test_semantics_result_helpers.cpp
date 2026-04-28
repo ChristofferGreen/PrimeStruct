@@ -72,30 +72,25 @@ main() {
 
 TEST_CASE("status-only stdlib Result sum overloads by template arity") {
   const std::string source = R"(
-namespace std {
-  namespace result {
-    [sum]
-    Result<E> {
-      ok
-      [E] error
-    }
-
-    [sum]
-    Result<T, E> {
-      [T] ok
-      [E] error
-    }
-  }
-}
+import /std/result/*
 
 [return<void>]
 main() {
-  [/std/result/Result<i32>] success{}
-  [/std/result/Result<i32>] failure{[error] 5i32}
-  [/std/result/Result<i32, i32>] value{[ok] 7i32}
+  [Result<i32>] success{ok<i32>()}
+  [Result<i32>] defaultSuccess{}
+  [Result<i32>] failure{[error] 5i32}
+  [Result<i32, i32>] value{[ok] 7i32}
   [i32] successValue{pick(success) {
     ok {
       1i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] defaultValue{pick(defaultSuccess) {
+    ok {
+      2i32
     }
     error(err) {
       err
@@ -498,12 +493,11 @@ TEST_CASE("status-only Result pick reports compatibility diagnostic") {
     CHECK_FALSE(validateProgram(source, "/main", error));
     CHECK(error.find("status-only Result<") != std::string::npos);
     CHECK(error.find(expectedErrorDomain) != std::string::npos);
-    CHECK(error.find("is not a stdlib Result sum") != std::string::npos);
+    CHECK(error.find("is not an imported stdlib Result sum") !=
+          std::string::npos);
   };
 
   checkDiagnostic(R"(
-import /std/result/*
-
 [return<int>]
 main() {
   [Result<FileError>] status{ Result.ok() }
@@ -521,7 +515,6 @@ main() {
                   "FileError");
 
   checkDiagnostic(R"(
-import /std/result/*
 import /std/collections/*
 
 [return<int>]
@@ -541,7 +534,6 @@ main() {
                   "ContainerError");
 
   checkDiagnostic(R"(
-import /std/result/*
 import /std/gfx/*
 
 [return<int>]
