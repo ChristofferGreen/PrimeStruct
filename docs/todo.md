@@ -290,9 +290,12 @@ Task template:
       functions now propagate local imported stdlib value-result sum errors by
       copying the `error` payload into the declared return `Result` sum. Direct
       calls that return imported stdlib value-result sums can now be consumed
-      by postfix `?` on the same VM/native sum-backed paths. Remaining work
-      covers broader operand shapes, status-only results, and non-VM/native
-      bridge cleanup.
+      by postfix `?` on the same VM/native sum-backed paths. Legacy
+      `Result.map`, `Result.and_then`, and `Result.map2` construction for typed
+      imported stdlib Result sums now accepts local sources and direct calls
+      that return imported stdlib Result sums. Remaining work covers borrowed
+      or pointer Result values, status-only results, and non-VM/native bridge
+      cleanup.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

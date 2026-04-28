@@ -622,27 +622,70 @@
         }
         return emitSelectedSumPayloadIntoLocal(selection, resultLocals, targetBaseLocal);
       };
+      struct StdlibResultSumSource {
+        const Definition *sumDef = nullptr;
+        int32_t sumPtrLocal = -1;
+      };
+      auto materializeStdlibResultSumSource =
+          [&](const Expr &sourceExpr,
+              const LocalMap &sourceLocals,
+              const std::string &builtinName,
+              const std::string &sourceDescription,
+              StdlibResultSumSource &sourceOut) -> bool {
+        sourceOut = {};
+        const std::string sourceLabel =
+            sourceDescription.empty() ? "source" : sourceDescription + " source";
+        const Definition *sourceSumDef = nullptr;
+        if (sourceExpr.kind == Expr::Kind::Name) {
+          auto sourceIt = sourceLocals.find(sourceExpr.name);
+          if (sourceIt == sourceLocals.end()) {
+            error = "native backend " + builtinName + " " +
+                    sourceLabel + " is unknown: " + sourceExpr.name;
+            return false;
+          }
+          sourceSumDef = resolveSumDefinitionForLocalInfo(sourceIt->second);
+          if (sourceSumDef == nullptr || !isStdlibResultSumDefinition(*sourceSumDef)) {
+            error = "native backend " + builtinName + " " +
+                    sourceLabel + " requires stdlib Result sum";
+            return false;
+          }
+          sourceOut.sumDef = sourceSumDef;
+          sourceOut.sumPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceIt->second.index)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sourceOut.sumPtrLocal)});
+          return true;
+        }
+        if (sourceExpr.kind != Expr::Kind::Call) {
+          error = "native backend " + builtinName + " " +
+                  sourceLabel + " requires local or direct stdlib Result sum";
+          return false;
+        }
+        const std::string sourceStructPath = inferStructExprPath(sourceExpr, sourceLocals);
+        sourceSumDef = resolveSumDefinitionForTypeText(sourceStructPath, sourceExpr.namespacePrefix);
+        if (sourceSumDef == nullptr || !isStdlibResultSumDefinition(*sourceSumDef)) {
+          error = "native backend " + builtinName + " " +
+                  sourceLabel + " requires local or direct stdlib Result sum";
+          return false;
+        }
+        if (!emitExpr(sourceExpr, sourceLocals)) {
+          return false;
+        }
+        sourceOut.sumDef = sourceSumDef;
+        sourceOut.sumPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sourceOut.sumPtrLocal)});
+        return true;
+      };
       auto tryEmitLoweredResultMapIntoLocal = [&]() -> std::optional<bool> {
         if (!isStdlibResultSumDefinition(sumDef) || !isLegacyResultMapCall(initializer)) {
           return std::nullopt;
         }
         const Expr &sourceExpr = initializer.args[1];
-        if (sourceExpr.kind != Expr::Kind::Name) {
-          error = "native backend Result.map sum source requires local stdlib Result";
+        StdlibResultSumSource source;
+        if (!materializeStdlibResultSumSource(sourceExpr, valueLocals, "Result.map", "", source)) {
           return false;
         }
-        auto sourceIt = valueLocals.find(sourceExpr.name);
-        if (sourceIt == valueLocals.end()) {
-          error = "native backend Result.map source is unknown: " + sourceExpr.name;
-          return false;
-        }
-        const Definition *sourceSumDef = resolveSumDefinitionForLocalInfo(sourceIt->second);
-        if (sourceSumDef == nullptr || !isStdlibResultSumDefinition(*sourceSumDef)) {
-          error = "native backend Result.map source requires stdlib Result sum";
-          return false;
-        }
-        const SumVariant *sourceOkVariant = findSumVariantByName(*sourceSumDef, "ok");
-        const SumVariant *sourceErrorVariant = findSumVariantByName(*sourceSumDef, "error");
+        const SumVariant *sourceOkVariant = findSumVariantByName(*source.sumDef, "ok");
+        const SumVariant *sourceErrorVariant = findSumVariantByName(*source.sumDef, "error");
         const SumVariant *targetOkVariant = findSumVariantByName(sumDef, "ok");
         const SumVariant *targetErrorVariant = findSumVariantByName(sumDef, "error");
         if (sourceOkVariant == nullptr || sourceErrorVariant == nullptr ||
@@ -667,10 +710,7 @@
           return false;
         }
 
-        const int32_t sourceSumPtrLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceIt->second.index)});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
-        emitSumTagComparisonForConstruction(sourceSumPtrLocal, sourceOkVariant->variantIndex);
+        emitSumTagComparisonForConstruction(source.sumPtrLocal, sourceOkVariant->variantIndex);
         const size_t jumpErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
@@ -678,9 +718,9 @@
             {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetOkVariant->variantIndex))});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         LocalMap lambdaLocals = valueLocals;
-        if (!bindSumPayloadLocal(*sourceSumDef,
+        if (!bindSumPayloadLocal(*source.sumDef,
                                  *sourceOkVariant,
-                                 sourceSumPtrLocal,
+                                 source.sumPtrLocal,
                                  lambdaExpr.args.front().name,
                                  lambdaLocals)) {
           return false;
@@ -699,10 +739,10 @@
         function.instructions.push_back(
             {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if (!emitCopySumPayload(*sourceSumDef,
+        if (!emitCopySumPayload(*source.sumDef,
                                 *sourceErrorVariant,
                                 *targetErrorVariant,
-                                sourceSumPtrLocal,
+                                source.sumPtrLocal,
                                 baseLocal,
                                 "Result.map",
                                 "error")) {
@@ -722,22 +762,12 @@
           return std::nullopt;
         }
         const Expr &sourceExpr = initializer.args[1];
-        if (sourceExpr.kind != Expr::Kind::Name) {
-          error = "native backend Result.and_then sum source requires local stdlib Result";
+        StdlibResultSumSource source;
+        if (!materializeStdlibResultSumSource(sourceExpr, valueLocals, "Result.and_then", "", source)) {
           return false;
         }
-        auto sourceIt = valueLocals.find(sourceExpr.name);
-        if (sourceIt == valueLocals.end()) {
-          error = "native backend Result.and_then source is unknown: " + sourceExpr.name;
-          return false;
-        }
-        const Definition *sourceSumDef = resolveSumDefinitionForLocalInfo(sourceIt->second);
-        if (sourceSumDef == nullptr || !isStdlibResultSumDefinition(*sourceSumDef)) {
-          error = "native backend Result.and_then source requires stdlib Result sum";
-          return false;
-        }
-        const SumVariant *sourceOkVariant = findSumVariantByName(*sourceSumDef, "ok");
-        const SumVariant *sourceErrorVariant = findSumVariantByName(*sourceSumDef, "error");
+        const SumVariant *sourceOkVariant = findSumVariantByName(*source.sumDef, "ok");
+        const SumVariant *sourceErrorVariant = findSumVariantByName(*source.sumDef, "error");
         const SumVariant *targetErrorVariant = findSumVariantByName(sumDef, "error");
         if (sourceOkVariant == nullptr || sourceErrorVariant == nullptr ||
             targetErrorVariant == nullptr || !sourceOkVariant->hasPayload ||
@@ -760,17 +790,14 @@
           return false;
         }
 
-        const int32_t sourceSumPtrLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceIt->second.index)});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
-        emitSumTagComparisonForConstruction(sourceSumPtrLocal, sourceOkVariant->variantIndex);
+        emitSumTagComparisonForConstruction(source.sumPtrLocal, sourceOkVariant->variantIndex);
         const size_t jumpErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
         LocalMap lambdaLocals = valueLocals;
-        if (!bindSumPayloadLocal(*sourceSumDef,
+        if (!bindSumPayloadLocal(*source.sumDef,
                                  *sourceOkVariant,
-                                 sourceSumPtrLocal,
+                                 source.sumPtrLocal,
                                  lambdaExpr.args.front().name,
                                  lambdaLocals)) {
           return false;
@@ -789,10 +816,10 @@
         function.instructions.push_back(
             {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if (!emitCopySumPayload(*sourceSumDef,
+        if (!emitCopySumPayload(*source.sumDef,
                                 *sourceErrorVariant,
                                 *targetErrorVariant,
-                                sourceSumPtrLocal,
+                                source.sumPtrLocal,
                                 baseLocal,
                                 "Result.and_then",
                                 "error")) {
@@ -813,32 +840,16 @@
         }
         const Expr &leftExpr = initializer.args[1];
         const Expr &rightExpr = initializer.args[2];
-        if (leftExpr.kind != Expr::Kind::Name || rightExpr.kind != Expr::Kind::Name) {
-          error = "native backend Result.map2 sum sources require local stdlib Results";
+        StdlibResultSumSource left;
+        StdlibResultSumSource right;
+        if (!materializeStdlibResultSumSource(leftExpr, valueLocals, "Result.map2", "left", left) ||
+            !materializeStdlibResultSumSource(rightExpr, valueLocals, "Result.map2", "right", right)) {
           return false;
         }
-        auto leftIt = valueLocals.find(leftExpr.name);
-        auto rightIt = valueLocals.find(rightExpr.name);
-        if (leftIt == valueLocals.end()) {
-          error = "native backend Result.map2 left source is unknown: " + leftExpr.name;
-          return false;
-        }
-        if (rightIt == valueLocals.end()) {
-          error = "native backend Result.map2 right source is unknown: " + rightExpr.name;
-          return false;
-        }
-        const Definition *leftSumDef = resolveSumDefinitionForLocalInfo(leftIt->second);
-        const Definition *rightSumDef = resolveSumDefinitionForLocalInfo(rightIt->second);
-        if (leftSumDef == nullptr || rightSumDef == nullptr ||
-            !isStdlibResultSumDefinition(*leftSumDef) ||
-            !isStdlibResultSumDefinition(*rightSumDef)) {
-          error = "native backend Result.map2 sources require stdlib Result sums";
-          return false;
-        }
-        const SumVariant *leftOkVariant = findSumVariantByName(*leftSumDef, "ok");
-        const SumVariant *leftErrorVariant = findSumVariantByName(*leftSumDef, "error");
-        const SumVariant *rightOkVariant = findSumVariantByName(*rightSumDef, "ok");
-        const SumVariant *rightErrorVariant = findSumVariantByName(*rightSumDef, "error");
+        const SumVariant *leftOkVariant = findSumVariantByName(*left.sumDef, "ok");
+        const SumVariant *leftErrorVariant = findSumVariantByName(*left.sumDef, "error");
+        const SumVariant *rightOkVariant = findSumVariantByName(*right.sumDef, "ok");
+        const SumVariant *rightErrorVariant = findSumVariantByName(*right.sumDef, "error");
         const SumVariant *targetOkVariant = findSumVariantByName(sumDef, "ok");
         const SumVariant *targetErrorVariant = findSumVariantByName(sumDef, "error");
         if (leftOkVariant == nullptr || leftErrorVariant == nullptr ||
@@ -867,17 +878,11 @@
           return false;
         }
 
-        const int32_t leftSumPtrLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(leftIt->second.index)});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(leftSumPtrLocal)});
-        emitSumTagComparisonForConstruction(leftSumPtrLocal, leftOkVariant->variantIndex);
+        emitSumTagComparisonForConstruction(left.sumPtrLocal, leftOkVariant->variantIndex);
         const size_t jumpLeftErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-        const int32_t rightSumPtrLocal = allocTempLocal();
-        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(rightIt->second.index)});
-        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(rightSumPtrLocal)});
-        emitSumTagComparisonForConstruction(rightSumPtrLocal, rightOkVariant->variantIndex);
+        emitSumTagComparisonForConstruction(right.sumPtrLocal, rightOkVariant->variantIndex);
         const size_t jumpRightErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
@@ -885,16 +890,16 @@
             {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetOkVariant->variantIndex))});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         LocalMap lambdaLocals = valueLocals;
-        if (!bindSumPayloadLocal(*leftSumDef,
+        if (!bindSumPayloadLocal(*left.sumDef,
                                  *leftOkVariant,
-                                 leftSumPtrLocal,
+                                 left.sumPtrLocal,
                                  lambdaExpr.args[0].name,
                                  lambdaLocals)) {
           return false;
         }
-        if (!bindSumPayloadLocal(*rightSumDef,
+        if (!bindSumPayloadLocal(*right.sumDef,
                                  *rightOkVariant,
-                                 rightSumPtrLocal,
+                                 right.sumPtrLocal,
                                  lambdaExpr.args[1].name,
                                  lambdaLocals)) {
           return false;
@@ -913,10 +918,10 @@
         function.instructions.push_back(
             {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if (!emitCopySumPayload(*leftSumDef,
+        if (!emitCopySumPayload(*left.sumDef,
                                 *leftErrorVariant,
                                 *targetErrorVariant,
-                                leftSumPtrLocal,
+                                left.sumPtrLocal,
                                 baseLocal,
                                 "Result.map2",
                                 "left error")) {
@@ -930,10 +935,10 @@
         function.instructions.push_back(
             {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
-        if (!emitCopySumPayload(*rightSumDef,
+        if (!emitCopySumPayload(*right.sumDef,
                                 *rightErrorVariant,
                                 *targetErrorVariant,
-                                rightSumPtrLocal,
+                                right.sumPtrLocal,
                                 baseLocal,
                                 "Result.map2",
                                 "right error")) {

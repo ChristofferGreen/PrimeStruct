@@ -2285,8 +2285,9 @@ for(
     sum-backed paths. Typed imported value-carrying sum
     locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed
     VM/native paths, and typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or
-    `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum; `Result.map2(left, right, fn)`
-    is available when both sources are local imported stdlib Result sums. `Result.error(value)` already reads the
+    `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum or a direct call returning
+    one; `Result.map2(left, right, fn)` is available when both sources are local imported stdlib Result sums or direct
+    calls returning them. `Result.error(value)` already reads the
     imported value-carrying sum tag on those paths, so it returns `false` for `ok` and `true` for `error` values from
     `/std/result/*`.
     `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
@@ -2737,8 +2738,10 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   stdlib-owned sum surface under `/std/result/*`; legacy `Result.ok(value)`,
   `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` have typed value-carrying sum compatibility
-  paths on IR-backed VM/native, while status-only `Result<Error>` still uses
-  the hybrid packed-status bridge and is diagnosed if used as a `pick` target.
+  paths on IR-backed VM/native. Those paths accept local imported Result sum
+  sources and direct calls returning imported Result sums, while status-only
+  `Result<Error>` still uses the hybrid packed-status bridge and is diagnosed
+  if used as a `pick` target.
   `?` propagation still uses the hybrid bridge.
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
@@ -3352,9 +3355,9 @@ bad_set() {
   substrate, and imported value-carrying `Result<T, E>` construction is available through `/std/result/*`.
   Legacy `Result.ok(value)`, `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` can initialize typed imported value-carrying sum locals/returns on IR-backed VM/native
-  paths, and `Result.error(...)` / `Result.why(...)` can inspect those imported sum values; status-only Result remains
-  a packed-status compatibility surface that cannot be used as a `pick` target, and propagation stays a compatibility
-  surface until TODO-4266 lands.
+  paths with local imported Result sum sources or direct calls returning them, and `Result.error(...)` /
+  `Result.why(...)` can inspect those imported sum values; status-only Result remains a packed-status compatibility
+  surface that cannot be used as a `pick` target, and propagation stays a compatibility surface until TODO-4266 lands.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on

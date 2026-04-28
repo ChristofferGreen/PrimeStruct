@@ -491,6 +491,134 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("vm supports direct stdlib Result sum sources in legacy combinators") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_success([i32] value) {
+  return(ok<i32, i32>(value))
+}
+
+[return<Result<i32, i32>>]
+make_failure([i32] code) {
+  return(error<i32, i32>(code))
+}
+
+[return<int>]
+main() {
+  [Result<i32, i32>] mappedOk{
+    Result.map(make_success(5i32), []([i32] value) { return(plus(value, 2i32)) })
+  }
+  [Result<i32, i32>] mappedError{
+    Result.map(make_failure(3i32), []([i32] value) { return(plus(value, 2i32)) })
+  }
+  [Result<i32, i32>] chainedOk{
+    Result.and_then(make_success(6i32), []([i32] value) { return(Result.ok(plus(value, 4i32))) })
+  }
+  [Result<i32, i32>] chainedError{
+    Result.and_then(make_failure(7i32), []([i32] value) { return(Result.ok(plus(value, 4i32))) })
+  }
+  [Result<i32, i32>] summedOk{
+    Result.map2(make_success(2i32), make_success(8i32), []([i32] left, [i32] right) {
+      return(plus(left, right))
+    })
+  }
+  [Result<i32, i32>] summedLeftError{
+    Result.map2(make_failure(9i32), make_success(8i32), []([i32] left, [i32] right) {
+      return(plus(left, right))
+    })
+  }
+  [Result<i32, i32>] summedRightError{
+    Result.map2(make_success(2i32), make_failure(10i32), []([i32] left, [i32] right) {
+      return(plus(left, right))
+    })
+  }
+  [i32] mappedOkValue{pick(mappedOk) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      100i32
+    }
+  }}
+  [i32] mappedErrorValue{pick(mappedError) {
+    ok(value) {
+      101i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] chainedOkValue{pick(chainedOk) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      102i32
+    }
+  }}
+  [i32] chainedErrorValue{pick(chainedError) {
+    ok(value) {
+      103i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] summedOkValue{pick(summedOk) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      104i32
+    }
+  }}
+  [i32] summedLeftErrorValue{pick(summedLeftError) {
+    ok(value) {
+      105i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] summedRightErrorValue{pick(summedRightError) {
+    ok(value) {
+      106i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  if(not(equal(mappedOkValue, 7i32))) {
+    return(1i32)
+  }
+  if(not(equal(mappedErrorValue, 3i32))) {
+    return(2i32)
+  }
+  if(not(equal(chainedOkValue, 10i32))) {
+    return(3i32)
+  }
+  if(not(equal(chainedErrorValue, 7i32))) {
+    return(4i32)
+  }
+  if(not(equal(summedOkValue, 10i32))) {
+    return(5i32)
+  }
+  if(not(equal(summedLeftErrorValue, 9i32))) {
+    return(6i32)
+  }
+  if(not(equal(summedRightErrorValue, 10i32))) {
+    return(7i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_direct_legacy_combinators.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 0);
+}
+
 TEST_CASE("vm supports Result.map on IR-backed path") {
   const std::string source = R"(
 import /std/file/*

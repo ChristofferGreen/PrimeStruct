@@ -781,8 +781,9 @@ recursive sum layout is designed. The stdlib `Maybe<T>` surface consumes this ge
 now exposes an imported value-carrying `Result<T, E>` sum. Typed imported value-carrying sum locals/returns may use
 legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed VM/native paths, typed imported
 value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or `Result.and_then(result, fn)` when the
-source is a local imported stdlib Result sum, and may use legacy `Result.map2(left, right, fn)` when both sources are
-local imported stdlib Result sums. `Result.error(value)` / `Result.why(value)` can inspect that imported sum shape.
+source is a local imported stdlib Result sum or a direct call returning one, and may use legacy
+`Result.map2(left, right, fn)` when both sources are local imported stdlib Result sums or direct calls returning them.
+`Result.error(value)` / `Result.why(value)` can inspect that imported sum shape.
 Status-only `Result<E>` remains a packed-status compatibility bridge and is not pickable as a stdlib Result sum;
 `pick(status)` on status-only `Result<E>` reports a deterministic compatibility diagnostic. `try(...)` semantic
 validation and semantic-product metadata accept both `Result<T, E>` and `/std/result/Result<T, E>` value-result
@@ -1402,8 +1403,9 @@ Draft constraints:
 - Imported value-carrying `Result<T, Error>` construction has a stdlib sum surface under `/std/result/*`; typed
   locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer, typed locals/returns
   may use legacy `Result.map(result, fn)` or `Result.and_then(result, fn)` when the source is a local imported stdlib
-  Result sum, and may use legacy `Result.map2(left, right, fn)` when both sources are local imported stdlib Result
-  sums. `Result.error(value)` / `Result.why(value)` can read that sum shape on IR-backed VM/native paths.
+  Result sum or a direct call returning one, and may use legacy `Result.map2(left, right, fn)` when both sources are
+  local imported stdlib Result sums or direct calls returning them. `Result.error(value)` / `Result.why(value)` can
+  read that sum shape on IR-backed VM/native paths.
   Status-only `Result<Error>` remains a packed-status bridge and reports a deterministic compatibility diagnostic
   when used as a `pick` target. `?` propagation remains a hybrid compiler/runtime bridge until its migration TODO
   lands.
