@@ -56,7 +56,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("ir lowers struct constructor call") {
+TEST_CASE("ir lowers struct brace constructor binding") {
   const std::string source = R"(
 [struct]
 thing() {
@@ -66,8 +66,8 @@ thing() {
 
 [return<int>]
 main() {
-  thing{[count] 3i32}
-  return(1i32)
+  [thing] item{thing{[count] 3i32}}
+  return(item.count)
 }
 )";
   std::string error;
