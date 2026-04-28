@@ -8,6 +8,7 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 #include <optional>
+#include <string_view>
 
 namespace primec::ir_lowerer {
 
@@ -120,6 +121,30 @@ bool needsSemanticQueryResultValueMetadata(const Expr &expr,
          !out.valueIsFileHandle;
 }
 
+bool validateInternedQueryTextMetadata(const SemanticProgram &semanticProgram,
+                                       SymbolId textId,
+                                       std::string_view expectedText,
+                                       std::string_view fieldLabel,
+                                       const std::string &queryCallName,
+                                       std::string &error) {
+  if (textId == InvalidSymbolId) {
+    return true;
+  }
+  const std::string_view resolvedText =
+      semanticProgramResolveCallTargetString(semanticProgram, textId);
+  if (resolvedText.empty()) {
+    error = "missing semantic-product query " + std::string(fieldLabel) +
+            " id: " + queryCallName;
+    return false;
+  }
+  if (!expectedText.empty() && resolvedText != expectedText) {
+    error = "stale semantic-product query " + std::string(fieldLabel) +
+            " metadata: " + queryCallName;
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *semanticProgram,
@@ -201,6 +226,26 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     }
     if (publishedTargetId.has_value() && *publishedTargetId != queryFact->resolvedPathId) {
       error = "stale semantic-product query fact: " + queryCallName;
+      return false;
+    }
+    if (!validateInternedQueryTextMetadata(*semanticProgram,
+                                           queryFact->queryTypeTextId,
+                                           queryFact->queryTypeText,
+                                           "type",
+                                           queryCallName,
+                                           error) ||
+        !validateInternedQueryTextMetadata(*semanticProgram,
+                                           queryFact->bindingTypeTextId,
+                                           queryFact->bindingTypeText,
+                                           "binding type",
+                                           queryCallName,
+                                           error) ||
+        !validateInternedQueryTextMetadata(*semanticProgram,
+                                           queryFact->receiverBindingTypeTextId,
+                                           queryFact->receiverBindingTypeText,
+                                           "receiver binding type",
+                                           queryCallName,
+                                           error)) {
       return false;
     }
     const auto *queryTargetSummary =

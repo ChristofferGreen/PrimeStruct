@@ -2539,6 +2539,77 @@ TEST_CASE("ir lowerer rejects stale semantic-product query facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product query type metadata") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8304,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "i32",
+      .bindingTypeText = "i32",
+      .receiverBindingTypeText = "Map<string, i32>",
+      .hasResultType = false,
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8304,
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "lookup"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .receiverBindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Map<string, i32>"),
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.queryFacts.back().queryTypeTextId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "missing semantic-product query type id: lookup");
+
+  semanticProgram.queryFacts.back().queryTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product query type metadata: lookup");
+
+  semanticProgram.queryFacts.back().queryTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.queryFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product query binding type metadata: lookup");
+
+  semanticProgram.queryFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.queryFacts.back().receiverBindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "OtherMap");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product query receiver binding type metadata: lookup");
+}
+
 TEST_CASE("ir lowerer rejects stale semantic-product query result metadata") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
