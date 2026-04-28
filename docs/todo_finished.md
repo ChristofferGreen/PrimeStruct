@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4285: Route sum moves through active payload helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Route sum-to-sum `move(...)` construction through the active payload
+    only while preserving the inline sum layout contract.
+  - implementation_notes:
+    - Start from `TODO-4261`, `TODO-4283`, and `TODO-4284`: slot 0 stores the
+      aggregate header, slot 1 stores the active tag, and slot 2 starts the
+      active payload storage. Scalar payloads occupy one slot; aggregate
+      payloads occupy their struct slot layout inline.
+    - Reuse existing `Move`/`Copy` helper emission where possible, but guard it
+      with the active tag so inactive payload storage is never observed.
+    - Split explicit `Destroy` helper routing to `TODO-4286`.
+  - acceptance:
+    - Explicit sum-to-sum `move(...)` behavior only applies to the active
+      payload and is covered by focused compile-run tests.
+    - Inactive aggregate payload storage remains unobservable in runtime tests.
+    - `docs/PrimeStruct.md` records the active-payload move rule and the
+      nested-sum plus destroy-helper deferrals.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once active-payload move helper behavior is implemented and
+    covered, without pulling generic/unit sums into the same change.
+  - finished_at: 2026-04-28
+  - evidence: Sum bindings initialized from `move(source)` now copy the active
+    tag from the source sum and guard each variant move/copy branch by that tag.
+    Aggregate payloads route through `Move` or `Copy` helpers when present and
+    fall back to slot copy otherwise; scalar payloads copy the active slot only.
+    Added compile-run coverage where an inactive aggregate payload helper would
+    overwrite the shared payload storage if it were not tag-guarded. Promoted
+    `TODO-4286` to Ready Now for explicit active-payload destroy routing and
+    deferred release reruns to CI per the lite workflow.
+
 - [x] TODO-4284: Stabilize aggregate sum pick result copies
   - owner: ai
   - created_at: 2026-04-28

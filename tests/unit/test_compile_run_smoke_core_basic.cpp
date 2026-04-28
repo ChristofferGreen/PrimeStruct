@@ -251,6 +251,66 @@ main() {
   CHECK(runCommand(nativePath) == 86);
 }
 
+TEST_CASE("sum moves route helpers through the active payload only") {
+  const std::string source = R"(
+[struct]
+LeftPayload() {
+  [i32] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, plus(other.value, 100i32))
+  }
+}
+
+[struct]
+RightPayload() {
+  [i32] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, plus(other.value, 1000i32))
+  }
+}
+
+[sum]
+Choice {
+  [LeftPayload] left
+  [RightPayload] right
+}
+
+[return<int>]
+main() {
+  [Choice] original{[left] LeftPayload{7i32}}
+  [Choice] moved{move(original)}
+  [i32] score{pick(moved) {
+    left(payload) {
+      payload.value
+    }
+    right(payload) {
+      payload.value
+    }
+  }}
+  return(score)
+}
+)";
+  const std::string srcPath = writeTemp("compile_sum_move_active_payload.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_sum_move_active_payload_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_sum_move_active_payload_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 107);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 107);
+
+  const std::string compileNativeCmd =
+      "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 107);
+}
+
 TEST_CASE("nested sum payloads report deterministic lowerer diagnostic") {
   const std::string source = R"(
 [sum]

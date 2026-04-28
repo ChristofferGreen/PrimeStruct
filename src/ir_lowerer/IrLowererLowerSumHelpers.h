@@ -364,6 +364,111 @@
       function.instructions.push_back({IrOpcode::CmpEqI32, 0});
     };
 
+    auto findSumPayloadMoveHelper = [&](const std::string &structPath) -> const Definition * {
+      auto moveIt = defMap.find(structPath + "/Move");
+      if (moveIt != defMap.end()) {
+        return moveIt->second;
+      }
+      moveIt = defMap.find(structPath + "/Copy");
+      if (moveIt != defMap.end()) {
+        return moveIt->second;
+      }
+      return nullptr;
+    };
+
+    auto emitActiveSumPayloadMoveFromSumPtr =
+        [&](int32_t destBaseLocal,
+            const Definition &sumDef,
+            int32_t sourceSumPtrLocal,
+            const LocalMap &valueLocals) -> bool {
+      std::vector<size_t> endJumps;
+      for (const auto &variant : sumDef.sumVariants) {
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
+          error = unsupportedSumPayloadError(sumDef, variant);
+          return false;
+        }
+        emitSumTagComparison(sourceSumPtrLocal, variant.variantIndex);
+        const size_t nextVariantJump = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        if (payloadInfo.isAggregate) {
+          const int32_t destPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(destBaseLocal + 2)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+          const int32_t srcPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          if (const Definition *moveHelper = findSumPayloadMoveHelper(payloadInfo.structPath)) {
+            if (!ir_lowerer::emitMoveHelperFromPtrs(destPtrLocal,
+                                                    srcPtrLocal,
+                                                    payloadInfo.structPath,
+                                                    moveHelper,
+                                                    valueLocals,
+                                                    [&](const Expr &callExpr,
+                                                        const Definition &callee,
+                                                        const LocalMap &callLocals,
+                                                        bool requireValue) {
+                                                      return emitInlineDefinitionCall(
+                                                          callExpr, callee, callLocals, requireValue);
+                                                    },
+                                                    error)) {
+              return false;
+            }
+          } else if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, payloadInfo.slotCount)) {
+            return false;
+          }
+        } else {
+          emitLoadSumSlotIndirect(sourceSumPtrLocal, 2);
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destBaseLocal + 2)});
+        }
+        endJumps.push_back(function.instructions.size());
+        function.instructions.push_back({IrOpcode::Jump, 0});
+        function.instructions[nextVariantJump].imm = static_cast<uint64_t>(function.instructions.size());
+      }
+      for (size_t jumpIndex : endJumps) {
+        function.instructions[jumpIndex].imm = static_cast<uint64_t>(function.instructions.size());
+      }
+      return true;
+    };
+
+    auto tryEmitLoweredSumMoveIntoLocal =
+        [&](int32_t baseLocal,
+            const Definition &sumDef,
+            const Expr &initializer,
+            const LocalMap &valueLocals,
+            bool &emittedOut) -> bool {
+      emittedOut = false;
+      if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
+          initializer.isFieldAccess || !isSimpleCallName(initializer, "move") ||
+          initializer.args.size() != 1 || initializer.args.front().kind != Expr::Kind::Name ||
+          hasNamedArguments(initializer.argNames) || !initializer.templateArgs.empty() ||
+          initializer.hasBodyArguments || !initializer.bodyArguments.empty()) {
+        return true;
+      }
+      auto sourceIt = valueLocals.find(initializer.args.front().name);
+      if (sourceIt == valueLocals.end()) {
+        error = "native backend sum move requires a local source: " + initializer.args.front().name;
+        return false;
+      }
+      const Definition *sourceSumDef = resolveSumDefinitionForLocalInfo(sourceIt->second);
+      if (sourceSumDef == nullptr || sourceSumDef->fullPath != sumDef.fullPath) {
+        error = "native backend sum move source type mismatch on " + sumDef.fullPath;
+        return false;
+      }
+      const int32_t sourceSumPtrLocal = allocTempLocal();
+      function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceIt->second.index)});
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+      emitLoadSumSlotIndirect(sourceSumPtrLocal, 1);
+      function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+      if (!emitActiveSumPayloadMoveFromSumPtr(baseLocal, sumDef, sourceSumPtrLocal, valueLocals)) {
+        return false;
+      }
+      emittedOut = true;
+      return true;
+    };
+
     auto makePickPayloadLocalInfo =
         [&](const Definition &sumDef,
             const SumVariant &variant,

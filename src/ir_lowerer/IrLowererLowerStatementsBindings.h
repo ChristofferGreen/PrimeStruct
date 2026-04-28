@@ -436,7 +436,11 @@
         emitLoweredSumHeader(baseLocal, totalSlots);
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
-        if (!emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, init, localsIn)) {
+        bool emittedSumMove = false;
+        if (!tryEmitLoweredSumMoveIntoLocal(baseLocal, *sumDef, init, localsIn, emittedSumMove)) {
+          return false;
+        }
+        if (!emittedSumMove && !emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, init, localsIn)) {
           return false;
         }
         localsIn.emplace(stmt.name, info);
