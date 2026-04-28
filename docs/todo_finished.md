@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Bridge `Result.and_then` to the result sum
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next legacy combinator bridge by making
+    `Result.and_then(result, fn)` construct typed imported value-carrying
+    `/std/result/*` sum locals and returns on IR-backed VM/native paths when
+    the source is a local stdlib Result sum.
+  - implementation_notes:
+    - Detect legacy `Result.and_then(result, fn)` during stdlib Result sum
+      construction.
+    - On source `ok`, bind the source payload into the lambda and construct
+      the target Result sum from the lambda-produced Result expression.
+    - On source `error`, copy the source error payload into the target
+      `error` payload without running the lambda.
+    - Left `Result.map2(...)`, status-only `Result<Error>`, and `?`
+      propagation in TODO-4293/TODO-4266.
+  - acceptance:
+    - Typed imported value-carrying Result locals can be initialized with
+      `Result.and_then(source, fn)` when `source` is a local stdlib Result sum.
+    - Functions returning typed imported value-carrying Results can return
+      `Result.and_then(source, fn)` for local stdlib Result sum sources.
+    - `ok` sources chain through the lambda, lambda-produced errors remain
+      errors, and source `error` payloads are preserved.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `Result.and_then` can construct typed imported
+    value-carrying stdlib Result sums and the remaining combinator bridge work
+    is still tracked.
+  - finished_at: 2026-04-28
+  - evidence: Added stdlib Result sum construction for legacy
+    `Result.and_then` plus semantic, VM, and native fixtures covering ok
+    chaining, lambda-produced errors, source-error preservation, and
+    declared-return chaining. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4297: Bridge `Result.map` to the result sum
   - owner: ai
   - created_at: 2026-04-28
