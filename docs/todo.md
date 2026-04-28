@@ -360,10 +360,10 @@ Task template:
     result-metadata diagnostic slices are complete; the query stale-target
     diagnostic slice is complete. The try on-error context diagnostic slice
     and try context-return diagnostic slice are complete. The try
-    result-metadata stale diagnostic slice is complete. The return-fact stale
-    diagnostic slice is complete. Continue with a different control-flow/query
-    consumer. The query result-metadata and type-metadata stale diagnostic
-    slices are complete.
+    result-metadata and operand-metadata stale diagnostic slices are complete.
+    The return-fact stale diagnostic slice is complete. Continue with a
+    different control-flow/query consumer. The query result-metadata and
+    type-metadata stale diagnostic slices are complete.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -439,6 +439,10 @@ Task template:
       rejects stale interned `try(...)` value/error metadata that contradicts
       the published callable summary for the resolved operand before lowering
       can consume the inconsistent try fact.
+    - Completed slice: semantic-product try completeness validation now
+      rejects missing or stale interned operand binding type, receiver binding
+      type, and query type metadata before lowerer consumers can read
+      inconsistent try fact text fields.
     - Completed slice: semantic-product return completeness validation now
       rejects stale interned return-kind metadata that contradicts the
       published callable summary before lowering can consume the inconsistent

@@ -121,25 +121,26 @@ bool needsSemanticQueryResultValueMetadata(const Expr &expr,
          !out.valueIsFileHandle;
 }
 
-bool validateInternedQueryTextMetadata(const SemanticProgram &semanticProgram,
-                                       SymbolId textId,
-                                       std::string_view expectedText,
-                                       std::string_view fieldLabel,
-                                       const std::string &queryCallName,
-                                       std::string &error) {
+bool validateInternedSemanticTextMetadata(const SemanticProgram &semanticProgram,
+                                          SymbolId textId,
+                                          std::string_view expectedText,
+                                          std::string_view factLabel,
+                                          std::string_view fieldLabel,
+                                          const std::string &displayName,
+                                          std::string &error) {
   if (textId == InvalidSymbolId) {
     return true;
   }
   const std::string_view resolvedText =
       semanticProgramResolveCallTargetString(semanticProgram, textId);
   if (resolvedText.empty()) {
-    error = "missing semantic-product query " + std::string(fieldLabel) +
-            " id: " + queryCallName;
+    error = "missing semantic-product " + std::string(factLabel) + " " +
+            std::string(fieldLabel) + " id: " + displayName;
     return false;
   }
   if (!expectedText.empty() && resolvedText != expectedText) {
-    error = "stale semantic-product query " + std::string(fieldLabel) +
-            " metadata: " + queryCallName;
+    error = "stale semantic-product " + std::string(factLabel) + " " +
+            std::string(fieldLabel) + " metadata: " + displayName;
     return false;
   }
   return true;
@@ -228,24 +229,27 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       error = "stale semantic-product query fact: " + queryCallName;
       return false;
     }
-    if (!validateInternedQueryTextMetadata(*semanticProgram,
-                                           queryFact->queryTypeTextId,
-                                           queryFact->queryTypeText,
-                                           "type",
-                                           queryCallName,
-                                           error) ||
-        !validateInternedQueryTextMetadata(*semanticProgram,
-                                           queryFact->bindingTypeTextId,
-                                           queryFact->bindingTypeText,
-                                           "binding type",
-                                           queryCallName,
-                                           error) ||
-        !validateInternedQueryTextMetadata(*semanticProgram,
-                                           queryFact->receiverBindingTypeTextId,
-                                           queryFact->receiverBindingTypeText,
-                                           "receiver binding type",
-                                           queryCallName,
-                                           error)) {
+    if (!validateInternedSemanticTextMetadata(*semanticProgram,
+                                              queryFact->queryTypeTextId,
+                                              queryFact->queryTypeText,
+                                              "query",
+                                              "type",
+                                              queryCallName,
+                                              error) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              queryFact->bindingTypeTextId,
+                                              queryFact->bindingTypeText,
+                                              "query",
+                                              "binding type",
+                                              queryCallName,
+                                              error) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              queryFact->receiverBindingTypeTextId,
+                                              queryFact->receiverBindingTypeText,
+                                              "query",
+                                              "receiver binding type",
+                                              queryCallName,
+                                              error)) {
       return false;
     }
     const auto *queryTargetSummary =
@@ -301,6 +305,29 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
     }
     if (trimTemplateTypeText(tryFact->valueType).empty()) {
       error = "incomplete semantic-product try fact: try";
+      return false;
+    }
+    if (!validateInternedSemanticTextMetadata(*semanticProgram,
+                                              tryFact->operandBindingTypeTextId,
+                                              tryFact->operandBindingTypeText,
+                                              "try",
+                                              "operand binding type",
+                                              "try",
+                                              error) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              tryFact->operandReceiverBindingTypeTextId,
+                                              tryFact->operandReceiverBindingTypeText,
+                                              "try",
+                                              "operand receiver binding type",
+                                              "try",
+                                              error) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              tryFact->operandQueryTypeTextId,
+                                              tryFact->operandQueryTypeText,
+                                              "try",
+                                              "operand query type",
+                                              "try",
+                                              error)) {
       return false;
     }
     const auto *tryOperandSummary =

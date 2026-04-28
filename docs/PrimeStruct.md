@@ -267,6 +267,10 @@ Planned non-template inference migration contract:
   checks interned `try(...)` value/error metadata against the published callable summary for the
   resolved operand before lowerer handoff can consume inconsistent try metadata. Contradictory
   operand Result facts fail closed with a deterministic try metadata diagnostic.
+- Completed try operand-metadata diagnostic slice: semantic-product try completeness validation now
+  checks interned operand binding type, operand receiver binding type, and operand query type
+  metadata before lowerer handoff can consume inconsistent try metadata. Missing or contradictory
+  operand type ids fail closed with deterministic try metadata diagnostics.
 - Completed return-fact stale diagnostic slice: semantic-product return completeness validation now
   checks interned return-kind facts against the published callable summary before lowerer handoff
   can consume inconsistent control-flow metadata. Contradictory return-kind facts fail closed with

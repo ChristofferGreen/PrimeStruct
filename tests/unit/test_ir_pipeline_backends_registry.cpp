@@ -2794,6 +2794,74 @@ TEST_CASE("ir lowerer rejects missing semantic-product try operand resolved path
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product try operand metadata") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "Map<string, Result<i32, FileError>>",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "i32",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8402,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .operandBindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i32, FileError>"),
+      .operandReceiverBindingTypeTextId = primec::semanticProgramInternCallTargetString(
+          semanticProgram, "Map<string, Result<i32, FileError>>"),
+      .operandQueryTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i32, FileError>"),
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.tryFacts.back().operandBindingTypeTextId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "missing semantic-product try operand binding type id: try");
+
+  semanticProgram.tryFacts.back().operandBindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i64, FileError>");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product try operand binding type metadata: try");
+
+  semanticProgram.tryFacts.back().operandBindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i32, FileError>");
+  semanticProgram.tryFacts.back().operandReceiverBindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "OtherReceiver");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product try operand receiver binding type metadata: try");
+
+  semanticProgram.tryFacts.back().operandReceiverBindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "Map<string, Result<i32, FileError>>");
+  semanticProgram.tryFacts.back().operandQueryTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i64, FileError>");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product try operand query type metadata: try");
+}
+
 TEST_CASE("ir lowerer rejects stale semantic-product try result metadata") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
