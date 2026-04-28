@@ -228,6 +228,10 @@ Planned non-template inference migration contract:
   parameter element metadata now uses the published binding fact when the syntax shape does not carry
   the element type. Missing or incomplete binding facts fail closed with semantic-product args-pack
   diagnostics instead of leaving the element kind unresolved for later lowering.
+- Completed binding metadata diagnostic slice: semantic-product binding completeness validation now
+  checks interned binding type and reference-root metadata before lowerer consumers can read binding
+  fact text fields. Missing or contradictory present ids fail closed with deterministic binding
+  metadata diagnostics.
 - Completed lowerer-side direct name payload slice: semantic-product-addressed direct
   `Result.ok(name)` payload metadata now uses the published binding fact before local maps or
   recursive expression-kind fallback can answer. Missing binding facts leave the payload kind

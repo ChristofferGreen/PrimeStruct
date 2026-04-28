@@ -350,13 +350,14 @@ Task template:
     with local-auto, `on_error`, or another uncovered query/control-flow
     consumer. The lowerer-side unresolved Result-combinator metadata slice is
     complete for `Result.map`, `Result.and_then`, and `Result.map2`. The
-    lowerer-side args-pack parameter metadata slice, direct
-    `Result.ok(name)` payload metadata slice, and statement initializer
-    binding-type slice are also complete. The statement name-initializer
-    final LocalInfo metadata slice is complete for scalar, pointer/reference,
-    and array/vector fallbacks. The local-auto stale binding-type diagnostic
-    slice is complete. The local-auto initializer path and return-kind
-    diagnostic slices are complete. The `on_error` stale fact and
+    lowerer-side args-pack parameter metadata slice and binding metadata
+    diagnostic slice are complete. The direct `Result.ok(name)` payload
+    metadata slice and statement initializer binding-type slice are also
+    complete. The statement name-initializer final LocalInfo metadata slice is
+    complete for scalar, pointer/reference, and array/vector fallbacks. The
+    local-auto stale binding-type diagnostic slice is complete. The local-auto
+    initializer path and return-kind diagnostic slices are complete. The
+    `on_error` stale fact and
     result-metadata diagnostic slices are complete; the query stale-target
     diagnostic slice is complete. The try on-error context diagnostic slice
     and try context-return diagnostic slice are complete. The try
@@ -394,6 +395,10 @@ Task template:
       metadata now requires the published binding fact when syntax does not
       carry the element type, instead of leaving variadic element metadata
       unknown for later lowering.
+    - Completed slice: semantic-product binding completeness validation now
+      rejects missing or stale interned binding type and reference-root
+      metadata before lowerer consumers can read inconsistent binding fact
+      text fields.
     - Completed slice: semantic-product-addressed direct `Result.ok(name)`
       payload metadata now requires the published binding fact instead of
       asking local maps or recursive expression-kind fallback to reconstruct

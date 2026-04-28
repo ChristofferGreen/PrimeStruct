@@ -1662,6 +1662,36 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main/selected"),
   });
 
+  semanticProgram.bindingFacts.back().bindingTypeTextId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "missing semantic-product binding type id: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.bindingFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "stale semantic-product binding type metadata: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.bindingFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.bindingFacts.back().referenceRoot = "selected";
+  semanticProgram.bindingFacts.back().referenceRootId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "other");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product binding reference root metadata: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.bindingFacts.back().referenceRoot = "";
+  semanticProgram.bindingFacts.back().referenceRootId = primec::InvalidSymbolId;
   semanticProgram.bindingFacts.back().resolvedPathId =
       static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
   error.clear();

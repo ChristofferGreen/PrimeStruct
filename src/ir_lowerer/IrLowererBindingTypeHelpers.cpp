@@ -457,6 +457,30 @@ void setReferenceArrayInfoFromTypeText(const std::string &typeText, LocalInfo &i
   }
 }
 
+bool validateInternedBindingTextMetadata(const SemanticProgram &semanticProgram,
+                                         SymbolId textId,
+                                         std::string_view expectedText,
+                                         std::string_view fieldLabel,
+                                         const std::string &siteDescription,
+                                         std::string &error) {
+  if (textId == InvalidSymbolId) {
+    return true;
+  }
+  const std::string_view resolvedText =
+      semanticProgramResolveCallTargetString(semanticProgram, textId);
+  if (resolvedText.empty()) {
+    error = "missing semantic-product binding " + std::string(fieldLabel) +
+            " id: " + siteDescription;
+    return false;
+  }
+  if (!expectedText.empty() && resolvedText != expectedText) {
+    error = "stale semantic-product binding " + std::string(fieldLabel) +
+            " metadata: " + siteDescription;
+    return false;
+  }
+  return true;
+}
+
 } // namespace
 
 bool validateSemanticProductBindingCoverage(const Program &program,
@@ -480,10 +504,25 @@ bool validateSemanticProductBindingCoverage(const Program &program,
               describeBindingSite(scopePath, siteKind, expr);
       return false;
     }
+    const std::string siteDescription = describeBindingSite(scopePath, siteKind, expr);
+    if (!validateInternedBindingTextMetadata(*semanticProgram,
+                                             bindingFact->bindingTypeTextId,
+                                             bindingFact->bindingTypeText,
+                                             "type",
+                                             siteDescription,
+                                             error) ||
+        !validateInternedBindingTextMetadata(*semanticProgram,
+                                             bindingFact->referenceRootId,
+                                             bindingFact->referenceRoot,
+                                             "reference root",
+                                             siteDescription,
+                                             error)) {
+      return false;
+    }
     if (bindingFact->resolvedPathId == InvalidSymbolId ||
         semanticProgramBindingFactResolvedPath(*semanticProgram, *bindingFact).empty()) {
       error = "missing semantic-product binding resolved path id: " +
-              describeBindingSite(scopePath, siteKind, expr);
+              siteDescription;
       return false;
     }
     return true;
