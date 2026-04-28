@@ -33,6 +33,84 @@ std::string Emitter::emitExpr(const Expr &expr,
     }
     return binding.typeName + "<" + binding.typeTemplateArg + ">";
   };
+  auto populateBindingFromTypeText = [](const std::string &typeText, BindingInfo &bindingOut) {
+    bindingOut = BindingInfo{};
+    std::string base;
+    std::string arg;
+    if (splitTemplateTypeName(typeText, base, arg)) {
+      bindingOut.typeName = normalizeBindingTypeName(base);
+      bindingOut.typeTemplateArg = arg;
+    } else {
+      bindingOut.typeName = normalizeBindingTypeName(typeText);
+    }
+    return !bindingOut.typeName.empty();
+  };
+  auto populateResultInfoFromBinding = [&](const BindingInfo &binding, ResultInfo &out) {
+    out = ResultInfo{};
+    const std::string normalizedTypeName = normalizeBindingTypeName(binding.typeName);
+    if (normalizedTypeName != "Result" && normalizedTypeName != "/std/result/Result" &&
+        normalizedTypeName != "std/result/Result") {
+      return false;
+    }
+    std::vector<std::string> args;
+    if (!splitTopLevelTemplateArgs(binding.typeTemplateArg, args)) {
+      return false;
+    }
+    if (args.size() == 1) {
+      out.isResult = true;
+      out.hasValue = false;
+      out.errorType = args.front();
+      return true;
+    }
+    if (args.size() == 2) {
+      out.isResult = true;
+      out.hasValue = true;
+      out.valueType = args.front();
+      out.errorType = args.back();
+      return true;
+    }
+    return false;
+  };
+  std::function<bool(const Expr &, const std::unordered_map<std::string, BindingInfo> &, BindingInfo &)>
+      resolveExprBindingInfoWithTypes;
+  resolveExprBindingInfoWithTypes =
+      [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &currentTypes,
+          BindingInfo &bindingOut) -> bool {
+    if (candidate.kind == Expr::Kind::Name) {
+      auto it = currentTypes.find(candidate.name);
+      if (it != currentTypes.end()) {
+        bindingOut = it->second;
+        return true;
+      }
+      return false;
+    }
+    if (candidate.kind != Expr::Kind::Call) {
+      return false;
+    }
+    if (isSimpleCallName(candidate, "dereference") && candidate.args.size() == 1) {
+      BindingInfo sourceBinding;
+      if (!resolveExprBindingInfoWithTypes(candidate.args.front(), currentTypes, sourceBinding)) {
+        return false;
+      }
+      const std::string normalizedSourceType = normalizeBindingTypeName(sourceBinding.typeName);
+      if ((normalizedSourceType == "Reference" || normalizedSourceType == "Pointer") &&
+          !sourceBinding.typeTemplateArg.empty()) {
+        return populateBindingFromTypeText(sourceBinding.typeTemplateArg, bindingOut);
+      }
+      return false;
+    }
+    std::string accessName;
+    if (candidate.args.size() == 2 && getBuiltinArrayAccessNameLocal(candidate, accessName) &&
+        (accessName == "at" || accessName == "at_unsafe")) {
+      for (const Expr &argExpr : candidate.args) {
+        std::string elementType;
+        if (inferCollectionElementTypeNameFromExpr(argExpr, currentTypes, {}, elementType)) {
+          return populateBindingFromTypeText(elementType, bindingOut);
+        }
+      }
+    }
+    return false;
+  };
   auto resolveDirectResultOkInfo = [&](const Expr &candidate,
                                        const std::unordered_map<std::string, BindingInfo> &currentTypes,
                                        const std::string &preferredErrorType,
@@ -224,23 +302,10 @@ std::string Emitter::emitExpr(const Expr &expr,
   resolveResultExprInfoWithTypes =
       [&](const Expr &candidate, const std::unordered_map<std::string, BindingInfo> &currentTypes, ResultInfo &out) -> bool {
         out = ResultInfo{};
-        if (candidate.kind == Expr::Kind::Name) {
-          auto it = currentTypes.find(candidate.name);
-          if (it != currentTypes.end() && it->second.typeName == "Result") {
-            std::vector<std::string> args;
-            if (splitTopLevelTemplateArgs(it->second.typeTemplateArg, args)) {
-              out.isResult = true;
-              out.hasValue = (args.size() == 2);
-              if (out.hasValue) {
-                out.valueType = args.front();
-                out.errorType = args.back();
-              } else if (!args.empty()) {
-                out.errorType = args.front();
-              }
-              return true;
-            }
-          }
-          return false;
+        BindingInfo binding;
+        if (resolveExprBindingInfoWithTypes(candidate, currentTypes, binding) &&
+            populateResultInfoFromBinding(binding, out)) {
+          return true;
         }
         if (candidate.kind != Expr::Kind::Call) {
           return false;

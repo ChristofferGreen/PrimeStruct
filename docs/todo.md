@@ -308,7 +308,12 @@ Task template:
       cleanup. SyntaxSpec now documents the landed IR-backed status-only
       `try(...)`, postfix `?`, `Result.error(...)`, and `Result.why(...)`
       operand families and leaves only the broader/non-IR bridge cleanup as
-      migration work.
+      migration work. The legacy source C++ emitter now preserves nested
+      `Result<T...>` types under `Reference` / `Pointer` and recognizes
+      dereferenced local/indexed borrowed Result operands for `try(...)`,
+      `Result.error(...)`, and `Result.why(...)` while it still uses the
+      packed bridge; remaining cleanup should focus on deleting or
+      quarantining the legacy representation.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

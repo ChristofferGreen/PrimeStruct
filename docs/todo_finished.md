@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4314: Preserve borrowed Result C++ bridge helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 legacy source C++ emitter slice for
+    dereferenced borrowed Result operands while leaving packed-representation
+    deletion as follow-up migration work.
+  - implementation_notes:
+    - Keep the source C++ emitter on the existing packed Result bridge for
+      this slice.
+    - Preserve nested `Result<T...>` C++ type lowering under `Reference` and
+      `Pointer` so borrowed/pointer Result bindings do not degrade to `int`.
+    - Teach Result helper operand inference to recognize `dereference(...)`
+      and indexed args-pack operands whose element type is a Result.
+  - acceptance:
+    - Source C++ emitter `try(dereference(refOrPtr))` can infer the Result
+      contract for borrowed/pointer Result operands.
+    - Source C++ emitter `Result.error(...)` and `Result.why(...)` can infer
+      dereferenced borrowed/pointer Result operands from indexed variadic
+      packs.
+    - C++ emitter coverage exercises value-carrying and status-only borrowed
+      Result helper operands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once source C++ helper inference covers dereferenced
+    borrowed/pointer Result operands without deleting the packed bridge.
+  - finished_at: 2026-04-28
+  - evidence: Preserved nested Result types beneath `Reference` / `Pointer`,
+    taught source C++ Result helper inference to classify dereferenced local
+    and indexed borrowed Result operands, and added C++ emitter coverage for
+    value-carrying and status-only borrowed Result helper flows. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4313: Align status-only Result bridge docs
   - owner: ai
   - created_at: 2026-04-28

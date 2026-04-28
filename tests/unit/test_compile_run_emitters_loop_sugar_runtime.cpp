@@ -383,6 +383,156 @@ main() {
   CHECK(runCommand(exePath) == 39);
 }
 
+TEST_CASE("C++ emitter materializes variadic borrowed Result value packs with indexed dereference helpers") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+swallow_parse_error([ParseError] err) {}
+
+[return<Result<i32, ParseError>>]
+ok_value([i32] value) {
+  return(Result.ok(value))
+}
+
+[return<Result<i32, ParseError>>]
+fail_bad() {
+  return(7i64)
+}
+
+[return<int> on_error<ParseError, /swallow_parse_error>]
+score_results([args<Reference<Result<i32, ParseError>>>] values) {
+  [i32] head{try(dereference(values[0i32]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
+  return(plus(head, tailWhyCount))
+}
+
+[return<int>]
+forward([args<Reference<Result<i32, ParseError>>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Reference<Result<i32, ParseError>>>] values) {
+  [Result<i32, ParseError> mut] extra{ok_value(10i32)}
+  [Reference<Result<i32, ParseError>>] extra_ref{location(extra)}
+  return(score_results(extra_ref, [spread] values))
+}
+
+[return<int>]
+main() {
+  [Result<i32, ParseError> mut] a0{ok_value(2i32)}
+  [Result<i32, ParseError> mut] a1{fail_bad()}
+  [Reference<Result<i32, ParseError>>] r0{location(a0)}
+  [Reference<Result<i32, ParseError>>] r1{location(a1)}
+
+  [Result<i32, ParseError> mut] b0{ok_value(3i32)}
+  [Result<i32, ParseError> mut] b1{fail_bad()}
+  [Reference<Result<i32, ParseError>>] s0{location(b0)}
+  [Reference<Result<i32, ParseError>>] s1{location(b1)}
+
+  [Result<i32, ParseError> mut] c0{ok_value(4i32)}
+  [Result<i32, ParseError> mut] c1{fail_bad()}
+  [Reference<Result<i32, ParseError>>] t0{location(c0)}
+  [Reference<Result<i32, ParseError>>] t1{location(c1)}
+
+  return(plus(score_results(r0, r1),
+              plus(forward(s0, s1),
+                   forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_borrowed_args_result.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_borrowed_args_result_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 24);
+}
+
+TEST_CASE("C++ emitter materializes variadic borrowed status-only Result packs with indexed dereference helpers") {
+  const std::string source = R"(
+[struct]
+ParseError() {
+  [i32] code{0i32}
+}
+
+namespace ParseError {
+  [return<string>]
+  why([ParseError] err) {
+    return(if(equal(err.code, 7i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+[return<Result<ParseError>>]
+ok_status() {
+  return(Result.ok())
+}
+
+[return<Result<ParseError>>]
+fail_bad() {
+  return(7i32)
+}
+
+[return<int>]
+score_results([args<Pointer<Result<ParseError>>>] values) {
+  [bool] tailHasError{Result.error(dereference(values[minus(count(values), 1i32)]))}
+  [i32] tailWhyCount{count(Result.why(dereference(values[minus(count(values), 1i32)])))}
+  return(if(tailHasError, then() { plus(10i32, tailWhyCount) }, else() { 0i32 }))
+}
+
+[return<int>]
+forward([args<Pointer<Result<ParseError>>>] values) {
+  return(score_results([spread] values))
+}
+
+[return<int>]
+forward_mixed([args<Pointer<Result<ParseError>>>] values) {
+  [Result<ParseError> mut] extra{ok_status()}
+  [Pointer<Result<ParseError>>] extra_ptr{location(extra)}
+  return(score_results(extra_ptr, [spread] values))
+}
+
+[return<int>]
+main() {
+  [Result<ParseError> mut] a0{ok_status()}
+  [Result<ParseError> mut] a1{fail_bad()}
+  [Pointer<Result<ParseError>>] r0{location(a0)}
+  [Pointer<Result<ParseError>>] r1{location(a1)}
+
+  [Result<ParseError> mut] b0{ok_status()}
+  [Result<ParseError> mut] b1{fail_bad()}
+  [Pointer<Result<ParseError>>] s0{location(b0)}
+  [Pointer<Result<ParseError>>] s1{location(b1)}
+
+  [Result<ParseError> mut] c0{ok_status()}
+  [Result<ParseError> mut] c1{fail_bad()}
+  [Pointer<Result<ParseError>>] t0{location(c0)}
+  [Pointer<Result<ParseError>>] t1{location(c1)}
+
+  return(plus(score_results(r0, r1),
+              plus(forward(s0, s1),
+                   forward_mixed(t0, t1))))
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_variadic_borrowed_status_result.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_cpp_variadic_borrowed_status_result_exe").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 39);
+}
+
 TEST_CASE("C++ emitter materializes variadic FileError value packs with indexed why methods") {
 #if defined(EACCES) && defined(ENOENT) && defined(EEXIST)
   const std::string source =
