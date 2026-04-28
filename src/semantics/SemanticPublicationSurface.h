@@ -192,6 +192,28 @@ struct StructFieldMetadataSnapshotEntry {
   uint64_t semanticNodeId = 0;
 };
 
+struct SumTypeMetadataSnapshotEntry {
+  std::string fullPath;
+  bool isPublic = false;
+  std::string activeTagTypeText;
+  std::string payloadStorageText;
+  size_t variantCount = 0;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+};
+
+struct SumVariantMetadataSnapshotEntry {
+  std::string sumPath;
+  std::string variantName;
+  size_t variantIndex = 0;
+  uint32_t tagValue = 0;
+  std::string payloadTypeText;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+};
+
 struct BindingFactSnapshotEntry {
   std::string scopePath;
   std::string siteKind;
@@ -221,6 +243,8 @@ struct SemanticPublicationSurface {
   std::vector<CollectedCallableSummaryEntry> callableSummaries;
   std::vector<TypeMetadataSnapshotEntry> typeMetadata;
   std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadata;
+  std::vector<SumTypeMetadataSnapshotEntry> sumTypeMetadata;
+  std::vector<SumVariantMetadataSnapshotEntry> sumVariantMetadata;
   std::vector<BindingFactSnapshotEntry> bindingFacts;
   std::vector<ReturnFactSnapshotEntry> returnFacts;
   std::vector<LocalAutoBindingSnapshotEntry> localAutoFacts;

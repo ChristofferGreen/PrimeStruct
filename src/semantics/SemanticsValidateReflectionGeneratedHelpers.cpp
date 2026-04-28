@@ -55,6 +55,10 @@ bool rewriteReflectionGeneratedHelpers(Program &program, std::string &error) {
     bool hasStructTransform = false;
     bool hasReturnTransform = false;
     for (const auto &transform : def.transforms) {
+      if (transform.name == "sum") {
+        isExplicitOut = false;
+        return false;
+      }
       if (semantics::isStructTransformName(transform.name)) {
         hasStructTransform = true;
       }

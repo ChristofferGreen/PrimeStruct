@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4257: Add sum declaration metadata and layout
+- TODO-4258: Add explicit sum construction
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4258: Add explicit sum construction
 - TODO-4259: Add inferred sum variant construction
 - TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
@@ -81,11 +80,12 @@ Task template:
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
+- TODO-4268: Add heterogeneous type-pack syntax and metadata
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4257 ->
-  TODO-4258 -> TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
+- Deferred algebraic types and brace-only construction: TODO-4258 ->
+  TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -95,7 +95,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4257: Add sum declaration metadata and layout
 - TODO-4258: Add explicit sum construction
 - TODO-4259: Add inferred sum variant construction
 - TODO-4260: Add `pick` semantic validation
@@ -142,7 +141,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -167,7 +166,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4257, TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -285,43 +284,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4257: Add sum declaration metadata and layout
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - scope: Add parser, AST, semantic-product, import/visibility, and
-    backend-neutral metadata support for `[sum]` declarations without adding
-    value construction or `pick` matching yet.
-  - implementation_notes:
-    - Start from `include/primec/Ast.h`, parser definition-body files under
-      `src/parser/`, `include/primec/SemanticProduct.h`,
-      `src/semantics/SemanticPublicationBuilders.h`,
-      `src/semantics/SemanticsDefinitionPrepass.*`, and layout/type metadata
-      setup under `src/semantics/`.
-    - Add a dedicated semantic shard such as `test_semantics_sum_types.cpp`
-      plus semantic-product or IR-layout snapshot coverage rather than hiding
-      the feature inside general struct tests.
-    - Keep sum declaration support parseable and diagnosable even if
-      construction and `pick` still report unsupported-feature diagnostics.
-  - acceptance:
-    - Parser and semantic tests accept `[sum] Shape { [Circle] circle ... }`.
-    - The AST and semantic product record sum metadata deterministically:
-      variant order, variant name, payload envelope, visibility/import
-      behavior, and a backend-neutral active-tag/payload layout contract.
-    - Sum declarations reject duplicate variant names, unsupported payload
-      envelopes, missing payload envelopes, and invalid field-like modifiers
-      with stable diagnostics.
-    - IR/layout metadata snapshots include enough information for later
-      construction and `pick` lowering without backend-specific assumptions.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once sum declarations are represented and validated
-    deterministically; leave construction to TODO-4258.
-
 - [ ] TODO-4258: Add explicit sum construction
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4257
   - scope: Add explicit sum value construction through `[variant] payload`
     entries when the target sum type is known from context.
   - implementation_notes:

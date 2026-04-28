@@ -149,7 +149,16 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
       return true;
     };
     ReturnKind kind = ReturnKind::Void;
-    if (explicitStructs.count(def.fullPath) > 0) {
+    bool isSumDefinition = false;
+    for (const auto &transform : def.transforms) {
+      if (transform.name == "sum") {
+        isSumDefinition = true;
+        break;
+      }
+    }
+    if (isSumDefinition) {
+      kind = ReturnKind::Void;
+    } else if (explicitStructs.count(def.fullPath) > 0) {
       kind = ReturnKind::Array;
     } else {
       std::string returnKindError;

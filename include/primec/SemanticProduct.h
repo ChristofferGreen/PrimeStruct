@@ -145,6 +145,30 @@ struct SemanticProgramStructFieldMetadata {
   uint64_t provenanceHandle = 0;
 };
 
+struct SemanticProgramSumTypeMetadata {
+  std::string fullPath;
+  bool isPublic = false;
+  std::string activeTagTypeText;
+  std::string payloadStorageText;
+  std::size_t variantCount = 0;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
+};
+
+struct SemanticProgramSumVariantMetadata {
+  std::string sumPath;
+  std::string variantName;
+  std::size_t variantIndex = 0;
+  uint32_t tagValue = 0;
+  std::string payloadTypeText;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+  uint64_t provenanceHandle = 0;
+};
+
 struct SemanticProgramCollectionSpecialization {
   std::string scopePath;
   std::string siteKind;
@@ -405,6 +429,8 @@ struct SemanticProgram {
   std::vector<SemanticProgramCallableSummary> callableSummaries;
   std::vector<SemanticProgramTypeMetadata> typeMetadata;
   std::vector<SemanticProgramStructFieldMetadata> structFieldMetadata;
+  std::vector<SemanticProgramSumTypeMetadata> sumTypeMetadata;
+  std::vector<SemanticProgramSumVariantMetadata> sumVariantMetadata;
   std::vector<SemanticProgramCollectionSpecialization> collectionSpecializations;
   std::vector<SemanticProgramBindingFact> bindingFacts;
   std::vector<SemanticProgramReturnFact> returnFacts;

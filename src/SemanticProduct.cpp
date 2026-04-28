@@ -164,6 +164,12 @@ const std::vector<SemanticProgramFactFamilyInfo> &semanticProgramFactFamilyInfos
       {"structFieldMetadata",
        SemanticProgramFactOwnership::SemanticProduct,
        "published struct-field metadata"},
+      {"sumTypeMetadata",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published sum-type layout metadata"},
+      {"sumVariantMetadata",
+       SemanticProgramFactOwnership::SemanticProduct,
+       "published sum variant metadata"},
       {"collectionSpecializations",
        SemanticProgramFactOwnership::SemanticProduct,
        "published collection specialization facts"},
@@ -1349,6 +1355,32 @@ std::string formatSemanticProgram(const SemanticProgram &semanticProgram) {
                                   quoteSemanticString(entry.fieldName) + " field_index=" +
                                   std::to_string(entry.fieldIndex) + " binding_type_text=" +
                                   quoteSemanticString(entry.bindingTypeText) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
+                                  quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
+  }
+  for (size_t i = 0; i < semanticProgram.sumTypeMetadata.size(); ++i) {
+    const auto &entry = semanticProgram.sumTypeMetadata[i];
+    appendSemanticIndexedLine(out,
+                              "sum_type_metadata",
+                              i,
+                              "full_path=" + quoteSemanticString(entry.fullPath) + " is_public=" +
+                                  formatSemanticBool(entry.isPublic) + " active_tag_type_text=" +
+                                  quoteSemanticString(entry.activeTagTypeText) + " payload_storage_text=" +
+                                  quoteSemanticString(entry.payloadStorageText) + " variant_count=" +
+                                  std::to_string(entry.variantCount) + " provenance_handle=" +
+                                  std::to_string(entry.provenanceHandle) + " source=" +
+                                  quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
+  }
+  for (size_t i = 0; i < semanticProgram.sumVariantMetadata.size(); ++i) {
+    const auto &entry = semanticProgram.sumVariantMetadata[i];
+    appendSemanticIndexedLine(out,
+                              "sum_variant_metadata",
+                              i,
+                              "sum_path=" + quoteSemanticString(entry.sumPath) + " variant_name=" +
+                                  quoteSemanticString(entry.variantName) + " variant_index=" +
+                                  std::to_string(entry.variantIndex) + " tag_value=" +
+                                  std::to_string(entry.tagValue) + " payload_type_text=" +
+                                  quoteSemanticString(entry.payloadTypeText) + " provenance_handle=" +
                                   std::to_string(entry.provenanceHandle) + " source=" +
                                   quoteSemanticString(formatSemanticSourceLocation(entry.sourceLine, entry.sourceColumn)));
   }

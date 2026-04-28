@@ -22,6 +22,9 @@ bool SemanticsValidator::validateStructLayouts() {
     bool hasStruct = false;
     bool hasReturn = false;
     for (const auto &transform : def.transforms) {
+      if (transform.name == "sum") {
+        return false;
+      }
       if (transform.name == "return") {
         hasReturn = true;
       }

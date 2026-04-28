@@ -1,6 +1,35 @@
 #include "SemanticsValidator.h"
 
 namespace primec::semantics {
+namespace {
+
+bool isSumTransformName(const std::string &name) {
+  return name == "sum";
+}
+
+bool isSumLayoutTransformName(const std::string &name) {
+  return name == "struct" || name == "enum" || name == "pod" || name == "handle" ||
+         name == "gpu_lane" || name == "no_padding" || name == "platform_independent_padding";
+}
+
+bool isUnsupportedSumPayloadEnvelope(const Transform &transform) {
+  return transform.name == "auto" || transform.name == "void" || transform.name == "return" ||
+         transform.name == "effects" || transform.name == "capabilities" ||
+         transform.name == "on_error" || transform.name == "compute" ||
+         transform.name == "workgroup_size" || transform.name == "unsafe" ||
+         transform.name == "ast" || transform.name == "reflect" ||
+         transform.name == "generate" || transform.name == "static" ||
+         transform.name == "public" || transform.name == "private" ||
+         transform.name == "mut" || transform.name == "copy" ||
+         transform.name == "restrict" || transform.name == "align_bytes" ||
+         transform.name == "align_kbytes" || isStructTransformName(transform.name);
+}
+
+bool isLowerCamelIdentifier(const std::string &name) {
+  return !name.empty() && name.front() >= 'a' && name.front() <= 'z';
+}
+
+} // namespace
 
 bool SemanticsValidator::validateDefinitionBuildTransforms(
     const Definition &def,
@@ -24,6 +53,8 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   bool sawAst = false;
   bool sawReflect = false;
   bool sawGenerate = false;
+  bool sawSum = false;
+  bool hasReturnTransform = false;
   const bool collectTransformDiagnostics =
       transformDiagnosticRecords != nullptr && shouldCollectStructuredDiagnostics();
 
@@ -76,6 +107,31 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       }
       sawVisibility = true;
       isPublic = (transform.name == "public");
+      continue;
+    }
+    if (transform.name == "return") {
+      hasReturnTransform = true;
+    }
+    if (isSumTransformName(transform.name)) {
+      if (sawSum) {
+        if (addTransformDiagnostic("duplicate sum transform on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      sawSum = true;
+      if (!transform.templateArgs.empty()) {
+        if (addTransformDiagnostic("sum transform does not accept template arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
+      if (!transform.arguments.empty()) {
+        if (addTransformDiagnostic("sum transform does not accept arguments on " + def.fullPath)) {
+          return false;
+        }
+        break;
+      }
       continue;
     }
     if (transform.name == "static") {
@@ -396,6 +452,93 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   if (definitionTransformError) {
     return true;
   }
+  if (sawSum) {
+    if (hasReturnTransform) {
+      if (addTransformDiagnostic("sum definitions cannot declare return transforms: " + def.fullPath)) {
+        return false;
+      }
+      return true;
+    }
+    if (!def.templateArgs.empty()) {
+      if (addTransformDiagnostic("sum definitions do not support template parameters yet: " + def.fullPath)) {
+        return false;
+      }
+      return true;
+    }
+    if (!def.parameters.empty()) {
+      if (addTransformDiagnostic("sum definitions cannot declare parameters: " + def.fullPath)) {
+        return false;
+      }
+      return true;
+    }
+    if (def.hasReturnStatement || def.returnExpr.has_value()) {
+      if (addTransformDiagnostic("sum definitions cannot declare return statements: " + def.fullPath)) {
+        return false;
+      }
+      return true;
+    }
+    for (const auto &transform : def.transforms) {
+      if (isSumLayoutTransformName(transform.name)) {
+        if (addTransformDiagnostic("sum definitions cannot combine with struct layout transforms: " + def.fullPath)) {
+          return false;
+        }
+        return true;
+      }
+      if (transform.name == "effects" || transform.name == "capabilities" ||
+          transform.name == "compute" || transform.name == "unsafe" ||
+          transform.name == "on_error" || transform.name == "workgroup_size" ||
+          transform.name == "ast" || transform.name == "reflect" ||
+          transform.name == "generate") {
+        if (addTransformDiagnostic("sum definitions cannot combine with callable transforms: " + def.fullPath)) {
+          return false;
+        }
+        return true;
+      }
+    }
+
+    std::unordered_set<std::string> seenVariants;
+    for (const auto &stmt : def.statements) {
+      if (!stmt.isBinding) {
+        if (addTransformDiagnostic("sum variants require one payload envelope on " + def.fullPath)) {
+          return false;
+        }
+        return true;
+      }
+      if (!isLowerCamelIdentifier(stmt.name)) {
+        if (addTransformDiagnostic("sum variant name must be lowerCamelCase: " + def.fullPath + "/" + stmt.name)) {
+          return false;
+        }
+        return true;
+      }
+      if (!seenVariants.insert(stmt.name).second) {
+        if (addTransformDiagnostic("duplicate sum variant: " + stmt.name + " on " + def.fullPath)) {
+          return false;
+        }
+        return true;
+      }
+      if (stmt.args.size() > 0 || stmt.hasBodyArguments || !stmt.argNames.empty()) {
+        if (addTransformDiagnostic("sum variants cannot declare initializers yet: " + def.fullPath + "/" + stmt.name)) {
+          return false;
+        }
+        return true;
+      }
+      if (stmt.transforms.size() != 1) {
+        if (addTransformDiagnostic("sum variants require exactly one payload envelope on " + def.fullPath + "/" +
+                                   stmt.name)) {
+          return false;
+        }
+        return true;
+      }
+      const Transform &payload = stmt.transforms.front();
+      if (!payload.arguments.empty() || isUnsupportedSumPayloadEnvelope(payload)) {
+        if (addTransformDiagnostic("unsupported sum payload envelope on " + def.fullPath + "/" + stmt.name + ": " +
+                                   payload.name)) {
+          return false;
+        }
+        return true;
+      }
+    }
+  }
   if (sawWorkgroupSize && !sawCompute) {
     bool hasCompute = false;
     for (const auto &transform : def.transforms) {
@@ -419,7 +562,6 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
   }
 
   bool isStruct = false;
-  bool hasReturnTransform = false;
   bool hasPod = false;
   bool hasHandle = false;
   bool hasGpuLane = false;
@@ -451,7 +593,8 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
     return true;
   }
   bool isFieldOnlyStruct = false;
-  if (!isStruct && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement && !def.returnExpr.has_value()) {
+  if (!sawSum && !isStruct && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
+      !def.returnExpr.has_value()) {
     isFieldOnlyStruct = true;
     for (const auto &stmt : def.statements) {
       if (!stmt.isBinding) {

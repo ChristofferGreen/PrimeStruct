@@ -15,8 +15,8 @@ bool isBindingOnlyTransformName(const std::string &name) {
          name == "align_kbytes";
 }
 
-bool isDefinitionOnlyStructTransform(const std::string &name) {
-  return isStructTransformName(name) && !isBindingAuxTransformName(name);
+bool isNoReturnDefinitionTransform(const std::string &name) {
+  return (isStructTransformName(name) || name == "sum") && !isBindingAuxTransformName(name);
 }
 
 size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
@@ -188,19 +188,19 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     return fail("definition transform tail sugar requires parameter list before transform list");
   }
   bool hasReturnTransform = false;
-  bool hasStructTransform = false;
+  bool hasNoReturnDefinitionTransform = false;
   for (const auto &transform : transforms) {
     if (transform.name == "return") {
       hasReturnTransform = true;
     }
-    if (isStructTransformName(transform.name)) {
-      hasStructTransform = true;
+    if (isNoReturnDefinitionTransform(transform.name)) {
+      hasNoReturnDefinitionTransform = true;
     }
   }
-  bool hasDefinitionOnlyStructTransform = false;
+  bool hasDefinitionOnlyNoReturnTransform = false;
   for (const auto &transform : transforms) {
-    if (isDefinitionOnlyStructTransform(transform.name)) {
-      hasDefinitionOnlyStructTransform = true;
+    if (isNoReturnDefinitionTransform(transform.name)) {
+      hasDefinitionOnlyNoReturnTransform = true;
       break;
     }
   }
@@ -214,11 +214,11 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   }
   if (match(TokenKind::LBrace)) {
     if ((hasBindingTypeTransform || hasBindingOnlyTransform) && !hasReturnTransform &&
-        !hasDefinitionOnlyStructTransform) {
+        !hasDefinitionOnlyNoReturnTransform) {
       return fail(
           "expected '(' after identifier; bindings are only allowed inside definition bodies or parameter lists");
     }
-    if (!allowSurfaceSyntax_ && !hasReturnTransform && !hasStructTransform) {
+    if (!allowSurfaceSyntax_ && !hasReturnTransform && !hasNoReturnDefinitionTransform) {
       return fail("definition requires explicit return transform in canonical mode");
     }
     Definition def;
@@ -229,7 +229,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.sourceColumn = name.column;
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
-    if (!parseDefinitionBody(def, hasStructTransform, defs)) {
+    if (!parseDefinitionBody(def, hasNoReturnDefinitionTransform, defs)) {
       return false;
     }
     defs.push_back(std::move(def));
@@ -243,7 +243,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
       allowSurfaceSyntax_ && name.text == "Copy" && isCopyConstructorShorthandSignature();
   if (hasReturnTransform) {
     isDefinition = true;
-  } else if (hasStructTransform) {
+  } else if (hasNoReturnDefinitionTransform) {
     isDefinition = isDefinitionSignatureAllowNoReturn(nullptr);
   } else {
     isDefinition = isDefinitionSignature(nullptr);
@@ -251,7 +251,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
   if (copyShorthand) {
     isDefinition = true;
   }
-  if (!allowSurfaceSyntax_ && isDefinition && !hasReturnTransform && !hasStructTransform) {
+  if (!allowSurfaceSyntax_ && isDefinition && !hasReturnTransform && !hasNoReturnDefinitionTransform) {
     return fail("definition requires explicit return transform in canonical mode");
   }
   if (isDefinition) {
@@ -277,8 +277,8 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
         if (transform.name == "return") {
           hasReturnTransform = true;
         }
-        if (isStructTransformName(transform.name)) {
-          hasStructTransform = true;
+        if (isNoReturnDefinitionTransform(transform.name)) {
+          hasNoReturnDefinitionTransform = true;
         }
         transforms.push_back(std::move(transform));
       }
@@ -295,7 +295,7 @@ bool Parser::parseDefinitionOrExecution(std::vector<Definition> &defs, std::vect
     def.transforms = std::move(transforms);
     def.templateArgs = std::move(templateArgs);
     def.parameters = std::move(parameters);
-    if (!parseDefinitionBody(def, hasStructTransform, defs)) {
+    if (!parseDefinitionBody(def, hasNoReturnDefinitionTransform, defs)) {
       return false;
     }
     defs.push_back(std::move(def));

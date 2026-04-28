@@ -18,6 +18,10 @@ bool isControlKeyword(const std::string &name) {
          name == "match";
 }
 
+bool isNoReturnDefinitionTransform(const std::string &name) {
+  return isStructTransformName(name) || name == "sum";
+}
+
 size_t skipCommentTokens(const std::vector<Token> &tokens, size_t index) {
   while (index < tokens.size() && isIgnorableToken(tokens[index].kind)) {
     ++index;
@@ -383,17 +387,17 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   }
 
   bool hasReturnTransform = false;
-  bool hasStructTransform = false;
+  bool hasNoReturnDefinitionTransform = false;
   for (const auto &transform : transforms) {
     if (transform.name == "return") {
       hasReturnTransform = true;
     }
-    if (isStructTransformName(transform.name)) {
-      hasStructTransform = true;
+    if (isNoReturnDefinitionTransform(transform.name)) {
+      hasNoReturnDefinitionTransform = true;
     }
   }
 
-  if (name.text == "repeat" && !hasReturnTransform && !hasStructTransform) {
+  if (name.text == "repeat" && !hasReturnTransform && !hasNoReturnDefinitionTransform) {
     pos_ = savedPos;
     return true;
   }
@@ -411,7 +415,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
       allowSurfaceSyntax_ && name.text == "Copy" && isCopyConstructorShorthandSignature();
   if (hasReturnTransform) {
     isDefinition = true;
-  } else if (hasStructTransform) {
+  } else if (hasNoReturnDefinitionTransform) {
     isDefinition = isDefinitionSignatureAllowNoReturn(nullptr);
   } else {
     isDefinition = isDefinitionSignature(nullptr);
@@ -424,7 +428,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
     pos_ = savedPos;
     return true;
   }
-  if (!allowSurfaceSyntax_ && !hasReturnTransform && !hasStructTransform) {
+  if (!allowSurfaceSyntax_ && !hasReturnTransform && !hasNoReturnDefinitionTransform) {
     return fail("definition requires explicit return transform in canonical mode");
   }
 
@@ -451,8 +455,8 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
       if (transform.name == "return") {
         hasReturnTransform = true;
       }
-      if (isStructTransformName(transform.name)) {
-        hasStructTransform = true;
+      if (isNoReturnDefinitionTransform(transform.name)) {
+        hasNoReturnDefinitionTransform = true;
       }
       combinedTransforms.push_back(std::move(transform));
     }
@@ -471,7 +475,7 @@ bool Parser::tryParseNestedDefinition(std::vector<Definition> &defs,
   def.templateArgs = std::move(templateArgs);
   def.parameters = std::move(parameters);
   def.isNested = true;
-  if (!parseDefinitionBody(def, hasStructTransform, defs)) {
+  if (!parseDefinitionBody(def, hasNoReturnDefinitionTransform, defs)) {
     return false;
   }
   defs.push_back(std::move(def));

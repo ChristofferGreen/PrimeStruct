@@ -67,7 +67,19 @@ void relieveAllocatorPressure() {
 
 bool isStructDefinition(const Definition &candidate) {
   for (const auto &transform : candidate.transforms) {
+    if (transform.name == "sum") {
+      return false;
+    }
     if (isStructTransformName(transform.name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool isSumDefinition(const Definition &candidate) {
+  for (const auto &transform : candidate.transforms) {
+    if (transform.name == "sum") {
       return true;
     }
   }
@@ -185,6 +197,9 @@ bool SemanticsValidator::validateDefinitionsFromStableIndexResolver(
             "validateCapabilitiesSubset failed on " + def.fullPath);
       }
       return false;
+    }
+    if (isSumDefinition(def)) {
+      return true;
     }
     const auto &defParams = *definitionContext.params;
     observeLocalMapSize(definitionContext.locals.size());
@@ -594,6 +609,10 @@ bool SemanticsValidator::validateDefinitions() {
                   result.publicationFacts.typeMetadata);
       appendMoved(mergedWorkerPublicationFacts_.structFieldMetadata,
                   result.publicationFacts.structFieldMetadata);
+      appendMoved(mergedWorkerPublicationFacts_.sumTypeMetadata,
+                  result.publicationFacts.sumTypeMetadata);
+      appendMoved(mergedWorkerPublicationFacts_.sumVariantMetadata,
+                  result.publicationFacts.sumVariantMetadata);
       appendMoved(mergedWorkerPublicationFacts_.bindingFacts,
                   result.publicationFacts.bindingFacts);
       appendMoved(mergedWorkerPublicationFacts_.returnFacts,
@@ -688,6 +707,22 @@ bool SemanticsValidator::validateDefinitions() {
                          return left.fieldIndex < right.fieldIndex;
                        }
                        return left.fieldName < right.fieldName;
+                     });
+    std::stable_sort(mergedWorkerPublicationFacts_.sumTypeMetadata.begin(),
+                     mergedWorkerPublicationFacts_.sumTypeMetadata.end(),
+                     [](const auto &left, const auto &right) {
+                       return left.fullPath < right.fullPath;
+                     });
+    std::stable_sort(mergedWorkerPublicationFacts_.sumVariantMetadata.begin(),
+                     mergedWorkerPublicationFacts_.sumVariantMetadata.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.sumPath != right.sumPath) {
+                         return left.sumPath < right.sumPath;
+                       }
+                       if (left.variantIndex != right.variantIndex) {
+                         return left.variantIndex < right.variantIndex;
+                       }
+                       return left.variantName < right.variantName;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.bindingFacts.begin(),
                      mergedWorkerPublicationFacts_.bindingFacts.end(),

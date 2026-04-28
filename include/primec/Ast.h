@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -48,6 +49,17 @@ struct Expr {
   uint64_t semanticNodeId = 0;
 };
 
+struct SumVariant {
+  std::string name;
+  std::string payloadType;
+  std::vector<std::string> payloadTemplateArgs;
+  std::string payloadTypeText;
+  std::size_t variantIndex = 0;
+  int sourceLine = 0;
+  int sourceColumn = 0;
+  uint64_t semanticNodeId = 0;
+};
+
 struct Definition {
   std::string name;
   std::string fullPath;
@@ -56,6 +68,7 @@ struct Definition {
   std::vector<std::string> templateArgs;
   std::vector<Expr> parameters;
   std::vector<Expr> statements;
+  std::vector<SumVariant> sumVariants;
   std::optional<Expr> returnExpr;
   bool hasReturnStatement = false;
   bool isNested = false;

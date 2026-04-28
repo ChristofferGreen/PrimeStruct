@@ -244,6 +244,15 @@ bool isStaticFieldStatement(const Expr &stmt) {
   return false;
 }
 
+bool hasSumTransformSnapshot(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "sum") {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool parsePositiveIntSnapshotArg(const std::string &text, uint32_t &valueOut) {
   std::string digits = text;
   if (digits.size() > 3 && digits.compare(digits.size() - 3, 3, "i32") == 0) {
@@ -292,6 +301,9 @@ bool explicitAlignmentBytesForSnapshot(const std::vector<Transform> &transforms,
 }
 
 bool isImplicitStructDefinitionSnapshot(const Definition &def) {
+  if (hasSumTransformSnapshot(def)) {
+    return false;
+  }
   bool hasStructTransform = false;
   bool hasReturnTransform = false;
   for (const auto &transform : def.transforms) {
@@ -317,6 +329,9 @@ bool isImplicitStructDefinitionSnapshot(const Definition &def) {
 }
 
 std::string typeMetadataCategoryForSnapshot(const Definition &def) {
+  if (hasSumTransformSnapshot(def)) {
+    return "sum";
+  }
   bool sawStructLikeTransform = false;
   for (const auto &transform : def.transforms) {
     if (transform.name == "enum") {
@@ -564,6 +579,9 @@ void SemanticsValidator::collectCallableSummaryEntriesForStableRange(
             .declarationsInStableOrder[stableOrderOffset + stableOrdinal]
             .stableIndex;
     const Definition &def = program_.definitions[stableIndex];
+    if (hasSumTransformSnapshot(def)) {
+      continue;
+    }
     const auto state = buildDefinitionValidationState(def);
     const auto &context = state.context;
     ReturnKind returnKind = ReturnKind::Unknown;
@@ -821,6 +839,20 @@ void SemanticsValidator::collectDefinitionPublicationFactsForStableRange(
         return entry.structPath;
       });
   appendEntriesForDefinitionPaths(
+      out.sumTypeMetadata,
+      sumTypeMetadataSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const SumTypeMetadataSnapshotEntry &entry) -> const std::string & {
+        return entry.fullPath;
+      });
+  appendEntriesForDefinitionPaths(
+      out.sumVariantMetadata,
+      sumVariantMetadataSnapshotForSemanticProduct(),
+      definitionPaths,
+      [](const SumVariantMetadataSnapshotEntry &entry) -> const std::string & {
+        return entry.sumPath;
+      });
+  appendEntriesForDefinitionPaths(
       out.bindingFacts,
       bindingFactSnapshotForSemanticProduct(),
       definitionPaths,
@@ -879,6 +911,8 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
 
   auto freshTypeMetadata = typeMetadataSnapshotForSemanticProduct();
   auto freshStructFieldMetadata = structFieldMetadataSnapshotForSemanticProduct();
+  auto freshSumTypeMetadata = sumTypeMetadataSnapshotForSemanticProduct();
+  auto freshSumVariantMetadata = sumVariantMetadataSnapshotForSemanticProduct();
   auto freshBindingFacts = bindingFactSnapshotForSemanticProduct();
   auto freshReturnFacts = returnFactSnapshotForSemanticProduct();
   auto freshLocalAutoFacts = localAutoFactSnapshotForSemanticProduct();
@@ -935,6 +969,22 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
                            0,
                            0,
                            std::to_string(entry.fieldIndex));
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.sumTypeMetadata,
+      std::move(freshSumTypeMetadata),
+      [](const SumTypeMetadataSnapshotEntry &entry) {
+        return snapshotKey(entry.fullPath, std::string_view{}, 0, 0);
+      });
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.sumVariantMetadata,
+      std::move(freshSumVariantMetadata),
+      [](const SumVariantMetadataSnapshotEntry &entry) {
+        return snapshotKey(entry.sumPath,
+                           entry.variantName,
+                           0,
+                           0,
+                           std::to_string(entry.variantIndex));
       });
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.bindingFacts,
@@ -1257,6 +1307,16 @@ SemanticsValidator::takeSemanticPublicationSurfaceForSemanticProduct(
                                       ? mergedWorkerPublicationFacts_.structFieldMetadata
                                       : structFieldMetadataSnapshotForSemanticProduct();
   }
+  if (isSemanticCollectorEnabled(buildConfig, "sum_type_metadata")) {
+    surface.sumTypeMetadata = useMergedWorkerPublicationFacts
+                                  ? mergedWorkerPublicationFacts_.sumTypeMetadata
+                                  : sumTypeMetadataSnapshotForSemanticProduct();
+  }
+  if (isSemanticCollectorEnabled(buildConfig, "sum_variant_metadata")) {
+    surface.sumVariantMetadata = useMergedWorkerPublicationFacts
+                                     ? mergedWorkerPublicationFacts_.sumVariantMetadata
+                                     : sumVariantMetadataSnapshotForSemanticProduct();
+  }
   if (isSemanticCollectorEnabled(buildConfig, "binding_facts")) {
     surface.bindingFacts = useMergedWorkerPublicationFacts
                                ? mergedWorkerPublicationFacts_.bindingFacts
@@ -1356,6 +1416,8 @@ SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {
     size_t enumValueCount = 0;
     if (category == "enum") {
       enumValueCount = def.statements.size();
+    } else if (category == "sum") {
+      fieldCount = def.sumVariants.size();
     } else {
       for (const auto &stmt : def.statements) {
         if (stmt.isBinding && !isStaticFieldStatement(stmt)) {
@@ -1404,7 +1466,7 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
 
   for (const auto &def : program_.definitions) {
     const std::string category = typeMetadataCategoryForSnapshot(def);
-    if (category.empty() || category == "enum") {
+    if (category.empty() || category == "enum" || category == "sum") {
       continue;
     }
 
@@ -1440,6 +1502,79 @@ SemanticsValidator::structFieldMetadataSnapshotForSemanticProduct() {
       return left.fieldIndex < right.fieldIndex;
     }
     return left.fieldName < right.fieldName;
+  });
+  return entries;
+}
+
+std::vector<SumTypeMetadataSnapshotEntry>
+SemanticsValidator::sumTypeMetadataSnapshotForSemanticProduct() const {
+  std::vector<SumTypeMetadataSnapshotEntry> entries;
+  entries.reserve(program_.definitions.size());
+
+  for (const auto &def : program_.definitions) {
+    if (!hasSumTransformSnapshot(def)) {
+      continue;
+    }
+    entries.push_back(SumTypeMetadataSnapshotEntry{
+        def.fullPath,
+        publicDefinitions_.count(def.fullPath) > 0,
+        "u32",
+        "inline_max_payload",
+        def.sumVariants.size(),
+        def.sourceLine,
+        def.sourceColumn,
+        def.semanticNodeId,
+    });
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    return left.fullPath < right.fullPath;
+  });
+  return entries;
+}
+
+std::vector<SumVariantMetadataSnapshotEntry>
+SemanticsValidator::sumVariantMetadataSnapshotForSemanticProduct() const {
+  std::vector<SumVariantMetadataSnapshotEntry> entries;
+  for (const auto &def : program_.definitions) {
+    if (!hasSumTransformSnapshot(def)) {
+      continue;
+    }
+    entries.reserve(entries.size() + def.sumVariants.size());
+    for (const auto &variant : def.sumVariants) {
+      uint64_t semanticNodeId = variant.semanticNodeId;
+      int sourceLine = variant.sourceLine;
+      int sourceColumn = variant.sourceColumn;
+      for (const auto &stmt : def.statements) {
+        if (!stmt.isBinding || stmt.name != variant.name) {
+          continue;
+        }
+        semanticNodeId = stmt.semanticNodeId;
+        sourceLine = stmt.sourceLine;
+        sourceColumn = stmt.sourceColumn;
+        break;
+      }
+      entries.push_back(SumVariantMetadataSnapshotEntry{
+          def.fullPath,
+          variant.name,
+          variant.variantIndex,
+          static_cast<uint32_t>(variant.variantIndex),
+          variant.payloadTypeText,
+          sourceLine,
+          sourceColumn,
+          semanticNodeId,
+      });
+    }
+  }
+
+  std::stable_sort(entries.begin(), entries.end(), [](const auto &left, const auto &right) {
+    if (left.sumPath != right.sumPath) {
+      return left.sumPath < right.sumPath;
+    }
+    if (left.variantIndex != right.variantIndex) {
+      return left.variantIndex < right.variantIndex;
+    }
+    return left.variantName < right.variantName;
   });
   return entries;
 }

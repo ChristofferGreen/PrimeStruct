@@ -1028,11 +1028,57 @@ void publishStructFieldMetadataFacts(
   }
 }
 
+void publishSumTypeMetadataFacts(
+    SemanticPublicationBuilderState &state,
+    const std::vector<SumTypeMetadataSnapshotEntry> &sumTypeMetadata) {
+  if (sumTypeMetadata.empty()) {
+    return;
+  }
+  state.semanticProgram.sumTypeMetadata.reserve(sumTypeMetadata.size());
+  for (const auto &entry : sumTypeMetadata) {
+    state.semanticProgram.sumTypeMetadata.push_back(SemanticProgramSumTypeMetadata{
+        entry.fullPath,
+        entry.isPublic,
+        entry.activeTagTypeText,
+        entry.payloadStorageText,
+        entry.variantCount,
+        entry.sourceLine,
+        entry.sourceColumn,
+        entry.semanticNodeId,
+        makeSemanticProvenanceHandle(entry.semanticNodeId),
+    });
+  }
+}
+
+void publishSumVariantMetadataFacts(
+    SemanticPublicationBuilderState &state,
+    const std::vector<SumVariantMetadataSnapshotEntry> &sumVariantMetadata) {
+  if (sumVariantMetadata.empty()) {
+    return;
+  }
+  state.semanticProgram.sumVariantMetadata.reserve(sumVariantMetadata.size());
+  for (const auto &entry : sumVariantMetadata) {
+    state.semanticProgram.sumVariantMetadata.push_back(SemanticProgramSumVariantMetadata{
+        entry.sumPath,
+        entry.variantName,
+        entry.variantIndex,
+        entry.tagValue,
+        entry.payloadTypeText,
+        entry.sourceLine,
+        entry.sourceColumn,
+        entry.semanticNodeId,
+        makeSemanticProvenanceHandle(entry.semanticNodeId),
+    });
+  }
+}
+
 void publishSemanticMetadataFamilies(
     SemanticPublicationBuilderState &state,
     SemanticPublicationSurface &publicationSurface) {
   publishTypeMetadataFacts(state, publicationSurface.typeMetadata);
   publishStructFieldMetadataFacts(state, publicationSurface.structFieldMetadata);
+  publishSumTypeMetadataFacts(state, publicationSurface.sumTypeMetadata);
+  publishSumVariantMetadataFacts(state, publicationSurface.sumVariantMetadata);
 }
 
 void publishBindingFacts(

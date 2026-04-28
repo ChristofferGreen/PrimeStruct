@@ -69,6 +69,10 @@ bool SemanticsValidator::buildDefinitionMaps() {
     bool hasStruct = false;
     bool hasReturn = false;
     for (const auto &transform : def.transforms) {
+      if (transform.name == "sum") {
+        isExplicitOut = false;
+        return false;
+      }
       if (transform.name == "return") {
         hasReturn = true;
       }

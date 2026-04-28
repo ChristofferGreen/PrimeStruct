@@ -52,5 +52,6 @@ Add a concrete SymbolId migration TODO before adding another fact family to this
 inventory or reintroducing transitional string shadow fields.
 
 ## Out of scope for this queue
-- `definitions`, `executions`, `type_metadata`, and `struct_field_metadata` are
-  not currently part of the hot-path SymbolId migration queue.
+- `definitions`, `executions`, `type_metadata`, `struct_field_metadata`,
+  `sum_type_metadata`, and `sum_variant_metadata` are not currently part of the
+  hot-path SymbolId migration queue.

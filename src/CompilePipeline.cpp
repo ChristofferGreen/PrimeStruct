@@ -65,7 +65,7 @@ DumpStage parseDumpStage(const std::string &dumpStage) {
   return DumpStage::Unsupported;
 }
 
-constexpr std::array<std::string_view, 14> SemanticCollectorFamilies = {
+constexpr std::array<std::string_view, 16> SemanticCollectorFamilies = {
     "definitions",
     "executions",
     "direct_call_targets",
@@ -74,6 +74,8 @@ constexpr std::array<std::string_view, 14> SemanticCollectorFamilies = {
     "callable_summaries",
     "type_metadata",
     "struct_field_metadata",
+    "sum_type_metadata",
+    "sum_variant_metadata",
     "binding_facts",
     "return_facts",
     "local_auto_facts",

@@ -490,6 +490,9 @@ private:
 
   bool isStructDefinition(const Definition &def) const {
     for (const auto &transform : def.transforms) {
+      if (transform.name == "sum") {
+        return false;
+      }
       if (isStructTransformName(transform.name)) {
         return true;
       }
@@ -508,8 +511,12 @@ private:
     return !def.statements.empty();
   }
 
+  bool isSumDefinition(const Definition &def) const {
+    return hasTransformNamed(def.transforms, "sum");
+  }
+
   bool isCallableDefinition(const Definition &def) const {
-    return !isStructDefinition(def);
+    return !isStructDefinition(def) && !isSumDefinition(def);
   }
 
   bool definitionReturnIsInferred(const Definition &def) const {

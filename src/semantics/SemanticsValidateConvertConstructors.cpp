@@ -32,7 +32,11 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
   for (const auto &def : program.definitions) {
     bool hasStructTransform = false;
     bool hasReturnTransform = false;
+    bool hasSumTransform = false;
     for (const auto &transform : def.transforms) {
+      if (transform.name == "sum") {
+        hasSumTransform = true;
+      }
       if (isStructTransformName(transform.name)) {
         hasStructTransform = true;
       }
@@ -41,8 +45,8 @@ bool rewriteConvertConstructors(Program &program, std::string &error) {
       }
     }
     bool fieldOnlyStruct = false;
-    if (!hasStructTransform && !hasReturnTransform && def.parameters.empty() && !def.hasReturnStatement &&
-        !def.returnExpr.has_value()) {
+    if (!hasSumTransform && !hasStructTransform && !hasReturnTransform && def.parameters.empty() &&
+        !def.hasReturnStatement && !def.returnExpr.has_value()) {
       fieldOnlyStruct = true;
       for (const auto &stmt : def.statements) {
         if (!stmt.isBinding) {

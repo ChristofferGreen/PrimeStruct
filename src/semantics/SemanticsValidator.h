@@ -78,6 +78,8 @@ public:
   void invalidatePilotRoutingSemanticCollectors();
   std::vector<TypeMetadataSnapshotEntry> typeMetadataSnapshotForSemanticProduct() const;
   std::vector<StructFieldMetadataSnapshotEntry> structFieldMetadataSnapshotForSemanticProduct();
+  std::vector<SumTypeMetadataSnapshotEntry> sumTypeMetadataSnapshotForSemanticProduct() const;
+  std::vector<SumVariantMetadataSnapshotEntry> sumVariantMetadataSnapshotForSemanticProduct() const;
   std::vector<BindingFactSnapshotEntry> bindingFactSnapshotForSemanticProduct();
   std::vector<ReturnFactSnapshotEntry> returnFactSnapshotForSemanticProduct();
   std::vector<LocalAutoBindingSnapshotEntry> localAutoFactSnapshotForSemanticProduct() const;

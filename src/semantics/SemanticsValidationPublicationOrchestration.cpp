@@ -33,6 +33,8 @@ uint64_t semanticProgramFactCountForValidationPublication(
       semanticProgram.callableSummaries.size() +
       semanticProgram.typeMetadata.size() +
       semanticProgram.structFieldMetadata.size() +
+      semanticProgram.sumTypeMetadata.size() +
+      semanticProgram.sumVariantMetadata.size() +
       semanticProgram.collectionSpecializations.size() +
       semanticProgram.bindingFacts.size() +
       semanticProgram.returnFacts.size() +

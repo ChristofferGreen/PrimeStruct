@@ -2,6 +2,8 @@
 
 #include "ParserHelpers.h"
 
+#include <sstream>
+
 namespace primec {
 using namespace parser;
 
@@ -9,6 +11,56 @@ namespace {
 
 bool isLoopFormKeyword(const std::string &name) {
   return name == "loop" || name == "while" || name == "for";
+}
+
+bool hasSumTransform(const Definition &def) {
+  for (const auto &transform : def.transforms) {
+    if (transform.name == "sum") {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::string sumPayloadTypeText(const Transform &transform) {
+  if (transform.templateArgs.empty()) {
+    return transform.name;
+  }
+  std::ostringstream out;
+  out << transform.name << "<";
+  for (size_t i = 0; i < transform.templateArgs.size(); ++i) {
+    if (i != 0) {
+      out << ", ";
+    }
+    out << transform.templateArgs[i];
+  }
+  out << ">";
+  return out.str();
+}
+
+void populateParsedSumVariants(Definition &def) {
+  if (!hasSumTransform(def)) {
+    return;
+  }
+
+  def.sumVariants.clear();
+  def.sumVariants.reserve(def.statements.size());
+  for (const auto &stmt : def.statements) {
+    if (!stmt.isBinding || stmt.transforms.size() != 1) {
+      continue;
+    }
+    const Transform &payload = stmt.transforms.front();
+    def.sumVariants.push_back(SumVariant{
+        stmt.name,
+        payload.name,
+        payload.templateArgs,
+        sumPayloadTypeText(payload),
+        def.sumVariants.size(),
+        stmt.sourceLine,
+        stmt.sourceColumn,
+        stmt.semanticNodeId,
+    });
+  }
 }
 
 } // namespace
@@ -243,6 +295,7 @@ bool Parser::parseDefinitionBody(Definition &def, bool allowNoReturn, std::vecto
     }
   }
   def.hasReturnStatement = foundReturn;
+  populateParsedSumVariants(def);
   return true;
 }
 

@@ -125,6 +125,9 @@ bool isStructDefinition(const Definition &def) {
   bool isStruct = false;
   bool hasReturnTransform = false;
   for (const auto &transform : def.transforms) {
+    if (transform.name == "sum") {
+      return false;
+    }
     if (transform.name == "return") {
       hasReturnTransform = true;
     }

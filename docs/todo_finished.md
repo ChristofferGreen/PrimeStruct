@@ -6,6 +6,48 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4257: Add sum declaration metadata and layout
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Add parser, AST, semantic-product, import/visibility, and
+    backend-neutral metadata support for `[sum]` declarations without adding
+    value construction or `pick` matching yet.
+  - implementation_notes:
+    - Start from `include/primec/Ast.h`, parser definition-body files under
+      `src/parser/`, `include/primec/SemanticProduct.h`,
+      `src/semantics/SemanticPublicationBuilders.h`,
+      `src/semantics/SemanticsDefinitionPrepass.*`, and layout/type metadata
+      setup under `src/semantics/`.
+    - Add a dedicated semantic shard such as `test_semantics_sum_types.cpp`
+      plus semantic-product or IR-layout snapshot coverage rather than hiding
+      the feature inside general struct tests.
+    - Keep sum declaration support parseable and diagnosable even if
+      construction and `pick` still report unsupported-feature diagnostics.
+  - acceptance:
+    - Parser and semantic tests accept `[sum] Shape { [Circle] circle ... }`.
+    - The AST and semantic product record sum metadata deterministically:
+      variant order, variant name, payload envelope, visibility/import
+      behavior, and a backend-neutral active-tag/payload layout contract.
+    - Sum declarations reject duplicate variant names, unsupported payload
+      envelopes, missing payload envelopes, and invalid field-like modifiers
+      with stable diagnostics.
+    - IR/layout metadata snapshots include enough information for later
+      construction and `pick` lowering without backend-specific assumptions.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once sum declarations are represented and validated
+    deterministically; leave construction to TODO-4258.
+  - finished_at: 2026-04-28
+  - evidence: Added parser support for `[sum]` declarations without treating
+    them as ordinary structs, recorded parsed variants in `Definition`
+    metadata, and published deterministic semantic-product sum type/variant
+    metadata with a `u32` active tag and `inline_max_payload` payload storage
+    contract. Dedicated parser and semantic tests cover accepted declarations,
+    public metadata, duplicate variants, missing payload envelopes,
+    unsupported payload envelopes, and invalid field-like variant modifiers.
+    Promoted `TODO-4258` to Ready Now and deferred release reruns to CI per
+    the lite workflow.
+
 - [x] TODO-4256: Classify constructor-shaped helper compatibility
   - owner: ai
   - created_at: 2026-04-27
