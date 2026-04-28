@@ -64,13 +64,13 @@ main() {
   CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native Maybe inferred present payload") {
+TEST_CASE("compiles and runs native Maybe present variant payload") {
   const std::string source = R"(
 import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32>] value{Maybe<i32>{9i32}}
+  [Maybe<i32>] value{[some] 9i32}
   return(pick(value) {
     none {
       return(0i32)
@@ -81,9 +81,9 @@ main() {
   })
 }
 )";
-  const std::string srcPath = writeTemp("native_maybe_inferred_payload.prime", source);
+  const std::string srcPath = writeTemp("native_maybe_present_variant_payload.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_maybe_inferred_payload_exe").string();
+      (testScratchPath("") / "primec_native_maybe_present_variant_payload_exe").string();
 
   const std::string compileCmd =
       "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";

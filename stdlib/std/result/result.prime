@@ -14,17 +14,20 @@ namespace std {
 
   [public return<Result<E>>]
   ok<E>() {
-    return(Result<E>{})
+    [Result<E>] result{}
+    return(result)
   }
 
   [public return<Result<T, E>>]
   ok<T, E>([T] value) {
-    return(Result<T, E>{[ok] value})
+    [Result<T, E>] result{[ok] value}
+    return(result)
   }
 
   [public return<Result<T, E>>]
   error<T, E>([E] err) {
-    return(Result<T, E>{[error] err})
+    [Result<T, E>] result{[error] err}
+    return(result)
   }
   }
 }

@@ -352,7 +352,10 @@ main() {
     Result.and_then(okSource, []([i32] value) { return(Result.ok(plus(value, 2i32))) })
   }
   [Result<i32, i32>] chainedToError{
-    Result.and_then(okSource, []([i32] value) { return(Result<i32, i32>{[error] 4i32}) })
+    Result.and_then(okSource, []([i32] value) {
+      [Result<i32, i32>] failure{[error] 4i32}
+      return(failure)
+    })
   }
   [Result<i32, i32>] chainedError{
     Result.and_then(errorSource, []([i32] value) { return(Result.ok(plus(value, 2i32))) })

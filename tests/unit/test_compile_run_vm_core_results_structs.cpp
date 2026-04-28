@@ -319,7 +319,7 @@ import /std/collections/*
 
 [return<Result<map<i32, i32>, FileError>>]
 make_values() {
-  [map<i32, i32>] values{map<i32, i32>{1i32=7i32, 3i32=9i32}}
+  [map<i32, i32>] values{1i32=7i32, 3i32=9i32}
   return(Result.ok(values))
 }
 

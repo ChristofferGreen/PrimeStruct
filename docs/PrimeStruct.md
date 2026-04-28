@@ -3292,12 +3292,14 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 
   [return<Maybe<T>>]
   some<T>([T] value) {
-    return(Maybe<T>{[some] value})
+    [Maybe<T>] result{[some] value}
+    return(result)
   }
 
   [return<Maybe<T>>]
   none<T>() {
-    return(Maybe<T>{none})
+    [Maybe<T>] result{none}
+    return(result)
   }
 
   [return<bool>]

@@ -2395,8 +2395,9 @@ TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") 
         std::string::npos);
   CHECK(maybeStdlib.find("[public sum]\n  Maybe<T> {\n    none\n    [T] some\n  }") !=
         std::string::npos);
-  CHECK(maybeStdlib.find("return(Maybe<T>{[some] value})") != std::string::npos);
-  CHECK(maybeStdlib.find("return(Maybe<T>{none})") != std::string::npos);
+  CHECK(maybeStdlib.find("[Maybe<T>] result{[some] value}") != std::string::npos);
+  CHECK(maybeStdlib.find("[Maybe<T>] result{none}") != std::string::npos);
+  CHECK(maybeStdlib.find("return(result)") != std::string::npos);
   CHECK(maybeStdlib.find("/Maybe/isEmpty<T>([Maybe<T>] self)") != std::string::npos);
   CHECK(maybeStdlib.find("/Maybe/isSome<T>([Maybe<T>] self)") != std::string::npos);
   CHECK(maybeStdlib.find("/Maybe/is_empty<T>([Maybe<T>] self)") != std::string::npos);
@@ -2526,8 +2527,9 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(codeExamples.find("return(left == right)") != std::string::npos);
 
-  CHECK(maybeStdlib.find("return(Maybe<T>{[some] value})") != std::string::npos);
-  CHECK(maybeStdlib.find("return(Maybe<T>{none})") != std::string::npos);
+  CHECK(maybeStdlib.find("[Maybe<T>] result{[some] value}") != std::string::npos);
+  CHECK(maybeStdlib.find("[Maybe<T>] result{none}") != std::string::npos);
+  CHECK(maybeStdlib.find("return(result)") != std::string::npos);
   CHECK(maybeStdlib.find("some(value) {\n        return(true)\n      }") != std::string::npos);
   CHECK(maybeStdlib.find("out{take(this.value)}") == std::string::npos);
   CHECK(maybeStdlib.find("[mut] out{Maybe<T>{}}") == std::string::npos);

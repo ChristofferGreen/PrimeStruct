@@ -14,12 +14,14 @@ Maybe<T> {
 
 [public return<Maybe<T>>]
 some<T>([T] value) {
-  return(Maybe<T>{[some] value})
+  [Maybe<T>] result{[some] value}
+  return(result)
 }
 
 [public return<Maybe<T>>]
 none<T>() {
-  return(Maybe<T>{none})
+  [Maybe<T>] result{none}
+  return(result)
 }
 
 [public return<bool>]

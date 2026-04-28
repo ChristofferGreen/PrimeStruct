@@ -53,13 +53,13 @@ main() {
   CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm with Maybe inferred present payload") {
+TEST_CASE("runs vm with Maybe present variant payload") {
   const std::string source = R"(
 import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32>] value{Maybe<i32>{9i32}}
+  [Maybe<i32>] value{[some] 9i32}
   return(pick(value) {
     none {
       return(0i32)
@@ -70,7 +70,7 @@ main() {
   })
 }
 )";
-  const std::string srcPath = writeTemp("vm_maybe_inferred_payload.prime", source);
+  const std::string srcPath = writeTemp("vm_maybe_present_variant_payload.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 9);
 }
