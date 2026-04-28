@@ -1,6 +1,7 @@
 #include "SemanticsValidator.h"
 #include "MapConstructorHelpers.h"
 
+#include <functional>
 #include <optional>
 
 namespace primec::semantics {
@@ -413,11 +414,67 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
   auto isResolvedMapConstructorPath = [](std::string resolvedPath) {
     return ::isResolvedPublishedMapConstructorPath(std::move(resolvedPath));
   };
+  auto substituteCallTemplateArgsInBinding =
+      [&](const std::string &resolvedPath, BindingInfo &binding) {
+        if (initializer.templateArgs.empty()) {
+          return;
+        }
+        const auto defIt = defMap_.find(resolvedPath);
+        if (defIt == defMap_.end() || defIt->second == nullptr ||
+            defIt->second->templateArgs.empty()) {
+          return;
+        }
+        const Definition &definition = *defIt->second;
+        std::function<std::string(const std::string &)> substitute =
+            [&](const std::string &typeText) -> std::string {
+          const std::string normalized = normalizeBindingTypeName(typeText);
+          if (normalized.empty()) {
+            return typeText;
+          }
+          for (size_t i = 0;
+               i < definition.templateArgs.size() &&
+               i < initializer.templateArgs.size();
+               ++i) {
+            if (normalizeBindingTypeName(definition.templateArgs[i]) ==
+                normalized) {
+              return initializer.templateArgs[i];
+            }
+          }
+          std::string base;
+          std::string argText;
+          if (!splitTemplateTypeName(normalized, base, argText)) {
+            return normalized;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(argText, args) || args.empty()) {
+            return normalized;
+          }
+          std::string substitutedBase = substitute(base);
+          for (auto &arg : args) {
+            arg = substitute(arg);
+          }
+          return substitutedBase + "<" + joinTemplateArgs(args) + ">";
+        };
+        binding.typeName = substitute(binding.typeName);
+        binding.typeTemplateArg = substitute(binding.typeTemplateArg);
+      };
+  auto inferResolvedCallBinding = [&](const std::string &resolvedPath,
+                                      BindingInfo &targetBinding) -> bool {
+    if (!inferResolvedDirectCallBindingType(resolvedPath, targetBinding)) {
+      return false;
+    }
+    substituteCallTemplateArgsInBinding(resolvedPath, targetBinding);
+    return true;
+  };
   auto inferDeclaredDirectCallBinding = [&](const std::string &resolvedPath) -> bool {
     const auto defIt = defMap_.find(resolvedPath);
     if (defIt == defMap_.end() || defIt->second == nullptr) {
       return false;
     }
+    auto finish = [&]() {
+      substituteCallTemplateArgsInBinding(resolvedPath, bindingOut);
+      return true;
+    };
     for (const auto &transform : defIt->second->transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
         continue;
@@ -429,25 +486,25 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       if (normalizedReturnType.rfind("std/collections/experimental_map/Map__", 0) == 0) {
         bindingOut.typeName = "/" + normalizedReturnType;
         bindingOut.typeTemplateArg.clear();
-        return true;
+        return finish();
       }
       const std::string resolvedStructPath =
           resolveStructTypePath(normalizedReturnType, defIt->second->namespacePrefix, structNames_);
       if (!resolvedStructPath.empty()) {
         bindingOut.typeName = resolvedStructPath;
         bindingOut.typeTemplateArg.clear();
-        return true;
+        return finish();
       }
       std::string base;
       std::string argText;
       if (splitTemplateTypeName(normalizedReturnType, base, argText)) {
         bindingOut.typeName = normalizeBindingTypeName(base);
         bindingOut.typeTemplateArg = argText;
-        return true;
+        return finish();
       }
       bindingOut.typeName = normalizedReturnType;
       bindingOut.typeTemplateArg.clear();
-      return true;
+      return finish();
     }
     return false;
   };
@@ -669,7 +726,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     if (inferRawBuiltinSoaCanonicalToAosBinding(initializer)) {
       return true;
     }
-    if (inferResolvedDirectCallBindingType(preferredResolvedInitializer, bindingOut)) {
+    if (inferResolvedCallBinding(preferredResolvedInitializer, bindingOut)) {
       return true;
     }
     if (inferDeclaredDirectCallBinding(preferredResolvedInitializer)) {
@@ -678,7 +735,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
   }
   if (initializer.isMethodCall && !initializer.args.empty() && !initializer.name.empty()) {
     if (hasGraphPreferredMethodResolvedInitializer) {
-      if (inferResolvedDirectCallBindingType(graphPreferredMethodResolvedInitializer, bindingOut)) {
+      if (inferResolvedCallBinding(graphPreferredMethodResolvedInitializer, bindingOut)) {
         return true;
       }
       if (inferDeclaredDirectCallBinding(graphPreferredMethodResolvedInitializer)) {
@@ -701,7 +758,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
       if (!concreteResolvedMethodInitializer.empty()) {
         resolvedMethodInitializer = concreteResolvedMethodInitializer;
       }
-      if (inferResolvedDirectCallBindingType(resolvedMethodInitializer, bindingOut)) {
+      if (inferResolvedCallBinding(resolvedMethodInitializer, bindingOut)) {
         return true;
       }
       if (inferDeclaredDirectCallBinding(resolvedMethodInitializer)) {
@@ -752,7 +809,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     }
     if (!isBuiltinCollectionCall && !resolvedInferencePath.empty()) {
       BindingInfo resolvedCollectionBinding;
-      if (inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCollectionBinding) &&
+      if (inferResolvedCallBinding(resolvedInferencePath, resolvedCollectionBinding) &&
           !normalizeCollectionTypePath(bindingTypeText(resolvedCollectionBinding)).empty()) {
         bindingOut = std::move(resolvedCollectionBinding);
         return true;
@@ -789,7 +846,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     std::string resolvedInferencePath = preferredResolvedInferencePath;
     if (isResolvedMapConstructorPath(resolvedInferencePath)) {
       BindingInfo resolvedCallBinding;
-      if (inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCallBinding)) {
+      if (inferResolvedCallBinding(resolvedInferencePath, resolvedCallBinding)) {
         bindingOut = std::move(resolvedCallBinding);
         return true;
       }
@@ -801,6 +858,9 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
         return true;
       }
     }
+    if (!resolvedInferencePath.empty()) {
+      substituteCallTemplateArgsInBinding(resolvedInferencePath, bindingOut);
+    }
     const std::string normalizedBindingType = normalizeBindingTypeName(bindingOut.typeName);
     const bool shouldPreferResolvedDirectCallBinding =
         ((!bindingOut.typeTemplateArg.empty() && isMapCollectionTypeName(normalizedBindingType)) ||
@@ -811,7 +871,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     if (shouldPreferResolvedDirectCallBinding) {
       BindingInfo resolvedCallBinding;
       if (!resolvedInferencePath.empty() &&
-          inferResolvedDirectCallBindingType(resolvedInferencePath, resolvedCallBinding)) {
+          inferResolvedCallBinding(resolvedInferencePath, resolvedCallBinding)) {
         bindingOut = std::move(resolvedCallBinding);
       }
     }
@@ -822,7 +882,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
     if (resolvedKind == ReturnKind::Array) {
       if (!hasGraphPreferredResolvedInitializer) {
         if (!preferredResolvedInferencePath.empty() &&
-            inferResolvedDirectCallBindingType(preferredResolvedInferencePath, bindingOut)) {
+            inferResolvedCallBinding(preferredResolvedInferencePath, bindingOut)) {
           return true;
         }
         if (!preferredResolvedInferencePath.empty() &&
@@ -851,7 +911,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
               ? preferredResolvedInferencePath
               : fallbackPreferredResolvedInitializerPath;
       if (!preferredResolvedInitializerPath.empty() &&
-          inferResolvedDirectCallBindingType(preferredResolvedInitializerPath, bindingOut)) {
+          inferResolvedCallBinding(preferredResolvedInitializerPath, bindingOut)) {
         return true;
       }
       if (!preferredResolvedInitializerPath.empty() &&
@@ -925,7 +985,7 @@ bool SemanticsValidator::inferCallInitializerBinding(const Expr &initializer,
   }
   if (!hasGraphPreferredResolvedInitializer &&
       !preferredResolvedInferencePath.empty() &&
-      inferResolvedDirectCallBindingType(preferredResolvedInferencePath, bindingOut)) {
+      inferResolvedCallBinding(preferredResolvedInferencePath, bindingOut)) {
     return true;
   }
   if (graphDirectCallFactAvailable &&
