@@ -702,7 +702,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{thing{[value] 2i32}}
+  [thing] item{[value] 2i32}
   return(1i32)
 }
 )";
@@ -720,9 +720,13 @@ thing() {
 }
 
 [return<int>]
+use([thing] item) {
+  return(item.count)
+}
+
+[return<int>]
 main() {
-  thing{[count] 3i32, [value] 4i32}
-  return(1i32)
+  return(use(thing{[count] 3i32, [value] 4i32}))
 }
 )";
   std::string error;
@@ -739,9 +743,13 @@ thing() {
 }
 
 [return<int>]
+use([thing] item) {
+  return(item.count)
+}
+
+[return<int>]
 main() {
-  thing{[count] 3i32, 4i32}
-  return(1i32)
+  return(use(thing{[count] 3i32, 4i32}))
 }
 )";
   std::string error;
@@ -758,9 +766,13 @@ thing() {
 }
 
 [return<int>]
+use([thing] item) {
+  return(item.value)
+}
+
+[return<int>]
 main() {
-  thing{[value] 5i32}
-  return(1i32)
+  return(use(thing{[value] 5i32}))
 }
 )";
   std::string error;
@@ -778,9 +790,13 @@ thing() {
 }
 
 [return<int>]
+use([thing] item) {
+  return(item.count)
+}
+
+[return<int>]
 main() {
-  thing{[count] 4i32, [value] 5i32}
-  return(1i32)
+  return(use(thing{[count] 4i32, [value] 5i32}))
 }
 )";
   std::string error;
@@ -1051,8 +1067,10 @@ use([thing] item) {
 [return<int>]
 main() {
   return(use(thing{
-    [i32] temp{1i32}
-    plus(temp, 2i32)
+    block(){
+      [i32] temp{1i32}
+      plus(temp, 2i32)
+    },
   }))
 }
 )";
@@ -1071,7 +1089,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{thing{[count] 3i32, [value] 4i32}}
+  [thing] item{[count] 3i32, [value] 4i32}
   return(1i32)
 }
 )";
@@ -1150,7 +1168,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{block(){ thing{} }}
+  [thing] item{block(){ return(thing{}) }}
   return(1i32)
 }
 )";
@@ -1168,7 +1186,7 @@ thing() {
 
 [return<int>]
 main() {
-  [thing] item{if(true, then(){ thing{} }, else(){ thing{} })}
+  [thing] item{if(true, then(){ return(thing{}) }, else(){ return(thing{}) })}
   return(1i32)
 }
 )";
@@ -1185,9 +1203,13 @@ thing() {
 }
 
 [return<int>]
+use([thing] item) {
+  return(item.value)
+}
+
+[return<int>]
 main() {
-  thing{[missing] 2i32}
-  return(1i32)
+  return(use(thing{[missing] 2i32}))
 }
 )";
   std::string error;
