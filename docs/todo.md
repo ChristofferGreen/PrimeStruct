@@ -276,53 +276,58 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: Deferred stdlib ADT migration
-  - scope: Route the remaining legacy `Result.map2(...)` helper bridge onto
-    the stdlib result sum contract while preserving current source
-    compatibility and leaving `?` rewiring to TODO-4266.
+  - scope: Resolve the remaining status-only `Result<Error>` bridge before
+    `?` rewiring consumes the stdlib result sum contract in TODO-4266.
   - implementation_notes:
     - Start from `stdlib/std/result/result.prime`, Result helper semantics,
-      `Result.map2`, result payload metadata, and VM/native/C++
-      result compile-run tests.
+      status-only result metadata, and VM/native/C++ result compile-run tests.
     - `Result.ok(value)` now selects the imported value-carrying stdlib
       Result sum `ok` variant for typed sum locals/returns on IR-backed
       VM/native paths; keep same-type success/error payload ambiguity covered
-      while bridging combinators.
+      while resolving status-only Result.
     - `Result.map(result, fn)` now selects/copies imported value-carrying
       stdlib Result sum variants for typed sum locals/returns on IR-backed
       VM/native paths when the source is a local stdlib Result sum; keep ok
       mapping, error preservation, and declared-return behavior covered while
-      bridging the remaining combinators.
+      resolving status-only Result.
     - `Result.and_then(result, fn)` now branches imported value-carrying
       stdlib Result sum variants for typed sum locals/returns on IR-backed
       VM/native paths when the source is a local stdlib Result sum; keep ok
       chaining, lambda-produced errors, source-error preservation, and
-      declared-return behavior covered while bridging `Result.map2`.
+      declared-return behavior covered while resolving status-only Result.
+    - `Result.map2(left, right, fn)` now branches imported value-carrying
+      stdlib Result sum variants for typed sum locals/returns on IR-backed
+      VM/native paths when both sources are local stdlib Result sums; keep
+      two-ok mapping, left-first error preservation, right-error preservation,
+      and declared-return behavior covered while resolving status-only Result.
     - `Result.error(value)` now reads imported value-carrying stdlib Result
       sum tags on IR-backed VM/native paths; keep that behavior covered while
-      bridging the remaining helpers.
+      resolving status-only Result.
     - `Result.why(value)` now reads imported value-carrying stdlib Result sums
       on IR-backed VM/native paths; keep ok-empty-string and error-payload why
-      behavior covered while bridging the remaining helpers.
-    - Status-only `Result<Error>` still needs either a supported same-name
-      one-argument sum spelling or an explicit compatibility bridge before
-      TODO-4266 can consume it as a sum.
+      behavior covered while resolving status-only Result.
+    - Status-only `Result<Error>` still needs either a supported sum spelling
+      or an explicit compatibility bridge before TODO-4266 can consume it as a
+      sum.
     - Keep `?` on the existing runtime/semantic contract until TODO-4266.
   - acceptance:
-    - Legacy helper calls construct or inspect values that follow the stdlib
-      `Result<T, E>` sum shape for value-carrying results.
+    - Value-carrying legacy helper calls keep constructing or inspecting
+      values that follow the stdlib `Result<T, E>` sum shape.
     - Status-only `Result<Error>` has a documented sum representation or
       deterministic compatibility diagnostic.
     - Existing helper/combinator behavior remains source-compatible for the
       supported payload matrix.
     - Diagnostics remain deterministic for unsupported payloads and ambiguous
       generic inference.
-    - Focused tests cover map2 and representative error domains
+    - Focused tests cover the status-only Result representation or diagnostic
+      and representative error domains
       (`FileError`, `ContainerError`, `GfxError`) without regressing
-      sum-backed `Result.ok`, `Result.map`, `Result.and_then`,
+      sum-backed `Result.ok`, `Result.map`, `Result.and_then`, `Result.map2`,
       `Result.error`, or `Result.why`.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once legacy Result helpers are bridged onto the stdlib sum
-    contract or intentionally split into narrower helper/status follow-ups.
+  - stop_rule: Stop once status-only Result is represented or diagnosed
+    deterministically enough for TODO-4266 to consume the remaining Result
+    propagation contract.
 
 - [ ] TODO-4266: Rewire `?` to the `Result` sum contract
   - owner: ai

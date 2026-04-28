@@ -293,6 +293,73 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result value sum accepts legacy Result.map2") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_summed_success() {
+  [Result<i32, i32>] left{Result.ok(7i32)}
+  [Result<i32, i32>] right{Result.ok(4i32)}
+  return(Result.map2(left, right, []([i32] a, [i32] b) { return(plus(a, b)) }))
+}
+
+[return<int>]
+main() {
+  [Result<i32, i32>] leftOk{Result.ok(5i32)}
+  [Result<i32, i32>] rightOk{Result.ok(2i32)}
+  [Result<i32, i32>] leftError{error<i32, i32>(3i32)}
+  [Result<i32, i32>] rightError{error<i32, i32>(4i32)}
+  [Result<i32, i32>] summed{
+    Result.map2(leftOk, rightOk, []([i32] a, [i32] b) { return(plus(a, b)) })
+  }
+  [Result<i32, i32>] firstError{
+    Result.map2(leftError, rightError, []([i32] a, [i32] b) { return(plus(a, b)) })
+  }
+  [Result<i32, i32>] secondError{
+    Result.map2(leftOk, rightError, []([i32] a, [i32] b) { return(plus(a, b)) })
+  }
+  [Result<i32, i32>] returnedSummed{make_summed_success()}
+  [i32] summedValue{pick(summed) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      100i32
+    }
+  }}
+  [i32] firstErrorValue{pick(firstError) {
+    ok(value) {
+      101i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] secondErrorValue{pick(secondError) {
+    ok(value) {
+      102i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] returnedValue{pick(returnedSummed) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      103i32
+    }
+  }}
+  return(plus(plus(summedValue, firstErrorValue), plus(secondErrorValue, returnedValue)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib result value sum rejects default construction") {
   const std::string source = R"(
 import /std/result/*

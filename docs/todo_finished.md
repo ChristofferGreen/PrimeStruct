@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4299: Bridge `Result.map2` to the result sum
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the final value-carrying legacy combinator bridge by making
+    `Result.map2(left, right, fn)` construct typed imported value-carrying
+    `/std/result/*` sum locals and returns on IR-backed VM/native paths when
+    both sources are local stdlib Result sums.
+  - implementation_notes:
+    - Detect legacy `Result.map2(left, right, fn)` during stdlib Result sum
+      construction.
+    - When both sources are `ok`, bind both payloads into the lambda,
+      evaluate the mapped value, and store it in the target `ok` payload.
+    - When the left source is `error`, preserve that error without inspecting
+      the right source. Otherwise, preserve the right source error.
+    - Left status-only `Result<Error>` and `?` propagation in
+      TODO-4293/TODO-4266.
+  - acceptance:
+    - Typed imported value-carrying Result locals can be initialized with
+      `Result.map2(left, right, fn)` when both inputs are local stdlib Result
+      sums.
+    - Functions returning typed imported value-carrying Results can return
+      `Result.map2(left, right, fn)` for local stdlib Result sum sources.
+    - Two `ok` sources map through the lambda, left errors are preserved
+      first, and right errors are preserved when the left source is `ok`.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `Result.map2` can construct typed imported
+    value-carrying stdlib Result sums and the remaining status-only bridge
+    work is still tracked.
+  - finished_at: 2026-04-28
+  - evidence: Added stdlib Result sum construction for legacy `Result.map2`
+    plus semantic, VM, and native fixtures covering two-ok mapping,
+    left-first error preservation, right-error preservation, and
+    declared-return mapping. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Bridge `Result.and_then` to the result sum
   - owner: ai
   - created_at: 2026-04-28

@@ -932,7 +932,7 @@
           returnSumDef != nullptr &&
           isStdlibResultSumDefinition(*returnSumDef) &&
           (isLegacyResultOkCall(returnValueExpr) || isLegacyResultMapCall(returnValueExpr) ||
-           isLegacyResultAndThenCall(returnValueExpr))) {
+           isLegacyResultAndThenCall(returnValueExpr) || isLegacyResultMap2Call(returnValueExpr))) {
         int32_t totalSlots = 0;
         if (!loweredSumSlotCount(*returnSumDef, totalSlots)) {
           error = "native backend does not support sum payload type on " +
