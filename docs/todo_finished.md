@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Reject stale local-auto return kinds
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    local-auto completeness validation reject missing or stale initializer
+    direct-call and method-call return-kind metadata that contradicts the
+    published callable summary.
+  - implementation_notes:
+    - Preserve existing local-auto missing-fact, missing initializer path,
+      stale initializer path, and stale binding-type diagnostics.
+    - Apply the consistency check to interned initializer return-kind metadata
+      so legacy string-only manual fixtures keep their existing compatibility
+      path.
+    - Keep broader control-flow, template inference, and Result lowering
+      migration out of scope.
+  - acceptance:
+    - Missing local-auto initializer direct-call return-kind ids fail before
+      lowering can consume incomplete local-auto metadata.
+    - Stale local-auto initializer direct-call and method-call return-kind
+      facts fail before lowering can consume inconsistent local-auto metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once local-auto semantic-product completeness rejects
+    missing or contradictory initializer call return-kind metadata without
+    changing syntax-only or no-semantic-product behavior.
+  - finished_at: 2026-04-29
+  - evidence: Tightened local-auto semantic-product completeness checks,
+    added lowerer handoff regressions for missing direct-call return-kind ids
+    and stale direct-call/method-call return-kind facts, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Reject stale on_error result metadata
   - owner: ai
   - created_at: 2026-04-28

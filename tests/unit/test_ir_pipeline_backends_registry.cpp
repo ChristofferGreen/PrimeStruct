@@ -1732,6 +1732,48 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   CHECK(error ==
         "stale semantic-product local-auto method-call fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().initializerMethodCallResolvedPathId =
+      primec::InvalidSymbolId;
+  semanticProgram.localAutoFacts.back().initializerResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
+  semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
+  semanticProgram.localAutoFacts.back().initializerDirectCallReturnKindId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "missing semantic-product local-auto direct-call return-kind id: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().initializerDirectCallReturnKind = "i64";
+  semanticProgram.localAutoFacts.back().initializerDirectCallReturnKindId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product local-auto direct-call return-kind fact: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().initializerDirectCallResolvedPathId =
+      primec::InvalidSymbolId;
+  semanticProgram.localAutoFacts.back().initializerDirectCallReturnKind = "void";
+  semanticProgram.localAutoFacts.back().initializerDirectCallReturnKindId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "void");
+  semanticProgram.localAutoFacts.back().initializerMethodCallResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
+  semanticProgram.localAutoFacts.back().initializerMethodCallReturnKind = "i64";
+  semanticProgram.localAutoFacts.back().initializerMethodCallReturnKindId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product local-auto method-call return-kind fact: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
 }
 
 TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in production mode") {

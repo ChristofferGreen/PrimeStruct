@@ -355,13 +355,14 @@ Task template:
     binding-type slice are also complete. The statement name-initializer
     final LocalInfo metadata slice is complete for scalar, pointer/reference,
     and array/vector fallbacks. The local-auto stale binding-type diagnostic
-    slice is complete. The `on_error` stale fact and result-metadata
-    diagnostic slices are complete; the query stale-target diagnostic slice is
-    complete. The try on-error context diagnostic slice and try context-return
-    diagnostic slice are complete. The try result-metadata stale diagnostic
-    slice is complete. The return-fact stale diagnostic slice is complete.
-    Continue with a different control-flow/query consumer. The query
-    result-metadata stale diagnostic slice is complete.
+    slice is complete. The local-auto initializer path and return-kind
+    diagnostic slices are complete. The `on_error` stale fact and
+    result-metadata diagnostic slices are complete; the query stale-target
+    diagnostic slice is complete. The try on-error context diagnostic slice
+    and try context-return diagnostic slice are complete. The try
+    result-metadata stale diagnostic slice is complete. The return-fact stale
+    diagnostic slice is complete. Continue with a different control-flow/query
+    consumer. The query result-metadata stale diagnostic slice is complete.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -421,6 +422,10 @@ Task template:
       now rejects missing or stale initializer direct-call/method-call path
       facts that contradict the published initializer path before lowering can
       consume the inconsistent local-auto metadata.
+    - Completed slice: semantic-product local-auto completeness validation
+      now rejects missing or stale interned initializer direct-call/method-call
+      return-kind metadata that contradicts the published callable summary
+      before lowering can consume the inconsistent local-auto metadata.
     - Completed slice: semantic-product try completeness validation now
       rejects missing or stale `try(...)` on-error handler metadata that
       contradicts the published callable summary before lowering can consume

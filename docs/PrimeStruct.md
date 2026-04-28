@@ -250,6 +250,11 @@ Planned non-template inference migration contract:
   validation now checks initializer direct-call and method-call path ids against the published
   initializer path before lowerer handoff can consume inconsistent local-auto metadata. Missing or
   contradictory initializer call path ids fail closed with deterministic local-auto diagnostics.
+- Completed local-auto initializer return-kind diagnostic slice: semantic-product local-auto
+  completeness validation now checks interned initializer direct-call and method-call return-kind
+  metadata against the published callable summary before lowerer handoff can consume inconsistent
+  local-auto metadata. Missing or contradictory initializer return-kind ids fail closed with
+  deterministic local-auto diagnostics.
 - Completed try on-error context diagnostic slice: semantic-product try completeness validation now
   checks `try(...)` on-error handler path, error type, and bound-arg count against the published
   callable summary before lowerer handoff can consume inconsistent try metadata. Missing handler

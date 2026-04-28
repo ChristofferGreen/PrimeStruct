@@ -8,6 +8,7 @@
 #include "primec/SoaPathHelpers.h"
 
 #include <cctype>
+#include <string_view>
 #include <utility>
 
 namespace primec::ir_lowerer {
@@ -558,6 +559,7 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
         return false;
       }
       auto validateInitializerCallPath = [&](SymbolId pathId,
+                                             SymbolId returnKindId,
                                              const char *missingLabel,
                                              const char *staleLabel) {
         if (pathId == InvalidSymbolId) {
@@ -574,14 +576,39 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                   " fact: " + describeBindingSite(scopePath, "local", expr);
           return false;
         }
+        if (returnKindId != InvalidSymbolId) {
+          const std::string_view returnKind =
+              semanticProgramResolveCallTargetString(*semanticProgram, returnKindId);
+          if (returnKind.empty()) {
+            error = std::string("missing semantic-product local-auto ") + missingLabel +
+                    " return-kind id: " + describeBindingSite(scopePath, "local", expr);
+            return false;
+          }
+          const auto *summary =
+              semanticProgramLookupPublishedCallableSummaryByPathId(*semanticProgram, pathId);
+          if (summary != nullptr) {
+            const std::string_view expectedReturnKind =
+                summary->returnKindId != InvalidSymbolId
+                    ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                             summary->returnKindId)
+                    : std::string_view(summary->returnKind);
+            if (!expectedReturnKind.empty() && returnKind != expectedReturnKind) {
+              error = std::string("stale semantic-product local-auto ") + staleLabel +
+                      " return-kind fact: " + describeBindingSite(scopePath, "local", expr);
+              return false;
+            }
+          }
+        }
         return true;
       };
       if (!validateInitializerCallPath(localAutoFact->initializerDirectCallResolvedPathId,
+                                       localAutoFact->initializerDirectCallReturnKindId,
                                        "direct-call",
                                        "direct-call")) {
         return false;
       }
       if (!validateInitializerCallPath(localAutoFact->initializerMethodCallResolvedPathId,
+                                       localAutoFact->initializerMethodCallReturnKindId,
                                        "method-call",
                                        "method-call")) {
         return false;
