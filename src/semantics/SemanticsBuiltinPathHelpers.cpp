@@ -2,6 +2,7 @@
 
 #include <array>
 #include <string_view>
+#include <utility>
 
 namespace primec::semantics {
 
@@ -768,6 +769,7 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   if (expr.name.empty()) {
     return false;
   }
+  const std::string rawExprName = expr.name;
   auto stripTemplateSpecializationSuffix = [](std::string value) {
     const size_t suffix = value.find("__t");
     if (suffix != std::string::npos) {
@@ -775,14 +777,54 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
     }
     return value;
   };
+  auto stripGeneratedSuffix = [](std::string value) {
+    const size_t suffix = value.find("__");
+    if (suffix != std::string::npos) {
+      value.erase(suffix);
+    }
+    return value;
+  };
+  auto accessAliasFromMemberName = [&](std::string memberName) -> bool {
+    memberName = stripGeneratedSuffix(stripTemplateSpecializationSuffix(std::move(memberName)));
+    if (memberName == "at" || memberName == "At" || memberName == "vectorAt" ||
+        memberName == "mapAt") {
+      out = "at";
+      return true;
+    }
+    if (memberName == "at_unsafe" || memberName == "AtUnsafe" ||
+        memberName == "vectorAtUnsafe" || memberName == "mapAtUnsafe") {
+      out = "at_unsafe";
+      return true;
+    }
+    return false;
+  };
   std::string name = expr.name;
+  if (!expr.namespacePrefix.empty() && name.find('/') == std::string::npos) {
+    std::string prefix = expr.namespacePrefix;
+    if (!prefix.empty() && prefix.front() == '/') {
+      prefix.erase(prefix.begin());
+    }
+    name = prefix.empty() ? name : prefix + "/" + name;
+  }
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
   }
+  auto matchStdlibLegacyAccessAlias = [&](std::string_view prefix) -> bool {
+    if (name.rfind(prefix, 0) != 0) {
+      return false;
+    }
+    const std::string memberName = name.substr(prefix.size());
+    return memberName.find('/') == std::string::npos &&
+           accessAliasFromMemberName(memberName);
+  };
+  if (matchStdlibLegacyAccessAlias("std/collections/") ||
+      matchStdlibLegacyAccessAlias("std/collections/experimental_vector/") ||
+      matchStdlibLegacyAccessAlias("std/collections/experimental_map/")) {
+    return true;
+  }
   if (name.rfind("std/collections/vector/", 0) == 0) {
     std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/vector/").size()));
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
+    if (accessAliasFromMemberName(alias)) {
       return true;
     }
     return false;
@@ -792,29 +834,27 @@ bool getBuiltinArrayAccessName(const Expr &expr, std::string &out) {
   }
   if (name.rfind("map/", 0) == 0) {
     std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("map/").size()));
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
+    if (accessAliasFromMemberName(alias)) {
       return true;
     }
     return false;
   }
   if (name.rfind("std/collections/map/", 0) == 0) {
     std::string alias = stripTemplateSpecializationSuffix(name.substr(std::string("std/collections/map/").size()));
-    if (alias == "at" || alias == "at_unsafe") {
-      out = alias;
+    if (accessAliasFromMemberName(alias)) {
       return true;
     }
     return false;
   }
   if (name.find('/') != std::string::npos) {
-    return false;
+    std::string rawName = rawExprName;
+    if (!rawName.empty() && rawName[0] == '/') {
+      rawName.erase(0, 1);
+    }
+    return rawName.find('/') == std::string::npos &&
+           accessAliasFromMemberName(rawName);
   }
-  name = stripTemplateSpecializationSuffix(name);
-  if (name == "at" || name == "at_unsafe") {
-    out = name;
-    return true;
-  }
-  return false;
+  return accessAliasFromMemberName(name);
 }
 
 bool getNamespacedCollectionHelperName(const Expr &expr, std::string &collectionOut, std::string &helperOut) {

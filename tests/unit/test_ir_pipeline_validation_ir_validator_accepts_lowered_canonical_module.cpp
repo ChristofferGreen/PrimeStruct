@@ -1119,6 +1119,33 @@ TEST_CASE("ir lowerer access helper recognizes namespaced canonical access helpe
       specializedVectorMethodAccessCall, helperName));
   CHECK(helperName == "at");
 
+  primec::Expr rootedLegacyVectorAccessCall;
+  rootedLegacyVectorAccessCall.kind = primec::Expr::Kind::Call;
+  rootedLegacyVectorAccessCall.name = "/std/collections/vectorAt__t12345678";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedLegacyVectorAccessCall, helperName));
+  CHECK(helperName == "at");
+  helperName.clear();
+  CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
+      rootedLegacyVectorAccessCall, helperName));
+  CHECK(helperName == "at");
+
+  primec::Expr rootedLegacyVectorUnsafeAccessCall;
+  rootedLegacyVectorUnsafeAccessCall.kind = primec::Expr::Kind::Call;
+  rootedLegacyVectorUnsafeAccessCall.name =
+      "/std/collections/experimental_vector/vectorAtUnsafe__t12345678";
+
+  helperName.clear();
+  CHECK(primec::ir_lowerer::getBuiltinArrayAccessName(
+      rootedLegacyVectorUnsafeAccessCall, helperName));
+  CHECK(helperName == "at_unsafe");
+  helperName.clear();
+  CHECK(primec::emitter::getBuiltinArrayAccessNameLocal(
+      rootedLegacyVectorUnsafeAccessCall, helperName));
+  CHECK(helperName == "at_unsafe");
+
   primec::Expr namespacedExperimentalSoaStorageAccessCall;
   namespacedExperimentalSoaStorageAccessCall.kind = primec::Expr::Kind::Call;
   namespacedExperimentalSoaStorageAccessCall.namespacePrefix =

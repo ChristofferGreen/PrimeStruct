@@ -34,6 +34,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: In the native compile-run path, expression-form named `push` receiver precedence cases now fail in native lowering with the generic “calls in expressions” diagnostic, while the std namespaced auto-inference/count/capacity alias-precedence rejects still fail semantically but now say `return type mismatch: expected i32`.
 - Evidence: Focused release reruns of `build-release/PrimeStruct_compile_run_tests --source-file=*test_compile_run_native_backend_collections_auto_inferred_helper_precedence.cpp` plus direct `./primec --emit=native` reproductions against the same fixtures.
 
+### namespaced-indexed-writes-use-access-aliases
+- Updated: 2026-04-28
+- Tags: semantics, ir, collections
+- Fact: Namespaced indexed writes can be validated or lowered after access calls have been canonicalized to stdlib legacy helper paths such as `/std/collections/vectorAt__...`, so semantic, IR-lowerer, and emitter array-access classifiers must all recognize those aliases.
+- Evidence: `./primec --emit=ir` on a `/std/image` helper with `values[0i32] = 9i32` reproduced the original semantic rejection until `getBuiltinArrayAccessName` in semantics accepted `vectorAt` aliases; the follow-on IR lowering repro required the matching alias support in `IrLowererBuiltinNameHelpers.cpp` and `EmitterBuiltinCallPathHelpers.cpp`.
+
 ### skipped-doctest-queue-locks-current-docs-and-source-surfaces
 - Updated: 2026-04-20
 - Tags: tests, docs, todo

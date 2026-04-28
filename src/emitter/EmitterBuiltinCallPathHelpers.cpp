@@ -168,6 +168,27 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
     }
     return false;
   };
+  auto matchLegacyAccessAlias = [&](const std::string &normalizedName,
+                                    const char *prefix) {
+    const std::string prefixText(prefix);
+    if (normalizedName.rfind(prefixText, 0) != 0) {
+      return false;
+    }
+    std::string alias = normalizedName.substr(prefixText.size());
+    if (alias.find('/') != std::string::npos) {
+      return false;
+    }
+    alias = stripGeneratedSuffix(std::move(alias));
+    if (alias == "vectorAt" || alias == "mapAt") {
+      out = "at";
+      return true;
+    }
+    if (alias == "vectorAtUnsafe" || alias == "mapAtUnsafe") {
+      out = "at_unsafe";
+      return true;
+    }
+    return false;
+  };
   const std::string resolvedPath = resolveExprPath(expr);
   if (resolvedPath.rfind("/std/collections/vector/", 0) == 0 &&
       resolvePublishedCollectionSurfaceExprMemberName(
@@ -187,6 +208,11 @@ bool getBuiltinArrayAccessNameLocal(const Expr &expr, std::string &out) {
   if (matchAccessAlias(scopedName,
                        "std/collections/internal_soa_storage/",
                        "SoaColumn")) {
+    return true;
+  }
+  if (matchLegacyAccessAlias(scopedName, "std/collections/") ||
+      matchLegacyAccessAlias(scopedName, "std/collections/experimental_vector/") ||
+      matchLegacyAccessAlias(scopedName, "std/collections/experimental_map/")) {
     return true;
   }
   if (scopedName.rfind("std/collections/internal_soa_storage/", 0) == 0) {

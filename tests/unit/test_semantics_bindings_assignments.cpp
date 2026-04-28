@@ -181,6 +181,56 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("assign to namespaced indexed inferred vector element succeeds") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace foo {
+[effects(heap_alloc), return<int>]
+work() {
+  [mut] values{vector<i32>()}
+  /std/collections/vector/push(values, 1i32)
+  values[0i32] = 9i32
+  return(values[0i32])
+}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/foo/work())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("assign to std-namespaced indexed inferred vector element succeeds") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+namespace image {
+[effects(heap_alloc), return<int>]
+work() {
+  [mut] values{vector<i32>()}
+  /std/collections/vector/push(values, 1i32)
+  values[0i32] = 9i32
+  return(values[0i32])
+}
+}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/image/work())
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("assign to indexed vector field succeeds") {
   const std::string source = R"(
 import /std/collections/*
@@ -196,6 +246,39 @@ main() {
   [i32] index{1i32}
   assign(box.values[index], 9i32)
   return(box.values[1i32])
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("assign to namespaced indexed vector field succeeds") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+namespace ui {
+[public struct]
+LayoutTree() {
+  [vector<i32> mut] rectXs{vector<i32>()}
+}
+
+namespace LayoutTree {
+  [return<void>]
+  assign_rect([LayoutTree mut] self, [i32] nodeId, [i32] x) {
+    self.rectXs[nodeId] = x
+  }
+}
+}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [/std/ui/LayoutTree mut] tree{/std/ui/LayoutTree()}
+  /std/collections/vector/push(tree.rectXs, 1i32)
+  tree.assign_rect(0i32, 9i32)
+  return(tree.rectXs[0i32])
 }
 )";
   std::string error;

@@ -6,7 +6,6 @@
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
-using count_access_detail::isVectorBuiltinName;
 using count_access_detail::isVectorCountTarget;
 
 namespace {
@@ -149,11 +148,12 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
       !isVectorTarget(expr.args.front(), localsIn)) {
     return UnsupportedNativeCallResult::NotHandled;
   }
-  if (!expr.isMethodCall && isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
+  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count") && expr.args.size() == 1 &&
       isVectorTarget(expr.args.front(), localsIn)) {
     return UnsupportedNativeCallResult::NotHandled;
   }
-  if (!expr.isMethodCall && (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
+  if (!expr.isMethodCall &&
+      (count_access_detail::isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count"))) {
     if (expr.name == "/count" && expr.namespacePrefix.empty() &&
         expr.args.size() == 1 && expr.args.front().kind != Expr::Kind::Call &&
         !isVectorTarget(expr.args.front(), localsIn)) {
@@ -170,15 +170,15 @@ UnsupportedNativeCallResult emitUnsupportedNativeCallDiagnostic(
     error = "count requires array, vector, map, or string target (target=" + targetName + ")";
     return UnsupportedNativeCallResult::Error;
   }
-  if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
+  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       isVectorTarget(expr.args.front(), localsIn)) {
     return UnsupportedNativeCallResult::NotHandled;
   }
-  if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity") &&
+  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity") &&
       expr.args.size() == 1 && expr.args.front().kind == Expr::Kind::Call) {
     return UnsupportedNativeCallResult::NotHandled;
   }
-  if (!expr.isMethodCall && isVectorBuiltinName(expr, "capacity")) {
+  if (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "capacity")) {
     error = "capacity requires vector target";
     return UnsupportedNativeCallResult::Error;
   }
@@ -223,7 +223,7 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
     return NativeCallTailDispatchResult::Error;
   }
   if ((isExplicitDirectVectorCountCall(semanticProgram, expr) ||
-       (!expr.isMethodCall && isVectorBuiltinName(expr, "count"))) &&
+       (!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, "count"))) &&
       expr.args.size() == 1 &&
       !isNamedArgumentVectorTemporary(expr.args.front())) {
     if (isVectorCountTarget(expr.args.front(), localsIn)) {
