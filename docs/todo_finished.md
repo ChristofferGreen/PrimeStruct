@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Require args-pack binding facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes
+    semantic-product-addressed variadic parameter element metadata depend on
+    published binding facts when syntax does not carry the args-pack element
+    type.
+  - implementation_notes:
+    - Keep syntax-only callers on the existing transform-derived metadata
+      path.
+    - Fail closed only when a semantic product, semantic index, and parameter
+      semantic node id make the binding fact authoritative.
+    - Preserve direct explicit `args<T>` syntax when it already exposes the
+      element type.
+  - acceptance:
+    - Published semantic binding facts still recover args-pack element
+      metadata for syntax-light parameter shapes.
+    - Missing semantic-product binding facts fail closed instead of leaving
+      variadic element metadata unresolved.
+    - Incomplete semantic-product binding facts fail closed instead of leaving
+      variadic element metadata unresolved.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once semantic-product-addressed args-pack parameter
+    element metadata requires published binding facts without changing
+    syntax-only compatibility behavior.
+  - finished_at: 2026-04-28
+  - evidence: Tightened `IrLowererStatementBindingHelpers.cpp` so
+    syntax-light semantic-product args-pack parameters require published
+    binding facts for element metadata, added lowerer parameter coverage for
+    success, missing-fact, and incomplete-fact cases, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Require Result combinator query facts
   - owner: ai
   - created_at: 2026-04-28

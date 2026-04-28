@@ -224,6 +224,10 @@ Planned non-template inference migration contract:
   lambda payload analysis leaves the result value unresolved. In that unresolved case, missing or
   incomplete semantic query facts now fail closed with the existing semantic-product query diagnostic
   instead of leaving a partially inferred result shape for later lowering.
+- Completed lowerer-side args-pack binding metadata slice: semantic-product-addressed variadic
+  parameter element metadata now uses the published binding fact when the syntax shape does not carry
+  the element type. Missing or incomplete binding facts fail closed with semantic-product args-pack
+  diagnostics instead of leaving the element kind unresolved for later lowering.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

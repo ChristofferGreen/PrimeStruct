@@ -1347,11 +1347,20 @@ bool inferCallParameterLocalInfo(const Expr &param,
   if (infoOut.isArgsPack) {
     std::string elementTypeText;
     bool hasElementTypeText = extractArgsPackElementTypeText(param, elementTypeText);
-    if (!hasElementTypeText && semanticIndex != nullptr && param.semanticNodeId != 0) {
-      if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, param);
-          bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-        hasElementTypeText = extractArgsPackElementTypeTextFromTypeText(
-            bindingFact->bindingTypeText, elementTypeText);
+    if (!hasElementTypeText && semanticProgram != nullptr && semanticIndex != nullptr &&
+        param.semanticNodeId != 0) {
+      const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, param);
+      if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+        error = "missing semantic-product args-pack binding type: " +
+                (param.name.empty() ? std::string("<unnamed>") : param.name);
+        return false;
+      }
+      hasElementTypeText = extractArgsPackElementTypeTextFromTypeText(
+          bindingFact->bindingTypeText, elementTypeText);
+      if (!hasElementTypeText) {
+        error = "incomplete semantic-product args-pack binding type: " +
+                (param.name.empty() ? std::string("<unnamed>") : param.name);
+        return false;
       }
     }
     if (hasElementTypeText) {

@@ -599,6 +599,183 @@ main() {
           "/std/collections/experimental_soa_vector/SoaVector__", 0) == 0);
 }
 
+TEST_CASE("ir lowerer statement binding helper uses semantic-product args-pack binding types") {
+  primec::Expr param;
+  param.name = "values";
+  param.namespacePrefix = "/pkg";
+  param.semanticNodeId = 9101;
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  param.transforms.push_back(argsTransform);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/pkg/score_refs",
+      .siteKind = "parameter",
+      .name = "values",
+      .bindingTypeText = "args<Reference<Pair>>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 7,
+      .sourceColumn = 12,
+      .semanticNodeId = 9101,
+      .resolvedPathId = primec::InvalidSymbolId,
+  });
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo info;
+  info.index = 14;
+  std::string error;
+  REQUIRE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &expr) {
+        return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+      },
+      [](const primec::Expr &expr) {
+        return primec::ir_lowerer::bindingKindFromTransforms(expr);
+      },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo &infoOut) {
+        for (const auto &transform : expr.transforms) {
+          if (transform.name == "Reference" && transform.templateArgs.size() == 1 &&
+              transform.templateArgs.front() == "Pair") {
+            infoOut.structTypeName = "/pkg/Pair";
+            return;
+          }
+        }
+      },
+      [](const primec::Expr &) { return false; },
+      info,
+      error,
+      {},
+      {},
+      {},
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error.empty());
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Array);
+  CHECK(info.isArgsPack);
+  CHECK(info.argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(info.structTypeName == "/pkg/Pair");
+}
+
+TEST_CASE("ir lowerer statement binding helper rejects missing semantic args-pack binding type") {
+  primec::Expr param;
+  param.name = "values";
+  param.semanticNodeId = 9102;
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  param.transforms.push_back(argsTransform);
+
+  primec::SemanticProgram semanticProgram;
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo info;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &expr) {
+        return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+      },
+      [](const primec::Expr &expr) {
+        return primec::ir_lowerer::bindingKindFromTransforms(expr);
+      },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error,
+      {},
+      {},
+      {},
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error == "missing semantic-product args-pack binding type: values");
+}
+
+TEST_CASE("ir lowerer statement binding helper rejects incomplete semantic args-pack binding type") {
+  primec::Expr param;
+  param.name = "values";
+  param.semanticNodeId = 9103;
+  primec::Transform argsTransform;
+  argsTransform.name = "args";
+  param.transforms.push_back(argsTransform);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/pkg/score_refs",
+      .siteKind = "parameter",
+      .name = "values",
+      .bindingTypeText = "args",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 7,
+      .sourceColumn = 12,
+      .semanticNodeId = 9103,
+      .resolvedPathId = primec::InvalidSymbolId,
+  });
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+
+  primec::ir_lowerer::LocalInfo info;
+  std::string error;
+  CHECK_FALSE(primec::ir_lowerer::inferCallParameterLocalInfo(
+      param,
+      {},
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &expr) {
+        return primec::ir_lowerer::hasExplicitBindingTypeTransform(expr);
+      },
+      [](const primec::Expr &expr) {
+        return primec::ir_lowerer::bindingKindFromTransforms(expr);
+      },
+      [](const primec::Expr &expr, primec::ir_lowerer::LocalInfo::Kind kind) {
+        return primec::ir_lowerer::bindingValueKindFromTransforms(expr, kind);
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &) {},
+      [](const primec::Expr &) { return false; },
+      info,
+      error,
+      {},
+      {},
+      {},
+      &semanticProgram,
+      &semanticIndex));
+  CHECK(error == "incomplete semantic-product args-pack binding type: values");
+}
+
 TEST_CASE("ir lowerer statement binding helper preserves inferred borrowed soa_vector return metadata") {
   primec::Definition callee;
   callee.fullPath = "/pkg/slice_ref";
