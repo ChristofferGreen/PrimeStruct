@@ -194,6 +194,28 @@ bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string>
   return !out.empty();
 }
 
+bool isResultBindingTypeName(const std::string &name) {
+  const std::string normalized = normalizeBindingTypeName(name);
+  return normalized == "Result" || normalized == "/std/result/Result" ||
+         normalized == "std/result/Result";
+}
+
+std::string legacyPackedResultCppType(bool hasValue) {
+  return hasValue ? "uint64_t" : "uint32_t";
+}
+
+std::optional<std::string> tryLegacyPackedResultCppType(const std::string &base,
+                                                        const std::string &argText) {
+  if (!isResultBindingTypeName(base)) {
+    return std::nullopt;
+  }
+  std::vector<std::string> args;
+  if (!splitTopLevelTemplateArgs(argText, args)) {
+    return legacyPackedResultCppType(false);
+  }
+  return legacyPackedResultCppType(args.size() == 2);
+}
+
 bool isBindingQualifierName(const std::string &name) {
   return name == "public" || name == "private" || name == "static";
 }
@@ -328,12 +350,8 @@ std::string bindingTypeToCpp(const std::string &typeName) {
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (base == "Result" || base == "/std/result/Result" || base == "std/result/Result") {
-      std::vector<std::string> args;
-      if (splitTopLevelTemplateArgs(arg, args)) {
-        return args.size() == 2 ? "uint64_t" : "uint32_t";
-      }
-      return "uint32_t";
+    if (auto resultType = tryLegacyPackedResultCppType(base, arg)) {
+      return *resultType;
     }
     if (base == "uninitialized") {
       return bindingTypeToCpp(arg);
@@ -413,12 +431,8 @@ std::string bindingTypeToCpp(const BindingInfo &info) {
   if (typeName == "FileError") {
     return "uint32_t";
   }
-  if (typeName == "Result" || typeName == "/std/result/Result" || typeName == "std/result/Result") {
-    std::vector<std::string> args;
-    if (splitTopLevelTemplateArgs(info.typeTemplateArg, args)) {
-      return (args.size() == 2) ? "uint64_t" : "uint32_t";
-    }
-    return "uint32_t";
+  if (auto resultType = tryLegacyPackedResultCppType(typeName, info.typeTemplateArg)) {
+    return *resultType;
   }
   if (typeName == "map") {
     std::vector<std::string> parts;

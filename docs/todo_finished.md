@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4315: Quarantine source C++ Result pack types
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that centralizes the
+    packed Result C++ storage-width decision without changing the legacy
+    runtime representation yet.
+  - implementation_notes:
+    - Keep existing source C++ behavior: value-carrying Result values remain
+      `uint64_t`, status-only Result values remain `uint32_t`.
+    - Move the Result type-name recognition and packed-width selection behind
+      named emitter helpers so future deletion does not need to chase scattered
+      raw storage spellings.
+    - Leave emitted `ps_result_pack`, `ps_result_error`, and
+      `ps_result_value` runtime helpers for a later TODO-4266 slice.
+  - acceptance:
+    - Source C++ type lowering for `Result<E>` and `Result<T, E>` goes through
+      the named packed Result helper path.
+    - Source C++ legacy `Result.ok`, `Result.map`, `Result.and_then`,
+      `Result.map2`, and status-only `Result.why` expression emission use the
+      same named packed Result helper path for storage-width spellings.
+    - Qualified `/std/result/Result<...>` and slashless
+      `std/result/Result<...>` spellings use the same helper path.
+    - Focused helper coverage pins the quarantine helper behavior.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once source C++ storage-width decisions no longer embed
+    the packed Result widths directly in each lowering branch.
+  - finished_at: 2026-04-28
+  - evidence: Added named source C++ emitter helpers for Result type-name
+    recognition and legacy packed storage-width selection, routed source C++
+    type lowering, lambda Result classification, and legacy Result expression
+    emission through them, and added focused helper coverage. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4314: Preserve borrowed Result C++ bridge helpers
   - owner: ai
   - created_at: 2026-04-28

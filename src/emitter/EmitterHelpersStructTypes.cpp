@@ -84,12 +84,8 @@ std::string bindingTypeToCpp(const std::string &typeName,
   std::string arg;
   if (splitTemplateTypeName(typeName, base, arg)) {
     base = normalizeBindingTypeName(base);
-    if (base == "Result" || base == "/std/result/Result" || base == "std/result/Result") {
-      std::vector<std::string> args;
-      if (splitTopLevelTemplateArgs(arg, args)) {
-        return args.size() == 2 ? "uint64_t" : "uint32_t";
-      }
-      return "uint32_t";
+    if (auto resultType = tryLegacyPackedResultCppType(base, arg)) {
+      return *resultType;
     }
     if (base == "uninitialized") {
       return bindingTypeToCpp(arg, namespacePrefix, importAliases, structTypeMap);
@@ -176,12 +172,8 @@ std::string bindingTypeToCpp(const BindingInfo &info,
   if (typeName == "FileError") {
     return "uint32_t";
   }
-  if (typeName == "Result" || typeName == "/std/result/Result" || typeName == "std/result/Result") {
-    std::vector<std::string> args;
-    if (splitTopLevelTemplateArgs(info.typeTemplateArg, args)) {
-      return (args.size() == 2) ? "uint64_t" : "uint32_t";
-    }
-    return "uint32_t";
+  if (auto resultType = tryLegacyPackedResultCppType(typeName, info.typeTemplateArg)) {
+    return *resultType;
   }
   if (typeName == "map") {
     std::vector<std::string> parts;

@@ -800,8 +800,9 @@ paths, and dereferenced local
 `Result.why(...)` also inspect local, direct-call, and dereferenced local `Reference<Result<E>>` /
 `Pointer<Result<E>>` status-only imported sums. The legacy source C++ emitter keeps using the packed Result bridge, but
 it now preserves nested `Result<T...>` types under `Reference` / `Pointer` and recognizes dereferenced borrowed Result
-operands for `try(...)`, `Result.error(...)`, and `Result.why(...)`. Broader result shapes and packed-representation
-deletion remain compatibility work until their dedicated migration tasks land.
+operands for `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its packed C++ storage-width decisions are
+quarantined behind named emitter helpers; broader result shapes and packed-representation deletion remain
+compatibility work until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1420,7 +1421,8 @@ Draft constraints:
   when used as a `pick` target. Imported status-only `Result<Error>` is pickable, and IR-backed `try(...)`, postfix
   `?`, `Result.error(...)`, and `Result.why(...)` consume the supported local/direct/dereferenced status-only sum
   sources. The legacy source C++ emitter mirrors borrowed/pointer helper operand inference while still using the packed
-  bridge. Unsupported broader result shapes and packed-representation deletion remain migration work.
+  bridge, with packed C++ storage-width decisions quarantined behind named emitter helpers. Unsupported broader result
+  shapes and packed-representation deletion remain migration work.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

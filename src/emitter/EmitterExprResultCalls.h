@@ -1,7 +1,9 @@
+  const std::string legacyPackedResultStatusCppType = legacyPackedResultCppType(false);
+  const std::string legacyPackedResultValueCppType = legacyPackedResultCppType(true);
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "ok") {
     if (expr.args.size() == 1) {
-      return "static_cast<uint32_t>(0)";
+      return "static_cast<" + legacyPackedResultStatusCppType + ">(0)";
     }
     if (expr.args.size() == 2) {
       std::ostringstream out;
@@ -43,7 +45,8 @@
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     const std::string errorExpr =
-        resultInfo.hasValue ? "ps_result_error(" + argText + ")" : "static_cast<uint32_t>(" + argText + ")";
+        resultInfo.hasValue ? "ps_result_error(" + argText + ")"
+                            : "static_cast<" + legacyPackedResultStatusCppType + ">(" + argText + ")";
     if (resultInfo.errorType == "FileError") {
       return "ps_file_error_why(" + errorExpr + ")";
     }
@@ -155,11 +158,11 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map") {
     if (expr.args.size() != 3) {
-      return "static_cast<uint64_t>(0)";
+      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return "static_cast<uint64_t>(0)";
+      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -173,7 +176,7 @@
         emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
-    out << "([&]() -> uint64_t {";
+    out << "([&]() -> " << legacyPackedResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
     out << " uint32_t ps_err = ps_result_error(ps_result);";
     out << " if (ps_err != 0u) { return ps_result_pack(ps_err, 0u); }";
@@ -186,11 +189,11 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "and_then") {
     if (expr.args.size() != 3) {
-      return "static_cast<uint64_t>(0)";
+      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return "static_cast<uint64_t>(0)";
+      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -204,26 +207,26 @@
         emitExpr(expr.args[2], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
-    out << "([&]() -> uint64_t {";
+    out << "([&]() -> " << legacyPackedResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
     out << " uint32_t ps_err = ps_result_error(ps_result);";
     out << " if (ps_err != 0u) { return ps_result_pack(ps_err, 0u); }";
     out << " auto ps_value = static_cast<" << valueType << ">(ps_result_value(ps_result));";
     out << " auto ps_next = (" << lambdaExpr << ")(ps_value);";
-    out << " return static_cast<uint64_t>(ps_next);";
+    out << " return static_cast<" << legacyPackedResultValueCppType << ">(ps_next);";
     out << " }())";
     return out.str();
   }
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map2") {
     if (expr.args.size() != 4) {
-      return "static_cast<uint64_t>(0)";
+      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
     }
     ResultInfo leftInfo;
     ResultInfo rightInfo;
     if (!resolveResultExprInfo(expr.args[1], leftInfo) || !leftInfo.isResult || !leftInfo.hasValue ||
         !resolveResultExprInfo(expr.args[2], rightInfo) || !rightInfo.isResult || !rightInfo.hasValue) {
-      return "static_cast<uint64_t>(0)";
+      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
     }
     std::string leftType =
         bindingTypeToCpp(leftInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -245,7 +248,7 @@
         emitExpr(expr.args[3], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     std::ostringstream out;
-    out << "([&]() -> uint64_t {";
+    out << "([&]() -> " << legacyPackedResultValueCppType << " {";
     out << " auto ps_left = " << leftExpr << ";";
     out << " uint32_t ps_left_err = ps_result_error(ps_left);";
     out << " if (ps_left_err != 0u) { return ps_result_pack(ps_left_err, 0u); }";

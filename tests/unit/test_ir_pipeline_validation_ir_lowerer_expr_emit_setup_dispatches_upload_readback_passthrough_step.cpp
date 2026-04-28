@@ -552,6 +552,44 @@ TEST_CASE("emitter helpers types normalize slashless map import aliases") {
   CHECK(primec::emitter::bindingTypeToCpp("NonMapAlias", "/pkg", importAliases, structTypeMap) == "int");
 }
 
+TEST_CASE("emitter helpers quarantine legacy packed Result cpp types") {
+  CHECK(primec::emitter::isResultBindingTypeName("Result"));
+  CHECK(primec::emitter::isResultBindingTypeName("/std/result/Result"));
+  CHECK(primec::emitter::isResultBindingTypeName("std/result/Result"));
+  CHECK_FALSE(primec::emitter::isResultBindingTypeName("ResultLike"));
+
+  CHECK(primec::emitter::legacyPackedResultCppType(false) == "uint32_t");
+  CHECK(primec::emitter::legacyPackedResultCppType(true) == "uint64_t");
+
+  const auto statusType =
+      primec::emitter::tryLegacyPackedResultCppType("Result", "FileError");
+  REQUIRE(statusType.has_value());
+  CHECK(*statusType == primec::emitter::legacyPackedResultCppType(false));
+
+  const auto valueType =
+      primec::emitter::tryLegacyPackedResultCppType("/std/result/Result", "i32, FileError");
+  REQUIRE(valueType.has_value());
+  CHECK(*valueType == primec::emitter::legacyPackedResultCppType(true));
+
+  CHECK_FALSE(primec::emitter::tryLegacyPackedResultCppType("ResultLike", "i32").has_value());
+  CHECK(primec::emitter::bindingTypeToCpp("Result<FileError>") ==
+        primec::emitter::legacyPackedResultCppType(false));
+  CHECK(primec::emitter::bindingTypeToCpp("/std/result/Result<i32, FileError>") ==
+        primec::emitter::legacyPackedResultCppType(true));
+
+  primec::emitter::BindingInfo statusBinding;
+  statusBinding.typeName = "std/result/Result";
+  statusBinding.typeTemplateArg = "FileError";
+  CHECK(primec::emitter::bindingTypeToCpp(statusBinding) ==
+        primec::emitter::legacyPackedResultCppType(false));
+
+  primec::emitter::BindingInfo valueBinding;
+  valueBinding.typeName = "/std/result/Result";
+  valueBinding.typeTemplateArg = "i32, FileError";
+  CHECK(primec::emitter::bindingTypeToCpp(valueBinding) ==
+        primec::emitter::legacyPackedResultCppType(true));
+}
+
 TEST_CASE("emitter helper path preference normalizes slashless map helper candidates") {
   const std::unordered_map<std::string, std::string> mapAliasOnlyNameMap = {
       {"/map/count", "ps_map_count"},

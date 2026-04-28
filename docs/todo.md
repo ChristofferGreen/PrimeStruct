@@ -312,8 +312,9 @@ Task template:
       `Result<T...>` types under `Reference` / `Pointer` and recognizes
       dereferenced local/indexed borrowed Result operands for `try(...)`,
       `Result.error(...)`, and `Result.why(...)` while it still uses the
-      packed bridge; remaining cleanup should focus on deleting or
-      quarantining the legacy representation.
+      packed bridge. Its packed C++ storage-width decisions are now
+      quarantined behind named emitter helpers; remaining cleanup should focus
+      on deleting the legacy runtime pack/unpack representation.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

@@ -47,9 +47,7 @@ std::string Emitter::emitExpr(const Expr &expr,
   };
   auto populateResultInfoFromBinding = [&](const BindingInfo &binding, ResultInfo &out) {
     out = ResultInfo{};
-    const std::string normalizedTypeName = normalizeBindingTypeName(binding.typeName);
-    if (normalizedTypeName != "Result" && normalizedTypeName != "/std/result/Result" &&
-        normalizedTypeName != "std/result/Result") {
+    if (!isResultBindingTypeName(binding.typeName)) {
       return false;
     }
     std::vector<std::string> args;

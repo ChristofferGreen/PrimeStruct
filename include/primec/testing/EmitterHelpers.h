@@ -28,6 +28,10 @@ bool isPrimitiveBindingTypeName(const std::string &name);
 std::string normalizeBindingTypeName(const std::string &name);
 bool splitTemplateTypeName(const std::string &text, std::string &base, std::string &arg);
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
+bool isResultBindingTypeName(const std::string &name);
+std::string legacyPackedResultCppType(bool hasValue);
+std::optional<std::string> tryLegacyPackedResultCppType(const std::string &base,
+                                                        const std::string &argText);
 bool isBindingQualifierName(const std::string &name);
 bool isBindingAuxTransformName(const std::string &name);
 bool hasExplicitBindingTypeTransform(const Expr &expr);

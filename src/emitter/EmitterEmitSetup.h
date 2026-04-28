@@ -267,7 +267,7 @@ std::string Emitter::emitCpp(const Program &program, const std::string &entryPat
     ReturnKind returnKind = returnKinds[def.fullPath];
     auto resultIt = resultInfos.find(def.fullPath);
     if (resultIt != resultInfos.end() && resultIt->second.isResult) {
-      return resultIt->second.hasValue ? std::string("uint64_t") : std::string("uint32_t");
+      return legacyPackedResultCppType(resultIt->second.hasValue);
     }
     auto structIt = returnStructs.find(def.fullPath);
     if (structIt != returnStructs.end()) {

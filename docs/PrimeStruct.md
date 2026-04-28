@@ -2302,7 +2302,8 @@ for(
     `Reference<Result<E>>` / `Pointer<Result<E>>` sources instead of falling back to the legacy packed-status bridge.
     The legacy source C++ emitter still uses the packed Result bridge, but it now preserves nested `Result<T...>`
     types under `Reference` / `Pointer` and recognizes dereferenced local/indexed borrowed Result operands for
-    `try(...)`, `Result.error(...)`, and `Result.why(...)`.
+    `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its packed C++ storage-width decisions are quarantined
+    behind named emitter helpers so remaining migration can target runtime pack/unpack semantics explicitly.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
@@ -2310,8 +2311,9 @@ for(
     status-code returns, Result-return error propagation, direct-call postfix `?` operands, and imported status-only
     `try(...)` operands across local, direct-call, and dereferenced local pointer/reference sources, plus status-only
     `Result.error(...)` / `Result.why(...)` helpers on those same operand families. The source C++ emitter now mirrors
-    the borrowed/pointer helper operand inference while still using the packed bridge, so the remaining migration work
-    can focus on deleting or quarantining the legacy Result representation.
+    the borrowed/pointer helper operand inference while still using the packed bridge; storage-width decisions are
+    quarantined behind named emitter helpers, so the remaining migration work can focus on deleting the legacy runtime
+    pack/unpack representation.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
