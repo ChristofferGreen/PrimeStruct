@@ -501,45 +501,94 @@ std::string inferStructExprPathFromDefinitionMapByCallTargetWithFieldIndex(
           return "";
         }
         const Definition &sumDef = *sumIt->second;
+        auto findSumVariantByName = [&](const std::string &variantName) -> const SumVariant * {
+          for (const SumVariant &candidate : sumDef.sumVariants) {
+            if (candidate.name == variantName) {
+              return &candidate;
+            }
+          }
+          return nullptr;
+        };
+        auto isPayloadArm = [](const Expr &arm) {
+          const bool hasNamedArgs = std::any_of(
+              arm.argNames.begin(), arm.argNames.end(), [](const auto &argName) { return argName.has_value(); });
+          return arm.kind == Expr::Kind::Call && !arm.isBinding &&
+                 !arm.isMethodCall && !arm.isFieldAccess && arm.hasBodyArguments &&
+                 arm.templateArgs.empty() && !hasNamedArgs && arm.args.size() == 1 &&
+                 arm.args.front().kind == Expr::Kind::Name;
+        };
+        auto isUnitCallArm = [](const Expr &arm) {
+          const bool hasNamedArgs = std::any_of(
+              arm.argNames.begin(), arm.argNames.end(), [](const auto &argName) { return argName.has_value(); });
+          return arm.kind == Expr::Kind::Call && !arm.isBinding &&
+                 !arm.isMethodCall && !arm.isFieldAccess && arm.hasBodyArguments &&
+                 arm.templateArgs.empty() && !hasNamedArgs && arm.args.empty();
+        };
+        auto isUnitBindingArm = [](const Expr &arm) {
+          return arm.kind == Expr::Kind::Call && arm.isBinding &&
+                 !arm.isMethodCall && !arm.isFieldAccess && !arm.name.empty() &&
+                 arm.transforms.empty() && arm.templateArgs.empty() &&
+                 !arm.hasBodyArguments && arm.bodyArguments.empty() &&
+                 arm.args.size() == 1 && arm.argNames.size() == 1 &&
+                 !arm.argNames.front().has_value();
+        };
+        auto armBodyExprs = [&](const Expr &arm) {
+          std::vector<const Expr *> out;
+          if (isPayloadArm(arm) || isUnitCallArm(arm)) {
+            out.reserve(arm.bodyArguments.size());
+            for (const Expr &bodyExpr : arm.bodyArguments) {
+              out.push_back(&bodyExpr);
+            }
+            return out;
+          }
+          if (!isUnitBindingArm(arm)) {
+            return out;
+          }
+          const Expr &initializer = arm.args.front();
+          if (initializer.kind == Expr::Kind::Call && initializer.name == "block" &&
+              initializer.hasBodyArguments && initializer.args.empty()) {
+            out.reserve(initializer.bodyArguments.size());
+            for (const Expr &bodyExpr : initializer.bodyArguments) {
+              out.push_back(&bodyExpr);
+            }
+            return out;
+          }
+          out.push_back(&initializer);
+          return out;
+        };
         std::string resultStructPath;
         bool sawAggregateResult = false;
         for (const Expr &arm : exprIn.bodyArguments) {
-          const bool hasNamedArgs = std::any_of(
-              arm.argNames.begin(), arm.argNames.end(), [](const auto &argName) { return argName.has_value(); });
-          if (arm.kind != Expr::Kind::Call || arm.isBinding ||
-              arm.isMethodCall || arm.isFieldAccess || !arm.hasBodyArguments ||
-              arm.templateArgs.size() != 0 || hasNamedArgs || arm.args.size() != 1 ||
-              arm.args.front().kind != Expr::Kind::Name) {
+          const bool payloadArm = isPayloadArm(arm);
+          const bool unitArm = isUnitCallArm(arm) || isUnitBindingArm(arm);
+          if (!payloadArm && !unitArm) {
             return "";
           }
-          const SumVariant *variant = nullptr;
-          for (const SumVariant &candidate : sumDef.sumVariants) {
-            if (candidate.name == arm.name) {
-              variant = &candidate;
-              break;
-            }
-          }
-          if (variant == nullptr) {
+          const SumVariant *variant = findSumVariantByName(arm.name);
+          if (variant == nullptr || variant->hasPayload != payloadArm) {
             return "";
           }
-          std::string payloadType = !variant->payloadTypeText.empty()
-                                        ? trimTemplateTypeText(variant->payloadTypeText)
-                                        : trimTemplateTypeText(variant->payloadType);
-          if (variant->payloadTypeText.empty() && !variant->payloadTemplateArgs.empty()) {
-            payloadType += "<" + joinTemplateArgsText(variant->payloadTemplateArgs) + ">";
-          }
-          std::string payloadStructPath;
-          resolveStructTypeName(payloadType, sumDef.namespacePrefix, payloadStructPath);
           LocalMap branchLocals = localsInExpr;
-          LocalInfo payloadInfo;
-          payloadInfo.kind = LocalInfo::Kind::Value;
-          payloadInfo.valueKind =
-              payloadStructPath.empty() ? LocalInfo::ValueKind::Unknown : LocalInfo::ValueKind::Int64;
-          payloadInfo.structTypeName = payloadStructPath;
-          branchLocals.emplace(arm.args.front().name, payloadInfo);
+          if (payloadArm) {
+            std::string payloadType = !variant->payloadTypeText.empty()
+                                          ? trimTemplateTypeText(variant->payloadTypeText)
+                                          : trimTemplateTypeText(variant->payloadType);
+            if (variant->payloadTypeText.empty() && !variant->payloadTemplateArgs.empty()) {
+              payloadType += "<" + joinTemplateArgsText(variant->payloadTemplateArgs) + ">";
+            }
+            std::string payloadStructPath;
+            resolveStructTypeName(payloadType, sumDef.namespacePrefix, payloadStructPath);
+            LocalInfo payloadInfo;
+            payloadInfo.kind = LocalInfo::Kind::Value;
+            payloadInfo.valueKind =
+                payloadStructPath.empty() ? LocalInfo::ValueKind::Unknown : LocalInfo::ValueKind::Int64;
+            payloadInfo.structTypeName = payloadStructPath;
+            branchLocals.emplace(arm.args.front().name, payloadInfo);
+          }
           const Expr *valueExpr = nullptr;
           bool sawReturn = false;
-          for (const Expr &bodyExpr : arm.bodyArguments) {
+          for (const Expr *bodyExprPtr : armBodyExprs(arm)) {
+            const Expr &bodyExpr = *bodyExprPtr;
             if (bodyExpr.isBinding) {
               continue;
             }

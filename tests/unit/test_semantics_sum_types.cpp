@@ -440,6 +440,42 @@ main() {
   }
 }
 
+TEST_CASE("sum construction supports unit variants and unit pick arms") {
+  const std::string source = R"(
+[sum]
+Maybe {
+  none
+  [i32] some
+}
+
+[return<i32>]
+measure([Maybe] value) {
+  return(pick(value) {
+    none {
+      return(1i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
+}
+
+[return<i32>]
+main() {
+  [Maybe] fromDefault{}
+  [Maybe] byName{none}
+  [Maybe] explicitDefault{Maybe{}}
+  [Maybe] explicitName{Maybe{none}}
+  [Maybe] byPayload{[some] 4i32}
+  [i32] total{plus(measure(fromDefault), measure(byName))}
+  [i32] explicitTotal{plus(measure(explicitDefault), measure(explicitName))}
+  return(plus(plus(total, explicitTotal), measure(byPayload)))
+}
+)";
+
+  CHECK(validateProgram(source));
+}
+
 TEST_CASE("explicit sum construction rejects payload and target mismatches") {
   SUBCASE("unit variant payload") {
     const std::string source = R"(
@@ -462,24 +498,24 @@ main() {
           std::string::npos);
   }
 
-  SUBCASE("payload variant while unit execution is deferred") {
+  SUBCASE("default requires first variant to be unit") {
     const std::string source = R"(
 [sum]
-Maybe {
-  none
+Bad {
   [i32] some
+  none
 }
 
 [return<i32>]
 main() {
-  [Maybe] bad{[some] 1i32}
+  [Bad] bad{}
   return(0i32)
 }
 )";
 
     std::string error;
     CHECK_FALSE(validateProgramExpectingError(source, error));
-    CHECK(error.find("sum construction with unit variants is not supported yet: /Maybe") !=
+    CHECK(error.find("default sum construction requires first variant to be unit: /Bad") !=
           std::string::npos);
   }
 

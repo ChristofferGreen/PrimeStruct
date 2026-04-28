@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4288: Add executable unit sum variants
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Complete unit/no-payload variant behavior now that bare unit
+    variants parse, validate, and publish semantic-product metadata.
+  - implementation_notes:
+    - Start from `SumVariant::hasPayload`, semantic-product
+      `has_payload=false` metadata, `SemanticsValidatorExprSumConstructors`,
+      `SemanticsValidatorExprPick`, and
+      `src/ir_lowerer/IrLowererLowerSumHelpers.h`.
+    - Preserve the source-order tag model already published for unit and
+      payload variants; unit variants must not allocate or observe hidden
+      payload storage.
+    - Default construction must follow the source-order tag model: `[Sum] s{}`
+      is valid only when the first variant is unit, and it selects that
+      variant/tag without constructing hidden payloads.
+  - acceptance:
+    - Unit variants can be explicitly constructed without payloads using the
+      accepted unit syntax selected for sums.
+    - `pick` supports unit arms such as `none { ... }` and rejects payload
+      binders on unit variants.
+    - Default construction accepts sums whose first variant is unit and rejects
+      sums whose first variant has a payload, even if that payload type is
+      default-constructible.
+    - IR serialization/lowering represents unit variants by tag only and never
+      requires an empty struct payload workaround.
+    - Negative tests cover invalid unit payload syntax, invalid unit pick
+      binders, and non-unit first-variant default construction.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once unit variants can be constructed, matched, lowered,
+    and defaulted well enough for stdlib `Maybe` and status-only `Result`.
+  - finished_at: 2026-04-28
+  - evidence: Added default and explicit bare unit construction, allowed
+    binder-free unit `pick` arms, lowered unit variants as tag-only sums, and
+    skipped inactive payload moves for unit variants. Added semantic and
+    compile-run coverage for unit construction/defaulting, unit `pick`, invalid
+    unit payload binders, and non-unit default construction. Promoted
+    `TODO-4289` to Ready Now and deferred release reruns to CI per the lite
+    workflow.
+
 - [x] TODO-4287: Add unit sum declaration metadata
   - owner: ai
   - created_at: 2026-04-28

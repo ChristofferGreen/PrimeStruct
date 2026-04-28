@@ -46,13 +46,46 @@ std::string allVariantNamesList(const Definition &sumDef) {
   return out;
 }
 
-bool hasUnitSumVariant(const Definition &sumDef) {
+const SumVariant *findVariantByName(const Definition &sumDef,
+                                    const std::string &variantName) {
   for (const auto &variant : sumDef.sumVariants) {
-    if (!variant.hasPayload) {
-      return true;
+    if (variant.name == variantName) {
+      return &variant;
     }
   }
-  return false;
+  return nullptr;
+}
+
+const SumVariant *defaultUnitVariant(const Definition &sumDef) {
+  if (sumDef.sumVariants.empty() || sumDef.sumVariants.front().hasPayload) {
+    return nullptr;
+  }
+  return &sumDef.sumVariants.front();
+}
+
+const SumVariant *unitVariantForNameInitializer(const Definition &sumDef,
+                                                const Expr &initializer) {
+  if (initializer.kind != Expr::Kind::Name) {
+    return nullptr;
+  }
+  const SumVariant *variant = findVariantByName(sumDef, initializer.name);
+  if (variant == nullptr || variant->hasPayload) {
+    return nullptr;
+  }
+  return variant;
+}
+
+const SumVariant *unitVariantForConstructorArgument(const Definition &sumDef,
+                                                    const Expr &arg) {
+  if (const SumVariant *variant = unitVariantForNameInitializer(sumDef, arg)) {
+    return variant;
+  }
+  if (arg.kind != Expr::Kind::Call || arg.name != "block" ||
+      !arg.hasBodyArguments || !arg.args.empty() ||
+      arg.bodyArguments.size() != 1) {
+    return nullptr;
+  }
+  return unitVariantForNameInitializer(sumDef, arg.bodyArguments.front());
 }
 
 } // namespace
@@ -180,6 +213,21 @@ bool SemanticsValidator::inferExplicitSumConstructorBinding(
   }
   if (constructorArgs->size() != 1 || constructorArgNames->size() != 1 ||
       !constructorArgNames->front().has_value()) {
+    if (constructorArgs->empty() && constructorArgNames->empty()) {
+      if (defaultUnitVariant(*sumDef) == nullptr) {
+        return false;
+      }
+      bindingOut.typeName = sumDef->fullPath;
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
+    if (constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
+        !constructorArgNames->front().has_value() &&
+        unitVariantForConstructorArgument(*sumDef, constructorArgs->front()) != nullptr) {
+      bindingOut.typeName = sumDef->fullPath;
+      bindingOut.typeTemplateArg.clear();
+      return true;
+    }
     return false;
   }
   const std::string &variantName = *constructorArgNames->front();
@@ -283,10 +331,16 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
       }
     }
   }
-  if (hasUnitSumVariant(*sumDef)) {
+  if (isEmptyBraceBlockArgument(initializer)) {
+    if (defaultUnitVariant(*sumDef) != nullptr) {
+      return true;
+    }
     return failInferredSumDiagnostic(
-        "sum construction with unit variants is not supported yet: " +
+        "default sum construction requires first variant to be unit: " +
         sumDef->fullPath);
+  }
+  if (unitVariantForNameInitializer(*sumDef, initializer) != nullptr) {
+    return true;
   }
   auto resolvesToTargetSum = [&](const std::string &typeText,
                                  const std::string &typeNamespace) -> bool {
@@ -546,6 +600,23 @@ bool SemanticsValidator::validateExplicitSumConstructorExpr(
           " on " + sumDef->fullPath);
     }
   }
+  if (constructorArgs->empty() && constructorArgNames->empty()) {
+    if (defaultUnitVariant(*sumDef) != nullptr) {
+      return true;
+    }
+    return failSumConstructorDiagnostic(
+        "default sum construction requires first variant to be unit: " +
+        sumDef->fullPath);
+  }
+  if (constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
+      !constructorArgNames->front().has_value()) {
+    if (unitVariantForConstructorArgument(*sumDef, constructorArgs->front()) != nullptr) {
+      return true;
+    }
+    return failSumConstructorDiagnostic(
+        "sum construction requires explicit variant label for " +
+        sumDef->fullPath);
+  }
   if (constructorArgs->size() != 1 || constructorArgNames->size() != 1) {
     return failSumConstructorDiagnostic(
         "sum construction requires exactly one explicit variant for " +
@@ -575,11 +646,6 @@ bool SemanticsValidator::validateExplicitSumConstructorExpr(
     return failSumConstructorDiagnostic(
         "unit sum variant does not accept payload: " +
         sumDef->fullPath + "/" + selectedVariant->name);
-  }
-  if (hasUnitSumVariant(*sumDef)) {
-    return failSumConstructorDiagnostic(
-        "sum construction with unit variants is not supported yet: " +
-        sumDef->fullPath);
   }
   if (!validateExpr(params, locals, payloadExpr)) {
     return false;

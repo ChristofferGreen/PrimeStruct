@@ -14,6 +14,7 @@ struct PickArm {
   const Expr *expr = nullptr;
   const SumVariant *variant = nullptr;
   std::string binderName;
+  bool hasPayloadBinder = false;
 };
 
 BindingInfo payloadBindingForVariant(const SumVariant &variant) {
@@ -46,11 +47,69 @@ const SumVariant *findVariantByName(const Definition &sumDef,
   return nullptr;
 }
 
-bool isPickArmEnvelope(const Expr &candidate) {
+bool isPickArmEnvelopeBase(const Expr &candidate) {
   return candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
          !candidate.isMethodCall && !candidate.isFieldAccess &&
          candidate.hasBodyArguments && !candidate.name.empty() &&
          candidate.templateArgs.empty() && !hasNamedArguments(candidate.argNames);
+}
+
+bool isPayloadPickArmEnvelope(const Expr &candidate) {
+  return isPickArmEnvelopeBase(candidate) && candidate.args.size() == 1 &&
+         candidate.args.front().kind == Expr::Kind::Name;
+}
+
+bool isUnitCallPickArmEnvelope(const Expr &candidate) {
+  return isPickArmEnvelopeBase(candidate) && candidate.args.empty();
+}
+
+bool isUnitBindingPickArmEnvelope(const Expr &candidate) {
+  return candidate.kind == Expr::Kind::Call && candidate.isBinding &&
+         !candidate.isMethodCall && !candidate.isFieldAccess &&
+         !candidate.name.empty() && candidate.transforms.empty() &&
+         candidate.templateArgs.empty() && !candidate.hasBodyArguments &&
+         candidate.bodyArguments.empty() && candidate.args.size() == 1 &&
+         candidate.argNames.size() == 1 && !candidate.argNames.front().has_value();
+}
+
+std::vector<const Expr *> pickArmBodyExprs(const Expr &arm) {
+  std::vector<const Expr *> out;
+  if (isPayloadPickArmEnvelope(arm) || isUnitCallPickArmEnvelope(arm)) {
+    out.reserve(arm.bodyArguments.size());
+    for (const Expr &bodyExpr : arm.bodyArguments) {
+      out.push_back(&bodyExpr);
+    }
+    return out;
+  }
+  if (!isUnitBindingPickArmEnvelope(arm)) {
+    return out;
+  }
+  const Expr &initializer = arm.args.front();
+  if (initializer.kind == Expr::Kind::Call && initializer.name == "block" &&
+      initializer.hasBodyArguments && initializer.args.empty()) {
+    out.reserve(initializer.bodyArguments.size());
+    for (const Expr &bodyExpr : initializer.bodyArguments) {
+      out.push_back(&bodyExpr);
+    }
+    return out;
+  }
+  out.push_back(&initializer);
+  return out;
+}
+
+const std::vector<Expr> *pickArmBodyRange(const Expr &arm) {
+  if (isPayloadPickArmEnvelope(arm) || isUnitCallPickArmEnvelope(arm)) {
+    return &arm.bodyArguments;
+  }
+  if (!isUnitBindingPickArmEnvelope(arm)) {
+    return nullptr;
+  }
+  const Expr &initializer = arm.args.front();
+  if (initializer.kind == Expr::Kind::Call && initializer.name == "block" &&
+      initializer.hasBodyArguments && initializer.args.empty()) {
+    return &initializer.bodyArguments;
+  }
+  return nullptr;
 }
 
 ReturnKind combinePickNumericReturnKinds(ReturnKind left, ReturnKind right) {
@@ -124,8 +183,10 @@ bool SemanticsValidator::validatePickExpr(
   arms.reserve(expr.bodyArguments.size());
   std::unordered_set<std::string> seenVariants;
   for (const Expr &arm : expr.bodyArguments) {
-    if (!isPickArmEnvelope(arm) || arm.args.size() != 1 ||
-        arm.args.front().kind != Expr::Kind::Name) {
+    const bool payloadArm = isPayloadPickArmEnvelope(arm);
+    const bool unitArm = isUnitCallPickArmEnvelope(arm) ||
+                         isUnitBindingPickArmEnvelope(arm);
+    if (!payloadArm && !unitArm) {
       return failPickDiagnostic(
           arm,
           "pick arms require variant(payload) block for " + sumDef->fullPath);
@@ -141,13 +202,21 @@ bool SemanticsValidator::validatePickExpr(
           arm,
           "duplicate pick variant on " + sumDef->fullPath + ": " + arm.name);
     }
-    if (!variant->hasPayload) {
+    if (variant->hasPayload && !payloadArm) {
+      return failPickDiagnostic(
+          arm,
+          "pick arms require variant(payload) block for " + sumDef->fullPath);
+    }
+    if (!variant->hasPayload && payloadArm) {
       return failPickDiagnostic(
           arm,
           "pick unit variant arm does not accept payload binder: " +
               sumDef->fullPath + "/" + variant->name);
     }
-    arms.push_back(PickArm{&arm, variant, arm.args.front().name});
+    arms.push_back(PickArm{&arm,
+                           variant,
+                           payloadArm ? arm.args.front().name : std::string{},
+                           payloadArm});
   }
 
   std::vector<std::string> missingVariants;
@@ -168,20 +237,25 @@ bool SemanticsValidator::validatePickExpr(
   bool sawNonString = false;
   for (const PickArm &arm : arms) {
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;
-    if (isParam(params, arm.binderName) ||
-        branchLocals.count(arm.binderName) > 0) {
+    if (arm.hasPayloadBinder &&
+        (isParam(params, arm.binderName) ||
+         branchLocals.count(arm.binderName) > 0)) {
       return failPickDiagnostic(
           *arm.expr,
           "pick payload binder conflicts with existing binding: " +
               arm.binderName);
     }
-    insertLocalBinding(branchLocals,
-                       arm.binderName,
-                       payloadBindingForVariant(*arm.variant));
+    if (arm.hasPayloadBinder) {
+      insertLocalBinding(branchLocals,
+                         arm.binderName,
+                         payloadBindingForVariant(*arm.variant));
+    }
 
     const Expr *valueExpr = nullptr;
     bool sawReturn = false;
-    for (const Expr &bodyExpr : arm.expr->bodyArguments) {
+    const std::vector<const Expr *> bodyExprs = pickArmBodyExprs(*arm.expr);
+    for (const Expr *bodyExprPtr : bodyExprs) {
+      const Expr &bodyExpr = *bodyExprPtr;
       if (isSyntheticBlockValueBinding(bodyExpr)) {
         if (!validateExpr(params, branchLocals, bodyExpr.args.front())) {
           return false;
@@ -273,22 +347,31 @@ ReturnKind SemanticsValidator::inferPickExprReturnKind(
 
   std::optional<ReturnKind> combinedKind;
   for (const Expr &arm : expr.bodyArguments) {
-    if (!isPickArmEnvelope(arm) || arm.args.size() != 1 ||
-        arm.args.front().kind != Expr::Kind::Name) {
+    const bool payloadArm = isPayloadPickArmEnvelope(arm);
+    const bool unitArm = isUnitCallPickArmEnvelope(arm) ||
+                         isUnitBindingPickArmEnvelope(arm);
+    if (!payloadArm && !unitArm) {
       return ReturnKind::Unknown;
     }
     const SumVariant *variant = findVariantByName(*sumDef, arm.name);
     if (variant == nullptr) {
       return ReturnKind::Unknown;
     }
+    if (variant->hasPayload != payloadArm) {
+      return ReturnKind::Unknown;
+    }
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;
-    insertLocalBinding(branchLocals,
-                       arm.args.front().name,
-                       payloadBindingForVariant(*variant));
+    if (payloadArm) {
+      insertLocalBinding(branchLocals,
+                         arm.args.front().name,
+                         payloadBindingForVariant(*variant));
+    }
 
     const Expr *valueExpr = nullptr;
     bool sawReturn = false;
-    for (const Expr &bodyExpr : arm.bodyArguments) {
+    const std::vector<const Expr *> bodyExprs = pickArmBodyExprs(arm);
+    for (const Expr *bodyExprPtr : bodyExprs) {
+      const Expr &bodyExpr = *bodyExprPtr;
       if (isSyntheticBlockValueBinding(bodyExpr)) {
         if (!sawReturn) {
           valueExpr = &bodyExpr.args.front();
@@ -392,13 +475,16 @@ bool SemanticsValidator::validatePickStatement(
 
   std::unordered_set<std::string> seenVariants;
   for (const Expr &arm : stmt.bodyArguments) {
-    if (!isPickArmEnvelope(arm) || arm.args.size() != 1 ||
-        arm.args.front().kind != Expr::Kind::Name) {
+    const bool payloadArm = isPayloadPickArmEnvelope(arm);
+    const bool unitArm = isUnitCallPickArmEnvelope(arm) ||
+                         isUnitBindingPickArmEnvelope(arm);
+    if (!payloadArm && !unitArm) {
       return failPickStatementDiagnostic(
           arm,
           "pick arms require variant(payload) block for " + sumDef->fullPath);
     }
-    if (findVariantByName(*sumDef, arm.name) == nullptr) {
+    const SumVariant *variant = findVariantByName(*sumDef, arm.name);
+    if (variant == nullptr) {
       return failPickStatementDiagnostic(
           arm,
           "unknown pick variant on " + sumDef->fullPath + ": " + arm.name);
@@ -408,15 +494,19 @@ bool SemanticsValidator::validatePickStatement(
           arm,
           "duplicate pick variant on " + sumDef->fullPath + ": " + arm.name);
     }
-    if (const SumVariant *variant = findVariantByName(*sumDef, arm.name);
-        variant != nullptr && !variant->hasPayload) {
+    if (variant->hasPayload && !payloadArm) {
+      return failPickStatementDiagnostic(
+          arm,
+          "pick arms require variant(payload) block for " + sumDef->fullPath);
+    }
+    if (!variant->hasPayload && payloadArm) {
       return failPickStatementDiagnostic(
           arm,
           "pick unit variant arm does not accept payload binder: " +
               sumDef->fullPath + "/" + variant->name);
     }
-    if (isParam(params, arm.args.front().name) ||
-        locals.count(arm.args.front().name) > 0) {
+    if (payloadArm && (isParam(params, arm.args.front().name) ||
+                       locals.count(arm.args.front().name) > 0)) {
       return failPickStatementDiagnostic(
           arm,
           "pick payload binder conflicts with existing binding: " +
@@ -443,21 +533,24 @@ bool SemanticsValidator::validatePickStatement(
           : std::min(statementIndex + 1, enclosingStatements->size());
   for (const Expr &arm : stmt.bodyArguments) {
     const SumVariant *variant = findVariantByName(*sumDef, arm.name);
-    if (variant == nullptr || arm.args.empty() ||
-        arm.args.front().kind != Expr::Kind::Name) {
+    const bool payloadArm = isPayloadPickArmEnvelope(arm);
+    if (variant == nullptr || (variant->hasPayload && !payloadArm)) {
       continue;
     }
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;
-    insertLocalBinding(branchLocals,
-                       arm.args.front().name,
-                       payloadBindingForVariant(*variant));
+    if (payloadArm) {
+      insertLocalBinding(branchLocals,
+                         arm.args.front().name,
+                         payloadBindingForVariant(*variant));
+    }
 
     std::vector<BorrowLivenessRange> livenessRanges;
     livenessRanges.reserve(2);
     OnErrorScope onErrorScope(*this, std::nullopt);
     BorrowEndScope borrowScope(*this, currentValidationState_.endedReferenceBorrows);
-    for (size_t bodyIndex = 0; bodyIndex < arm.bodyArguments.size(); ++bodyIndex) {
-      const Expr &bodyExpr = arm.bodyArguments[bodyIndex];
+    const std::vector<const Expr *> bodyExprs = pickArmBodyExprs(arm);
+    for (size_t bodyIndex = 0; bodyIndex < bodyExprs.size(); ++bodyIndex) {
+      const Expr &bodyExpr = *bodyExprs[bodyIndex];
       if (!validateStatement(params,
                              branchLocals,
                              bodyExpr,
@@ -466,13 +559,15 @@ bool SemanticsValidator::validatePickStatement(
                              allowBindings,
                              sawReturn,
                              namespacePrefix,
-                             &arm.bodyArguments,
+                             nullptr,
                              bodyIndex)) {
         return false;
       }
       livenessRanges.clear();
-      livenessRanges.push_back(BorrowLivenessRange{&arm.bodyArguments,
-                                                   bodyIndex + 1});
+      if (const std::vector<Expr> *bodyRange = pickArmBodyRange(arm)) {
+        livenessRanges.push_back(BorrowLivenessRange{bodyRange,
+                                                     bodyIndex + 1});
+      }
       if (postMergeStatements != nullptr &&
           postMergeStartIndex < postMergeStatements->size()) {
         livenessRanges.push_back(BorrowLivenessRange{postMergeStatements,

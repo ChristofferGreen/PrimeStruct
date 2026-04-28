@@ -144,6 +144,62 @@ main() {
   CHECK(runCommand(nativePath) == 43);
 }
 
+TEST_CASE("unit sum construction and pick lower across backends") {
+  const std::string source = R"(
+[sum]
+MaybeI32 {
+  none
+  [i32] some
+}
+
+[return<int>]
+main() {
+  [MaybeI32] empty{MaybeI32{}}
+  [MaybeI32] named{MaybeI32{none}}
+  [MaybeI32] present{[some] 40i32}
+  [i32] left{pick(empty) {
+    none {
+      1i32
+    }
+    some(value) {
+      value
+    }
+  }}
+  [i32] middle{pick(named) {
+    none {
+      0i32
+    }
+    some(value) {
+      value
+    }
+  }}
+  [i32] right{pick(present) {
+    none {
+      100i32
+    }
+    some(value) {
+      plus(value, 2i32)
+    }
+  }}
+  return(plus(plus(left, middle), right))
+}
+)";
+  const std::string srcPath = writeTemp("compile_unit_sum_pick.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_unit_sum_pick_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_unit_sum_pick_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 43);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 43);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 43);
+}
+
 TEST_CASE("aggregate sum payloads bind only the active pick branch") {
   const std::string source = R"(
 [struct]

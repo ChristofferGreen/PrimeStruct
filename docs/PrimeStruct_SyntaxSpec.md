@@ -728,9 +728,8 @@ Shape {
 Each payload variant has a lowerCamelCase variant name and one payload envelope. A sum value has exactly one active
 variant at runtime. Unit/no-payload variants use bare lowerCamelCase variant names such as `none` rather than an empty
 struct payload workaround. They are parsed, validated, and published in semantic-product sum variant metadata with
-`has_payload=false` and an empty payload type; executable unit construction, defaulting, and `pick` arms are deferred
-to the unit-sum lowering follow-up. Explicit payload sum construction uses the same brace-only construction model as
-structs:
+`has_payload=false` and an empty payload type. Executable unit construction stores only the active tag. Explicit payload
+sum construction uses the same brace-only construction model as structs:
 
 ```prime
 [Shape] explicitLabeled{[circle] Circle{[radius] 3.4}}
@@ -754,31 +753,30 @@ Message {
 [Message] ok{[title] Text{"hello"}}   // explicit variant selection
 ```
 
-Planned generic/unit executable sum shape:
+Generic sums are planned, but executable unit construction already uses the
+same source shape on non-generic sums:
 
 ```prime
 [sum]
-Maybe<T> {
+MaybeI32 {
   none
-  [T] some
+  [i32] some
 }
 
-[Maybe<i32>] a{}        // defaults to first variant because it is unit
-[Maybe<i32>] b{none}    // explicit unit variant
-[Maybe<i32>] c{[some] 1i32}
+[MaybeI32] a{}        // defaults to first variant because it is unit
+[MaybeI32] b{none}    // explicit unit variant
+[MaybeI32] c{[some] 1i32}
 ```
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
-therefore tag `0`, following source order. This construction rule is planned with executable unit constructors; payload
-variants are never default-constructed implicitly, so if the first variant has a payload, `[Sum] value{}` remains a
-diagnostic even when that payload type has its own default constructor. Variant tag order is
-layout/serialization-sensitive, so reordering variants changes ABI-like behavior and must be treated as a
-version-sensitive change.
+therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
+variant has a payload, `[Sum] value{}` remains a diagnostic even when that payload type has its own default constructor.
+Variant tag order is layout/serialization-sensitive, so reordering variants changes ABI-like behavior and must be
+treated as a version-sensitive change.
 
 `pick` is the semantically validated exhaustive pattern form for sums. Each arm names a variant and binds its payload;
-missing variants are diagnostics unless an explicit fallback form is later specified. Payload variants require a binder;
-payload binders on unit variants are rejected until unit arm syntax and backend lowering land. Backend lowering and
-execution for unit `pick` arms are tracked separately.
+missing variants are diagnostics unless an explicit fallback form is later specified. Payload variants require a binder.
+Unit variants use binder-free arms such as `none { ... }`; payload binders on unit variants are rejected.
 
 ```prime
 pick(shape) {
@@ -793,15 +791,14 @@ pick(shape) {
   }
 }
 
-// Planned once unit variants are implemented:
-// pick(maybeValue) {
-//   none {
-//     return(0)
-//   }
-//   some(value) {
-//     return(value)
-//   }
-// }
+pick(maybeValue) {
+  none {
+    return(0)
+  }
+  some(value) {
+    return(value)
+  }
+}
 ```
 
 ### 7.2 Parameters

@@ -36,6 +36,9 @@
     };
 
     auto sumPayloadTypeText = [](const SumVariant &variant) {
+      if (!variant.hasPayload) {
+        return std::string{};
+      }
       if (!variant.payloadTypeText.empty()) {
         return trimTemplateTypeText(variant.payloadTypeText);
       }
@@ -55,6 +58,10 @@
             const SumVariant &variant,
             LoweredSumPayloadStorageInfo &infoOut) -> bool {
       infoOut = {};
+      if (!variant.hasPayload) {
+        infoOut.slotCount = 0;
+        return true;
+      }
       infoOut.valueKind = sumPayloadKind(variant);
       if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
         infoOut.slotCount = 1;
@@ -149,7 +156,7 @@
     };
 
     auto loweredSumSlotCount = [&](const Definition &sumDef, int32_t &totalSlotsOut) -> bool {
-      int32_t maxPayloadSlots = 1;
+      int32_t maxPayloadSlots = 0;
       for (const auto &variant : sumDef.sumVariants) {
         LoweredSumPayloadStorageInfo payloadInfo;
         if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
@@ -160,6 +167,35 @@
       }
       totalSlotsOut = 2 + maxPayloadSlots;
       return true;
+    };
+
+    auto defaultUnitVariant = [](const Definition &sumDef) -> const SumVariant * {
+      if (sumDef.sumVariants.empty() || sumDef.sumVariants.front().hasPayload) {
+        return nullptr;
+      }
+      return &sumDef.sumVariants.front();
+    };
+
+    auto unitVariantForNameExpr =
+        [&](const Definition &sumDef, const Expr &expr) -> const SumVariant * {
+      if (expr.kind != Expr::Kind::Name) {
+        return nullptr;
+      }
+      const SumVariant *variant = findSumVariantByName(sumDef, expr.name);
+      return variant != nullptr && !variant->hasPayload ? variant : nullptr;
+    };
+
+    auto unitVariantForConstructorArg =
+        [&](const Definition &sumDef, const Expr &arg) -> const SumVariant * {
+      if (const SumVariant *variant = unitVariantForNameExpr(sumDef, arg)) {
+        return variant;
+      }
+      if (arg.kind != Expr::Kind::Call || arg.name != "block" ||
+          !arg.hasBodyArguments || !arg.args.empty() ||
+          arg.bodyArguments.size() != 1) {
+        return nullptr;
+      }
+      return unitVariantForNameExpr(sumDef, arg.bodyArguments.front());
     };
 
     auto firstUnsupportedSumPayloadVariant = [&](const Definition &sumDef) -> const SumVariant * {
@@ -178,8 +214,7 @@
             LoweredSumVariantSelection &selectionOut) -> bool {
       selectionOut = {};
       if (initializer.kind != Expr::Kind::Call || initializer.isMethodCall ||
-          initializer.isFieldAccess || initializer.args.size() != 1 ||
-          initializer.argNames.size() != 1 || !initializer.argNames.front().has_value()) {
+          initializer.isFieldAccess) {
         return false;
       }
       const Definition *constructorSum =
@@ -187,7 +222,31 @@
       if (constructorSum == nullptr || constructorSum->fullPath != targetSum.fullPath) {
         return false;
       }
-      const SumVariant *variant = findSumVariantByName(targetSum, *initializer.argNames.front());
+      const std::vector<Expr> *constructorArgs = &initializer.args;
+      const std::vector<std::optional<std::string>> *constructorArgNames =
+          &initializer.argNames;
+      std::vector<Expr> normalizedArgs;
+      std::vector<std::optional<std::string>> normalizedArgNames;
+      if (initializer.args.size() == 1 && initializer.argNames.size() == 1 &&
+          !initializer.argNames.front().has_value() &&
+          initializer.args.front().kind == Expr::Kind::Call &&
+          initializer.args.front().name == "block" &&
+          initializer.args.front().hasBodyArguments &&
+          initializer.args.front().bodyArguments.empty() &&
+          initializer.args.front().args.empty()) {
+        constructorArgs = &normalizedArgs;
+        constructorArgNames = &normalizedArgNames;
+      }
+      const SumVariant *variant = nullptr;
+      if (constructorArgs->empty() && constructorArgNames->empty()) {
+        variant = defaultUnitVariant(targetSum);
+      } else if (constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
+                 !constructorArgNames->front().has_value()) {
+        variant = unitVariantForConstructorArg(targetSum, constructorArgs->front());
+      } else if (constructorArgs->size() == 1 && constructorArgNames->size() == 1 &&
+                 constructorArgNames->front().has_value()) {
+        variant = findSumVariantByName(targetSum, *constructorArgNames->front());
+      }
       if (variant == nullptr) {
         return false;
       }
@@ -197,7 +256,7 @@
       }
       selectionOut.sumDef = &targetSum;
       selectionOut.variant = variant;
-      selectionOut.payloadExpr = &initializer.args.front();
+      selectionOut.payloadExpr = variant->hasPayload ? &constructorArgs->front() : nullptr;
       selectionOut.payloadKind = payloadInfo.valueKind;
       selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
       selectionOut.payloadSlotCount = payloadInfo.slotCount;
@@ -213,6 +272,20 @@
       if (selectExplicitSumVariantForConstructor(initializer, targetSum, selectionOut)) {
         return true;
       }
+      if (const SumVariant *variant = unitVariantForNameExpr(targetSum, initializer)) {
+        selectionOut.sumDef = &targetSum;
+        selectionOut.variant = variant;
+        return true;
+      }
+      if (initializer.kind == Expr::Kind::Call && initializer.name == "block" &&
+          initializer.hasBodyArguments && initializer.bodyArguments.empty() &&
+          initializer.args.empty()) {
+        if (const SumVariant *variant = defaultUnitVariant(targetSum)) {
+          selectionOut.sumDef = &targetSum;
+          selectionOut.variant = variant;
+          return true;
+        }
+      }
       const SumVariant *matchedVariant = nullptr;
       LoweredSumPayloadStorageInfo matchedPayloadInfo;
       const LocalInfo::ValueKind initializerKind = inferExprKind(initializer, valueLocals);
@@ -224,6 +297,9 @@
         }
       }
       for (const auto &variant : targetSum.sumVariants) {
+        if (!variant.hasPayload) {
+          continue;
+        }
         LoweredSumPayloadStorageInfo payloadInfo;
         if (!resolveSumPayloadStorageInfo(targetSum, variant, payloadInfo)) {
           continue;
@@ -273,13 +349,21 @@
             const LocalMap &valueLocals) -> bool {
       LoweredSumVariantSelection selection;
       if (!selectSumVariantForInitializer(initializer, sumDef, valueLocals, selection) ||
-          selection.variant == nullptr || selection.payloadExpr == nullptr) {
+          selection.variant == nullptr) {
         error = "native backend could not select sum variant for " + sumDef.fullPath;
         return false;
       }
       function.instructions.push_back(
           {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(selection.variant->variantIndex))});
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+      if (!selection.variant->hasPayload) {
+        return true;
+      }
+      if (selection.payloadExpr == nullptr) {
+        error = "native backend sum payload was not selected for " +
+                sumDef.fullPath + "/" + selection.variant->name;
+        return false;
+      }
       if (selection.payloadIsAggregate) {
         if (!emitExpr(*selection.payloadExpr, valueLocals)) {
           return false;
@@ -451,6 +535,13 @@
         emitSumTagComparison(sourceSumPtrLocal, variant.variantIndex);
         const size_t nextVariantJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        if (!variant.hasPayload) {
+          endJumps.push_back(function.instructions.size());
+          function.instructions.push_back({IrOpcode::Jump, 0});
+          function.instructions[nextVariantJump].imm =
+              static_cast<uint64_t>(function.instructions.size());
+          continue;
+        }
         if (payloadInfo.isAggregate) {
           const int32_t destPtrLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(destBaseLocal + 2)});
@@ -570,18 +661,67 @@
       return true;
     };
 
-    auto isPickArmEnvelope = [](const Expr &candidate) {
+    auto isPickArmEnvelopeBase = [](const Expr &candidate) {
       return candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
              !candidate.isMethodCall && !candidate.isFieldAccess &&
              candidate.hasBodyArguments && !candidate.name.empty() &&
-             candidate.templateArgs.empty() && !hasNamedArguments(candidate.argNames) &&
-             candidate.args.size() == 1 && candidate.args.front().kind == Expr::Kind::Name;
+             candidate.templateArgs.empty() && !hasNamedArguments(candidate.argNames);
+    };
+
+    auto isPayloadPickArmEnvelope = [&](const Expr &candidate) {
+      return isPickArmEnvelopeBase(candidate) && candidate.args.size() == 1 &&
+             candidate.args.front().kind == Expr::Kind::Name;
+    };
+
+    auto isUnitCallPickArmEnvelope = [&](const Expr &candidate) {
+      return isPickArmEnvelopeBase(candidate) && candidate.args.empty();
+    };
+
+    auto isUnitBindingPickArmEnvelope = [](const Expr &candidate) {
+      return candidate.kind == Expr::Kind::Call && candidate.isBinding &&
+             !candidate.isMethodCall && !candidate.isFieldAccess &&
+             !candidate.name.empty() && candidate.transforms.empty() &&
+             candidate.templateArgs.empty() && !candidate.hasBodyArguments &&
+             candidate.bodyArguments.empty() && candidate.args.size() == 1 &&
+             candidate.argNames.size() == 1 && !candidate.argNames.front().has_value();
+    };
+
+    auto isSupportedPickArmEnvelope = [&](const Expr &candidate) {
+      return isPayloadPickArmEnvelope(candidate) ||
+             isUnitCallPickArmEnvelope(candidate) ||
+             isUnitBindingPickArmEnvelope(candidate);
+    };
+
+    auto pickArmBodyExprs = [&](const Expr &arm) {
+      std::vector<const Expr *> out;
+      if (isPayloadPickArmEnvelope(arm) || isUnitCallPickArmEnvelope(arm)) {
+        out.reserve(arm.bodyArguments.size());
+        for (const Expr &bodyExpr : arm.bodyArguments) {
+          out.push_back(&bodyExpr);
+        }
+        return out;
+      }
+      if (!isUnitBindingPickArmEnvelope(arm)) {
+        return out;
+      }
+      const Expr &initializer = arm.args.front();
+      if (initializer.kind == Expr::Kind::Call && initializer.name == "block" &&
+          initializer.hasBodyArguments && initializer.args.empty()) {
+        out.reserve(initializer.bodyArguments.size());
+        for (const Expr &bodyExpr : initializer.bodyArguments) {
+          out.push_back(&bodyExpr);
+        }
+        return out;
+      }
+      out.push_back(&initializer);
+      return out;
     };
 
     auto findPickArmValueExpr = [&](const Expr &arm) -> const Expr * {
       const Expr *valueExpr = nullptr;
       bool sawReturn = false;
-      for (const Expr &bodyExpr : arm.bodyArguments) {
+      for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {
+        const Expr &bodyExpr = *bodyExprPtr;
         if (bodyExpr.isBinding) {
           continue;
         }
@@ -602,7 +742,8 @@
 
     auto emitPickArmPrefixStatements =
         [&](const Expr &arm, const Expr *valueExpr, LocalMap &branchLocals) -> bool {
-      for (const Expr &bodyExpr : arm.bodyArguments) {
+      for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {
+        const Expr &bodyExpr = *bodyExprPtr;
         if (isReturnCall(bodyExpr) && bodyExpr.args.size() == 1 && valueExpr == &bodyExpr.args.front()) {
           return true;
         }
@@ -625,8 +766,9 @@
       structPathOut.clear();
       bool sawAggregateResult = false;
       for (const Expr &arm : expr.bodyArguments) {
-        if (!isPickArmEnvelope(arm)) {
-          error = "native backend requires pick arms as variant(payload) blocks";
+        const bool payloadArm = isPayloadPickArmEnvelope(arm);
+        if (!isSupportedPickArmEnvelope(arm)) {
+          error = "native backend requires pick arms as variant blocks";
           return false;
         }
         const SumVariant *variant = findSumVariantByName(sumDef, arm.name);
@@ -634,12 +776,22 @@
           error = "native backend unknown pick variant on " + sumDef.fullPath + ": " + arm.name;
           return false;
         }
-        LocalMap branchLocals = valueLocals;
-        LocalInfo payloadInfo;
-        if (!makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)) {
+        if (variant->hasPayload != payloadArm) {
+          error = variant->hasPayload
+                      ? "native backend requires payload pick arm for " +
+                            sumDef.fullPath + "/" + variant->name
+                      : "native backend unit pick arm cannot bind payload: " +
+                            sumDef.fullPath + "/" + variant->name;
           return false;
         }
-        branchLocals.emplace(arm.args.front().name, payloadInfo);
+        LocalMap branchLocals = valueLocals;
+        if (payloadArm) {
+          LocalInfo payloadInfo;
+          if (!makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)) {
+            return false;
+          }
+          branchLocals.emplace(arm.args.front().name, payloadInfo);
+        }
         const Expr *valueExpr = findPickArmValueExpr(arm);
         if (valueExpr == nullptr) {
           error = "native backend requires pick arms to produce a value";
@@ -715,8 +867,9 @@
       }
       std::vector<size_t> endJumps;
       for (const Expr &arm : expr.bodyArguments) {
-        if (!isPickArmEnvelope(arm)) {
-          error = "native backend requires pick arms as variant(payload) blocks";
+        const bool payloadArm = isPayloadPickArmEnvelope(arm);
+        if (!isSupportedPickArmEnvelope(arm)) {
+          error = "native backend requires pick arms as variant blocks";
           return LoweredSumPickEmitResult::Error;
         }
         const SumVariant *variant = findSumVariantByName(*sumDef, arm.name);
@@ -724,11 +877,20 @@
           error = "native backend unknown pick variant on " + sumDef->fullPath + ": " + arm.name;
           return LoweredSumPickEmitResult::Error;
         }
+        if (variant->hasPayload != payloadArm) {
+          error = variant->hasPayload
+                      ? "native backend requires payload pick arm for " +
+                            sumDef->fullPath + "/" + variant->name
+                      : "native backend unit pick arm cannot bind payload: " +
+                            sumDef->fullPath + "/" + variant->name;
+          return LoweredSumPickEmitResult::Error;
+        }
         emitSumTagComparison(sumPtrLocal, variant->variantIndex);
         const size_t nextArmJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = valueLocals;
-        if (!bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
+        if (payloadArm &&
+            !bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
           return LoweredSumPickEmitResult::Error;
         }
         const Expr *valueExpr = findPickArmValueExpr(arm);
@@ -791,8 +953,9 @@
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sumPtrLocal)});
       std::vector<size_t> endJumps;
       for (const Expr &arm : stmt.bodyArguments) {
-        if (!isPickArmEnvelope(arm)) {
-          error = "native backend requires pick arms as variant(payload) blocks";
+        const bool payloadArm = isPayloadPickArmEnvelope(arm);
+        if (!isSupportedPickArmEnvelope(arm)) {
+          error = "native backend requires pick arms as variant blocks";
           return LoweredSumPickEmitResult::Error;
         }
         const SumVariant *variant = findSumVariantByName(*sumDef, arm.name);
@@ -800,15 +963,24 @@
           error = "native backend unknown pick variant on " + sumDef->fullPath + ": " + arm.name;
           return LoweredSumPickEmitResult::Error;
         }
+        if (variant->hasPayload != payloadArm) {
+          error = variant->hasPayload
+                      ? "native backend requires payload pick arm for " +
+                            sumDef->fullPath + "/" + variant->name
+                      : "native backend unit pick arm cannot bind payload: " +
+                            sumDef->fullPath + "/" + variant->name;
+          return LoweredSumPickEmitResult::Error;
+        }
         emitSumTagComparison(sumPtrLocal, variant->variantIndex);
         const size_t nextArmJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = localsIn;
-        if (!bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
+        if (payloadArm &&
+            !bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
           return LoweredSumPickEmitResult::Error;
         }
-        for (const Expr &bodyExpr : arm.bodyArguments) {
-          if (!emitStatement(bodyExpr, branchLocals)) {
+        for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {
+          if (!emitStatement(*bodyExprPtr, branchLocals)) {
             return LoweredSumPickEmitResult::Error;
           }
         }

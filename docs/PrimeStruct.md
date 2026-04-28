@@ -3340,30 +3340,30 @@ bad_use_after_take() {
   The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{Circle{3.4}}`) is valid only
   when exactly one `Shape` variant accepts a `Circle` payload. Zero matches are type errors and multiple matches are
   ambiguity errors requiring an explicit `[variant]` label.
-  Generic sums plus executable unit construction/matching are required for the planned stdlib `Maybe<T>` shape:
+  Unit variants can be constructed by default when the first declared variant is unit, or by naming the unit variant in
+  a target-typed constructor:
   ```prime
   [sum]
-  Maybe<T> {
+  MaybeI32 {
     none
-    [T] some
+    [i32] some
   }
 
-  [Maybe<i32>] a{}
-  [Maybe<i32>] b{none}
-  [Maybe<i32>] c{[some] 1i32}
+  [MaybeI32] a{}
+  [MaybeI32] b{none}
+  [MaybeI32] c{[some] 1i32}
   ```
-  Generic sum declarations and executable unit construction/defaulting are still deferred. The intended default sum
-  construction rule is valid only when the first declared variant is a unit variant; the default active variant is tag
-  `0` in source order. Payload variants are not default-constructed implicitly, so `[Shape] value{}` is rejected when
-  the first `Shape` variant carries a payload. Variant order is therefore layout/serialization-sensitive and should be
-  treated as version-sensitive API surface.
+  Generic sum declarations are still deferred. The default sum construction rule is valid only when the first declared
+  variant is a unit variant; the default active variant is tag `0` in source order. Payload variants are not
+  default-constructed implicitly, so `[Shape] value{}` is rejected when the first `Shape` variant carries a payload.
+  Variant order is therefore layout/serialization-sensitive and should be treated as version-sensitive API surface.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
-  branch value types are diagnostics. Until executable unit matching lands, payload binders on unit variants are
-  rejected and unit arm syntax is deferred. IR-backed VM, native, and exe lowering currently execute scalar and
-  struct-payload sums with an inline aggregate convention: slot 0
-  stores the payload-slot header, slot 1 stores the active variant tag, and slot 2 starts the active payload storage.
-  Scalar payloads occupy one slot; struct payloads occupy their ordinary struct slot layout inline and `pick` arms bind a
+  branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on
+  unit variants are rejected. IR-backed VM, native, and exe lowering currently execute scalar, unit, and struct-payload
+  sums with an inline aggregate convention: slot 0 stores the payload-slot header, slot 1 stores the active variant tag,
+  and slot 2 starts the active payload storage. Unit variants carry only the tag. Scalar payloads occupy one slot; struct
+  payloads occupy their ordinary struct slot layout inline and `pick` arms bind a
   branch-local view of the selected payload only. Aggregate-valued `pick(...)` expressions copy the selected active
   payload into stable result storage before the value can be bound, returned, or passed to a helper, so inactive payload
   storage stays unobserved by the escape path. Sum-to-sum `move(...)` construction copies the active tag and routes only
