@@ -6705,3 +6705,23 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     deterministic lowerer diagnostic. Moved aggregate payload move/borrow/drop
     semantics to `TODO-4283`, promoted that follow-up to Ready Now, and
     deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4283: Lower aggregate sum payload ownership
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Extend executable sum construction and `pick` beyond the scalar
+    payload slice to aggregate payload materialization and active-branch
+    binding, while splitting explicit lifecycle hooks into a follow-up.
+  - finished_at: 2026-04-28
+  - evidence: Extended the sum lowering helper to compute per-variant payload
+    storage, size inline sum payload storage for the widest scalar or struct
+    payload, copy struct payload slots into the active payload area during sum
+    construction, and bind aggregate `pick` arm payloads as branch-local views
+    into the selected payload storage only. Compile-run coverage now exercises
+    struct payload construction plus field access through `pick` across exe,
+    VM, and native, and nested sum payloads report a deterministic lowerer
+    diagnostic instead of falling through to struct or integer fallback logic.
+    Moved explicit active-payload move/drop lifecycle hooks to `TODO-4284`,
+    promoted that follow-up to Ready Now, and deferred release reruns to CI per
+    the lite workflow.

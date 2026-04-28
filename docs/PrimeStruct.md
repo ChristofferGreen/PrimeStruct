@@ -3357,9 +3357,11 @@ bad_use_after_take() {
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variant arm syntax is planned with unit variant support. IR-backed VM,
-  native, and exe lowering currently execute scalar-payload sums with an inline aggregate convention: slot 0 stores the
-  payload-slot header, slot 1 stores the active variant tag, and slot 2 stores the active scalar payload. Aggregate
-  payload move/borrow/drop semantics remain a follow-up before public examples should rely on struct-payload sums.
+  native, and exe lowering currently execute scalar and struct-payload sums with an inline aggregate convention: slot 0
+  stores the payload-slot header, slot 1 stores the active variant tag, and slot 2 starts the active payload storage.
+  Scalar payloads occupy one slot; struct payloads occupy their ordinary struct slot layout inline and `pick` arms bind a
+  branch-local view of the selected payload only. Nested sum payloads and explicit active-payload lifecycle hooks for
+  move/drop remain follow-ups before public examples should rely on ownership-heavy struct-payload sums.
 - **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on
   executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries.
   Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.

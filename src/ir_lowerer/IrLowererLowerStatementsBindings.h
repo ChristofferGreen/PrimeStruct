@@ -418,9 +418,12 @@
           LoweredSumVariantSelection selection;
           if (selectSumVariantForInitializer(init, *sumDef, localsIn, selection) &&
               selection.variant != nullptr) {
-            error = unsupportedAggregateSumPayloadError(*sumDef, *selection.variant);
+            error = unsupportedSumPayloadError(*sumDef, *selection.variant);
+          } else if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
+                     unsupportedVariant != nullptr) {
+            error = unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
           } else {
-            error = "native backend does not support aggregate sum payloads yet: " + sumDef->fullPath;
+            error = "native backend does not support sum payload type on " + sumDef->fullPath;
           }
           return false;
         }

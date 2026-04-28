@@ -3,6 +3,16 @@
       const SumVariant *variant = nullptr;
       const Expr *payloadExpr = nullptr;
       LocalInfo::ValueKind payloadKind = LocalInfo::ValueKind::Unknown;
+      std::string payloadStructPath;
+      int32_t payloadSlotCount = 1;
+      bool payloadIsAggregate = false;
+    };
+
+    struct LoweredSumPayloadStorageInfo {
+      LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+      std::string structPath;
+      int32_t slotCount = 1;
+      bool isAggregate = false;
     };
 
     enum class LoweredSumPickEmitResult {
@@ -38,6 +48,32 @@
 
     auto sumPayloadKind = [&](const SumVariant &variant) {
       return valueKindFromTypeName(sumPayloadTypeText(variant));
+    };
+
+    auto resolveSumPayloadStorageInfo =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            LoweredSumPayloadStorageInfo &infoOut) -> bool {
+      infoOut = {};
+      infoOut.valueKind = sumPayloadKind(variant);
+      if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
+        infoOut.slotCount = 1;
+        return true;
+      }
+      std::string payloadStructPath;
+      if (!resolveStructTypeName(sumPayloadTypeText(variant),
+                                 sumDef.namespacePrefix,
+                                 payloadStructPath)) {
+        return false;
+      }
+      StructSlotLayout payloadLayout;
+      if (!resolveStructSlotLayout(payloadStructPath, payloadLayout)) {
+        return false;
+      }
+      infoOut.structPath = std::move(payloadStructPath);
+      infoOut.slotCount = payloadLayout.totalSlots;
+      infoOut.isAggregate = true;
+      return true;
     };
 
     auto resolveSumDefinitionByPath = [&](const std::string &path) -> const Definition * {
@@ -115,13 +151,25 @@
     auto loweredSumSlotCount = [&](const Definition &sumDef, int32_t &totalSlotsOut) -> bool {
       int32_t maxPayloadSlots = 1;
       for (const auto &variant : sumDef.sumVariants) {
-        if (sumPayloadKind(variant) == LocalInfo::ValueKind::Unknown) {
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
           totalSlotsOut = 0;
           return false;
         }
+        maxPayloadSlots = std::max(maxPayloadSlots, payloadInfo.slotCount);
       }
       totalSlotsOut = 2 + maxPayloadSlots;
       return true;
+    };
+
+    auto firstUnsupportedSumPayloadVariant = [&](const Definition &sumDef) -> const SumVariant * {
+      for (const auto &variant : sumDef.sumVariants) {
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
+          return &variant;
+        }
+      }
+      return nullptr;
     };
 
     auto selectExplicitSumVariantForConstructor =
@@ -143,10 +191,17 @@
       if (variant == nullptr) {
         return false;
       }
+      LoweredSumPayloadStorageInfo payloadInfo;
+      if (!resolveSumPayloadStorageInfo(targetSum, *variant, payloadInfo)) {
+        return false;
+      }
       selectionOut.sumDef = &targetSum;
       selectionOut.variant = variant;
       selectionOut.payloadExpr = &initializer.args.front();
-      selectionOut.payloadKind = sumPayloadKind(*variant);
+      selectionOut.payloadKind = payloadInfo.valueKind;
+      selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
+      selectionOut.payloadSlotCount = payloadInfo.slotCount;
+      selectionOut.payloadIsAggregate = payloadInfo.isAggregate;
       return true;
     };
 
@@ -158,17 +213,34 @@
       if (selectExplicitSumVariantForConstructor(initializer, targetSum, selectionOut)) {
         return true;
       }
-      const LocalInfo::ValueKind initializerKind = inferExprKind(initializer, valueLocals);
       const SumVariant *matchedVariant = nullptr;
+      LoweredSumPayloadStorageInfo matchedPayloadInfo;
+      const LocalInfo::ValueKind initializerKind = inferExprKind(initializer, valueLocals);
+      std::string initializerStructPath = inferStructExprPath(initializer, valueLocals);
+      if (initializerStructPath.empty() && initializer.kind == Expr::Kind::Call) {
+        if (const Definition *initCallee = resolveDefinitionCall(initializer);
+            initCallee != nullptr && ir_lowerer::isStructDefinition(*initCallee)) {
+          initializerStructPath = initCallee->fullPath;
+        }
+      }
       for (const auto &variant : targetSum.sumVariants) {
-        const LocalInfo::ValueKind variantKind = sumPayloadKind(variant);
-        if (variantKind == LocalInfo::ValueKind::Unknown || variantKind != initializerKind) {
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (!resolveSumPayloadStorageInfo(targetSum, variant, payloadInfo)) {
+          continue;
+        }
+        const bool matchesPayload =
+            payloadInfo.isAggregate
+                ? (!initializerStructPath.empty() &&
+                   initializerStructPath == payloadInfo.structPath)
+                : payloadInfo.valueKind == initializerKind;
+        if (!matchesPayload) {
           continue;
         }
         if (matchedVariant != nullptr) {
           return false;
         }
         matchedVariant = &variant;
+        matchedPayloadInfo = std::move(payloadInfo);
       }
       if (matchedVariant == nullptr) {
         return false;
@@ -176,13 +248,16 @@
       selectionOut.sumDef = &targetSum;
       selectionOut.variant = matchedVariant;
       selectionOut.payloadExpr = &initializer;
-      selectionOut.payloadKind = sumPayloadKind(*matchedVariant);
+      selectionOut.payloadKind = matchedPayloadInfo.valueKind;
+      selectionOut.payloadStructPath = std::move(matchedPayloadInfo.structPath);
+      selectionOut.payloadSlotCount = matchedPayloadInfo.slotCount;
+      selectionOut.payloadIsAggregate = matchedPayloadInfo.isAggregate;
       return true;
     };
 
-    auto unsupportedAggregateSumPayloadError = [](const Definition &sumDef, const SumVariant &variant) {
-      return "native backend does not support aggregate sum payloads yet: " +
-             sumDef.fullPath + "/" + variant.name;
+    auto unsupportedSumPayloadError = [&](const Definition &sumDef, const SumVariant &variant) {
+      return "native backend does not support sum payload type: " +
+             sumDef.fullPath + "/" + variant.name + " (" + sumPayloadTypeText(variant) + ")";
     };
 
     auto emitLoweredSumHeader = [&](int32_t baseLocal, int32_t totalSlots) {
@@ -202,13 +277,29 @@
         error = "native backend could not select sum variant for " + sumDef.fullPath;
         return false;
       }
-      if (selection.payloadKind == LocalInfo::ValueKind::Unknown) {
-        error = unsupportedAggregateSumPayloadError(sumDef, *selection.variant);
-        return false;
-      }
       function.instructions.push_back(
           {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(selection.variant->variantIndex))});
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+      if (selection.payloadIsAggregate) {
+        if (!emitExpr(*selection.payloadExpr, valueLocals)) {
+          return false;
+        }
+        const int32_t srcPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        const int32_t destPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal + 2)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+        if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, selection.payloadSlotCount)) {
+          return false;
+        }
+        if (selection.payloadExpr->kind == Expr::Kind::Call) {
+          ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              srcPtrLocal,
+              selection.payloadStructPath);
+        }
+        return true;
+      }
       if (!emitExpr(*selection.payloadExpr, valueLocals)) {
         return false;
       }
@@ -225,9 +316,12 @@
       if (!loweredSumSlotCount(*sumDef, totalSlots)) {
         LoweredSumVariantSelection selection;
         if (selectExplicitSumVariantForConstructor(expr, *sumDef, selection) && selection.variant != nullptr) {
-          error = unsupportedAggregateSumPayloadError(*sumDef, *selection.variant);
+          error = unsupportedSumPayloadError(*sumDef, *selection.variant);
+        } else if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
+                   unsupportedVariant != nullptr) {
+          error = unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
         } else {
-          error = "native backend does not support aggregate sum payloads yet: " + sumDef->fullPath;
+          error = "native backend does not support sum payload type on " + sumDef->fullPath;
         }
         return false;
       }
@@ -277,15 +371,24 @@
             int32_t sumPtrLocal,
             LocalMap &branchLocals) -> bool {
       const LocalInfo::ValueKind payloadKind = sumPayloadKind(variant);
-      if (payloadKind == LocalInfo::ValueKind::Unknown) {
-        error = unsupportedAggregateSumPayloadError(sumDef, variant);
+      LoweredSumPayloadStorageInfo payloadStorage;
+      if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadStorage)) {
+        error = unsupportedSumPayloadError(sumDef, variant);
         return false;
       }
       LocalInfo payloadInfo;
       payloadInfo.kind = LocalInfo::Kind::Value;
-      payloadInfo.valueKind = payloadKind;
+      payloadInfo.valueKind = payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadKind;
+      payloadInfo.structTypeName = payloadStorage.structPath;
+      payloadInfo.structSlotCount = payloadStorage.slotCount;
       payloadInfo.index = nextLocal++;
-      emitLoadSumSlotIndirect(sumPtrLocal, 2);
+      if (payloadStorage.isAggregate) {
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
+        function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+      } else {
+        emitLoadSumSlotIndirect(sumPtrLocal, 2);
+      }
       function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadInfo.index)});
       branchLocals.emplace(binderExpr.name, payloadInfo);
       return true;
