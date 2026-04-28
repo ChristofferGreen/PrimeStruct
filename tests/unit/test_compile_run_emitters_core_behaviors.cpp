@@ -88,6 +88,54 @@ main() {
   CHECK(output.find("{[error]") == std::string::npos);
 }
 
+TEST_CASE("C++ emitter guards Result.why on ok bridge values") {
+  const std::string source = R"(
+import /std/file/*
+import /std/result/*
+
+[return<Result<FileError>>]
+make_status_ok() {
+  return(Result<FileError>{})
+}
+
+[return<Result<FileError>>]
+make_status_error() {
+  return(FileError.status(FileError.eof()))
+}
+
+[return<Result<i32, FileError>>]
+make_value_ok() {
+  return(Result<i32, FileError>{[ok] 7i32})
+}
+
+[return<Result<i32, FileError>>]
+make_value_error() {
+  return(FileError.result<i32>(FileError.eof()))
+}
+
+[return<int>]
+main() {
+  [string] statusOkWhy{Result.why(make_status_ok())}
+  [string] statusErrorWhy{Result.why(make_status_error())}
+  [string] valueOkWhy{Result.why(make_value_ok())}
+  [string] valueErrorWhy{Result.why(make_value_error())}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_result_why_guard.prime", source);
+  const std::string outPath = (testScratchPath("") / "primec_result_why_guard.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("if (!(ps_result_status_is_error(ps_result))) { return std::string_view(); }") !=
+        std::string::npos);
+  CHECK(output.find("if (!(ps_result_value_is_error(ps_result))) { return std::string_view(); }") !=
+        std::string::npos);
+  CHECK(output.find("ps_file_error_why(ps_result_status_error_payload(ps_result))") != std::string::npos);
+  CHECK(output.find("ps_file_error_why(ps_result_value_error_payload(ps_result))") != std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

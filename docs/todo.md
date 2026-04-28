@@ -329,8 +329,11 @@ Task template:
       supported `Result<T, E>{[ok] value}`,
       `Result<T, E>{[error] err}`, `Result<E>{}`, `Result<E>{ok}`, and
       `Result<E>{[error] err}` shapes now route through the same bridge
-      helper constructors. Remaining cleanup should retarget broader bridge
-      construction and propagation to the stdlib Result sum contract.
+      helper constructors. Source C++ `Result.why(...)` now binds status-only
+      and value-carrying bridge operands once, returns an empty string for
+      `ok` tags, and only calls the error-domain `why` helper for `error`
+      payloads. Remaining cleanup should retarget broader bridge construction
+      and propagation to the stdlib Result sum contract.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

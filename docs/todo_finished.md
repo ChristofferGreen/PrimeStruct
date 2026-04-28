@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4328: Guard source Result why bridge
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that prevents
+    `Result.why(...)` from calling error-domain helpers for `ok` bridge
+    values.
+  - implementation_notes:
+    - Bind source C++ `Result.why(...)` operands once inside the generated
+      expression before inspecting bridge tags.
+    - Return `std::string_view()` for `ok` status-only and value-carrying
+      bridge values.
+    - Preserve existing error-domain `why` helper dispatch for `error`
+      payloads.
+  - acceptance:
+    - Source C++ status-only `Result.why(...)` emits a tag guard before
+      extracting the status error payload.
+    - Source C++ value-carrying `Result.why(...)` emits a tag guard before
+      extracting the value error payload.
+    - C++ emitter coverage checks emitted source text for both guard forms
+      and FileError why payload calls.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once source C++ `Result.why(...)` returns the empty
+    string for `ok` bridge values and preserves existing `error` payload
+    helper dispatch.
+  - finished_at: 2026-04-28
+  - evidence: Added a single-evaluation source C++ `Result.why(...)` guard
+    for status-only and value-carrying bridge values, added C++ emitter
+    source-text coverage for both guard forms, and documented the remaining
+    broader bridge retargeting work. Local test execution was skipped per the
+    lite workflow.
+
 - [x] TODO-4327: Lower source Result sum constructors
   - owner: ai
   - created_at: 2026-04-28

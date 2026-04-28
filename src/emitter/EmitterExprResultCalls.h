@@ -104,11 +104,20 @@
     std::string argText =
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
+    const std::string guardedResultName = "ps_result";
+    const std::string resultIsErrorExpr =
+        resultInfo.hasValue ? sourceResultValueIsErrorExpr(guardedResultName)
+                            : sourceResultStatusIsErrorExpr(guardedResultName);
     const std::string errorExpr =
-        resultInfo.hasValue ? sourceResultValueErrorPayloadExpr(argText)
-                            : sourceResultStatusErrorPayloadExpr(argText);
+        resultInfo.hasValue ? sourceResultValueErrorPayloadExpr(guardedResultName)
+                            : sourceResultStatusErrorPayloadExpr(guardedResultName);
+    auto guardWhyExpr = [&](const std::string &whyExpr) {
+      return "([&]() -> std::string_view { auto " + guardedResultName + " = " + argText +
+             "; if (!(" + resultIsErrorExpr + ")) { return std::string_view(); } return " + whyExpr +
+             "; }())";
+    };
     if (resultInfo.errorType == "FileError") {
-      return "ps_file_error_why(" + errorExpr + ")";
+      return guardWhyExpr("ps_file_error_why(" + errorExpr + ")");
     }
     auto isSupportedErrorCodeType = [&](const BindingInfo &info) -> bool {
       if (!info.typeTemplateArg.empty()) {
@@ -192,12 +201,13 @@
               if (fieldType.empty()) {
                 fieldType = "uint32_t";
               }
-              return whyIt->second + "(" + ctorIt->second + "(static_cast<" + fieldType + ">(" + errorExpr + ")))";
+              return guardWhyExpr(whyIt->second + "(" + ctorIt->second + "(static_cast<" + fieldType + ">(" +
+                                  errorExpr + ")))");
             }
           }
         }
         if (isSupportedErrorCodeType(paramInfo)) {
-          return emitWhyCall(whyPath, paramInfo);
+          return guardWhyExpr(emitWhyCall(whyPath, paramInfo));
         }
       }
     }
@@ -209,7 +219,7 @@
       if (whyIt != nameMap.end() && whyParamsIt != paramMap.end() && whyParamsIt->second.size() == 1) {
         BindingInfo paramInfo = getBindingInfo(whyParamsIt->second.front());
         if (isSupportedErrorCodeType(paramInfo)) {
-          return emitWhyCall(whyPath, paramInfo);
+          return guardWhyExpr(emitWhyCall(whyPath, paramInfo));
         }
       }
     }
