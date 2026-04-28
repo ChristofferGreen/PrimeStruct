@@ -67,6 +67,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
+- TODO-4298: Promote graph-backed non-template inference authority
 - TODO-4266: Rewire `?` to the `Result` sum contract
 
 ### Immediate Next 10 (After Ready Now)
@@ -79,21 +80,23 @@ Task template:
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
+- TODO-4297: Add zero C++ vector-surface audit
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
-- TODO-4269: Bind and monomorphize type-pack arguments
 
 ### Priority Lanes (Current)
 
+- Semantic ownership authority: TODO-4298
 - Deferred stdlib ADT migration: TODO-4266 -> TODO-4267
   -> TODO-4291
 - Vector stdlib ownership cutover: TODO-4292 -> TODO-4293 -> TODO-4294
-  -> TODO-4281 -> TODO-4295 -> TODO-4296
+  -> TODO-4281 -> TODO-4295 -> TODO-4296 -> TODO-4297
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
 
 ### Execution Queue (Recommended)
 
+- TODO-4298: Promote graph-backed non-template inference authority
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
@@ -103,6 +106,7 @@ Task template:
 - TODO-4281: Lift vector dynamic capacity limit
 - TODO-4295: Move collection surface metadata out of C++
 - TODO-4296: Delete vector compatibility seams
+- TODO-4297: Add zero C++ vector-surface audit
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
 - TODO-4270: Add compile-time integer template arguments
@@ -119,16 +123,16 @@ Task template:
 
 | PrimeStruct area | Primary TODO IDs |
 | --- | --- |
-| Semantic ownership boundary and graph/local-auto authority | none |
+| Semantic ownership boundary and graph/local-auto authority | TODO-4298 |
 | Compile-pipeline stage and publication-boundary contracts | none |
 | Compile-time macro hooks and AST transform ownership | none |
 | Stdlib surface-style alignment and public helper readability | TODO-4292 |
-| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296 |
-| Vector/map stdlib ownership cutover and collection surface authority | TODO-4292, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296 |
-| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4292, TODO-4296 |
+| Stdlib bridge consolidation and collection/file/gfx surface authority | TODO-4295, TODO-4296, TODO-4297 |
+| Vector/map stdlib ownership cutover and collection surface authority | TODO-4292, TODO-4293, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297 |
+| Stdlib de-experimentalization and public/internal namespace cleanup | TODO-4292, TODO-4296, TODO-4297 |
 | SoA maturity and `soa_vector` promotion | none |
 | Validator entrypoint and benchmark-plumbing split | none |
-| Semantic-product publication by module and fact family | none |
+| Semantic-product publication by module and fact family | TODO-4298 |
 | Semantic-product public API factoring and versioning | none |
 | IR lowerer compile-unit breakup | none |
 | Backend validation/build ergonomics | none |
@@ -146,14 +150,14 @@ Task template:
 
 | Validation area | Primary TODO IDs |
 | --- | --- |
-| Semantic-product-authority conformance | none |
+| Semantic-product-authority conformance | TODO-4298 |
 | AST transform hook conformance | none |
 | CodeExamples-aligned stdlib surface syntax conformance | none |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
-| Lowerer/source-composition contract coverage | none |
-| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4292, TODO-4294, TODO-4281, TODO-4295, TODO-4296 |
-| De-experimentalization surface and namespace parity | TODO-4292, TODO-4296 |
+| Lowerer/source-composition contract coverage | TODO-4298 |
+| Vector/map bridge parity for imports, rewrites, and lowering | TODO-4292, TODO-4294, TODO-4281, TODO-4295, TODO-4296, TODO-4297 |
+| De-experimentalization surface and namespace parity | TODO-4292, TODO-4296, TODO-4297 |
 | `soa_vector` maturity and canonical surface parity | none |
 | Focused backend rerun ergonomics and suite partitioning | none |
 | Architecture contract probe migration | none |
@@ -177,11 +181,11 @@ Task template:
   `vectorCount` / `mapCount`-style lowering names, and
   `/std/collections/experimental_*` implementation modules stay temporary.
   The vector/map adapter cutover is complete for semantic and
-  template-monomorph helper decisions. TODO-4292 through TODO-4296 now split
+  template-monomorph helper decisions. TODO-4292 through TODO-4297 now split
   the vector half of that remaining seam into canonical implementation
   promotion, generic storage/lifecycle substrate, ordinary `.prime` lowering,
-  metadata extraction, and compatibility deletion. Add a separate map follow-up
-  before changing `/map/*`, `mapCount`-style, or
+  metadata extraction, compatibility deletion, and a final zero-C++-vector
+  audit. Add a separate map follow-up before changing `/map/*`, `mapCount`-style, or
   `/std/collections/experimental_map/*` public status.
 - Compatibility adapter inventory: map insert helper compatibility is migrated
   through `StdlibSurfaceRegistry::CollectionsMapHelpers` for canonical
@@ -209,6 +213,12 @@ Task template:
   contiguous-storage work that is required to make vector ordinary `.prime`
   code is tracked explicitly in TODO-4293 instead of being folded into
   TODO-4281.
+- End-state rule for vector: after TODO-4297, production C++ under `src/` and
+  `include/` must not contain PrimeStruct-vector-specific paths, helper names,
+  type names, diagnostics, parser/lowering branches, or metadata tables.
+  `std::vector` as the C++ standard-library container remains allowed; tests,
+  docs, generated source-lock fixtures, and stdlib `.prime` files may still
+  mention the PrimeStruct vector surface.
 
 ### Stdlib De-Experimentalization Policy Summary
 
@@ -285,6 +295,53 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
+
+- [ ] TODO-4298: Promote graph-backed non-template inference authority
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Migrate one remaining non-template inference island among
+    local-auto, query, `try(...)`, or `on_error` onto graph-owned semantic
+    facts, then delete or quarantine the old validator-local/recomputed branch
+    for that surface.
+  - implementation_notes:
+    - Start from the semantic ownership boundary and graph migration plan in
+      `docs/PrimeStruct.md`, especially the sections that call for
+      graph-backed inference facts to replace ad hoc ordering before template
+      inference and tuple/type-pack work expand the semantic surface.
+    - Inspect `src/semantics/SemanticsValidatorPassesDefinitions.cpp` for
+      validator-local inference structures, worker publication merging, and
+      post-worker fact sorting; use that inventory to choose one concrete
+      surface with a small but real consumer path.
+    - Candidate surfaces include local-auto facts, query facts, `try(...)`
+      facts, and `on_error` facts. Pick one, document why it is the first
+      slice, and keep broader template inference, tuple, and vector work out of
+      scope.
+    - Add semantic-product and lowerer contract coverage proving consumers read
+      the published graph-owned fact instead of reconstructing equivalent state
+      from AST or validator-local caches.
+  - acceptance:
+    - One chosen non-template inference surface is inventoried, and docs record
+      the old ownership path, the graph-backed fact that replaces it, and the
+      remaining adjacent islands.
+    - Semantic validation publishes the chosen fact through a graph-owned or
+      graph-authoritative path in deterministic order.
+    - Semantic-product publication exposes that fact through a narrow API that
+      downstream consumers can use without private validator state.
+    - At least one lowerer or backend-adapter consumer is changed to consume the
+      published fact and no longer reconstructs the same information from raw
+      AST, import aliases, or validator-local caches.
+    - The retired branch is deleted when possible, or quarantined behind an
+      explicitly named compatibility/test-only seam with a follow-up note.
+    - Tests cover the successful graph-backed path, a stale/contradictory fact
+      diagnostic, deterministic publication order, and the lowerer/adapter
+      consumer contract.
+    - No broader type-pack, tuple, template-inference, or collection feature
+      work is bundled into this task.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once exactly one non-template inference island has
+    graph-backed semantic-product authority, one downstream consumer depends on
+    it, and the old duplicate ownership path is removed or quarantined.
 
 - [ ] TODO-4266: Rewire `?` to the `Result` sum contract
   - owner: ai
@@ -926,8 +983,10 @@ Task template:
   - phase: Vector stdlib ownership cutover
   - depends_on: TODO-4294
   - scope: Remove vector-specific public-surface knowledge from handwritten C++
-    by moving canonical vector helper/import/constructor metadata into a
-    stdlib-owned manifest, generated table, or equivalent data-driven source.
+    and generated production C++ by moving canonical vector
+    helper/import/constructor metadata into a stdlib-owned manifest or
+    equivalent data-driven source consumed through generic collection-surface
+    APIs.
   - implementation_notes:
     - Start from `include/primec/StdlibSurfaceRegistry.h`,
       `src/StdlibSurfaceRegistry.cpp`,
@@ -935,24 +994,25 @@ Task template:
       wildcard import tests, and source locks that currently assert registry
       spellings.
     - The target is not to delete the notion of public stdlib surfaces; it is to
-      stop encoding vector-specific lists and compatibility names as procedural
-      C++ behavior.
-    - If a generated C++ table is used, keep the authoritative source outside
-      handwritten C++ and document the generation/update path.
+      stop encoding vector-specific lists and compatibility names in C++ source
+      at all. Avoid generated C++ tables that still contain PrimeStruct vector
+      strings; prefer a non-C++ manifest or stdlib metadata read through generic
+      code.
   - acceptance:
     - Canonical vector import, wildcard import, constructor, and method-helper
-      metadata is loaded from or generated from stdlib-owned data rather than
-      handwritten vector lists in production C++.
+      metadata is loaded from stdlib-owned data rather than handwritten or
+      generated vector lists in production C++.
     - Existing canonical vector behavior and diagnostics stay stable across
       repeated builds.
-    - Remaining handwritten C++ vector references, if any, are limited to tests,
-      source-lock probes, or the compatibility-deletion work tracked by
-      TODO-4296.
+    - Production `src/` and `include/` C++ no longer contain canonical vector
+      surface tables, path aliases, import aliases, constructor spellings, or
+      helper-name lists; temporary compatibility traces are limited to the
+      deletion work tracked by TODO-4296.
     - Docs describe the stdlib surface metadata ownership boundary.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once canonical vector surface metadata no longer requires
-    handwritten vector-specific C++ entries; leave removal of compatibility
-    spellings to TODO-4296.
+    PrimeStruct-vector-specific C++ entries; leave removal of compatibility
+    spellings and the final zero-trace audit to TODO-4296 and TODO-4297.
 
 - [ ] TODO-4296: Delete vector compatibility seams
   - owner: ai
@@ -981,10 +1041,50 @@ Task template:
     - Rooted `/vector/*`, `vectorCount`-style names, and direct
       `experimental_vector` imports are either removed from tests/docs or reject
       with stable, intentional compatibility diagnostics.
-    - Production C++ contains no procedural vector compatibility handling.
+    - Production C++ contains no PrimeStruct-vector-specific compatibility
+      handling, compatibility diagnostics, removed-helper adapters, parser/text
+      transform branches, lowerer raw-path checks, or surface metadata entries.
     - The de-experimentalization policy and vector/map bridge summary record the
       final vector status and any intentionally retained map seams.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once vector compatibility spellings are deleted or
     intentionally rejected and the only supported public vector surface is the
-    canonical stdlib one.
+    canonical stdlib one; leave the mechanical C++ trace audit to TODO-4297.
+
+- [ ] TODO-4297: Add zero C++ vector-surface audit
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Vector stdlib ownership cutover
+  - depends_on: TODO-4296
+  - scope: Add a deterministic validation gate that proves the PrimeStruct
+    vector surface is fully `.prime`/stdlib-owned and absent from production
+    C++ source.
+  - implementation_notes:
+    - Add a script or CTest-integrated check that scans production C++ under
+      `src/` and `include/` for PrimeStruct-vector-specific traces such as
+      `/vector`, `/std/collections/vector`, `experimental_vector`,
+      `vectorCount`, `vectorCapacity`, `vectorPush`, `vectorPop`,
+      `vectorReserve`, `vectorRemove`, `vectorAt`, `Vector<T>`, vector-specific
+      diagnostics, and vector-specific parser/semantic/lowering branch names.
+    - The check must allow ordinary C++ library usage such as `std::vector`,
+      variable names that refer to C++ containers, and test/docs/source-lock
+      files outside production `src/` and `include/`.
+    - If generic collection code needs examples or fixtures, place them in
+      tests/docs or stdlib-owned manifests rather than production C++ strings.
+  - acceptance:
+    - The audit runs in the release validation path and fails when a
+      PrimeStruct-vector-specific production C++ trace is reintroduced.
+    - The audit passes with canonical vector construction, imports, helper
+      calls, mutation, growth, destruction, and direct `.prime` implementation
+      behavior covered by existing tests.
+    - Production C++ under `src/` and `include/` contains no PrimeStruct vector
+      paths, helper aliases, type-name recognizers, diagnostics, special
+      parser/text-transform cases, semantic rewrites, lowering dispatches, or
+      metadata tables.
+    - The only allowed vector mentions after the audit are `std::vector` as a
+      C++ implementation container, stdlib `.prime` source, tests, docs, and
+      explicitly non-production generated source-lock fixtures.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the release gate mechanically enforces that vector is
+    fully stdlib-owned and no PrimeStruct-vector-specific production C++ traces
+    remain.
