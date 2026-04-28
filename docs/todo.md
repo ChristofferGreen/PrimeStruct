@@ -359,7 +359,8 @@ Task template:
     the query stale-target diagnostic slice is complete. The try on-error
     context diagnostic slice and try context-return diagnostic slice are
     complete. The return-fact stale diagnostic slice is complete. Continue
-    with a different control-flow/query consumer.
+    with a different control-flow/query consumer. The query result-metadata
+    stale diagnostic slice is complete.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -427,6 +428,10 @@ Task template:
       rejects stale interned return-kind metadata that contradicts the
       published callable summary before lowering can consume the inconsistent
       return fact.
+    - Completed slice: semantic-product query completeness validation now
+      rejects stale interned Result payload/error metadata that contradicts
+      the published callable summary for the resolved target before lowering
+      can consume the inconsistent query fact.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

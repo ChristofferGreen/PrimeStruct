@@ -270,6 +270,10 @@ Planned non-template inference migration contract:
   now checks query facts against the published direct or method call target for the same
   semantic node before lowerer result metadata can consume the query fact. Resolved-target
   mismatches fail closed with a deterministic stale query diagnostic.
+- Completed query result-metadata diagnostic slice: semantic-product query completeness validation
+  now checks interned query Result payload/error metadata against the published callable summary
+  for the resolved target before lowerer result metadata can consume the query fact. Contradictory
+  Result shape facts fail closed with a deterministic stale query metadata diagnostic.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

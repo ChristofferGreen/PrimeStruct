@@ -2497,6 +2497,72 @@ TEST_CASE("ir lowerer rejects stale semantic-product query facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product query result metadata") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8303,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "Result<i32, FileError>",
+      .bindingTypeText = "Result<i32, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8303,
+      .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "lookup"),
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .resultErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .returnKind = "i32",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .resultErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.queryFacts.back().resultValueType = "i64";
+  semanticProgram.queryFacts.back().resultValueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product query result metadata: lookup");
+
+  semanticProgram.queryFacts.back().resultValueType = "i32";
+  semanticProgram.queryFacts.back().resultValueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.queryFacts.back().resultTypeHasValue = false;
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product query result metadata: lookup");
+}
+
 TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
   primec::Program program;
 

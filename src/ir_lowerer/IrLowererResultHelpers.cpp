@@ -203,6 +203,40 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       error = "stale semantic-product query fact: " + queryCallName;
       return false;
     }
+    const auto *queryTargetSummary =
+        semanticProgramLookupPublishedCallableSummaryByPathId(*semanticProgram,
+                                                              queryFact->resolvedPathId);
+    const bool hasInternedQueryResultMetadata =
+        queryFact->resultValueTypeId != InvalidSymbolId ||
+        queryFact->resultErrorTypeId != InvalidSymbolId;
+    if (queryTargetSummary != nullptr && queryTargetSummary->hasResultType &&
+        queryFact->hasResultType && hasInternedQueryResultMetadata) {
+      const std::string_view queryResultValueType =
+          queryFact->resultValueTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, queryFact->resultValueTypeId)
+              : std::string_view(queryFact->resultValueType);
+      const std::string_view expectedResultValueType =
+          queryTargetSummary->resultValueTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                       queryTargetSummary->resultValueTypeId)
+              : std::string_view(queryTargetSummary->resultValueType);
+      const std::string_view queryResultErrorType =
+          queryFact->resultErrorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, queryFact->resultErrorTypeId)
+              : std::string_view(queryFact->resultErrorType);
+      const std::string_view expectedResultErrorType =
+          queryTargetSummary->resultErrorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                       queryTargetSummary->resultErrorTypeId)
+              : std::string_view(queryTargetSummary->resultErrorType);
+      if (queryFact->resultTypeHasValue != queryTargetSummary->resultTypeHasValue ||
+          (queryFact->resultTypeHasValue && !expectedResultValueType.empty() &&
+           queryResultValueType != expectedResultValueType) ||
+          (!expectedResultErrorType.empty() && queryResultErrorType != expectedResultErrorType)) {
+        error = "stale semantic-product query result metadata: " + queryCallName;
+        return false;
+      }
+    }
     if (queryFact->hasResultType && queryFact->resultTypeHasValue) {
       ResultExprInfo resultInfo;
       if (!applySemanticResultValueTypeText(queryFact->resultValueType, resultInfo)) {

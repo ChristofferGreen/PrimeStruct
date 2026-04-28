@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Reject stale query result metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    query completeness validation reject interned Result payload/error
+    metadata that contradicts the published callable summary for the resolved
+    target.
+  - implementation_notes:
+    - Preserve existing missing query target, stale query target, and
+      incomplete query fact diagnostics.
+    - Apply the new consistency check to interned semantic-product query
+      Result metadata so legacy string-only manual fixtures keep their
+      existing compatibility path.
+    - Keep broader control-flow, template inference, and Result lowering
+      migration out of scope.
+  - acceptance:
+    - Matching interned query Result metadata validates successfully.
+    - Stale query Result payload type or value/status shape facts fail before
+      lowering can consume inconsistent query metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once query semantic-product completeness rejects
+    contradictory Result metadata without changing syntax-only or
+    no-semantic-product behavior.
+  - finished_at: 2026-04-29
+  - evidence: Tightened query semantic-product completeness checks, added a
+    lowerer handoff regression for matching and stale query Result metadata,
+    and documented the remaining TODO-4298 work. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4298: Reject stale return facts
   - owner: ai
   - created_at: 2026-04-28
