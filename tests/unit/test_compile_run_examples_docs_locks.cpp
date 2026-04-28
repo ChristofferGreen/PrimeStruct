@@ -2260,9 +2260,12 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(prelude.find("using ps_legacy_result_value = uint64_t;") == std::string::npos);
   CHECK(prelude.find("ps_result_value_ok") != std::string::npos);
   CHECK(prelude.find("ps_result_value_error") != std::string::npos);
-  CHECK(prelude.find("ps_result_is_error") != std::string::npos);
-  CHECK(prelude.find("ps_result_error_payload") != std::string::npos);
-  CHECK(prelude.find("ps_result_payload") != std::string::npos);
+  CHECK(prelude.find("ps_result_value_is_error") != std::string::npos);
+  CHECK(prelude.find("ps_result_value_error_payload") != std::string::npos);
+  CHECK(prelude.find("ps_result_value_ok_payload") != std::string::npos);
+  CHECK(prelude.find("ps_result_is_error") == std::string::npos);
+  CHECK(prelude.find("ps_result_error_payload") == std::string::npos);
+  CHECK(prelude.find("ps_result_payload") == std::string::npos);
   CHECK(prelude.find("ps_result_pack") == std::string::npos);
   CHECK(prelude.find("static inline uint64_t ps_legacy_result_pack") == std::string::npos);
   CHECK(prelude.find("static inline uint64_t ps_file_open_read") == std::string::npos);
@@ -2275,6 +2278,12 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
         std::string::npos);
   CHECK(resultCalls.find("sourceResultValueOkExpr(") != std::string::npos);
   CHECK(resultCalls.find("sourceResultValueErrorExpr(") != std::string::npos);
+  CHECK(resultCalls.find("sourceResultValueIsErrorExpr(") != std::string::npos);
+  CHECK(resultCalls.find("sourceResultValueErrorPayloadExpr(") != std::string::npos);
+  CHECK(resultCalls.find("sourceResultValueOkPayloadExpr(") != std::string::npos);
+  CHECK(resultCalls.find("sourceResultIsErrorExpr(") == std::string::npos);
+  CHECK(resultCalls.find("sourceResultErrorPayloadExpr(") == std::string::npos);
+  CHECK(resultCalls.find("sourceResultValuePayloadExpr(") == std::string::npos);
   CHECK(resultCalls.find("sourceResultPackExpr") == std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusOkExpr()") != std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusIsErrorExpr(argText)") != std::string::npos);

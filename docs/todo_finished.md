@@ -6,6 +6,44 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4325: Qualify source Result value accessors
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that replaces the
+    remaining generic value-result accessor helper names with value-qualified
+    source bridge helpers.
+  - implementation_notes:
+    - Replace generated `ps_result_is_error`,
+      `ps_result_error_payload`, and `ps_result_payload` with
+      `ps_result_value_is_error`, `ps_result_value_error_payload`, and
+      `ps_result_value_ok_payload`.
+    - Route source C++ `Result.error(...)`, `Result.why(...)`,
+      map/and_then/map2 propagation, try/file bridge helpers, and entry
+      result unpacking through value-qualified accessor expressions.
+    - Leave broader source C++ bridge retargeting to the next TODO-4266
+      slice.
+  - acceptance:
+    - Source C++ value-result helper emission exposes
+      `sourceResultValueIsErrorExpr(...)`,
+      `sourceResultValueErrorPayloadExpr(...)`, and
+      `sourceResultValueOkPayloadExpr(...)`.
+    - The generated prelude emits value-qualified accessor helpers instead of
+      the old generic value-result accessor spellings.
+    - Result helper, combinator, try/file, and entry source C++ paths use the
+      value-qualified accessor helper expressions.
+    - Source-lock coverage rejects the removed generic accessor helper names.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once no source C++ generation path references the generic
+    value-result accessor helper names.
+  - finished_at: 2026-04-28
+  - evidence: Replaced the remaining generic source C++ value-result accessor
+    helper names with value-qualified prelude helpers and emitter expression
+    APIs, retargeted Result.error/why, map/and_then/map2, try/file bridge, and
+    entry unpacking paths, updated source-lock coverage, and documented the
+    remaining broader bridge retargeting work. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4324: Split source Result value construction
   - owner: ai
   - created_at: 2026-04-28

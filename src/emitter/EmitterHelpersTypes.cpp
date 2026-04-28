@@ -232,16 +232,16 @@ std::string sourceResultValueErrorExpr(const std::string &errorExpr) {
   return "ps_result_value_error(" + errorExpr + ")";
 }
 
-std::string sourceResultIsErrorExpr(const std::string &resultExpr) {
-  return "ps_result_is_error(" + resultExpr + ")";
+std::string sourceResultValueIsErrorExpr(const std::string &resultExpr) {
+  return "ps_result_value_is_error(" + resultExpr + ")";
 }
 
-std::string sourceResultErrorPayloadExpr(const std::string &resultExpr) {
-  return "ps_result_error_payload(" + resultExpr + ")";
+std::string sourceResultValueErrorPayloadExpr(const std::string &resultExpr) {
+  return "ps_result_value_error_payload(" + resultExpr + ")";
 }
 
-std::string sourceResultValuePayloadExpr(const std::string &resultExpr) {
-  return "ps_result_payload(" + resultExpr + ")";
+std::string sourceResultValueOkPayloadExpr(const std::string &resultExpr) {
+  return "ps_result_value_ok_payload(" + resultExpr + ")";
 }
 
 std::optional<std::string> trySourceResultCppType(const std::string &base,

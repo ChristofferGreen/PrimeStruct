@@ -595,10 +595,10 @@
     if (entryIsResult) {
       out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "(ps_args);\n";
       if (entryResultHasValue) {
-        out << "  if (" << sourceResultIsErrorExpr("ps_entry_result") << ") {\n";
-        out << "    return static_cast<int>(" << sourceResultErrorPayloadExpr("ps_entry_result") << ");\n";
+        out << "  if (" << sourceResultValueIsErrorExpr("ps_entry_result") << ") {\n";
+        out << "    return static_cast<int>(" << sourceResultValueErrorPayloadExpr("ps_entry_result") << ");\n";
         out << "  }\n";
-        out << "  return static_cast<int>(" << sourceResultValuePayloadExpr("ps_entry_result") << ");\n";
+        out << "  return static_cast<int>(" << sourceResultValueOkPayloadExpr("ps_entry_result") << ");\n";
       } else {
         out << "  if (" << sourceResultStatusIsErrorExpr("ps_entry_result") << ") {\n";
         out << "    return static_cast<int>(" << sourceResultStatusErrorPayloadExpr("ps_entry_result") << ");\n";
@@ -619,10 +619,10 @@
       out << "int main() {\n";
       out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "();\n";
       if (entryResultHasValue) {
-        out << "  if (" << sourceResultIsErrorExpr("ps_entry_result") << ") {\n";
-        out << "    return static_cast<int>(" << sourceResultErrorPayloadExpr("ps_entry_result") << ");\n";
+        out << "  if (" << sourceResultValueIsErrorExpr("ps_entry_result") << ") {\n";
+        out << "    return static_cast<int>(" << sourceResultValueErrorPayloadExpr("ps_entry_result") << ");\n";
         out << "  }\n";
-        out << "  return static_cast<int>(" << sourceResultValuePayloadExpr("ps_entry_result") << ");\n";
+        out << "  return static_cast<int>(" << sourceResultValueOkPayloadExpr("ps_entry_result") << ");\n";
       } else {
         out << "  if (" << sourceResultStatusIsErrorExpr("ps_entry_result") << ") {\n";
         out << "    return static_cast<int>(" << sourceResultStatusErrorPayloadExpr("ps_entry_result") << ");\n";

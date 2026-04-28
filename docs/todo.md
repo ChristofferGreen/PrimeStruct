@@ -317,9 +317,10 @@ Task template:
       emitter helpers. Value-carrying source C++ Result storage now emits the
       tagged `ps_result_value` bridge type instead of raw `uint64_t`
       return/binding types or legacy `ps_legacy_result_*` helper names; the
-      bridge exposes separate tag, error-payload, and success-payload accessors
-      plus explicit ok/error construction helpers. Raw packed-integer
-      conversion, construction compatibility, and the generated
+      bridge exposes value-qualified tag, error-payload, and success-payload
+      accessors plus explicit ok/error construction helpers. Raw
+      packed-integer conversion, construction compatibility, generic
+      `ps_result_*` value accessor names, and the generated
       `ps_result_pack(...)` helper have been deleted. Status-only source C++
       Result storage now emits the tagged `ps_result_status` bridge type
       instead of raw `uint32_t` return/binding types, and low-level file helper

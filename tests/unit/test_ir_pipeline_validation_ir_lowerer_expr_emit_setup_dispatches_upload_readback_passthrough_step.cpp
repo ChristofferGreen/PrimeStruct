@@ -573,12 +573,12 @@ TEST_CASE("emitter helpers expose source Result cpp bridge types") {
         "ps_result_value_ok(value)");
   CHECK(primec::emitter::sourceResultValueErrorExpr("err") ==
         "ps_result_value_error(err)");
-  CHECK(primec::emitter::sourceResultIsErrorExpr("result") ==
-        "ps_result_is_error(result)");
-  CHECK(primec::emitter::sourceResultErrorPayloadExpr("result") ==
-        "ps_result_error_payload(result)");
-  CHECK(primec::emitter::sourceResultValuePayloadExpr("result") ==
-        "ps_result_payload(result)");
+  CHECK(primec::emitter::sourceResultValueIsErrorExpr("result") ==
+        "ps_result_value_is_error(result)");
+  CHECK(primec::emitter::sourceResultValueErrorPayloadExpr("result") ==
+        "ps_result_value_error_payload(result)");
+  CHECK(primec::emitter::sourceResultValueOkPayloadExpr("result") ==
+        "ps_result_value_ok_payload(result)");
 
   const auto statusType =
       primec::emitter::trySourceResultCppType("Result", "FileError");

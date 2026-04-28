@@ -27,7 +27,7 @@
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     if (resultInfo.hasValue) {
-      return sourceResultIsErrorExpr(argText);
+      return sourceResultValueIsErrorExpr(argText);
     }
     return sourceResultStatusIsErrorExpr(argText);
   }
@@ -44,7 +44,7 @@
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     const std::string errorExpr =
-        resultInfo.hasValue ? sourceResultErrorPayloadExpr(argText)
+        resultInfo.hasValue ? sourceResultValueErrorPayloadExpr(argText)
                             : sourceResultStatusErrorPayloadExpr(argText);
     if (resultInfo.errorType == "FileError") {
       return "ps_file_error_why(" + errorExpr + ")";
@@ -177,11 +177,11 @@
     std::ostringstream out;
     out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
-    out << " if (" << sourceResultIsErrorExpr("ps_result") << ") {";
-    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_result")) << ";";
+    out << " if (" << sourceResultValueIsErrorExpr("ps_result") << ") {";
+    out << " return " << sourceResultValueErrorExpr(sourceResultValueErrorPayloadExpr("ps_result")) << ";";
     out << " }";
     out << " auto ps_value = static_cast<" << valueType << ">("
-        << sourceResultValuePayloadExpr("ps_result") << ");";
+        << sourceResultValueOkPayloadExpr("ps_result") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_value);";
     out << " return " << sourceResultValueOkExpr("static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
@@ -210,11 +210,11 @@
     std::ostringstream out;
     out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
-    out << " if (" << sourceResultIsErrorExpr("ps_result") << ") {";
-    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_result")) << ";";
+    out << " if (" << sourceResultValueIsErrorExpr("ps_result") << ") {";
+    out << " return " << sourceResultValueErrorExpr(sourceResultValueErrorPayloadExpr("ps_result")) << ";";
     out << " }";
     out << " auto ps_value = static_cast<" << valueType << ">("
-        << sourceResultValuePayloadExpr("ps_result") << ");";
+        << sourceResultValueOkPayloadExpr("ps_result") << ");";
     out << " auto ps_next = (" << lambdaExpr << ")(ps_value);";
     out << " return ps_next;";
     out << " }())";
@@ -253,17 +253,17 @@
     std::ostringstream out;
     out << "([&]() -> " << sourceResultValueCppType << " {";
     out << " auto ps_left = " << leftExpr << ";";
-    out << " if (" << sourceResultIsErrorExpr("ps_left") << ") {";
-    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_left")) << ";";
+    out << " if (" << sourceResultValueIsErrorExpr("ps_left") << ") {";
+    out << " return " << sourceResultValueErrorExpr(sourceResultValueErrorPayloadExpr("ps_left")) << ";";
     out << " }";
     out << " auto ps_right = " << rightExpr << ";";
-    out << " if (" << sourceResultIsErrorExpr("ps_right") << ") {";
-    out << " return " << sourceResultValueErrorExpr(sourceResultErrorPayloadExpr("ps_right")) << ";";
+    out << " if (" << sourceResultValueIsErrorExpr("ps_right") << ") {";
+    out << " return " << sourceResultValueErrorExpr(sourceResultValueErrorPayloadExpr("ps_right")) << ";";
     out << " }";
     out << " auto ps_left_value = static_cast<" << leftType << ">("
-        << sourceResultValuePayloadExpr("ps_left") << ");";
+        << sourceResultValueOkPayloadExpr("ps_left") << ");";
     out << " auto ps_right_value = static_cast<" << rightType << ">("
-        << sourceResultValuePayloadExpr("ps_right") << ");";
+        << sourceResultValueOkPayloadExpr("ps_right") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_left_value, ps_right_value);";
     out << " return " << sourceResultValueOkExpr("static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
