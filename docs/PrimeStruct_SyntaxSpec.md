@@ -786,7 +786,9 @@ local imported stdlib Result sums. `Result.error(value)` / `Result.why(value)` c
 Status-only `Result<E>` remains a packed-status compatibility bridge and is not pickable as a stdlib Result sum;
 `pick(status)` on status-only `Result<E>` reports a deterministic compatibility diagnostic. `try(...)` semantic
 validation and semantic-product metadata accept both `Result<T, E>` and `/std/result/Result<T, E>` value-result
-spellings, while `?` propagation stays a compatibility surface until its dedicated migration task lands.
+spellings. IR-backed `try(...)` can now consume local imported stdlib value-result sums for
+`return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag, while Result-return `?`
+propagation stays a compatibility surface until its dedicated migration task lands.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first

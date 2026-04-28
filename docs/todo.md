@@ -284,6 +284,10 @@ Task template:
       Result type parsing now recognize both `Result<T, E>` and the qualified
       `/std/result/Result<T, E>` spelling for value-carrying results. The
       remaining work is the actual sum-backed propagation/lowering contract.
+    - IR-backed `try(...)` now consumes local imported stdlib value-result sums
+      for `return<int> on_error<...>` status-code flows by branching on the
+      `ok`/`error` tag and extracting int-backed error payloads. Result-return
+      propagation remains open.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

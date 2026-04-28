@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4301: Branch try over stdlib Result sums for int returns
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 runtime slice by making IR-backed
+    `try(...)` consume local imported stdlib value-result sums for
+    `return<int> on_error<...>` status-code flows.
+  - implementation_notes:
+    - Keep this slice limited to local stdlib `Result<T, E>` sum operands and
+      `return<int>` propagation.
+    - Preserve Result-return propagation for a later TODO-4266 slice.
+    - Preserve status-only `Result<E>` as the packed compatibility path.
+  - acceptance:
+    - `try(localResultSum)` branches on the stdlib `ok`/`error` tag instead of
+      treating the sum pointer as a packed Result value.
+    - The `ok` branch yields the `ok` payload for downstream expression use.
+    - The `error` branch extracts an int-backed error payload, invokes the
+      active `on_error` handler, and returns the propagated status code for
+      `return<int>` functions.
+    - VM and native compile-run fixtures cover ok and error propagation from
+      imported stdlib Result sums.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once local stdlib value-result sum operands work for
+    IR-backed status-code `try(...)` propagation without widening into
+    Result-return lowering.
+  - finished_at: 2026-04-28
+  - evidence: Added stdlib Result sum tag branching in IR-backed
+    `try(...)`, preserved sum slot counts on local sum bindings, added VM and
+    native compile-run fixtures for ok and error branches, and documented that
+    Result-return propagation remains the next TODO-4266 slice. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4300: Recognize qualified Result sums in try metadata
   - owner: ai
   - created_at: 2026-04-28

@@ -780,5 +780,59 @@ main() {
   CHECK(readFile(outPath) == "7\n");
 }
 
+TEST_CASE("vm supports try on imported stdlib Result sum ok") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<int> on_error<MyError, /swallow>]
+main() {
+  [Result<i32, MyError>] status{ok<i32, MyError>(9i32)}
+  [i32] value{try(status)}
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_try_ok.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
+TEST_CASE("vm supports try on imported stdlib Result sum error") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<void> effects(io_out)]
+swallow([MyError] err) {
+  print_line(err.code)
+}
+
+[return<int> effects(io_out) on_error<MyError, /swallow>]
+main() {
+  [Result<i32, MyError>] status{error<i32, MyError>(MyError{})}
+  [i32] value{try(status)}
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_try_error.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_result_sum_try_error_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 6);
+  CHECK(readFile(outPath) == "6\n");
+}
+
 
 TEST_SUITE_END();

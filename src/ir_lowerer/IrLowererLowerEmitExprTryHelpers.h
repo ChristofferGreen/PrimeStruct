@@ -481,7 +481,8 @@
               if (!resolveStructSlotLayout(errorStructPath, layout)) {
                 return false;
               }
-              if (layout.fields.size() != 1 || !layout.fields.front().structPath.empty() ||
+              if (layout.fields.size() != 1 || layout.fields.front().slotOffset < 0 ||
+                  !layout.fields.front().structPath.empty() ||
                   layout.fields.front().valueKind != LocalInfo::ValueKind::Int32) {
                 error = "on_error requires int-backed error type";
                 return false;
@@ -548,6 +549,105 @@
             }
             return true;
           };
+
+          auto tryEmitStdlibResultSumTry = [&](bool &emittedOut) -> bool {
+            emittedOut = false;
+            if (currentReturnResult.has_value() || !resultInfo.hasValue ||
+                expr.args.front().kind != Expr::Kind::Name) {
+              return true;
+            }
+            auto operandIt = localsIn.find(expr.args.front().name);
+            if (operandIt == localsIn.end()) {
+              return true;
+            }
+            const Definition *sumDef = resolveSumDefinitionForLocalInfo(operandIt->second);
+            if (sumDef == nullptr || !isStdlibResultSumDefinition(*sumDef)) {
+              return true;
+            }
+            const SumVariant *okVariant = findSumVariantByName(*sumDef, "ok");
+            const SumVariant *errorVariant = findSumVariantByName(*sumDef, "error");
+            if (okVariant == nullptr || errorVariant == nullptr ||
+                !okVariant->hasPayload || !errorVariant->hasPayload) {
+              error = "native backend requires stdlib Result ok/error payload variants";
+              return false;
+            }
+            LoweredSumPayloadStorageInfo okPayload;
+            LoweredSumPayloadStorageInfo errorPayload;
+            if (!resolveSumPayloadStorageInfo(*sumDef, *okVariant, okPayload)) {
+              error = unsupportedSumPayloadError(*sumDef, *okVariant);
+              return false;
+            }
+            if (!resolveSumPayloadStorageInfo(*sumDef, *errorVariant, errorPayload)) {
+              error = unsupportedSumPayloadError(*sumDef, *errorVariant);
+              return false;
+            }
+
+            auto emitLoadIntBackedErrorPayload = [&](int32_t sumPtrLocal) -> bool {
+              if (!errorPayload.isAggregate) {
+                if (errorPayload.valueKind != LocalInfo::ValueKind::Int32) {
+                  error = "native backend requires int-backed stdlib Result error payloads";
+                  return false;
+                }
+                emitLoadSumSlotIndirect(sumPtrLocal, 2);
+                return true;
+              }
+              StructSlotLayoutInfo layout;
+              if (!resolveStructSlotLayout(errorPayload.structPath, layout)) {
+                return false;
+              }
+              if (layout.fields.size() != 1 || layout.fields.front().slotOffset < 0 ||
+                  !layout.fields.front().structPath.empty() ||
+                  layout.fields.front().valueKind != LocalInfo::ValueKind::Int32) {
+                error = "native backend requires int-backed stdlib Result error payloads";
+                return false;
+              }
+              emitLoadSumSlotIndirect(sumPtrLocal, 2 + layout.fields.front().slotOffset);
+              return true;
+            };
+
+            auto emitLoadOkPayload = [&](int32_t sumPtrLocal) -> bool {
+              if (okPayload.isAggregate) {
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
+                function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+                function.instructions.push_back({IrOpcode::AddI64, 0});
+                return true;
+              }
+              emitLoadSumSlotIndirect(sumPtrLocal, 2);
+              return true;
+            };
+
+            const int32_t sumPtrLocal = resultLocal;
+            emitSumTagComparison(sumPtrLocal, okVariant->variantIndex);
+            size_t jumpError = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            if (!emitLoadOkPayload(sumPtrLocal)) {
+              return false;
+            }
+            size_t jumpEnd = function.instructions.size();
+            function.instructions.push_back({IrOpcode::Jump, 0});
+            size_t errorIndex = function.instructions.size();
+            function.instructions[jumpError].imm = static_cast<int32_t>(errorIndex);
+            const int32_t errorLocal = allocTempLocal();
+            if (!emitLoadIntBackedErrorPayload(sumPtrLocal)) {
+              return false;
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
+            if (!emitOnErrorReturn(errorLocal)) {
+              return false;
+            }
+            size_t endIndex = function.instructions.size();
+            function.instructions[jumpEnd].imm = static_cast<int32_t>(endIndex);
+            emittedOut = true;
+            return true;
+          };
+
+          bool emittedStdlibResultSumTry = false;
+          if (!tryEmitStdlibResultSumTry(emittedStdlibResultSumTry)) {
+            return false;
+          }
+          if (emittedStdlibResultSumTry) {
+            return true;
+          }
 
           if (resultInfo.hasValue) {
             if (!ir_lowerer::isSupportedPackedResultValueInfo(

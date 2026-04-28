@@ -475,6 +475,7 @@
         info.kind = LocalInfo::Kind::Value;
         info.valueKind = LocalInfo::ValueKind::Int64;
         info.structTypeName = sumDef->fullPath;
+        info.structSlotCount = totalSlots;
         info.index = nextLocal++;
         emitLoweredSumHeader(baseLocal, totalSlots);
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
