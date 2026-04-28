@@ -233,6 +233,10 @@ Planned non-template inference migration contract:
   recursive expression-kind fallback can answer. Missing binding facts leave the payload kind
   unresolved on the semantic-product path while syntax-only compatibility keeps the legacy local
   reconstruction behavior.
+- Completed lowerer-side statement initializer binding slice: semantic-product-addressed statement
+  bindings initialized from names now prefer the published initializer binding fact before local-map
+  metadata can decide the collection shape. Syntax-only or no-semantic-product contexts keep the
+  legacy locals-based compatibility path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

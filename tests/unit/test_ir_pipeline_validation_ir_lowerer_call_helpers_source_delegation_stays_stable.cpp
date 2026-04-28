@@ -2652,6 +2652,68 @@ TEST_CASE("ir lowerer statement binding helper consumes semantic-product index d
   CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
 }
 
+TEST_CASE("ir lowerer statement binding helper prefers semantic initializer binding facts") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.bindingFacts.push_back(primec::SemanticProgramBindingFact{
+      .scopePath = "/main",
+      .siteKind = "local",
+      .name = "source",
+      .bindingTypeText = "map<i32, string>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 22,
+      .sourceColumn = 5,
+      .semanticNodeId = 7601,
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/source"),
+  });
+
+  primec::Expr bindingExpr;
+  bindingExpr.kind = primec::Expr::Kind::Name;
+  bindingExpr.isBinding = true;
+  bindingExpr.name = "selected";
+
+  primec::Expr initExpr;
+  initExpr.kind = primec::Expr::Kind::Name;
+  initExpr.name = "source";
+  initExpr.semanticNodeId = 7601;
+
+  primec::ir_lowerer::LocalInfo staleLocalInfo;
+  staleLocalInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Map;
+  staleLocalInfo.mapKeyKind = primec::ir_lowerer::LocalInfo::ValueKind::Int64;
+  staleLocalInfo.mapValueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  staleLocalInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Bool;
+  staleLocalInfo.structTypeName = "/stale/Map";
+  const primec::ir_lowerer::LocalMap locals{{"source", staleLocalInfo}};
+
+  const auto semanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&semanticProgram);
+  const primec::ir_lowerer::StatementBindingTypeInfo info =
+      primec::ir_lowerer::inferStatementBindingTypeInfo(
+          bindingExpr,
+          initExpr,
+          locals,
+          [](const primec::Expr &) { return false; },
+          [](const primec::Expr &) { return primec::ir_lowerer::LocalInfo::Kind::Value; },
+          [](const primec::Expr &, primec::ir_lowerer::LocalInfo::Kind) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+            return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+          },
+          {},
+          &semanticProgram,
+          &semanticIndex);
+
+  CHECK(info.kind == primec::ir_lowerer::LocalInfo::Kind::Map);
+  CHECK(info.mapKeyKind == primec::ir_lowerer::LocalInfo::ValueKind::Int32);
+  CHECK(info.mapValueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(info.valueKind == primec::ir_lowerer::LocalInfo::ValueKind::String);
+  CHECK(info.structTypeName != "/stale/Map");
+}
+
 TEST_CASE("ir lowerer semantic-product adapter ignores query resolved-path fallback") {
   primec::Expr queryExpr;
   queryExpr.kind = primec::Expr::Kind::Call;

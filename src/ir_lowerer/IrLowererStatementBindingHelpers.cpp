@@ -587,6 +587,10 @@ bool inferExprBindingTypeInfo(const Expr &expr,
                               const SemanticProductIndex *semanticIndex,
                               StatementBindingTypeInfo &infoOut) {
   infoOut = {};
+  if (populateBindingTypeInfoFromSemanticBindingFact(
+          expr, resolveDefinitionCall, semanticIndex, infoOut)) {
+    return true;
+  }
   if (expr.kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.name);
     if (it == localsIn.end()) {
@@ -630,10 +634,6 @@ bool inferExprBindingTypeInfo(const Expr &expr,
   if (expr.kind == Expr::Kind::StringLiteral) {
     infoOut.kind = LocalInfo::Kind::Value;
     infoOut.valueKind = LocalInfo::ValueKind::String;
-    return true;
-  }
-  if (populateBindingTypeInfoFromSemanticBindingFact(
-          expr, resolveDefinitionCall, semanticIndex, infoOut)) {
     return true;
   }
   if (isIfCall(expr) && expr.args.size() == 3) {
@@ -801,14 +801,20 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   const bool hasSemanticBindingInfo = populateBindingTypeInfoFromSemanticBindingFact(
       stmt, safeResolveDefinitionCall, semanticIndex, semanticInfo);
   deferSurfaceStructTypeName(semanticInfo);
+  StatementBindingTypeInfo semanticInitInfo;
+  const bool hasSemanticInitBindingInfo = !hasExplicitType &&
+      populateBindingTypeInfoFromSemanticBindingFact(
+          init, safeResolveDefinitionCall, semanticIndex, semanticInitInfo);
+  deferSurfaceStructTypeName(semanticInitInfo);
   if (!hasExplicitType && hasSemanticBindingInfo) {
     return semanticInfo;
   }
   LocalInfo::ValueKind inferredInitValueKind = LocalInfo::ValueKind::Unknown;
   if (!hasExplicitType && info.kind == LocalInfo::Kind::Value) {
     if (init.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(init.name);
-      if (it != localsIn.end()) {
+      if (hasSemanticInitBindingInfo) {
+        info.kind = semanticInitInfo.kind;
+      } else if (auto it = localsIn.find(init.name); it != localsIn.end()) {
         info.kind = it->second.kind;
       }
     } else if (init.kind == Expr::Kind::Call) {
@@ -883,8 +889,14 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
         }
       }
     } else if (init.kind == Expr::Kind::Name) {
-      auto it = localsIn.find(init.name);
-      if (it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
+      if (hasSemanticInitBindingInfo && semanticInitInfo.kind == LocalInfo::Kind::Map) {
+        info.mapKeyKind = semanticInitInfo.mapKeyKind;
+        info.mapValueKind = semanticInitInfo.mapValueKind;
+        if (info.structTypeName.empty()) {
+          info.structTypeName = semanticInitInfo.structTypeName;
+        }
+      } else if (auto it = localsIn.find(init.name);
+                 it != localsIn.end() && it->second.kind == LocalInfo::Kind::Map) {
         info.mapKeyKind = it->second.mapKeyKind;
         info.mapValueKind = it->second.mapValueKind;
         if (info.structTypeName.empty()) {

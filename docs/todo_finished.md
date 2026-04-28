@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Prefer initializer binding facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes statement
+    bindings initialized from semantic-product-addressed names prefer
+    published initializer binding facts before local-map metadata can decide
+    collection shape.
+  - implementation_notes:
+    - Apply the authority boundary only when a semantic binding fact is
+      available for the initializer expression.
+    - Preserve syntax-only and no-semantic-product compatibility behavior.
+    - Keep broader local-auto and control-flow migration out of scope.
+  - acceptance:
+    - Published semantic initializer binding facts recover statement binding
+      map key/value metadata.
+    - Conflicting local-map metadata no longer overrides the published
+      semantic initializer binding fact.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once name-initialized statement binding metadata prefers
+    published initializer binding facts without changing syntax-only
+    compatibility behavior.
+  - finished_at: 2026-04-28
+  - evidence: Tightened `IrLowererStatementBindingHelpers.cpp` so
+    name-initialized statement binding inference consults semantic binding
+    facts before local-map metadata, added lowerer coverage with conflicting
+    stale local map facts, and documented the remaining TODO-4298 work. Local
+    test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Require Result ok name binding facts
   - owner: ai
   - created_at: 2026-04-28
