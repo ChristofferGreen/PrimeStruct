@@ -56,7 +56,6 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   std::string &error = errorOut;
 
   LowerSetupStageState &setupStage = *input.setupStage;
-  const Definition *entryDef = setupStage.entryDef;
   auto &defMap = setupStage.defMap;
   auto &structNames = setupStage.structNames;
   auto &structFieldInfoByName = setupStage.structFieldInfoByName;

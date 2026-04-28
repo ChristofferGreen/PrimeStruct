@@ -2,6 +2,7 @@
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererBindingTypeHelpers.h"
+#include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
