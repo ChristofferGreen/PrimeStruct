@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4312: Lower status-only stdlib Result helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 runtime slice by making IR-backed
+    `Result.error(...)` and `Result.why(...)` inspect imported status-only
+    stdlib Result sums.
+  - implementation_notes:
+    - Keep the helper-specific pointer-preserving operand emission scoped to
+      `Result.error(...)` / `Result.why(...)`.
+    - Cover local, direct-call, and dereferenced local borrowed/pointer
+      imported status-only Result operands in one coherent helper-call slice.
+    - Preserve non-VM/native bridge cleanup for later TODO-4266 work.
+  - acceptance:
+    - `Result.error(localStatus)` and `Result.why(localStatus)` read the
+      lowered stdlib sum tag/payload for imported status-only `Result<E>`.
+    - `Result.error(makeStatus())` and `Result.why(makeStatus())` read direct
+      calls returning imported status-only `Result<E>`.
+    - `Result.error(dereference(refOrPtr))` and
+      `Result.why(dereference(refOrPtr))` preserve borrowed/pointer sum
+      storage for local `Reference<Result<E>>` / `Pointer<Result<E>>` sources.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once imported status-only Result helper calls work on the
+    local/direct-call/borrowed operand families without widening into bridge
+    deletion.
+  - finished_at: 2026-04-28
+  - evidence: Taught `Result.error(...)` and `Result.why(...)` to consume
+    imported status-only stdlib Result sums from locals, direct calls, and
+    dereferenced local reference/pointer operands. Added IR/VM coverage for
+    those success/error helper paths. Local test execution was skipped per the
+    lite workflow.
+
 - [x] TODO-4311: Lower borrowed status-only stdlib Result try
   - owner: ai
   - created_at: 2026-04-28

@@ -517,13 +517,16 @@ TEST_CASE("ir lowerer result helpers try emit Result.error method calls") {
       };
 
   std::vector<primec::IrInstruction> instructions;
+  std::unordered_map<std::string, const primec::Definition *> defMap;
   int allocCounter = 0;
   int emitCalls = 0;
   std::string error;
   const EmitResult emitted = primec::ir_lowerer::tryEmitResultErrorCall(
       expr,
       locals,
+      defMap,
       resolveResultExprInfo,
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
       [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &valueLocals) {
         ++emitCalls;
         CHECK(valueExpr.kind == primec::Expr::Kind::Name);
@@ -570,7 +573,9 @@ TEST_CASE("ir lowerer result helpers try emit Result.error method calls") {
   const EmitResult badCall = primec::ir_lowerer::tryEmitResultErrorCall(
       expr,
       locals,
+      defMap,
       resolveResultExprInfo,
+      [](const primec::Expr &) -> const primec::Definition * { return nullptr; },
       [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
       [&]() { return 0; },
       [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },

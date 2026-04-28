@@ -588,7 +588,9 @@
         const auto resultErrorCallResult = ir_lowerer::tryEmitResultErrorCall(
             expr,
             localsIn,
+            defMap,
             resolveResultExprInfo,
+            [&](const Expr &valueExpr) { return resolveDefinitionCall(valueExpr); },
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return emitExpr(valueExpr, valueLocals);
             },
@@ -607,6 +609,7 @@
             defMap,
             onErrorTempCounter,
             resolveResultExprInfo,
+            [&](const Expr &valueExpr) { return resolveDefinitionCall(valueExpr); },
             [&](const Expr &valueExpr, const LocalMap &valueLocals) {
               return emitExpr(valueExpr, valueLocals);
             },

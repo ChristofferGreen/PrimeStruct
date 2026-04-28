@@ -484,7 +484,9 @@ bool resolveResultErrorCallInfo(const Expr &expr,
 ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     const Expr &expr,
     const LocalMap &localsIn,
+    const std::unordered_map<std::string, const Definition *> &defMap,
     const ResolveResultExprInfoWithLocalsFn &resolveResultExprInfo,
+    const ResolveCallDefinitionFn &resolveDefinitionCall,
     const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
     const std::function<int32_t()> &allocTempLocal,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
@@ -500,22 +502,81 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     return ResultErrorMethodCallEmitResult::Error;
   }
 
-  auto isStdlibResultSumValue = [&]() {
-    const Expr &valueExpr = expr.args[1];
-    if (valueExpr.kind != Expr::Kind::Name) {
-      return false;
-    }
-    auto localIt = localsIn.find(valueExpr.name);
-    if (localIt == localsIn.end()) {
-      return false;
-    }
-    const std::string &structType = localIt->second.structTypeName;
-    return structType == "/std/result/Result" ||
-           structType.rfind("/std/result/Result__", 0) == 0;
+  auto hasImportedStdlibResultSum = [&]() {
+    return defMap.find("/std/result/Result") != defMap.end();
   };
 
-  if (isStdlibResultSumValue()) {
-    if (!emitExpr(expr.args[1], localsIn)) {
+  auto directCallReturnsImportedStdlibResultSum = [&](const Expr &valueExpr) {
+    if (valueExpr.kind != Expr::Kind::Call || valueExpr.isMethodCall ||
+        resultInfo.hasValue || !resolveDefinitionCall || !hasImportedStdlibResultSum()) {
+      return false;
+    }
+    const Definition *calleeDef = resolveDefinitionCall(valueExpr);
+    if (calleeDef == nullptr) {
+      return false;
+    }
+    for (const auto &transform : calleeDef->transforms) {
+      if (transform.name != "return" || transform.templateArgs.size() != 1) {
+        continue;
+      }
+      std::string base;
+      std::string argList;
+      if (!splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, argList)) {
+        continue;
+      }
+      if (normalizeCollectionBindingTypeName(base) == "Result") {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  auto tryEmitStdlibResultSumValue = [&](bool &emittedOut) -> bool {
+    emittedOut = false;
+    const Expr &valueExpr = expr.args[1];
+    if (valueExpr.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(valueExpr.name);
+      if (localIt != localsIn.end()) {
+        const std::string &structType = localIt->second.structTypeName;
+        if (structType == "/std/result/Result" ||
+            structType.rfind("/std/result/Result__", 0) == 0) {
+          emittedOut = true;
+          return emitExpr(valueExpr, localsIn);
+        }
+      }
+    }
+    if (directCallReturnsImportedStdlibResultSum(valueExpr)) {
+      emittedOut = true;
+      return emitExpr(valueExpr, localsIn);
+    }
+    if (valueExpr.kind == Expr::Kind::Call &&
+        isSimpleCallName(valueExpr, "dereference") &&
+        valueExpr.args.size() == 1 &&
+        valueExpr.args.front().kind == Expr::Kind::Name &&
+        !resultInfo.hasValue &&
+        hasImportedStdlibResultSum()) {
+      auto localIt = localsIn.find(valueExpr.args.front().name);
+      if (localIt != localsIn.end() &&
+          (localIt->second.kind == LocalInfo::Kind::Reference ||
+           localIt->second.kind == LocalInfo::Kind::Pointer) &&
+          localIt->second.isResult &&
+          !localIt->second.resultHasValue &&
+          trimTemplateTypeText(localIt->second.resultErrorType) ==
+              trimTemplateTypeText(resultInfo.errorType)) {
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index));
+        emittedOut = true;
+        return true;
+      }
+    }
+    return true;
+  };
+
+  bool emittedStdlibResultSum = false;
+  if (!tryEmitStdlibResultSumValue(emittedStdlibResultSum)) {
+    return ResultErrorMethodCallEmitResult::Error;
+  }
+  if (emittedStdlibResultSum) {
+    if (!emitExpr) {
       return ResultErrorMethodCallEmitResult::Error;
     }
     const int32_t resultLocal = allocTempLocal();

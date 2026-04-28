@@ -1,5 +1,11 @@
 #include "test_ir_pipeline_validation_helpers.h"
 
+namespace {
+const primec::Definition *noResolveDefinition(const primec::Expr &) {
+  return nullptr;
+}
+} // namespace
+
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.validation");
 
 TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
@@ -46,6 +52,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
               out.errorType = "AnyInt";
               return true;
             },
+            noResolveDefinition,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [&]() {
               ++allocCounter;
@@ -95,6 +102,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
               return false;
             },
+            noResolveDefinition,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&]() { return 0; },
             [&](primec::IrOpcode, uint64_t) {},
@@ -123,6 +131,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
               return false;
             },
+            noResolveDefinition,
             [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&]() { return 0; },
             [&](primec::IrOpcode, uint64_t) {},
@@ -186,6 +195,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               out.errorType = "AnyInt";
               return true;
             },
+            noResolveDefinition,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             [&]() {
               ++allocCounter;
@@ -246,6 +256,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               out.errorType = "FileError";
               return true;
             },
+            noResolveDefinition,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             []() { return 0; },
             [&](primec::IrOpcode, uint64_t) {},
@@ -297,6 +308,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               out.errorType = "/std/file/FileError";
               return true;
             },
+            noResolveDefinition,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
             []() { return 0; },
             [&](primec::IrOpcode, uint64_t) {},
@@ -344,6 +356,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
               return false;
             },
+            noResolveDefinition,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             []() { return 0; },
             [&](primec::IrOpcode, uint64_t) {},
@@ -379,6 +392,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
               return false;
             },
+            noResolveDefinition,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             []() { return 0; },
             [](primec::IrOpcode, uint64_t) {},
@@ -407,6 +421,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
               return false;
             },
+            noResolveDefinition,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             []() { return 0; },
             [](primec::IrOpcode, uint64_t) {},
@@ -442,6 +457,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, primec::ir_lowerer::ResultExprInfo &) {
               return false;
             },
+            noResolveDefinition,
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             []() { return 0; },
             [](primec::IrOpcode, uint64_t) {},

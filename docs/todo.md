@@ -302,8 +302,10 @@ Task template:
       construction, `ok<E>()`, and semantic `pick` coverage. IR-backed
       `try(...)` now consumes local, direct-call, and dereferenced local
       borrowed/pointer imported status-only `Result<E>` sums for status-code
-      returns and Result-return error propagation. Remaining work covers
-      status-only helper-call lowering and non-VM/native bridge cleanup.
+      returns and Result-return error propagation. IR-backed
+      `Result.error(...)` / `Result.why(...)` now inspect those same imported
+      status-only operand families. Remaining work covers non-VM/native bridge
+      cleanup.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the
