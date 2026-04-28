@@ -56,6 +56,9 @@ build and layout solidify.
   call syntax. `Type(...)` is an ordinary execution/call shape only. Struct constructor braces map arguments to fields
   (positional/labeled); they do not forward to `Create()`. Implementation is tracked in `docs/todo.md`.
 - Lifecycle helpers (`Create`/`Destroy`) must be `void` and accept no parameters.
+- `Copy`/`Move` lifecycle helpers must be `void` and accept exactly one
+  `Reference<Self>` parameter; `Copy(other)` / `Move(other)` shorthand
+  desugars to that parameter form inside a struct.
 - Non-lifecycle helpers only get an implicit `this` when nested inside the struct body; helpers defined as `/Type/Name`
   outside the struct should use an explicit `self` parameter if they want method-call sugar.
 

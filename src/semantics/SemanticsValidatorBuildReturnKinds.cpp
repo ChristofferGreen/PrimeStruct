@@ -204,6 +204,10 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
         kind = hasExplicitSumReturn
                    ? ReturnKind::Array
                    : getReturnKind(def, structNames_, importAliases_, returnKindError);
+        if (kind == ReturnKind::Unknown && isLifecycleHelperName(def.fullPath) &&
+            !def.returnExpr.has_value()) {
+          kind = ReturnKind::Void;
+        }
       }
       if (!returnKindError.empty()) {
         if (!addReturnKindDiagnostic(returnKindError)) {

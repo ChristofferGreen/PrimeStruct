@@ -56,7 +56,7 @@ use() {
 TEST_CASE("struct transform rejects parameters") {
   const std::string source = R"(
 [struct]
-main{[i32] x} {
+main([i32] x) {
   [i32] value{1i32}
 }
 )";

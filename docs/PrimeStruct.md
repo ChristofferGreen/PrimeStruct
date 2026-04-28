@@ -3122,19 +3122,18 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   - **Effect interaction:** a zero-arg constructor is outside-effect-free only when both `Create()` (if present) and all
     field initializers are effect-free under the “no outside effects” rules.
 
-## Move/Clone/Destroy
-- **Lifecycle set:** structured types can define `Create`, `Move`, `Clone`, and `Destroy` helpers. `Create`/`Destroy`
-  are optional hooks; `Move`/`Clone` must be nested inside the struct, return `void`, and accept exactly one parameter.
-- **Clone signature:** the canonical clone constructor is `Clone([Reference<Self>] other) { ... }`. A shorthand
-  `Clone(other) { ... }` desugars to the reference form.
+## Move/Copy/Destroy
+- **Lifecycle set:** structured types can define `Create`, `Move`, `Copy`, and `Destroy` helpers. `Create`/`Destroy`
+  are optional hooks; `Move`/`Copy` must be nested inside the struct, return `void`, and accept exactly one parameter.
+- **Copy signature:** the canonical copy constructor is `Copy([Reference<Self>] other) { ... }`. A shorthand
+  `Copy(other) { ... }` desugars to the reference form.
 - **Move-by-default:** assignments, argument passing, and returns consume values unless the type is `Copy` or the value
   is a `Reference<T>`.
 - **`Copy` types (Rust-aligned):** values that can be duplicated by a simple bitwise copy with no custom destruction.
   - Built-in `Copy` types: `bool`, `i32`, `i64`, `u64`, `f32`, `f64`, `Pointer<T>`, `Reference<T>`.
-  - Structs are `Copy` when they are `[pod]`, all fields are `Copy`, and they do **not** define `Destroy` or `Clone`.
+  - Structs are `Copy` when they are `[pod]`, all fields are `Copy`, and they do **not** define `Destroy` or `Copy`.
   - Types with `handle`/`gpu_lane` fields are not `Copy` (they cannot be `[pod]`).
-- **Explicit clone:** `clone(value)` invokes the `Clone` helper and returns a new value. It is a compile-time error if
-  the type does not define `Clone`.
+- **Copy helper use:** ownership-sensitive lowering may route aggregate duplication through `Copy` when one exists.
 - **Move signature:** the canonical move constructor is `Move([Reference<Self>] other) { ... }`. A shorthand
   `Move(other) { ... }` desugars to the reference form.
 - **Explicit move:** `move(value)` is the explicit consume helper. It requires a local binding or parameter name (no
