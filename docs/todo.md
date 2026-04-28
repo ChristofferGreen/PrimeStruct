@@ -361,9 +361,9 @@ Task template:
     diagnostic slice is complete. The try on-error context diagnostic slice
     and try context-return diagnostic slice are complete. The try
     result-metadata and operand-metadata stale diagnostic slices are complete.
-    The return-fact stale diagnostic slice is complete. Continue with a
-    different control-flow/query consumer. The query result-metadata and
-    type-metadata stale diagnostic slices are complete.
+    The return-fact stale diagnostic and return metadata diagnostic slices are
+    complete. Continue with a different control-flow/query consumer. The query
+    result-metadata and type-metadata stale diagnostic slices are complete.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -447,6 +447,10 @@ Task template:
       rejects stale interned return-kind metadata that contradicts the
       published callable summary before lowering can consume the inconsistent
       return fact.
+    - Completed slice: semantic-product return completeness validation now
+      rejects missing or stale interned return binding type, struct path, and
+      reference-root metadata before return inference can read inconsistent
+      return fact text fields.
     - Completed slice: semantic-product query completeness validation now
       rejects stale interned Result payload/error metadata that contradicts
       the published callable summary for the resolved target before lowering

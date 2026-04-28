@@ -2364,6 +2364,8 @@ TEST_CASE("ir lowerer rejects stale semantic-product return facts") {
       .definitionPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .structPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/i32"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
 
   std::string error;
@@ -2371,9 +2373,37 @@ TEST_CASE("ir lowerer rejects stale semantic-product return facts") {
       &semanticProgram, error));
   CHECK(error.empty());
 
+  semanticProgram.returnFacts.back().bindingTypeTextId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "missing semantic-product return binding type id: /main");
+
+  semanticProgram.returnFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product return binding type metadata: /main");
+
+  semanticProgram.returnFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.returnFacts.back().structPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/Other");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product return struct path metadata: /main");
+
+  semanticProgram.returnFacts.back().structPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/i32");
   semanticProgram.returnFacts.back().returnKind = "return";
   semanticProgram.returnFacts.back().returnKindId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "return");
+  error.clear();
 
   CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
       &semanticProgram, error));

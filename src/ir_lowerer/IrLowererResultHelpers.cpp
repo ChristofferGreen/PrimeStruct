@@ -176,13 +176,36 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
   for (const auto *returnFact : returnFacts) {
     const std::string_view definitionPath =
         semanticProgramReturnFactDefinitionPath(*semanticProgram, *returnFact);
+    const std::string returnDefinitionPath(definitionPath);
     if (returnFact->definitionPathId == InvalidSymbolId || definitionPath.empty()) {
       error = "missing semantic-product return definition path id";
       return false;
     }
     if (returnFact->bindingTypeText.empty()) {
-      error = "missing semantic-product return binding type: " +
-              std::string(definitionPath);
+      error = "missing semantic-product return binding type: " + returnDefinitionPath;
+      return false;
+    }
+    if (!validateInternedSemanticTextMetadata(*semanticProgram,
+                                              returnFact->bindingTypeTextId,
+                                              returnFact->bindingTypeText,
+                                              "return",
+                                              "binding type",
+                                              returnDefinitionPath,
+                                              error) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              returnFact->structPathId,
+                                              returnFact->structPath,
+                                              "return",
+                                              "struct path",
+                                              returnDefinitionPath,
+                                              error) ||
+        !validateInternedSemanticTextMetadata(*semanticProgram,
+                                              returnFact->referenceRootId,
+                                              returnFact->referenceRoot,
+                                              "return",
+                                              "reference root",
+                                              returnDefinitionPath,
+                                              error)) {
       return false;
     }
     if (returnFact->returnKindId != InvalidSymbolId) {
@@ -197,8 +220,7 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
                 : std::string_view(summary->returnKind);
         if (!returnKind.empty() && !expectedReturnKind.empty() &&
             returnKind != expectedReturnKind) {
-          error = "stale semantic-product return fact: " +
-                  std::string(definitionPath);
+          error = "stale semantic-product return fact: " + returnDefinitionPath;
           return false;
         }
       }

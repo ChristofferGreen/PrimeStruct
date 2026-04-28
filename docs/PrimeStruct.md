@@ -275,6 +275,10 @@ Planned non-template inference migration contract:
   checks interned return-kind facts against the published callable summary before lowerer handoff
   can consume inconsistent control-flow metadata. Contradictory return-kind facts fail closed with
   a deterministic return diagnostic.
+- Completed return metadata diagnostic slice: semantic-product return completeness validation now
+  checks interned return binding type, struct path, and reference-root metadata before return
+  inference can consume inconsistent return fact text fields. Missing or contradictory present ids
+  fail closed with deterministic return metadata diagnostics.
 - Completed `on_error` stale-fact diagnostic slice: semantic-product on-error completeness
   validation now checks the on-error fact against the published callable summary before lowerer
   setup can install the handler. Handler path, error-type, and bound-arg-count mismatches fail

@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Reject stale return metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    return completeness validation reject missing or stale interned return
+    binding type, struct path, and reference-root metadata before return
+    inference can read inconsistent return fact text fields.
+  - implementation_notes:
+    - Preserve existing missing return definition path, missing return binding
+      type, and stale return-kind diagnostics.
+    - Apply the new consistency check only when the interned return metadata
+      id is present so string-only manual fixtures keep their existing
+      compatibility path.
+    - Keep broader control-flow, template inference, and Result lowering
+      migration out of scope.
+  - acceptance:
+    - Missing return binding type ids fail before lowering can consume
+      incomplete return metadata.
+    - Stale return binding type and struct path ids fail before return
+      inference can consume inconsistent return metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once return semantic-product completeness rejects missing
+    or contradictory return metadata without changing syntax-only or
+    no-semantic-product behavior.
+  - finished_at: 2026-04-29
+  - evidence: Tightened return semantic-product completeness checks, expanded
+    lowerer handoff regressions for missing return binding type ids and stale
+    return binding type and struct path metadata, and documented the remaining
+    TODO-4298 work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Reject stale try operand metadata
   - owner: ai
   - created_at: 2026-04-28
