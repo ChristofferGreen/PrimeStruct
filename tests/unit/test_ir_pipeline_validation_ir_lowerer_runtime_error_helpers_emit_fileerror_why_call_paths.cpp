@@ -64,6 +64,26 @@ TEST_CASE("ir lowerer runtime error helpers emit FileError.why call paths") {
   instructions.clear();
   error.clear();
   emittedWhyLocal = -1;
+  emitExprCalls = 0;
+  CHECK(primec::ir_lowerer::tryEmitFileErrorWhyCall(
+            expr,
+            locals,
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              ++emitExprCalls;
+              return true;
+            },
+            []() { return 42; },
+            [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+            std::function<void(int32_t)>(),
+            error) == Result::Error);
+  CHECK(error == "FileError.why emitter is unavailable");
+  CHECK(emitExprCalls == 0);
+  CHECK(instructions.empty());
+  CHECK(emittedWhyLocal == -1);
+
+  instructions.clear();
+  error.clear();
+  emittedWhyLocal = -1;
   expr.isMethodCall = true;
   expr.namespacePrefix.clear();
   expr.name = "why";

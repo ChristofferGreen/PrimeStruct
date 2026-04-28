@@ -630,7 +630,7 @@
             [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals) {
               return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
             },
-            [&](int32_t emittedErrorLocal) { return emitFileErrorWhy(emittedErrorLocal); },
+            emitFileErrorWhy,
             &function.instructions,
             error);
         if (resultWhyDispatchResult == ir_lowerer::ResultWhyDispatchEmitResult::Emitted) {

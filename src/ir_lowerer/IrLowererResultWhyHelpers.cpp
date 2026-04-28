@@ -355,15 +355,19 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     return ResultWhyDispatchEmitResult::Error;
   }
 
+  std::function<void(int32_t)> emitFileErrorWhyThunk;
+  if (emitFileErrorWhy) {
+    emitFileErrorWhyThunk = [&](int32_t errorLocal) {
+      (void)emitFileErrorWhy(errorLocal);
+    };
+  }
   const FileErrorWhyCallEmitResult fileErrorWhyResult = tryEmitFileErrorWhyCall(
       expr,
       localsIn,
       emitExpr,
       allocTempLocal,
       emitInstruction,
-      [&](int32_t errorLocal) {
-        (void)emitFileErrorWhy(errorLocal);
-      },
+      emitFileErrorWhyThunk,
       error);
   if (fileErrorWhyResult == FileErrorWhyCallEmitResult::Emitted) {
     return ResultWhyDispatchEmitResult::Emitted;
@@ -745,6 +749,10 @@ ResultWhyCallEmitResult emitResolvedResultWhyCall(
   }
 
   if (resultInfo.errorType == "FileError" || resultInfo.errorType == "/std/file/FileError") {
+    if (!ops.emitFileErrorWhy) {
+      error = "FileError.why emitter is unavailable";
+      return ResultWhyCallEmitResult::Error;
+    }
     return ops.emitFileErrorWhy(errorLocal) ? ResultWhyCallEmitResult::Emitted
                                             : ResultWhyCallEmitResult::Error;
   }

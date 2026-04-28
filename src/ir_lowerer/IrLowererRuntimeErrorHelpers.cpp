@@ -311,10 +311,20 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
     }
     return candidate.name;
   };
+  auto requireFileErrorWhyEmitter = [&]() {
+    if (emitFileErrorWhyFn) {
+      return true;
+    }
+    error = "FileError.why emitter is unavailable";
+    return false;
+  };
 
   if (!expr.isMethodCall && resolveDirectCallPath() == "/file_error/why") {
     if (expr.args.size() != 1) {
       error = "FileError.why requires exactly one argument";
+      return FileErrorWhyCallEmitResult::Error;
+    }
+    if (!requireFileErrorWhyEmitter()) {
       return FileErrorWhyCallEmitResult::Error;
     }
     if (!emitExpr(expr.args.front(), localsIn)) {
@@ -334,6 +344,9 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
         error = "FileError.why requires exactly one argument";
         return FileErrorWhyCallEmitResult::Error;
       }
+      if (!requireFileErrorWhyEmitter()) {
+        return FileErrorWhyCallEmitResult::Error;
+      }
       if (!emitExpr(expr.args[1], localsIn)) {
         return FileErrorWhyCallEmitResult::Error;
       }
@@ -348,6 +361,9 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
       expr.args.front().kind == Expr::Kind::Name) {
     auto it = localsIn.find(expr.args.front().name);
     if (it != localsIn.end() && it->second.isFileError) {
+      if (!requireFileErrorWhyEmitter()) {
+        return FileErrorWhyCallEmitResult::Error;
+      }
       if (it->second.kind == LocalInfo::Kind::Reference || it->second.kind == LocalInfo::Kind::Pointer) {
         emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
         emitInstruction(IrOpcode::LoadIndirect, 0);
@@ -372,6 +388,9 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
           (it->second.argsPackElementKind == LocalInfo::Kind::Value ||
            it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
            it->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
+        if (!requireFileErrorWhyEmitter()) {
+          return FileErrorWhyCallEmitResult::Error;
+        }
         Expr valueExpr = receiver;
         if (it->second.argsPackElementKind != LocalInfo::Kind::Value) {
           valueExpr.kind = Expr::Kind::Call;
@@ -396,6 +415,9 @@ FileErrorWhyCallEmitResult tryEmitFileErrorWhyCall(
         if (it != localsIn.end() && it->second.isArgsPack && it->second.isFileError &&
             (it->second.argsPackElementKind == LocalInfo::Kind::Reference ||
              it->second.argsPackElementKind == LocalInfo::Kind::Pointer)) {
+          if (!requireFileErrorWhyEmitter()) {
+            return FileErrorWhyCallEmitResult::Error;
+          }
           if (!emitExpr(receiver, localsIn)) {
             return FileErrorWhyCallEmitResult::Error;
           }

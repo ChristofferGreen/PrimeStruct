@@ -251,6 +251,13 @@ TEST_CASE("ir lowerer result helpers emit resolved Result.why calls") {
             resultWhyExpr, fileErrorResultInfo, locals, 17, defMap, ops, error) ==
         EmitResult::Emitted);
   CHECK(fileErrorCalls == 1);
+
+  ops.emitFileErrorWhy = {};
+  error.clear();
+  CHECK(primec::ir_lowerer::emitResolvedResultWhyCall(
+            resultWhyExpr, fileErrorResultInfo, locals, 17, defMap, ops, error) ==
+        EmitResult::Error);
+  CHECK(error == "FileError.why emitter is unavailable");
 }
 
 TEST_CASE("ir lowerer map insert helper writes grown pointers back through wrapper locals") {
