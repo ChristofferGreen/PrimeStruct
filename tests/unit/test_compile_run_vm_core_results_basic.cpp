@@ -834,5 +834,87 @@ main() {
   CHECK(readFile(outPath) == "6\n");
 }
 
+TEST_CASE("vm propagates imported stdlib Result sum try ok through Result return") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<Result<i32, MyError>> on_error<MyError, /swallow>]
+forward_ok() {
+  [Result<i32, MyError>] status{ok<i32, MyError>(9i32)}
+  [i32] value{try(status)}
+  return(Result.ok(plus(value, 1i32)))
+}
+
+[return<int>]
+main() {
+  [Result<i32, MyError>] status{forward_ok()}
+  [i32] observed{pick(status) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  return(observed)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_try_result_return_ok.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 10);
+}
+
+TEST_CASE("vm propagates imported stdlib Result sum try error through Result return") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<void> effects(io_out)]
+swallow([MyError] err) {
+  print_line(err.code)
+}
+
+[return<Result<i32, MyError>> effects(io_out) on_error<MyError, /swallow>]
+forward_error() {
+  [Result<i32, MyError>] status{error<i32, MyError>(MyError{})}
+  [i32] value{try(status)}
+  return(Result.ok(value))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, MyError>] status{forward_error()}
+  [i32] observed{pick(status) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  return(observed)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_try_result_return_error.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_result_sum_try_result_return_error_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 6);
+  CHECK(readFile(outPath) == "6\n");
+}
 
 TEST_SUITE_END();

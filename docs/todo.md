@@ -287,7 +287,10 @@ Task template:
     - IR-backed `try(...)` now consumes local imported stdlib value-result sums
       for `return<int> on_error<...>` status-code flows by branching on the
       `ok`/`error` tag and extracting int-backed error payloads. Result-return
-      propagation remains open.
+      functions now propagate local imported stdlib value-result sum errors by
+      copying the `error` payload into the declared return `Result` sum.
+      Remaining work covers postfix `?`, broader operand shapes, status-only
+      results, and non-VM/native bridge cleanup.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

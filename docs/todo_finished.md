@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4302: Propagate stdlib Result sums from Result-returning try
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 runtime slice by making IR-backed
+    `try(...)` propagate local imported stdlib value-result sum errors from
+    functions whose declared return type is also an imported stdlib
+    `Result<T, E>` sum.
+  - implementation_notes:
+    - Keep this slice limited to local stdlib `Result<T, E>` sum operands and
+      VM/native Result-returning functions.
+    - Preserve status-code propagation and status-only `Result<E>` as the
+      packed compatibility paths.
+    - Reuse the active `on_error` handler before constructing the propagated
+      error return sum.
+  - acceptance:
+    - The `ok` branch still yields the `ok` payload for downstream expression
+      use inside Result-returning functions.
+    - The `error` branch extracts the int-backed error payload, invokes the
+      active `on_error` handler, and returns an imported stdlib `Result<T, E>`
+      sum with the `error` variant active.
+    - VM and native compile-run fixtures cover ok and error propagation from
+      imported stdlib Result sums through Result-returning functions.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once local stdlib value-result sum operands work for
+    IR-backed Result-returning `try(...)` propagation without widening into
+    postfix `?`, status-only results, or borrowed/pointer operand shapes.
+  - finished_at: 2026-04-28
+  - evidence: Split on_error handler emission from packed error returns,
+    added a stdlib Result-return path that copies matching error payload
+    storage into the declared return sum, added VM and native compile-run
+    fixtures for ok and error propagation through Result-returning functions,
+    and documented the remaining TODO-4266 migration boundary. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4301: Branch try over stdlib Result sums for int returns
   - owner: ai
   - created_at: 2026-04-28

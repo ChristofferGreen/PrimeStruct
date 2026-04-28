@@ -787,8 +787,10 @@ Status-only `Result<E>` remains a packed-status compatibility bridge and is not 
 `pick(status)` on status-only `Result<E>` reports a deterministic compatibility diagnostic. `try(...)` semantic
 validation and semantic-product metadata accept both `Result<T, E>` and `/std/result/Result<T, E>` value-result
 spellings. IR-backed `try(...)` can now consume local imported stdlib value-result sums for
-`return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag, while Result-return `?`
-propagation stays a compatibility surface until its dedicated migration task lands.
+`return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag, and Result-returning functions can
+propagate local imported stdlib value-result sum errors by copying the `error` payload into the declared return
+`Result` sum after running the active `on_error` handler. Postfix `?`, broader operand/result shapes, and status-only
+results remain compatibility surfaces until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first

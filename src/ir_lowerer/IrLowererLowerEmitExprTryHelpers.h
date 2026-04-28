@@ -453,7 +453,7 @@
           const int32_t resultLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
 
-          auto emitOnErrorReturn = [&](int32_t errorLocal) -> bool {
+          auto emitOnErrorHandlerCall = [&](int32_t errorLocal) -> bool {
             const OnErrorHandler &handler = *currentOnError;
             auto defIt = defMap.find(handler.handlerPath);
             if (defIt == defMap.end()) {
@@ -519,7 +519,13 @@
             if (!handlerReturn.returnsVoid) {
               function.instructions.push_back({IrOpcode::Pop, 0});
             }
+            return true;
+          };
 
+          auto emitOnErrorReturn = [&](int32_t errorLocal) -> bool {
+            if (!emitOnErrorHandlerCall(errorLocal)) {
+              return false;
+            }
             const bool returnHasValue = currentReturnResult.has_value() && currentReturnResult->hasValue;
             if (activeInlineContext) {
               InlineContext &context = *activeInlineContext;
@@ -552,8 +558,7 @@
 
           auto tryEmitStdlibResultSumTry = [&](bool &emittedOut) -> bool {
             emittedOut = false;
-            if (currentReturnResult.has_value() || !resultInfo.hasValue ||
-                expr.args.front().kind != Expr::Kind::Name) {
+            if (!resultInfo.hasValue || expr.args.front().kind != Expr::Kind::Name) {
               return true;
             }
             auto operandIt = localsIn.find(expr.args.front().name);
@@ -581,6 +586,30 @@
               error = unsupportedSumPayloadError(*sumDef, *errorVariant);
               return false;
             }
+
+            auto resolveCurrentStdlibResultReturnSumDefinition = [&]() -> const Definition * {
+              if (!currentReturnResult.has_value()) {
+                return nullptr;
+              }
+              const std::string &definitionPath =
+                  activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+              auto defIt = defMap.find(definitionPath);
+              if (defIt == defMap.end() || defIt->second == nullptr) {
+                return nullptr;
+              }
+              for (const auto &transform : defIt->second->transforms) {
+                if (transform.name != "return" || transform.templateArgs.size() != 1) {
+                  continue;
+                }
+                const Definition *returnSumDef =
+                    resolveSumDefinitionForTypeText(trimTemplateTypeText(transform.templateArgs.front()),
+                                                    defIt->second->namespacePrefix);
+                if (returnSumDef != nullptr && isStdlibResultSumDefinition(*returnSumDef)) {
+                  return returnSumDef;
+                }
+              }
+              return nullptr;
+            };
 
             auto emitLoadIntBackedErrorPayload = [&](int32_t sumPtrLocal) -> bool {
               if (!errorPayload.isAggregate) {
@@ -616,6 +645,103 @@
               return true;
             };
 
+            auto emitCopyTryResultErrorPayload =
+                [&](const Definition &sourceSumDef,
+                    const SumVariant &sourceErrorVariant,
+                    const Definition &targetSumDef,
+                    const SumVariant &targetErrorVariant,
+                    int32_t sourceSumPtrLocal,
+                    int32_t targetBaseLocal) -> bool {
+              LoweredSumPayloadStorageInfo sourcePayload;
+              LoweredSumPayloadStorageInfo targetPayload;
+              if (!resolveSumPayloadStorageInfo(sourceSumDef, sourceErrorVariant, sourcePayload)) {
+                error = unsupportedSumPayloadError(sourceSumDef, sourceErrorVariant);
+                return false;
+              }
+              if (!resolveSumPayloadStorageInfo(targetSumDef, targetErrorVariant, targetPayload)) {
+                error = unsupportedSumPayloadError(targetSumDef, targetErrorVariant);
+                return false;
+              }
+              if (sourcePayload.isAggregate != targetPayload.isAggregate ||
+                  sourcePayload.valueKind != targetPayload.valueKind ||
+                  sourcePayload.structPath != targetPayload.structPath ||
+                  sourcePayload.slotCount != targetPayload.slotCount) {
+                error = "native backend try requires matching stdlib Result error payload storage";
+                return false;
+              }
+              if (sourcePayload.isAggregate) {
+                const int32_t srcPtrLocal = allocTempLocal();
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+                function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+                function.instructions.push_back({IrOpcode::AddI64, 0});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+                const int32_t destPtrLocal = allocTempLocal();
+                function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+                return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, sourcePayload.slotCount);
+              }
+              emitLoadSumSlotIndirect(sourceSumPtrLocal, 2);
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
+              return true;
+            };
+
+            auto emitReturnStdlibResultErrorPayload =
+                [&](int32_t sourceSumPtrLocal,
+                    const Definition &sourceSumDef,
+                    const SumVariant &sourceErrorVariant,
+                    const Definition &targetSumDef) -> bool {
+              const SumVariant *targetErrorVariant = findSumVariantByName(targetSumDef, "error");
+              if (targetErrorVariant == nullptr || !targetErrorVariant->hasPayload) {
+                error = "native backend requires stdlib Result error payload variant";
+                return false;
+              }
+              int32_t totalSlots = 0;
+              if (!loweredSumSlotCount(targetSumDef, totalSlots)) {
+                error = "native backend does not support sum payload type on " +
+                        targetSumDef.fullPath;
+                return false;
+              }
+              const int32_t baseLocal = nextLocal;
+              nextLocal += totalSlots;
+              const int32_t ptrLocal = nextLocal++;
+              emitLoweredSumHeader(baseLocal, totalSlots);
+              function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back(
+                  {IrOpcode::PushI32, static_cast<uint64_t>(targetErrorVariant->variantIndex)});
+              function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+              if (!emitCopyTryResultErrorPayload(sourceSumDef,
+                                                 sourceErrorVariant,
+                                                 targetSumDef,
+                                                 *targetErrorVariant,
+                                                 sourceSumPtrLocal,
+                                                 baseLocal)) {
+                return false;
+              }
+              if (activeInlineContext) {
+                InlineContext &context = *activeInlineContext;
+                if (context.returnLocal < 0) {
+                  error = "native backend missing inline return local";
+                  return false;
+                }
+                function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+                function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(context.returnLocal)});
+                size_t jumpIndex = function.instructions.size();
+                function.instructions.push_back({IrOpcode::Jump, 0});
+                context.returnJumps.push_back(jumpIndex);
+                return true;
+              }
+              emitFileScopeCleanupAll();
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+              function.instructions.push_back({IrOpcode::ReturnI64, 0});
+              return true;
+            };
+
+            const Definition *returnSumDef = resolveCurrentStdlibResultReturnSumDefinition();
+            if (currentReturnResult.has_value() && returnSumDef == nullptr) {
+              return true;
+            }
+
             const int32_t sumPtrLocal = resultLocal;
             emitSumTagComparison(sumPtrLocal, okVariant->variantIndex);
             size_t jumpError = function.instructions.size();
@@ -632,7 +758,14 @@
               return false;
             }
             function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(errorLocal)});
-            if (!emitOnErrorReturn(errorLocal)) {
+            if (returnSumDef != nullptr) {
+              if (!emitOnErrorHandlerCall(errorLocal)) {
+                return false;
+              }
+              if (!emitReturnStdlibResultErrorPayload(sumPtrLocal, *sumDef, *errorVariant, *returnSumDef)) {
+                return false;
+              }
+            } else if (!emitOnErrorReturn(errorLocal)) {
               return false;
             }
             size_t endIndex = function.instructions.size();
