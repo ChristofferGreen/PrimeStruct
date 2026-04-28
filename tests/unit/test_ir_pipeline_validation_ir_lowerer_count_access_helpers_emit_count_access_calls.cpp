@@ -102,6 +102,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
 
   primec::ir_lowerer::LocalMap experimentalVectorLocals;
   primec::ir_lowerer::LocalInfo experimentalVectorInfo;
+  experimentalVectorInfo.index = 3;
   experimentalVectorInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   experimentalVectorInfo.valueKind =
       primec::ir_lowerer::LocalInfo::ValueKind::Int32;
@@ -130,9 +131,12 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
-            error) == Result::NotHandled);
+            error) == Result::Emitted);
   CHECK(error.empty());
-  CHECK(instructions.empty());
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 3);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -162,9 +166,10 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
-  CHECK(fieldCountEmitExprCalls == 1);
+  CHECK(fieldCountEmitExprCalls == 0);
   REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 3);
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
@@ -194,9 +199,10 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
-  CHECK(fieldCapacityEmitExprCalls == 1);
+  CHECK(fieldCapacityEmitExprCalls == 0);
   REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 3);
   CHECK(instructions[1].op == primec::IrOpcode::PushI64);
   CHECK(instructions[1].imm == primec::IrSlotBytes);
   CHECK(instructions[2].op == primec::IrOpcode::AddI64);
@@ -229,6 +235,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
 
   primec::ir_lowerer::LocalMap soaStorageLocals;
   primec::ir_lowerer::LocalInfo soaColumnInfo;
+  soaColumnInfo.index = 4;
   soaColumnInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   soaColumnInfo.structTypeName =
       "/std/collections/internal_soa_storage/SoaColumn__ti32";
@@ -262,13 +269,11 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
-  CHECK(soaFieldCountEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
-  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+  CHECK(soaFieldCountEmitExprCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 4);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   instructions.clear();
   error.clear();
@@ -297,16 +302,18 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
-  CHECK(soaFieldCapacityEmitExprCalls == 1);
+  CHECK(soaFieldCapacityEmitExprCalls == 0);
   REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 4);
   CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == 2 * primec::IrSlotBytes);
+  CHECK(instructions[1].imm == primec::IrSlotBytes);
   CHECK(instructions[2].op == primec::IrOpcode::AddI64);
   CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
 
   primec::ir_lowerer::LocalMap genericSoaStorageLocals;
   primec::ir_lowerer::LocalInfo genericSoaColumnInfo;
+  genericSoaColumnInfo.index = 5;
   genericSoaColumnInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Value;
   genericSoaColumnInfo.structTypeName = "SoaColumn<i32>";
   genericSoaStorageLocals.emplace("values", genericSoaColumnInfo);
@@ -338,13 +345,11 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             },
             [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
             error) == Result::Emitted);
-  CHECK(genericSoaFieldCountEmitExprCalls == 1);
-  REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].op == primec::IrOpcode::PushI64);
-  CHECK(instructions[1].imm == primec::IrSlotBytes);
-  CHECK(instructions[2].op == primec::IrOpcode::AddI64);
-  CHECK(instructions[3].op == primec::IrOpcode::LoadIndirect);
+  CHECK(genericSoaFieldCountEmitExprCalls == 0);
+  REQUIRE(instructions.size() == 2);
+  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].imm == 5);
+  CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
   callExpr.isMethodCall = false;
   instructions.clear();
