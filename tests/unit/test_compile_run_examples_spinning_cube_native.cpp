@@ -94,6 +94,10 @@ TEST_CASE("spinning cube stdlib gfx frame stream entry stays source locked") {
   CHECK(cubeSource.find("device.create_swapchain(") != std::string::npos);
   CHECK(cubeSource.find("device.create_mesh([vertices] vertices, [indices] indices)?") != std::string::npos);
   CHECK(cubeSource.find("device.create_pipeline(") != std::string::npos);
+  CHECK(cubeSource.find("[i32] frameToken{plus(swapchain.token, 1i32)}") != std::string::npos);
+  CHECK(cubeSource.find("[Frame] frame{Frame{[token] frameToken}}") != std::string::npos);
+  CHECK(cubeSource.find("[Frame] frame{Frame{[token] plus(swapchain.token, 1i32)}}") ==
+        std::string::npos);
   CHECK(cubeSource.find("frame.render_pass(") != std::string::npos);
   CHECK(cubeSource.find("pass.draw_mesh(mesh, material)") != std::string::npos);
   CHECK(cubeSource.find("pass.end()") != std::string::npos);

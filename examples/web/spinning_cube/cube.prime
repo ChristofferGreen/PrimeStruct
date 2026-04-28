@@ -348,7 +348,8 @@ cubeStdGfxEmitFrameStream() {
       log_gfx_error(frameAcquireFailed())
       return(7i32)
     }
-    [Frame] frame{Frame{[token] plus(swapchain.token, 1i32)}}
+    [i32] frameToken{plus(swapchain.token, 1i32)}
+    [Frame] frame{Frame{[token] frameToken}}
     [RenderPass] pass{
       frame.render_pass(
         [clear_color] clearColor,
