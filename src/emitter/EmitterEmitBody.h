@@ -530,7 +530,7 @@
       if (resultHasValue) {
         out << "    return " << sourceResultPackExpr("ps_unwind.error", "0u") << ";\n";
       } else {
-        out << "    return ps_unwind.error;\n";
+        out << "    return " << sourceResultStatusErrorExpr("ps_unwind.error") << ";\n";
       }
       out << "  }\n";
     } else {
@@ -600,7 +600,10 @@
         out << "  }\n";
         out << "  return static_cast<int>(" << sourceResultValuePayloadExpr("ps_entry_result") << ");\n";
       } else {
-        out << "  return static_cast<int>(ps_entry_result);\n";
+        out << "  if (" << sourceResultStatusIsErrorExpr("ps_entry_result") << ") {\n";
+        out << "    return static_cast<int>(" << sourceResultStatusErrorPayloadExpr("ps_entry_result") << ");\n";
+        out << "  }\n";
+        out << "  return 0;\n";
       }
     } else if (entryReturn == ReturnKind::Void) {
       out << "  " << nameMap.at(entryPath) << "(ps_args);\n";
@@ -621,7 +624,10 @@
         out << "  }\n";
         out << "  return static_cast<int>(" << sourceResultValuePayloadExpr("ps_entry_result") << ");\n";
       } else {
-        out << "  return static_cast<int>(ps_entry_result);\n";
+        out << "  if (" << sourceResultStatusIsErrorExpr("ps_entry_result") << ") {\n";
+        out << "    return static_cast<int>(" << sourceResultStatusErrorPayloadExpr("ps_entry_result") << ");\n";
+        out << "  }\n";
+        out << "  return 0;\n";
       }
       out << "}\n";
     } else if (entryReturn == ReturnKind::Void) {

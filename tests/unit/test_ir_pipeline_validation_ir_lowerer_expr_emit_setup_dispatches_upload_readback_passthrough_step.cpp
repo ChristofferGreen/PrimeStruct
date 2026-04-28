@@ -558,8 +558,17 @@ TEST_CASE("emitter helpers expose source Result cpp bridge types") {
   CHECK(primec::emitter::isResultBindingTypeName("std/result/Result"));
   CHECK_FALSE(primec::emitter::isResultBindingTypeName("ResultLike"));
 
-  CHECK(primec::emitter::sourceResultCppType(false) == "uint32_t");
+  CHECK(primec::emitter::sourceResultCppType(false) == "ps_result_status");
   CHECK(primec::emitter::sourceResultCppType(true) == "ps_result_value");
+  CHECK(primec::emitter::sourceResultStatusOkExpr() == "ps_result_status_ok()");
+  CHECK(primec::emitter::sourceResultStatusErrorExpr("err") ==
+        "ps_result_status_error(err)");
+  CHECK(primec::emitter::sourceResultStatusFromErrorExpr("err") ==
+        "ps_result_status_from_error(err)");
+  CHECK(primec::emitter::sourceResultStatusIsErrorExpr("result") ==
+        "ps_result_status_is_error(result)");
+  CHECK(primec::emitter::sourceResultStatusErrorPayloadExpr("result") ==
+        "ps_result_status_error_payload(result)");
   CHECK(primec::emitter::sourceResultPackExpr("err", "value") ==
         "ps_result_pack(err, value)");
   CHECK(primec::emitter::sourceResultIsErrorExpr("result") ==

@@ -319,9 +319,11 @@ Task template:
       types or legacy `ps_legacy_result_*` helper names; the bridge exposes
       separate tag, error-payload, and success-payload accessors. Raw
       packed-integer conversion and construction compatibility have been
-      deleted. Remaining cleanup should retarget status-only source C++ Result
-      storage and broader bridge construction to the stdlib Result sum
-      contract.
+      deleted. Status-only source C++ Result storage now emits the tagged
+      `ps_result_status` bridge type instead of raw `uint32_t` return/binding
+      types, and low-level file helper status codes are wrapped at the source
+      Result boundary. Remaining cleanup should retarget broader bridge
+      construction to the stdlib Result sum contract.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

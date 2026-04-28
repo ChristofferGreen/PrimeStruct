@@ -1,9 +1,8 @@
-  const std::string sourceResultStatusCppType = sourceResultCppType(false);
   const std::string sourceResultValueCppType = sourceResultCppType(true);
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "ok") {
     if (expr.args.size() == 1) {
-      return "static_cast<" + sourceResultStatusCppType + ">(0)";
+      return sourceResultStatusOkExpr();
     }
     if (expr.args.size() == 2) {
       const std::string valueExpr =
@@ -30,7 +29,7 @@
     if (resultInfo.hasValue) {
       return sourceResultIsErrorExpr(argText);
     }
-    return "(" + argText + " != 0u)";
+    return sourceResultStatusIsErrorExpr(argText);
   }
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "why") {
@@ -46,7 +45,7 @@
                  resultInfos, returnStructs, allowMathBare);
     const std::string errorExpr =
         resultInfo.hasValue ? sourceResultErrorPayloadExpr(argText)
-                            : "static_cast<" + sourceResultStatusCppType + ">(" + argText + ")";
+                            : sourceResultStatusErrorPayloadExpr(argText);
     if (resultInfo.errorType == "FileError") {
       return "ps_file_error_why(" + errorExpr + ")";
     }

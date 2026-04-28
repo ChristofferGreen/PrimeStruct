@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4323: Tag source C++ Result status
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that moves
+    status-only Result bridge storage from the raw `uint32_t` contract to a
+    tagged helper contract.
+  - implementation_notes:
+    - Retarget `Result<E>` source C++ return and binding storage to
+      `ps_result_status`.
+    - Keep low-level file helper functions returning raw status codes
+      internally, but wrap those codes with `ps_result_status_from_error(...)`
+      at the source Result boundary.
+    - Leave broader bridge construction retargeting to the next TODO-4266
+      slice.
+  - acceptance:
+    - `sourceResultCppType(false)` returns `ps_result_status`.
+    - The generated prelude emits `ps_result_status` helpers and
+      `ps_try_status(ps_result_status, ...)`.
+    - Status-only `Result.ok`, `Result.error`, `Result.why`, `try`, entry
+      unpacking, and file-operation source Result boundaries use status helper
+      expressions.
+    - Source-lock coverage guards the generated status bridge and rejects the
+      retired raw `ps_try_status` return shape.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once status-only source C++ Result bridge storage has an
+    explicit tag and raw file status codes are wrapped before becoming source
+    Result values.
+  - finished_at: 2026-04-28
+  - evidence: Replaced source C++ status-only Result storage with
+    `ps_result_status`, added explicit ok/error/from-error/is-error/payload
+    helpers, retargeted status-only Result calls, try propagation, entry
+    unpacking, and file-operation source Result boundaries, updated
+    source-lock coverage, and documented the remaining broader bridge
+    retargeting work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4322: Tag source C++ Result values
   - owner: ai
   - created_at: 2026-04-28

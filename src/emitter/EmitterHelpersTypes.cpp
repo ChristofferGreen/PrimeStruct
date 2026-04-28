@@ -201,7 +201,27 @@ bool isResultBindingTypeName(const std::string &name) {
 }
 
 std::string sourceResultCppType(bool hasValue) {
-  return hasValue ? "ps_result_value" : "uint32_t";
+  return hasValue ? "ps_result_value" : "ps_result_status";
+}
+
+std::string sourceResultStatusOkExpr() {
+  return "ps_result_status_ok()";
+}
+
+std::string sourceResultStatusErrorExpr(const std::string &errorExpr) {
+  return "ps_result_status_error(" + errorExpr + ")";
+}
+
+std::string sourceResultStatusFromErrorExpr(const std::string &errorExpr) {
+  return "ps_result_status_from_error(" + errorExpr + ")";
+}
+
+std::string sourceResultStatusIsErrorExpr(const std::string &resultExpr) {
+  return "ps_result_status_is_error(" + resultExpr + ")";
+}
+
+std::string sourceResultStatusErrorPayloadExpr(const std::string &resultExpr) {
+  return "ps_result_status_error_payload(" + resultExpr + ")";
 }
 
 std::string sourceResultPackExpr(const std::string &errorExpr,

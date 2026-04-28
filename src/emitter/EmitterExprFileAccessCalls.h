@@ -23,42 +23,42 @@
           emitExpr(expr.args.front(), nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                    resultInfos, returnStructs, allowMathBare);
       if (expr.name == "write" || expr.name == "write_line") {
-        out << "ps_file_" << expr.name << "(" << receiver;
+        out << "ps_result_status_from_error(ps_file_" << expr.name << "(" << receiver;
         for (size_t i = 1; i < expr.args.size(); ++i) {
           out << ", "
               << emitExpr(expr.args[i], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                           resultInfos, returnStructs, allowMathBare);
         }
-        out << ")";
+        out << "))";
         return out.str();
       }
       if (expr.name == "write_byte" && expr.args.size() == 2) {
-        out << "ps_file_write_byte(" << receiver << ", "
+        out << "ps_result_status_from_error(ps_file_write_byte(" << receiver << ", "
             << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                         resultInfos, returnStructs, allowMathBare)
-            << ")";
+            << "))";
         return out.str();
       }
       if (expr.name == "read_byte" && expr.args.size() == 2) {
-        out << "ps_file_read_byte(" << receiver << ", "
+        out << "ps_result_status_from_error(ps_file_read_byte(" << receiver << ", "
             << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                         resultInfos, returnStructs, allowMathBare)
-            << ")";
+            << "))";
         return out.str();
       }
       if (expr.name == "write_bytes" && expr.args.size() == 2) {
-        out << "ps_file_write_bytes(" << receiver << ", "
+        out << "ps_result_status_from_error(ps_file_write_bytes(" << receiver << ", "
             << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                         resultInfos, returnStructs, allowMathBare)
-            << ")";
+            << "))";
         return out.str();
       }
       if (expr.name == "flush") {
-        out << "ps_file_flush(" << receiver << ")";
+        out << "ps_result_status_from_error(ps_file_flush(" << receiver << "))";
         return out.str();
       }
       if (expr.name == "close") {
-        out << "ps_file_close(" << receiver << ")";
+        out << "ps_result_status_from_error(ps_file_close(" << receiver << "))";
         return out.str();
       }
     }

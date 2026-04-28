@@ -30,6 +30,11 @@ bool splitTemplateTypeName(const std::string &text, std::string &base, std::stri
 bool splitTopLevelTemplateArgs(const std::string &text, std::vector<std::string> &out);
 bool isResultBindingTypeName(const std::string &name);
 std::string sourceResultCppType(bool hasValue);
+std::string sourceResultStatusOkExpr();
+std::string sourceResultStatusErrorExpr(const std::string &errorExpr);
+std::string sourceResultStatusFromErrorExpr(const std::string &errorExpr);
+std::string sourceResultStatusIsErrorExpr(const std::string &resultExpr);
+std::string sourceResultStatusErrorPayloadExpr(const std::string &resultExpr);
 std::string sourceResultPackExpr(const std::string &errorExpr,
                                  const std::string &valueExpr);
 std::string sourceResultIsErrorExpr(const std::string &resultExpr);
