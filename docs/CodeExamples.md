@@ -439,9 +439,13 @@ shape_score([Shape] shape) {
 
 [int]
 sum_shape_scores() {
-  [Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}
-  [Shape] labeled_shape{[rectangle] Rectangle{[width] 4, [height] 5}}
-  [Shape] inferred_shape{Circle{[radius] 6}}
+  [Circle] explicit_circle_payload{[radius] 3}
+  [Rectangle] labeled_rectangle_payload{[width] 4, [height] 5}
+  [Circle] inferred_circle_payload{[radius] 6}
+
+  [Shape] explicit_shape{[circle] explicit_circle_payload}
+  [Shape] labeled_shape{[rectangle] labeled_rectangle_payload}
+  [Shape] inferred_shape{inferred_circle_payload}
 
   return(shape_score(explicit_shape) + shape_score(labeled_shape) + shape_score(inferred_shape))
 }
@@ -463,7 +467,8 @@ AmbiguousShape {
   [Circle] secondary
 }
 
-[AmbiguousShape] bad{Circle{[radius] 2}} // error: ambiguous inferred sum construction
+[Circle] payload{[radius] 2}
+[AmbiguousShape] bad{payload} // error: ambiguous inferred sum construction
 ```
 
 ### Labeled Function Arguments

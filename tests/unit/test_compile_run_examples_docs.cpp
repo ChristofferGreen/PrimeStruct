@@ -209,8 +209,10 @@ TEST_CASE("sum docs snippets stay public style and executable") {
   const std::vector<std::string> requiredReadmeSnippets = {
       "Algebraic sum values:",
       "[sum]\nShape",
-      "[Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}",
-      "[Shape] inferred_shape{Circle{[radius] 4}}"};
+      "[Circle] explicit_circle_payload{[radius] 3}",
+      "[Shape] explicit_shape{[circle] explicit_circle_payload}",
+      "[Circle] inferred_circle_payload{[radius] 4}",
+      "[Shape] inferred_shape{inferred_circle_payload}"};
   for (const std::string &snippet : requiredReadmeSnippets) {
     CAPTURE(snippet);
     CHECK(readme.find(snippet) != std::string::npos);
@@ -218,9 +220,12 @@ TEST_CASE("sum docs snippets stay public style and executable") {
 
   const std::vector<std::string> requiredCodeExamplesSnippets = {
       "### Sum Values with Exhaustive Pick",
-      "[Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}",
-      "[Shape] labeled_shape{[rectangle] Rectangle{[width] 4, [height] 5}}",
-      "[Shape] inferred_shape{Circle{[radius] 6}}",
+      "[Circle] explicit_circle_payload{[radius] 3}",
+      "[Shape] explicit_shape{[circle] explicit_circle_payload}",
+      "[Rectangle] labeled_rectangle_payload{[width] 4, [height] 5}",
+      "[Shape] labeled_shape{[rectangle] labeled_rectangle_payload}",
+      "[Circle] inferred_circle_payload{[radius] 6}",
+      "[Shape] inferred_shape{inferred_circle_payload}",
       "ambiguous inferred sum construction"};
   for (const std::string &snippet : requiredCodeExamplesSnippets) {
     CAPTURE(snippet);
@@ -259,9 +264,13 @@ shape_score([Shape] shape) {
 
 [int]
 main() {
-  [Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}
-  [Shape] labeled_shape{[rectangle] Rectangle{[width] 4, [height] 5}}
-  [Shape] inferred_shape{Circle{[radius] 6}}
+  [Circle] explicit_circle_payload{[radius] 3}
+  [Rectangle] labeled_rectangle_payload{[width] 4, [height] 5}
+  [Circle] inferred_circle_payload{[radius] 6}
+
+  [Shape] explicit_shape{[circle] explicit_circle_payload}
+  [Shape] labeled_shape{[rectangle] labeled_rectangle_payload}
+  [Shape] inferred_shape{inferred_circle_payload}
 
   return(shape_score(explicit_shape) + shape_score(labeled_shape) + shape_score(inferred_shape))
 }
@@ -284,7 +293,8 @@ AmbiguousShape {
 
 [int]
 main() {
-  [AmbiguousShape] bad{Circle{[radius] 2}}
+  [Circle] payload{[radius] 2}
+  [AmbiguousShape] bad{payload}
   return(0)
 }
 )";

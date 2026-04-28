@@ -179,8 +179,11 @@ shape_score([Shape] shape) {
 
 [int]
 main() {
-  [Shape] explicit_shape{Shape{[circle] Circle{[radius] 3}}}
-  [Shape] inferred_shape{Circle{[radius] 4}}
+  [Circle] explicit_circle_payload{[radius] 3}
+  [Circle] inferred_circle_payload{[radius] 4}
+
+  [Shape] explicit_shape{[circle] explicit_circle_payload}
+  [Shape] inferred_shape{inferred_circle_payload}
 
   return(shape_score(explicit_shape) + shape_score(inferred_shape))
 }

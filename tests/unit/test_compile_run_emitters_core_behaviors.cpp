@@ -356,7 +356,7 @@ Point() {
 
 [return<int>]
 main() {
-  [Point] value{Point{[x] 9i32}}
+  [Point] value{[x] 9i32}
   return(plus(value.x, value.y))
 }
 )";

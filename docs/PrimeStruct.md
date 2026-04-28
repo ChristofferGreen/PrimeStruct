@@ -3394,11 +3394,14 @@ bad_set() {
     [Text] text
   }
 
-  [Shape] a{[circle] Circle{[radius] 3.4}}
-  [Shape] b{[circle] Circle{3.4}}
-  [Shape] c{Circle{3.4}}
+  [Circle] circleA{[radius] 3.4}
+  [Circle] circleB{3.4}
+  [Circle] circleC{3.4}
+  [Shape] a{[circle] circleA}
+  [Shape] b{[circle] circleB}
+  [Shape] c{circleC}
   ```
-  The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{Circle{3.4}}`) is valid only
+  The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{circleC}`) is valid only
   when exactly one `Shape` variant accepts a `Circle` payload. Zero matches are type errors and multiple matches are
   ambiguity errors requiring an explicit `[variant]` label.
   Unit variants can be constructed by default when the first declared variant is unit, or by naming the unit variant in
