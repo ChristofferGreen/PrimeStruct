@@ -2274,8 +2274,10 @@ for(
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
   - **ADT migration note:** `/std/result/*` now exposes an importable value-carrying `Result<T, E>` sum with `ok` and
     `error` variants plus explicit `ok<T, E>(value)` / `error<T, E>(err)` construction helpers. The legacy
-    status-only `Result<Error>` and `?` propagation remain hybrid compiler/runtime bridges until the remaining Result
-    migration TODOs land. Typed imported value-carrying sum
+    status-only `Result<Error>` remains a packed-status compiler/runtime bridge and is not pickable as a stdlib
+    Result sum; using `pick(status)` on `Result<Error>` produces a deterministic compatibility diagnostic. `?`
+    propagation remains a hybrid compiler/runtime bridge until the remaining Result migration TODO lands. Typed
+    imported value-carrying sum
     locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed
     VM/native paths, and typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or
     `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum; `Result.map2(left, right, fn)`
@@ -2283,8 +2285,8 @@ for(
     imported value-carrying sum tag on those paths, so it returns `false` for `ok` and `true` for `error` values from
     `/std/result/*`.
     `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
-    error payload type's `why` helper for `error`. Status-only results should use a unit success variant plus an error
-    payload variant rather than an empty payload struct when they move to the sum contract.
+    error payload type's `why` helper for `error`. The future status-only sum contract should use a unit success
+    variant plus an error payload variant rather than an empty payload struct.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented.
@@ -2727,8 +2729,9 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   stdlib-owned sum surface under `/std/result/*`; legacy `Result.ok(value)`,
   `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` have typed value-carrying sum compatibility
-  paths on IR-backed VM/native, while status-only `Result<Error>` and `?`
-  propagation still use the hybrid bridge.
+  paths on IR-backed VM/native, while status-only `Result<Error>` still uses
+  the hybrid packed-status bridge and is diagnosed if used as a `pick` target.
+  `?` propagation still uses the hybrid bridge.
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
 - `stdlib-owned`
@@ -3164,9 +3167,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   constructor surface IDs as helper metadata rather than struct field construction.
 - **Maybe/Result migration:** `Maybe<T>` is now a stdlib-owned sum with `none` and `some` variants. `Maybe<T>{}`
   defaults to `none`, `Maybe<T>{none}` is the explicit empty form, `some<T>(value)` is the named helper, and
-  `Maybe<T>{value}` is accepted when the `some` payload is the only matching variant. The remaining Result helper,
-  propagation, and legacy cleanup work is tracked by TODO-4293, TODO-4266, and TODO-4267, not by file/gfx/collection
-  compatibility.
+  `Maybe<T>{value}` is accepted when the `some` payload is the only matching variant. The remaining Result
+  propagation and legacy cleanup work is tracked by TODO-4266 and TODO-4267, not by file/gfx/collection compatibility.
 - **Follow-up policy:** do not add new constructor-shaped compatibility surfaces. Existing retained forms must either
   route through named helpers with focused coverage or get a dedicated migration TODO with scope, acceptance, and
   stop_rule before their status changes.
@@ -3342,8 +3344,9 @@ bad_set() {
   substrate, and imported value-carrying `Result<T, E>` construction is available through `/std/result/*`.
   Legacy `Result.ok(value)`, `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` can initialize typed imported value-carrying sum locals/returns on IR-backed VM/native
-  paths, and `Result.error(...)` / `Result.why(...)` can inspect those imported sum values; status-only Result and
-  propagation stay compatibility surfaces until TODO-4293 and TODO-4266 land.
+  paths, and `Result.error(...)` / `Result.why(...)` can inspect those imported sum values; status-only Result remains
+  a packed-status compatibility surface that cannot be used as a `pick` target, and propagation stays a compatibility
+  surface until TODO-4266 lands.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on

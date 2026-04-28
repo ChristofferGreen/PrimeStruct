@@ -86,6 +86,11 @@
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,
       const std::string &namespacePrefix);
+  bool resolveStatusOnlyResultTypeTextForPickTarget(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      std::string &typeTextOut);
   bool validateExplicitSumConstructorExpr(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,

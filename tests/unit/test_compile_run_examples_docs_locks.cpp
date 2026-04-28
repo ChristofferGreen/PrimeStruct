@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4293: Bridge legacy `Result` helpers to the result sum") !=
+                  "- TODO-4266: Rewire `?` to the `Result` sum contract") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4266: Rewire `?` to the `Result` sum contract") !=
+                  "- TODO-4267: Retire legacy Maybe/Result representations") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,10 +1153,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4293: Bridge legacy `Result` helpers to the result sum") !=
+                  "- TODO-4266: Rewire `?` to the `Result` sum contract") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4293: Bridge legacy `Result` helpers to the result sum",
       "TODO-4266: Rewire `?` to the `Result` sum contract",
       "TODO-4267: Retire legacy Maybe/Result representations",
       "TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers",
@@ -1188,6 +1187,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todoFinished.find("TODO-4264: Add stdlib-owned `Maybe<T>` sum") !=
         std::string::npos);
   CHECK(todo.find("TODO-4265: Add stdlib-owned `Result<T, E>` sum") ==
+        std::string::npos);
+  CHECK(todo.find("TODO-4293: Bridge legacy `Result` helpers to the result sum") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4293: Bridge legacy `Result` helpers to the result sum") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4299: Bridge `Result.map2` to the result sum") !=
         std::string::npos);

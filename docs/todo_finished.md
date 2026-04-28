@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4293: Bridge legacy `Result` helpers to the result sum
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Resolve the remaining status-only `Result<Error>` bridge before
+    `?` rewiring consumes the stdlib result sum contract in TODO-4266.
+  - implementation_notes:
+    - Value-carrying legacy `Result.error`, `Result.why`, `Result.ok`,
+      `Result.map`, `Result.and_then`, and `Result.map2` helper calls now
+      bridge to imported stdlib `Result<T, E>` sum values where the current
+      IR-backed VM/native contract supports them.
+    - Status-only `Result<Error>` remains a legacy packed-status bridge until
+      `?` and `try(...)` are rewired. Treating it as an imported stdlib sum by
+      using `pick(status)` now reports a deterministic compatibility
+      diagnostic instead of falling through to the generic non-sum message.
+    - Keep `?` on the existing runtime/semantic contract until TODO-4266.
+  - acceptance:
+    - Value-carrying legacy helper calls keep constructing or inspecting
+      values that follow the stdlib `Result<T, E>` sum shape.
+    - Status-only `Result<Error>` has a documented deterministic
+      compatibility diagnostic for sum-only `pick(...)` usage.
+    - Existing helper/combinator behavior remains source-compatible for the
+      supported payload matrix.
+    - Focused tests cover the status-only Result diagnostic for `FileError`,
+      `ContainerError`, and `GfxError` without changing sum-backed helper
+      fixtures.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once status-only Result is represented or diagnosed
+    deterministically enough for TODO-4266 to consume the remaining Result
+    propagation contract.
+  - finished_at: 2026-04-28
+  - evidence: Added a status-only Result pick diagnostic, documented the
+    status-only packed bridge boundary in the Result/sum specs, updated the
+    semantic TODO queue to make TODO-4266 ready, and added focused semantic
+    diagnostics for `FileError`, `ContainerError`, and `GfxError`. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4299: Bridge `Result.map2` to the result sum
   - owner: ai
   - created_at: 2026-04-28

@@ -381,6 +381,76 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("status-only Result pick reports compatibility diagnostic") {
+  auto checkDiagnostic = [](const std::string &source,
+                            const std::string &expectedErrorDomain) {
+    std::string error;
+    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK(error.find("status-only Result<") != std::string::npos);
+    CHECK(error.find(expectedErrorDomain) != std::string::npos);
+    CHECK(error.find("is not a stdlib Result sum") != std::string::npos);
+  };
+
+  checkDiagnostic(R"(
+import /std/result/*
+
+[return<int>]
+main() {
+  [Result<FileError>] status{ Result.ok() }
+  [i32] value{pick(status) {
+    ok {
+      0i32
+    }
+    error(err) {
+      1i32
+    }
+  }}
+  return(value)
+}
+)",
+                  "FileError");
+
+  checkDiagnostic(R"(
+import /std/result/*
+import /std/collections/*
+
+[return<int>]
+main() {
+  [Result<ContainerError>] status{ Result.ok() }
+  [i32] value{pick(status) {
+    ok {
+      0i32
+    }
+    error(err) {
+      1i32
+    }
+  }}
+  return(value)
+}
+)",
+                  "ContainerError");
+
+  checkDiagnostic(R"(
+import /std/result/*
+import /std/gfx/*
+
+[return<int>]
+main() {
+  [Result<GfxError>] status{ Result.ok() }
+  [i32] value{pick(status) {
+    ok {
+      0i32
+    }
+    error(err) {
+      1i32
+    }
+  }}
+  return(value)
+}
+)",
+                  "GfxError");
+}
+
 TEST_CASE("Result.error rejects non-result argument") {
   const std::string source = R"(
 [return<void>]

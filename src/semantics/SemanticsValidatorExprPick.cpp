@@ -37,6 +37,36 @@ std::string joinVariantNames(const std::vector<std::string> &names) {
   return out;
 }
 
+std::string pickBindingTypeText(const BindingInfo &binding) {
+  if (binding.typeTemplateArg.empty()) {
+    return binding.typeName;
+  }
+  return binding.typeName + "<" + binding.typeTemplateArg + ">";
+}
+
+bool isStatusOnlyResultTypeText(const std::string &typeText) {
+  std::string base;
+  std::string argText;
+  if (!splitTemplateTypeName(normalizeBindingTypeName(typeText),
+                             base,
+                             argText)) {
+    return false;
+  }
+  base = normalizeBindingTypeName(base);
+  if (base != "Result" && base != "std/result/Result" &&
+      base != "/std/result/Result") {
+    return false;
+  }
+  std::vector<std::string> args;
+  return splitTopLevelTemplateArgs(argText, args) && args.size() == 1;
+}
+
+std::string statusOnlyResultPickDiagnostic(const std::string &typeText) {
+  return "status-only " + typeText +
+         " is not a stdlib Result sum; use Result<T, E> or the legacy "
+         "Result helpers until status-only Result sum migration lands";
+}
+
 const SumVariant *findVariantByName(const Definition &sumDef,
                                     const std::string &name) {
   for (const auto &variant : sumDef.sumVariants) {
@@ -148,6 +178,54 @@ ReturnKind combinePickNumericReturnKinds(ReturnKind left, ReturnKind right) {
 
 } // namespace
 
+bool SemanticsValidator::resolveStatusOnlyResultTypeTextForPickTarget(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    std::string &typeTextOut) {
+  auto checkBinding = [&](const BindingInfo &binding) {
+    const std::string typeText = pickBindingTypeText(binding);
+    if (!isStatusOnlyResultTypeText(typeText)) {
+      return false;
+    }
+    typeTextOut = typeText;
+    return true;
+  };
+  auto checkTypeText = [&](const std::string &typeText) {
+    if (!isStatusOnlyResultTypeText(typeText)) {
+      return false;
+    }
+    typeTextOut = typeText;
+    return true;
+  };
+
+  if (expr.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
+      if (checkBinding(*paramBinding)) {
+        return true;
+      }
+    }
+    auto localIt = locals.find(expr.name);
+    if (localIt != locals.end() && checkBinding(localIt->second)) {
+      return true;
+    }
+  }
+
+  BindingInfo inferredBinding;
+  if ((inferExplicitSumConstructorBinding(expr, inferredBinding) ||
+       inferBindingTypeFromInitializer(expr, params, locals, inferredBinding)) &&
+      checkBinding(inferredBinding)) {
+    return true;
+  }
+
+  std::string inferredTypeText;
+  if (inferQueryExprTypeText(expr, params, locals, inferredTypeText) &&
+      checkTypeText(inferredTypeText)) {
+    return true;
+  }
+  return false;
+}
+
 bool SemanticsValidator::validatePickExpr(
     const std::vector<ParameterInfo> &params,
     const std::unordered_map<std::string, BindingInfo> &locals,
@@ -176,6 +254,15 @@ bool SemanticsValidator::validatePickExpr(
   const Definition *sumDef =
       resolvePickSumDefinitionForExpr(target, params, locals, expr.namespacePrefix);
   if (sumDef == nullptr) {
+    std::string statusOnlyResultTypeText;
+    if (resolveStatusOnlyResultTypeTextForPickTarget(target,
+                                                     params,
+                                                     locals,
+                                                     statusOnlyResultTypeText)) {
+      return failPickDiagnostic(
+          target,
+          statusOnlyResultPickDiagnostic(statusOnlyResultTypeText));
+    }
     return failPickDiagnostic(target, "pick target requires sum value");
   }
 
@@ -469,6 +556,15 @@ bool SemanticsValidator::validatePickStatement(
   const Definition *sumDef = resolvePickSumDefinitionForExpr(
       stmt.args.front(), params, locals, namespacePrefix);
   if (sumDef == nullptr) {
+    std::string statusOnlyResultTypeText;
+    if (resolveStatusOnlyResultTypeTextForPickTarget(stmt.args.front(),
+                                                     params,
+                                                     locals,
+                                                     statusOnlyResultTypeText)) {
+      return failPickStatementDiagnostic(
+          stmt.args.front(),
+          statusOnlyResultPickDiagnostic(statusOnlyResultTypeText));
+    }
     return failPickStatementDiagnostic(stmt.args.front(),
                                        "pick target requires sum value");
   }
