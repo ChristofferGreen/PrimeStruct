@@ -152,7 +152,7 @@ Task template:
 | --- | --- |
 | Semantic-product-authority conformance | TODO-4298 |
 | AST transform hook conformance | none |
-| CodeExamples-aligned stdlib surface syntax conformance | none |
+| CodeExamples-aligned stdlib surface syntax conformance | TODO-4292 |
 | Compile-pipeline stage handoff conformance | none |
 | Semantic-product publication parity and deterministic ordering | none |
 | Lowerer/source-composition contract coverage | TODO-4298 |
