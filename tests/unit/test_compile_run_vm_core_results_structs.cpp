@@ -371,22 +371,27 @@ main() {
   if(not(Result.error(failedStatus))) {
     return(2i32)
   }
-  if(not(equal(count(Result.why(directStatus)), 0i32))) {
+  [string] directWhy{Result.why(directStatus)}
+  [string] failedWhy{Result.why(failedStatus)}
+  if(not(equal(count(directWhy), 0i32))) {
     return(3i32)
   }
-  if(not(equal(count(Result.why(failedStatus)), 19i32))) {
+  if(not(equal(count(failedWhy), 19i32))) {
     return(4i32)
   }
   [Buffer<i32>] direct{try(directStatus)}
-  [Buffer<i32>] mappedValue{
-    try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
+  [Result<Buffer<i32>, GfxError>] mappedStatus{
+    Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) })
   }
-  [Buffer<i32>] chainedValue{
-    try(Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) }))
+  [Buffer<i32>] mappedValue{try(mappedStatus)}
+  [Result<Buffer<i32>, GfxError>] chainedStatus{
+    Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) })
   }
-  [Buffer<i32>] combinedValue{
-    try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) }))
+  [Buffer<i32>] chainedValue{try(chainedStatus)}
+  [Result<Buffer<i32>, GfxError>] combinedStatus{
+    Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) })
   }
+  [Buffer<i32>] combinedValue{try(combinedStatus)}
   [array<i32>] directOut{direct.readback()}
   [array<i32>] mappedOut{mappedValue.readback()}
   [array<i32>] chainedOut{chainedValue.readback()}

@@ -853,18 +853,25 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [ContainerError] mapped{
-    try(Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError{value}) }))
+  [Result<ContainerError, FileError>] mappedStatus{
+    Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError{value}) })
   }
-  [ImageError] chained{
-    try(Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError{value})) }))
+  [ContainerError] mapped{try(mappedStatus)}
+  [Result<ImageError, FileError>] chainedStatus{
+    Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError{value})) })
   }
-  [GfxError] summed{
-    try(Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
+  [ImageError] chained{try(chainedStatus)}
+  [Result<GfxError, FileError>] summedStatus{
+    Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
       return(GfxError{plus(left, right)})
-    }))
+    })
   }
-  return(plus(mapped.code, plus(chained.code, summed.code)))
+  [GfxError] summed{try(summedStatus)}
+  [i32] mappedCode{mapped.code}
+  [i32] chainedCode{chained.code}
+  [i32] summedCode{summed.code}
+  [i32] tail{plus(chainedCode, summedCode)}
+  return(plus(mappedCode, tail))
 }
 )";
   const std::string srcPath = writeTemp("vm_result_packed_error_combinators_ir_backed.prime", source);

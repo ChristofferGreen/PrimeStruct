@@ -346,18 +346,25 @@ log_file_error([FileError] err) {
 
 [return<int> effects(io_out, io_err) on_error<FileError, /log_file_error>]
 main() {
-  [ContainerError] mapped{
-    try(Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError{value}) }))
+  [Result<ContainerError, FileError>] mappedStatus{
+    Result.map(Result.ok(2i32), []([i32] value) { return(ContainerError{value}) })
   }
-  [ImageError] chained{
-    try(Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError{value})) }))
+  [ContainerError] mapped{try(mappedStatus)}
+  [Result<ImageError, FileError>] chainedStatus{
+    Result.and_then(Result.ok(3i32), []([i32] value) { return(Result.ok(ImageError{value})) })
   }
-  [GfxError] summed{
-    try(Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
+  [ImageError] chained{try(chainedStatus)}
+  [Result<GfxError, FileError>] summedStatus{
+    Result.map2(Result.ok(4i32), Result.ok(5i32), []([i32] left, [i32] right) {
       return(GfxError{plus(left, right)})
-    }))
+    })
   }
-  return(plus(mapped.code, plus(chained.code, summed.code)))
+  [GfxError] summed{try(summedStatus)}
+  [i32] mappedCode{mapped.code}
+  [i32] chainedCode{chained.code}
+  [i32] summedCode{summed.code}
+  [i32] tail{plus(chainedCode, summedCode)}
+  return(plus(mappedCode, tail))
 }
 )";
   primec::Program program;
@@ -765,16 +772,20 @@ log_gfx_error([GfxError] err) {
 
 [return<int> effects(gpu_dispatch, io_out, io_err) on_error<GfxError, /log_gfx_error>]
 main() {
-  [Buffer<i32>] direct{try(make_buffer())}
-  [Buffer<i32>] mappedValue{
-    try(Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) }))
+  [Result<Buffer<i32>, GfxError>] directStatus{make_buffer()}
+  [Buffer<i32>] direct{try(directStatus)}
+  [Result<Buffer<i32>, GfxError>] mappedStatus{
+    Result.map(make_buffer(), []([Buffer<i32>] value) { return(value) })
   }
-  [Buffer<i32>] chainedValue{
-    try(Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) }))
+  [Buffer<i32>] mappedValue{try(mappedStatus)}
+  [Result<Buffer<i32>, GfxError>] chainedStatus{
+    Result.and_then(make_buffer(), []([Buffer<i32>] value) { return(Result.ok(value)) })
   }
-  [Buffer<i32>] combinedValue{
-    try(Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) }))
+  [Buffer<i32>] chainedValue{try(chainedStatus)}
+  [Result<Buffer<i32>, GfxError>] combinedStatus{
+    Result.map2(make_buffer(), make_buffer(), []([Buffer<i32>] left, [Buffer<i32>] right) { return(right) })
   }
+  [Buffer<i32>] combinedValue{try(combinedStatus)}
   [array<i32>] directOut{direct.readback()}
   [array<i32>] mappedOut{mappedValue.readback()}
   [array<i32>] chainedOut{chainedValue.readback()}
