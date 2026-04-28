@@ -1,5 +1,6 @@
 #include "IrLowererCallHelpers.h"
 
+#include <cctype>
 #include <string>
 #include <string_view>
 
@@ -469,6 +470,47 @@ bool isVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   return false;
 }
 
+bool isInternalSoaMetadataTarget(const Expr &expr, const LocalMap &localsIn) {
+  if (expr.kind != Expr::Kind::Name) {
+    return false;
+  }
+  auto it = localsIn.find(expr.name);
+  if (it == localsIn.end()) {
+    return false;
+  }
+  auto trimTypeText = [](std::string text) {
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
+      text.erase(text.begin());
+    }
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back()))) {
+      text.pop_back();
+    }
+    return text;
+  };
+  std::string structPath = trimTypeText(it->second.structTypeName);
+  for (std::string_view wrapper : {"Reference<", "Pointer<"}) {
+    if (structPath.rfind(wrapper, 0) == 0 && structPath.size() > wrapper.size() &&
+        structPath.back() == '>') {
+      structPath =
+          trimTypeText(structPath.substr(wrapper.size(),
+                                         structPath.size() - wrapper.size() - 1));
+      break;
+    }
+  }
+  const size_t templateStart = structPath.find('<');
+  if (templateStart != std::string::npos) {
+    structPath.erase(templateStart);
+  }
+  const size_t leafStart = structPath.find_last_of('/');
+  const size_t suffixStart =
+      structPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+  if (suffixStart != std::string::npos) {
+    structPath.erase(suffixStart);
+  }
+  return structPath == "/std/collections/internal_soa_storage/SoaColumn" ||
+         structPath == "/std/collections/internal_soa_storage/SoaFieldView";
+}
+
 bool isExperimentalVectorTarget(const Expr &expr, const LocalMap &localsIn) {
   if (expr.kind != Expr::Kind::Name) {
     return false;
@@ -675,6 +717,13 @@ InlineCallDispatchResult tryEmitInlineCallWithCountFallbacksImpl(
         isBuiltinMapTryAtName || isBuiltinMapInsertName;
     const Definition *callee = resolveMethodCallDefinition(expr);
     if (callee != nullptr) {
+      if (expr.args.size() == 1 &&
+          (isSimpleCallName(expr, "field_count") ||
+           isSimpleCallName(expr, "field_capacity")) &&
+          (callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+           callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+        return InlineCallDispatchResult::NotHandled;
+      }
       if (isCollectionAccessReceiverExpr && !expr.args.empty() &&
           isCollectionAccessReceiverExpr(expr.args.front()) &&
           isMapBuiltinInlinePath(expr, *callee)) {
@@ -744,6 +793,32 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   if (!expr.isMethodCall) {
     std::string mapHelperName;
     const std::string rawPath = resolveInlineCallPathWithoutFallbackProbes(expr);
+    if (expr.args.size() == 1 && isVectorTarget(expr.args.front(), localsIn)) {
+      std::string vectorHelperName;
+      if (resolveVectorHelperAliasName(expr, vectorHelperName) &&
+          (vectorHelperName == "count" || vectorHelperName == "capacity")) {
+        return InlineCallDispatchResult::NotHandled;
+      }
+      const size_t rawLeafStart = rawPath.find_last_of('/');
+      std::string rawLeaf = rawLeafStart == std::string::npos
+                                ? rawPath
+                                : rawPath.substr(rawLeafStart + 1);
+      rawLeaf = stripGeneratedInlineHelperSuffix(std::move(rawLeaf));
+      if (rawLeaf == "vectorCount" || rawLeaf == "vectorCapacity") {
+        return InlineCallDispatchResult::NotHandled;
+      }
+      if (const Definition *callee = resolveDefinitionCallFn(expr);
+          callee != nullptr) {
+        const size_t leafStart = callee->fullPath.find_last_of('/');
+        std::string leaf = leafStart == std::string::npos
+                               ? callee->fullPath
+                               : callee->fullPath.substr(leafStart + 1);
+        leaf = stripGeneratedInlineHelperSuffix(std::move(leaf));
+        if (leaf == "vectorCount" || leaf == "vectorCapacity") {
+          return InlineCallDispatchResult::NotHandled;
+        }
+      }
+    }
     std::string experimentalVectorElementType;
     if (getExperimentalVectorConstructorElementTypeAlias(
             expr, experimentalVectorElementType)) {
@@ -915,6 +990,14 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         error = priorError;
         continue;
       }
+      if (methodExpr.args.size() == 1 &&
+          (isSimpleCallName(methodExpr, "field_count") ||
+           isSimpleCallName(methodExpr, "field_capacity")) &&
+          (callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+           callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+        error = priorError;
+        return InlineCallDispatchResult::NotHandled;
+      }
       if (methodExpr.hasBodyArguments || !methodExpr.bodyArguments.empty()) {
         error = "native backend does not support block arguments on calls";
         return InlineCallDispatchResult::Error;
@@ -931,6 +1014,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
   const auto vectorMutatorCallFormResult = tryEmitVectorMutatorCallFormExpr();
   if (vectorMutatorCallFormResult != InlineCallDispatchResult::NotHandled) {
     return vectorMutatorCallFormResult;
+  }
+  if (expr.isMethodCall && expr.args.size() == 1 &&
+      (isSimpleCallName(expr, "field_count") || isSimpleCallName(expr, "field_capacity")) &&
+      isVectorTarget(expr.args.front(), localsIn)) {
+    return InlineCallDispatchResult::NotHandled;
+  }
+  if (expr.isMethodCall && expr.args.size() == 1 &&
+      (isSimpleCallName(expr, "field_count") ||
+       isSimpleCallName(expr, "field_capacity")) &&
+      isInternalSoaMetadataTarget(expr.args.front(), localsIn)) {
+    return InlineCallDispatchResult::NotHandled;
   }
   if (deferVectorReturningMutatorCall) {
     return InlineCallDispatchResult::NotHandled;
@@ -1044,7 +1138,17 @@ InlineCallDispatchResult tryEmitInlineCallDispatchWithLocals(
         }
         return false;
       },
-      [&](const Expr &callExpr) { return resolveMethodCallDefinitionFn(callExpr, localsIn); },
+      [&](const Expr &callExpr) {
+        const Definition *callee = resolveMethodCallDefinitionFn(callExpr, localsIn);
+        if (callee != nullptr && callExpr.isMethodCall && callExpr.args.size() == 1 &&
+            (isSimpleCallName(callExpr, "field_count") ||
+             isSimpleCallName(callExpr, "field_capacity")) &&
+            (callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+             callee->fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+          return static_cast<const Definition *>(nullptr);
+        }
+        return callee;
+      },
       [&](const Expr &callExpr) { return resolveDefinitionCallFn(callExpr); },
       [&](const Expr &callExpr, const Definition &callee) {
         return emitCanonicalInlineDefinitionCall(callExpr, callee);

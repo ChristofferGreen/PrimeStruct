@@ -2,8 +2,10 @@
 #include "IrLowererCountAccessClassifiers.h"
 
 #include <limits>
+#include <functional>
 #include <memory>
 #include <string_view>
+#include <cctype>
 
 #include "IrLowererBindingTransformHelpers.h"
 #include "IrLowererHelpers.h"
@@ -93,7 +95,32 @@ bool isNamedArgumentCollectionTemporary(const Expr &expr,
   return getBuiltinCollectionName(expr, collection) && collection == collectionName;
 }
 
+bool isExperimentalVectorStructValueLocal(const LocalInfo &info) {
+  return info.kind == LocalInfo::Kind::Value &&
+         (info.structTypeName == "/std/collections/experimental_vector/Vector" ||
+          info.structTypeName.rfind("/std/collections/experimental_vector/Vector__", 0) == 0);
+}
+
 std::string normalizedInternalSoaStorageMetadataLeaf(std::string structPath) {
+  auto trimTypeText = [](std::string text) {
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front()))) {
+      text.erase(text.begin());
+    }
+    while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back()))) {
+      text.pop_back();
+    }
+    return text;
+  };
+  structPath = trimTypeText(std::move(structPath));
+  for (std::string_view wrapper : {"Reference<", "Pointer<"}) {
+    if (structPath.rfind(wrapper, 0) == 0 && structPath.size() > wrapper.size() &&
+        structPath.back() == '>') {
+      structPath =
+          trimTypeText(structPath.substr(wrapper.size(),
+                                         structPath.size() - wrapper.size() - 1));
+      break;
+    }
+  }
   const size_t templateStart = structPath.find('<');
   if (templateStart != std::string::npos) {
     structPath.erase(templateStart);
@@ -125,6 +152,34 @@ bool isInternalSoaStorageMetadataTarget(const Expr &target,
   auto it = localsIn.find(target.name);
   return it != localsIn.end() &&
          !normalizedInternalSoaStorageMetadataLeaf(it->second.structTypeName).empty();
+}
+
+bool emitInternalSoaStorageMetadataBase(const Expr &target,
+                                        const LocalMap &localsIn,
+                                        const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
+                                        const std::function<bool(const Expr &, const LocalMap &)> &emitExpr) {
+  if (target.kind == Expr::Kind::Name) {
+    auto it = localsIn.find(target.name);
+    if (it != localsIn.end() &&
+        !normalizedInternalSoaStorageMetadataLeaf(it->second.structTypeName).empty()) {
+      emitInstruction(it->second.kind == LocalInfo::Kind::Value
+                          ? IrOpcode::AddressOfLocal
+                          : IrOpcode::LoadLocal,
+                      static_cast<uint64_t>(it->second.index));
+      return true;
+    }
+  }
+  return emitExpr(target, localsIn);
+}
+
+void emitInternalSoaStorageMetadataLoad(
+    std::string_view fieldName,
+    const std::function<void(IrOpcode, uint64_t)> &emitInstruction) {
+  if (fieldName == "field_capacity") {
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+  }
+  emitInstruction(IrOpcode::LoadIndirect, 0);
 }
 
 bool hasInferredTypedWrappedMap(const LocalInfo &info, LocalInfo::Kind kind) {
@@ -582,52 +637,65 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       isExplicitRemovedCountLikeAliasCall(expr, "capacity")) {
     return CountAccessCallEmitResult::NotHandled;
   }
-  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
-      isDynamicVectorCountTargetFn != nullptr &&
-      isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
-      return CountAccessCallEmitResult::Error;
+  const auto emitDynamicVectorHeaderBase = [&](const Expr &target) {
+    if (target.kind == Expr::Kind::Name) {
+      auto it = localsIn.find(target.name);
+      if (it != localsIn.end() && isExperimentalVectorStructValueLocal(it->second)) {
+        emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index));
+        return true;
+      }
+    }
+    return emitExpr(target, localsIn);
+  };
+  const auto emitDynamicVectorCount = [&](const Expr &target) {
+    if (!emitDynamicVectorHeaderBase(target)) {
+      return false;
     }
     emitInstruction(IrOpcode::LoadIndirect, 0);
-    return CountAccessCallEmitResult::Emitted;
-  }
-  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
-      isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
-      return CountAccessCallEmitResult::Error;
+    return true;
+  };
+  const auto emitDynamicVectorCapacity = [&](const Expr &target) {
+    if (!emitDynamicVectorHeaderBase(target)) {
+      return false;
     }
     emitInstruction(IrOpcode::PushI64, IrSlotBytes);
     emitInstruction(IrOpcode::AddI64, 0);
     emitInstruction(IrOpcode::LoadIndirect, 0);
+    return true;
+  };
+  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
+      isDynamicVectorCountTargetFn != nullptr &&
+      isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCount(expr.args.front())) {
+      return CountAccessCallEmitResult::Error;
+    }
+    return CountAccessCallEmitResult::Emitted;
+  }
+  if (expr.isMethodCall && expr.name == "field_count" && expr.args.size() == 1 &&
+      isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
+    if (!emitInternalSoaStorageMetadataBase(
+            expr.args.front(), localsIn, emitInstruction, emitExpr)) {
+      return CountAccessCallEmitResult::Error;
+    }
+    emitInternalSoaStorageMetadataLoad(expr.name, emitInstruction);
     return CountAccessCallEmitResult::Emitted;
   }
   if (expr.isMethodCall && expr.name == "field_capacity" && expr.args.size() == 1 &&
       isDynamicVectorCapacityTargetFn != nullptr &&
       isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCapacity(expr.args.front())) {
       return CountAccessCallEmitResult::Error;
     }
-    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
   }
   if (expr.isMethodCall && expr.name == "field_capacity" && expr.args.size() == 1 &&
       isInternalSoaStorageMetadataTarget(expr.args.front(), localsIn)) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
+    if (!emitInternalSoaStorageMetadataBase(
+            expr.args.front(), localsIn, emitInstruction, emitExpr)) {
       return CountAccessCallEmitResult::Error;
     }
-    emitInstruction(IrOpcode::PushI64, 2 * IrSlotBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::LoadIndirect, 0);
+    emitInternalSoaStorageMetadataLoad(expr.name, emitInstruction);
     return CountAccessCallEmitResult::Emitted;
-  }
-  if (isExplicitPublishedVectorCountCall(expr) &&
-      expr.args.size() == 1 &&
-      expr.args.front().kind == Expr::Kind::Name &&
-      !isNamedArgumentCollectionTemporary(expr.args.front(), "vector") &&
-      isVectorCountTarget(expr.args.front(), localsIn)) {
-    return CountAccessCallEmitResult::NotHandled;
   }
   const bool namedArgVectorTemporaryCountTarget =
       (isVectorBuiltinName(expr, "count") || isMapBuiltinName(expr, "count")) &&
@@ -712,23 +780,14 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
       !(isDynamicVectorCapacityTargetFn &&
         isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn));
   if (blocksBareVectorCountCall || blocksLocalVectorCountCall ||
-      (isExplicitPublishedVectorCountCall(expr) &&
-       expr.args.size() == 1 &&
-       expr.args.front().kind != Expr::Kind::Call &&
-       ((isDynamicVectorCountTargetFn &&
-         isDynamicVectorCountTargetFn(expr.args.front(), localsIn)) ||
-        isVectorCountTarget(expr.args.front(), localsIn))) ||
       blocksBareVectorCapacityCall || blocksLocalVectorCapacityCall) {
     return CountAccessCallEmitResult::NotHandled;
   }
 
   if (isVectorCapacityCallFn(expr, localsIn)) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCapacity(expr.args.front())) {
       return CountAccessCallEmitResult::Error;
     }
-    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
   }
 
@@ -738,10 +797,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
         inferExprKind(expr.args.front(), localsIn) == LocalInfo::ValueKind::String) {
       // String receivers can be dynamic call results; defer to string count emission.
     } else {
-      if (!emitExpr(expr.args.front(), localsIn)) {
+      if (!emitDynamicVectorCount(expr.args.front())) {
         return CountAccessCallEmitResult::Error;
       }
-      emitInstruction(IrOpcode::LoadIndirect, 0);
       return CountAccessCallEmitResult::Emitted;
     }
   }
@@ -749,12 +807,9 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
   if (expr.namespacePrefix.empty() &&
       isVectorBuiltinName(expr, "capacity") && expr.args.size() == 1 &&
       isDynamicVectorCapacityTargetFn && isDynamicVectorCapacityTargetFn(expr.args.front(), localsIn)) {
-    if (!emitExpr(expr.args.front(), localsIn)) {
+    if (!emitDynamicVectorCapacity(expr.args.front())) {
       return CountAccessCallEmitResult::Error;
     }
-    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
-    emitInstruction(IrOpcode::AddI64, 0);
-    emitInstruction(IrOpcode::LoadIndirect, 0);
     return CountAccessCallEmitResult::Emitted;
   }
 

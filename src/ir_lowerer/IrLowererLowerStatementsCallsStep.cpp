@@ -1,5 +1,7 @@
 #include "IrLowererLowerStatementsCallsStep.h"
 
+#include "IrLowererFlowHelpers.h"
+
 namespace primec::ir_lowerer {
 
 bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
@@ -8,6 +10,10 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
                                  std::string &errorOut) {
   if (!input.inferExprKind) {
     errorOut = "native backend missing statements/calls step dependency: inferExprKind";
+    return false;
+  }
+  if (!input.inferStructExprPath) {
+    errorOut = "native backend missing statements/calls step dependency: inferStructExprPath";
     return false;
   }
   if (!input.emitExpr) {
@@ -24,6 +30,14 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
   }
   if (!input.findDefinitionByPath) {
     errorOut = "native backend missing statements/calls step dependency: findDefinitionByPath";
+    return false;
+  }
+  if (!input.resolveDestroyHelperForStruct) {
+    errorOut = "native backend missing statements/calls step dependency: resolveDestroyHelperForStruct";
+    return false;
+  }
+  if (!input.resolveMoveHelperForStruct) {
+    errorOut = "native backend missing statements/calls step dependency: resolveMoveHelperForStruct";
     return false;
   }
   if (!input.isArrayCountCall) {
@@ -52,6 +66,30 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
   }
   if (!input.emitInlineDefinitionCall) {
     errorOut = "native backend missing statements/calls step dependency: emitInlineDefinitionCall";
+    return false;
+  }
+  if (!input.emitArrayIndexOutOfBounds) {
+    errorOut = "native backend missing statements/calls step dependency: emitArrayIndexOutOfBounds";
+    return false;
+  }
+  if (!input.emitVectorCapacityExceeded) {
+    errorOut = "native backend missing statements/calls step dependency: emitVectorCapacityExceeded";
+    return false;
+  }
+  if (!input.emitVectorPopOnEmpty) {
+    errorOut = "native backend missing statements/calls step dependency: emitVectorPopOnEmpty";
+    return false;
+  }
+  if (!input.emitVectorIndexOutOfBounds) {
+    errorOut = "native backend missing statements/calls step dependency: emitVectorIndexOutOfBounds";
+    return false;
+  }
+  if (!input.emitVectorReserveNegative) {
+    errorOut = "native backend missing statements/calls step dependency: emitVectorReserveNegative";
+    return false;
+  }
+  if (!input.emitVectorReserveExceeded) {
+    errorOut = "native backend missing statements/calls step dependency: emitVectorReserveExceeded";
     return false;
   }
   if (input.instructions == nullptr) {
@@ -95,6 +133,66 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
     return true;
   }
 
+  const auto vectorHelperResult = tryEmitVectorStatementHelper(
+      stmt,
+      localsIn,
+      instructions,
+      [&]() { return input.allocTempLocal(); },
+      [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+        return input.inferExprKind(valueExpr, valueLocals);
+      },
+      [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+        return input.inferStructExprPath(valueExpr, valueLocals);
+      },
+      [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+        return input.emitExpr(valueExpr, valueLocals);
+      },
+      [&](const std::string &structPath) {
+        return input.resolveDestroyHelperForStruct(structPath);
+      },
+      [&](const std::string &structPath) {
+        return input.resolveMoveHelperForStruct(structPath);
+      },
+      [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool requireValue) {
+        return input.emitInlineDefinitionCall(callExpr, callee, callLocals, requireValue);
+      },
+      [&](const Expr &candidate) {
+        if (candidate.isMethodCall && candidate.namespacePrefix.empty() &&
+            !candidate.args.empty() &&
+            (candidate.name == "push" || candidate.name == "pop" ||
+             candidate.name == "reserve" || candidate.name == "clear" ||
+             candidate.name == "remove_at" || candidate.name == "remove_swap") &&
+            candidate.args.front().kind == Expr::Kind::Name) {
+          auto localIt = localsIn.find(candidate.args.front().name);
+          if (localIt != localsIn.end() && !localIt->second.isSoaVector &&
+              (localIt->second.kind == LocalInfo::Kind::Vector ||
+               localIt->second.structTypeName == "/std/collections/experimental_vector/Vector" ||
+               localIt->second.structTypeName.rfind(
+                   "/std/collections/experimental_vector/Vector__", 0) == 0)) {
+            return false;
+          }
+        }
+        if (candidate.isMethodCall && !input.isArrayCountCall(candidate, localsIn) &&
+            !input.isStringCountCall(candidate, localsIn) &&
+            !input.isVectorCapacityCall(candidate, localsIn)) {
+          return input.resolveMethodCallDefinition(candidate, localsIn) != nullptr;
+        }
+        return input.resolveDefinitionCall(candidate) != nullptr;
+      },
+      [&]() { input.emitVectorCapacityExceeded(); },
+      [&]() { input.emitVectorPopOnEmpty(); },
+      [&]() { input.emitVectorIndexOutOfBounds(); },
+      [&]() { input.emitArrayIndexOutOfBounds(); },
+      [&]() { input.emitVectorReserveNegative(); },
+      [&]() { input.emitVectorReserveExceeded(); },
+      errorOut);
+  if (vectorHelperResult == VectorStatementHelperEmitResult::Error) {
+    return false;
+  }
+  if (vectorHelperResult == VectorStatementHelperEmitResult::Emitted) {
+    return true;
+  }
+
   const auto directCallResult = tryEmitDirectCallStatement(
       stmt,
       localsIn,
@@ -110,6 +208,7 @@ bool runLowerStatementsCallsStep(const LowerStatementsCallsStepInput &input,
       [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
         return input.emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
       },
+      [&]() { input.emitArrayIndexOutOfBounds(); },
       instructions,
       errorOut);
   if (directCallResult == DirectCallStatementEmitResult::Error) {

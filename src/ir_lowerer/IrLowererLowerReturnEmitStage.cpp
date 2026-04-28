@@ -91,7 +91,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   auto &emitFloatToIntNonFinite = runtimeErrorEmitters.emitFloatToIntNonFinite;
 
   const auto &entryReturnConfig = setupLocalsOrchestration.entryReturnConfig;
-  bool returnsVoid = entryReturnConfig.returnsVoid;
+  const bool &returnsVoid = entryReturnConfig.returnsVoid;
 
   const auto &entryCountAccessSetup = setupLocalsOrchestration.entryCountAccessSetup;
   const bool &hasEntryArgs = entryCountAccessSetup.hasEntryArgs;
@@ -104,7 +104,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
 
   const auto &entryCallOnErrorSetup = setupLocalsOrchestration.entryCallOnErrorSetup;
   const auto &callResolutionAdapters = entryCallOnErrorSetup.callResolutionAdapters;
-  const SemanticProgram *semanticProgram = callResolutionAdapters.semanticProgram;
+  const SemanticProgram *const &semanticProgram = callResolutionAdapters.semanticProgram;
   auto &resolveExprPath = callResolutionAdapters.resolveExprPath;
   OnErrorByDefinition &onErrorByDef = *input.onErrorByDef;
 
@@ -221,12 +221,38 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
         {
             .inferExprKind =
                 [&](const Expr &valueExpr, const LocalMap &valueLocals) { return inferExprKind(valueExpr, valueLocals); },
+            .inferStructExprPath =
+                [&](const Expr &valueExpr, const LocalMap &valueLocals) {
+                  return inferStructExprPath(valueExpr, valueLocals);
+                },
             .emitExpr = [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
             .allocTempLocal = [&]() { return allocTempLocal(); },
             .resolveExprPath = [&](const Expr &valueExpr) { return resolveExprPath(valueExpr); },
             .findDefinitionByPath = [&](const std::string &path) -> const Definition * {
               auto it = defMap.find(path);
               return it == defMap.end() ? nullptr : it->second;
+            },
+            .resolveDestroyHelperForStruct = [&](const std::string &structPath) -> const Definition * {
+              auto destroyIt = defMap.find(structPath + "/DestroyStack");
+              if (destroyIt != defMap.end()) {
+                return destroyIt->second;
+              }
+              destroyIt = defMap.find(structPath + "/Destroy");
+              if (destroyIt != defMap.end()) {
+                return destroyIt->second;
+              }
+              return nullptr;
+            },
+            .resolveMoveHelperForStruct = [&](const std::string &structPath) -> const Definition * {
+              auto moveIt = defMap.find(structPath + "/Move");
+              if (moveIt != defMap.end()) {
+                return moveIt->second;
+              }
+              moveIt = defMap.find(structPath + "/Copy");
+              if (moveIt != defMap.end()) {
+                return moveIt->second;
+              }
+              return nullptr;
             },
             .isArrayCountCall = [&](const Expr &callExpr, const LocalMap &callLocals) {
               return isArrayCountCall(callExpr, callLocals);
@@ -249,12 +275,22 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
                 [&](const Expr &callExpr, const Definition &callee, const LocalMap &callLocals, bool expectValue) {
                   return emitInlineDefinitionCall(callExpr, callee, callLocals, expectValue);
                 },
+            .emitArrayIndexOutOfBounds = [&]() { emitArrayIndexOutOfBounds(); },
+            .emitVectorCapacityExceeded = [&]() { emitVectorCapacityExceeded(); },
+            .emitVectorPopOnEmpty = [&]() { emitVectorPopOnEmpty(); },
+            .emitVectorIndexOutOfBounds = [&]() { emitVectorIndexOutOfBounds(); },
+            .emitVectorReserveNegative = [&]() { emitVectorReserveNegative(); },
+            .emitVectorReserveExceeded = [&]() { emitVectorReserveExceeded(); },
             .instructions = &function.instructions,
         },
         stmt,
         localsIn,
         error);
   };
+
+  if (input.consumeStage) {
+    return input.consumeStage(stateOut, error);
+  }
 
   return true;
 }

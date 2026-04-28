@@ -77,15 +77,6 @@ bool isStructDefinition(const Definition &candidate) {
   return false;
 }
 
-bool isSumDefinition(const Definition &candidate) {
-  for (const auto &transform : candidate.transforms) {
-    if (transform.name == "sum") {
-      return true;
-    }
-  }
-  return false;
-}
-
 } // namespace
 
 bool SemanticsValidator::publishPassesDefinitionsDiagnostic(const Expr *expr) {

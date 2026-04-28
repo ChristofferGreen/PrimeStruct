@@ -1088,6 +1088,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
     std::vector<IrInstruction> &instructions,
     std::string &error) {
   if (stmt.kind != Expr::Kind::Call) {
@@ -1118,6 +1119,96 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
             localIt->second.structTypeName.rfind(
                 "/std/collections/experimental_vector/Vector__", 0) == 0);
   };
+  auto isExperimentalVectorReceiverExpr = [&](const Expr &candidate) {
+    if (candidate.kind != Expr::Kind::Name) {
+      return false;
+    }
+    auto localIt = localsIn.find(candidate.name);
+    return localIt != localsIn.end() &&
+           (localIt->second.structTypeName == "/std/collections/experimental_vector/Vector" ||
+            localIt->second.structTypeName.rfind(
+                "/std/collections/experimental_vector/Vector__", 0) == 0);
+  };
+  auto emitVectorHeaderFieldAddress = [&](const Expr &receiver, int32_t slotOffset) {
+    if (!emitExpr(receiver, localsIn)) {
+      return false;
+    }
+    if (slotOffset != 0) {
+      instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slotOffset) * IrSlotBytes});
+      instructions.push_back({IrOpcode::AddI64, 0});
+    }
+    return true;
+  };
+  auto emitVectorHeaderFieldLoad = [&](const Expr &receiver, int32_t slotOffset) {
+    if (!emitVectorHeaderFieldAddress(receiver, slotOffset)) {
+      return false;
+    }
+    instructions.push_back({IrOpcode::LoadIndirect, 0});
+    return true;
+  };
+  auto emitBoundsTrapIfStackTrue = [&]() {
+    const size_t okJump = instructions.size();
+    instructions.push_back({IrOpcode::JumpIfZero, 0});
+    emitArrayIndexOutOfBounds();
+    instructions[okJump].imm = instructions.size();
+  };
+  auto emitExperimentalVectorHeaderSetter = [&]() -> int {
+    if (!stmt.isMethodCall || stmt.args.size() != 2 ||
+        (!isSimpleCallName(stmt, "set_field_count") &&
+         !isSimpleCallName(stmt, "set_field_capacity")) ||
+        !isExperimentalVectorReceiverExpr(stmt.args.front())) {
+      return -1;
+    }
+    const Expr &receiver = stmt.args.front();
+    const Expr &value = stmt.args[1];
+    if (!emitExpr(value, localsIn)) {
+      return 0;
+    }
+    instructions.push_back({IrOpcode::PushI32, 0});
+    instructions.push_back({IrOpcode::CmpLtI32, 0});
+    emitBoundsTrapIfStackTrue();
+
+    if (isSimpleCallName(stmt, "set_field_count")) {
+      if (!emitExpr(value, localsIn) ||
+          !emitVectorHeaderFieldLoad(receiver, 1)) {
+        return 0;
+      }
+      instructions.push_back({IrOpcode::CmpGtI32, 0});
+      emitBoundsTrapIfStackTrue();
+      if (!emitVectorHeaderFieldAddress(receiver, 0) ||
+          !emitExpr(value, localsIn)) {
+        return 0;
+      }
+      instructions.push_back({IrOpcode::StoreIndirect, 0});
+      instructions.push_back({IrOpcode::Pop, 0});
+      return 1;
+    }
+
+    if (!emitVectorHeaderFieldLoad(receiver, 0) ||
+        !emitExpr(value, localsIn)) {
+      return 0;
+    }
+    instructions.push_back({IrOpcode::CmpGtI32, 0});
+    emitBoundsTrapIfStackTrue();
+    if (!emitExpr(value, localsIn)) {
+      return 0;
+    }
+    instructions.push_back({IrOpcode::PushI32, 1073741823});
+    instructions.push_back({IrOpcode::CmpGtI32, 0});
+    emitBoundsTrapIfStackTrue();
+    if (!emitVectorHeaderFieldAddress(receiver, 1) ||
+        !emitExpr(value, localsIn)) {
+      return 0;
+    }
+    instructions.push_back({IrOpcode::StoreIndirect, 0});
+    instructions.push_back({IrOpcode::Pop, 0});
+    return 1;
+  };
+  if (const int setterResult = emitExperimentalVectorHeaderSetter();
+      setterResult >= 0) {
+    return setterResult != 0 ? DirectCallStatementEmitResult::Emitted
+                             : DirectCallStatementEmitResult::Error;
+  }
   auto rewriteBareVectorMethodMutatorToDirectCall = [&](const Expr &callExpr, Expr &rewrittenExpr) {
     if (callExpr.kind != Expr::Kind::Call || !callExpr.isMethodCall || callExpr.args.empty() ||
         !callExpr.namespacePrefix.empty() || callExpr.name.find('/') != std::string::npos) {
@@ -1233,15 +1324,13 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     error.clear();
   }
 
-  if (!explicitVectorMutatorHelperCall) {
-    const auto vectorHelperCallFormResult = tryEmitVectorHelperCallFormStatement(
-        directStmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
-    if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Error) {
-      return DirectCallStatementEmitResult::Error;
-    }
-    if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Emitted) {
-      return DirectCallStatementEmitResult::Emitted;
-    }
+  const auto vectorHelperCallFormResult = tryEmitVectorHelperCallFormStatement(
+      directStmt, localsIn, resolveMethodCallDefinition, emitInlineDefinitionCall, error);
+  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Error) {
+    return DirectCallStatementEmitResult::Error;
+  }
+  if (vectorHelperCallFormResult == DirectCallStatementEmitResult::Emitted) {
+    return DirectCallStatementEmitResult::Emitted;
   }
 
   const std::string priorError = error;
@@ -1266,6 +1355,34 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
   }
   error = priorError;
   return DirectCallStatementEmitResult::Emitted;
+}
+
+DirectCallStatementEmitResult tryEmitDirectCallStatement(
+    const Expr &stmt,
+    const LocalMap &localsIn,
+    const std::function<bool(const Expr &, const LocalMap &)> &isArrayCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isStringCountCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &isVectorCapacityCall,
+    const std::function<bool(const Expr &, const LocalMap &)> &emitExpr,
+    const std::function<const Definition *(const Expr &, const LocalMap &)> &resolveMethodCallDefinition,
+    const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
+    const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
+    const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    std::vector<IrInstruction> &instructions,
+    std::string &error) {
+  return tryEmitDirectCallStatement(stmt,
+                                    localsIn,
+                                    isArrayCountCall,
+                                    isStringCountCall,
+                                    isVectorCapacityCall,
+                                    emitExpr,
+                                    resolveMethodCallDefinition,
+                                    resolveDefinitionCall,
+                                    getReturnInfo,
+                                    emitInlineDefinitionCall,
+                                    []() {},
+                                    instructions,
+                                    error);
 }
 
 AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(

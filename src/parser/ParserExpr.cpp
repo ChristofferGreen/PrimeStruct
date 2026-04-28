@@ -105,6 +105,15 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
     }
     return name == "array" || name == "vector" || name == "map" || name == "soa_vector";
   };
+  auto isLikelyTypeBraceConstructor = [&](const Expr &call) -> bool {
+    if (call.name.empty()) {
+      return false;
+    }
+    if (call.name.find('/') != std::string::npos || !call.templateArgs.empty()) {
+      return true;
+    }
+    return std::isupper(static_cast<unsigned char>(call.name.front())) != 0;
+  };
   auto parseBraceConstructor = [&](Expr &call, Expr &out) -> bool {
     call.isBraceConstructor = true;
     if (call.templateArgs.empty() && isPrimitiveBraceType(call.name)) {
@@ -240,7 +249,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       if (match(TokenKind::LBrace)) {
         if (!bindingTransforms &&
-            (!allowBareBindings_ || isPrimitiveBraceType(call.name) || isCollectionBraceType(call.name))) {
+            (!allowBareBindings_ || isPrimitiveBraceType(call.name) ||
+             isCollectionBraceType(call.name) || isLikelyTypeBraceConstructor(call))) {
           return parseBraceConstructor(call, out);
         }
         if (!call.templateArgs.empty()) {
@@ -483,7 +493,8 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       }
       if (match(TokenKind::LBrace)) {
         if (!sawParen) {
-          if (!allowBareBindings_ || isPrimitiveBraceType(call.name) || isCollectionBraceType(call.name)) {
+          if (!allowBareBindings_ || isPrimitiveBraceType(call.name) ||
+              isCollectionBraceType(call.name) || isLikelyTypeBraceConstructor(call)) {
             return parseBraceConstructor(call, out);
           } else if (allowBareBindings_) {
             if (!call.templateArgs.empty()) {

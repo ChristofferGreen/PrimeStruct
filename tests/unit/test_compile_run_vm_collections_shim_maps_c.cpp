@@ -255,6 +255,26 @@ main() {
   CHECK(runCommand(runCmd) == 13);
 }
 
+TEST_CASE("runs vm published vector count and capacity on mutable locals") {
+  const std::string source = R"(
+import /std/collections/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32> mut] values{vectorNew<i32>()}
+  [i32 mut] total{plus(vectorCount<i32>(values), vectorCapacity<i32>(values))}
+  /std/collections/vector/push(values, 4i32)
+  assign(total, plus(total, plus(vectorCount<i32>(values), vectorCapacity<i32>(values))))
+  /std/collections/vector/push(values, 8i32)
+  assign(total, plus(total, plus(vectorCount<i32>(values), vectorCapacity<i32>(values))))
+  return(total)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_vector_count_capacity_mut_local.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 6);
+}
+
 TEST_CASE("rejects vm stdlib collection shim vector count type mismatch") {
   const std::string source = R"(
 import /std/collections/*

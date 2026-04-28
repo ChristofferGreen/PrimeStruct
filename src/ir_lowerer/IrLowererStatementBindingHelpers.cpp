@@ -1178,6 +1178,15 @@ bool inferCallParameterLocalInfo(const Expr &param,
     infoOut.isSoaVector = semanticBindingTypeInfo.isSoaVector;
     infoOut.usesBuiltinCollectionLayout =
         semanticBindingTypeInfo.usesBuiltinCollectionLayout;
+    LocalInfo::ValueKind declaredValueKind =
+        bindingValueKindFromTransforms(param, infoOut.kind);
+    if (declaredValueKind == LocalInfo::ValueKind::Unknown) {
+      declaredValueKind = bindingValueKindFn(param, infoOut.kind);
+    }
+    if (hasExplicitBindingTypeTransformFn(param) &&
+        declaredValueKind != LocalInfo::ValueKind::Unknown) {
+      infoOut.valueKind = declaredValueKind;
+    }
   }
 
   if (infoOut.kind == LocalInfo::Kind::Map) {

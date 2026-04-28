@@ -512,8 +512,14 @@ bool Parser::tryParseBraceConstructorArgumentList(
     return false;
   }
   if (matchRaw(TokenKind::RBrace)) {
-    restoreState(true);
-    return false;
+    if (!expectRaw(TokenKind::RBrace, "expected '}'")) {
+      restoreState(true);
+      return false;
+    }
+    out.clear();
+    argNames.clear();
+    restoreState(false);
+    return true;
   }
 
   ArgumentLabelGuard labelGuard(*this);

@@ -79,6 +79,7 @@ DirectCallStatementEmitResult tryEmitDirectCallStatement(
     const std::function<const Definition *(const Expr &)> &resolveDefinitionCall,
     const std::function<bool(const std::string &, ReturnInfo &)> &getReturnInfo,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &, bool)> &emitInlineDefinitionCall,
+    const std::function<void()> &emitArrayIndexOutOfBounds,
     std::vector<IrInstruction> &instructions,
     std::string &error);
 AssignOrExprStatementEmitResult emitAssignOrExprStatementWithPop(

@@ -661,6 +661,13 @@
       return true;
     };
 
+    auto isPickCall = [](const Expr &candidate) {
+      return candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
+             !candidate.isMethodCall && !candidate.isFieldAccess &&
+             isSimpleCallName(candidate, "pick") &&
+             candidate.templateArgs.empty() && !hasNamedArguments(candidate.argNames);
+    };
+
     auto isPickArmEnvelopeBase = [](const Expr &candidate) {
       return candidate.kind == Expr::Kind::Call && !candidate.isBinding &&
              !candidate.isMethodCall && !candidate.isFieldAccess &&

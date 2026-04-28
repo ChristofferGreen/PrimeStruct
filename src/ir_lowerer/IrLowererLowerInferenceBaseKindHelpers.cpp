@@ -140,6 +140,19 @@ LocalInfo::ValueKind inferBaseSetupSimpleExprKind(const Expr &expr,
       return LocalInfo::ValueKind::Unknown;
     }
     case Expr::Kind::Call: {
+      if (!expr.isMethodCall && expr.args.empty() && expr.templateArgs.empty() &&
+          !expr.hasBodyArguments && expr.bodyArguments.empty()) {
+        const std::string resolvedPrimitivePath = resolveScopedExprPath(expr);
+        const size_t slash = resolvedPrimitivePath.find_last_of('/');
+        const std::string leaf = slash == std::string::npos
+                                     ? resolvedPrimitivePath
+                                     : resolvedPrimitivePath.substr(slash + 1);
+        if (leaf == "int" || leaf == "i32" || leaf == "i64" ||
+            leaf == "u64" || leaf == "float" || leaf == "f32" ||
+            leaf == "f64" || leaf == "bool") {
+          return valueKindFromTypeName(leaf);
+        }
+      }
       LocalInfo::ValueKind kindOut = LocalInfo::ValueKind::Unknown;
       if (inferBaseSetupSemanticQueryFactValueKind(expr, semanticProgram, semanticIndex, kindOut)) {
         return kindOut;

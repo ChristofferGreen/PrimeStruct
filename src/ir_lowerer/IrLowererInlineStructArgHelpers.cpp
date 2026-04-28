@@ -2,6 +2,7 @@
 
 #include "IrLowererFlowHelpers.h"
 
+#include <limits>
 #include <string_view>
 
 namespace primec::ir_lowerer {
@@ -184,11 +185,28 @@ bool emitInlineStructDefinitionArguments(const std::string &calleePath,
         error = "native backend requires known scalar struct field values on " + calleePath;
         return false;
       }
+      bool emittedFieldValue = false;
       if (argKind != field.valueKind) {
-        error = "struct field type mismatch";
-        return false;
+        if (field.valueKind == LocalInfo::ValueKind::Int32 &&
+            arg->kind == Expr::Kind::Literal && !arg->isUnsigned &&
+            arg->literalValue <=
+                static_cast<uint64_t>(std::numeric_limits<int32_t>::max())) {
+          emitInstruction(IrOpcode::PushI32, arg->literalValue);
+          emittedFieldValue = true;
+        } else if (field.valueKind == LocalInfo::ValueKind::Int32 &&
+                   argKind == LocalInfo::ValueKind::Int64) {
+          // Unsuffixed integer literals can flow through explicit i32
+          // parameters as i64 facts; the slot representation is still
+          // compatible for field materialization.
+        } else {
+          error = "struct field type mismatch: expected " +
+                  std::to_string(static_cast<int>(field.valueKind)) +
+                  ", got " + std::to_string(static_cast<int>(argKind)) +
+                  " in " + calleePath + "::" + field.name;
+          return false;
+        }
       }
-      if (!emitExpr(*arg, argLocals)) {
+      if (!emittedFieldValue && !emitExpr(*arg, argLocals)) {
         return false;
       }
       emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + field.slotOffset));

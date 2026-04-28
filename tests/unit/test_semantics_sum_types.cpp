@@ -473,7 +473,8 @@ main() {
 }
 )";
 
-  CHECK(validateProgram(source));
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
 }
 
 TEST_CASE("explicit sum construction rejects payload and target mismatches") {

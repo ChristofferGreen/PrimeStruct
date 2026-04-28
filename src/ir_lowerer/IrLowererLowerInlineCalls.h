@@ -2,6 +2,33 @@
                                  const Definition &callee,
                                  const LocalMap &callerLocals,
                                  bool requireValue) -> bool {
+    if (callExpr.isMethodCall && callExpr.args.size() == 1 &&
+        (isSimpleCallName(callExpr, "field_count") ||
+         isSimpleCallName(callExpr, "field_capacity")) &&
+        (callee.fullPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+         callee.fullPath.rfind("/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+      const Expr &receiver = callExpr.args.front();
+      if (receiver.kind == Expr::Kind::Name) {
+        auto localIt = callerLocals.find(receiver.name);
+        if (localIt != callerLocals.end()) {
+          function.instructions.push_back(
+              {localIt->second.kind == LocalInfo::Kind::Value
+                   ? IrOpcode::AddressOfLocal
+                   : IrOpcode::LoadLocal,
+               static_cast<uint64_t>(localIt->second.index)});
+        } else if (!emitExpr(receiver, callerLocals)) {
+          return false;
+        }
+      } else if (!emitExpr(receiver, callerLocals)) {
+        return false;
+      }
+      if (isSimpleCallName(callExpr, "field_capacity")) {
+        function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+      }
+      function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+      return true;
+    }
     ir_lowerer::InlineDefinitionCallContextSetup callSetup;
     if (!ir_lowerer::prepareInlineDefinitionCallContext(
             callee,

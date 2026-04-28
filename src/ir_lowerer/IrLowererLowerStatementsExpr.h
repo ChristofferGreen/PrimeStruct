@@ -407,6 +407,138 @@
           if (directCallee == nullptr && isDirectCollectionHelperPath(resolvedExprPath)) {
             directCallee = findDirectHelperDefinition(resolvedExprPath);
           }
+          auto isExperimentalVectorReceiver = [&](const Expr &receiver) {
+            if (receiver.kind == Expr::Kind::Name) {
+              auto localIt = localsIn.find(receiver.name);
+              if (localIt != localsIn.end() &&
+                  (localIt->second.structTypeName == "/std/collections/experimental_vector/Vector" ||
+                   localIt->second.structTypeName.rfind(
+                       "/std/collections/experimental_vector/Vector__", 0) == 0)) {
+                return true;
+              }
+            }
+            const std::string structPath = inferStructExprPath(receiver, localsIn);
+            return structPath == "/std/collections/experimental_vector/Vector" ||
+                   structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0;
+          };
+          auto emitVectorHeaderFieldLoad = [&](int32_t ptrLocal, int32_t slotOffset) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            if (slotOffset != 0) {
+              function.instructions.push_back(
+                  {IrOpcode::PushI64, static_cast<uint64_t>(slotOffset) * IrSlotBytes});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+            }
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+          };
+          auto emitVectorHeaderFieldStore = [&](int32_t ptrLocal, int32_t slotOffset, int32_t valueLocal) {
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(ptrLocal)});
+            if (slotOffset != 0) {
+              function.instructions.push_back(
+                  {IrOpcode::PushI64, static_cast<uint64_t>(slotOffset) * IrSlotBytes});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+            }
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({IrOpcode::StoreIndirect, 0});
+            function.instructions.push_back({IrOpcode::Pop, 0});
+          };
+          auto emitVectorHeaderBoundsTrapIfStackTrue = [&]() {
+            const size_t okJump = function.instructions.size();
+            function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+            emitArrayIndexOutOfBounds();
+            function.instructions[okJump].imm = function.instructions.size();
+          };
+          auto emitExperimentalVectorHeaderSetter = [&]() -> int {
+            if (!expr.isMethodCall || expr.args.size() != 2 ||
+                (!isSimpleCallName(expr, "set_field_count") &&
+                 !isSimpleCallName(expr, "set_field_capacity")) ||
+                !isExperimentalVectorReceiver(expr.args.front())) {
+              return -1;
+            }
+            const int32_t ptrLocal = allocTempLocal();
+            if (!emitExpr(expr.args.front(), localsIn)) {
+              return 0;
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+            const int32_t valueLocal = allocTempLocal();
+            if (!emitExpr(expr.args[1], localsIn)) {
+              return 0;
+            }
+            function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(valueLocal)});
+
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({IrOpcode::PushI32, 0});
+            function.instructions.push_back({IrOpcode::CmpLtI32, 0});
+            emitVectorHeaderBoundsTrapIfStackTrue();
+
+            if (isSimpleCallName(expr, "set_field_count")) {
+              function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+              emitVectorHeaderFieldLoad(ptrLocal, 1);
+              function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+              emitVectorHeaderBoundsTrapIfStackTrue();
+              emitVectorHeaderFieldStore(ptrLocal, 0, valueLocal);
+              return 1;
+            }
+
+            emitVectorHeaderFieldLoad(ptrLocal, 0);
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+            emitVectorHeaderBoundsTrapIfStackTrue();
+            function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(valueLocal)});
+            function.instructions.push_back({IrOpcode::PushI32, 1073741823});
+            function.instructions.push_back({IrOpcode::CmpGtI32, 0});
+            emitVectorHeaderBoundsTrapIfStackTrue();
+            emitVectorHeaderFieldStore(ptrLocal, 1, valueLocal);
+            return 1;
+          };
+          if (const auto setterResult = emitExperimentalVectorHeaderSetter();
+              setterResult >= 0) {
+            return setterResult != 0;
+          }
+          auto isInternalSoaMetadataReceiver = [&](const Expr &receiver) {
+            std::string structPath = inferStructExprPath(receiver, localsIn);
+            const size_t templateStart = structPath.find('<');
+            if (templateStart != std::string::npos) {
+              structPath.erase(templateStart);
+            }
+            const size_t leafStart = structPath.find_last_of('/');
+            const size_t suffixStart =
+                structPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+            if (suffixStart != std::string::npos) {
+              structPath.erase(suffixStart);
+            }
+            if (!structPath.empty() && structPath.front() == '/') {
+              structPath.erase(structPath.begin());
+            }
+            constexpr std::string_view internalSoaPrefix =
+                "std/collections/internal_soa_storage/";
+            if (structPath.rfind(internalSoaPrefix, 0) == 0) {
+              structPath.erase(0, internalSoaPrefix.size());
+            }
+            return structPath == "SoaColumn" || structPath == "SoaFieldView";
+          };
+          const bool isInternalSoaMetadataMethod =
+              expr.isMethodCall && expr.args.size() == 1 &&
+              (isSimpleCallName(expr, "field_count") ||
+               isSimpleCallName(expr, "field_capacity"));
+          const bool hasInternalSoaMetadataCallee =
+              directCallee != nullptr &&
+              (directCallee->fullPath.rfind(
+                   "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+               directCallee->fullPath.rfind(
+                   "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0);
+          if (isInternalSoaMetadataMethod &&
+              (isInternalSoaMetadataReceiver(expr.args.front()) ||
+               hasInternalSoaMetadataCallee)) {
+            if (!emitExpr(expr.args.front(), localsIn)) {
+              return false;
+            }
+            const uint64_t slotOffset =
+                isSimpleCallName(expr, "field_count") ? 1ull : 2ull;
+            function.instructions.push_back({IrOpcode::PushI64, slotOffset * IrSlotBytes});
+            function.instructions.push_back({IrOpcode::AddI64, 0});
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            return true;
+          }
           if (directCallee != nullptr) {
             if (ir_lowerer::isStructDefinition(*directCallee)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
@@ -414,7 +546,8 @@
               }
               return true;
             }
-            if (directCallee->fullPath.rfind("/std/collections/internal_soa_storage/", 0) == 0 &&
+            if (!isInternalSoaMetadataMethod &&
+                directCallee->fullPath.rfind("/std/collections/internal_soa_storage/", 0) == 0 &&
                 isInternalSoaHelperFamilyPath(directCallee->fullPath)) {
               if (!emitInlineDefinitionCall(expr, *directCallee, localsIn, true)) {
                 return false;
@@ -702,11 +835,112 @@
           return false;
         }
         if (expr.isMethodCall) {
+          auto isInternalSoaMetadataReceiver = [&](const Expr &receiver) {
+            auto unwrapInternalSoaMetadataPath = [](std::string structPath) {
+              structPath = trimTemplateTypeText(structPath);
+              for (std::string_view wrapper : {"Reference<", "Pointer<"}) {
+                if (structPath.rfind(wrapper, 0) == 0 &&
+                    structPath.size() > wrapper.size() &&
+                    structPath.back() == '>') {
+                  structPath = trimTemplateTypeText(
+                      structPath.substr(wrapper.size(),
+                                        structPath.size() - wrapper.size() - 1));
+                  break;
+                }
+              }
+              return structPath;
+            };
+            if (receiver.kind == Expr::Kind::Name) {
+              auto localIt = localsIn.find(receiver.name);
+              if (localIt != localsIn.end()) {
+                std::string localStructPath =
+                    unwrapInternalSoaMetadataPath(localIt->second.structTypeName);
+                const size_t localTemplateStart = localStructPath.find('<');
+                if (localTemplateStart != std::string::npos) {
+                  localStructPath.erase(localTemplateStart);
+                }
+                const size_t localLeafStart = localStructPath.find_last_of('/');
+                const size_t localSuffixStart =
+                    localStructPath.find("__",
+                                         localLeafStart == std::string::npos
+                                             ? 0
+                                             : localLeafStart + 1);
+                if (localSuffixStart != std::string::npos) {
+                  localStructPath.erase(localSuffixStart);
+                }
+                if (localStructPath == "/std/collections/internal_soa_storage/SoaColumn" ||
+                    localStructPath == "/std/collections/internal_soa_storage/SoaFieldView") {
+                  return true;
+                }
+              }
+            }
+            std::string structPath =
+                unwrapInternalSoaMetadataPath(inferStructExprPath(receiver, localsIn));
+            const size_t templateStart = structPath.find('<');
+            if (templateStart != std::string::npos) {
+              structPath.erase(templateStart);
+            }
+            const size_t leafStart = structPath.find_last_of('/');
+            const size_t suffixStart =
+                structPath.find("__", leafStart == std::string::npos ? 0 : leafStart + 1);
+            if (suffixStart != std::string::npos) {
+              structPath.erase(suffixStart);
+            }
+            return structPath == "/std/collections/internal_soa_storage/SoaColumn" ||
+                   structPath == "/std/collections/internal_soa_storage/SoaFieldView";
+          };
+          auto emitInternalSoaMetadataBase = [&](const Expr &receiver) {
+            if (receiver.kind == Expr::Kind::Name) {
+              auto localIt = localsIn.find(receiver.name);
+              if (localIt != localsIn.end() &&
+                  isInternalSoaMetadataReceiver(receiver)) {
+                function.instructions.push_back(
+                    {localIt->second.kind == LocalInfo::Kind::Value
+                         ? IrOpcode::AddressOfLocal
+                         : IrOpcode::LoadLocal,
+                     static_cast<uint64_t>(localIt->second.index)});
+                return true;
+              }
+            }
+            return emitExpr(receiver, localsIn);
+          };
+          if (expr.args.size() == 1 &&
+              (isSimpleCallName(expr, "field_count") ||
+               isSimpleCallName(expr, "field_capacity")) &&
+              isInternalSoaMetadataReceiver(expr.args.front())) {
+            if (!emitInternalSoaMetadataBase(expr.args.front())) {
+              return false;
+            }
+            if (isSimpleCallName(expr, "field_capacity")) {
+              function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+            }
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            return true;
+          }
           const std::string priorError = error;
           const Definition *methodCallee =
               resolveMethodCallDefinition(expr, localsIn);
           if (methodCallee == nullptr) {
             methodCallee = findDirectHelperDefinition(resolveExprPath(expr));
+          }
+          if (methodCallee != nullptr && expr.args.size() == 1 &&
+              (isSimpleCallName(expr, "field_count") ||
+               isSimpleCallName(expr, "field_capacity")) &&
+              (methodCallee->fullPath.rfind(
+                   "/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+               methodCallee->fullPath.rfind(
+                   "/std/collections/internal_soa_storage/SoaFieldView", 0) == 0)) {
+            if (!emitInternalSoaMetadataBase(expr.args.front())) {
+              return false;
+            }
+            if (isSimpleCallName(expr, "field_capacity")) {
+              function.instructions.push_back({IrOpcode::PushI64, IrSlotBytes});
+              function.instructions.push_back({IrOpcode::AddI64, 0});
+            }
+            function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+            error = priorError;
+            return true;
           }
           if (methodCallee != nullptr) {
             if (!emitInlineDefinitionCall(expr, *methodCallee, localsIn, true)) {

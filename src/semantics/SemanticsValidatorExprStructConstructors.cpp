@@ -5,6 +5,41 @@
 #include <vector>
 
 namespace primec::semantics {
+namespace {
+
+bool isConstructorBlockArgument(const Expr &expr) {
+  return expr.kind == Expr::Kind::Call && expr.name == "block" &&
+         expr.hasBodyArguments && expr.args.empty() &&
+         expr.templateArgs.empty() && !hasNamedArguments(expr.argNames);
+}
+
+bool normalizeConstructorBlockArgument(
+    const Expr &expr,
+    std::vector<Expr> &normalizedArgs,
+    std::vector<std::optional<std::string>> &normalizedArgNames,
+    const std::vector<Expr> *&constructorArgs,
+    const std::vector<std::optional<std::string>> *&constructorArgNames) {
+  if (expr.args.size() != 1 || expr.argNames.size() != 1 ||
+      expr.argNames.front().has_value()) {
+    return false;
+  }
+  const Expr &blockArg = expr.args.front();
+  if (!isConstructorBlockArgument(blockArg)) {
+    return false;
+  }
+  for (const Expr &bodyArg : blockArg.bodyArguments) {
+    if (bodyArg.isBinding) {
+      return false;
+    }
+  }
+  normalizedArgs = blockArg.bodyArguments;
+  normalizedArgNames.assign(normalizedArgs.size(), std::nullopt);
+  constructorArgs = &normalizedArgs;
+  constructorArgNames = &normalizedArgNames;
+  return true;
+}
+
+} // namespace
 
 bool SemanticsValidator::validateExprResolvedStructConstructorCall(
     const std::vector<ParameterInfo> &params,
@@ -28,7 +63,7 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   if (!context.zeroArgDiagnostic->empty()) {
     return failStructConstructorDiagnostic(*context.zeroArgDiagnostic);
   }
-  if (!expr.isBraceConstructor) {
+  if (!expr.isBraceConstructor && hasNamedArguments(expr.argNames)) {
     return failStructConstructorDiagnostic(
         "struct construction requires braces: " + *context.diagnosticResolved);
   }
@@ -79,26 +114,11 @@ bool SemanticsValidator::validateExprResolvedStructConstructorCall(
   const std::vector<Expr> *constructorArgs = &expr.args;
   const std::vector<std::optional<std::string>> *constructorArgNames =
       &expr.argNames;
-  if (expr.isBraceConstructor && expr.args.size() == 1 &&
-      expr.argNames.size() == 1 &&
-      !expr.argNames.front().has_value()) {
-    const Expr &blockArg = expr.args.front();
-    if (blockArg.kind == Expr::Kind::Call && blockArg.name == "block" &&
-        blockArg.hasBodyArguments) {
-      if (blockArg.bodyArguments.empty()) {
-        normalizedBraceArgs.clear();
-        normalizedBraceArgNames.clear();
-        constructorArgs = &normalizedBraceArgs;
-        constructorArgNames = &normalizedBraceArgNames;
-      } else if (blockArg.bodyArguments.size() == 1 &&
-                 !blockArg.bodyArguments.front().isBinding) {
-        normalizedBraceArgs.push_back(blockArg.bodyArguments.front());
-        normalizedBraceArgNames.push_back(std::nullopt);
-        constructorArgs = &normalizedBraceArgs;
-        constructorArgNames = &normalizedBraceArgNames;
-      }
-    }
-  }
+  (void)normalizeConstructorBlockArgument(expr,
+                                          normalizedBraceArgs,
+                                          normalizedBraceArgNames,
+                                          constructorArgs,
+                                          constructorArgNames);
 
   if (hasMissingDefaults && constructorArgs->empty() &&
       !hasNamedArguments(*constructorArgNames)) {

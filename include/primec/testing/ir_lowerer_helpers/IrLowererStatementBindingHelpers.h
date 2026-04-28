@@ -27,6 +27,9 @@ using ResolveUninitializedStorageForStatementFn =
     std::function<bool(const Expr &, const LocalMap &, UninitializedStorageAccessInfo &, bool &)>;
 using ResolveStructSlotLayoutForStatementFn = std::function<bool(const std::string &, StructSlotLayoutInfo &)>;
 using EmitStructCopyFromPtrsForStatementFn = std::function<bool(int32_t, int32_t, int32_t)>;
+// For non-local storage, valuePtrLocal == -1 is an interest probe before pointer emission.
+using EmitUninitializedStorageDropFromPtrForStatementFn =
+    std::function<bool(const UninitializedStorageAccessInfo &, int32_t, bool &)>;
 using EmitPrintArgForStatementFn = std::function<bool(const Expr &, const LocalMap &, const PrintBuiltin &)>;
 using ResolveDefinitionCallForStatementFn = std::function<const Definition *(const Expr &)>;
 
@@ -179,7 +182,8 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
     const std::function<int32_t()> &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
-    std::string &error);
+    std::string &error,
+    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr = {});
 UninitializedStorageTakeEmitResult tryEmitUninitializedStorageTakeStatement(
     const Expr &stmt,
     const LocalMap &localsIn,

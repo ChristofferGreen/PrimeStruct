@@ -5927,7 +5927,11 @@ bool rewriteOmittedStructInitializers(Program &program, std::string &error) {
     Expr call;
     call.kind = Expr::Kind::Call;
     call.isBraceConstructor = true;
-    call.name = info.typeName;
+    const std::string structPath =
+        semantics::resolveStructTypePath(info.typeName,
+                                         expr.namespacePrefix,
+                                         structNames);
+    call.name = structPath.empty() ? info.typeName : structPath;
     call.namespacePrefix = expr.namespacePrefix;
     expr.args.clear();
     expr.argNames.clear();

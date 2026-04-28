@@ -44,9 +44,12 @@ using LowerReturnEmitInlineDefinitionCallFn =
 using LowerReturnEmitAppendInstructionSourceRangeFn =
     std::function<void(const std::string &, const Expr &, size_t, size_t)>;
 
+struct LowerReturnEmitStageState;
+
 struct LowerReturnEmitStageInput {
   LowerSetupStageState *setupStage = nullptr;
   OnErrorByDefinition *onErrorByDef = nullptr;
+  std::function<bool(LowerReturnEmitStageState &, std::string &)> consumeStage;
 };
 
 struct LowerReturnEmitStageState {

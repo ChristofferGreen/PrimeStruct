@@ -77,6 +77,23 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   if (stmt.hasBodyArguments || !stmt.bodyArguments.empty()) {
     return failBindingDiagnostic("binding does not accept block arguments");
   }
+  if (stmt.transforms.empty() && !stmt.args.empty()) {
+    const std::string lookupNamespace =
+        !stmt.namespacePrefix.empty() ? stmt.namespacePrefix : namespacePrefix;
+    const std::string structPath =
+        resolveStructTypePath(stmt.name, lookupNamespace, structNames_);
+    if (!structPath.empty()) {
+      Expr constructorExpr = stmt;
+      constructorExpr.isBinding = false;
+      constructorExpr.isBraceConstructor = true;
+      constructorExpr.name = structPath;
+      constructorExpr.namespacePrefix.clear();
+      if (!validateExpr(params, locals, constructorExpr)) {
+        return false;
+      }
+      return true;
+    }
+  }
   if (isParam(params, stmt.name) || locals.count(stmt.name) > 0) {
     return failBindingDiagnostic("duplicate binding name: " + stmt.name);
   }

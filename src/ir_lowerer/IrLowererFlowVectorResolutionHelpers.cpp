@@ -130,6 +130,11 @@ bool resolveVectorMutatorAliasName(const Expr &expr, std::string &helperNameOut)
     helperNameOut = stripGeneratedHelperSuffix(normalized.substr(stdVectorPrefix.size()));
     return true;
   }
+  const std::string stdCollectionsPrefix = "std/collections/";
+  if (normalized.rfind(stdCollectionsPrefix, 0) == 0) {
+    return resolveExperimentalVectorMutatorAliasName(
+        normalized.substr(stdCollectionsPrefix.size()), helperNameOut);
+  }
   if (normalized.rfind(soaVectorPrefix, 0) == 0) {
     const std::string helperName = stripGeneratedHelperSuffix(normalized.substr(soaVectorPrefix.size()));
     if (helperName == "push" || helperName == "reserve") {
@@ -192,6 +197,10 @@ bool resolveVectorMutatorName(const Expr &expr, std::string &helperNameOut) {
 }
 
 bool classifyMutableVectorLocal(const LocalInfo &localInfo, bool fromArgsPack) {
+  if (localInfo.isSoaVector ||
+      localInfo.structTypeName.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0) {
+    return false;
+  }
   const LocalInfo::Kind kind = fromArgsPack ? localInfo.argsPackElementKind : localInfo.kind;
   if (!fromArgsPack && kind == LocalInfo::Kind::Vector && localInfo.isMutable) {
     return true;
@@ -524,7 +533,13 @@ VectorStatementHelperPrepareResult prepareVectorStatementHelperCall(
   const std::string qualifiedHelperName = normalizeQualifiedHelperName(stmt);
   const bool explicitVectorHelperPath =
       !stmt.isMethodCall &&
-      (qualifiedHelperName.rfind("std/collections/vector/", 0) == 0);
+      (qualifiedHelperName.rfind("std/collections/vector/", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/vectorPush", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/vectorPop", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/vectorReserve", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/vectorClear", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/vectorRemoveAt", 0) == 0 ||
+       qualifiedHelperName.rfind("std/collections/vectorRemoveSwap", 0) == 0);
   Expr normalizedStmt = stmt;
   const Expr *activeStmt = &stmt;
   bool useBuiltinCompatibilityStmt = false;
