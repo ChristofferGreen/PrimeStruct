@@ -3158,6 +3158,126 @@ TEST_CASE("ir lowerer rejects stale semantic-product on_error facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product on_error result metadata") {
+  primec::Program program;
+
+  primec::Definition handlerDef;
+  handlerDef.fullPath = "/handler";
+  handlerDef.semanticNodeId = 9600;
+  program.definitions.push_back(handlerDef);
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 9601;
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "void",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 9600,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .isExecution = false,
+      .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .hasOnError = true,
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 9601,
+      .provenanceHandle = 0,
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .resultErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .onErrorHandlerPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+      .onErrorErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "return",
+      .structPath = "",
+      .bindingTypeText = "Result<i32, FileError>",
+      .isMutable = false,
+      .isEntryArgString = false,
+      .isUnsafeReference = false,
+      .referenceRoot = "",
+      .sourceLine = 0,
+      .sourceColumn = 0,
+      .semanticNodeId = 9601,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "return",
+      .errorType = "FileError",
+      .boundArgCount = 0,
+      .boundArgTexts = {},
+      .returnResultHasValue = true,
+      .returnResultValueType = "i32",
+      .returnResultErrorType = "FileError",
+      .semanticNodeId = 9601,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "return"),
+      .handlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+      .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .returnResultValueTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .returnResultErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+
+  primec::IrLowerer lowerer;
+  primec::IrModule module;
+  primec::DiagnosticSinkReport diagnosticInfo;
+  std::string error;
+
+  semanticProgram.onErrorFacts.back().returnResultValueType = "i64";
+  semanticProgram.onErrorFacts.back().returnResultValueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "stale semantic-product on_error result metadata: /main");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.onErrorFacts.back().returnResultValueType = "i32";
+  semanticProgram.onErrorFacts.back().returnResultValueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.onErrorFacts.back().returnResultHasValue = false;
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
+  CHECK(error == "stale semantic-product on_error result metadata: /main");
+  CHECK(diagnosticInfo.message == error);
+}
+
 TEST_CASE("ir lowerer rejects mismatched semantic-product on_error bound args") {
   primec::Program program;
 

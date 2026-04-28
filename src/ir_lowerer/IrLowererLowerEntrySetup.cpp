@@ -119,6 +119,40 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
               std::string(callablePath);
       return false;
     }
+    const bool hasInternedOnErrorResultMetadata =
+        onErrorFact->returnResultValueTypeId != InvalidSymbolId ||
+        onErrorFact->returnResultErrorTypeId != InvalidSymbolId;
+    if (summary->hasResultType && hasInternedOnErrorResultMetadata) {
+      const std::string_view onErrorResultValueType =
+          onErrorFact->returnResultValueTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*context.semanticProgram,
+                                                       onErrorFact->returnResultValueTypeId)
+              : std::string_view(onErrorFact->returnResultValueType);
+      const std::string_view expectedResultValueType =
+          summary->resultValueTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*context.semanticProgram,
+                                                       summary->resultValueTypeId)
+              : std::string_view(summary->resultValueType);
+      const std::string_view onErrorResultErrorType =
+          onErrorFact->returnResultErrorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*context.semanticProgram,
+                                                       onErrorFact->returnResultErrorTypeId)
+              : std::string_view(onErrorFact->returnResultErrorType);
+      const std::string_view expectedResultErrorType =
+          summary->resultErrorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*context.semanticProgram,
+                                                       summary->resultErrorTypeId)
+              : std::string_view(summary->resultErrorType);
+      if (onErrorFact->returnResultHasValue != summary->resultTypeHasValue ||
+          (onErrorFact->returnResultHasValue && !expectedResultValueType.empty() &&
+           onErrorResultValueType != expectedResultValueType) ||
+          (!expectedResultErrorType.empty() &&
+           onErrorResultErrorType != expectedResultErrorType)) {
+        error = "stale semantic-product on_error result metadata: " +
+                std::string(callablePath);
+        return false;
+      }
+    }
     if (onErrorFact->boundArgTexts.size() != onErrorFact->boundArgCount) {
       error = "semantic-product on_error bound arg mismatch on " +
               std::string(callablePath);

@@ -270,6 +270,10 @@ Planned non-template inference migration contract:
   validation now checks the on-error fact against the published callable summary before lowerer
   setup can install the handler. Handler path, error-type, and bound-arg-count mismatches fail
   closed with a deterministic stale on-error diagnostic.
+- Completed `on_error` result-metadata diagnostic slice: semantic-product on-error completeness
+  validation now checks interned return Result metadata against the published callable summary
+  before lowerer setup can install the handler. Contradictory return Result shape facts fail closed
+  with a deterministic stale on-error metadata diagnostic.
 - Completed query stale-target diagnostic slice: semantic-product query completeness validation
   now checks query facts against the published direct or method call target for the same
   semantic node before lowerer result metadata can consume the query fact. Resolved-target
