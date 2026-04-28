@@ -1,78 +1,67 @@
 namespace std {
   namespace maybe {
-  [public struct]
-  Maybe<T>() {
-    [public bool mut] empty{true}
-    [public uninitialized<T> mut] value{uninitialized<T>()}
-
-    [public]
-    Create() {
-    }
-
-    [public]
-    Destroy() {
-      if(not(this.empty)) {
-        drop(this.value)
-      }
-    }
-
-    [public return<bool>]
-    isEmpty() {
-      return(this.empty)
-    }
-
-    [public return<bool>]
-    isSome() {
-      return(not(this.empty))
-    }
-
-    [public return<bool>]
-    is_empty() {
-      return(this.isEmpty())
-    }
-
-    [public return<bool>]
-    is_some() {
-      return(this.isSome())
-    }
-
-    [public mut return<void>]
-    clear() {
-      if(not(this.empty)) {
-        drop(this.value)
-      }
-      this.empty = true
-    }
-
-    [public mut return<void>]
-    set([T] v) {
-      if(not(this.empty)) {
-        drop(this.value)
-      }
-      init(this.value, v)
-      this.empty = false
-    }
-
-    [public mut return<T>]
-    take() {
-      out{take(this.value)}
-      this.empty = true
-      return(out)
-    }
+  [public sum]
+  Maybe<T> {
+    none
+    [T] some
   }
 
   [public return<Maybe<T>>]
   some<T>([T] value) {
-    [mut] out{Maybe<T>{}}
-    [mut] ref{location(out)}
-    init(ref.value, value)
-    ref.empty = false
-    return(out)
+    return(Maybe<T>{[some] value})
   }
 
   [public return<Maybe<T>>]
   none<T>() {
-    return(Maybe<T>{})
+    return(Maybe<T>{none})
+  }
+
+  [public return<bool>]
+  /Maybe/isEmpty<T>([Maybe<T>] self) {
+    return(pick(self) {
+      none {
+        return(true)
+      }
+      some(value) {
+        return(false)
+      }
+    })
+  }
+
+  [public return<bool>]
+  /Maybe/isSome<T>([Maybe<T>] self) {
+    return(pick(self) {
+      none {
+        return(false)
+      }
+      some(value) {
+        return(true)
+      }
+    })
+  }
+
+  [public return<bool>]
+  /Maybe/is_empty<T>([Maybe<T>] self) {
+    return(pick(self) {
+      none {
+        return(true)
+      }
+      some(value) {
+        return(false)
+      }
+    })
+  }
+
+  [public return<bool>]
+  /Maybe/is_some<T>([Maybe<T>] self) {
+    return(pick(self) {
+      none {
+        return(false)
+      }
+      some(value) {
+        return(true)
+      }
+    })
   }
   }
 }

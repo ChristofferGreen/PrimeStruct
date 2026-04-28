@@ -6,83 +6,85 @@ TEST_SUITE_BEGIN("primestruct.semantics.maybe");
 
 namespace {
 const std::string kMaybePrelude = R"(
-[public struct]
-Maybe<T>() {
-  [public bool mut] empty{true}
-  [public uninitialized<T> mut] value{uninitialized<T>()}
-
-  [public]
-  Create() {
-  }
-
-[public]
-Destroy() {
-  if(not(this.empty), then() { drop(this.value) }, else() { })
-}
-
-[public return<bool>]
-isEmpty() {
-  return(this.empty)
-}
-
-[public return<bool>]
-isSome() {
-  return(not(this.empty))
-}
-
-[public return<bool>]
-is_empty() {
-  return(this.isEmpty())
-}
-
-[public return<bool>]
-is_some() {
-  return(this.isSome())
-}
-
-[public mut return<void>]
-clear() {
-  if(not(this.empty), then() { drop(this.value) }, else() { })
-  assign(this.empty, true)
-}
-
-[public mut return<void>]
-set([T] v) {
-  if(not(this.empty), then() { drop(this.value) }, else() { })
-  init(this.value, v)
-  assign(this.empty, false)
-}
-
-[public mut return<T>]
-take() {
-  [T] out{take(this.value)}
-  assign(this.empty, true)
-  return(out)
-}
+[public sum]
+Maybe<T> {
+  none
+  [T] some
 }
 
 [public return<Maybe<T>>]
 some<T>([T] value) {
-  [Maybe<T> mut] out{Maybe<T>{}}
-  [Reference<Maybe<T>> mut] ref{location(out)}
-  init(ref.value, value)
-  assign(ref.empty, false)
-  return(out)
+  return(Maybe<T>{[some] value})
 }
 
 [public return<Maybe<T>>]
 none<T>() {
-  return(Maybe<T>{})
+  return(Maybe<T>{none})
+}
+
+[public return<bool>]
+/Maybe/isEmpty<T>([Maybe<T>] self) {
+  return(pick(self) {
+    none {
+      return(true)
+    }
+    some(value) {
+      return(false)
+    }
+  })
+}
+
+[public return<bool>]
+/Maybe/isSome<T>([Maybe<T>] self) {
+  return(pick(self) {
+    none {
+      return(false)
+    }
+    some(value) {
+      return(true)
+    }
+  })
+}
+
+[public return<bool>]
+/Maybe/is_empty<T>([Maybe<T>] self) {
+  return(pick(self) {
+    none {
+      return(true)
+    }
+    some(value) {
+      return(false)
+    }
+  })
+}
+
+[public return<bool>]
+/Maybe/is_some<T>([Maybe<T>] self) {
+  return(pick(self) {
+    none {
+      return(false)
+    }
+    some(value) {
+      return(true)
+    }
+  })
 }
 )";
 } // namespace
 
-TEST_CASE("maybe some constructs present value") {
+TEST_CASE("maybe some constructs present sum value") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
   [Maybe<i32>] value{some<i32>(1i32)}
-  if(value.empty) { return(0i32) } else { return(1i32) }
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
   std::string error;
@@ -90,12 +92,49 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("maybe none constructs empty value") {
+TEST_CASE("maybe none constructs default sum value") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
   [Maybe<i32>] value{none<i32>()}
-  if(value.empty) { return(1i32) } else { return(0i32) }
+  return(pick(value) {
+    none {
+      return(1i32)
+    }
+    some(v) {
+      return(0i32)
+    }
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe default and explicit none are equivalent") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32>] implicit{}
+  [Maybe<i32>] explicit{none}
+  [i32] left{pick(implicit) {
+    none {
+      1i32
+    }
+    some(v) {
+      0i32
+    }
+  }}
+  [i32] right{pick(explicit) {
+    none {
+      1i32
+    }
+    some(v) {
+      0i32
+    }
+  }}
+  return(left + right)
 }
 )";
   std::string error;
@@ -113,7 +152,14 @@ Widget() {
 [return<int>]
 main() {
   [Maybe<Widget>] value{some<Widget>(Widget{})}
-  if(value.empty) { return(0i32) } else { return(1i32) }
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(widget) {
+      return(widget.id)
+    }
+  })
 }
 )";
   std::string error;
@@ -131,7 +177,14 @@ make() {
 [return<int>]
 main() {
   [Maybe<i32>] value{make()}
-  if(value.empty) { return(0i32) } else { return(1i32) }
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
   std::string error;
@@ -153,7 +206,14 @@ choose([bool] flag) {
 [return<int>]
 main() {
   [Maybe<i32>] value{choose(false)}
-  if(value.empty) { return(1i32) } else { return(0i32) }
+  return(pick(value) {
+    none {
+      return(1i32)
+    }
+    some(v) {
+      return(0i32)
+    }
+  })
 }
 )";
   std::string error;
@@ -199,20 +259,19 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("maybe set and clear mutate value") {
+TEST_CASE("maybe direct constructor accepts explicit present variant") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
-  [Maybe<i32>] value{none<i32>()}
-  value.set(9i32)
-  if(value.is_empty()) {
-    return(0i32)
-  }
-  value.clear()
-  if(value.is_empty()) {
-    return(1i32)
-  }
-  return(0i32)
+  [Maybe<i32>] value{Maybe<i32>{[some] 1i32}}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
   std::string error;
@@ -220,60 +279,39 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("maybe take returns stored value") {
-  const std::string source = kMaybePrelude + R"(
-[return<int>]
-main() {
-  [Maybe<i32>] value{some<i32>(7i32)}
-  [i32] out{value.take()}
-  return(out)
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("maybe set overwrites existing value") {
-  const std::string source = kMaybePrelude + R"(
-[return<int>]
-main() {
-  [Maybe<i32>] value{some<i32>(1i32)}
-  value.set(2i32)
-  if(value.is_some()) { return(1i32) } else { return(0i32) }
-}
-)";
-  std::string error;
-  CHECK(validateProgram(source, "/main", error));
-  CHECK(error.empty());
-}
-
-TEST_CASE("maybe direct constructor rejects payload shorthand without some") {
-  const std::string source = kMaybePrelude + R"(
-[return<int>]
-main() {
-  [Maybe<i32>] value{Maybe{1i32}}
-  if(value.empty) { return(0i32) } else { return(1i32) }
-}
-)";
-  std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument count mismatch for /Maybe") != std::string::npos);
-}
-
-TEST_CASE("maybe direct constructor rejects payload shorthand with explicit template") {
+TEST_CASE("maybe direct constructor accepts unique inferred payload") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]
 main() {
   [Maybe<i32>] value{Maybe<i32>{1i32}}
-  if(value.empty) { return(0i32) } else { return(1i32) }
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("maybe mutable struct helpers are retired on sum values") {
+  const std::string source = kMaybePrelude + R"(
+[return<int>]
+main() {
+  [Maybe<i32> mut] value{none<i32>()}
+  value.set(9i32)
+  return(0i32)
 }
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("argument type mismatch for /Maybe__t") != std::string::npos);
-  CHECK(error.find("parameter empty") != std::string::npos);
-  CHECK(error.find("expected bool got i32") != std::string::npos);
+  CHECK(error.find("/Maybe__t") != std::string::npos);
+  CHECK(error.find("/set") != std::string::npos);
 }
 
 TEST_SUITE_END();

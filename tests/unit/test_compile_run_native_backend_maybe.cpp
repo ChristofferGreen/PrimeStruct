@@ -3,107 +3,92 @@
 #if defined(__APPLE__) && (defined(__arm64__) || defined(__aarch64__))
 TEST_SUITE_BEGIN("primestruct.compile.run.native_backend.maybe");
 
-TEST_CASE("compiles and runs native Maybe some/take") {
+TEST_CASE("compiles and runs native Maybe some and pick") {
   const std::string source = R"(
 import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32> mut] value{some<i32>(2i32)}
-  return(value.take())
+  [Maybe<i32>] value{some<i32>(2i32)}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
-  const std::string srcPath = writeTemp("native_maybe_some_take.prime", source);
+  const std::string srcPath = writeTemp("native_maybe_some_pick.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_maybe_some_take_exe").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_maybe_some_take_err.txt").string();
+      (testScratchPath("") / "primec_native_maybe_some_pick_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 2);
 }
 
-TEST_CASE("compiles and runs native Maybe set and is_some") {
+TEST_CASE("compiles and runs native Maybe none and helper methods") {
   const std::string source = R"(
 import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32> mut] value{none<i32>()}
-  value.set(9i32)
-  if(value.is_some(), then() { return(value.take()) }, else() { return(0i32) })
+  [Maybe<i32>] empty{none<i32>()}
+  [Maybe<i32>] value{some<i32>(7i32)}
+  if(not(empty.isEmpty())) {
+    return(0i32)
+  }
+  if(not(value.is_some())) {
+    return(0i32)
+  }
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
-  const std::string srcPath = writeTemp("native_maybe_set.prime", source);
+  const std::string srcPath = writeTemp("native_maybe_helpers.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_maybe_set_exe").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_maybe_set_err.txt").string();
+      (testScratchPath("") / "primec_native_maybe_helpers_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 7);
 }
 
-TEST_CASE("compiles and runs native Maybe of string") {
+TEST_CASE("compiles and runs native Maybe inferred present payload") {
   const std::string source = R"(
 import /std/maybe/*
-
-[return<int> effects(io_out)]
-main() {
-  [Maybe<string> mut] value{some<string>("hello"utf8)}
-  print_line(value.take())
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("native_maybe_string.prime", source);
-  const std::string exePath =
-      (testScratchPath("") / "primec_native_maybe_string_exe").string();
-  const std::string outPath =
-      (testScratchPath("") / "primec_native_maybe_string_out.txt").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_maybe_string_err.txt").string();
-
-  const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main > " + outPath +
-      " 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-}
-
-TEST_CASE("compiles and runs native Maybe of struct value") {
-  const std::string source = R"(
-import /std/maybe/*
-
-[struct]
-Widget() {
-  [i32] value{4i32}
-}
 
 [return<int>]
 main() {
-  [Maybe<Widget> mut] item{none<Widget>()}
-  item.set(Widget{})
-  return(item.take().value)
+  [Maybe<i32>] value{Maybe<i32>{9i32}}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
-  const std::string srcPath = writeTemp("native_maybe_struct.prime", source);
+  const std::string srcPath = writeTemp("native_maybe_inferred_payload.prime", source);
   const std::string exePath =
-      (testScratchPath("") / "primec_native_maybe_struct_exe").string();
-  const std::string errPath =
-      (testScratchPath("") / "primec_native_maybe_struct_err.txt").string();
+      (testScratchPath("") / "primec_native_maybe_inferred_payload_exe").string();
 
   const std::string compileCmd =
-      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("unknown struct type for layout: Widget") !=
-        std::string::npos);
+      "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
 }
 
 TEST_SUITE_END();

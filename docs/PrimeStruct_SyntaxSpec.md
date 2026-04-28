@@ -777,8 +777,8 @@ Result<T, E> {
 Template parameters may appear in payload envelopes. Concrete uses monomorphize before validation, so semantic-product
 sum metadata publishes substituted payload type text while preserving source-order variant indices and tag values.
 Invalid template arity is diagnosed. Recursive inline payloads such as `Bad<T> { [Bad<T>] again }` are rejected until
-recursive sum layout is designed. The stdlib `Maybe<T>` and `Result<T, E>` migrations are still deferred to their
-dedicated compatibility tasks; this section defines the generic `[sum]` substrate they will consume.
+recursive sum layout is designed. The stdlib `Maybe<T>` surface already consumes this generic substrate; `Result<T, E>`
+remains deferred to its dedicated compatibility task.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -858,7 +858,7 @@ Architectural direction for type ownership:
   should converge on stdlib `.prime` implementations over generic substrate.
 - `soa_vector<T>` is a promoted stdlib-owned public collection surface over
   generic SoA substrate.
-- `Maybe<T>` is intended to be stdlib-owned, while `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*`
+- `Maybe<T>` is stdlib-owned, while `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*`
   remain hybrid surfaces with minimal builtin/runtime substrate.
 
 ### 8.2 Vectors

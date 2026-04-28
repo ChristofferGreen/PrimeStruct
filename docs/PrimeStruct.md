@@ -2274,7 +2274,7 @@ for(
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
   - **ADT migration note:** `Result<T, Error>` and status-only `Result<Error>` are intended to become stdlib-owned sum
     types after the stdlib `Maybe<T>` sum migration. Status-only results use a unit success variant plus an error
-    payload variant rather than an empty payload struct. The migration is gated by `TODO-4264` through `TODO-4267`;
+    payload variant rather than an empty payload struct. The migration is gated by `TODO-4265` through `TODO-4267`;
     `?` propagation must not be rewritten onto sums until the Result sum contract is implemented and covered.
   - `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract stay
     language-defined, while constructors, helper combinators, and domain-specific error policy should keep moving into
@@ -3148,132 +3148,80 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
   `/std/collections/vector/vector<T>(...)`, `/std/collections/map/map<K, V>(...)`, and `soa_vector<T>(...)` spellings
   remain compatibility helper families registered through stdlib surface metadata; semantic-product tests publish their
   constructor surface IDs as helper metadata rather than struct field construction.
-- **Maybe/Result migration:** `Maybe{}` remains the current empty value construction form for the existing `Maybe<T>`
-  representation, while `none<T>()` and `some<T>(value)` are helper calls. Present-value shorthand
-  `Maybe{value}` / `Maybe<T>{value}` stays rejected until the stdlib-owned sum migration lands. The full Maybe/Result
-  representation migration is intentionally tracked by TODO-4264 through TODO-4267, not by file/gfx/collection
+- **Maybe/Result migration:** `Maybe<T>` is now a stdlib-owned sum with `none` and `some` variants. `Maybe<T>{}`
+  defaults to `none`, `Maybe<T>{none}` is the explicit empty form, `some<T>(value)` is the named helper, and
+  `Maybe<T>{value}` is accepted when the `some` payload is the only matching variant. The remaining Result migration
+  and legacy Maybe/Result cleanup are tracked by TODO-4265 through TODO-4267, not by file/gfx/collection
   compatibility.
 - **Follow-up policy:** do not add new constructor-shaped compatibility surfaces. Existing retained forms must either
   route through named helpers with focused coverage or get a dedicated migration TODO with scope, acceptance, and
   stop_rule before their status changes.
 
-## Optional Values (Maybe) (draft)
+## Optional Values (Maybe)
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.
 - **Naming:** `Maybe<T>` is the canonical optional type in PrimeStruct; there is no separate `Option<T>`.
-- **ADT migration note:** `Maybe<T>` is intended to become a stdlib-owned sum type with a unit `none` variant and a
-  payload-carrying `some` variant. Generic sums and unit variants are available now; the stdlib representation
-  migration is tracked by `TODO-4264`. Until then, the existing representation and helpers remain the supported
-  surface.
-- **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
-- **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)`
-  to destroy.
-- **Ergonomic constructor surface:** `Maybe{}` yields empty. Use `some<T>(value)` for a present value and `none<T>()`
-  for empty helper construction.
-  - `Maybe<T>` is intended to be a stdlib-owned optional type, not a permanently compiler-owned special case.
-  - Present-value construction is explicit: `Maybe{value}` / `Maybe<T>{value}` are intentionally unsupported; use
-    `some<T>(value)` instead.
-- **Helper surface (stdlib):** `isEmpty()` / `isSome()`, `set(value)`, `clear()`, `take()` (consumes the stored value
-  and marks empty). Compatibility wrappers keep `is_empty()` / `is_some()` available for migration-only callers.
+- **Concrete representation:** `Maybe<T>` is a stdlib-owned generic sum type with a unit `none` variant followed by a
+  payload-carrying `some` variant. The active variant is represented by the generic sum layout contract.
+- **Ergonomic constructor surface:** `Maybe<T>{}` yields `none`, `Maybe<T>{none}` is the explicit empty form, and
+  `some<T>(value)` constructs the present variant. Direct `Maybe<T>{value}` construction is also accepted when the
+  payload uniquely matches the `some` variant; use `some<T>(value)` when call-site clarity matters.
+- **Helper surface (stdlib):** `isEmpty()` / `isSome()` and compatibility wrappers `is_empty()` / `is_some()` are
+  implemented as type-path helpers over `pick`. The old mutable struct helpers `set(value)`, `clear()`, and `take()`
+  are retired for the sum-backed representation until a dedicated mutable active-variant contract lands.
 - **Example shape:**
   ```
-  [struct]
-  Maybe<T>() {
-    [bool] empty{true}
-    [uninitialized<T>] value{uninitialized<T>()}
-
-    [public]
-    Create() { }
-
-    [public]
-    Destroy() {
-      if(not(this.empty)) {
-        drop(this.value)
-      }
-    }
-
-    [public return<bool>]
-    isEmpty() {
-      return(this.empty)
-    }
-
-    [public return<bool>]
-    isSome() {
-      return(not(this.empty))
-    }
-
-    [public mut return<void>]
-    clear() {
-      if(not(this.empty)) {
-        drop(this.value)
-      }
-      this.empty = true
-    }
-
-    [public mut return<void>]
-    set([T] v) {
-      if(not(this.empty)) {
-        drop(this.value)
-      }
-      init(this.value, v)
-      this.empty = false
-    }
-
-    [public mut return<T>]
-    take() {
-      [T] out{take(this.value)}
-      this.empty = true
-      return(out)
-    }
+  [sum]
+  Maybe<T> {
+    none
+    [T] some
   }
 
   [return<Maybe<T>>]
-  some<T>([T] v) {
-    [Maybe<T> mut] out{Maybe<T>{}}
-    [Reference<Maybe<T>> mut] ref{location(out)}
-    init(ref.value, v)
-    ref.empty = false
-    return(out)
+  some<T>([T] value) {
+    return(Maybe<T>{[some] value})
   }
 
   [return<Maybe<T>>]
   none<T>() {
-    return(Maybe<T>{})
+    return(Maybe<T>{none})
+  }
+
+  [return<bool>]
+  /Maybe/isSome<T>([Maybe<T>] self) {
+    return(pick(self) {
+      none {
+        return(false)
+      }
+      some(value) {
+        return(true)
+      }
+    })
   }
   ```
 
 Draft tests (shape only):
 ```
-// Positive: create empty, create filled, drop only when filled.
+// Positive: create empty, create filled, inspect with pick.
 [return<i32>]
 maybe_basic() {
   [Maybe<i32>] a{none<i32>()}
   [Maybe<i32>] b{some<i32>(1i32)}
-  if(not(b.empty)) { drop(b.value) }
+  return(pick(b) {
+    none {
+      return(0i32)
+    }
+    some(value) {
+      return(value)
+    }
+  })
+}
+
+// Negative: retired mutable helper.
+[return<i32>]
+bad_set() {
+  [Maybe<i32> mut] value{none<i32>()}
+  value.set(1i32) // error: no sum-backed Maybe set helper is defined yet
   return(0i32)
-}
-
-// Negative: double init.
-[return<void>]
-bad_double_init() {
-  [uninitialized<i32>] storage{uninitialized<i32>()}
-  init(storage, 1i32)
-  init(storage, 2i32) // error: storage already initialized
-}
-
-// Negative: drop before init.
-[return<void>]
-bad_drop_uninit() {
-  [uninitialized<i32>] storage{uninitialized<i32>()}
-  drop(storage) // error: storage not initialized
-}
-
-// Negative: use after take.
-[return<void>]
-bad_use_after_take() {
-  [uninitialized<i32>] storage{uninitialized<i32>()}
-  init(storage, 1i32)
-  [i32] v{take(storage)}
-  drop(storage) // error: storage not initialized
 }
 ```
 
@@ -3376,9 +3324,9 @@ bad_use_after_take() {
   recursive sum layout is designed. The default sum construction rule is valid only when the first declared variant is
   a unit variant; the default active variant is tag `0` in source order. Payload variants are not default-constructed
   implicitly, so `[Shape] value{}` is rejected when the first `Shape` variant carries a payload. Variant order is
-  therefore layout/serialization-sensitive and should be treated as version-sensitive API surface. `Maybe<T>` and
-  `Result<T, E>` remain legacy/std-library migration surfaces until TODO-4264 and TODO-4265 re-express them on top of
-  this generic sum substrate.
+  therefore layout/serialization-sensitive and should be treated as version-sensitive API surface. `Maybe<T>` already
+  uses this substrate, while `Result<T, E>` remains a legacy/std-library migration surface until TODO-4265
+  re-expresses it on top of generic sums.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on

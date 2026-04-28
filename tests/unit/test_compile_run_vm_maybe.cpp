@@ -2,81 +2,77 @@
 
 TEST_SUITE_BEGIN("primestruct.compile.run.vm.maybe");
 
-TEST_CASE("runs vm with Maybe some/take") {
+TEST_CASE("runs vm with Maybe some and pick") {
   const std::string source = R"(
 import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32> mut] value{some<i32>(2i32)}
-  return(value.take())
+  [Maybe<i32>] value{some<i32>(2i32)}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
-  const std::string srcPath = writeTemp("vm_maybe_some_take.prime", source);
+  const std::string srcPath = writeTemp("vm_maybe_some_pick.prime", source);
   const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
   CHECK(runCommand(runCmd) == 2);
 }
 
-TEST_CASE("runs vm with Maybe set and is_some") {
+TEST_CASE("runs vm with Maybe none and helper methods") {
   const std::string source = R"(
 import /std/maybe/*
 
 [return<int>]
 main() {
-  [Maybe<i32> mut] value{none<i32>()}
-  value.set(9i32)
-  if(value.is_some(), then() { return(value.take()) }, else() { return(0i32) })
+  [Maybe<i32>] empty{none<i32>()}
+  [Maybe<i32>] value{some<i32>(7i32)}
+  if(not(empty.is_empty())) {
+    return(0i32)
+  }
+  if(not(value.isSome())) {
+    return(0i32)
+  }
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
-  const std::string srcPath = writeTemp("vm_maybe_set.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_vm_maybe_set_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
+  const std::string srcPath = writeTemp("vm_maybe_helpers.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 7);
 }
 
-TEST_CASE("runs vm with Maybe of string") {
+TEST_CASE("runs vm with Maybe inferred present payload") {
   const std::string source = R"(
 import /std/maybe/*
-
-[return<int> effects(io_out)]
-main() {
-  [Maybe<string> mut] value{some<string>("hello"utf8)}
-  print_line(value.take())
-  return(0i32)
-}
-)";
-  const std::string srcPath = writeTemp("vm_maybe_string.prime", source);
-  const std::string outPath = (testScratchPath("") / "primec_vm_maybe_string_out.txt").string();
-  const std::string errPath = (testScratchPath("") / "primec_vm_maybe_string_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath + " 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("vm backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/convert/pointer/assign/increment/decrement calls in expressions") !=
-        std::string::npos);
-}
-
-TEST_CASE("runs vm with Maybe of struct value") {
-  const std::string source = R"(
-import /std/maybe/*
-
-[struct]
-Widget() {
-  [i32] value{4i32}
-}
 
 [return<int>]
 main() {
-  [Maybe<Widget> mut] item{none<Widget>()}
-  item.set(Widget{})
-  return(item.take().value)
+  [Maybe<i32>] value{Maybe<i32>{9i32}}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(v)
+    }
+  })
 }
 )";
-  const std::string srcPath = writeTemp("vm_maybe_struct.prime", source);
-  const std::string errPath = (testScratchPath("") / "primec_vm_maybe_struct_err.txt").string();
-  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main 2> " + errPath;
-  CHECK(runCommand(runCmd) == 2);
-  CHECK(readFile(errPath).find("unknown struct type for layout: Widget") != std::string::npos);
+  const std::string srcPath = writeTemp("vm_maybe_inferred_payload.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
 }
 
 TEST_SUITE_END();

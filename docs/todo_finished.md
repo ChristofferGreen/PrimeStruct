@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4264: Add stdlib-owned `Maybe<T>` sum
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred stdlib ADT migration
+  - scope: Re-express `Maybe<T>` as a stdlib-owned sum type while preserving
+    the supported public optional-value helper surface.
+  - implementation_notes:
+    - Started from current Maybe docs, stdlib Maybe files, maybe semantics
+      tests, and VM/native Maybe compile-run tests.
+    - Kept `some<T>(value)`, `none<T>()`, `isEmpty()`, `isSome()`,
+      `is_empty()`, and `is_some()` in stdlib.
+    - Split the old mutable struct helpers `set(value)`, `clear()`, and
+      `take()` into TODO-4291 because sum values do not yet have a general
+      in-place active-variant mutation contract.
+  - acceptance:
+    - `Maybe<T>` is declared as a sum with a unit `none` variant and a
+      payload-carrying `some` variant.
+    - `[Maybe<T>] value{}` defaults to `none`, and `[Maybe<T>] value{none}`
+      remains the explicit equivalent.
+    - Supported Maybe helper behavior remains source-compatible; retired
+      mutable struct helpers are documented and covered by a deterministic
+      diagnostic test.
+    - Compile-run coverage proves `none`, `some`, read-only helpers, and
+      present-payload construction on supported scalar payloads.
+    - Docs mark the old struct/storage representation as retired.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `Maybe<T>` is stdlib-owned on top of sum semantics and
+    existing Maybe behavior is preserved or intentionally migrated.
+  - finished_at: 2026-04-28
+  - evidence: Replaced stdlib Maybe's bool/uninitialized struct storage with a
+    generic sum, added `some`/`none` wrappers plus type-path read-only helpers,
+    updated semantic and VM/native compile-run fixtures to use `pick` over the
+    sum, documented direct inferred present-payload construction, and split the
+    mutable-helper policy into TODO-4291. Local test execution was skipped per
+    the lite workflow.
+
 - [x] TODO-4288: Add executable unit sum variants
   - owner: ai
   - created_at: 2026-04-28

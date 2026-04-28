@@ -67,21 +67,21 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4264: Add stdlib-owned `Maybe<T>` sum
+- TODO-4265: Add stdlib-owned `Result<T, E>` sum
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
+- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
 - TODO-4270: Add compile-time integer template arguments
 
 ### Priority Lanes (Current)
 
-- Deferred stdlib ADT migration: TODO-4264 -> TODO-4265 -> TODO-4266
-  -> TODO-4267
+- Deferred stdlib ADT migration: TODO-4265 -> TODO-4266 -> TODO-4267
+  -> TODO-4291
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -89,10 +89,10 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
+- TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
 - TODO-4270: Add compile-time integer template arguments
@@ -130,7 +130,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
+| Stdlib ADT migration for `Maybe` and `Result` | TODO-4265, TODO-4266, TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Validation Coverage Snapshot
@@ -155,7 +155,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
+| Maybe/Result sum migration conformance | TODO-4265, TODO-4266, TODO-4267, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Vector/Map Bridge Contract Summary
@@ -272,40 +272,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4264: Add stdlib-owned `Maybe<T>` sum
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred stdlib ADT migration
-  - scope: Re-express `Maybe<T>` as a stdlib-owned sum type while preserving
-    the existing public optional-value helper surface.
-  - implementation_notes:
-    - Start from current Maybe docs, stdlib Maybe files, maybe semantics tests,
-      and VM/native Maybe compile-run tests.
-    - Keep compatibility wrappers such as `some<T>(value)`, `none<T>()`,
-      `isEmpty()`, `isSome()`, `set(value)`, `clear()`, and `take()` until
-      this TODO explicitly removes or reclassifies them.
-    - Do not migrate `Result` or `?` in this item; use this as the smaller
-      proof that ordinary stdlib code can own a generic sum surface.
-  - acceptance:
-    - `Maybe<T>` is declared as a sum with a unit `none` variant and a
-      payload-carrying `some` variant.
-    - `[Maybe<T>] value{}` defaults to `none`, and `[Maybe<T>] value{none}`
-      remains the explicit equivalent.
-    - Existing Maybe helper behavior and diagnostics remain source-compatible
-      unless an explicit migration diagnostic is documented and tested.
-    - Compile-run coverage proves `none`, `some`, `isEmpty`/`isSome`, `take`,
-      and `clear` on supported payload kinds.
-    - Docs mark the old struct/storage representation as retired or
-      compatibility-only.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once `Maybe<T>` is stdlib-owned on top of sum semantics and
-    existing Maybe behavior is preserved or intentionally migrated.
-
 - [ ] TODO-4265: Add stdlib-owned `Result<T, E>` sum
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4264
   - scope: Re-express `Result<T, E>` and status-only `Result<E>` as
     stdlib-owned sum types while preserving the current helper/combinator
     surface before changing `?`.
@@ -392,6 +362,33 @@ Task template:
   - stop_rule: Stop once legacy Maybe/Result special cases are removed,
     quarantined behind named compatibility bridges, or split into explicit
     follow-up TODOs.
+
+- [ ] TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - depends_on: TODO-4267
+  - scope: Decide whether `Maybe<T>.set(value)`, `Maybe<T>.clear()`, and
+    `Maybe<T>.take()` should return as stdlib helpers on top of sum-backed
+    `Maybe<T>`, or remain retired in favor of explicit `pick` plus value
+    construction.
+  - implementation_notes:
+    - Start from `stdlib/std/maybe/maybe.prime`,
+      `tests/unit/test_semantics_maybe.cpp`, and the VM/native Maybe
+      compile-run tests.
+    - If mutable helpers return, first define the general language contract for
+      in-place active-variant mutation and payload movement on sum values.
+    - If mutable helpers stay retired, strengthen diagnostics so callers get a
+      named migration error rather than a generic missing-helper path.
+  - acceptance:
+    - The chosen direction is documented in `docs/PrimeStruct.md`.
+    - Semantic tests cover `set`, `clear`, and `take` either as supported
+      helper behavior or as deterministic migration diagnostics.
+    - Compile-run coverage covers the chosen supported Maybe mutation or
+      explicit-construction/pick replacement surface.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once the sum-backed Maybe mutable-helper policy is
+    implemented or intentionally retired with focused diagnostics and docs.
 
 - [ ] TODO-4268: Add heterogeneous type-pack syntax and metadata
   - owner: ai

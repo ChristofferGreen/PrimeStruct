@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4289: Add generic sum declarations and monomorphization") !=
+                  "- TODO-4265: Add stdlib-owned `Result<T, E>` sum") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4264: Add stdlib-owned `Maybe<T>` sum") !=
+                  "- TODO-4266: Rewire `?` to the `Result` sum contract") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,14 +1153,13 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4289: Add generic sum declarations and monomorphization") !=
+                  "- TODO-4265: Add stdlib-owned `Result<T, E>` sum") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4289: Add generic sum declarations and monomorphization",
-      "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
       "TODO-4265: Add stdlib-owned `Result<T, E>` sum",
       "TODO-4266: Rewire `?` to the `Result` sum contract",
       "TODO-4267: Retire legacy Maybe/Result representations",
+      "TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers",
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
       "TODO-4269: Bind and monomorphize type-pack arguments",
       "TODO-4270: Add compile-time integer template arguments",
@@ -1179,6 +1178,14 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("TODO-4288:") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4288") == std::string::npos);
   CHECK(todoFinished.find("TODO-4288: Add executable unit sum variants") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4289: Add generic sum declarations and monomorphization") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4289: Add generic sum declarations and monomorphization") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4264: Add stdlib-owned `Maybe<T>` sum") ==
+        std::string::npos);
+  CHECK(todoFinished.find("TODO-4264: Add stdlib-owned `Maybe<T>` sum") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4287: Add unit sum declaration metadata") !=
         std::string::npos);
@@ -1606,9 +1613,9 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
             "`array<T>(...)`, `vector<T>(...)`, `map<K, V>(...)`, canonical") !=
         std::string::npos);
   CHECK(primeStructDoc.find(
-            "`Maybe{}` remains the current empty value construction form") !=
+            "`Maybe<T>` is now a stdlib-owned sum with `none` and `some` variants") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("`none<T>()` and `some<T>(value)` are helper calls") !=
+  CHECK(primeStructDoc.find("`Maybe<T>{value}` is accepted when the `some` payload is the only matching variant") !=
         std::string::npos);
   CHECK(syntaxSpecDoc.find("Current call-shaped vector helpers remain "
                            "compatibility helper surfaces;") !=
@@ -1633,8 +1640,11 @@ TEST_CASE("constructor-shaped compatibility inventory stays source locked") {
         std::string::npos);
   CHECK(maybeSemantics.find("TEST_CASE(\"maybe helpers report empty and some\")") !=
         std::string::npos);
-  CHECK(maybeSemantics.find("TEST_CASE(\"maybe direct constructor rejects "
-                            "payload shorthand without some\")") !=
+  CHECK(maybeSemantics.find("TEST_CASE(\"maybe direct constructor accepts "
+                            "unique inferred payload\")") !=
+        std::string::npos);
+  CHECK(maybeSemantics.find("TEST_CASE(\"maybe mutable struct helpers are "
+                            "retired on sum values\")") !=
         std::string::npos);
   CHECK(collectionSnapshot.find(
             "TEST_CASE(\"semantic product publishes graph-backed collection "
@@ -2239,27 +2249,35 @@ TEST_CASE("maybe stdlib control flow stays source locked to surface if syntax") 
   const std::string maybeStdlib = readFile(maybeStdlibPath.string());
 
   CHECK(primeStructDoc.find("`isEmpty()` / `isSome()`") != std::string::npos);
-  CHECK(primeStructDoc.find("Compatibility wrappers keep `is_empty()` / `is_some()`") != std::string::npos);
+  CHECK(primeStructDoc.find("compatibility wrappers `is_empty()` / `is_some()`") != std::string::npos);
   CHECK(primeStructDoc.find("**Helper surface (stdlib):** `is_empty()` / `is_some()`") == std::string::npos);
-  CHECK(primeStructDoc.find("Destroy() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n    }") !=
+  CHECK(primeStructDoc.find("`Maybe<T>` is a stdlib-owned generic sum type") !=
         std::string::npos);
-  CHECK(primeStructDoc.find("isEmpty() {\n      return(this.empty)\n    }") != std::string::npos);
-  CHECK(primeStructDoc.find("isSome() {\n      return(not(this.empty))\n    }") != std::string::npos);
-  CHECK(primeStructDoc.find("clear() {\n      if(not(this.empty)) {\n        drop(this.value)\n      }\n      this.empty = true\n    }") !=
+  CHECK(primeStructDoc.find("The old mutable struct helpers `set(value)`, `clear()`, and `take()`") !=
         std::string::npos);
-  CHECK(maybeStdlib.find("isEmpty() {\n      return(this.empty)\n    }") != std::string::npos);
-  CHECK(maybeStdlib.find("isSome() {\n      return(not(this.empty))\n    }") != std::string::npos);
-  CHECK(maybeStdlib.find("is_empty() {\n      return(this.isEmpty())\n    }") != std::string::npos);
-  CHECK(maybeStdlib.find("is_some() {\n      return(this.isSome())\n    }") != std::string::npos);
-  CHECK(maybeStdlib.find("if(not(this.empty)) {\n        drop(this.value)\n      }") != std::string::npos);
-  CHECK(maybeStdlib.find("this.empty = true") != std::string::npos);
-  CHECK(maybeStdlib.find("this.empty = false") != std::string::npos);
-  CHECK(maybeStdlib.find("ref.empty = false") != std::string::npos);
+  CHECK(primeStructDoc.find("value.set(1i32) // error: no sum-backed Maybe set helper is defined yet") !=
+        std::string::npos);
+  CHECK(maybeStdlib.find("[public sum]\n  Maybe<T> {\n    none\n    [T] some\n  }") !=
+        std::string::npos);
+  CHECK(maybeStdlib.find("return(Maybe<T>{[some] value})") != std::string::npos);
+  CHECK(maybeStdlib.find("return(Maybe<T>{none})") != std::string::npos);
+  CHECK(maybeStdlib.find("/Maybe/isEmpty<T>([Maybe<T>] self)") != std::string::npos);
+  CHECK(maybeStdlib.find("/Maybe/isSome<T>([Maybe<T>] self)") != std::string::npos);
+  CHECK(maybeStdlib.find("/Maybe/is_empty<T>([Maybe<T>] self)") != std::string::npos);
+  CHECK(maybeStdlib.find("/Maybe/is_some<T>([Maybe<T>] self)") != std::string::npos);
+  CHECK(maybeStdlib.find("pick(self) {\n      none {\n        return(true)\n      }") !=
+        std::string::npos);
+  CHECK(maybeStdlib.find("pick(self) {\n      none {\n        return(false)\n      }") !=
+        std::string::npos);
+  CHECK(maybeStdlib.find("[public struct]") == std::string::npos);
+  CHECK(maybeStdlib.find("uninitialized<T>") == std::string::npos);
+  CHECK(maybeStdlib.find("drop(this.value)") == std::string::npos);
   CHECK(maybeStdlib.find("assign(this.empty, true)") == std::string::npos);
   CHECK(maybeStdlib.find("assign(this.empty, false)") == std::string::npos);
   CHECK(maybeStdlib.find("assign(ref.empty, false)") == std::string::npos);
-  CHECK(maybeStdlib.find("if(not(this.empty), then() { drop(this.value) }, else() { })") ==
-        std::string::npos);
+  CHECK(maybeStdlib.find("this.empty = true") == std::string::npos);
+  CHECK(maybeStdlib.find("this.empty = false") == std::string::npos);
+  CHECK(maybeStdlib.find("ref.empty = false") == std::string::npos);
 }
 
 TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
@@ -2372,9 +2390,12 @@ TEST_CASE("small stdlib wrappers stay source locked to inferred locals") {
         std::string::npos);
   CHECK(codeExamples.find("return(left == right)") != std::string::npos);
 
-  CHECK(maybeStdlib.find("out{take(this.value)}") != std::string::npos);
-  CHECK(maybeStdlib.find("[mut] out{Maybe<T>{}}") != std::string::npos);
-  CHECK(maybeStdlib.find("[mut] ref{location(out)}") != std::string::npos);
+  CHECK(maybeStdlib.find("return(Maybe<T>{[some] value})") != std::string::npos);
+  CHECK(maybeStdlib.find("return(Maybe<T>{none})") != std::string::npos);
+  CHECK(maybeStdlib.find("some(value) {\n        return(true)\n      }") != std::string::npos);
+  CHECK(maybeStdlib.find("out{take(this.value)}") == std::string::npos);
+  CHECK(maybeStdlib.find("[mut] out{Maybe<T>{}}") == std::string::npos);
+  CHECK(maybeStdlib.find("[mut] ref{location(out)}") == std::string::npos);
   CHECK(maybeStdlib.find("[T] out{take(this.value)}") == std::string::npos);
   CHECK(maybeStdlib.find("[Maybe<T> mut] out{Maybe<T>{}}") == std::string::npos);
   CHECK(maybeStdlib.find("[Reference<Maybe<T>> mut] ref{location(out)}") == std::string::npos);
