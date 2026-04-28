@@ -2273,10 +2273,9 @@ for(
   - **Result helpers (draft):**
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
   - **ADT migration note:** `Result<T, Error>` and status-only `Result<Error>` are intended to become stdlib-owned sum
-    types after generic/unit sums, stdlib `Maybe<T>`, and core `pick` lowering are implemented. Status-only results use
-    a unit success variant plus an error payload variant rather than an empty payload struct. The migration is gated by
-    `TODO-4288`, `TODO-4289`, and `TODO-4264` through `TODO-4267`; `?` propagation must not be rewritten onto sums
-    until the Result sum contract is implemented and covered.
+    types after the stdlib `Maybe<T>` sum migration. Status-only results use a unit success variant plus an error
+    payload variant rather than an empty payload struct. The migration is gated by `TODO-4264` through `TODO-4267`;
+    `?` propagation must not be rewritten onto sums until the Result sum contract is implemented and covered.
   - `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract stay
     language-defined, while constructors, helper combinators, and domain-specific error policy should keep moving into
     stdlib `.prime`.
@@ -3152,8 +3151,8 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Maybe/Result migration:** `Maybe{}` remains the current empty value construction form for the existing `Maybe<T>`
   representation, while `none<T>()` and `some<T>(value)` are helper calls. Present-value shorthand
   `Maybe{value}` / `Maybe<T>{value}` stays rejected until the stdlib-owned sum migration lands. The full Maybe/Result
-  representation migration is intentionally tracked by TODO-4288, TODO-4289, and TODO-4264 through TODO-4267, not by
-  file/gfx/collection compatibility.
+  representation migration is intentionally tracked by TODO-4264 through TODO-4267, not by file/gfx/collection
+  compatibility.
 - **Follow-up policy:** do not add new constructor-shaped compatibility surfaces. Existing retained forms must either
   route through named helpers with focused coverage or get a dedicated migration TODO with scope, acceptance, and
   stop_rule before their status changes.
@@ -3162,9 +3161,9 @@ Enum entry access uses static field syntax (`Colors.Blue`) and rewrites to brace
 - **Purpose:** represent either "no value" or a value of `T` without heap allocation.
 - **Naming:** `Maybe<T>` is the canonical optional type in PrimeStruct; there is no separate `Option<T>`.
 - **ADT migration note:** `Maybe<T>` is intended to become a stdlib-owned sum type with a unit `none` variant and a
-  payload-carrying `some` variant after generic sums and unit variants are supported. That migration is explicitly
-  deferred behind the core `[sum]` / `pick` implementation and tracked by `TODO-4288`, `TODO-4289`, and
-  `TODO-4264`; until then, the existing representation and helpers remain the supported surface.
+  payload-carrying `some` variant. Generic sums and unit variants are available now; the stdlib representation
+  migration is tracked by `TODO-4264`. Until then, the existing representation and helpers remain the supported
+  surface.
 - **Concrete representation:** a boolean tag plus uninitialized storage for `T`.
 - **Required primitives:** `uninitialized<T>` storage, `init(storage, value)` to construct in-place, and `drop(storage)`
   to destroy.
@@ -3353,10 +3352,33 @@ bad_use_after_take() {
   [MaybeI32] b{none}
   [MaybeI32] c{[some] 1i32}
   ```
-  Generic sum declarations are still deferred. The default sum construction rule is valid only when the first declared
-  variant is a unit variant; the default active variant is tag `0` in source order. Payload variants are not
-  default-constructed implicitly, so `[Shape] value{}` is rejected when the first `Shape` variant carries a payload.
-  Variant order is therefore layout/serialization-sensitive and should be treated as version-sensitive API surface.
+  Generic sum declarations use the same template syntax as generic structs and helpers. Template parameters may appear
+  in payload envelopes, and each concrete use is monomorphized before validation and semantic-product publication:
+  ```prime
+  [sum]
+  Maybe<T> {
+    none
+    [T] some
+  }
+
+  [sum]
+  Result<T, E> {
+    [T] ok
+    [E] err
+  }
+
+  [Maybe<i32>] a{}
+  [Maybe<i32>] b{[some] 1i32}
+  [Result<i32, string>] c{[ok] 2i32}
+  ```
+  Monomorphized sum metadata records the substituted payload type text, keeps source-order variant indices/tags, and
+  rejects invalid template arity. Recursive inline payloads such as `Bad<T> { [Bad<T>] again }` are unsupported until
+  recursive sum layout is designed. The default sum construction rule is valid only when the first declared variant is
+  a unit variant; the default active variant is tag `0` in source order. Payload variants are not default-constructed
+  implicitly, so `[Shape] value{}` is rejected when the first `Shape` variant carries a payload. Variant order is
+  therefore layout/serialization-sensitive and should be treated as version-sensitive API surface. `Maybe<T>` and
+  `Result<T, E>` remain legacy/std-library migration surfaces until TODO-4264 and TODO-4265 re-express them on top of
+  this generic sum substrate.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on

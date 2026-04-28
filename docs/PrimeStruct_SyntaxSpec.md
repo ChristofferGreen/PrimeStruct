@@ -753,20 +753,32 @@ Message {
 [Message] ok{[title] Text{"hello"}}   // explicit variant selection
 ```
 
-Generic sums are planned, but executable unit construction already uses the
-same source shape on non-generic sums:
+Generic sums use the same template syntax as other generic definitions:
 
 ```prime
 [sum]
-MaybeI32 {
+Maybe<T> {
   none
-  [i32] some
+  [T] some
 }
 
-[MaybeI32] a{}        // defaults to first variant because it is unit
-[MaybeI32] b{none}    // explicit unit variant
-[MaybeI32] c{[some] 1i32}
+[sum]
+Result<T, E> {
+  [T] ok
+  [E] err
+}
+
+[Maybe<i32>] a{}                  // defaults to first variant because it is unit
+[Maybe<i32>] b{none}              // explicit unit variant
+[Maybe<i32>] c{[some] 1i32}
+[Result<i32, string>] d{[ok] 2i32}
 ```
+
+Template parameters may appear in payload envelopes. Concrete uses monomorphize before validation, so semantic-product
+sum metadata publishes substituted payload type text while preserving source-order variant indices and tag values.
+Invalid template arity is diagnosed. Recursive inline payloads such as `Bad<T> { [Bad<T>] again }` are rejected until
+recursive sum layout is designed. The stdlib `Maybe<T>` and `Result<T, E>` migrations are still deferred to their
+dedicated compatibility tasks; this section defines the generic `[sum]` substrate they will consume.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first

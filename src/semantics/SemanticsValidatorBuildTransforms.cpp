@@ -29,6 +29,27 @@ bool isLowerCamelIdentifier(const std::string &name) {
   return !name.empty() && name.front() >= 'a' && name.front() <= 'z';
 }
 
+std::string sumPayloadTypeTextForBuildTransformValidation(const Transform &payload) {
+  if (payload.templateArgs.empty()) {
+    return payload.name;
+  }
+  return payload.name + "<" + joinTemplateArgs(payload.templateArgs) + ">";
+}
+
+bool isDirectRecursiveSumPayload(const Definition &def, const Transform &payload) {
+  if (!payload.templateArgs.empty()) {
+    return false;
+  }
+  if (payload.name == def.fullPath || payload.name == def.name) {
+    return true;
+  }
+  if (!def.namespacePrefix.empty() &&
+      payload.name == def.namespacePrefix + "/" + def.name) {
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateDefinitionBuildTransforms(
@@ -542,6 +563,19 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
       if (!payload.arguments.empty() || isUnsupportedSumPayloadEnvelope(payload)) {
         if (addTransformDiagnostic("unsupported sum payload envelope on " + def.fullPath + "/" + stmt.name + ": " +
                                    payload.name)) {
+          return false;
+        }
+        return true;
+      }
+      const std::string payloadTypeText =
+          sumPayloadTypeTextForBuildTransformValidation(payload);
+      const Definition *payloadSum =
+          isDirectRecursiveSumPayload(def, payload)
+              ? &def
+              : resolveSumDefinitionForTypeText(payloadTypeText, def.namespacePrefix);
+      if (payloadSum != nullptr && payloadSum->fullPath == def.fullPath) {
+        if (addTransformDiagnostic("recursive sum payload is unsupported on " +
+                                   def.fullPath + "/" + stmt.name)) {
           return false;
         }
         return true;

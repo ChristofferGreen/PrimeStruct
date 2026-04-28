@@ -209,6 +209,150 @@ main() {
   CHECK(error.find("unsupported sum payload envelope on /Bad/item: auto") != std::string::npos);
 }
 
+TEST_CASE("generic sum declarations monomorphize payload metadata") {
+  const std::string source = R"(
+[public sum]
+Maybe<T> {
+  none
+  [T] some
+}
+
+[public sum]
+Result<T, E> {
+  [T] ok
+  [E] err
+}
+
+[return<i32>]
+main() {
+  [Maybe<i32>] maybe{[some] 42i32}
+  [Result<i32, string>] result{[ok] 7i32}
+  return(0i32)
+}
+)";
+
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(validateProgramWithSemanticProduct(source, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::SemanticProgramSumTypeMetadata *maybeType = nullptr;
+  const primec::SemanticProgramSumTypeMetadata *resultType = nullptr;
+  for (const auto &entry : semanticProgram.sumTypeMetadata) {
+    if (entry.fullPath.rfind("/Maybe__t", 0) == 0) {
+      maybeType = &entry;
+    }
+    if (entry.fullPath.rfind("/Result__t", 0) == 0) {
+      resultType = &entry;
+    }
+  }
+  REQUIRE(maybeType != nullptr);
+  REQUIRE(resultType != nullptr);
+  CHECK(maybeType->isPublic);
+  CHECK(maybeType->variantCount == 2);
+  CHECK(resultType->isPublic);
+  CHECK(resultType->variantCount == 2);
+
+  bool sawNone = false;
+  bool sawSome = false;
+  bool sawOk = false;
+  bool sawErr = false;
+  for (const auto &entry : semanticProgram.sumVariantMetadata) {
+    if (entry.sumPath == maybeType->fullPath && entry.variantName == "none") {
+      sawNone = true;
+      CHECK(entry.variantIndex == 0);
+      CHECK(entry.tagValue == 0);
+      CHECK_FALSE(entry.hasPayload);
+      CHECK(entry.payloadTypeText.empty());
+    }
+    if (entry.sumPath == maybeType->fullPath && entry.variantName == "some") {
+      sawSome = true;
+      CHECK(entry.variantIndex == 1);
+      CHECK(entry.tagValue == 1);
+      CHECK(entry.hasPayload);
+      CHECK(entry.payloadTypeText == "i32");
+    }
+    if (entry.sumPath == resultType->fullPath && entry.variantName == "ok") {
+      sawOk = true;
+      CHECK(entry.variantIndex == 0);
+      CHECK(entry.payloadTypeText == "i32");
+    }
+    if (entry.sumPath == resultType->fullPath && entry.variantName == "err") {
+      sawErr = true;
+      CHECK(entry.variantIndex == 1);
+      CHECK(entry.payloadTypeText == "string");
+    }
+  }
+  CHECK(sawNone);
+  CHECK(sawSome);
+  CHECK(sawOk);
+  CHECK(sawErr);
+}
+
+TEST_CASE("generic sum declarations reject invalid template arity") {
+  const std::string source = R"(
+[sum]
+Maybe<T> {
+  none
+  [T] some
+}
+
+[return<i32>]
+main() {
+  [Maybe<i32, string>] bad{}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramExpectingError(source, error));
+  CHECK(error.find("template argument count mismatch for /Maybe: expected 1, got 2") !=
+        std::string::npos);
+}
+
+TEST_CASE("generic sum declarations reject recursive inline payloads") {
+  const std::string source = R"(
+[sum]
+Bad<T> {
+  [Bad<T>] again
+}
+
+[return<i32>]
+main() {
+  [Bad<i32>] bad{}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramExpectingError(source, error));
+  CHECK(error.find("recursive sum payload is unsupported on /Bad__t") !=
+        std::string::npos);
+  CHECK(error.find("/again") != std::string::npos);
+}
+
+TEST_CASE("generic sum construction reports payload inference ambiguity") {
+  const std::string source = R"(
+[sum]
+Choice<T> {
+  [T] left
+  [T] right
+}
+
+[return<i32>]
+main() {
+  [Choice<i32>] bad{1i32}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramExpectingError(source, error));
+  CHECK(error.find("ambiguous inferred sum construction for /Choice__t") !=
+        std::string::npos);
+  CHECK(error.find(": left, right") != std::string::npos);
+}
+
 TEST_CASE("explicit sum construction accepts labeled and positional payloads") {
   const std::string source = R"(
 [struct]

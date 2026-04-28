@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4289: Add generic sum declarations and monomorphization
+- TODO-4264: Add stdlib-owned `Maybe<T>` sum
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
@@ -81,8 +80,8 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred stdlib ADT migration: TODO-4289 -> TODO-4264
-  -> TODO-4265 -> TODO-4266 -> TODO-4267
+- Deferred stdlib ADT migration: TODO-4264 -> TODO-4265 -> TODO-4266
+  -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
   -> TODO-4273 -> TODO-4277 -> TODO-4278
@@ -90,7 +89,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4289: Add generic sum declarations and monomorphization
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
 - TODO-4265: Add stdlib-owned `Result<T, E>` sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
@@ -132,7 +130,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4289, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
+| Stdlib ADT migration for `Maybe` and `Result` | TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Validation Coverage Snapshot
@@ -157,7 +155,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4289, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
+| Maybe/Result sum migration conformance | TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Vector/Map Bridge Contract Summary
@@ -274,41 +272,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4289: Add generic sum declarations and monomorphization
-  - owner: ai
-  - created_at: 2026-04-28
-  - phase: Deferred stdlib ADT migration
-  - scope: Extend `[sum]` definitions so generic sums such as `Maybe<T>` and
-    `Result<T, E>` parse, validate, monomorphize, and publish deterministic
-    semantic-product metadata.
-  - implementation_notes:
-    - Start from the sum parser/metadata/resolver introduced by TODO-4257
-      through TODO-4288 and template monomorphization paths under
-      `src/semantics/TemplateMonomorph*.h`.
-    - Preserve source-order tag assignment after monomorphization; generic
-      variants must not reorder or duplicate variant metadata per backend.
-    - Keep Maybe/Result stdlib migration deferred to TODO-4264 and TODO-4265;
-      this item only makes generic sums available as a language substrate.
-  - acceptance:
-    - Generic sum declarations such as `Maybe<T>` and `Result<T, E>` parse,
-      validate, monomorphize, and expose deterministic semantic-product
-      metadata with substituted payload type text.
-    - Duplicate generic variants, invalid template arity, unsupported
-      recursive inline payloads, and template inference ambiguity produce
-      deterministic diagnostics.
-    - `docs/PrimeStruct.md` and `docs/PrimeStruct_SyntaxSpec.md` record the
-      generic sum contract and note that Maybe/Result migration is still
-      deferred to TODO-4264 and TODO-4265.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once generic sum syntax and monomorphized metadata are
-    implemented and covered well enough for stdlib `Maybe<T>` and
-    `Result<T, E>` migration.
-
 - [ ] TODO-4264: Add stdlib-owned `Maybe<T>` sum
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4289
   - scope: Re-express `Maybe<T>` as a stdlib-owned sum type while preserving
     the existing public optional-value helper surface.
   - implementation_notes:

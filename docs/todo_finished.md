@@ -6947,3 +6947,22 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     Moved explicit active-payload move/drop lifecycle hooks to `TODO-4284`,
     promoted that follow-up to Ready Now, and deferred release reruns to CI per
     the lite workflow.
+
+- [x] TODO-4289: Add generic sum declarations and monomorphization
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Extend `[sum]` definitions so generic sums such as `Maybe<T>` and
+    `Result<T, E>` parse, validate, monomorphize, and publish deterministic
+    semantic-product metadata.
+  - finished_at: 2026-04-28
+  - evidence: Generic sum specializations now refresh their parsed variant
+    metadata after template substitution, so semantic-product sum type and
+    variant metadata publish substituted payload type text while preserving
+    source-order tags. Sum validation now rejects self-recursive inline
+    payloads, and generic sum coverage exercises `Maybe<T>`/`Result<T, E>`
+    metadata, invalid template arity, recursive payload diagnostics, and
+    inferred-construction ambiguity. Updated the PrimeStruct language docs and
+    syntax spec with the generic sum contract, removed `TODO-4289` from the
+    live queue, promoted `TODO-4264` to Ready Now, and deferred release reruns
+    to CI per the lite workflow.
