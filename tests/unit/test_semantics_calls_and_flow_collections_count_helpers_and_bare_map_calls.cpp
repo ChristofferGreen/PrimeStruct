@@ -735,33 +735,49 @@ TEST_CASE("public stdlib map wrappers route through canonical slash helpers") {
             "  mapContains<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/contains<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find("  [public return<bool> Comparable<K>]\n  mapContains<K, V>") !=
+        std::string::npos);
   CHECK(source.find(
             "  mapContainsRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "    return(/std/collections/map/contains_ref<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find("  [public return<bool> Comparable<K>]\n  mapContainsRef<K, V>") !=
         std::string::npos);
   CHECK(source.find(
             "  mapTryAt<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/tryAt<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find("  [public return<Result<V, ContainerError>> Comparable<K>]\n  mapTryAt<K, V>") !=
+        std::string::npos);
   CHECK(source.find(
             "  mapTryAtRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "    return(/std/collections/map/tryAt_ref<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find("  [public return<Result<V, ContainerError>> Comparable<K>]\n  mapTryAtRef<K, V>") !=
         std::string::npos);
   CHECK(source.find(
             "  mapAt<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/at<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find("  [public return<V> Comparable<K>]\n  mapAt<K, V>") !=
+        std::string::npos);
   CHECK(source.find(
             "  mapAtRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "    return(/std/collections/map/at_ref<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find("  [public return<V> Comparable<K>]\n  mapAtRef<K, V>") !=
         std::string::npos);
   CHECK(source.find(
             "  mapAtUnsafe<K, V>([map<K, V>] values, [K] key) {\n"
             "    return(/std/collections/map/at_unsafe<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find("  [public return<V> Comparable<K>]\n  mapAtUnsafe<K, V>") !=
+        std::string::npos);
   CHECK(source.find(
             "  mapAtUnsafeRef<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "    return(/std/collections/map/at_unsafe_ref<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find("  [public return<V> Comparable<K>]\n  mapAtUnsafeRef<K, V>") !=
         std::string::npos);
   CHECK(source.find(
             "  mapInsert<K, V>([Map<K, V> mut] values, [K] key, [V] value) {\n"
@@ -811,33 +827,51 @@ TEST_CASE("canonical stdlib map slash helpers avoid wrapper recursion") {
             "/std/collections/map/contains<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapContains<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find("[public return<bool> Comparable<K>]\n/std/collections/map/contains<K, V>") !=
+        std::string::npos);
   CHECK(source.find(
             "/std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapContainsRef<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find("[public return<bool> Comparable<K>]\n/std/collections/map/contains_ref<K, V>") !=
         std::string::npos);
   CHECK(source.find(
             "/std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapTryAt<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
+            "[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]\n"
+            "/std/collections/map/tryAt<K, V>") != std::string::npos);
+  CHECK(source.find(
             "/std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapTryAtRef<K, V>(values, key))") !=
         std::string::npos);
   CHECK(source.find(
+            "[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]\n"
+            "/std/collections/map/tryAt_ref<K, V>") != std::string::npos);
+  CHECK(source.find(
             "/std/collections/map/at<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapAt<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at<K, V>") !=
         std::string::npos);
   CHECK(source.find(
             "/std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapAtRef<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at_ref<K, V>") !=
+        std::string::npos);
   CHECK(source.find(
             "/std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapAtUnsafe<K, V>(values, key))") !=
         std::string::npos);
+  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at_unsafe<K, V>") !=
+        std::string::npos);
   CHECK(source.find(
             "/std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {\n"
             "  return(/std/collections/experimental_map/mapAtUnsafeRef<K, V>(values, key))") !=
+        std::string::npos);
+  CHECK(source.find("[public return<V> Comparable<K>]\n/std/collections/map/at_unsafe_ref<K, V>") !=
         std::string::npos);
   CHECK(source.find(
             "/std/collections/map/insert_ref<K, V>([Reference<Map<K, V>> mut] values, [K] key, [V] value) {\n"

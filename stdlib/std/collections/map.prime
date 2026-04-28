@@ -204,42 +204,42 @@ import /std/collections/experimental_map/*
   return(/std/collections/experimental_map/mapCountRef<K, V>(values))
 }
 
-[public return<bool>]
+[public return<bool> Comparable<K>]
 /std/collections/map/contains<K, V>([map<K, V>] values, [K] key) {
   return(/std/collections/experimental_map/mapContains<K, V>(values, key))
 }
 
-[public return<bool>]
+[public return<bool> Comparable<K>]
 /std/collections/map/contains_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
   return(/std/collections/experimental_map/mapContainsRef<K, V>(values, key))
 }
 
-[public return<Result<V, /std/collections/ContainerError>>]
+[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
 /std/collections/map/tryAt<K, V>([map<K, V>] values, [K] key) {
   return(/std/collections/experimental_map/mapTryAt<K, V>(values, key))
 }
 
-[public return<Result<V, /std/collections/ContainerError>>]
+[public return<Result<V, /std/collections/ContainerError>> Comparable<K>]
 /std/collections/map/tryAt_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
   return(/std/collections/experimental_map/mapTryAtRef<K, V>(values, key))
 }
 
-[public return<V>]
+[public return<V> Comparable<K>]
 /std/collections/map/at<K, V>([map<K, V>] values, [K] key) {
   return(/std/collections/experimental_map/mapAt<K, V>(values, key))
 }
 
-[public return<V>]
+[public return<V> Comparable<K>]
 /std/collections/map/at_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
   return(/std/collections/experimental_map/mapAtRef<K, V>(values, key))
 }
 
-[public return<V>]
+[public return<V> Comparable<K>]
 /std/collections/map/at_unsafe<K, V>([map<K, V>] values, [K] key) {
   return(/std/collections/experimental_map/mapAtUnsafe<K, V>(values, key))
 }
 
-[public return<V>]
+[public return<V> Comparable<K>]
 /std/collections/map/at_unsafe_ref<K, V>([Reference<Map<K, V>>] values, [K] key) {
   return(/std/collections/experimental_map/mapAtUnsafeRef<K, V>(values, key))
 }
