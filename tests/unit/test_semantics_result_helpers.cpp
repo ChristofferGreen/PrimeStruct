@@ -176,6 +176,59 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result value sum accepts legacy Result.map") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_mapped_success() {
+  [Result<i32, i32>] source{Result.ok(7i32)}
+  return(Result.map(source, []([i32] value) { return(plus(value, 4i32)) }))
+}
+
+[return<int>]
+main() {
+  [Result<i32, i32>] okSource{Result.ok(5i32)}
+  [Result<i32, i32>] errorSource{error<i32, i32>(3i32)}
+  [Result<i32, i32>] mappedOk{
+    Result.map(okSource, []([i32] value) { return(plus(value, 2i32)) })
+  }
+  [Result<i32, i32>] mappedError{
+    Result.map(errorSource, []([i32] value) { return(plus(value, 2i32)) })
+  }
+  [Result<i32, i32>] returnedMapped{make_mapped_success()}
+  [i32] okValue{pick(mappedOk) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      100i32
+    }
+  }}
+  [i32] errorValue{pick(mappedError) {
+    ok(value) {
+      101i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] returnedValue{pick(returnedMapped) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      102i32
+    }
+  }}
+  return(plus(plus(okValue, errorValue), returnedValue))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib result value sum rejects default construction") {
   const std::string source = R"(
 import /std/result/*

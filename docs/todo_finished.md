@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4297: Bridge `Result.map` to the result sum
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the first legacy combinator bridge by making
+    `Result.map(result, fn)` construct typed imported value-carrying
+    `/std/result/*` sum locals and returns on IR-backed VM/native paths when
+    the source is a local stdlib Result sum.
+  - implementation_notes:
+    - Detect legacy `Result.map(result, fn)` during stdlib Result sum
+      construction.
+    - On `ok`, bind the source payload into the lambda, evaluate the mapped
+      value, and store it in the target `ok` payload.
+    - On `error`, copy the source error payload into the target `error`
+      payload without running the lambda.
+    - Left `Result.and_then(...)`, `Result.map2(...)`, status-only
+      `Result<Error>`, and `?` propagation in TODO-4293/TODO-4266.
+  - acceptance:
+    - Typed imported value-carrying Result locals can be initialized with
+      `Result.map(source, fn)` when `source` is a local stdlib Result sum.
+    - Functions returning typed imported value-carrying Results can return
+      `Result.map(source, fn)` for local stdlib Result sum sources.
+    - `ok` sources map through the lambda and `error` sources preserve their
+      error payload.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `Result.map` can construct typed imported
+    value-carrying stdlib Result sums and the remaining combinator bridge work
+    is still tracked.
+  - finished_at: 2026-04-28
+  - evidence: Added stdlib Result sum construction for legacy `Result.map`
+    plus semantic, VM, and native fixtures covering ok mapping, error
+    preservation, and declared-return mapping. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4296: Bridge `Result.ok` to the result sum variant
   - owner: ai
   - created_at: 2026-04-28

@@ -1189,6 +1189,8 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("TODO-4265: Add stdlib-owned `Result<T, E>` sum") ==
         std::string::npos);
+  CHECK(todoFinished.find("TODO-4297: Bridge `Result.map` to the result sum") !=
+        std::string::npos);
   CHECK(todoFinished.find("TODO-4296: Bridge `Result.ok` to the result sum variant") !=
         std::string::npos);
   CHECK(todoFinished.find("TODO-4295: Bridge `Result.why` to the result sum payload") !=

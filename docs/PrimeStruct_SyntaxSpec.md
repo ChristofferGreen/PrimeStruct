@@ -779,9 +779,11 @@ sum metadata publishes substituted payload type text while preserving source-ord
 Invalid template arity is diagnosed. Recursive inline payloads such as `Bad<T> { [Bad<T>] again }` are rejected until
 recursive sum layout is designed. The stdlib `Maybe<T>` surface consumes this generic substrate, and `/std/result/*`
 now exposes an imported value-carrying `Result<T, E>` sum. Typed imported value-carrying sum locals/returns may use
-legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed VM/native paths, and
-`Result.error(value)` / `Result.why(value)` can inspect that imported sum shape. Combinators, status-only `Result<E>`,
-and `?` propagation remain compatibility surfaces until their dedicated migration tasks land.
+legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed VM/native paths, typed imported
+value-carrying sum locals/returns may use legacy `Result.map(result, fn)` when the source is a local imported stdlib
+Result sum, and `Result.error(value)` / `Result.why(value)` can inspect that imported sum shape. Remaining
+combinators, status-only `Result<E>`, and `?` propagation stay compatibility surfaces until their dedicated migration
+tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1390,9 +1392,11 @@ Draft constraints:
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
 - Imported value-carrying `Result<T, Error>` construction has a stdlib sum surface under `/std/result/*`; typed
-  locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed VM/native,
-  and `Result.error(value)` / `Result.why(value)` can read that sum shape. `?` propagation, status-only
-  `Result<Error>`, and combinator helpers remain hybrid compiler/runtime bridges until their migration TODOs land.
+  locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer, typed locals/returns
+  may use legacy `Result.map(result, fn)` when the source is a local imported stdlib Result sum, and
+  `Result.error(value)` / `Result.why(value)` can read that sum shape on IR-backed VM/native paths. `?` propagation,
+  status-only `Result<Error>`, and the remaining combinator helpers remain hybrid compiler/runtime bridges until their
+  migration TODOs land.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

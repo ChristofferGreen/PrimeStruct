@@ -49,6 +49,14 @@
              expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames);
     };
 
+    auto isLegacyResultMapCall = [](const Expr &expr) {
+      return expr.kind == Expr::Kind::Call && !expr.isFieldAccess && expr.name == "map" &&
+             expr.args.size() == 3 && expr.args.front().kind == Expr::Kind::Name &&
+             expr.args.front().name == "Result" &&
+             expr.templateArgs.empty() && !expr.hasBodyArguments &&
+             expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames);
+    };
+
     auto sumPayloadTypeText = [](const SumVariant &variant) {
       if (!variant.hasPayload) {
         return std::string{};
@@ -385,6 +393,248 @@
             const Definition &sumDef,
             const Expr &initializer,
             const LocalMap &valueLocals) -> bool {
+      auto emitLoadSumSlotIndirectForConstruction = [&](int32_t sumPtrLocal, int32_t slotOffset) {
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
+        if (slotOffset != 0) {
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(slotOffset) * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+        }
+        function.instructions.push_back({IrOpcode::LoadIndirect, 0});
+      };
+      auto emitSumTagComparisonForConstruction = [&](int32_t sumPtrLocal, int32_t tagValue) {
+        emitLoadSumSlotIndirectForConstruction(sumPtrLocal, 1);
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(tagValue))});
+        function.instructions.push_back({IrOpcode::CmpEqI32, 0});
+      };
+      auto findResultLambdaValueExpr = [](const Expr &lambdaExpr) -> const Expr * {
+        for (size_t i = 0; i < lambdaExpr.bodyArguments.size(); ++i) {
+          const Expr &bodyExpr = lambdaExpr.bodyArguments[i];
+          const bool isLast = (i + 1 == lambdaExpr.bodyArguments.size());
+          if (bodyExpr.isBinding) {
+            continue;
+          }
+          if (isReturnCall(bodyExpr)) {
+            if (bodyExpr.args.size() != 1 || !isLast) {
+              return nullptr;
+            }
+            return &bodyExpr.args.front();
+          }
+          if (isLast) {
+            return &bodyExpr;
+          }
+        }
+        return nullptr;
+      };
+      auto emitResultLambdaPrefixStatements =
+          [&](const Expr &lambdaExpr, const Expr *valueExpr, LocalMap &lambdaLocals) -> bool {
+        for (const Expr &bodyExpr : lambdaExpr.bodyArguments) {
+          if (isReturnCall(bodyExpr) && bodyExpr.args.size() == 1 && valueExpr == &bodyExpr.args.front()) {
+            return true;
+          }
+          if (&bodyExpr == valueExpr) {
+            return true;
+          }
+          if (!emitStatement(bodyExpr, lambdaLocals)) {
+            return false;
+          }
+        }
+        return true;
+      };
+      auto bindSumPayloadLocal =
+          [&](const Definition &payloadSumDef,
+              const SumVariant &payloadVariant,
+              int32_t sumPtrLocal,
+              const std::string &payloadName,
+              LocalMap &payloadLocals) -> bool {
+        LoweredSumPayloadStorageInfo payloadStorage;
+        if (!resolveSumPayloadStorageInfo(payloadSumDef, payloadVariant, payloadStorage)) {
+          error = unsupportedSumPayloadError(payloadSumDef, payloadVariant);
+          return false;
+        }
+        LocalInfo payloadInfo;
+        payloadInfo.kind = LocalInfo::Kind::Value;
+        payloadInfo.valueKind = payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadStorage.valueKind;
+        payloadInfo.structTypeName = payloadStorage.structPath;
+        payloadInfo.structSlotCount = payloadStorage.slotCount;
+        payloadInfo.index = nextLocal++;
+        if (payloadStorage.isAggregate) {
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+        } else {
+          emitLoadSumSlotIndirectForConstruction(sumPtrLocal, 2);
+        }
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadInfo.index)});
+        if (payloadInfo.valueKind == LocalInfo::ValueKind::String && payloadInfo.structTypeName.empty()) {
+          payloadInfo.stringSource = LocalInfo::StringSource::RuntimeIndex;
+        }
+        payloadLocals.emplace(payloadName, payloadInfo);
+        return true;
+      };
+      auto emitCopySumPayload =
+          [&](const Definition &sourceSumDef,
+              const SumVariant &sourceVariant,
+              const SumVariant &targetVariant,
+              int32_t sourceSumPtrLocal,
+              int32_t targetBaseLocal) -> bool {
+        LoweredSumPayloadStorageInfo sourcePayload;
+        LoweredSumPayloadStorageInfo targetPayload;
+        if (!resolveSumPayloadStorageInfo(sourceSumDef, sourceVariant, sourcePayload)) {
+          error = unsupportedSumPayloadError(sourceSumDef, sourceVariant);
+          return false;
+        }
+        if (!resolveSumPayloadStorageInfo(sumDef, targetVariant, targetPayload)) {
+          error = unsupportedSumPayloadError(sumDef, targetVariant);
+          return false;
+        }
+        if (sourcePayload.isAggregate != targetPayload.isAggregate ||
+            sourcePayload.valueKind != targetPayload.valueKind ||
+            sourcePayload.structPath != targetPayload.structPath ||
+            sourcePayload.slotCount != targetPayload.slotCount) {
+          error = "native backend Result.map requires matching error payload storage";
+          return false;
+        }
+        if (sourcePayload.isAggregate) {
+          const int32_t srcPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+          function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+          function.instructions.push_back({IrOpcode::AddI64, 0});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+          const int32_t destPtrLocal = allocTempLocal();
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+          return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, sourcePayload.slotCount);
+        }
+        emitLoadSumSlotIndirectForConstruction(sourceSumPtrLocal, 2);
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
+        return true;
+      };
+      auto emitMappedValueIntoSum =
+          [&](const Expr &mappedExpr,
+              const LocalMap &mappedLocals,
+              const SumVariant &targetVariant,
+              int32_t targetBaseLocal) -> bool {
+        LoweredSumPayloadStorageInfo targetPayload;
+        if (!resolveSumPayloadStorageInfo(sumDef, targetVariant, targetPayload)) {
+          error = unsupportedSumPayloadError(sumDef, targetVariant);
+          return false;
+        }
+        if (!targetPayload.isAggregate) {
+          if (!emitExpr(mappedExpr, mappedLocals)) {
+            return false;
+          }
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
+          return true;
+        }
+        if (!emitExpr(mappedExpr, mappedLocals)) {
+          return false;
+        }
+        const int32_t srcPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});
+        const int32_t destPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(targetBaseLocal + 2)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(destPtrLocal)});
+        if (!emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, targetPayload.slotCount)) {
+          return false;
+        }
+        if (mappedExpr.kind == Expr::Kind::Call) {
+          ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+              [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
+              srcPtrLocal,
+              targetPayload.structPath);
+        }
+        return true;
+      };
+      auto tryEmitLoweredResultMapIntoLocal = [&]() -> std::optional<bool> {
+        if (!isStdlibResultSumDefinition(sumDef) || !isLegacyResultMapCall(initializer)) {
+          return std::nullopt;
+        }
+        const Expr &sourceExpr = initializer.args[1];
+        if (sourceExpr.kind != Expr::Kind::Name) {
+          error = "native backend Result.map sum source requires local stdlib Result";
+          return false;
+        }
+        auto sourceIt = valueLocals.find(sourceExpr.name);
+        if (sourceIt == valueLocals.end()) {
+          error = "native backend Result.map source is unknown: " + sourceExpr.name;
+          return false;
+        }
+        const Definition *sourceSumDef = resolveSumDefinitionForLocalInfo(sourceIt->second);
+        if (sourceSumDef == nullptr || !isStdlibResultSumDefinition(*sourceSumDef)) {
+          error = "native backend Result.map source requires stdlib Result sum";
+          return false;
+        }
+        const SumVariant *sourceOkVariant = findSumVariantByName(*sourceSumDef, "ok");
+        const SumVariant *sourceErrorVariant = findSumVariantByName(*sourceSumDef, "error");
+        const SumVariant *targetOkVariant = findSumVariantByName(sumDef, "ok");
+        const SumVariant *targetErrorVariant = findSumVariantByName(sumDef, "error");
+        if (sourceOkVariant == nullptr || sourceErrorVariant == nullptr ||
+            targetOkVariant == nullptr || targetErrorVariant == nullptr ||
+            !sourceOkVariant->hasPayload || !sourceErrorVariant->hasPayload ||
+            !targetOkVariant->hasPayload || !targetErrorVariant->hasPayload) {
+          error = "native backend Result.map requires value-carrying stdlib Result sums";
+          return false;
+        }
+        const Expr &lambdaExpr = initializer.args[2];
+        if (!lambdaExpr.isLambda) {
+          error = "Result.map requires a lambda argument";
+          return false;
+        }
+        if (lambdaExpr.args.size() != 1 || lambdaExpr.args.front().kind != Expr::Kind::Name) {
+          error = "Result.map requires a single-parameter lambda";
+          return false;
+        }
+        const Expr *mappedValueExpr = findResultLambdaValueExpr(lambdaExpr);
+        if (mappedValueExpr == nullptr) {
+          error = "IR backends require Result.map lambda bodies";
+          return false;
+        }
+
+        const int32_t sourceSumPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceIt->second.index)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+        emitSumTagComparisonForConstruction(sourceSumPtrLocal, sourceOkVariant->variantIndex);
+        const size_t jumpErrorIndex = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetOkVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+        LocalMap lambdaLocals = valueLocals;
+        if (!bindSumPayloadLocal(*sourceSumDef,
+                                 *sourceOkVariant,
+                                 sourceSumPtrLocal,
+                                 lambdaExpr.args.front().name,
+                                 lambdaLocals)) {
+          return false;
+        }
+        if (!emitResultLambdaPrefixStatements(lambdaExpr, mappedValueExpr, lambdaLocals)) {
+          return false;
+        }
+        if (!emitMappedValueIntoSum(*mappedValueExpr, lambdaLocals, *targetOkVariant, baseLocal)) {
+          return false;
+        }
+        const size_t jumpEndIndex = function.instructions.size();
+        function.instructions.push_back({IrOpcode::Jump, 0});
+
+        const size_t errorIndex = function.instructions.size();
+        function.instructions[jumpErrorIndex].imm = static_cast<uint64_t>(errorIndex);
+        function.instructions.push_back(
+            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
+        if (!emitCopySumPayload(*sourceSumDef, *sourceErrorVariant, *targetErrorVariant, sourceSumPtrLocal, baseLocal)) {
+          return false;
+        }
+
+        const size_t endIndex = function.instructions.size();
+        function.instructions[jumpEndIndex].imm = static_cast<uint64_t>(endIndex);
+        return true;
+      };
+      if (const auto resultMapEmitResult = tryEmitLoweredResultMapIntoLocal();
+          resultMapEmitResult.has_value()) {
+        return *resultMapEmitResult;
+      }
       LoweredSumVariantSelection selection;
       if (!selectSumVariantForInitializer(initializer, sumDef, valueLocals, selection) ||
           selection.variant == nullptr) {

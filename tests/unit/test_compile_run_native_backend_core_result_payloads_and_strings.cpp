@@ -172,6 +172,71 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("native backend supports legacy Result.map on imported stdlib Result sum") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_mapped_success() {
+  [Result<i32, i32>] source{Result.ok(7i32)}
+  return(Result.map(source, []([i32] value) { return(plus(value, 4i32)) }))
+}
+
+[return<int>]
+main() {
+  [Result<i32, i32>] okSource{Result.ok(5i32)}
+  [Result<i32, i32>] errorSource{error<i32, i32>(3i32)}
+  [Result<i32, i32>] mappedOk{
+    Result.map(okSource, []([i32] value) { return(plus(value, 2i32)) })
+  }
+  [Result<i32, i32>] mappedError{
+    Result.map(errorSource, []([i32] value) { return(plus(value, 2i32)) })
+  }
+  [Result<i32, i32>] returnedMapped{make_mapped_success()}
+  [i32] okValue{pick(mappedOk) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      100i32
+    }
+  }}
+  [i32] errorValue{pick(mappedError) {
+    ok(value) {
+      101i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  [i32] returnedValue{pick(returnedMapped) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      102i32
+    }
+  }}
+  if(not(equal(okValue, 7i32))) {
+    return(1i32)
+  }
+  if(not(equal(errorValue, 3i32))) {
+    return(2i32)
+  }
+  if(not(equal(returnedValue, 11i32))) {
+    return(3i32)
+  }
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_legacy_map_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_legacy_map_helper").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 0);
+}
+
 TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

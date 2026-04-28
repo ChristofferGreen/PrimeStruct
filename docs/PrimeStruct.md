@@ -2274,14 +2274,15 @@ for(
   - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a value on success.
   - **ADT migration note:** `/std/result/*` now exposes an importable value-carrying `Result<T, E>` sum with `ok` and
     `error` variants plus explicit `ok<T, E>(value)` / `error<T, E>(err)` construction helpers. The legacy
-    combinator helpers, status-only `Result<Error>`, and `?` propagation remain hybrid compiler/runtime bridges until
-    the remaining Result migration TODOs land. Typed imported value-carrying sum locals/returns may use legacy
-    `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed VM/native paths. `Result.error(value)`
-    already reads the imported value-carrying sum tag on those paths, so it returns `false` for `ok` and `true` for
-    `error` values from `/std/result/*`. `Result.why(value)` also reads imported value-carrying sums, yielding the
-    empty string for `ok` and calling the error payload type's `why` helper for `error`. Status-only results should use
-    a unit success variant plus an error payload variant rather than an empty payload struct when they move to the sum
-    contract.
+    `Result.and_then(...)` / `Result.map2(...)` combinators, status-only `Result<Error>`, and `?` propagation remain
+    hybrid compiler/runtime bridges until the remaining Result migration TODOs land. Typed imported value-carrying sum
+    locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed
+    VM/native paths, and typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` when
+    the source is a local imported stdlib Result sum. `Result.error(value)` already reads the imported value-carrying
+    sum tag on those paths, so it returns `false` for `ok` and `true` for `error` values from `/std/result/*`.
+    `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
+    error payload type's `why` helper for `error`. Status-only results should use a unit success variant plus an error
+    payload variant rather than an empty payload struct when they move to the sum contract.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented.
@@ -2721,9 +2722,10 @@ language/runtime-owned, which remain hybrid, and which should move fully into st
   Public types/surfaces: `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, `/std/gfx/*`.
   Ownership rule: keep only minimal builtin/runtime substrate for propagation, host I/O, and
   device interaction. Imported value-carrying `Result<T, Error>` construction now has a
-  stdlib-owned sum surface under `/std/result/*`; legacy `Result.ok(value)` has a typed
-  value-carrying sum compatibility path on IR-backed VM/native, while status-only
-  `Result<Error>`, combinators, and `?` propagation still use the hybrid bridge.
+  stdlib-owned sum surface under `/std/result/*`; legacy `Result.ok(value)` and
+  `Result.map(result, fn)` have typed value-carrying sum compatibility paths on
+  IR-backed VM/native, while status-only `Result<Error>`, the remaining
+  combinators, and `?` propagation still use the hybrid bridge.
   Migration stance: move public constructors, helper APIs, and error-domain behavior into stdlib
   `.prime` wherever practical, then delete the old compatibility paths once the bridge is empty.
 - `stdlib-owned`
@@ -3335,9 +3337,10 @@ bad_set() {
   implicitly, so `[Shape] value{}` is rejected when the first `Shape` variant carries a payload. Variant order is
   therefore layout/serialization-sensitive and should be treated as version-sensitive API surface. `Maybe<T>` uses this
   substrate, and imported value-carrying `Result<T, E>` construction is available through `/std/result/*`.
-  Legacy `Result.ok(value)` can initialize typed imported value-carrying sum locals/returns on IR-backed VM/native
-  paths, and `Result.error(...)` / `Result.why(...)` can inspect those imported sum values; the remaining legacy Result
-  combinators, status-only Result, and propagation stay compatibility surfaces until TODO-4293 and TODO-4266 land.
+  Legacy `Result.ok(value)` and `Result.map(result, fn)` can initialize typed imported value-carrying sum locals/returns
+  on IR-backed VM/native paths, and `Result.error(...)` / `Result.why(...)` can inspect those imported sum values; the
+  remaining legacy Result combinators, status-only Result, and propagation stay compatibility surfaces until TODO-4293
+  and TODO-4266 land.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
   branch value types are diagnostics. Unit variants use binder-free arms such as `none { ... }`, and payload binders on
