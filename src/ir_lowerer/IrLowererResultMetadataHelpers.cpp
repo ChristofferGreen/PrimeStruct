@@ -849,6 +849,13 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
         applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
       return;
     }
+    if (auto localIt = localsIn.find(valueExpr.name);
+        localIt != localsIn.end() && localIt->second.isFileHandle) {
+      out.valueKind = LocalInfo::ValueKind::Int64;
+      out.valueIsFileHandle = true;
+      out.valueStructType.clear();
+      return;
+    }
     return;
   }
   if (valueExpr.kind == Expr::Kind::Name) {

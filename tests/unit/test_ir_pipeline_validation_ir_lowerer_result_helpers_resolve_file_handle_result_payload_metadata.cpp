@@ -224,6 +224,100 @@ TEST_CASE("ir lowerer result helpers prefer file handles over stale struct paths
   CHECK(out.valueStructType.empty());
 }
 
+TEST_CASE("ir lowerer result helpers preserve semantic-id file handle payload metadata") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo fileLocal;
+  fileLocal.isFileHandle = true;
+  fileLocal.valueKind = ValueKind::Int64;
+  locals.emplace("file", fileLocal);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr fileExpr;
+  fileExpr.kind = primec::Expr::Kind::Name;
+  fileExpr.name = "file";
+  fileExpr.semanticNodeId = 701;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultName, fileExpr};
+
+  primec::Expr paramExpr;
+  paramExpr.kind = primec::Expr::Kind::Name;
+  paramExpr.name = "opened";
+  paramExpr.semanticNodeId = 702;
+
+  primec::Expr lambdaExpr;
+  lambdaExpr.isLambda = true;
+  lambdaExpr.args.push_back(paramExpr);
+  lambdaExpr.bodyArguments.push_back(paramExpr);
+
+  primec::Expr mapExpr;
+  mapExpr.kind = primec::Expr::Kind::Call;
+  mapExpr.isMethodCall = true;
+  mapExpr.name = "map";
+  mapExpr.args = {resultName, okExpr, lambdaExpr};
+
+  const auto resolveMethodCall =
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  bool fallbackCalled = false;
+  const primec::ir_lowerer::InferExprKindWithLocalsFn inferExprKind =
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    fallbackCalled = true;
+    return ValueKind::Unknown;
+  };
+  primec::SemanticProgram semanticProgram;
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::ir_lowerer::ResultExprInfo out;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(okExpr,
+                                                            locals,
+                                                            resolveMethodCall,
+                                                            resolveDefinitionCall,
+                                                            lookupReturnInfo,
+                                                            inferExprKind,
+                                                            out,
+                                                            &semanticTargets));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+  CHECK_FALSE(fallbackCalled);
+
+  out = {};
+  fallbackCalled = false;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(mapExpr,
+                                                            locals,
+                                                            resolveMethodCall,
+                                                            resolveDefinitionCall,
+                                                            lookupReturnInfo,
+                                                            inferExprKind,
+                                                            out,
+                                                            &semanticTargets));
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int64);
+  CHECK(out.valueIsFileHandle);
+  CHECK(out.valueStructType.empty());
+  CHECK_FALSE(fallbackCalled);
+}
+
 TEST_CASE("ir lowerer result helpers resolve array and vector Result payload metadata") {
   primec::ir_lowerer::LocalMap locals;
 
