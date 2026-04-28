@@ -777,8 +777,9 @@ Result<T, E> {
 Template parameters may appear in payload envelopes. Concrete uses monomorphize before validation, so semantic-product
 sum metadata publishes substituted payload type text while preserving source-order variant indices and tag values.
 Invalid template arity is diagnosed. Recursive inline payloads such as `Bad<T> { [Bad<T>] again }` are rejected until
-recursive sum layout is designed. The stdlib `Maybe<T>` surface already consumes this generic substrate; `Result<T, E>`
-remains deferred to its dedicated compatibility task.
+recursive sum layout is designed. The stdlib `Maybe<T>` surface consumes this generic substrate, and `/std/result/*`
+now exposes an imported value-carrying `Result<T, E>` sum. The legacy `Result.ok/error/why` bridge, status-only
+`Result<E>`, and `?` propagation remain compatibility surfaces until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -858,8 +859,9 @@ Architectural direction for type ownership:
   should converge on stdlib `.prime` implementations over generic substrate.
 - `soa_vector<T>` is a promoted stdlib-owned public collection surface over
   generic SoA substrate.
-- `Maybe<T>` is stdlib-owned, while `Result<T, Error>`, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*`
-  remain hybrid surfaces with minimal builtin/runtime substrate.
+- `Maybe<T>` is stdlib-owned, imported value-carrying `Result<T, Error>` construction has a stdlib sum surface, and
+  legacy `Result` propagation/helpers, `File<Mode>`, `Buffer<T>`, and `/std/gfx/*` remain hybrid surfaces with minimal
+  builtin/runtime substrate.
 
 ### 8.2 Vectors
 
@@ -1385,8 +1387,9 @@ Draft constraints:
 ## 10. Error Handling (Draft)
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
-- `Result<T, Error>` is a hybrid surface: `?` propagation and the minimum success/error runtime contract are
-  language-defined, while constructors/helpers/error-domain policy should live in stdlib `.prime` where practical.
+- Imported value-carrying `Result<T, Error>` construction has a stdlib sum surface under `/std/result/*`; `?`
+  propagation, status-only `Result<Error>`, and legacy `Result.ok/error/why` helpers remain hybrid compiler/runtime
+  bridges until their migration TODOs land.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

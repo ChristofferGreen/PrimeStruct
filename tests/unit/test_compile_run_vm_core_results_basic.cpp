@@ -119,6 +119,43 @@ main() {
   CHECK(readFile(outPath) == "EOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\nEOF\n");
 }
 
+TEST_CASE("vm supports imported stdlib Result sum pick") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+[return<int>]
+main() {
+  [Result<i32, MyError>] success{ok<i32, MyError>(7i32)}
+  [Result<i32, MyError>] failure{error<i32, MyError>(MyError{})}
+  [i32] left{pick(success) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  [i32] right{pick(failure) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  return(plus(left, right))
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_pick.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 12);
+}
+
 TEST_CASE("vm supports Result.map on IR-backed path") {
   const std::string source = R"(
 import /std/file/*

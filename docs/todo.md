@@ -67,7 +67,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4265: Add stdlib-owned `Result<T, E>` sum
+- TODO-4293: Bridge legacy `Result` helpers to the result sum
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -80,7 +80,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred stdlib ADT migration: TODO-4265 -> TODO-4266 -> TODO-4267
+- Deferred stdlib ADT migration: TODO-4293 -> TODO-4266 -> TODO-4267
   -> TODO-4291
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
   -> TODO-4275 -> TODO-4276 -> TODO-4271 -> TODO-4272 -> TODO-4274
@@ -89,7 +89,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4265: Add stdlib-owned `Result<T, E>` sum
+- TODO-4293: Bridge legacy `Result` helpers to the result sum
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
@@ -130,7 +130,7 @@ Task template:
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
 | Algebraic sum types and brace-only construction | none |
-| Stdlib ADT migration for `Maybe` and `Result` | TODO-4265, TODO-4266, TODO-4267, TODO-4291 |
+| Stdlib ADT migration for `Maybe` and `Result` | TODO-4293, TODO-4266, TODO-4267, TODO-4291 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Validation Coverage Snapshot
@@ -155,7 +155,7 @@ Task template:
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
 | Sum-type and brace-construction conformance | none |
-| Maybe/Result sum migration conformance | TODO-4265, TODO-4266, TODO-4267, TODO-4291 |
+| Maybe/Result sum migration conformance | TODO-4293, TODO-4266, TODO-4267, TODO-4291 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
 ### Vector/Map Bridge Contract Summary
@@ -272,28 +272,28 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4265: Add stdlib-owned `Result<T, E>` sum
+- [ ] TODO-4293: Bridge legacy `Result` helpers to the result sum
   - owner: ai
-  - created_at: 2026-04-27
+  - created_at: 2026-04-28
   - phase: Deferred stdlib ADT migration
-  - scope: Re-express `Result<T, E>` and status-only `Result<E>` as
-    stdlib-owned sum types while preserving the current helper/combinator
-    surface before changing `?`.
+  - scope: Route the legacy `Result.ok(...)`, `Result.error(...)`,
+    `Result.why(...)`, `Result.map(...)`, `Result.and_then(...)`, and
+    `Result.map2(...)` helper bridge onto the stdlib result sum contract while
+    preserving current source compatibility and leaving `?` rewiring to
+    TODO-4266.
   - implementation_notes:
-    - Start from Result helper semantics, `Result.ok/error/why`,
-      `Result.map/and_then/map2`, result payload metadata, and VM/native/C++
-      result compile-run tests.
-    - Keep `?` on the existing runtime/semantic contract until TODO-4266; this
-      item should make Result values sum-backed without changing propagation.
-    - Status-only `Result<Error>` should use a unit success variant plus an
-      error payload variant instead of a synthetic empty struct payload.
+    - Start from `stdlib/std/result/result.prime`, Result helper semantics,
+      `Result.ok/error/why`, `Result.map/and_then/map2`, result payload
+      metadata, and VM/native/C++ result compile-run tests.
+    - Status-only `Result<Error>` still needs either a supported same-name
+      one-argument sum spelling or an explicit compatibility bridge before
+      TODO-4266 can consume it as a sum.
+    - Keep `?` on the existing runtime/semantic contract until TODO-4266.
   - acceptance:
-    - Value-carrying and status-only `Result` forms are represented through the
-      sum contract from TODO-4288 and TODO-4289, including a unit success variant for
-      status-only results.
-    - Status-only `Result<Error>{}` defaults to the unit success variant, while
-      value-carrying `Result<T, Error>{}` is rejected unless an explicit
-      variant is selected.
+    - Legacy helper calls construct or inspect values that follow the stdlib
+      `Result<T, E>` sum shape for value-carrying results.
+    - Status-only `Result<Error>` has a documented sum representation or
+      deterministic compatibility diagnostic.
     - Existing helper/combinator behavior remains source-compatible for the
       supported payload matrix.
     - Diagnostics remain deterministic for unsupported payloads and ambiguous
@@ -302,14 +302,14 @@ Task template:
       `Result.why`, map/and_then/map2, and representative error domains
       (`FileError`, `ContainerError`, `GfxError`).
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once `Result` values are sum-backed and helper behavior is
-    stable; leave `?` propagation rewiring to TODO-4266.
+  - stop_rule: Stop once legacy Result helpers are bridged onto the stdlib sum
+    contract or intentionally split into narrower helper/status follow-ups.
 
 - [ ] TODO-4266: Rewire `?` to the `Result` sum contract
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred stdlib ADT migration
-  - depends_on: TODO-4265
+  - depends_on: TODO-4293
   - scope: Make postfix `?`, `try(...)`, and `on_error` propagation consume the
     stdlib-owned `Result` sum shape instead of bespoke Result metadata or
     legacy runtime representation.

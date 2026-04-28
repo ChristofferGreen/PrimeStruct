@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4292: Add importable stdlib `Result<T, E>` sum
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Split the oversized Result migration and land the first concrete
+    stdlib-owned value-carrying `Result<T, E>` sum surface without changing
+    legacy `Result.ok/error/why`, status-only `Result<E>`, or `?`.
+  - implementation_notes:
+    - Added `stdlib/std/result/result.prime` with an `ok` payload variant and
+      an `error` payload variant.
+    - Added explicit `ok<T, E>(value)` and `error<T, E>(err)` construction
+      helpers for imported `/std/result/*` users.
+    - Left the legacy helper bridge and status-only Result shorthand to
+      TODO-4293 because they still pass through compiler/runtime Result
+      metadata.
+  - acceptance:
+    - Imported value-carrying `Result<T, E>` can be explicitly constructed as a
+      generic sum.
+    - `pick` covers both `ok(value)` and `error(err)` arms.
+    - Default value-carrying `Result<T, E>{}` remains rejected because the
+      first variant carries a payload.
+    - VM/native compile-run fixtures cover the imported explicit sum surface.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the importable value-carrying Result sum is usable and
+    the remaining legacy bridge/status work is tracked separately.
+  - finished_at: 2026-04-28
+  - evidence: Added `/std/result/*`, semantic coverage for explicit ok/error
+    construction and default-construction rejection, VM/native compile-run
+    fixtures for `pick`, and split remaining helper/status migration into
+    TODO-4293. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4264: Add stdlib-owned `Maybe<T>` sum
   - owner: ai
   - created_at: 2026-04-27

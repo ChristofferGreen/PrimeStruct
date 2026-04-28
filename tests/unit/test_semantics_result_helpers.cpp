@@ -33,6 +33,64 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result value sum validates explicit ok and error variants") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+[return<int>]
+main() {
+  [Result<i32, MyError>] success{ok<i32, MyError>(7i32)}
+  [Result<i32, MyError>] failure{error<i32, MyError>(MyError{})}
+  [i32] left{pick(success) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  [i32] right{pick(failure) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  return(left + right)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("stdlib result value sum rejects default construction") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+[return<int>]
+main() {
+  [Result<i32, MyError>] status{}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("default sum construction requires first variant to be unit") !=
+        std::string::npos);
+}
+
 TEST_CASE("Result.error rejects non-result argument") {
   const std::string source = R"(
 [return<void>]
