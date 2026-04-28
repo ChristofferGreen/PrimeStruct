@@ -428,6 +428,20 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     resultOut.errorType = info.resultErrorType;
     return true;
   };
+  auto applyLocalResultInfo = [&](const LocalResultInfo &local) {
+    if (!local.found || !local.isResult) {
+      return false;
+    }
+    out.isResult = true;
+    out.hasValue = local.resultHasValue;
+    out.valueKind = local.resultValueKind;
+    out.valueCollectionKind = local.resultValueCollectionKind;
+    out.valueMapKeyKind = local.resultValueMapKeyKind;
+    out.valueIsFileHandle = local.resultValueIsFileHandle;
+    out.valueStructType = local.resultValueStructType;
+    out.errorType = local.resultErrorType;
+    return true;
+  };
   auto inferCallMapTargetInfo = [&](const Expr &targetExpr, MapAccessTargetInfo &targetInfoOut) {
     targetInfoOut = {};
     const Definition *callee = resolveDefinitionCallFn(targetExpr);
@@ -494,6 +508,15 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
   }
   if (isSimpleCallName(expr, "dereference") && expr.args.size() == 1) {
     const Expr &targetExpr = expr.args.front();
+    if (targetExpr.kind == Expr::Kind::Name) {
+      auto localIt = localsIn.find(targetExpr.name);
+      if (localIt != localsIn.end() &&
+          (localIt->second.kind == LocalInfo::Kind::Reference ||
+           localIt->second.kind == LocalInfo::Kind::Pointer) &&
+          applyLocalResultInfo(lookupLocal(targetExpr.name))) {
+        return true;
+      }
+    }
     if (targetExpr.kind == Expr::Kind::Call && getBuiltinArrayAccessName(targetExpr, accessName) &&
         targetExpr.args.size() == 2 && targetExpr.args.front().kind == Expr::Kind::Name) {
       const LocalResultInfo local = lookupLocal(targetExpr.args.front().name);

@@ -791,8 +791,10 @@ spellings. IR-backed `try(...)` can now consume local imported stdlib value-resu
 `return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag, and Result-returning functions can
 propagate local imported stdlib value-result sum errors by copying the `error` payload into the declared return
 `Result` sum after running the active `on_error` handler. Direct calls that return imported stdlib value-result sums
-can also be consumed through postfix `?` on those same VM/native sum-backed paths. Broader operand/result shapes and
-status-only results remain compatibility surfaces until their dedicated migration tasks land.
+can also be consumed through postfix `?` on those same VM/native sum-backed paths, and dereferenced local
+`Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values can feed `try(...)`, `Result.error(...)`, and
+`Result.why(...)` when they point at imported stdlib Result sums. Broader result shapes and status-only results remain
+compatibility surfaces until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1480,7 +1482,9 @@ Draft constraints:
     each produce a `Result`. IR-backed `[args<Result<T, Error>>]`, `[args<Reference<Result<T, Error>>>]`, and
     `[args<Pointer<Result<T, Error>>>]` packs preserve indexed `try(...)`, `Result.error(...)`, and `Result.why(...)`
     access across direct, pure-spread, and mixed variadic forwarding when `T` already fits that same payload
-    contract. Downstream `try(...)`, `Result.error(...)`, and success/error `Result.why(...)` preserve those
+    contract; local dereferenced `Reference<Result<T, Error>>` and `Pointer<Result<T, Error>>` values also preserve
+    those helpers when they point at imported stdlib Result sums. Downstream `try(...)`, `Result.error(...)`, and
+    success/error `Result.why(...)` preserve those
     handle/error-struct payloads, rebuild single-slot struct payloads, and keep multi-slot struct payloads on that
     same pointer-backed path on VM/native; other remaining wider non-struct payloads remain unsupported.
   - Unsupported math or GPU builtins fail during lowering.

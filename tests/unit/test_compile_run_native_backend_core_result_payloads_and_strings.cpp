@@ -1271,6 +1271,106 @@ main() {
   CHECK(readFile(outPath) == "6\n");
 }
 
+TEST_CASE("native backend supports dereferenced borrowed stdlib Result sum helpers") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    return(if(equal(err.code, 6i32), then() { "bad"utf8 }, else() { "other"utf8 }))
+  }
+}
+
+[return<Result<i32, MyError>>]
+make_ok([i32] value) {
+  return(ok<i32, MyError>(value))
+}
+
+[return<Result<i32, MyError>>]
+make_error([i32] code) {
+  return(error<i32, MyError>(MyError{[code] code}))
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_reference_ok() {
+  [Result<i32, MyError>] status{make_ok(9i32)}
+  [Reference<Result<i32, MyError>>] ref{location(status)}
+  if(Result.error(dereference(ref))) {
+    return(100i32)
+  }
+  if(not(equal(count(Result.why(dereference(ref))), 0i32))) {
+    return(101i32)
+  }
+  return(try(dereference(ref)))
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_reference_error() {
+  [Result<i32, MyError>] status{make_error(6i32)}
+  [Reference<Result<i32, MyError>>] ref{location(status)}
+  if(not(Result.error(dereference(ref)))) {
+    return(102i32)
+  }
+  if(not(equal(count(Result.why(dereference(ref))), 3i32))) {
+    return(103i32)
+  }
+  [i32] value{try(dereference(ref))}
+  return(value)
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_pointer_ok() {
+  [Result<i32, MyError>] status{make_ok(10i32)}
+  [Pointer<Result<i32, MyError>>] ptr{location(status)}
+  if(Result.error(dereference(ptr))) {
+    return(104i32)
+  }
+  if(not(equal(count(Result.why(dereference(ptr))), 0i32))) {
+    return(105i32)
+  }
+  return(try(dereference(ptr)))
+}
+
+[return<int> on_error<MyError, /swallow>]
+read_pointer_error() {
+  [Result<i32, MyError>] status{make_error(7i32)}
+  [Pointer<Result<i32, MyError>>] ptr{location(status)}
+  if(not(Result.error(dereference(ptr)))) {
+    return(106i32)
+  }
+  if(not(equal(count(Result.why(dereference(ptr))), 5i32))) {
+    return(107i32)
+  }
+  [i32] value{try(dereference(ptr))}
+  return(value)
+}
+
+[return<int>]
+main() {
+  return(plus(plus(read_reference_ok(), read_reference_error()),
+              plus(read_pointer_ok(), read_pointer_error())))
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_stdlib_result_sum_dereferenced_borrowed_helpers.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_result_sum_dereferenced_borrowed_helpers").string();
+
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 32);
+}
+
 TEST_CASE("native backend propagates imported stdlib Result sum try ok through Result return") {
   const std::string source = R"(
 import /std/result/*

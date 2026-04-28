@@ -2287,9 +2287,10 @@ for(
     VM/native paths, and typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or
     `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum or a direct call returning
     one; `Result.map2(left, right, fn)` is available when both sources are local imported stdlib Result sums or direct
-    calls returning them. `Result.error(value)` already reads the
-    imported value-carrying sum tag on those paths, so it returns `false` for `ok` and `true` for `error` values from
-    `/std/result/*`.
+    calls returning them. Dereferenced local `Reference<Result<T, E>>` and `Pointer<Result<T, E>>` values can feed
+    `try(...)`, `Result.error(...)`, and `Result.why(...)` when they point at imported stdlib Result sums.
+    `Result.error(value)` already reads the imported value-carrying sum tag on those paths, so it returns `false` for
+    `ok` and `true` for `error` values from `/std/result/*`.
     `Result.why(value)` also reads imported value-carrying sums, yielding the empty string for `ok` and calling the
     error payload type's `why` helper for `error`. The future status-only sum contract should use a unit success
     variant plus an error payload variant rather than an empty payload struct.
@@ -3355,8 +3356,9 @@ bad_set() {
   substrate, and imported value-carrying `Result<T, E>` construction is available through `/std/result/*`.
   Legacy `Result.ok(value)`, `Result.map(result, fn)`, `Result.and_then(result, fn)`, and
   `Result.map2(left, right, fn)` can initialize typed imported value-carrying sum locals/returns on IR-backed VM/native
-  paths with local imported Result sum sources or direct calls returning them, and `Result.error(...)` /
-  `Result.why(...)` can inspect those imported sum values; status-only Result remains a packed-status compatibility
+  paths with local imported Result sum sources or direct calls returning them. `try(...)`, `Result.error(...)`, and
+  `Result.why(...)` can inspect imported sum values directly or through dereferenced local
+  `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values; status-only Result remains a packed-status compatibility
   surface that cannot be used as a `pick` target, and propagation stays a compatibility surface until TODO-4266 lands.
   `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
   require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible

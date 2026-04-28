@@ -293,9 +293,11 @@ Task template:
       by postfix `?` on the same VM/native sum-backed paths. Legacy
       `Result.map`, `Result.and_then`, and `Result.map2` construction for typed
       imported stdlib Result sums now accepts local sources and direct calls
-      that return imported stdlib Result sums. Remaining work covers borrowed
-      or pointer Result values, status-only results, and non-VM/native bridge
-      cleanup.
+      that return imported stdlib Result sums. Dereferenced local
+      `Reference<Result<T, E>>` and `Pointer<Result<T, E>>` values now feed
+      `try(...)`, `Result.error(...)`, and `Result.why(...)` when they point at
+      imported stdlib Result sums. Remaining work covers status-only results
+      and non-VM/native bridge cleanup.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

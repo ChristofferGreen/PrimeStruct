@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4305: Support borrowed stdlib Result sum helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 runtime slice by making dereferenced local
+    `Reference<Result<T, E>>` and `Pointer<Result<T, E>>` values participate in
+    the imported stdlib Result sum helper path for `try(...)`,
+    `Result.error(...)`, and `Result.why(...)`.
+  - implementation_notes:
+    - Keep this slice limited to local reference/pointer bindings that already
+      carry Result metadata and whose dereferenced value points at an imported
+      value-carrying stdlib Result sum.
+    - Preserve status-only `Result<E>` and non-VM/native bridge cleanup for
+      later TODO-4266 slices.
+  - acceptance:
+    - `try(dereference(ref))` unwraps or propagates a local borrowed imported
+      stdlib Result sum on VM/native paths.
+    - `try(dereference(ptr))` unwraps or propagates a local pointer imported
+      stdlib Result sum on VM/native paths.
+    - `Result.error(...)` and `Result.why(...)` inspect those same dereferenced
+      borrowed/pointer Result sum values.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once local dereferenced reference/pointer Result sums work
+    for `try(...)`, `Result.error(...)`, and `Result.why(...)` without widening
+    into status-only results or C++ emitter cleanup.
+  - finished_at: 2026-04-28
+  - evidence: Taught IR result metadata inference to recognize
+    `dereference(localReferenceOrPointer)` when the local carries Result
+    metadata, added VM/native compile-run fixtures covering borrowed and
+    pointer ok/error paths through `try(...)`, `Result.error(...)`, and
+    `Result.why(...)`, and documented the remaining TODO-4266 boundary. Local
+    test execution was skipped per the lite workflow.
+
 - [x] TODO-4304: Allow direct Result sum combinator sources
   - owner: ai
   - created_at: 2026-04-28
