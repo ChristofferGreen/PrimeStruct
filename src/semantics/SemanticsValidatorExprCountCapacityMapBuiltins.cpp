@@ -239,6 +239,20 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
     return false;
   };
+  auto hasVisibleCallableDefinition = [&](const std::string &path) {
+    return hasImportedDefinitionPath(path) ||
+           hasDeclaredDefinitionPath(path) ||
+           defMap_.find(path) != defMap_.end();
+  };
+  if (resolvedMethod &&
+      (logicalResolvedMethod == "/std/collections/map/count" ||
+       logicalResolvedMethod == "/std/collections/map/count_ref") &&
+      hasVisibleCallableDefinition(logicalResolvedMethod) &&
+      !hasDeclaredCallableArity(logicalResolvedMethod)) {
+    handledOut = true;
+    return failCountCapacityMapBuiltin("argument count mismatch for " +
+                                       logicalResolvedMethod);
+  }
   if (resolvedMethod &&
       (logicalResolvedMethod == "/map/count" ||
        logicalResolvedMethod == "/map/count_ref" ||
@@ -435,6 +449,12 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
        isUnnamespacedMapCountBuiltinFallbackCall(expr, params, locals,
                                                  *dispatchResolverAdapters));
   if (shouldBuiltinValidateMapCountCall && it == defMap_.end()) {
+    if (hasVisibleCallableDefinition("/std/collections/map/count")) {
+      if (std::optional<Expr> rewrittenMapHelperCall =
+              tryRewriteBareMapCountBuiltinFallback()) {
+        return validateExpr(params, locals, *rewrittenMapHelperCall);
+      }
+    }
     handledOut = true;
     if (isExplicitCanonicalMapCountCall &&
         !hasImportedDefinitionPath(logicalResolvedMethod == "/std/collections/map/count_ref"
