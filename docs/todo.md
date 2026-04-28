@@ -355,8 +355,9 @@ Task template:
     metadata slice and statement initializer binding-type slice are also
     complete. The statement name-initializer final LocalInfo metadata slice is
     complete for scalar, pointer/reference, and array/vector fallbacks. The
-    local-auto stale binding-type diagnostic slice is complete. The local-auto
-    initializer path and return-kind diagnostic slices are complete. The
+    local-auto stale binding-type and binding metadata diagnostic slices are
+    complete. The local-auto initializer path and return-kind diagnostic
+    slices are complete. The
     `on_error` stale fact and
     result-metadata diagnostic slices are complete; the query stale-target
     diagnostic slice is complete. The try on-error context diagnostic slice
@@ -415,6 +416,10 @@ Task template:
     - Completed slice: semantic-product local-auto completeness validation now
       rejects stale local-auto binding type facts that contradict the
       published binding fact before lowering can use the stale graph entry.
+    - Completed slice: semantic-product local-auto completeness validation now
+      rejects missing or stale interned local-auto binding type metadata before
+      lowering can synthesize a binding transform from inconsistent local-auto
+      fact text fields.
     - Completed slice: semantic-product `on_error` completeness validation now
       rejects stale on-error facts whose handler path, error type, or bound
       arg count contradicts the published callable summary.

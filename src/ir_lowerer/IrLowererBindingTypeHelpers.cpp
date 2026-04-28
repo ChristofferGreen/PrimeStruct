@@ -597,11 +597,21 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                 describeBindingSite(scopePath, "local", expr);
         return false;
       }
+      const std::string siteDescription = describeBindingSite(scopePath, "local", expr);
+      if (!validateInternedSemanticTextMetadata(*semanticProgram,
+                                                localAutoFact->bindingTypeTextId,
+                                                localAutoFact->bindingTypeText,
+                                                "local-auto",
+                                                "binding type",
+                                                siteDescription,
+                                                error)) {
+        return false;
+      }
       if (localAutoFact != nullptr &&
           localAutoFact->initializerResolvedPathId != InvalidSymbolId &&
           semanticProgramLocalAutoFactInitializerResolvedPath(*semanticProgram, *localAutoFact).empty()) {
         error = "missing semantic-product local-auto initializer path id: " +
-                describeBindingSite(scopePath, "local", expr);
+                siteDescription;
         return false;
       }
       auto validateInitializerCallPath = [&](SymbolId pathId,
@@ -613,13 +623,13 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
         }
         if (semanticProgramResolveCallTargetString(*semanticProgram, pathId).empty()) {
           error = std::string("missing semantic-product local-auto ") + missingLabel +
-                  " path id: " + describeBindingSite(scopePath, "local", expr);
+                  " path id: " + siteDescription;
           return false;
         }
         if (localAutoFact->initializerResolvedPathId != InvalidSymbolId &&
             pathId != localAutoFact->initializerResolvedPathId) {
           error = std::string("stale semantic-product local-auto ") + staleLabel +
-                  " fact: " + describeBindingSite(scopePath, "local", expr);
+                  " fact: " + siteDescription;
           return false;
         }
         if (returnKindId != InvalidSymbolId) {
@@ -627,7 +637,7 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
               semanticProgramResolveCallTargetString(*semanticProgram, returnKindId);
           if (returnKind.empty()) {
             error = std::string("missing semantic-product local-auto ") + missingLabel +
-                    " return-kind id: " + describeBindingSite(scopePath, "local", expr);
+                    " return-kind id: " + siteDescription;
             return false;
           }
           const auto *summary =
@@ -640,7 +650,7 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                     : std::string_view(summary->returnKind);
             if (!expectedReturnKind.empty() && returnKind != expectedReturnKind) {
               error = std::string("stale semantic-product local-auto ") + staleLabel +
-                      " return-kind fact: " + describeBindingSite(scopePath, "local", expr);
+                      " return-kind fact: " + siteDescription;
               return false;
             }
           }
@@ -666,7 +676,7 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
           !semanticTypeTextsMatchForLocalAuto(localAutoFact->bindingTypeText,
                                               bindingFact->bindingTypeText)) {
         error = "stale semantic-product local-auto fact: " +
-                describeBindingSite(scopePath, "local", expr);
+                siteDescription;
         return false;
       }
     }

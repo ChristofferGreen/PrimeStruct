@@ -250,6 +250,10 @@ Planned non-template inference migration contract:
   validation now checks the local-auto binding type against the published binding fact before
   lowering can synthesize a binding transform from the local-auto entry. Mismatches fail closed with
   a deterministic stale local-auto diagnostic.
+- Completed local-auto binding metadata diagnostic slice: semantic-product local-auto completeness
+  validation now checks the interned binding type metadata before lowering can synthesize a binding
+  transform from the local-auto entry. Missing or contradictory present ids fail closed with
+  deterministic local-auto metadata diagnostics.
 - Completed local-auto initializer-path diagnostic slice: semantic-product local-auto completeness
   validation now checks initializer direct-call and method-call path ids against the published
   initializer path before lowerer handoff can consume inconsistent local-auto metadata. Missing or

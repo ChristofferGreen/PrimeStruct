@@ -1844,9 +1844,30 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   localAutoFact.bindingName = "selected";
   localAutoFact.bindingTypeText = "i32";
   localAutoFact.semanticNodeId = 47;
+  localAutoFact.bindingTypeTextId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
   localAutoFact.initializerResolvedPathId =
       static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
   semanticProgram.localAutoFacts.push_back(std::move(localAutoFact));
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error == "missing semantic-product local-auto binding type id: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+  error.clear();
+  diagnosticInfo = {};
+  CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
+  CHECK(error ==
+        "stale semantic-product local-auto binding type metadata: /main -> local selected");
+  CHECK(diagnosticInfo.message == error);
+
+  semanticProgram.localAutoFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.localAutoFacts.back().initializerResolvedPathId =
+      static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
   error.clear();
   diagnosticInfo = {};
   CHECK_FALSE(lowerWithSemanticProduct(semanticProgram, error, diagnosticInfo));
