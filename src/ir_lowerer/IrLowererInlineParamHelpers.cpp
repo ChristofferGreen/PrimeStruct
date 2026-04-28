@@ -307,6 +307,50 @@ bool shouldRewriteMapReferenceReceiverForParam(const LocalInfo &paramInfo) {
   return false;
 }
 
+bool isDirectSequentialHandle(const LocalInfo &info) {
+  return info.kind == LocalInfo::Kind::Array ||
+         info.kind == LocalInfo::Kind::Vector ||
+         info.kind == LocalInfo::Kind::Buffer;
+}
+
+bool sequentialHandleKindsCompatible(const LocalInfo &paramInfo,
+                                     const LocalInfo &argInfo) {
+  if (!isDirectSequentialHandle(paramInfo) || !isDirectSequentialHandle(argInfo)) {
+    return false;
+  }
+  if (paramInfo.kind != argInfo.kind) {
+    return false;
+  }
+  return paramInfo.valueKind == LocalInfo::ValueKind::Unknown ||
+         argInfo.valueKind == LocalInfo::ValueKind::Unknown ||
+         paramInfo.valueKind == argInfo.valueKind;
+}
+
+void preserveSequentialHandleArgumentInfo(LocalInfo &paramInfo,
+                                          const LocalInfo &argInfo) {
+  const int32_t paramIndex = paramInfo.index;
+  const bool paramIsMutable = paramInfo.isMutable;
+  const bool paramIsArgsPack = paramInfo.isArgsPack;
+  const int32_t paramArgsPackElementCount = paramInfo.argsPackElementCount;
+
+  if (argInfo.valueKind != LocalInfo::ValueKind::Unknown) {
+    paramInfo.valueKind = argInfo.valueKind;
+  }
+  if (!argInfo.structTypeName.empty()) {
+    paramInfo.structTypeName = argInfo.structTypeName;
+  }
+  if (argInfo.structSlotCount > 0) {
+    paramInfo.structSlotCount = argInfo.structSlotCount;
+  }
+  paramInfo.isSoaVector = paramInfo.isSoaVector || argInfo.isSoaVector;
+  paramInfo.usesBuiltinCollectionLayout =
+      paramInfo.usesBuiltinCollectionLayout || argInfo.usesBuiltinCollectionLayout;
+  paramInfo.index = paramIndex;
+  paramInfo.isMutable = paramIsMutable;
+  paramInfo.isArgsPack = paramIsArgsPack;
+  paramInfo.argsPackElementCount = paramArgsPackElementCount;
+}
+
 } // namespace
 
 bool emitInlineDefinitionCallParameters(
@@ -549,6 +593,19 @@ bool emitInlineDefinitionCallParameters(
         return false;
       }
       continue;
+    }
+
+    if (orderedArg != nullptr && orderedArg->kind == Expr::Kind::Name &&
+        isDirectSequentialHandle(paramInfo)) {
+      auto argIt = callerLocals.find(orderedArg->name);
+      if (argIt != callerLocals.end() &&
+          sequentialHandleKindsCompatible(paramInfo, argIt->second)) {
+        preserveSequentialHandleArgumentInfo(paramInfo, argIt->second);
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(argIt->second.index));
+        calleeLocals.emplace(param.name, paramInfo);
+        emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(paramInfo.index));
+        continue;
+      }
     }
 
     if (isStringBinding(param)) {
