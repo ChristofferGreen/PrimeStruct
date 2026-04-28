@@ -74,7 +74,7 @@ Task template:
 
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
-- TODO-4292: Promote canonical `.prime` vector implementation
+- TODO-4292: Promote and style canonical `.prime` vector implementation
 - TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
@@ -100,7 +100,7 @@ Task template:
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4291: Decide sum-backed mutable `Maybe<T>` helpers
-- TODO-4292: Promote canonical `.prime` vector implementation
+- TODO-4292: Promote and style canonical `.prime` vector implementation
 - TODO-4293: Stabilize generic contiguous-storage substrate
 - TODO-4294: Lower vector helpers through ordinary `.prime`
 - TODO-4281: Lift vector dynamic capacity limit
@@ -834,7 +834,7 @@ Task template:
   - stop_rule: Stop once multi-wait returns stdlib `tuple<...>` or the missing
     task-side prerequisite is split into an explicit multithreading TODO.
 
-- [ ] TODO-4292: Promote canonical `.prime` vector implementation
+- [ ] TODO-4292: Promote and style canonical `.prime` vector implementation
   - owner: ai
   - created_at: 2026-04-28
   - phase: Vector stdlib ownership cutover
@@ -842,7 +842,8 @@ Task template:
     `/std/collections/experimental_vector/*` namespace and make the canonical
     `/std/collections/vector/*` surface, or a non-public
     `/std/collections/internal_vector/*` module behind that surface, own the
-    implementation.
+    implementation while bringing the public vector `.prime` source up to the
+    readability bar in `docs/CodeExamples.md`.
   - implementation_notes:
     - Start from `stdlib/std/collections/vector.prime`,
       `stdlib/std/collections/experimental_vector.prime`,
@@ -850,6 +851,18 @@ Task template:
       `src/StdlibSurfaceRegistry.cpp`, collection import tests, vector
       compile-run suites, and docs/source-lock tests that mention
       `experimental_vector`.
+    - Cross-check `docs/CodeExamples.md`: `vector.prime` is listed as
+      style-aligned surface code, while `experimental_vector.prime` and
+      `internal_*` collection files are bridge/substrate-oriented. If the
+      canonical implementation needs low-level buffer mechanics, keep those
+      mechanics in an internal implementation module and keep the public vector
+      surface readable.
+    - Prefer CodeExamples surface style in public vector code where the current
+      language supports it: descriptive names, shallow control flow, concise
+      inferred locals, method-style calls, operator syntax instead of canonical
+      helper-call noise, and lowerCamelCase member helpers. Do not copy the
+      current `vectorPair`/`vectorTriple`/manual-forwarding style into the
+      canonical implementation except as isolated compatibility shims.
     - Preserve exact `import /std/collections/vector`, wildcard
       `import /std/collections/*`, constructor/literal rewrite, method sugar,
       and fixed-arity compatibility behavior while moving the implementation
@@ -864,6 +877,13 @@ Task template:
       shim or are limited to explicitly named compatibility/conformance tests.
     - Public docs and examples no longer present `experimental_vector` as the
       vector implementation namespace.
+    - `stdlib/std/collections/vector.prime` is no longer a thin low-quality
+      wrapper over experimental helpers; its public code follows the
+      `docs/CodeExamples.md` style boundary or delegates only to an explicitly
+      internal implementation module.
+    - Any remaining low-level buffer, slot, ownership, or compatibility code is
+      quarantined in `internal_*` or compatibility-shim files and is not used as
+      the public style reference.
     - Existing vector constructor, access, mutation, lifecycle, and import
       conformance remains behavior-compatible.
     - `./scripts/compile.sh --release` passes.
