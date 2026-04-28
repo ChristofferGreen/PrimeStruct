@@ -7,6 +7,10 @@
       const Expr &expr,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals);
+  ReturnKind inferPickExprReturnKind(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   bool ensureDefinitionReturnKindReady(const Definition &def);
   bool inferDefinitionReturnKind(const Definition &def);
   struct DefinitionReturnInferenceState {
@@ -84,6 +88,9 @@
   bool validateIfExpr(const std::vector<ParameterInfo> &params,
                       const std::unordered_map<std::string, BindingInfo> &locals,
                       const Expr &expr);
+  bool validatePickExpr(const std::vector<ParameterInfo> &params,
+                        const std::unordered_map<std::string, BindingInfo> &locals,
+                        const Expr &expr);
   bool validateBlockExpr(const std::vector<ParameterInfo> &params,
                          const std::unordered_map<std::string, BindingInfo> &locals,
                          const Expr &expr);

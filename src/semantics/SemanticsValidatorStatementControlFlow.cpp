@@ -56,6 +56,25 @@ bool SemanticsValidator::validateControlFlowStatement(const std::vector<Paramete
     return failExprDiagnostic(stmt, std::move(message));
   };
 
+  bool handledPickStatement = false;
+  if (!validatePickStatement(params,
+                             locals,
+                             stmt,
+                             returnKind,
+                             allowReturn,
+                             allowBindings,
+                             sawReturn,
+                             namespacePrefix,
+                             enclosingStatements,
+                             statementIndex,
+                             handledPickStatement)) {
+    return false;
+  }
+  if (handledPickStatement) {
+    handled = true;
+    return true;
+  }
+
   if (isMatchCall(stmt)) {
     handled = true;
     Expr expanded;

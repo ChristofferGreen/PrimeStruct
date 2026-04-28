@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4260: Add `pick` semantic validation
+- TODO-4261: Lower and execute `pick` matches
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4261: Lower and execute `pick` matches
 - TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
@@ -80,11 +79,12 @@ Task template:
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
 - TODO-4269: Bind and monomorphize type-pack arguments
+- TODO-4270: Add compile-time integer template arguments
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4260 ->
-  TODO-4261 -> TODO-4262
+- Deferred algebraic types and brace-only construction: TODO-4261 ->
+  TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -94,7 +94,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
 - TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
@@ -138,7 +137,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -163,7 +162,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -281,42 +280,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4260: Add `pick` semantic validation
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - scope: Add parsing and semantic validation for
-    `pick(sumValue) { variant(payload) { ... } }`, including exhaustiveness,
-    arm binding, branch typing, and diagnostics, without requiring backend
-    execution support yet.
-  - implementation_notes:
-    - Start from control-flow parsing/validation in `src/parser/ParserExprControl.cpp`,
-      `src/semantics/SemanticsValidatorStatementControlFlow.cpp`,
-      `src/semantics/SemanticsValidatorInferControlFlow.cpp`, and block/result
-      validation helpers.
-    - Add a dedicated semantic shard for `pick` diagnostics and result/effect
-      joining before any backend lowering.
-    - Unsupported lowering should fail at a clear semantic or IR-preparation
-      boundary until TODO-4261 lands.
-  - acceptance:
-    - `pick` requires every sum variant to be handled unless a future explicit
-      fallback form is added and documented.
-    - Duplicate arms, unknown variant arms, missing payload binders, and binder
-      type mismatches produce stable diagnostics.
-    - Branch payload bindings have the declared variant payload type and obey
-      ownership/borrow rules.
-    - Branch result types and effects are validated deterministically.
-    - Statement-position and value-position `pick` behavior is specified and
-      tested, including non-void result joining and `return(...)` inside arms.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once `pick` is semantically validated and unsupported
-    execution paths are deterministic; leave lowering to TODO-4261.
-
 - [ ] TODO-4261: Lower and execute `pick` matches
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4260
   - scope: Lower sum construction and `pick` to executable backend behavior for
     the supported backend set, with deterministic diagnostics elsewhere.
   - implementation_notes:

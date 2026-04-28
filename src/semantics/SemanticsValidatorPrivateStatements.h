@@ -36,6 +36,17 @@
                                     const std::vector<Expr> *enclosingStatements,
                                     size_t statementIndex,
                                     bool &handled);
+  bool validatePickStatement(const std::vector<ParameterInfo> &params,
+                             std::unordered_map<std::string, BindingInfo> &locals,
+                             const Expr &stmt,
+                             ReturnKind returnKind,
+                             bool allowReturn,
+                             bool allowBindings,
+                             bool *sawReturn,
+                             const std::string &namespacePrefix,
+                             const std::vector<Expr> *enclosingStatements,
+                             size_t statementIndex,
+                             bool &handled);
   bool validateReturnStatement(const std::vector<ParameterInfo> &params,
                                std::unordered_map<std::string, BindingInfo> &locals,
                                const Expr &stmt,

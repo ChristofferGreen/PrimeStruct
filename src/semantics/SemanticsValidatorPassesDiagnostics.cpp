@@ -81,7 +81,7 @@ void SemanticsValidator::collectDefinitionIntraBodyCallDiagnostics(
     if (isRootBuiltinName(expr.name)) {
       return true;
     }
-    if (isIfCall(expr) || isMatchCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
+    if (isIfCall(expr) || isMatchCall(expr) || isPickCall(expr) || isLoopCall(expr) || isWhileCall(expr) || isForCall(expr) ||
         isRepeatCall(expr) || isReturnCall(expr) || isBlockCall(expr) ||
         isLoopBlockEnvelope(expr)) {
       return true;

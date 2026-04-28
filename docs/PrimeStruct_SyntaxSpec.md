@@ -772,9 +772,10 @@ variant has a payload, `[Sum] value{}` is a diagnostic even when that payload ty
 Variant tag order is layout/serialization-sensitive, so reordering variants changes ABI-like behavior and must be
 treated as a version-sensitive change.
 
-`pick` is the planned exhaustive pattern form for sums. Each arm names a variant and binds its payload; missing variants
-are diagnostics unless an explicit fallback form is later specified. Unit variants use a bare arm with no payload
-binder; payload variants require a binder.
+`pick` is the semantically validated exhaustive pattern form for sums. Each arm names a variant and binds its payload;
+missing variants are diagnostics unless an explicit fallback form is later specified. Payload variants require a binder;
+unit variant arm syntax is planned with unit variant support. Backend lowering and execution for `pick` are tracked
+separately.
 
 ```prime
 pick(shape) {
@@ -789,14 +790,15 @@ pick(shape) {
   }
 }
 
-pick(maybeValue) {
-  none {
-    return(0)
-  }
-  some(value) {
-    return(value)
-  }
-}
+// Planned once unit variants are implemented:
+// pick(maybeValue) {
+//   none {
+//     return(0)
+//   }
+//   some(value) {
+//     return(value)
+//   }
+// }
 ```
 
 ### 7.2 Parameters

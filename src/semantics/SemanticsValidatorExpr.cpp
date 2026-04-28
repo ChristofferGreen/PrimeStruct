@@ -364,6 +364,9 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
       }
       return validateExpr(params, locals, expanded);
     }
+    if (isPickCall(expr)) {
+      return validatePickExpr(params, locals, expr);
+    }
     if (isIfCall(expr)) {
       return validateIfExpr(params, locals, expr);
     }

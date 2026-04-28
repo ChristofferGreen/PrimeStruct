@@ -184,6 +184,58 @@ bool SemanticsValidator::inferExplicitSumConstructorBinding(
   return false;
 }
 
+const Definition *SemanticsValidator::resolvePickSumDefinitionForExpr(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::string &namespacePrefix) {
+  auto resolveBinding = [&](const BindingInfo &binding,
+                            const std::string &bindingNamespace) {
+    return resolveSumDefinitionForTypeText(bindingTypeText(binding),
+                                           bindingNamespace);
+  };
+  if (expr.kind == Expr::Kind::Name) {
+    if (const BindingInfo *paramBinding = findParamBinding(params, expr.name)) {
+      if (const Definition *sumDef = resolveBinding(*paramBinding,
+                                                    namespacePrefix)) {
+        return sumDef;
+      }
+    }
+    auto localIt = locals.find(expr.name);
+    if (localIt != locals.end()) {
+      if (const Definition *sumDef = resolveBinding(localIt->second,
+                                                    namespacePrefix)) {
+        return sumDef;
+      }
+    }
+  }
+
+  BindingInfo inferredBinding;
+  if (inferExplicitSumConstructorBinding(expr, inferredBinding) ||
+      inferBindingTypeFromInitializer(expr, params, locals, inferredBinding)) {
+    if (const Definition *sumDef =
+            resolveBinding(inferredBinding, expr.namespacePrefix)) {
+      return sumDef;
+    }
+    if (const Definition *sumDef =
+            resolveBinding(inferredBinding, namespacePrefix)) {
+      return sumDef;
+    }
+  }
+
+  std::string inferredTypeText;
+  if (inferQueryExprTypeText(expr, params, locals, inferredTypeText) &&
+      !inferredTypeText.empty()) {
+    if (const Definition *sumDef =
+            resolveSumDefinitionForTypeText(inferredTypeText,
+                                            expr.namespacePrefix)) {
+      return sumDef;
+    }
+    return resolveSumDefinitionForTypeText(inferredTypeText, namespacePrefix);
+  }
+  return nullptr;
+}
+
 bool SemanticsValidator::validateTargetTypedSumInitializer(
     const std::string &targetTypeText,
     const Expr &initializer,

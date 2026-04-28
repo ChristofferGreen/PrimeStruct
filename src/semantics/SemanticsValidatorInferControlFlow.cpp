@@ -54,6 +54,11 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
     return inferExprReturnKind(expanded, params, locals);
   }
 
+  if (isPickCall(expr)) {
+    handled = true;
+    return inferPickExprReturnKind(expr, params, locals);
+  }
+
   if (isIfCall(expr) && expr.args.size() == 3) {
     handled = true;
     std::unordered_map<std::string, BindingInfo> branchLocals = locals;

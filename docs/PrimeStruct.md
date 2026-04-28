@@ -3354,9 +3354,10 @@ bad_use_after_take() {
   is tag `0` in source order. Payload variants are not default-constructed implicitly, so `[Shape] value{}` is rejected
   when the first `Shape` variant carries a payload. Variant order is therefore layout/serialization-sensitive and should
   be treated as version-sensitive API surface.
-  `pick(value) { variant(payload) { ... } }` is the planned exhaustive pattern form. Unit variants use bare arms such
-  as `none { ... }`; payload variants require binders such as `some(value) { ... }`. Missing variants are diagnostics
-  unless a future explicit fallback form is specified.
+  `pick(value) { variant(payload) { ... } }` is the semantically validated exhaustive pattern form. Payload variants
+  require binders such as `circle(c) { ... }`; missing variants, duplicate variants, unknown variants, and incompatible
+  branch value types are diagnostics. Unit variant arm syntax is planned with unit variant support. Backend lowering and
+  execution for `pick` are tracked separately.
 - **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on
   executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries.
   Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.

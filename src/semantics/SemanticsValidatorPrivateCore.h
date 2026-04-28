@@ -81,6 +81,11 @@
   const Definition *resolveSumDefinitionForTypeText(
       const std::string &typeText,
       const std::string &namespacePrefix) const;
+  const Definition *resolvePickSumDefinitionForExpr(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::string &namespacePrefix);
   bool validateExplicitSumConstructorExpr(
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals,

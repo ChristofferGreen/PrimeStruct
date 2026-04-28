@@ -3,10 +3,56 @@
 #include <cctype>
 #include <functional>
 #include <optional>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace primec::semantics {
+namespace {
+
+BindingInfo effectFreePickPayloadBinding(const SumVariant &variant) {
+  BindingInfo binding;
+  binding.typeName = variant.payloadType;
+  if (!variant.payloadTemplateArgs.empty()) {
+    binding.typeTemplateArg = joinTemplateArgs(variant.payloadTemplateArgs);
+  }
+  return binding;
+}
+
+const SumVariant *findEffectFreePickVariant(const Definition &sumDef,
+                                            const std::string &name) {
+  for (const auto &variant : sumDef.sumVariants) {
+    if (variant.name == name) {
+      return &variant;
+    }
+  }
+  return nullptr;
+}
+
+bool seedEffectFreePickBranchContext(const Expr &arm,
+                                     const Definition &sumDef,
+                                     std::unordered_map<std::string, BindingInfo> &locals,
+                                     const std::unordered_set<std::string> &paramNames) {
+  if (arm.kind != Expr::Kind::Call || arm.isBinding || arm.isMethodCall ||
+      arm.isFieldAccess || !arm.hasBodyArguments || arm.args.size() != 1 ||
+      arm.args.front().kind != Expr::Kind::Name || !arm.templateArgs.empty() ||
+      hasNamedArguments(arm.argNames)) {
+    return false;
+  }
+  if (locals.count(arm.args.front().name) > 0 ||
+      paramNames.count(arm.args.front().name) > 0) {
+    return false;
+  }
+  const SumVariant *variant = findEffectFreePickVariant(sumDef, arm.name);
+  if (variant == nullptr) {
+    return false;
+  }
+  locals.emplace(arm.args.front().name,
+                 effectFreePickPayloadBinding(*variant));
+  return true;
+}
+
+} // namespace
 
 SemanticsValidator::EffectFreeSummary SemanticsValidator::effectFreeSummaryForDefinition(const Definition &def) {
   auto cached = effectFreeDefCache_.find(def.fullPath);
@@ -206,6 +252,32 @@ bool SemanticsValidator::isOutsideEffectFreeStatement(const Expr &stmt,
         return false;
       }
       return isOutsideEffectFreeStatement(expanded, ctx, writesThis);
+    }
+    if (isPickCall(stmt)) {
+      if (stmt.args.size() != 1 || !isOutsideEffectFreeExpr(stmt.args.front(), ctx, writesThis)) {
+        return false;
+      }
+      if (ctx.params == nullptr) {
+        return false;
+      }
+      const Definition *sumDef = resolvePickSumDefinitionForExpr(
+          stmt.args.front(), *ctx.params, ctx.locals, stmt.namespacePrefix);
+      if (sumDef == nullptr) {
+        return false;
+      }
+      for (const Expr &arm : stmt.bodyArguments) {
+        EffectFreeContext branchCtx = ctx;
+        if (!seedEffectFreePickBranchContext(
+                arm, *sumDef, branchCtx.locals, branchCtx.paramNames)) {
+          return false;
+        }
+        for (const auto &bodyExpr : arm.bodyArguments) {
+          if (!isOutsideEffectFreeStatement(bodyExpr, branchCtx, writesThis)) {
+            return false;
+          }
+        }
+      }
+      return true;
     }
     if (isIfCall(stmt) && stmt.args.size() == 3) {
       if (!isOutsideEffectFreeExpr(stmt.args[0], ctx, writesThis)) {
@@ -441,6 +513,32 @@ bool SemanticsValidator::isOutsideEffectFreeExpr(const Expr &expr, EffectFreeCon
       return false;
     }
     return isOutsideEffectFreeExpr(expanded, ctx, writesThis);
+  }
+  if (isPickCall(expr)) {
+    if (expr.args.size() != 1 || !isOutsideEffectFreeExpr(expr.args.front(), ctx, writesThis)) {
+      return false;
+    }
+    if (ctx.params == nullptr) {
+      return false;
+    }
+    const Definition *sumDef = resolvePickSumDefinitionForExpr(
+        expr.args.front(), *ctx.params, ctx.locals, expr.namespacePrefix);
+    if (sumDef == nullptr) {
+      return false;
+    }
+    for (const Expr &arm : expr.bodyArguments) {
+      EffectFreeContext branchCtx = ctx;
+      if (!seedEffectFreePickBranchContext(
+              arm, *sumDef, branchCtx.locals, branchCtx.paramNames)) {
+        return false;
+      }
+      for (const auto &bodyExpr : arm.bodyArguments) {
+        if (!isOutsideEffectFreeStatement(bodyExpr, branchCtx, writesThis)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
   if (isIfCall(expr) && expr.args.size() == 3) {
     if (!isOutsideEffectFreeExpr(expr.args[0], ctx, writesThis)) {

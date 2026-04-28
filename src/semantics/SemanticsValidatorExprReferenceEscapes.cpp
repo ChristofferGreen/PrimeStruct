@@ -36,7 +36,7 @@ bool SemanticsValidator::isUnsafeReferenceExpr(
     }
     return false;
   };
-  if (isIfCall(expr) || isMatchCall(expr) || isBlockCall(expr) ||
+  if (isIfCall(expr) || isMatchCall(expr) || isPickCall(expr) || isBlockCall(expr) ||
       isReturnCall(expr) || isSimpleCallName(expr, "then") ||
       isSimpleCallName(expr, "else") || isSimpleCallName(expr, "case")) {
     return hasUnsafeChildExpr(expr);
@@ -140,7 +140,7 @@ bool SemanticsValidator::resolveEscapingReferenceRoot(
     }
     return false;
   };
-  if (isIfCall(expr) || isMatchCall(expr) || isBlockCall(expr) ||
+  if (isIfCall(expr) || isMatchCall(expr) || isPickCall(expr) || isBlockCall(expr) ||
       isReturnCall(expr) || isSimpleCallName(expr, "then") ||
       isSimpleCallName(expr, "else") || isSimpleCallName(expr, "case")) {
     return resolveChildRoot(expr);

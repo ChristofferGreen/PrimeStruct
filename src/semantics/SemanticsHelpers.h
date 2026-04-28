@@ -173,6 +173,7 @@ bool isPointerLikeExpr(const Expr &expr,
 bool isSimpleCallName(const Expr &expr, const char *nameToMatch);
 bool isIfCall(const Expr &expr);
 bool isMatchCall(const Expr &expr);
+bool isPickCall(const Expr &expr);
 bool isReturnCall(const Expr &expr);
 bool isLoopCall(const Expr &expr);
 bool isWhileCall(const Expr &expr);

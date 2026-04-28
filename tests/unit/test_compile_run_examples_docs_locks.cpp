@@ -1138,10 +1138,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4260: Add `pick` semantic validation") !=
+                  "- TODO-4261: Lower and execute `pick` matches") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
-                  "- TODO-4261: Lower and execute `pick` matches") !=
+                  "- TODO-4262: Add public sum-type examples") !=
         std::string::npos);
   CHECK(todo.find("- Semantic phase contract hardening:") == std::string::npos);
   CHECK(todo.find("- Deferred graph and inference hardening: TODO-4239") ==
@@ -1153,10 +1153,9 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4260: Add `pick` semantic validation") !=
+                  "- TODO-4261: Lower and execute `pick` matches") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4260: Add `pick` semantic validation",
       "TODO-4261: Lower and execute `pick` matches",
       "TODO-4262: Add public sum-type examples",
       "TODO-4263: Design generic and unit sum variants",
@@ -1166,6 +1165,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
       "TODO-4267: Retire legacy Maybe/Result representations",
       "TODO-4268: Add heterogeneous type-pack syntax and metadata",
       "TODO-4269: Bind and monomorphize type-pack arguments",
+      "TODO-4270: Add compile-time integer template arguments",
   };
   for (const std::string &entry : semanticPhaseQueue) {
     CHECK(todo.find("- " + entry) != std::string::npos);
@@ -1211,6 +1211,11 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4259") == std::string::npos);
   CHECK(todoFinished.find("TODO-4259: Add inferred sum variant construction") !=
+        std::string::npos);
+  CHECK(todo.find("TODO-4260: Add `pick` semantic validation") ==
+        std::string::npos);
+  CHECK(todo.find("  - depends_on: TODO-4260") == std::string::npos);
+  CHECK(todoFinished.find("TODO-4260: Add `pick` semantic validation") !=
         std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4227") == std::string::npos);
   CHECK(todo.find("  - depends_on: TODO-4215") == std::string::npos);

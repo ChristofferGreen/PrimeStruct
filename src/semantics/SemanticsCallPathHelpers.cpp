@@ -85,6 +85,12 @@ bool isMatchCall(const Expr &expr) {
   return isSimpleCallName(expr, "match");
 }
 
+bool isPickCall(const Expr &expr) {
+  return !expr.isMethodCall && !expr.isFieldAccess &&
+         isSimpleCallName(expr, "pick") &&
+         (expr.hasBodyArguments || !expr.bodyArguments.empty());
+}
+
 bool isReturnCall(const Expr &expr) {
   return isSimpleCallName(expr, "return");
 }

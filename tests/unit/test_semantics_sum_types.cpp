@@ -541,4 +541,295 @@ main() {
   }
 }
 
+TEST_CASE("pick validates exhaustive sum arms and payload binders") {
+  const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[struct]
+Rectangle {
+  [i32] width
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+measure([Shape] shape) {
+  return(pick(shape) {
+    circle(circlePayload) {
+      circlePayload.radius
+    }
+    rectangle(rectanglePayload) {
+      rectanglePayload.width
+    }
+  })
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Circle{4i32}}
+  return(measure(shape))
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pick statement arms can mutate through payload-specific branches") {
+  const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[struct]
+Rectangle {
+  [i32] width
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Rectangle{7i32}}
+  [i32 mut] out{0i32}
+  pick(shape) {
+    circle(circlePayload) {
+      assign(out, circlePayload.radius)
+    }
+    rectangle(rectanglePayload) {
+      assign(out, rectanglePayload.width)
+    }
+  }
+  return(out)
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("pick rejects invalid sum arm shapes") {
+  SUBCASE("missing variant") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[struct]
+Rectangle {
+  [i32] width
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Circle{1i32}}
+  return(pick(shape) {
+    circle(circlePayload) {
+      circlePayload.radius
+    }
+  })
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("missing pick variants for /Shape: rectangle") !=
+          std::string::npos);
+  }
+
+  SUBCASE("duplicate variant") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Circle{1i32}}
+  return(pick(shape) {
+    circle(firstPayload) {
+      firstPayload.radius
+    }
+    circle(secondPayload) {
+      secondPayload.radius
+    }
+  })
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("duplicate pick variant on /Shape: circle") !=
+          std::string::npos);
+  }
+
+  SUBCASE("unknown variant") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Circle{1i32}}
+  return(pick(shape) {
+    rectangle(payload) {
+      0i32
+    }
+  })
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("unknown pick variant on /Shape: rectangle") !=
+          std::string::npos);
+  }
+
+  SUBCASE("missing payload binder") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Circle{1i32}}
+  return(pick(shape) {
+    circle() {
+      0i32
+    }
+  })
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("pick arms require variant(payload) block for /Shape") !=
+          std::string::npos);
+  }
+}
+
+TEST_CASE("pick validates branch payload types and value compatibility") {
+  SUBCASE("payload binder has the selected variant type") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[struct]
+Rectangle {
+  [i32] width
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+acceptRectangle([Rectangle] rectangle) {
+  return(rectangle.width)
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Circle{1i32}}
+  return(pick(shape) {
+    circle(circlePayload) {
+      acceptRectangle(circlePayload)
+    }
+    rectangle(rectanglePayload) {
+      acceptRectangle(rectanglePayload)
+    }
+  })
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("argument type mismatch for /acceptRectangle parameter rectangle") !=
+          std::string::npos);
+  }
+
+  SUBCASE("branch values must be compatible") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [i32] radius
+}
+
+[struct]
+Rectangle {
+  [i32] width
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+main() {
+  [Shape] shape{Circle{1i32}}
+  return(pick(shape) {
+    circle(circlePayload) {
+      circlePayload.radius
+    }
+    rectangle(rectanglePayload) {
+      "wide"utf8
+    }
+  })
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("pick branches must return compatible types") !=
+          std::string::npos);
+  }
+}
+
 TEST_SUITE_END();

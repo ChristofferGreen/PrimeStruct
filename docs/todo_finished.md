@@ -6664,3 +6664,24 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     zero-match diagnostics, and no-widening primitive matching. Removed
     `TODO-4259` from the live queue, promoted `TODO-4260` to Ready Now, and
     deferred release reruns to CI per the lite workflow.
+
+- [x] TODO-4260: Add `pick` semantic validation
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Add parsing and semantic validation for
+    `pick(sumValue) { variant(payload) { ... } }`, including exhaustiveness,
+    arm binding, branch typing, and diagnostics, without requiring backend
+    execution support yet.
+  - finished_at: 2026-04-28
+  - evidence: Added a dedicated `pick` semantic validator for value and
+    statement positions. Semantic validation now resolves the target sum,
+    requires exhaustive arms, rejects duplicate or unknown variants, requires
+    payload binders, binds arm payloads to the selected variant type, validates
+    arm bodies with branch-local bindings and borrow tracking, and infers
+    branch return kinds for value-position compatibility checks. Sum semantics
+    coverage now exercises value-position `pick`, statement-position mutation,
+    missing/duplicate/unknown arm diagnostics, missing binders, payload type
+    mismatch diagnostics, and incompatible branch values. Removed `TODO-4260`
+    from the live queue, promoted `TODO-4261` to Ready Now, and deferred
+    release reruns to CI per the lite workflow.
