@@ -173,6 +173,42 @@ main() {
   CHECK(output.find("static_cast<uint32_t>(err)") == std::string::npos);
 }
 
+TEST_CASE("C++ emitter packs single-field Result.ok payloads") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+Token() {
+  [i32] code{0i32}
+}
+
+[return<Result<Token, i32>>]
+make_local_ok() {
+  [Token] token{Token{[code] 11i32}}
+  return(Result.ok(token))
+}
+
+[return<Result<Token, i32>>]
+make_direct_ok() {
+  return(Result.ok(Token{[code] 13i32}))
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_result_ok_struct_payload.prime", source);
+  const std::string outPath = (testScratchPath("") / "primec_result_ok_struct_payload.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_result_value_ok(static_cast<uint32_t>((token).code))") != std::string::npos);
+  CHECK(output.find("ps_result_value_ok(static_cast<uint32_t>((ps_Token") != std::string::npos);
+  CHECK(output.find("static_cast<uint32_t>(token)") == std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

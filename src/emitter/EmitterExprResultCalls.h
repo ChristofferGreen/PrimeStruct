@@ -108,6 +108,17 @@
     }
     return "static_cast<uint32_t>(" + emittedPayload + ")";
   };
+  auto resultPayloadTypeTextFromExpr = [&](const Expr &payloadExpr) -> std::string {
+    BindingInfo binding;
+    if (resolveExprBindingInfoWithTypes(payloadExpr, localTypes, binding)) {
+      return bindingTypeText(binding);
+    }
+    if (payloadExpr.kind == Expr::Kind::Call && !payloadExpr.isMethodCall &&
+        payloadExpr.isBraceConstructor && !payloadExpr.name.empty()) {
+      return payloadExpr.name;
+    }
+    return "";
+  };
   if (expr.kind == Expr::Kind::Call && !expr.isMethodCall && !expr.isFieldAccess &&
       expr.isBraceConstructor) {
     std::string resultBase = expr.name;
@@ -160,11 +171,17 @@
       return sourceResultStatusOkExpr();
     }
     if (expr.args.size() == 2) {
-      const std::string valueExpr =
-          "static_cast<uint32_t>(" +
+      const std::string emittedValue =
           emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
-                   resultInfos, returnStructs, allowMathBare) +
-          ")";
+                   resultInfos, returnStructs, allowMathBare);
+      std::string valueExpr = "static_cast<uint32_t>(" + emittedValue + ")";
+      const std::string valueType = resultPayloadTypeTextFromExpr(expr.args[1]);
+      if (!valueType.empty()) {
+        auto packedValue = singleFieldResultBridgePayload(valueType, expr.namespacePrefix, emittedValue);
+        if (packedValue.has_value()) {
+          valueExpr = *packedValue;
+        }
+      }
       return sourceResultValueOkExpr(valueExpr);
     }
     return "0";

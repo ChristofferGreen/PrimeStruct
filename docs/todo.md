@@ -350,9 +350,11 @@ Task template:
       `ok` tags, and only calls the error-domain `why` helper for `error`
       payloads. Explicit source C++ `error` constructors now also pack
       single-field int-backed error structs through their code field before
-      entering the status-only or value-carrying bridge. Remaining cleanup
-      should retarget broader bridge construction and propagation to the
-      stdlib Result sum contract.
+      entering the status-only or value-carrying bridge. Direct source C++
+      `Result.ok(value)` now also packs local or explicitly constructed
+      single-field success structs through their code field before entering the
+      value-carrying bridge. Remaining cleanup should retarget broader bridge
+      construction and propagation to the stdlib Result sum contract.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

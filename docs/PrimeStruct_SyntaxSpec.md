@@ -813,7 +813,8 @@ explicit source C++ `Result<T, E>{[ok] value}`, `Result<T, E>{[error] err}`, `Re
 Source C++ `Result.why(...)` now binds bridge operands once and returns the empty string for `ok` before extracting
 the error payload or calling the error-domain `why` helper. Explicit source C++ `error` constructors pack
 single-field int-backed error structs through their code field before entering the status-only or value-carrying
-bridge.
+bridge. Direct source C++ `Result.ok(value)` packs local or explicitly constructed single-field success structs
+through their code field before entering the value-carrying bridge.
 Broader result shapes and full bridge retargeting remain compatibility work until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is

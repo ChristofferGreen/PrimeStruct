@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4330: Pack source Result ok struct payloads
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that lets direct
+    `Result.ok(value)` accept local and explicitly constructed single-field
+    success structs without falling back to raw struct-to-integer casts.
+  - implementation_notes:
+    - Infer direct `Result.ok(value)` payload type text from local binding
+      metadata or explicit brace-constructor expressions.
+    - Reuse the source C++ bridge payload packer for single non-static
+      bridge-code fields.
+    - Leave wider or unsupported success payload shapes on the existing
+      compatibility boundary until broader bridge retargeting lands.
+  - acceptance:
+    - Direct source C++ `Result.ok(localStruct)` packs single-field success
+      structs through the field before calling `ps_result_value_ok(...)`.
+    - Direct source C++ `Result.ok(Struct{...})` packs explicit single-field
+      constructor expressions through the field before calling
+      `ps_result_value_ok(...)`.
+    - C++ emitter coverage checks emitted source text for both bridge helper
+      calls and rejects the old direct `static_cast<uint32_t>(localStruct)`
+      shape.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once direct source C++ `Result.ok(value)` can bridge local
+    and explicit single-field success structs without changing wider
+    unsupported payload behavior.
+  - finished_at: 2026-04-28
+  - evidence: Added source C++ `Result.ok(value)` payload packing for local
+    and explicitly constructed single-field success structs, added C++ emitter
+    source-text coverage for both forms, and documented the remaining broader
+    bridge retargeting work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4329: Pack source Result error struct constructors
   - owner: ai
   - created_at: 2026-04-28
