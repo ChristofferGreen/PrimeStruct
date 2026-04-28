@@ -52,6 +52,23 @@ bool isMapTypeName(const std::string &typeName) {
   return isBuiltinMapTypeName(typeName) || isExperimentalMapTypeName(typeName);
 }
 
+bool isKnownStdUiStructAlias(const std::string &typeName) {
+  return typeName.find('/') == std::string::npos &&
+         (typeName == "CommandList" || typeName == "HtmlCommandList" ||
+          typeName == "LayoutTree" || typeName == "LoginFormNodes" ||
+          typeName == "Rgba8" || typeName == "UiEventStream");
+}
+
+std::string resolveStructSlotLookupPath(
+    const std::string &structPath,
+    const StructLayoutFieldIndex &fieldIndex) {
+  if (fieldIndex.count(structPath) > 0 || !isKnownStdUiStructAlias(structPath)) {
+    return structPath;
+  }
+  const std::string stdUiPath = "/std/ui/" + structPath;
+  return fieldIndex.count(stdUiPath) > 0 ? stdUiPath : structPath;
+}
+
 std::string normalizeVectorStructPath(const std::string &typeName) {
   if (isBuiltinVectorTypeName(typeName)) {
     return "/vector";
@@ -507,8 +524,10 @@ bool resolveStructSlotLayoutFromDefinitionFieldIndex(
     std::unordered_set<std::string> &layoutStack,
     StructSlotLayoutInfo &out,
     std::string &error) {
+  const std::string resolvedStructPath =
+      resolveStructSlotLookupPath(structPath, fieldIndex);
   return resolveStructSlotLayoutFromDefinitionFields(
-      structPath,
+      resolvedStructPath,
       [&](const std::string &structPathIn, std::vector<StructLayoutFieldInfo> &fieldsOut) {
         return collectStructLayoutFieldsFromIndex(fieldIndex, structPathIn, fieldsOut);
       },
@@ -560,8 +579,10 @@ bool resolveStructFieldSlotFromDefinitionFieldIndex(
     std::unordered_set<std::string> &layoutStack,
     StructSlotFieldInfo &out,
     std::string &error) {
+  const std::string resolvedStructPath =
+      resolveStructSlotLookupPath(structPath, fieldIndex);
   return resolveStructFieldSlotFromDefinitionFields(
-      structPath,
+      resolvedStructPath,
       fieldName,
       [&](const std::string &structPathIn, std::vector<StructLayoutFieldInfo> &fieldsOut) {
         return collectStructLayoutFieldsFromIndex(fieldIndex, structPathIn, fieldsOut);

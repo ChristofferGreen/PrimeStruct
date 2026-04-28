@@ -177,6 +177,54 @@ TEST_CASE("ir lowerer struct type helpers resolve struct slots from definition f
   CHECK(error == "native backend cannot resolve struct layout: /pkg/Null");
 }
 
+TEST_CASE("ir lowerer struct type helpers resolve bare std ui field aliases") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+  const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =
+      primec::ir_lowerer::buildStructLayoutFieldIndex(
+          1,
+          [](const primec::ir_lowerer::AppendStructLayoutFieldFn &appendStructLayoutField) {
+            appendStructLayoutField("/std/ui/LayoutTree", {"kinds", "vector", "i32", false});
+            appendStructLayoutField("/std/ui/LayoutTree", {"parentIndices", "vector", "i32", false});
+          });
+  primec::Definition layoutTreeDef;
+  layoutTreeDef.fullPath = "/std/ui/LayoutTree";
+  layoutTreeDef.namespacePrefix = "/std/ui";
+  const std::unordered_map<std::string, const primec::Definition *> defMap = {
+      {"/std/ui/LayoutTree", &layoutTreeDef},
+  };
+  auto resolveStructTypeName = [](const std::string &, const std::string &, std::string &) {
+    return false;
+  };
+  auto valueKindFromTypeName = [](const std::string &typeName) {
+    if (typeName == "i32") {
+      return ValueKind::Int32;
+    }
+    return ValueKind::Unknown;
+  };
+
+  primec::ir_lowerer::StructSlotLayoutCache layoutCache;
+  std::unordered_set<std::string> layoutStack;
+  std::string error;
+
+  auto resolveStructSlotLayout = primec::ir_lowerer::makeResolveStructSlotLayoutFromDefinitionFieldIndex(
+      fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
+  auto resolveStructFieldSlot = primec::ir_lowerer::makeResolveStructFieldSlotFromDefinitionFieldIndex(
+      fieldIndex, defMap, resolveStructTypeName, valueKindFromTypeName, layoutCache, layoutStack, error);
+
+  primec::ir_lowerer::StructSlotLayoutInfo layout;
+  REQUIRE(resolveStructSlotLayout("LayoutTree", layout));
+  CHECK(layout.structPath == "/std/ui/LayoutTree");
+  CHECK(layout.totalSlots == 7);
+  REQUIRE(layout.fields.size() == 2);
+
+  primec::ir_lowerer::StructSlotFieldInfo field;
+  REQUIRE(resolveStructFieldSlot("LayoutTree", "kinds", field));
+  CHECK(field.name == "kinds");
+  CHECK(field.slotOffset == 1);
+  CHECK(field.slotCount == 3);
+  CHECK(field.structPath == "/vector");
+}
+
 TEST_CASE("ir lowerer struct type helpers build struct-slot resolvers from definition field index") {
   using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
   const primec::ir_lowerer::StructLayoutFieldIndex fieldIndex =
