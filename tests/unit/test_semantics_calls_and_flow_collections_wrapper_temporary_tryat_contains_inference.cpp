@@ -133,6 +133,29 @@ main() {
   CHECK(error.find("unknown call target: /map/at") != std::string::npos);
 }
 
+TEST_CASE("stdlib-owned map compatibility at call falls back to canonical helper") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+  namespace demo {
+  [effects(heap_alloc), return<int>]
+  read_value([map<i32, i32>] values) {
+    return(/map/at(values, 1i32))
+  }
+  }
+}
+
+[return<void>]
+main() {
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("map compatibility at call keeps explicit alias precedence") {
   const std::string source = R"(
 [effects(heap_alloc), return<int>]

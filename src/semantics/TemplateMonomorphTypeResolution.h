@@ -390,6 +390,39 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     }
     return {};
   };
+  auto resolveRootedStdlibSurfaceCompatibilityPath =
+      [&](const std::string &resolvedPath) -> std::string {
+    if (!usesStdlibScopedImportAliases(namespacePrefix, ctx) ||
+        ctx.sourceDefs.count(resolvedPath) > 0 ||
+        ctx.helperOverloads.count(resolvedPath) > 0) {
+      return {};
+    }
+    const StdlibSurfaceMetadata *metadata =
+        findStdlibSurfaceMetadataByResolvedPath(resolvedPath);
+    if (metadata == nullptr || metadata->shape == StdlibSurfaceShape::ConstructorFamily) {
+      return {};
+    }
+    auto containsSpelling = [&](std::span<const std::string_view> spellings) {
+      return std::find(spellings.begin(), spellings.end(), resolvedPath) !=
+             spellings.end();
+    };
+    if (!containsSpelling(metadata->compatibilitySpellings) &&
+        !containsSpelling(metadata->loweringSpellings)) {
+      return {};
+    }
+    const std::string_view memberName =
+        resolveStdlibSurfaceMemberName(*metadata, resolvedPath);
+    if (memberName.empty()) {
+      return {};
+    }
+    const std::string canonicalPath =
+        std::string(metadata->canonicalPath) + "/" + std::string(memberName);
+    if (ctx.sourceDefs.count(canonicalPath) > 0 ||
+        ctx.helperOverloads.count(canonicalPath) > 0) {
+      return canonicalPath;
+    }
+    return {};
+  };
   if (expr.name.empty()) {
     return "";
   }
@@ -400,10 +433,21 @@ std::string resolveCalleePath(const Expr &expr, const std::string &namespacePref
     return finalizeResolvedPath("/" + builtinCollection);
   }
   if (!expr.name.empty() && expr.name[0] == '/') {
+    if (std::string stdlibSurfacePath =
+            resolveRootedStdlibSurfaceCompatibilityPath(expr.name);
+        !stdlibSurfacePath.empty()) {
+      return finalizeResolvedPath(stdlibSurfacePath);
+    }
     return finalizeResolvedPath(expr.name);
   }
   if (expr.name.find('/') != std::string::npos) {
-    return finalizeResolvedPath("/" + expr.name);
+    const std::string rootedPath = "/" + expr.name;
+    if (std::string stdlibSurfacePath =
+            resolveRootedStdlibSurfaceCompatibilityPath(rootedPath);
+        !stdlibSurfacePath.empty()) {
+      return finalizeResolvedPath(stdlibSurfacePath);
+    }
+    return finalizeResolvedPath(rootedPath);
   }
   if (!namespacePrefix.empty()) {
     const size_t lastSlash = namespacePrefix.find_last_of('/');
