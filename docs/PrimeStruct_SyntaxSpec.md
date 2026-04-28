@@ -803,9 +803,9 @@ it now preserves nested `Result<T...>` types under `Reference` / `Pointer` and r
 operands for `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its packed C++ storage-width decisions and source
 C++ pack/unpack expression emission are quarantined behind named emitter helpers, generated prelude helper names use
 explicit `ps_legacy_result_*` spellings, and value-carrying Result storage emits the named
-`ps_legacy_result_value` fielded type instead of raw `uint64_t` return/binding types; deleting raw packed-integer
-construction compatibility, broader result shapes, and full bridge retargeting remain compatibility work until their
-dedicated migration tasks land.
+`ps_legacy_result_value` fielded type instead of raw `uint64_t` return/binding types without raw packed-integer
+construction or conversion compatibility; broader result shapes and full bridge retargeting remain compatibility work
+until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1426,8 +1426,9 @@ Draft constraints:
   sources. The legacy source C++ emitter mirrors borrowed/pointer helper operand inference while still using the packed
   bridge, with packed C++ storage-width decisions and source C++ pack/unpack expression emission quarantined behind
   named emitter helpers, generated prelude helper names marked with explicit `ps_legacy_result_*` spellings, and
-  value-carrying Result storage named through the fielded `ps_legacy_result_value` type. Unsupported broader result
-  shapes, raw packed-integer construction compatibility deletion, and full bridge retargeting remain migration work.
+  value-carrying Result storage named through the fielded `ps_legacy_result_value` type without raw packed-integer
+  construction or conversion compatibility. Unsupported broader result shapes and full bridge retargeting remain
+  migration work.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

@@ -158,11 +158,11 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map") {
     if (expr.args.size() != 3) {
-      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
+      return legacyPackedResultPackExpr("0u", "0u");
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
+      return legacyPackedResultPackExpr("0u", "0u");
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -190,11 +190,11 @@
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "and_then") {
     if (expr.args.size() != 3) {
-      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
+      return legacyPackedResultPackExpr("0u", "0u");
     }
     ResultInfo resultInfo;
     if (!resolveResultExprInfo(expr.args[1], resultInfo) || !resultInfo.isResult || !resultInfo.hasValue) {
-      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
+      return legacyPackedResultPackExpr("0u", "0u");
     }
     std::string valueType =
         bindingTypeToCpp(resultInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
@@ -215,20 +215,20 @@
     out << " auto ps_value = static_cast<" << valueType << ">("
         << legacyPackedResultValueExpr("ps_result") << ");";
     out << " auto ps_next = (" << lambdaExpr << ")(ps_value);";
-    out << " return static_cast<" << legacyPackedResultValueCppType << ">(ps_next);";
+    out << " return ps_next;";
     out << " }())";
     return out.str();
   }
   if (expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
       expr.args.front().name == "Result" && expr.name == "map2") {
     if (expr.args.size() != 4) {
-      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
+      return legacyPackedResultPackExpr("0u", "0u");
     }
     ResultInfo leftInfo;
     ResultInfo rightInfo;
     if (!resolveResultExprInfo(expr.args[1], leftInfo) || !leftInfo.isResult || !leftInfo.hasValue ||
         !resolveResultExprInfo(expr.args[2], rightInfo) || !rightInfo.isResult || !rightInfo.hasValue) {
-      return "static_cast<" + legacyPackedResultValueCppType + ">(0)";
+      return legacyPackedResultPackExpr("0u", "0u");
     }
     std::string leftType =
         bindingTypeToCpp(leftInfo.valueType, expr.namespacePrefix, importAliases, structTypeMap);
