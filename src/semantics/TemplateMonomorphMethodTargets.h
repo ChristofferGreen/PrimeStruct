@@ -51,9 +51,33 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     return candidate;
   };
   auto isFileMethodName = [](std::string_view methodName) {
-    return methodName == "write" || methodName == "write_line" || methodName == "write_byte" ||
-           methodName == "read_byte" || methodName == "write_bytes" || methodName == "flush" ||
+    return methodName == "write" || methodName == "writeLine" ||
+           methodName == "write_line" || methodName == "writeByte" ||
+           methodName == "write_byte" || methodName == "readByte" ||
+           methodName == "read_byte" || methodName == "writeBytes" ||
+           methodName == "write_bytes" || methodName == "flush" ||
            methodName == "close";
+  };
+  auto normalizeFileMethodName = [](std::string_view methodName) {
+    if (methodName == "readByte") {
+      return std::string("read_byte");
+    }
+    if (methodName == "writeLine") {
+      return std::string("write_line");
+    }
+    if (methodName == "writeByte") {
+      return std::string("write_byte");
+    }
+    if (methodName == "writeBytes") {
+      return std::string("write_bytes");
+    }
+    return std::string(methodName);
+  };
+  auto normalizeFileErrorMethodName = [](std::string_view methodName) {
+    if (methodName == "isEof") {
+      return std::string("is_eof");
+    }
+    return std::string(methodName);
   };
   std::function<std::string(std::string)> qualifyImportedCollectionTypeText =
       [&](std::string typeText) -> std::string {
@@ -286,18 +310,21 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
   }
   typeName = normalizeCollectionReceiverTypeName(typeName);
   auto preferredFileMethodTarget = [&](std::string_view helperName) {
-    const std::string builtinPath = "/file/" + std::string(helperName);
-    if (helperName != "write" && helperName != "write_line" && helperName != "close") {
+    const std::string normalizedHelperName = normalizeFileMethodName(helperName);
+    const std::string builtinPath = "/file/" + normalizedHelperName;
+    if (normalizedHelperName != "write" &&
+        normalizedHelperName != "write_line" &&
+        normalizedHelperName != "close") {
       return builtinPath;
     }
-    if ((helperName == "write" || helperName == "write_line") &&
+    if ((normalizedHelperName == "write" || normalizedHelperName == "write_line") &&
         expr.args.size() > 10) {
       return builtinPath;
     }
     if (receiver.kind == Expr::Kind::Name && receiver.name == "self") {
       return builtinPath;
     }
-    const std::string stdlibPath = "/File/" + std::string(helperName);
+    const std::string stdlibPath = "/File/" + normalizedHelperName;
     if (hasDefinitionFamilyPath(stdlibPath)) {
       return stdlibPath;
     }
@@ -325,10 +352,12 @@ bool resolveMethodCallTemplateTarget(const Expr &expr,
     pathOut = selectHelperOverloadPath(expr, "/" + normalizeBindingTypeName(typeName) + "/" + normalizedMethodName, ctx);
     return true;
   }
+  const std::string fileErrorMethodName =
+      normalizeFileErrorMethodName(normalizedMethodName);
   if (normalizedReceiverLeafName == "FileError" &&
-      (normalizedMethodName == "why" || normalizedMethodName == "is_eof" ||
-       normalizedMethodName == "status" || normalizedMethodName == "result")) {
-    pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + normalizedMethodName);
+      (fileErrorMethodName == "why" || fileErrorMethodName == "is_eof" ||
+       fileErrorMethodName == "status" || fileErrorMethodName == "result")) {
+    pathOut = selectStaticHelperOverloadPath("/std/file/FileError/" + fileErrorMethodName);
     return true;
   }
   if (normalizedReceiverLeafName == "ImageError" &&

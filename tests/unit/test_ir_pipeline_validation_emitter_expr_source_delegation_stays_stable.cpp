@@ -631,6 +631,18 @@ TEST_CASE("template monomorph source delegation stays stable") {
   CHECK(templateMonomorphSource.find(
             "std::string experimentalVectorConstructorRewritePath(const std::string &resolvedPath, size_t argumentCount)") ==
         std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto normalizeFileMethodName = [](std::string_view methodName)") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "if (methodName == \"readByte\")") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "const std::string normalizedHelperName = normalizeFileMethodName(helperName);") !=
+        std::string::npos);
+  CHECK(templateMonomorphMethodTargetsSource.find(
+            "auto normalizeFileErrorMethodName = [](std::string_view methodName)") !=
+        std::string::npos);
   CHECK(templateMonomorphImplicitTemplateInferenceSource.find(
             "if (inferCallBindingTypeForMonomorph(initializer, params, locals, allowMathBare, ctx, infoOut,") !=
         std::string::npos);
