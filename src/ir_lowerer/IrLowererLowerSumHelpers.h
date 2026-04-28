@@ -35,6 +35,20 @@
       return nullptr;
     };
 
+    auto isStdlibResultSumDefinition = [](const Definition &sumDef) {
+      return sumDef.fullPath == "/std/result/Result" ||
+             sumDef.fullPath.rfind("/std/result/Result__", 0) == 0;
+    };
+
+    auto isLegacyResultOkCall = [](const Expr &expr) {
+      return expr.kind == Expr::Kind::Call && expr.isMethodCall &&
+             !expr.isFieldAccess && expr.name == "ok" &&
+             !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
+             expr.args.front().name == "Result" &&
+             expr.templateArgs.empty() && !expr.hasBodyArguments &&
+             expr.bodyArguments.empty() && !hasNamedArguments(expr.argNames);
+    };
+
     auto sumPayloadTypeText = [](const SumVariant &variant) {
       if (!variant.hasPayload) {
         return std::string{};
@@ -269,6 +283,30 @@
             const Definition &targetSum,
             const LocalMap &valueLocals,
             LoweredSumVariantSelection &selectionOut) -> bool {
+      if (isStdlibResultSumDefinition(targetSum) && isLegacyResultOkCall(initializer)) {
+        if (initializer.args.size() != 2 && initializer.args.size() != 1) {
+          return false;
+        }
+        const SumVariant *variant = findSumVariantByName(targetSum, "ok");
+        if (variant == nullptr) {
+          return false;
+        }
+        if (variant->hasPayload != (initializer.args.size() == 2)) {
+          return false;
+        }
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (!resolveSumPayloadStorageInfo(targetSum, *variant, payloadInfo)) {
+          return false;
+        }
+        selectionOut.sumDef = &targetSum;
+        selectionOut.variant = variant;
+        selectionOut.payloadExpr = variant->hasPayload ? &initializer.args[1] : nullptr;
+        selectionOut.payloadKind = payloadInfo.valueKind;
+        selectionOut.payloadStructPath = std::move(payloadInfo.structPath);
+        selectionOut.payloadSlotCount = payloadInfo.slotCount;
+        selectionOut.payloadIsAggregate = payloadInfo.isAggregate;
+        return true;
+      }
       if (selectExplicitSumVariantForConstructor(initializer, targetSum, selectionOut)) {
         return true;
       }

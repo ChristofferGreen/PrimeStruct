@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4296: Bridge `Result.ok` to the result sum variant
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next legacy construction-helper bridge by making
+    `Result.ok(value)` select the `ok` variant for typed imported
+    value-carrying `/std/result/*` sum locals and returns on IR-backed
+    VM/native paths.
+  - implementation_notes:
+    - Detect legacy `Result.ok(value)` during stdlib Result sum construction
+      instead of relying on payload-type inference.
+    - This keeps `Result<i32, i32>` and other same-type success/error payload
+      cases deterministic.
+    - Stabilize declared stdlib Result sum returns that return
+      `Result.ok(value)` through the same sum construction path.
+    - Left combinators, status-only `Result<Error>`, and `?` propagation in
+      TODO-4293/TODO-4266.
+  - acceptance:
+    - Typed imported value-carrying Result locals can be initialized with
+      `Result.ok(value)` and store the `ok` tag.
+    - Functions returning typed imported value-carrying Results can return
+      `Result.ok(value)` and store the `ok` tag.
+    - Same-type success/error payloads do not make `Result.ok(value)`
+      ambiguous.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `Result.ok(value)` can construct typed imported
+    value-carrying stdlib Result sums and the remaining combinator bridge work
+    is still tracked.
+  - finished_at: 2026-04-28
+  - evidence: Added explicit stdlib Result sum `ok`-variant selection for
+    legacy `Result.ok(value)` plus semantic, VM, and native fixtures covering
+    same-type success/error payload ambiguity. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4295: Bridge `Result.why` to the result sum payload
   - owner: ai
   - created_at: 2026-04-28

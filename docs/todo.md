@@ -276,14 +276,18 @@ Task template:
   - owner: ai
   - created_at: 2026-04-28
   - phase: Deferred stdlib ADT migration
-  - scope: Route the remaining legacy `Result.ok(...)`, `Result.map(...)`,
+  - scope: Route the remaining legacy `Result.map(...)`,
     `Result.and_then(...)`, and `Result.map2(...)` helper bridge onto the
     stdlib result sum contract while preserving current source compatibility
     and leaving `?` rewiring to TODO-4266.
   - implementation_notes:
     - Start from `stdlib/std/result/result.prime`, Result helper semantics,
-      `Result.ok`, `Result.map/and_then/map2`, result payload metadata, and
-      VM/native/C++ result compile-run tests.
+      `Result.map/and_then/map2`, result payload metadata, and VM/native/C++
+      result compile-run tests.
+    - `Result.ok(value)` now selects the imported value-carrying stdlib
+      Result sum `ok` variant for typed sum locals/returns on IR-backed
+      VM/native paths; keep same-type success/error payload ambiguity covered
+      while bridging combinators.
     - `Result.error(value)` now reads imported value-carrying stdlib Result
       sum tags on IR-backed VM/native paths; keep that behavior covered while
       bridging the remaining helpers.
@@ -303,10 +307,9 @@ Task template:
       supported payload matrix.
     - Diagnostics remain deterministic for unsupported payloads and ambiguous
       generic inference.
-    - Focused tests cover `Result.ok`, error construction, map/and_then/map2,
-      and representative error domains (`FileError`, `ContainerError`,
-      `GfxError`) without regressing sum-backed `Result.error` or
-      `Result.why`.
+    - Focused tests cover map/and_then/map2 and representative error domains
+      (`FileError`, `ContainerError`, `GfxError`) without regressing
+      sum-backed `Result.ok`, `Result.error`, or `Result.why`.
     - `./scripts/compile.sh --release` passes.
   - stop_rule: Stop once legacy Result helpers are bridged onto the stdlib sum
     contract or intentionally split into narrower helper/status follow-ups.

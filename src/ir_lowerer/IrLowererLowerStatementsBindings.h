@@ -181,6 +181,23 @@
       }
       return std::string{};
     };
+    auto extractDeclaredSumReturnDefinition = [&]() -> const Definition * {
+      const std::string &definitionPath =
+          activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+      auto defIt = defMap.find(definitionPath);
+      if (defIt == defMap.end() || defIt->second == nullptr) {
+        return nullptr;
+      }
+      for (const auto &transform : defIt->second->transforms) {
+        if (transform.name != "return" || transform.templateArgs.size() != 1) {
+          continue;
+        }
+        return resolveSumDefinitionForTypeText(
+            trimTemplateTypeText(transform.templateArgs.front()),
+            defIt->second->namespacePrefix);
+      }
+      return nullptr;
+    };
     auto declaredReturnBase = [&]() {
       const std::string &definitionPath =
           activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
@@ -911,9 +928,46 @@
         emittedReturnStmt = &rewrittenReturnStmt;
       }
       const Expr &returnValueExpr = emittedReturnStmt->args.front();
+      if (const Definition *returnSumDef = extractDeclaredSumReturnDefinition();
+          returnSumDef != nullptr &&
+          isStdlibResultSumDefinition(*returnSumDef) &&
+          isLegacyResultOkCall(returnValueExpr)) {
+        int32_t totalSlots = 0;
+        if (!loweredSumSlotCount(*returnSumDef, totalSlots)) {
+          error = "native backend does not support sum payload type on " +
+                  returnSumDef->fullPath;
+          return false;
+        }
+        const int32_t baseLocal = nextLocal;
+        nextLocal += totalSlots;
+        const int32_t ptrLocal = nextLocal++;
+        emitLoweredSumHeader(baseLocal, totalSlots);
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+        if (!emitLoweredSumConstructionIntoLocal(baseLocal, *returnSumDef, returnValueExpr, localsIn)) {
+          return false;
+        }
+        rewrittenReturnLocals = localsIn;
+        LocalInfo returnInfo;
+        returnInfo.kind = LocalInfo::Kind::Value;
+        returnInfo.valueKind = LocalInfo::ValueKind::Int64;
+        returnInfo.structTypeName = returnSumDef->fullPath;
+        returnInfo.structSlotCount = totalSlots;
+        returnInfo.index = ptrLocal;
+        const std::string tempReturnName = "__native_return_sum_" + std::to_string(ptrLocal);
+        rewrittenReturnLocals.emplace(tempReturnName, returnInfo);
+        rewrittenReturnStmt = *emittedReturnStmt;
+        Expr stableReturnValueExpr;
+        stableReturnValueExpr.kind = Expr::Kind::Name;
+        stableReturnValueExpr.name = tempReturnName;
+        rewrittenReturnStmt.args.front() = std::move(stableReturnValueExpr);
+        emittedReturnStmt = &rewrittenReturnStmt;
+        emittedReturnLocals = &rewrittenReturnLocals;
+      }
+      const Expr &stableReturnValueExpr = emittedReturnStmt->args.front();
       StructSlotLayout layout;
       std::string aggregateStructPath;
-      const std::string inferredStructPath = inferStructExprPath(returnValueExpr, localsIn);
+      const std::string inferredStructPath = inferStructExprPath(stableReturnValueExpr, *emittedReturnLocals);
       if (!inferredStructPath.empty() && resolveStructSlotLayout(inferredStructPath, layout)) {
         aggregateStructPath = inferredStructPath;
       }
@@ -926,7 +980,7 @@
       const bool shouldStabilizeAggregateReturn =
           !aggregateStructPath.empty() &&
           !declaredReturnIsPointerLikeHandle &&
-          (returnValueExpr.kind == Expr::Kind::Call || returnValueExpr.kind == Expr::Kind::Name);
+          (stableReturnValueExpr.kind == Expr::Kind::Call || stableReturnValueExpr.kind == Expr::Kind::Name);
       if (shouldStabilizeAggregateReturn) {
         const int32_t baseLocal = nextLocal;
         nextLocal += layout.totalSlots;
@@ -937,7 +991,7 @@
         function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
         const int32_t srcPtrLocal = allocTempLocal();
-        if (!emitExpr(returnValueExpr, localsIn)) {
+        if (!emitExpr(stableReturnValueExpr, *emittedReturnLocals)) {
           return false;
         }
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(srcPtrLocal)});

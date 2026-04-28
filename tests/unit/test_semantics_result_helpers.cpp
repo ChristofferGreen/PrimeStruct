@@ -130,6 +130,52 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result value sum accepts legacy Result.ok") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<Result<i32, i32>>]
+make_success() {
+  return(Result.ok(7i32))
+}
+
+[return<int>]
+main() {
+  [Result<i32, i32>] localSuccess{Result.ok(5i32)}
+  [Result<i32, i32>] returnedSuccess{make_success()}
+  [Result<i32, i32>] failure{error<i32, i32>(3i32)}
+  [i32] localValue{pick(localSuccess) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      100i32
+    }
+  }}
+  [i32] returnedValue{pick(returnedSuccess) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      101i32
+    }
+  }}
+  [i32] failureValue{pick(failure) {
+    ok(value) {
+      102i32
+    }
+    error(err) {
+      err
+    }
+  }}
+  return(plus(plus(localValue, returnedValue), failureValue))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib result value sum rejects default construction") {
   const std::string source = R"(
 import /std/result/*
