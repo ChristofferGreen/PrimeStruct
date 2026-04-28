@@ -3029,7 +3029,7 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
   CHECK(pngWriteBody.find("[i32] status{writeImpl(path, width, height, pixels)}") == std::string::npos);
 }
 
-TEST_CASE("gfx stdlib wrappers stay source locked to explicit parser-safe locals") {
+TEST_CASE("gfx stdlib wrappers stay source locked to parser-safe locals") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   if (!std::filesystem::exists(gfxStdlibPath)) {
     gfxStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "gfx" / "gfx.prime";
@@ -3038,7 +3038,7 @@ TEST_CASE("gfx stdlib wrappers stay source locked to explicit parser-safe locals
 
   const std::string gfxStdlib = readFile(gfxStdlibPath.string());
 
-  CHECK(gfxStdlib.find("[SubstrateSwapchainConfig] config{\n        SubstrateSwapchainConfig{") !=
+  CHECK(gfxStdlib.find("[SubstrateSwapchainConfig] config{\n        [window] window,") !=
         std::string::npos);
   CHECK(gfxStdlib.find("[i32] swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") !=
         std::string::npos);
@@ -3059,7 +3059,7 @@ TEST_CASE("gfx stdlib wrappers stay source locked to explicit parser-safe locals
   CHECK(gfxStdlib.find("[i32] drawToken{GraphicsSubstrate.drawMesh(config)}") != std::string::npos);
   CHECK(gfxStdlib.find("[SubstrateRenderPassEndConfig] config{") != std::string::npos);
   CHECK(gfxStdlib.find("[i32] endToken{GraphicsSubstrate.endRenderPass(config)}") != std::string::npos);
-  CHECK(gfxStdlib.find("[Window] window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") !=
+  CHECK(gfxStdlib.find("[Window] window{[token] 1i32, [width] 1i32, [height] 1i32}") !=
         std::string::npos);
   CHECK(gfxStdlib.find("[SubstrateDeviceConfig] config{") != std::string::npos);
   CHECK(gfxStdlib.find("[i32] deviceToken{GraphicsSubstrate.createDevice(config)?}") !=
@@ -3068,6 +3068,7 @@ TEST_CASE("gfx stdlib wrappers stay source locked to explicit parser-safe locals
         std::string::npos);
 
   CHECK(gfxStdlib.find("      config{\n        SubstrateSwapchainConfig{") == std::string::npos);
+  CHECK(gfxStdlib.find("SubstrateSwapchainConfig{") == std::string::npos);
   CHECK(gfxStdlib.find("      swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") ==
         std::string::npos);
   CHECK(gfxStdlib.find("      vertexCount{count(vertices)}") == std::string::npos);
@@ -3082,6 +3083,8 @@ TEST_CASE("gfx stdlib wrappers stay source locked to explicit parser-safe locals
   CHECK(gfxStdlib.find("      drawToken{GraphicsSubstrate.drawMesh(config)}") == std::string::npos);
   CHECK(gfxStdlib.find("      endToken{GraphicsSubstrate.endRenderPass(config)}") == std::string::npos);
   CHECK(gfxStdlib.find("    window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") ==
+        std::string::npos);
+  CHECK(gfxStdlib.find("[Window] window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") ==
         std::string::npos);
   CHECK(gfxStdlib.find("    deviceToken{GraphicsSubstrate.createDevice(config)?}") ==
         std::string::npos);
@@ -3224,7 +3227,9 @@ TEST_CASE("gfx stdlib compatibility shim stays source locked") {
   CHECK(gfxExperimental.find("return(greater_than(this.token, 0i32))") != std::string::npos);
   CHECK(gfxExperimental.find("return(Queue{[token] plus(this.token, 1i32)})") != std::string::npos);
   CHECK(gfxExperimental.find("return(RenderPass{[token] renderPassToken})") != std::string::npos);
-  CHECK(gfxExperimental.find("SubstrateDrawMeshConfig{") != std::string::npos);
+  CHECK(gfxExperimental.find("[SubstrateDrawMeshConfig] config{\n        [renderPass] this,") !=
+        std::string::npos);
+  CHECK(gfxExperimental.find("SubstrateDrawMeshConfig{") == std::string::npos);
   CHECK(gfxExperimental.find("return(/std/gfx/Buffer/readback<T>(canonical))") !=
         std::string::npos);
   CHECK(gfxExperimental.find("[/std/gfx/Buffer<T>] canonical{/std/gfx/Buffer/upload<T>(values)}") !=
