@@ -2222,6 +2222,12 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(prelude.find("static inline uint32_t ps_file_read_byte") != std::string::npos);
   CHECK(prelude.find("return \" << FileReadEofCode << \"u;") != std::string::npos);
   CHECK(prelude.find("std::string_view(\\\"EOF\\\")") != std::string::npos);
+  CHECK(prelude.find("ps_legacy_result_pack") != std::string::npos);
+  CHECK(prelude.find("ps_legacy_result_error") != std::string::npos);
+  CHECK(prelude.find("ps_legacy_result_value") != std::string::npos);
+  CHECK(prelude.find("ps_result_pack") == std::string::npos);
+  CHECK(prelude.find("ps_result_error") == std::string::npos);
+  CHECK(prelude.find("ps_result_value") == std::string::npos);
 
   CHECK(lowerer.find("read_byte requires exactly one argument") != std::string::npos);
   CHECK(lowerer.find("read_byte requires mutable integer binding") != std::string::npos);

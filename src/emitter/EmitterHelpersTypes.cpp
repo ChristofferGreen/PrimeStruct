@@ -206,15 +206,15 @@ std::string legacyPackedResultCppType(bool hasValue) {
 
 std::string legacyPackedResultPackExpr(const std::string &errorExpr,
                                        const std::string &valueExpr) {
-  return "ps_result_pack(" + errorExpr + ", " + valueExpr + ")";
+  return "ps_legacy_result_pack(" + errorExpr + ", " + valueExpr + ")";
 }
 
 std::string legacyPackedResultErrorExpr(const std::string &resultExpr) {
-  return "ps_result_error(" + resultExpr + ")";
+  return "ps_legacy_result_error(" + resultExpr + ")";
 }
 
 std::string legacyPackedResultValueExpr(const std::string &resultExpr) {
-  return "ps_result_value(" + resultExpr + ")";
+  return "ps_legacy_result_value(" + resultExpr + ")";
 }
 
 std::optional<std::string> tryLegacyPackedResultCppType(const std::string &base,

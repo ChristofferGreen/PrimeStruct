@@ -528,7 +528,7 @@
       }
       out << "  } catch (const ps_result_unwind &ps_unwind) {\n";
       if (resultHasValue) {
-        out << "    return (static_cast<uint64_t>(ps_unwind.error) << 32);\n";
+        out << "    return " << legacyPackedResultPackExpr("ps_unwind.error", "0u") << ";\n";
       } else {
         out << "    return ps_unwind.error;\n";
       }

@@ -315,8 +315,10 @@ Task template:
       packed bridge. Its packed C++ storage-width decisions are now
       quarantined behind named emitter helpers, and source C++ pack/unpack
       expression emission now goes through named helper functions; remaining
-      cleanup should focus on deleting the legacy runtime pack/unpack
-      representation and prelude helpers.
+      cleanup should focus on deleting the legacy `uint64_t` storage
+      representation. The generated C++ prelude helper names now use explicit
+      `ps_legacy_result_*` spellings instead of the older `ps_result_*`
+      names.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

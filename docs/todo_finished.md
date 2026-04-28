@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4317: Rename source C++ Result prelude bridge helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that removes the old
+    generated `ps_result_pack/error/value` helper names from the C++ prelude
+    and marks the remaining packed bridge helpers as explicitly legacy.
+  - implementation_notes:
+    - Preserve generated C++ behavior and the current `uint64_t` storage shape.
+    - Route source C++ Result pack, error, and value expression helpers to
+      `ps_legacy_result_pack`, `ps_legacy_result_error`, and
+      `ps_legacy_result_value`.
+    - Rename the generated prelude definitions and internal prelude/file-open
+      uses to the same explicit legacy names.
+    - Keep full storage-shape deletion as the next TODO-4266 slice.
+  - acceptance:
+    - Production source C++ emitter code no longer emits or references
+      `ps_result_pack`, `ps_result_error`, or `ps_result_value`.
+    - Focused helper coverage pins the new explicit legacy spellings.
+    - TODO-4266 documentation narrows remaining source C++ cleanup to deleting
+      the legacy `uint64_t` storage representation.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the old generated source C++ Result prelude helper
+    names are gone and the remaining bridge is visibly legacy-named without
+    changing behavior.
+  - finished_at: 2026-04-28
+  - evidence: Renamed generated source C++ Result pack/unpack helper spellings
+    to `ps_legacy_result_*`, routed helper expression emission and the unwind
+    path through those names, exposed the helper declarations to focused tests,
+    and updated TODO-4266 docs. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4316: Quarantine Result pack expressions
   - owner: ai
   - created_at: 2026-04-28
