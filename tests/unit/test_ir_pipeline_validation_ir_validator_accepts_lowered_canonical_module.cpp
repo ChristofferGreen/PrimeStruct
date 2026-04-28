@@ -1599,6 +1599,23 @@ TEST_CASE("shared helper bodies keep scoped stdlib builtins normalized") {
   CHECK(primec::emitter::getBuiltinConvertName(
       namespacedImageConvertCall, builtinName));
   CHECK(builtinName == "convert");
+
+  primec::Expr arbitraryImageHelperCall;
+  arbitraryImageHelperCall.kind = primec::Expr::Kind::Call;
+  arbitraryImageHelperCall.name = "/std/image/work";
+
+  CHECK_FALSE(primec::ir_lowerer::isSimpleCallName(
+      arbitraryImageHelperCall, "work"));
+  CHECK_FALSE(primec::emitter::isSimpleCallName(
+      arbitraryImageHelperCall, "work"));
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinOperatorName(
+      arbitraryImageHelperCall, builtinName));
+  CHECK_FALSE(primec::emitter::getBuiltinOperator(
+      arbitraryImageHelperCall, op));
+  CHECK_FALSE(primec::ir_lowerer::getBuiltinConvertName(
+      arbitraryImageHelperCall));
+  CHECK_FALSE(primec::emitter::getBuiltinConvertName(
+      arbitraryImageHelperCall, builtinName));
 }
 
 TEST_CASE("emitter collection inference keeps namespaced internal soa builtins out of string-value access inference") {

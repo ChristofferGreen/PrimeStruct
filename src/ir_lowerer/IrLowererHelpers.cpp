@@ -24,6 +24,57 @@ bool isScopedBuiltinControlAlias(const std::string &name) {
          name == "do";
 }
 
+bool isNamespacedStdlibBuiltinAlias(const std::string &alias) {
+  return alias == "assign" || alias == "if" || alias == "while" ||
+         alias == "take" || alias == "borrow" || alias == "init" ||
+         alias == "drop" || alias == "increment" ||
+         alias == "decrement" || alias == "return" ||
+         alias == "then" || alias == "else" || alias == "do" ||
+         alias == "block" || alias == "loop" || alias == "for" ||
+         alias == "repeat" || alias == "try" || alias == "location" ||
+         alias == "dereference" || alias == "count" ||
+         alias == "count_ref" || alias == "capacity" ||
+         alias == "to_aos" || alias == "to_aos_ref" ||
+         alias == "push" || alias == "pop" || alias == "reserve" ||
+         alias == "clear" || alias == "remove_at" ||
+         alias == "remove_swap" || alias == "move" ||
+         alias == "negate" || alias == "plus" || alias == "minus" ||
+         alias == "multiply" || alias == "divide" ||
+         alias == "greater_than" || alias == "less_than" ||
+         alias == "equal" || alias == "not_equal" ||
+         alias == "greater_equal" || alias == "less_equal" ||
+         alias == "and" || alias == "or" || alias == "not" ||
+         alias == "get" || alias == "get_ref" || alias == "ref" ||
+         alias == "ref_ref" || alias == "at" ||
+         alias == "at_unsafe" || alias == "array" ||
+         alias == "vector" || alias == "map" ||
+         alias == "soa_vector" || alias == "convert" ||
+         alias == "clamp" || alias == "min" || alias == "max" ||
+         alias == "lerp" || alias == "fma" || alias == "hypot" ||
+         alias == "copysign" || alias == "radians" ||
+         alias == "degrees" || alias == "sin" || alias == "cos" ||
+         alias == "tan" || alias == "atan2" || alias == "asin" ||
+         alias == "acos" || alias == "atan" || alias == "sinh" ||
+         alias == "cosh" || alias == "tanh" || alias == "asinh" ||
+         alias == "acosh" || alias == "atanh" || alias == "exp" ||
+         alias == "exp2" || alias == "log" || alias == "log2" ||
+         alias == "log10" || alias == "abs" || alias == "sign" ||
+         alias == "saturate" || alias == "pow" ||
+         alias == "is_nan" || alias == "is_inf" ||
+         alias == "is_finite" || alias == "floor" ||
+         alias == "ceil" || alias == "round" || alias == "trunc" ||
+         alias == "fract" || alias == "sqrt" || alias == "cbrt";
+}
+
+bool shouldStripBuiltinPrefix(const std::string &prefix,
+                              const std::string &alias) {
+  if (prefix == "std/file/" || prefix == "std/image/" ||
+      prefix == "std/ui/") {
+    return isNamespacedStdlibBuiltinAlias(alias);
+  }
+  return true;
+}
+
 std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
   if (!name.empty() && name[0] == '/') {
     name.erase(0, 1);
@@ -54,6 +105,9 @@ std::string normalizeInternalSoaStorageBuiltinAlias(std::string name) {
     const size_t generatedSuffix = alias.find("__");
     if (generatedSuffix != std::string::npos) {
       alias.erase(generatedSuffix);
+    }
+    if (!shouldStripBuiltinPrefix(prefixText, alias)) {
+      return name;
     }
     return alias;
   }

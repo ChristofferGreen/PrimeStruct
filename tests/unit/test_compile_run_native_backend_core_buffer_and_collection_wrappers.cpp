@@ -224,6 +224,39 @@ main() {
         "image_invalid_operation\n");
 }
 
+TEST_CASE("native keeps std image user helpers distinct from builtin aliases") {
+  const std::string source = R"(
+import /std/collections/*
+
+namespace std {
+namespace image {
+  [effects(heap_alloc), return<int>]
+  work() {
+    [mut] values{vector<i32>()}
+    /std/collections/vector/push(values, 1i32)
+    values[0i32] = 9i32
+    return(values[0i32])
+  }
+}
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  return(/std/image/work())
+}
+)";
+  const std::string srcPath =
+      writeTemp("compile_native_std_image_user_helper_vector.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_std_image_user_helper_vector").string();
+
+  const std::string compileCmd =
+      "./primec --emit=native " + srcPath + " -o " + exePath +
+      " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
 TEST_CASE("native uses stdlib ImageError result helpers") {
   const std::string source = R"(
 import /std/image/*
