@@ -3029,7 +3029,7 @@ TEST_CASE("png top-level read write workflows stay source locked to inferred loc
   CHECK(pngWriteBody.find("[i32] status{writeImpl(path, width, height, pixels)}") == std::string::npos);
 }
 
-TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
+TEST_CASE("gfx stdlib wrappers stay source locked to explicit parser-safe locals") {
   std::filesystem::path gfxStdlibPath = std::filesystem::path("..") / "stdlib" / "std" / "gfx" / "gfx.prime";
   if (!std::filesystem::exists(gfxStdlibPath)) {
     gfxStdlibPath = std::filesystem::current_path() / "stdlib" / "std" / "gfx" / "gfx.prime";
@@ -3038,46 +3038,54 @@ TEST_CASE("gfx stdlib wrappers stay source locked to inferred locals") {
 
   const std::string gfxStdlib = readFile(gfxStdlibPath.string());
 
-  CHECK(gfxStdlib.find("config{\n        SubstrateSwapchainConfig{") != std::string::npos);
-  CHECK(gfxStdlib.find("swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") != std::string::npos);
-  CHECK(gfxStdlib.find("vertexCount{count(vertices)}") != std::string::npos);
-  CHECK(gfxStdlib.find("indexCount{count(indices)}") != std::string::npos);
-  CHECK(gfxStdlib.find("meshToken{GraphicsSubstrate.createMesh(config)?}") != std::string::npos);
-  CHECK(gfxStdlib.find("pipelineToken{GraphicsSubstrate.createPipeline(config)?}") != std::string::npos);
-  CHECK(gfxStdlib.find("frameToken{GraphicsSubstrate.acquireFrame(config)?}") != std::string::npos);
-  CHECK(gfxStdlib.find("renderPassToken{GraphicsSubstrate.openRenderPass(config)}") != std::string::npos);
-  CHECK(gfxStdlib.find("drawToken{GraphicsSubstrate.drawMesh(config)}") != std::string::npos);
-  CHECK(gfxStdlib.find("endToken{GraphicsSubstrate.endRenderPass(config)}") != std::string::npos);
-  CHECK(gfxStdlib.find("window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") != std::string::npos);
-  CHECK(gfxStdlib.find("deviceToken{GraphicsSubstrate.createDevice(config)?}") != std::string::npos);
-  CHECK(gfxStdlib.find("queueToken{GraphicsSubstrate.createQueue(config)?}") != std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateSwapchainConfig] config{\n        SubstrateSwapchainConfig{") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("[i32] swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("[i32] vertexCount{count(vertices)}") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] indexCount{count(indices)}") != std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateMeshConfig] config{") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] meshToken{GraphicsSubstrate.createMesh(config)?}") != std::string::npos);
+  CHECK(gfxStdlib.find("[SubstratePipelineConfig] config{") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] pipelineToken{GraphicsSubstrate.createPipeline(config)?}") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateFrameConfig] config{") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] frameToken{GraphicsSubstrate.acquireFrame(config)?}") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateRenderPassConfig] config{") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] renderPassToken{GraphicsSubstrate.openRenderPass(config)}") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateDrawMeshConfig] config{") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] drawToken{GraphicsSubstrate.drawMesh(config)}") != std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateRenderPassEndConfig] config{") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] endToken{GraphicsSubstrate.endRenderPass(config)}") != std::string::npos);
+  CHECK(gfxStdlib.find("[Window] window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("[SubstrateDeviceConfig] config{") != std::string::npos);
+  CHECK(gfxStdlib.find("[i32] deviceToken{GraphicsSubstrate.createDevice(config)?}") !=
+        std::string::npos);
+  CHECK(gfxStdlib.find("[i32] queueToken{GraphicsSubstrate.createQueue(config)?}") !=
+        std::string::npos);
 
-  CHECK(gfxStdlib.find("[SubstrateSwapchainConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") ==
+  CHECK(gfxStdlib.find("      config{\n        SubstrateSwapchainConfig{") == std::string::npos);
+  CHECK(gfxStdlib.find("      swapchainToken{GraphicsSubstrate.createSwapchain(config)?}") ==
         std::string::npos);
-  CHECK(gfxStdlib.find("[i32] vertexCount{count(vertices)}") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] indexCount{count(indices)}") == std::string::npos);
-  CHECK(gfxStdlib.find("[SubstrateMeshConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] meshToken{GraphicsSubstrate.createMesh(config)?}") == std::string::npos);
-  CHECK(gfxStdlib.find("[SubstratePipelineConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] pipelineToken{GraphicsSubstrate.createPipeline(config)?}") ==
+  CHECK(gfxStdlib.find("      vertexCount{count(vertices)}") == std::string::npos);
+  CHECK(gfxStdlib.find("      indexCount{count(indices)}") == std::string::npos);
+  CHECK(gfxStdlib.find("      meshToken{GraphicsSubstrate.createMesh(config)?}") == std::string::npos);
+  CHECK(gfxStdlib.find("      pipelineToken{GraphicsSubstrate.createPipeline(config)?}") ==
         std::string::npos);
-  CHECK(gfxStdlib.find("[SubstrateFrameConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] frameToken{GraphicsSubstrate.acquireFrame(config)?}") ==
+  CHECK(gfxStdlib.find("      frameToken{GraphicsSubstrate.acquireFrame(config)?}") ==
         std::string::npos);
-  CHECK(gfxStdlib.find("[SubstrateRenderPassConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] renderPassToken{GraphicsSubstrate.openRenderPass(config)}") ==
+  CHECK(gfxStdlib.find("      renderPassToken{GraphicsSubstrate.openRenderPass(config)}") ==
         std::string::npos);
-  CHECK(gfxStdlib.find("[SubstrateDrawMeshConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] drawToken{GraphicsSubstrate.drawMesh(config)}") == std::string::npos);
-  CHECK(gfxStdlib.find("[SubstrateRenderPassEndConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] endToken{GraphicsSubstrate.endRenderPass(config)}") == std::string::npos);
-  CHECK(gfxStdlib.find("[Window] window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") ==
+  CHECK(gfxStdlib.find("      drawToken{GraphicsSubstrate.drawMesh(config)}") == std::string::npos);
+  CHECK(gfxStdlib.find("      endToken{GraphicsSubstrate.endRenderPass(config)}") == std::string::npos);
+  CHECK(gfxStdlib.find("    window{Window{[token] 1i32, [width] 1i32, [height] 1i32}}") ==
         std::string::npos);
-  CHECK(gfxStdlib.find("[SubstrateDeviceConfig] config{") == std::string::npos);
-  CHECK(gfxStdlib.find("[i32] deviceToken{GraphicsSubstrate.createDevice(config)?}") ==
+  CHECK(gfxStdlib.find("    deviceToken{GraphicsSubstrate.createDevice(config)?}") ==
         std::string::npos);
-  CHECK(gfxStdlib.find("[i32] queueToken{GraphicsSubstrate.createQueue(config)?}") ==
+  CHECK(gfxStdlib.find("    queueToken{GraphicsSubstrate.createQueue(config)?}") ==
         std::string::npos);
 }
 
