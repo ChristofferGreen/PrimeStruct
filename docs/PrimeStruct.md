@@ -214,6 +214,11 @@ Planned non-template inference migration contract:
   kind unresolved instead of asking recursive expression-kind fallback to reconstruct the query result.
   The recursive fallback remains available only for syntax-only or no-semantic-product compatibility
   contexts.
+- Completed lowerer-side `try(...)` dispatch slice: semantic-product-addressed `try(...)` expressions
+  now use published try facts as the authority before local-result, callable-result, map-helper, or
+  file-helper inference can answer. Missing or incomplete semantic try facts produce the existing
+  deterministic semantic-product try diagnostic and keep the inferred value kind unresolved; legacy
+  reconstruction remains available only for `try(...)` expressions without semantic-product identity.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

@@ -862,6 +862,52 @@ TEST_CASE("ir lowerer inference dispatch requires semantic try facts") {
       error));
   CHECK(state.inferExprKind(tryExpr, {}) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
   CHECK(error == "missing semantic-product try fact: try");
+
+  primec::ir_lowerer::LocalInfo localResultInfo;
+  localResultInfo.isResult = true;
+  localResultInfo.resultHasValue = true;
+  localResultInfo.resultValueKind = primec::ir_lowerer::LocalInfo::ValueKind::String;
+  localResultInfo.resultErrorType = "FileError";
+
+  primec::ir_lowerer::LocalMap locals;
+  locals.emplace("source", localResultInfo);
+
+  error.clear();
+  CHECK(state.inferExprKind(tryExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(error == "missing semantic-product try fact: try");
+
+  primec::SemanticProgram incompleteSemanticProgram;
+  incompleteSemanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<string, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<string, FileError>",
+      .valueType = "",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "/handler",
+      .onErrorErrorType = "FileError",
+      .onErrorBoundArgCount = 1,
+      .sourceLine = 12,
+      .sourceColumn = 9,
+      .semanticNodeId = 64,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(incompleteSemanticProgram, "/lookup"),
+  });
+  const auto incompleteSemanticIndex =
+      primec::ir_lowerer::buildSemanticProductIndex(&incompleteSemanticProgram);
+  state.semanticProgram = &incompleteSemanticProgram;
+  state.semanticIndex = &incompleteSemanticIndex;
+  error.clear();
+  CHECK(primec::ir_lowerer::runLowerInferenceExprKindDispatchSetup(
+      {
+          .defMap = &defMap,
+          .resolveExprPath = [](const primec::Expr &) { return std::string{}; },
+          .error = &error,
+      },
+      state,
+      error));
+  CHECK(state.inferExprKind(tryExpr, locals) == primec::ir_lowerer::LocalInfo::ValueKind::Unknown);
+  CHECK(error == "incomplete semantic-product try fact: try");
 }
 
 TEST_CASE("ir lowerer inference dispatch rejects operand-path semantic try fallback in production mode") {

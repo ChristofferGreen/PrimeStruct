@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Require try dispatch semantic facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes
+    semantic-product-addressed `try(...)` dispatch inference depend on
+    published try facts before legacy local/result/helper inference can answer.
+  - implementation_notes:
+    - Treat `try(...)` expressions with semantic node ids as semantic-product
+      authoritative when a semantic product and index are present.
+    - Preserve legacy reconstruction for syntax-only or no-semantic-product
+      compatibility contexts.
+    - Reuse the existing missing/incomplete semantic-product try diagnostics.
+  - acceptance:
+    - Published semantic try facts still infer the `try(...)` value kind.
+    - Missing semantic-product try facts do not fall back to local-result
+      operand metadata.
+    - Incomplete semantic-product try facts do not fall back to local-result
+      operand metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once semantic-product-addressed `try(...)` dispatch
+    inference fails closed on absent or incomplete try facts without removing
+    no-product compatibility fallback behavior.
+  - finished_at: 2026-04-28
+  - evidence: Tightened `IrLowererLowerInferenceDispatchSetup.cpp` so missing
+    or incomplete semantic try facts stop dispatch inference before local or
+    helper fallback paths, expanded lowerer inference-dispatch coverage for
+    missing and incomplete facts with local-result fallback available, and
+    documented the remaining TODO-4298 work. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Quarantine lowerer query-kind fallback
   - owner: ai
   - created_at: 2026-04-28

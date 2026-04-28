@@ -345,7 +345,10 @@ Task template:
     facts, then delete or quarantine the old validator-local/recomputed branch
     for that surface. The lowerer-side `Result.ok(query())` payload and
     `try(Result.ok(query()))` base-kind fallback slice is complete; continue
-    with another adjacent island rather than reopening that fallback.
+    with another adjacent island rather than reopening that fallback. The
+    lowerer-side `try(...)` dispatch fallback slice is also complete; continue
+    with local-auto, `on_error`, or another uncovered query/control-flow
+    consumer.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -363,6 +366,11 @@ Task template:
       payloads and base-kind `try(Result.ok(query()))` inference now consume
       published binding/query facts and leave the value kind unresolved when
       the fact is absent, rather than consulting recursive fallback inference.
+    - Completed slice: semantic-product-addressed `try(...)` dispatch
+      inference now consumes published try facts before local-result,
+      callable-result, map-helper, or file-helper fallback can infer the value
+      kind; missing or incomplete try facts stay unresolved with the existing
+      semantic-product try diagnostic.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

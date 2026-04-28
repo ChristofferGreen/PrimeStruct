@@ -104,6 +104,10 @@ bool runLowerInferenceExprKindDispatchSetup(const LowerInferenceExprKindDispatch
         } else {
           semanticTryFactError = "missing semantic-product try fact: try";
         }
+        if (!semanticTryFactError.empty()) {
+          *inferenceError = semanticTryFactError;
+          return false;
+        }
       }
       if (tryExpr.kind != Expr::Kind::Call || tryExpr.args.size() != 1) {
         if (!semanticTryFactError.empty()) {
