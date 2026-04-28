@@ -21,6 +21,31 @@ std::string bindingTypeText(const BindingInfo &binding) {
   return binding.typeName + "<" + binding.typeTemplateArg + ">";
 }
 
+std::string variantNamesList(const std::vector<const SumVariant *> &variants) {
+  std::string out;
+  for (const SumVariant *variant : variants) {
+    if (variant == nullptr) {
+      continue;
+    }
+    if (!out.empty()) {
+      out += ", ";
+    }
+    out += variant->name;
+  }
+  return out;
+}
+
+std::string allVariantNamesList(const Definition &sumDef) {
+  std::string out;
+  for (const auto &variant : sumDef.sumVariants) {
+    if (!out.empty()) {
+      out += ", ";
+    }
+    out += variant.name;
+  }
+  return out;
+}
+
 } // namespace
 
 bool SemanticsValidator::isSumDefinition(const Definition &def) const {
@@ -157,6 +182,237 @@ bool SemanticsValidator::inferExplicitSumConstructorBinding(
     }
   }
   return false;
+}
+
+bool SemanticsValidator::validateTargetTypedSumInitializer(
+    const std::string &targetTypeText,
+    const Expr &initializer,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    const std::string &namespacePrefix,
+    bool &handledOut) {
+  handledOut = false;
+  const Definition *sumDef =
+      resolveSumDefinitionForTypeText(targetTypeText, namespacePrefix);
+  if (sumDef == nullptr) {
+    return true;
+  }
+  handledOut = true;
+
+  auto failInferredSumDiagnostic = [&](std::string message) -> bool {
+    return failExprDiagnostic(initializer, std::move(message));
+  };
+
+  BindingInfo explicitSumBinding;
+  if (inferExplicitSumConstructorBinding(initializer, explicitSumBinding)) {
+    if (explicitSumBinding.typeName == sumDef->fullPath) {
+      return validateExpr(params, locals, initializer);
+    }
+    return failInferredSumDiagnostic(
+        "sum construction target mismatch for " + sumDef->fullPath +
+        ": got " + explicitSumBinding.typeName);
+  }
+  auto resolvesToTargetSum = [&](const std::string &typeText,
+                                 const std::string &typeNamespace) -> bool {
+    const Definition *actualSum =
+        resolveSumDefinitionForTypeText(typeText, typeNamespace);
+    return actualSum != nullptr && actualSum->fullPath == sumDef->fullPath;
+  };
+  BindingInfo directBinding;
+  if (inferBindingTypeFromInitializer(initializer,
+                                      params,
+                                      locals,
+                                      directBinding) &&
+      resolvesToTargetSum(bindingTypeText(directBinding),
+                          initializer.namespacePrefix)) {
+    return validateExpr(params, locals, initializer);
+  }
+  std::string directTypeText;
+  if (inferQueryExprTypeText(initializer, params, locals, directTypeText) &&
+      resolvesToTargetSum(directTypeText, initializer.namespacePrefix)) {
+    return validateExpr(params, locals, initializer);
+  }
+
+  auto payloadTypeText = [](const SumVariant &variant) {
+    if (!variant.payloadTypeText.empty()) {
+      return variant.payloadTypeText;
+    }
+    if (variant.payloadTemplateArgs.empty()) {
+      return variant.payloadType;
+    }
+    return variant.payloadType + "<" +
+           joinTemplateArgs(variant.payloadTemplateArgs) + ">";
+  };
+
+  auto bindingMatchesExpected =
+      [&](const BindingInfo &actualBinding,
+          const std::string &expectedTypeText,
+          const std::string &expectedNamespace) -> bool {
+    const std::string actualTypeText = bindingTypeText(actualBinding);
+    if (actualTypeText.empty()) {
+      return false;
+    }
+    if (errorTypesMatch(expectedTypeText, actualTypeText, expectedNamespace)) {
+      return true;
+    }
+    if (const Definition *expectedSum =
+            resolveSumDefinitionForTypeText(expectedTypeText,
+                                            expectedNamespace)) {
+      if (const Definition *actualSum =
+              resolveSumDefinitionForTypeText(actualTypeText,
+                                              initializer.namespacePrefix)) {
+        return actualSum->fullPath == expectedSum->fullPath;
+      }
+      if (const Definition *actualSum =
+              resolveSumDefinitionForTypeText(actualTypeText,
+                                              expectedNamespace)) {
+        return actualSum->fullPath == expectedSum->fullPath;
+      }
+      return actualBinding.typeName == expectedSum->fullPath;
+    }
+
+    const std::string expectedStructPath =
+        resolveStructTypePath(expectedTypeText, expectedNamespace,
+                              structNames_);
+    if (!expectedStructPath.empty()) {
+      std::string actualStructPath =
+          resolveStructTypePath(actualTypeText, initializer.namespacePrefix,
+                                structNames_);
+      if (actualStructPath.empty()) {
+        actualStructPath = resolveStructTypePath(actualBinding.typeName,
+                                                initializer.namespacePrefix,
+                                                structNames_);
+      }
+      if (actualStructPath.empty()) {
+        actualStructPath = resolveStructTypePath(actualTypeText,
+                                                expectedNamespace,
+                                                structNames_);
+      }
+      return actualStructPath == expectedStructPath;
+    }
+
+    const ReturnKind expectedKind =
+        returnKindForTypeName(normalizeBindingTypeName(expectedTypeText));
+    if (expectedKind == ReturnKind::Unknown) {
+      return false;
+    }
+    const ReturnKind actualKind = returnKindForTypeName(
+        normalizeBindingTypeName(actualBinding.typeName));
+    return actualKind == expectedKind;
+  };
+
+  auto payloadMatchesVariant = [&](const SumVariant &variant) -> bool {
+    const std::string expectedTypeText = payloadTypeText(variant);
+    BindingInfo inferredBinding;
+    if (inferExplicitSumConstructorBinding(initializer, inferredBinding) ||
+        inferBindingTypeFromInitializer(initializer,
+                                        params,
+                                        locals,
+                                        inferredBinding)) {
+      if (bindingMatchesExpected(inferredBinding,
+                                 expectedTypeText,
+                                 sumDef->namespacePrefix)) {
+        return true;
+      }
+    }
+
+    const std::string expectedStructPath =
+        resolveStructTypePath(expectedTypeText, sumDef->namespacePrefix,
+                              structNames_);
+    if (!expectedStructPath.empty()) {
+      const std::string actualStructPath =
+          inferStructReturnPath(initializer, params, locals);
+      if (!actualStructPath.empty()) {
+        return actualStructPath == expectedStructPath;
+      }
+    }
+
+    std::string inferredTypeText;
+    if (inferQueryExprTypeText(initializer,
+                               params,
+                               locals,
+                               inferredTypeText) &&
+        !inferredTypeText.empty()) {
+      BindingInfo inferredTypeBinding;
+      std::string base;
+      std::string argText;
+      if (splitTemplateTypeName(inferredTypeText, base, argText)) {
+        inferredTypeBinding.typeName = normalizeBindingTypeName(base);
+        inferredTypeBinding.typeTemplateArg = argText;
+      } else {
+        inferredTypeBinding.typeName = normalizeBindingTypeName(inferredTypeText);
+      }
+      if (bindingMatchesExpected(inferredTypeBinding,
+                                 expectedTypeText,
+                                 sumDef->namespacePrefix)) {
+        return true;
+      }
+    }
+
+    const ReturnKind expectedKind =
+        returnKindForTypeName(normalizeBindingTypeName(expectedTypeText));
+    if (expectedKind == ReturnKind::Unknown) {
+      return false;
+    }
+    const ReturnKind actualKind = inferExprReturnKind(initializer,
+                                                      params,
+                                                      locals);
+    return actualKind == expectedKind;
+  };
+
+  std::vector<const SumVariant *> matches;
+  for (const auto &variant : sumDef->sumVariants) {
+    if (payloadMatchesVariant(variant)) {
+      matches.push_back(&variant);
+    }
+  }
+
+  if (matches.empty()) {
+    return failInferredSumDiagnostic(
+        "no inferred sum variant for " + sumDef->fullPath +
+        " accepts payload; candidates: " + allVariantNamesList(*sumDef));
+  }
+  if (matches.size() > 1) {
+    return failInferredSumDiagnostic(
+        "ambiguous inferred sum construction for " + sumDef->fullPath +
+        ": " + variantNamesList(matches));
+  }
+
+  if (!validateExpr(params, locals, initializer)) {
+    return false;
+  }
+
+  const SumVariant &selectedVariant = *matches.front();
+  ParameterInfo payloadParam;
+  payloadParam.name = selectedVariant.name;
+  payloadParam.binding.typeName = selectedVariant.payloadType;
+  if (!selectedVariant.payloadTemplateArgs.empty()) {
+    payloadParam.binding.typeTemplateArg =
+        joinTemplateArgs(selectedVariant.payloadTemplateArgs);
+  }
+
+  const BuiltinCollectionDispatchResolverAdapters dispatchResolverAdapters;
+  const BuiltinCollectionDispatchResolvers dispatchResolvers =
+      makeBuiltinCollectionDispatchResolvers(params,
+                                             locals,
+                                             dispatchResolverAdapters);
+  const std::string resolved = sumDef->fullPath;
+  const std::string diagnosticResolved = sumDef->fullPath;
+  Expr contextExpr = initializer;
+  contextExpr.namespacePrefix = sumDef->namespacePrefix;
+  ExprArgumentValidationContext argumentContext;
+  argumentContext.callExpr = &contextExpr;
+  argumentContext.resolved = &resolved;
+  argumentContext.diagnosticResolved = &diagnosticResolved;
+  argumentContext.params = &params;
+  argumentContext.locals = &locals;
+  argumentContext.dispatchResolvers = &dispatchResolvers;
+  return validateArgumentTypeAgainstParam(
+      initializer,
+      payloadParam,
+      payloadParam.binding.typeName,
+      bindingTypeText(payloadParam.binding),
+      argumentContext);
 }
 
 bool SemanticsValidator::validateExplicitSumConstructorExpr(

@@ -204,6 +204,20 @@ bool SemanticsValidator::validateArgumentTypeAgainstParam(
   if (expectedTypeName.empty() || expectedTypeName == "auto") {
     return true;
   }
+  {
+    bool handledSumInitializer = false;
+    if (!validateTargetTypedSumInitializer(expectedTypeText,
+                                           arg,
+                                           params,
+                                           locals,
+                                           callExpr.namespacePrefix,
+                                           handledSumInitializer)) {
+      return false;
+    }
+    if (handledSumInitializer) {
+      return true;
+    }
+  }
   if (normalizeBindingTypeName(expectedTypeName) == "string") {
     if (!isStringExprForArgumentValidation(arg, dispatchResolvers)) {
       return failArgumentValidation(

@@ -3319,7 +3319,9 @@ bad_use_after_take() {
     list.
 - **Algebraic sum types (partial):** `[sum]` definitions declare named, field-like variants. Payload-carrying variants
   have one payload envelope; explicit `[variant] payload` construction is validated for typed bindings, return values,
-  fields, and `auto` bindings when the sum type is named. Unit/no-payload variants are a planned follow-up using bare
+  fields, and `auto` bindings when the sum type is named. Target-typed inferred construction is also validated for
+  bindings, call/field arguments, and returns when exactly one variant accepts the payload. Unit/no-payload variants are
+  a planned follow-up using bare
   lowerCamelCase names such as `none`. A sum value has exactly one active variant at runtime.
   ```prime
   [sum]
@@ -3333,9 +3335,9 @@ bad_use_after_take() {
   [Shape] b{[circle] Circle{3.4}}
   [Shape] c{Circle{3.4}}
   ```
-  The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{Circle{3.4}}`) is still
-  planned; it is valid only when exactly one `Shape` variant accepts a `Circle` payload. Zero matches are type errors
-  and multiple matches are ambiguity errors requiring an explicit `[variant]` label.
+  The explicit `[circle]` form selects the variant directly. The inferred form (`[Shape] c{Circle{3.4}}`) is valid only
+  when exactly one `Shape` variant accepts a `Circle` payload. Zero matches are type errors and multiple matches are
+  ambiguity errors requiring an explicit `[variant]` label.
   Generic/unit sums are required for the planned stdlib `Maybe<T>` shape:
   ```prime
   [sum]

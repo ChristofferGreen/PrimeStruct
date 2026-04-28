@@ -86,6 +86,13 @@
       const std::unordered_map<std::string, BindingInfo> &locals,
       const Expr &expr,
       bool &handledOut);
+  bool validateTargetTypedSumInitializer(
+      const std::string &targetTypeText,
+      const Expr &initializer,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const std::string &namespacePrefix,
+      bool &handledOut);
   bool inferExplicitSumConstructorBinding(
       const Expr &initializer,
       BindingInfo &bindingOut) const;

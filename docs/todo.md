@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4259: Add inferred sum variant construction
+- TODO-4260: Add `pick` semantic validation
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
 - TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
@@ -80,11 +79,12 @@ Task template:
 - TODO-4266: Rewire `?` to the `Result` sum contract
 - TODO-4267: Retire legacy Maybe/Result representations
 - TODO-4268: Add heterogeneous type-pack syntax and metadata
+- TODO-4269: Bind and monomorphize type-pack arguments
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4259 ->
-  TODO-4260 -> TODO-4261 -> TODO-4262
+- Deferred algebraic types and brace-only construction: TODO-4260 ->
+  TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -94,7 +94,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4259: Add inferred sum variant construction
 - TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
 - TODO-4262: Add public sum-type examples
@@ -139,7 +138,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4260, TODO-4261, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -164,7 +163,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4258, TODO-4259, TODO-4260, TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4260, TODO-4261, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -282,40 +281,10 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4259: Add inferred sum variant construction
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4258
-  - scope: Add target-typed inferred variant construction, where a payload
-    without an explicit `[variant]` label selects a sum variant only when the
-    match is unique.
-  - implementation_notes:
-    - Build on the explicit-construction resolver from TODO-4258; the inferred
-      path should be a thin target-typed selection layer over the same payload
-      validation.
-    - Add diagnostics that include the target sum and candidate variant names so
-      ambiguity can be fixed mechanically by adding `[variant]`.
-    - Cover interactions with imports, duplicate payload envelopes, struct
-      payload defaults, and no implicit conversions.
-  - acceptance:
-    - Inferred variant construction accepts `[Shape] s{Circle{...}}` only when
-      exactly one variant accepts the payload type.
-    - Zero-match and multi-match inferred construction produce deterministic
-      diagnostics that name the relevant variants.
-    - Matching uses the same conversion/no-implicit-conversion rules as
-      ordinary construction and is deterministic across imports.
-    - Tests cover duplicate payload envelopes, subtype/template-like ambiguity
-      if present, and successful inference with all three accepted forms.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once sums can be declared and constructed with deterministic
-    inferred variant-selection semantics; leave `pick` matching to TODO-4260.
-
 - [ ] TODO-4260: Add `pick` semantic validation
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4259
   - scope: Add parsing and semantic validation for
     `pick(sumValue) { variant(payload) { ... } }`, including exhaustiveness,
     arm binding, branch typing, and diagnostics, without requiring backend

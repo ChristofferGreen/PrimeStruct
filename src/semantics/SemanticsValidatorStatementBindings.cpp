@@ -337,6 +337,32 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           soaUnavailableMethodDiagnostic(*pendingPath));
     }
   }
+  if (hasExplicitType && !explicitAutoType) {
+    bool handledSumInitializer = false;
+    if (!validateTargetTypedSumInitializer(expectedBindingTypeText(info),
+                                           initializer,
+                                           params,
+                                           locals,
+                                           namespacePrefix,
+                                           handledSumInitializer)) {
+      return false;
+    }
+    if (handledSumInitializer) {
+      if (restrictType.has_value()) {
+        const bool hasTemplate = !info.typeTemplateArg.empty();
+        if (!restrictMatchesBinding(*restrictType, info.typeName,
+                                    info.typeTemplateArg, hasTemplate,
+                                    namespacePrefix)) {
+          return failBindingDiagnostic("restrict type does not match binding type");
+        }
+      }
+      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+        return false;
+      }
+      insertLocalBinding(locals, stmt.name, std::move(info));
+      return true;
+    }
+  }
 
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);
   if (initKind == ReturnKind::Void && !isStructConstructorValueExpr(initializer)) {

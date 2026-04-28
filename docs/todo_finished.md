@@ -6643,3 +6643,24 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     expanded for positive and negative cases. Removed `TODO-4258` from the live
     queue, promoted `TODO-4259` to Ready Now, and deferred release reruns to CI
     per the lite workflow.
+
+- [x] TODO-4259: Add inferred sum variant construction
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Add target-typed inferred variant construction, where a payload
+    without an explicit `[variant]` label selects a sum variant only when the
+    match is unique.
+  - finished_at: 2026-04-28
+  - evidence: Added target-typed inferred sum construction over the explicit
+    sum payload validator. Typed sum bindings, struct fields, call parameters,
+    and declared returns now accept unambiguous payloads such as
+    `[Shape] s{Circle{...}}` while leaving `auto` payloads as their ordinary
+    payload type unless a sum target is present. Zero-match and ambiguous
+    inferred construction report deterministic diagnostics naming the target
+    sum and candidate variants. Dedicated sum semantics coverage now includes
+    successful inferred bindings, field construction, parameter passing,
+    returns, imported sum targets, duplicate payload-envelope ambiguity,
+    zero-match diagnostics, and no-widening primitive matching. Removed
+    `TODO-4259` from the live queue, promoted `TODO-4260` to Ready Now, and
+    deferred release reruns to CI per the lite workflow.

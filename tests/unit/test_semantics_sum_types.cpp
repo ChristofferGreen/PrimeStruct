@@ -235,6 +235,93 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("inferred sum construction accepts unique target-typed payloads") {
+  const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[struct]
+Rectangle {
+  [f32] width
+  [f32] height
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[struct]
+Holder {
+  [Shape] primary
+}
+
+[return<Shape>]
+makeShape() {
+  return(Circle{1.0})
+}
+
+[return<i32>]
+acceptShape([Shape] shape) {
+  return(1i32)
+}
+
+[return<i32>]
+main() {
+  [Shape] named{Circle{[radius] 3.4}}
+  [Shape] positional{Rectangle{4.0, 5.0}}
+  [Circle] localCircle{Circle{6.0}}
+  [Shape] localPayload{localCircle}
+  [Holder] holder{Holder{[primary] Circle{2.0}}}
+  [i32] accepted{acceptShape(Circle{7.0})}
+  [Shape] returned{makeShape()}
+  return(accepted)
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("inferred sum construction resolves imported sums deterministically") {
+  const std::string source = R"(
+import /geo
+
+namespace geo {
+  [public struct]
+  Circle {
+    [f32] radius
+  }
+
+  [public struct]
+  Rectangle {
+    [f32] width
+    [f32] height
+  }
+
+  [public sum]
+  Shape {
+    [Circle] circle
+    [Rectangle] rectangle
+  }
+}
+
+[return<i32>]
+main() {
+  [Shape] imported{Circle{1.0}}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("explicit sum construction rejects invalid variant shapes") {
   SUBCASE("unknown variant") {
     const std::string source = R"(
@@ -366,6 +453,91 @@ main() {
     std::string error;
     CHECK_FALSE(validateProgramExpectingError(source, error));
     CHECK(error.find("sum construction requires target sum type") != std::string::npos);
+  }
+}
+
+TEST_CASE("inferred sum construction rejects missing and ambiguous payloads") {
+  SUBCASE("no matching variant") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[struct]
+Rectangle {
+  [f32] width
+  [f32] height
+}
+
+[struct]
+Triangle {
+  [f32] side
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+main() {
+  [Shape] bad{Triangle{1.0}}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("no inferred sum variant for /Shape accepts payload; "
+                     "candidates: circle, rectangle") != std::string::npos);
+  }
+
+  SUBCASE("duplicate payload envelope is ambiguous") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Circle] round
+}
+
+[return<i32>]
+main() {
+  [Shape] bad{Circle{1.0}}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("ambiguous inferred sum construction for /Shape: circle, round") !=
+          std::string::npos);
+  }
+
+  SUBCASE("primitive payloads do not widen implicitly") {
+    const std::string source = R"(
+[sum]
+Shape {
+  [i32] count
+}
+
+[return<i32>]
+main() {
+  [Shape] bad{1.0}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("no inferred sum variant for /Shape accepts payload; candidates: count") !=
+          std::string::npos);
   }
 }
 

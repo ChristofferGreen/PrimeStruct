@@ -843,6 +843,15 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
       if (returnKind == ReturnKind::Array) {
         auto structIt = returnStructs_.find(currentValidationState_.context.definitionPath);
         if (structIt != returnStructs_.end()) {
+          bool handledSumReturn = false;
+          if (!validateTargetTypedSumInitializer(structIt->second,
+                                                 stmt.args.front(),
+                                                 params,
+                                                 locals,
+                                                 namespacePrefix,
+                                                 handledSumReturn)) {
+            return false;
+          }
           auto normalizeCollectionStructPath = [&](const std::string &typePath) -> std::string {
             std::string normalizedTypePath = normalizeBindingTypeName(typePath);
             if (!normalizedTypePath.empty() && normalizedTypePath.front() == '/') {
@@ -873,8 +882,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
             }
               return "";
             };
-            std::string actualStruct = inferStructReturnPath(stmt.args.front(), params, locals);
-            if (actualStruct.empty()) {
+            std::string actualStruct =
+                handledSumReturn
+                    ? structIt->second
+                    : inferStructReturnPath(stmt.args.front(), params, locals);
+            if (!handledSumReturn && actualStruct.empty()) {
               BindingInfo actualReturnBinding;
               if (inferBindingTypeFromInitializer(stmt.args.front(), params, locals, actualReturnBinding)) {
                 std::string actualTypeText = actualReturnBinding.typeName;
@@ -907,7 +919,7 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                 }
               }
             }
-            if (actualStruct.empty()) {
+            if (!handledSumReturn && actualStruct.empty()) {
               std::string inferredTypeText;
               if (inferQueryExprTypeText(stmt.args.front(), params, locals, inferredTypeText) &&
                   !inferredTypeText.empty()) {
@@ -930,10 +942,11 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                 resolveStructTypePath(structIt->second, namespacePrefix, structNames_);
             const std::string resolvedActualStruct =
                 resolveStructTypePath(actualStruct, namespacePrefix, structNames_);
-            if (actualStruct.empty() ||
-                ((actualStruct != structIt->second &&
-                  (resolvedExpectedStruct.empty() || resolvedExpectedStruct != resolvedActualStruct)) &&
-                 (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct))) {
+            if (!handledSumReturn &&
+                (actualStruct.empty() ||
+                 ((actualStruct != structIt->second &&
+                   (resolvedExpectedStruct.empty() || resolvedExpectedStruct != resolvedActualStruct)) &&
+                  (normalizedExpectedStruct.empty() || normalizedExpectedStruct != normalizedActualStruct)))) {
               std::string expectedType = structIt->second;
               if (expectedType == "/array" || expectedType == "/vector" || expectedType == "/map" ||
                 expectedType == "/string") {

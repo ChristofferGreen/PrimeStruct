@@ -736,10 +736,10 @@ workaround. Explicit sum construction uses the same brace-only construction mode
 [Shape] inferredVariant{Circle{3.4}}
 ```
 
-The explicit `[variant] payload` form always selects that variant and is the currently implemented construction form.
-The inferred form is planned and is valid only when the target sum type is known from context and exactly one variant
-payload type accepts the constructed payload. If zero variants match, construction is a type error. If more than one
-variant matches, construction is ambiguous and the source must use the explicit `[variant]` form.
+The explicit `[variant] payload` form always selects that variant. The inferred form is valid only when the target sum
+type is known from context and exactly one variant payload type accepts the constructed payload. If zero variants match,
+construction is a type error. If more than one variant matches, construction is ambiguous and the source must use the
+explicit `[variant]` form.
 
 ```prime
 [sum]
