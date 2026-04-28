@@ -8,6 +8,8 @@
 #include "IrLowererStringLiteralHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
 
+#include <optional>
+
 namespace primec::ir_lowerer {
 
 bool emitStringStatementBindingInitializer(const Expr &stmt,
@@ -81,7 +83,8 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     const ResolveStructSlotLayoutForStatementFn &resolveStructSlotLayout,
     const std::function<int32_t()> &allocTempLocal,
     const EmitStructCopyFromPtrsForStatementFn &emitStructCopyFromPtrs,
-    std::string &error) {
+    std::string &error,
+    const EmitUninitializedStorageDropFromPtrForStatementFn &emitDropFromPtr) {
   if (stmt.kind != Expr::Kind::Call || stmt.isMethodCall ||
       (!isSimpleCallName(stmt, "init") && !isSimpleCallName(stmt, "drop"))) {
     return UninitializedStorageInitDropEmitResult::NotMatched;
@@ -103,10 +106,6 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
   if (!resolved) {
     error = std::string(isInit ? "init" : "drop") + " requires uninitialized storage";
     return UninitializedStorageInitDropEmitResult::Error;
-  }
-
-  if (!isInit) {
-    return UninitializedStorageInitDropEmitResult::Emitted;
   }
 
   auto emitFieldPointer = [&](const Expr &receiver,
@@ -145,6 +144,59 @@ UninitializedStorageInitDropEmitResult tryEmitUninitializedStorageInitDropStatem
     instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
     return true;
   };
+  auto emitDropFromValuePointer = [&](int32_t valuePtrLocal) -> UninitializedStorageInitDropEmitResult {
+    if (!emitDropFromPtr) {
+      return UninitializedStorageInitDropEmitResult::Emitted;
+    }
+    bool handled = false;
+    if (!emitDropFromPtr(access, valuePtrLocal, handled)) {
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    return UninitializedStorageInitDropEmitResult::Emitted;
+  };
+  auto shouldEmitDropFromValuePointer = [&]() -> std::optional<bool> {
+    if (!emitDropFromPtr) {
+      return false;
+    }
+    bool handled = false;
+    if (!emitDropFromPtr(access, -1, handled)) {
+      return std::nullopt;
+    }
+    return handled;
+  };
+
+  if (!isInit) {
+    if (access.location == UninitializedStorageAccessInfo::Location::Local) {
+      return emitDropFromValuePointer(access.local != nullptr ? access.local->index : -1);
+    }
+    std::optional<bool> shouldEmitDrop = shouldEmitDropFromValuePointer();
+    if (!shouldEmitDrop.has_value()) {
+      return UninitializedStorageInitDropEmitResult::Error;
+    }
+    if (!*shouldEmitDrop) {
+      return UninitializedStorageInitDropEmitResult::Emitted;
+    }
+    if (access.location == UninitializedStorageAccessInfo::Location::Field) {
+      const Expr &receiver = stmt.args.front().args.front();
+      const int32_t ptrLocal = allocTempLocal();
+      if (!emitFieldPointer(receiver, access.receiver, access.fieldSlot, ptrLocal)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      return emitDropFromValuePointer(ptrLocal);
+    }
+    if (access.location == UninitializedStorageAccessInfo::Location::Indirect) {
+      if (access.pointerExpr == nullptr) {
+        error = "native backend could not resolve uninitialized pointer target";
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      const int32_t ptrLocal = allocTempLocal();
+      if (!emitIndirectPointer(*access.pointerExpr, ptrLocal)) {
+        return UninitializedStorageInitDropEmitResult::Error;
+      }
+      return emitDropFromValuePointer(ptrLocal);
+    }
+    return UninitializedStorageInitDropEmitResult::Emitted;
+  }
 
   const Expr &valueExpr = stmt.args.back();
   if (access.location == UninitializedStorageAccessInfo::Location::Local) {

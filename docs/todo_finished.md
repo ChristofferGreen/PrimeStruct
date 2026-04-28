@@ -6,6 +6,46 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4286: Route sum drop through active payload destroy helpers
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Complete the remaining sum payload ownership work by routing
+    explicit drop/destroy helper behavior through the active payload only.
+  - implementation_notes:
+    - Start from `TODO-4261`, `TODO-4283`, `TODO-4284`, and `TODO-4285`:
+      slot 0 stores the aggregate
+      header, slot 1 stores the active tag, and slot 2 starts the active payload
+      storage. Scalar payloads occupy one slot; aggregate payloads occupy their
+      struct slot layout inline.
+    - Reuse existing `DestroyStack`/`Destroy` helper emission where possible,
+      but guard it with the active tag so inactive payload storage is never
+      observed or destroyed. Sum-to-sum `move(...)` already routes active
+      aggregate payloads through `Move`/`Copy` helpers.
+    - Keep nested sum payloads unsupported until recursive sum layout is
+      designed; they currently produce deterministic lowerer diagnostics.
+  - acceptance:
+    - Explicit drop/destroy behavior only applies to the active payload and is
+      covered by focused lowerer plus compile-run tests.
+    - Active aggregate payload destroy calls cannot leave double-destroyed
+      temporary storage.
+    - Inactive aggregate payload storage remains unobservable in IR and runtime
+      tests.
+    - `docs/PrimeStruct.md` records the active-payload destroy lifecycle rule and the
+      nested-sum deferral.
+    - `./scripts/compile.sh --release` passes.
+  - stop_rule: Stop once active-payload destroy helper behavior is implemented
+    and covered, without pulling generic/unit sums into the same change.
+  - finished_at: 2026-04-28
+  - evidence: `drop(storage)` for `uninitialized<Sum>` now reaches the
+    uninitialized storage pointer hook and emits active-tag guards before
+    routing aggregate payloads through `DestroyStack`/`Destroy` helpers.
+    Aggregate variants without destroy helpers and scalar variants remain
+    drop-trivial. Added lowerer helper coverage for pointer callback routing
+    and compile-run coverage where an inactive payload destroy would overwrite
+    the observed counter. Promoted `TODO-4262` to Ready Now and deferred
+    release reruns to CI per the lite workflow.
+
 - [x] TODO-4285: Route sum moves through active payload helpers
   - owner: ai
   - created_at: 2026-04-28

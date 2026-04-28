@@ -3364,8 +3364,10 @@ bad_use_after_take() {
   payload into stable result storage before the value can be bound, returned, or passed to a helper, so inactive payload
   storage stays unobserved by the escape path. Sum-to-sum `move(...)` construction copies the active tag and routes only
   the selected aggregate payload through its `Move`/`Copy` helper when one exists, falling back to slot copy for
-  helper-free payloads. Nested sum payloads and explicit active-payload `Destroy` helper routing remain follow-ups
-  before public examples should rely on ownership-heavy struct-payload sums.
+  helper-free payloads. Explicit `drop(storage)` for `uninitialized<Sum>` storage routes only the active aggregate
+  payload through `DestroyStack`/`Destroy` when a payload helper exists; inactive payload storage is never observed or
+  destroyed. Nested sum payloads remain unsupported until recursive sum layout is designed, so public examples should
+  still avoid ownership-heavy nested struct-payload sums.
 - **Labeled arguments:** labeled arguments use a bracket prefix (`[name] value`) and may be reordered (including on
   executions). Positional arguments fill the remaining parameters in declaration order, skipping labeled entries.
   Builtin calls (operators, comparisons, clamp, convert, pointer helpers, collections) do not accept labeled arguments.

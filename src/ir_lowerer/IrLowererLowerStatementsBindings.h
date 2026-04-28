@@ -227,6 +227,32 @@
         uninitializedType = trimTemplateTypeText(init.templateArgs.front());
       }
       if (!uninitializedType.empty()) {
+        if (const Definition *sumDef = resolveSumDefinitionForTypeText(uninitializedType, stmt.namespacePrefix)) {
+          int32_t totalSlots = 0;
+          if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+            if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
+                unsupportedVariant != nullptr) {
+              error = unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
+            } else {
+              error = "native backend does not support sum payload type on " + sumDef->fullPath;
+            }
+            return false;
+          }
+          LocalInfo info;
+          info.isMutable = isBindingMutable(stmt);
+          info.isUninitializedStorage = true;
+          info.kind = LocalInfo::Kind::Value;
+          info.structTypeName = sumDef->fullPath;
+          info.structSlotCount = totalSlots;
+          const int32_t baseLocal = nextLocal;
+          nextLocal += totalSlots;
+          info.index = nextLocal++;
+          emitLoweredSumHeader(baseLocal, totalSlots);
+          function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+          function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+          localsIn.emplace(stmt.name, info);
+          return true;
+        }
         UninitializedTypeInfo uninitInfo;
         if (!resolveUninitializedTypeInfo(uninitializedType, stmt.namespacePrefix, uninitInfo)) {
           if (error.empty()) {
@@ -774,13 +800,37 @@
             bool &resolvedOut) { return resolveUninitializedStorage(storageExpr, valueLocals, accessOut, resolvedOut); },
         [&](const Expr &valueExpr, const LocalMap &valueLocals) { return emitExpr(valueExpr, valueLocals); },
         [&](const std::string &structPath, ir_lowerer::StructSlotLayoutInfo &layoutOut) {
+          if (const Definition *sumDef = resolveSumDefinitionByPath(structPath)) {
+            int32_t totalSlots = 0;
+            if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+              return false;
+            }
+            layoutOut = {};
+            layoutOut.structPath = sumDef->fullPath;
+            layoutOut.totalSlots = totalSlots;
+            return true;
+          }
           return resolveStructSlotLayout(structPath, layoutOut);
         },
         [&]() { return allocTempLocal(); },
         [&](int32_t destPtrLocal, int32_t srcPtrLocal, int32_t slotCount) {
           return emitStructCopyFromPtrs(destPtrLocal, srcPtrLocal, slotCount);
         },
-        error);
+        error,
+        [&](const ir_lowerer::UninitializedStorageAccessInfo &access,
+            int32_t valuePtrLocal,
+            bool &handledOut) {
+          handledOut = false;
+          const Definition *sumDef = resolveSumDefinitionByPath(access.typeInfo.structPath);
+          if (sumDef == nullptr) {
+            return true;
+          }
+          handledOut = true;
+          if (valuePtrLocal < 0) {
+            return true;
+          }
+          return emitActiveSumPayloadDestroyFromSumPtr(*sumDef, valuePtrLocal, localsIn);
+        });
     if (uninitializedInitDropResult == ir_lowerer::UninitializedStorageInitDropEmitResult::Error) {
       return false;
     }

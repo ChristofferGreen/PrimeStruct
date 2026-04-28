@@ -376,6 +376,66 @@
       return nullptr;
     };
 
+    auto findSumPayloadDestroyHelper = [&](const std::string &structPath) -> const Definition * {
+      auto destroyIt = defMap.find(structPath + "/DestroyStack");
+      if (destroyIt != defMap.end()) {
+        return destroyIt->second;
+      }
+      destroyIt = defMap.find(structPath + "/Destroy");
+      if (destroyIt != defMap.end()) {
+        return destroyIt->second;
+      }
+      return nullptr;
+    };
+
+    auto emitActiveSumPayloadDestroyFromSumPtr =
+        [&](const Definition &sumDef, int32_t sourceSumPtrLocal, const LocalMap &valueLocals) -> bool {
+      std::vector<size_t> endJumps;
+      for (const auto &variant : sumDef.sumVariants) {
+        LoweredSumPayloadStorageInfo payloadInfo;
+        if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
+          error = unsupportedSumPayloadError(sumDef, variant);
+          return false;
+        }
+        if (!payloadInfo.isAggregate) {
+          continue;
+        }
+        const Definition *destroyHelper = findSumPayloadDestroyHelper(payloadInfo.structPath);
+        if (destroyHelper == nullptr) {
+          continue;
+        }
+        emitSumTagComparison(sourceSumPtrLocal, variant.variantIndex);
+        const size_t nextVariantJump = function.instructions.size();
+        function.instructions.push_back({IrOpcode::JumpIfZero, 0});
+        const int32_t payloadPtrLocal = allocTempLocal();
+        function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sourceSumPtrLocal)});
+        function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
+        function.instructions.push_back({IrOpcode::AddI64, 0});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(payloadPtrLocal)});
+        if (!ir_lowerer::emitDestroyHelperFromPtr(payloadPtrLocal,
+                                                  payloadInfo.structPath,
+                                                  destroyHelper,
+                                                  valueLocals,
+                                                  [&](const Expr &callExpr,
+                                                      const Definition &callee,
+                                                      const LocalMap &callLocals,
+                                                      bool requireValue) {
+                                                    return emitInlineDefinitionCall(
+                                                        callExpr, callee, callLocals, requireValue);
+                                                  },
+                                                  error)) {
+          return false;
+        }
+        endJumps.push_back(function.instructions.size());
+        function.instructions.push_back({IrOpcode::Jump, 0});
+        function.instructions[nextVariantJump].imm = static_cast<uint64_t>(function.instructions.size());
+      }
+      for (size_t jumpIndex : endJumps) {
+        function.instructions[jumpIndex].imm = static_cast<uint64_t>(function.instructions.size());
+      }
+      return true;
+    };
+
     auto emitActiveSumPayloadMoveFromSumPtr =
         [&](int32_t destBaseLocal,
             const Definition &sumDef,
