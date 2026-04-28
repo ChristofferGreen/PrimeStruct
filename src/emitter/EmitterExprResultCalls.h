@@ -6,12 +6,12 @@
       return "static_cast<" + legacyPackedResultStatusCppType + ">(0)";
     }
     if (expr.args.size() == 2) {
-      std::ostringstream out;
-      out << "ps_result_pack(0u, static_cast<uint32_t>("
-          << emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
-                      resultInfos, returnStructs, allowMathBare)
-          << "))";
-      return out.str();
+      const std::string valueExpr =
+          "static_cast<uint32_t>(" +
+          emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
+                   resultInfos, returnStructs, allowMathBare) +
+          ")";
+      return legacyPackedResultPackExpr("0u", valueExpr);
     }
     return "0";
   }
@@ -28,7 +28,7 @@
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     if (resultInfo.hasValue) {
-      return "(ps_result_error(" + argText + ") != 0u)";
+      return "(" + legacyPackedResultErrorExpr(argText) + " != 0u)";
     }
     return "(" + argText + " != 0u)";
   }
@@ -45,7 +45,7 @@
         emitExpr(expr.args[1], nameMap, paramMap, defMap, structTypeMap, importAliases, localTypes, returnKinds,
                  resultInfos, returnStructs, allowMathBare);
     const std::string errorExpr =
-        resultInfo.hasValue ? "ps_result_error(" + argText + ")"
+        resultInfo.hasValue ? legacyPackedResultErrorExpr(argText)
                             : "static_cast<" + legacyPackedResultStatusCppType + ">(" + argText + ")";
     if (resultInfo.errorType == "FileError") {
       return "ps_file_error_why(" + errorExpr + ")";
@@ -178,11 +178,12 @@
     std::ostringstream out;
     out << "([&]() -> " << legacyPackedResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
-    out << " uint32_t ps_err = ps_result_error(ps_result);";
-    out << " if (ps_err != 0u) { return ps_result_pack(ps_err, 0u); }";
-    out << " auto ps_value = static_cast<" << valueType << ">(ps_result_value(ps_result));";
+    out << " uint32_t ps_err = " << legacyPackedResultErrorExpr("ps_result") << ";";
+    out << " if (ps_err != 0u) { return " << legacyPackedResultPackExpr("ps_err", "0u") << "; }";
+    out << " auto ps_value = static_cast<" << valueType << ">("
+        << legacyPackedResultValueExpr("ps_result") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_value);";
-    out << " return ps_result_pack(0u, static_cast<uint32_t>(ps_mapped));";
+    out << " return " << legacyPackedResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
     return out.str();
   }
@@ -209,9 +210,10 @@
     std::ostringstream out;
     out << "([&]() -> " << legacyPackedResultValueCppType << " {";
     out << " auto ps_result = " << resultExpr << ";";
-    out << " uint32_t ps_err = ps_result_error(ps_result);";
-    out << " if (ps_err != 0u) { return ps_result_pack(ps_err, 0u); }";
-    out << " auto ps_value = static_cast<" << valueType << ">(ps_result_value(ps_result));";
+    out << " uint32_t ps_err = " << legacyPackedResultErrorExpr("ps_result") << ";";
+    out << " if (ps_err != 0u) { return " << legacyPackedResultPackExpr("ps_err", "0u") << "; }";
+    out << " auto ps_value = static_cast<" << valueType << ">("
+        << legacyPackedResultValueExpr("ps_result") << ");";
     out << " auto ps_next = (" << lambdaExpr << ")(ps_value);";
     out << " return static_cast<" << legacyPackedResultValueCppType << ">(ps_next);";
     out << " }())";
@@ -250,15 +252,17 @@
     std::ostringstream out;
     out << "([&]() -> " << legacyPackedResultValueCppType << " {";
     out << " auto ps_left = " << leftExpr << ";";
-    out << " uint32_t ps_left_err = ps_result_error(ps_left);";
-    out << " if (ps_left_err != 0u) { return ps_result_pack(ps_left_err, 0u); }";
+    out << " uint32_t ps_left_err = " << legacyPackedResultErrorExpr("ps_left") << ";";
+    out << " if (ps_left_err != 0u) { return " << legacyPackedResultPackExpr("ps_left_err", "0u") << "; }";
     out << " auto ps_right = " << rightExpr << ";";
-    out << " uint32_t ps_right_err = ps_result_error(ps_right);";
-    out << " if (ps_right_err != 0u) { return ps_result_pack(ps_right_err, 0u); }";
-    out << " auto ps_left_value = static_cast<" << leftType << ">(ps_result_value(ps_left));";
-    out << " auto ps_right_value = static_cast<" << rightType << ">(ps_result_value(ps_right));";
+    out << " uint32_t ps_right_err = " << legacyPackedResultErrorExpr("ps_right") << ";";
+    out << " if (ps_right_err != 0u) { return " << legacyPackedResultPackExpr("ps_right_err", "0u") << "; }";
+    out << " auto ps_left_value = static_cast<" << leftType << ">("
+        << legacyPackedResultValueExpr("ps_left") << ");";
+    out << " auto ps_right_value = static_cast<" << rightType << ">("
+        << legacyPackedResultValueExpr("ps_right") << ");";
     out << " auto ps_mapped = (" << lambdaExpr << ")(ps_left_value, ps_right_value);";
-    out << " return ps_result_pack(0u, static_cast<uint32_t>(ps_mapped));";
+    out << " return " << legacyPackedResultPackExpr("0u", "static_cast<uint32_t>(ps_mapped)") << ";";
     out << " }())";
     return out.str();
   }

@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4316: Quarantine Result pack expressions
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that centralizes
+    legacy packed Result pack/unpack expression emission without deleting the
+    packed runtime bridge yet.
+  - implementation_notes:
+    - Keep existing source C++ behavior and generated helper names.
+    - Route C++ `Result.ok(value)`, `Result.error(value)`, `Result.why(value)`,
+      `Result.map(...)`, `Result.and_then(...)`, `Result.map2(...)`, and
+      Result-returning entry-point unpack expressions through named emitter
+      helpers instead of open-coded `ps_result_pack/error/value` expression
+      strings.
+    - Leave emitted prelude definitions for `ps_result_pack`,
+      `ps_result_error`, and `ps_result_value` for the next deletion slice.
+  - acceptance:
+    - Source C++ result pack, error, and value expression construction goes
+      through named emitter helper functions.
+    - Focused helper coverage pins the helper spellings.
+    - TODO-4266 documentation narrows remaining source C++ cleanup to deleting
+      the legacy runtime pack/unpack representation and prelude helpers.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once open-coded source C++ result pack/unpack expression
+    construction is quarantined behind helpers without changing generated C++
+    behavior.
+  - finished_at: 2026-04-28
+  - evidence: Added named emitter helpers for legacy packed Result pack,
+    error, and value expressions; routed source C++ Result helper emission and
+    Result-returning entry-point unpacking through them; updated TODO-4266
+    docs to leave only prelude/runtime bridge deletion as source C++ cleanup.
+    Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4315: Quarantine source C++ Result pack types
   - owner: ai
   - created_at: 2026-04-28

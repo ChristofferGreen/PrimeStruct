@@ -595,9 +595,9 @@
     if (entryIsResult) {
       out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "(ps_args);\n";
       if (entryResultHasValue) {
-        out << "  uint32_t ps_entry_err = ps_result_error(ps_entry_result);\n";
+        out << "  uint32_t ps_entry_err = " << legacyPackedResultErrorExpr("ps_entry_result") << ";\n";
         out << "  if (ps_entry_err != 0) { return static_cast<int>(ps_entry_err); }\n";
-        out << "  return static_cast<int>(ps_result_value(ps_entry_result));\n";
+        out << "  return static_cast<int>(" << legacyPackedResultValueExpr("ps_entry_result") << ");\n";
       } else {
         out << "  return static_cast<int>(ps_entry_result);\n";
       }
@@ -615,9 +615,9 @@
       out << "int main() {\n";
       out << "  auto ps_entry_result = " << nameMap.at(entryPath) << "();\n";
       if (entryResultHasValue) {
-        out << "  uint32_t ps_entry_err = ps_result_error(ps_entry_result);\n";
+        out << "  uint32_t ps_entry_err = " << legacyPackedResultErrorExpr("ps_entry_result") << ";\n";
         out << "  if (ps_entry_err != 0) { return static_cast<int>(ps_entry_err); }\n";
-        out << "  return static_cast<int>(ps_result_value(ps_entry_result));\n";
+        out << "  return static_cast<int>(" << legacyPackedResultValueExpr("ps_entry_result") << ");\n";
       } else {
         out << "  return static_cast<int>(ps_entry_result);\n";
       }
