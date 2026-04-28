@@ -778,9 +778,9 @@ Template parameters may appear in payload envelopes. Concrete uses monomorphize 
 sum metadata publishes substituted payload type text while preserving source-order variant indices and tag values.
 Invalid template arity is diagnosed. Recursive inline payloads such as `Bad<T> { [Bad<T>] again }` are rejected until
 recursive sum layout is designed. The stdlib `Maybe<T>` surface consumes this generic substrate, and `/std/result/*`
-now exposes an imported value-carrying `Result<T, E>` sum. `Result.error(value)` can inspect that imported sum shape on
-IR-backed VM/native paths. The legacy `Result.ok/why` bridge, combinators, status-only `Result<E>`, and `?`
-propagation remain compatibility surfaces until their dedicated migration tasks land.
+now exposes an imported value-carrying `Result<T, E>` sum. `Result.error(value)` and `Result.why(value)` can inspect
+that imported sum shape on IR-backed VM/native paths. The legacy `Result.ok` bridge, combinators, status-only
+`Result<E>`, and `?` propagation remain compatibility surfaces until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first
@@ -1389,9 +1389,9 @@ Draft constraints:
 
 - `Result<Error>` is a status-only wrapper for fallible operations; `Result<T, Error>` carries a success value.
 - Imported value-carrying `Result<T, Error>` construction has a stdlib sum surface under `/std/result/*`;
-  `Result.error(value)` can read that sum shape on IR-backed VM/native paths, while `?` propagation, status-only
-  `Result<Error>`, and legacy `Result.ok/why` helpers remain hybrid compiler/runtime bridges until their migration
-  TODOs land.
+  `Result.error(value)` and `Result.why(value)` can read that sum shape on IR-backed VM/native paths, while `?`
+  propagation, status-only `Result<Error>`, and legacy `Result.ok`/combinator helpers remain hybrid compiler/runtime
+  bridges until their migration TODOs land.
 - The postfix `?` operator unwraps a `Result` in-place. On error, it invokes a local handler and returns the error
   from the current definition.
   - **Monadic view:** `value?` is equivalent to binding the success value and early-returning the error; it matches

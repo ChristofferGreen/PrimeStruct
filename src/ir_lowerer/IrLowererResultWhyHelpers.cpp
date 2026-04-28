@@ -35,6 +35,142 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     return ResultWhyMethodCallEmitResult::Error;
   }
 
+  auto stdlibResultSumLocal = [&]() -> const LocalInfo * {
+    const Expr &valueExpr = expr.args[1];
+    if (valueExpr.kind != Expr::Kind::Name) {
+      return nullptr;
+    }
+    auto localIt = localsIn.find(valueExpr.name);
+    if (localIt == localsIn.end()) {
+      return nullptr;
+    }
+    const std::string &structType = localIt->second.structTypeName;
+    if (structType == "/std/result/Result" ||
+        structType.rfind("/std/result/Result__", 0) == 0) {
+      return &localIt->second;
+    }
+    return nullptr;
+  }();
+
+  auto emitStdlibResultSumErrorWhy = [&](int32_t resultLocal) -> bool {
+    std::string errorStructPath;
+    if (resolveStructTypeName(resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
+      const std::string whyPath = errorStructPath + "/why";
+      auto whyIt = defMap.find(whyPath);
+      if (whyIt == defMap.end() || whyIt->second == nullptr ||
+          whyIt->second->parameters.size() != 1) {
+        return emitResultWhyEmptyString(internString, emitInstruction);
+      }
+      ReturnInfo whyReturn;
+      if (!getReturnInfo || !getReturnInfo(whyIt->second->fullPath, whyReturn)) {
+        return false;
+      }
+      if (whyReturn.returnsVoid || whyReturn.returnsArray ||
+          whyReturn.kind != LocalInfo::ValueKind::String) {
+        error = "Result.why requires a string-returning why() for " + resultInfo.errorType;
+        return false;
+      }
+      StructSlotLayoutInfo errorLayout;
+      if (!resolveStructSlotLayout(errorStructPath, errorLayout)) {
+        return false;
+      }
+      const int32_t payloadPtrLocal = allocTempLocal();
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+      emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes);
+      emitInstruction(IrOpcode::AddI64, 0);
+      emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(payloadPtrLocal));
+
+      LocalMap callLocals = localsIn;
+      const std::string payloadLocalName =
+          "__result_sum_error_payload_" + std::to_string(onErrorTempCounter++);
+      LocalInfo payloadInfo;
+      payloadInfo.kind = LocalInfo::Kind::Value;
+      payloadInfo.valueKind = LocalInfo::ValueKind::Int64;
+      payloadInfo.structTypeName = errorStructPath;
+      payloadInfo.structSlotCount = errorLayout.totalSlots;
+      payloadInfo.index = payloadPtrLocal;
+      callLocals.emplace(payloadLocalName, payloadInfo);
+
+      Expr payloadExpr;
+      payloadExpr.kind = Expr::Kind::Name;
+      payloadExpr.name = payloadLocalName;
+      payloadExpr.namespacePrefix = expr.namespacePrefix;
+
+      Expr callExpr;
+      callExpr.kind = Expr::Kind::Call;
+      callExpr.name = whyPath;
+      callExpr.namespacePrefix = expr.namespacePrefix;
+      callExpr.isMethodCall = false;
+      callExpr.isBinding = false;
+      callExpr.args.push_back(payloadExpr);
+      callExpr.argNames.push_back(std::nullopt);
+      return emitInlineDefinitionCall(callExpr, *whyIt->second, callLocals);
+    }
+
+    LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
+    if (!isSupportedResultWhyErrorKind(errorKind)) {
+      return emitResultWhyEmptyString(internString, emitInstruction);
+    }
+    const int32_t payloadLocal = allocTempLocal();
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+    emitInstruction(IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(payloadLocal));
+
+    ResultWhyExprOps payloadOps = makeResultWhyExprOps(
+        payloadLocal,
+        expr.namespacePrefix,
+        onErrorTempCounter,
+        internString,
+        allocTempLocal,
+        emitInstruction);
+    return emitResultWhyCallWithComposedOps(
+        expr,
+        resultInfo,
+        localsIn,
+        payloadLocal,
+        defMap,
+        payloadOps,
+        resolveStructTypeName,
+        getReturnInfo,
+        bindingKind,
+        resolveStructSlotLayout,
+        valueKindFromTypeName,
+        emitInlineDefinitionCall,
+        emitFileErrorWhy,
+        error);
+  };
+
+  if (stdlibResultSumLocal != nullptr && instructionsOut != nullptr) {
+    if (!emitExpr || !emitExpr(expr.args[1], localsIn)) {
+      return ResultWhyMethodCallEmitResult::Error;
+    }
+    const int32_t resultLocal = allocTempLocal();
+    emitInstruction(IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal));
+    emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(resultLocal));
+    emitInstruction(IrOpcode::PushI64, IrSlotBytes);
+    emitInstruction(IrOpcode::AddI64, 0);
+    emitInstruction(IrOpcode::LoadIndirect, 0);
+    emitInstruction(IrOpcode::PushI32, 1);
+    emitInstruction(IrOpcode::CmpEqI32, 0);
+    const size_t jumpEmptyIndex = instructionsOut->size();
+    emitInstruction(IrOpcode::JumpIfZero, 0);
+    if (!emitStdlibResultSumErrorWhy(resultLocal)) {
+      return ResultWhyMethodCallEmitResult::Error;
+    }
+    const size_t jumpEndIndex = instructionsOut->size();
+    emitInstruction(IrOpcode::Jump, 0);
+    const size_t emptyIndex = instructionsOut->size();
+    (*instructionsOut)[jumpEmptyIndex].imm = static_cast<int32_t>(emptyIndex);
+    if (!emitResultWhyEmptyString(internString, emitInstruction)) {
+      return ResultWhyMethodCallEmitResult::Error;
+    }
+    const size_t endIndex = instructionsOut->size();
+    (*instructionsOut)[jumpEndIndex].imm = static_cast<int32_t>(endIndex);
+    return ResultWhyMethodCallEmitResult::Emitted;
+  }
+
   int32_t errorLocal = 0;
   if (!emitResultWhyLocalsFromValueExpr(
           expr.args[1],

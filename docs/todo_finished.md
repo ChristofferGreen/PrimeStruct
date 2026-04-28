@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4295: Bridge `Result.why` to the result sum payload
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next legacy inspect-helper bridge by making
+    `Result.why(value)` inspect imported value-carrying `/std/result/*` sum
+    values on IR-backed VM/native paths.
+  - implementation_notes:
+    - Detect local values whose lowered aggregate type is the monomorphized
+      stdlib result sum.
+    - Emit the empty string when the active tag is not the `error` variant.
+    - For the `error` variant, pass the stored error payload directly to the
+      payload type's `why` helper when one exists, with the existing empty
+      string fallback for unsupported payloads.
+    - Left `Result.ok(...)`, combinators, status-only `Result<Error>`, and
+      `?` propagation in TODO-4293/TODO-4266.
+  - acceptance:
+    - `Result.why(success)` returns the empty string for imported sum-backed
+      value-carrying Result values.
+    - `Result.why(failure)` calls the error payload type's `why` helper for
+      imported sum-backed value-carrying Result values.
+    - Existing packed Result helper behavior stays on the previous fallback
+      path.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once `Result.why` can inspect imported value-carrying
+    stdlib Result sums and the remaining helper bridge work is still tracked.
+  - finished_at: 2026-04-28
+  - evidence: Added IR-backed `Result.why` tag/payload inspection for
+    `/std/result/*` sum locals plus semantic, VM, and native fixtures for
+    success-empty and error-payload why behavior. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4294: Bridge `Result.error` to the result sum tag
   - owner: ai
   - created_at: 2026-04-28

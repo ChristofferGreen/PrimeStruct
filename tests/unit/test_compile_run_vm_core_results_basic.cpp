@@ -183,6 +183,42 @@ main() {
   CHECK(runCommand(runCmd) == 0);
 }
 
+TEST_CASE("vm supports Result.why on imported stdlib Result sum") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    if(equal(err.code, 5i32)) {
+      return("five"utf8)
+    }
+    return("other"utf8)
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, MyError>] success{ok<i32, MyError>(7i32)}
+  [Result<i32, MyError>] failure{error<i32, MyError>(MyError{})}
+  print_line(Result.why(success))
+  print_line(Result.why(failure))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_why_helper.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_result_sum_why_helper_out.txt").string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 0);
+  CHECK(readFile(outPath) == "\nfive\n");
+}
+
 TEST_CASE("vm supports Result.map on IR-backed path") {
   const std::string source = R"(
 import /std/file/*

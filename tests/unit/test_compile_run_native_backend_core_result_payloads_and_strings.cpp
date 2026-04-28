@@ -75,6 +75,45 @@ main() {
   CHECK(runCommand(exePath) == 0);
 }
 
+TEST_CASE("native backend supports Result.why on imported stdlib Result sum") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    if(equal(err.code, 5i32)) {
+      return("five"utf8)
+    }
+    return("other"utf8)
+  }
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, MyError>] success{ok<i32, MyError>(7i32)}
+  [Result<i32, MyError>] failure{error<i32, MyError>(MyError{})}
+  print_line(Result.why(success))
+  print_line(Result.why(failure))
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_why_helper.prime", source);
+  const std::string exePath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_why_helper").string();
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_native_stdlib_result_sum_why_helper_out.txt").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 0);
+  CHECK(readFile(outPath) == "\nfive\n");
+}
+
 TEST_CASE("native backend compiles packed error struct Result combinator payloads on IR-backed paths") {
   const std::string source = R"(
 import /std/file/*

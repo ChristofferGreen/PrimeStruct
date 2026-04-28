@@ -97,6 +97,39 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result value sum participates in Result.why") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{5i32}
+}
+
+namespace MyError {
+  [return<string>]
+  why([MyError] err) {
+    if(equal(err.code, 5i32)) {
+      return("five"utf8)
+    }
+    return("other"utf8)
+  }
+}
+
+[return<void>]
+main() {
+  [Result<i32, MyError>] success{ok<i32, MyError>(7i32)}
+  [Result<i32, MyError>] failure{error<i32, MyError>(MyError{})}
+  [string] successWhy{Result.why(success)}
+  [string] failureWhy{Result.why(failure)}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("stdlib result value sum rejects default construction") {
   const std::string source = R"(
 import /std/result/*
