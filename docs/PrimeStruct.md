@@ -250,6 +250,10 @@ Planned non-template inference migration contract:
   validation now checks the on-error fact against the published callable summary before lowerer
   setup can install the handler. Handler path, error-type, and bound-arg-count mismatches fail
   closed with a deterministic stale on-error diagnostic.
+- Completed query stale-target diagnostic slice: semantic-product query completeness validation
+  now checks query facts against the published direct or method call target for the same
+  semantic node before lowerer result metadata can consume the query fact. Resolved-target
+  mismatches fail closed with a deterministic stale query diagnostic.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

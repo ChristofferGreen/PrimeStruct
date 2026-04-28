@@ -356,7 +356,8 @@ Task template:
     final LocalInfo metadata slice is complete for scalar, pointer/reference,
     and array/vector fallbacks. The local-auto stale binding-type diagnostic
     slice is complete. The `on_error` stale fact diagnostic slice is complete;
-    continue with a different control-flow/query consumer.
+    the query stale-target diagnostic slice is complete. Continue with a
+    different control-flow/query consumer.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -405,6 +406,9 @@ Task template:
     - Completed slice: semantic-product `on_error` completeness validation now
       rejects stale on-error facts whose handler path, error type, or bound
       arg count contradicts the published callable summary.
+    - Completed slice: semantic-product query completeness validation now
+      rejects stale query facts whose resolved target path contradicts the
+      published direct or method call target for the same semantic node.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

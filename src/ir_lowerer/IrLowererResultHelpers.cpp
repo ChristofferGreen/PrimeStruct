@@ -7,6 +7,8 @@
 #include "IrLowererSetupTypeHelpers.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
+#include <optional>
+
 namespace primec::ir_lowerer {
 
 namespace {
@@ -171,6 +173,16 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
         queryCallNameView.empty() ? "<call>" : std::string(queryCallNameView);
     if (queryFact->resolvedPathId == InvalidSymbolId || resolvedPath.empty()) {
       error = "missing semantic-product query resolved path id: " + queryCallName;
+      return false;
+    }
+    std::optional<SymbolId> publishedTargetId =
+        semanticProgramLookupPublishedDirectCallTargetId(*semanticProgram, queryFact->semanticNodeId);
+    if (!publishedTargetId.has_value()) {
+      publishedTargetId =
+          semanticProgramLookupPublishedMethodCallTargetId(*semanticProgram, queryFact->semanticNodeId);
+    }
+    if (publishedTargetId.has_value() && *publishedTargetId != queryFact->resolvedPathId) {
+      error = "stale semantic-product query fact: " + queryCallName;
       return false;
     }
     if (queryFact->hasResultType && queryFact->resultTypeHasValue) {
