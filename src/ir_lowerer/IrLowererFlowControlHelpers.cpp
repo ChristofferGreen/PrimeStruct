@@ -2,6 +2,8 @@
 
 #include "IrLowererHelpers.h"
 
+#include <string_view>
+
 namespace primec::ir_lowerer {
 
 void emitFileCloseIfValid(std::vector<IrInstruction> &instructions, int32_t localIndex) {
@@ -186,9 +188,49 @@ void emitDisarmTemporaryStructAfterCopy(const std::function<void(IrOpcode, uint6
     emitInstruction(IrOpcode::Pop, 0);
   };
 
+  auto generatedStructLeaf = [](const std::string &path) {
+    const size_t leafStart = path.find_last_of('/');
+    std::string leaf = path.substr(leafStart == std::string::npos ? 0 : leafStart + 1);
+    const size_t suffixStart = leaf.find("__");
+    if (suffixStart != std::string::npos) {
+      leaf.erase(suffixStart);
+    }
+    return leaf;
+  };
+
   if (structPath == "/std/collections/experimental_vector/Vector" ||
       structPath.rfind("/std/collections/experimental_vector/Vector__", 0) == 0) {
     emitStoreFalseAtOffset(3ull * IrSlotBytes);
+    return;
+  }
+
+  const std::string leaf = generatedStructLeaf(structPath);
+  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumn", 0) == 0 ||
+      leaf == "SoaColumn") {
+    emitStoreFalseAtOffset(4ull * IrSlotBytes);
+    return;
+  }
+
+  if (structPath.rfind("/std/collections/experimental_soa_vector/SoaVector", 0) == 0 ||
+      leaf == "SoaVector") {
+    emitStoreFalseAtOffset(5ull * IrSlotBytes);
+    return;
+  }
+
+  if (structPath.rfind("/std/collections/internal_soa_storage/SoaColumns", 0) == 0 ||
+      leaf.rfind("SoaColumns", 0) == 0) {
+    constexpr std::string_view Prefix = "SoaColumns";
+    size_t cursor = Prefix.size();
+    int columnCount = 0;
+    while (cursor < leaf.size() && leaf[cursor] >= '0' && leaf[cursor] <= '9') {
+      columnCount = columnCount * 10 + static_cast<int>(leaf[cursor] - '0');
+      ++cursor;
+    }
+    if (columnCount >= 2 && columnCount <= 16) {
+      for (int column = 0; column < columnCount; ++column) {
+        emitStoreFalseAtOffset(static_cast<uint64_t>(1 + column * 5 + 4) * IrSlotBytes);
+      }
+    }
     return;
   }
 

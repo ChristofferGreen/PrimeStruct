@@ -420,6 +420,48 @@ TEST_CASE("ir lowerer flow helpers emit struct copy sequences") {
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer flow helpers disarm soa storage temporaries after copy") {
+  auto checkDisarmAt = [](const std::vector<primec::IrInstruction> &instructions,
+                          size_t start,
+                          uint64_t offsetBytes) {
+    REQUIRE(instructions.size() >= start + 6);
+    CHECK(instructions[start + 0].op == primec::IrOpcode::LoadLocal);
+    CHECK(instructions[start + 0].imm == 12);
+    CHECK(instructions[start + 1].op == primec::IrOpcode::PushI64);
+    CHECK(instructions[start + 1].imm == offsetBytes);
+    CHECK(instructions[start + 2].op == primec::IrOpcode::AddI64);
+    CHECK(instructions[start + 3].op == primec::IrOpcode::PushI32);
+    CHECK(instructions[start + 3].imm == 0);
+    CHECK(instructions[start + 4].op == primec::IrOpcode::StoreIndirect);
+    CHECK(instructions[start + 5].op == primec::IrOpcode::Pop);
+  };
+
+  std::vector<primec::IrInstruction> instructions;
+  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      12,
+      "/std/collections/internal_soa_storage/SoaColumn__ti32");
+  REQUIRE(instructions.size() == 6);
+  checkDisarmAt(instructions, 0, 4u * primec::IrSlotBytes);
+
+  instructions.clear();
+  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      12,
+      "/std/collections/internal_soa_storage/SoaColumns2__ti32_i32");
+  REQUIRE(instructions.size() == 12);
+  checkDisarmAt(instructions, 0, 5u * primec::IrSlotBytes);
+  checkDisarmAt(instructions, 6, 10u * primec::IrSlotBytes);
+
+  instructions.clear();
+  primec::ir_lowerer::emitDisarmTemporaryStructAfterCopy(
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      12,
+      "/std/collections/experimental_soa_vector/SoaVector__tParticle");
+  REQUIRE(instructions.size() == 6);
+  checkDisarmAt(instructions, 0, 5u * primec::IrSlotBytes);
+}
+
 TEST_CASE("ir lowerer flow helpers emit destroy helper calls from ptr locals") {
   const primec::Definition destroyHelper = [] {
     primec::Definition def;
