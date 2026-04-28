@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -54,6 +55,25 @@ bool anyMessageContains(const std::vector<std::string> &messages,
                      [&](const std::string &message) {
                        return message.find(needle) != std::string::npos;
                      });
+}
+
+std::string readRepoText(std::filesystem::path relativePath) {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  const std::array<std::filesystem::path, 2> candidates = {
+      cwd / relativePath,
+      cwd.parent_path() / relativePath,
+  };
+  for (const auto &candidate : candidates) {
+    std::ifstream file(candidate);
+    if (!file) {
+      continue;
+    }
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+  }
+  ADD_FAIL("failed to read repo file: " << relativePath.string());
+  return {};
 }
 
 bool validateWithWorkerCount(primec::Semantics &semantics,
@@ -731,6 +751,49 @@ main() {
   CHECK(parallelError.empty());
   CHECK(primec::formatSemanticProgram(serialSemanticProduct) ==
         primec::formatSemanticProgram(parallelSemanticProduct));
+}
+
+TEST_CASE("semantic memory inline fixture semantic product is equivalent across worker counts") {
+  const std::string source =
+      readRepoText("benchmarks/semantic_memory/fixtures/inline_math_body.prime");
+  REQUIRE(source.find("poly3") != std::string::npos);
+
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  primec::Semantics semantics;
+  std::array<std::string, 3> formattedByWorkerCount;
+  std::array<std::size_t, 3> directCallCounts{};
+  std::array<std::size_t, 3> queryFactCounts{};
+  constexpr std::array<uint32_t, 3> workerCounts = {1u, 2u, 4u};
+
+  for (std::size_t i = 0; i < workerCounts.size(); ++i) {
+    primec::Program program = parseProgram(source);
+    std::string error;
+    primec::SemanticProgram semanticProgram;
+    const bool ok = validateWithWorkerCount(semantics,
+                                            program,
+                                            "/bench/main",
+                                            error,
+                                            defaults,
+                                            defaults,
+                                            {},
+                                            nullptr,
+                                            false,
+                                            &semanticProgram,
+                                            nullptr,
+                                            workerCounts[i]);
+    CHECK(ok);
+    CHECK(error.empty());
+    directCallCounts[i] = semanticProgram.directCallTargets.size();
+    queryFactCounts[i] = semanticProgram.queryFacts.size();
+    formattedByWorkerCount[i] = primec::formatSemanticProgram(semanticProgram);
+  }
+
+  CHECK(directCallCounts[0] == directCallCounts[1]);
+  CHECK(directCallCounts[1] == directCallCounts[2]);
+  CHECK(queryFactCounts[0] == queryFactCounts[1]);
+  CHECK(queryFactCounts[1] == queryFactCounts[2]);
+  CHECK(formattedByWorkerCount[0] == formattedByWorkerCount[1]);
+  CHECK(formattedByWorkerCount[1] == formattedByWorkerCount[2]);
 }
 
 TEST_CASE("definition validation diagnostics are equivalent across worker counts 1,2,4") {

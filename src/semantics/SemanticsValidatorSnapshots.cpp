@@ -47,15 +47,22 @@ template <typename Entry, typename KeyForEntry>
 void rebindSemanticNodeIdsBySnapshotKey(std::vector<Entry> &entries,
                                         std::vector<Entry> freshEntries,
                                         KeyForEntry keyForEntry) {
-  std::unordered_map<std::string, uint64_t> semanticNodeIdsByKey;
+  std::unordered_map<std::string, std::vector<uint64_t>> semanticNodeIdsByKey;
   semanticNodeIdsByKey.reserve(freshEntries.size());
   for (const auto &entry : freshEntries) {
-    semanticNodeIdsByKey.insert_or_assign(keyForEntry(entry), entry.semanticNodeId);
+    semanticNodeIdsByKey[keyForEntry(entry)].push_back(entry.semanticNodeId);
   }
+
+  std::unordered_map<std::string, std::size_t> nextSemanticNodeIdByKey;
+  nextSemanticNodeIdByKey.reserve(semanticNodeIdsByKey.size());
   for (auto &entry : entries) {
-    const auto idIt = semanticNodeIdsByKey.find(keyForEntry(entry));
+    const std::string key = keyForEntry(entry);
+    const auto idIt = semanticNodeIdsByKey.find(key);
     if (idIt != semanticNodeIdsByKey.end()) {
-      entry.semanticNodeId = idIt->second;
+      std::size_t &nextIndex = nextSemanticNodeIdByKey[key];
+      if (nextIndex < idIt->second.size()) {
+        entry.semanticNodeId = idIt->second[nextIndex++];
+      }
     }
   }
 }
@@ -1045,7 +1052,10 @@ void SemanticsValidator::sortCollectedOnErrorSnapshots(
   std::stable_sort(entries.begin(),
                    entries.end(),
                    [](const auto &left, const auto &right) {
-                     return left.definitionPath < right.definitionPath;
+                     if (left.definitionPath != right.definitionPath) {
+                       return left.definitionPath < right.definitionPath;
+                     }
+                     return left.semanticNodeId < right.semanticNodeId;
                    });
 }
 
@@ -1200,7 +1210,10 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
                      if (left.callName != right.callName) {
                        return left.callName < right.callName;
                      }
-                     return left.resolvedPath < right.resolvedPath;
+                     if (left.resolvedPath != right.resolvedPath) {
+                       return left.resolvedPath < right.resolvedPath;
+                     }
+                     return left.semanticNodeId < right.semanticNodeId;
                    });
   std::stable_sort(collectedMethodCallTargets_.begin(),
                    collectedMethodCallTargets_.end(),
@@ -1217,7 +1230,10 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
                      if (left.methodName != right.methodName) {
                        return left.methodName < right.methodName;
                      }
-                     return left.resolvedPath < right.resolvedPath;
+                     if (left.resolvedPath != right.resolvedPath) {
+                       return left.resolvedPath < right.resolvedPath;
+                     }
+                     return left.semanticNodeId < right.semanticNodeId;
                    });
   std::stable_sort(collectedBridgePathChoices_.begin(),
                    collectedBridgePathChoices_.end(),
@@ -1237,7 +1253,10 @@ void SemanticsValidator::collectPilotRoutingSemanticProductFacts() {
                      if (left.helperName != right.helperName) {
                        return left.helperName < right.helperName;
                      }
-                     return left.chosenPath < right.chosenPath;
+                     if (left.chosenPath != right.chosenPath) {
+                       return left.chosenPath < right.chosenPath;
+                     }
+                     return left.semanticNodeId < right.semanticNodeId;
                    });
   pilotRoutingSemanticCollectorsValid_ = true;
 }

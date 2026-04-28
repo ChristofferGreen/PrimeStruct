@@ -641,7 +641,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.callName != right.callName) {
                          return left.callName < right.callName;
                        }
-                       return left.resolvedPath < right.resolvedPath;
+                       if (left.resolvedPath != right.resolvedPath) {
+                         return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.methodCallTargets.begin(),
                      mergedWorkerPublicationFacts_.methodCallTargets.end(),
@@ -658,7 +661,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.methodName != right.methodName) {
                          return left.methodName < right.methodName;
                        }
-                       return left.resolvedPath < right.resolvedPath;
+                       if (left.resolvedPath != right.resolvedPath) {
+                         return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.bridgePathChoices.begin(),
                      mergedWorkerPublicationFacts_.bridgePathChoices.end(),
@@ -678,7 +684,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.helperName != right.helperName) {
                          return left.helperName < right.helperName;
                        }
-                       return left.chosenPath < right.chosenPath;
+                       if (left.chosenPath != right.chosenPath) {
+                         return left.chosenPath < right.chosenPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.typeMetadata.begin(),
                      mergedWorkerPublicationFacts_.typeMetadata.end(),
@@ -686,7 +695,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.fullPath != right.fullPath) {
                          return left.fullPath < right.fullPath;
                        }
-                       return left.category < right.category;
+                       if (left.category != right.category) {
+                         return left.category < right.category;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.structFieldMetadata.begin(),
                      mergedWorkerPublicationFacts_.structFieldMetadata.end(),
@@ -697,12 +709,18 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.fieldIndex != right.fieldIndex) {
                          return left.fieldIndex < right.fieldIndex;
                        }
-                       return left.fieldName < right.fieldName;
+                       if (left.fieldName != right.fieldName) {
+                         return left.fieldName < right.fieldName;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.sumTypeMetadata.begin(),
                      mergedWorkerPublicationFacts_.sumTypeMetadata.end(),
                      [](const auto &left, const auto &right) {
-                       return left.fullPath < right.fullPath;
+                       if (left.fullPath != right.fullPath) {
+                         return left.fullPath < right.fullPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.sumVariantMetadata.begin(),
                      mergedWorkerPublicationFacts_.sumVariantMetadata.end(),
@@ -713,7 +731,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.variantIndex != right.variantIndex) {
                          return left.variantIndex < right.variantIndex;
                        }
-                       return left.variantName < right.variantName;
+                       if (left.variantName != right.variantName) {
+                         return left.variantName < right.variantName;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.bindingFacts.begin(),
                      mergedWorkerPublicationFacts_.bindingFacts.end(),
@@ -733,12 +754,18 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.name != right.name) {
                          return left.name < right.name;
                        }
-                       return left.resolvedPath < right.resolvedPath;
+                       if (left.resolvedPath != right.resolvedPath) {
+                         return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.returnFacts.begin(),
                      mergedWorkerPublicationFacts_.returnFacts.end(),
                      [](const auto &left, const auto &right) {
-                       return left.definitionPath < right.definitionPath;
+                       if (left.definitionPath != right.definitionPath) {
+                         return left.definitionPath < right.definitionPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.localAutoFacts.begin(),
                      mergedWorkerPublicationFacts_.localAutoFacts.end(),
@@ -752,7 +779,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.sourceColumn != right.sourceColumn) {
                          return left.sourceColumn < right.sourceColumn;
                        }
-                       return left.bindingName < right.bindingName;
+                       if (left.bindingName != right.bindingName) {
+                         return left.bindingName < right.bindingName;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.queryFacts.begin(),
                      mergedWorkerPublicationFacts_.queryFacts.end(),
@@ -769,7 +799,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.callName != right.callName) {
                          return left.callName < right.callName;
                        }
-                       return left.resolvedPath < right.resolvedPath;
+                       if (left.resolvedPath != right.resolvedPath) {
+                         return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     std::stable_sort(mergedWorkerPublicationFacts_.tryFacts.begin(),
                      mergedWorkerPublicationFacts_.tryFacts.end(),
@@ -783,7 +816,10 @@ bool SemanticsValidator::validateDefinitions() {
                        if (left.sourceColumn != right.sourceColumn) {
                          return left.sourceColumn < right.sourceColumn;
                        }
-                       return left.operandResolvedPath < right.operandResolvedPath;
+                       if (left.operandResolvedPath != right.operandResolvedPath) {
+                         return left.operandResolvedPath < right.operandResolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
                      });
     mergedWorkerPublicationFactsValid_ = true;
     mergedWorkerPublicationFactSemanticNodeIdsCurrent_ = false;
