@@ -2315,7 +2315,8 @@ for(
     `Result<T, E>{[error] err}`, `Result<E>{}`, `Result<E>{ok}`, and `Result<E>{[error] err}` constructors route
     through those bridge helpers for supported scalar-compatible payloads. Source C++ `Result.why(...)` binds the
     bridge operand once, returns an empty string for `ok`, and only calls the error-domain `why` helper for `error`
-    payloads.
+    payloads. Explicit source C++ `error` constructors also pack single-field int-backed error structs through their
+    code field before entering the bridge.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
@@ -2333,8 +2334,9 @@ for(
     codes at the source Result boundary. Explicit source C++ Result sum constructors for supported scalar-compatible
     ok/error payloads now lower through the same bridge helpers. Source C++ `Result.why(...)` uses those tag checks
     before extracting the error payload, so `ok` bridge values yield the empty string instead of calling the
-    error-domain `why` helper. The remaining migration work can focus on retargeting broader bridge construction to
-    the stdlib Result sum contract.
+    error-domain `why` helper. Explicit source C++ `error` constructors pack single-field int-backed error structs
+    through their code field before entering the status-only or value-carrying bridge. The remaining migration work
+    can focus on retargeting broader bridge construction to the stdlib Result sum contract.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).

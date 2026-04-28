@@ -136,6 +136,43 @@ main() {
   CHECK(output.find("ps_file_error_why(ps_result_value_error_payload(ps_result))") != std::string::npos);
 }
 
+TEST_CASE("C++ emitter packs single-field error sum constructor payloads") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{0i32}
+}
+
+[return<Result<MyError>>]
+make_status_error() {
+  return(Result<MyError>{[error] MyError{[code] 7i32}})
+}
+
+[return<Result<i32, MyError>>]
+make_value_error() {
+  [MyError] err{MyError{[code] 9i32}}
+  return(Result<i32, MyError>{[error] err})
+}
+
+[return<int>]
+main() {
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_cpp_result_error_struct_constructor.prime", source);
+  const std::string outPath = (testScratchPath("") / "primec_result_error_struct_constructor.cpp").string();
+
+  const std::string compileCmd = "./primec --emit=cpp " + srcPath + " -o " + outPath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  const std::string output = readFile(outPath);
+  CHECK(output.find("ps_result_status_error(static_cast<uint32_t>((") != std::string::npos);
+  CHECK(output.find(".code))") != std::string::npos);
+  CHECK(output.find("ps_result_value_error(static_cast<uint32_t>((err).code))") != std::string::npos);
+  CHECK(output.find("static_cast<uint32_t>(err)") == std::string::npos);
+}
+
 TEST_CASE("C++ emitter rejects experimental map custom comparable struct keys") {
   const std::string source = R"(
 import /std/collections/*

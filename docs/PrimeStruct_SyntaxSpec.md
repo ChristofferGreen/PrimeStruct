@@ -811,7 +811,9 @@ the same named ok/error tag constants, and wraps raw low-level file helper statu
 explicit source C++ `Result<T, E>{[ok] value}`, `Result<T, E>{[error] err}`, `Result<E>{}`, `Result<E>{ok}`, and
 `Result<E>{[error] err}` constructors route through the bridge helpers for supported scalar-compatible payloads.
 Source C++ `Result.why(...)` now binds bridge operands once and returns the empty string for `ok` before extracting
-the error payload or calling the error-domain `why` helper.
+the error payload or calling the error-domain `why` helper. Explicit source C++ `error` constructors pack
+single-field int-backed error structs through their code field before entering the status-only or value-carrying
+bridge.
 Broader result shapes and full bridge retargeting remain compatibility work until their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is

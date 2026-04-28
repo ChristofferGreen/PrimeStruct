@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4329: Pack source Result error struct constructors
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that lets explicit
+    Result sum `error` constructors accept single-field int-backed error
+    structs without falling back to raw struct-to-integer casts.
+  - implementation_notes:
+    - Resolve source C++ Result constructor payload types through the same
+      local/import-aware struct path lookup used by Result helper dispatch.
+    - When an `error` payload type is a single non-static bridge-code field,
+      pack the generated bridge payload from that field.
+    - Leave wider or unsupported payload shapes on the existing compatibility
+      boundary until broader bridge retargeting lands.
+  - acceptance:
+    - Explicit source C++ status-only `Result<Error>{[error] err}` constructors
+      pack single-field error structs through the field before calling
+      `ps_result_status_error(...)`.
+    - Explicit source C++ value-carrying `Result<T, Error>{[error] err}`
+      constructors pack single-field error structs through the field before
+      calling `ps_result_value_error(...)`.
+    - C++ emitter coverage checks emitted source text for both bridge helper
+      calls and rejects the old direct `static_cast<uint32_t>(err)` shape.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once explicit source C++ Result error constructors can
+    bridge single-field int-backed error structs without changing wider
+    unsupported payload behavior.
+  - finished_at: 2026-04-28
+  - evidence: Added source C++ Result constructor payload packing for
+    single-field int-backed error structs, added C++ emitter source-text
+    coverage for status-only and value-carrying error constructors, and
+    documented the remaining broader bridge retargeting work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4328: Guard source Result why bridge
   - owner: ai
   - created_at: 2026-04-28
