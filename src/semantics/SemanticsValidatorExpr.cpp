@@ -87,6 +87,16 @@ bool SemanticsValidator::validateExpr(const std::vector<ParameterInfo> &params,
     if (expr.isBinding) {
       return failExprRootDiagnostic("binding not allowed in expression context");
     }
+    bool handledExplicitSumConstructor = false;
+    if (!validateExplicitSumConstructorExpr(params,
+                                            locals,
+                                            expr,
+                                            handledExplicitSumConstructor)) {
+      return false;
+    }
+    if (handledExplicitSumConstructor) {
+      return true;
+    }
     if (expr.isMethodCall &&
         (expr.name == "count" || expr.name == "get" ||
          expr.name == "get_ref" || expr.name == "ref") &&

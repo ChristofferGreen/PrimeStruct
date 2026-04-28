@@ -77,7 +77,7 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
           BindingInfo binding;
           std::optional<std::string> restrictType;
           if (!parseBindingInfo(bodyExpr, candidate.namespacePrefix, structNames_, importAliases_, binding, restrictType,
-                                error_)) {
+                                error_, &sumNames_)) {
             return false;
           }
           const bool hasExplicitType = hasExplicitBindingTypeTransform(bodyExpr);
@@ -136,7 +136,7 @@ ReturnKind SemanticsValidator::inferControlFlowExprReturnKind(
           BindingInfo info;
           std::optional<std::string> restrictType;
           if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType,
-                                error_)) {
+                                error_, &sumNames_)) {
             return ReturnKind::Unknown;
           }
           if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {

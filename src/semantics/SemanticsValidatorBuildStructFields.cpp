@@ -10,8 +10,8 @@ bool SemanticsValidator::resolveStructFieldBinding(const Definition &structDef,
   };
   std::optional<std::string> restrictType;
   std::string parseError;
-  if (!parseBindingInfo(fieldStmt, structDef.namespacePrefix, structNames_, importAliases_, bindingOut, restrictType,
-                        parseError)) {
+  if (!parseBindingInfo(fieldStmt, structDef.namespacePrefix, structNames_, importAliases_, bindingOut,
+                        restrictType, parseError, &sumNames_)) {
     return failStructFieldDiagnostic(std::move(parseError));
   }
   if (hasExplicitBindingTypeTransform(fieldStmt)) {

@@ -222,7 +222,7 @@ bool SemanticsValidator::validateExprScalarPointerMemoryBuiltins(
     std::string parseError;
     if (!parseBindingInfo(bindingExpr, expr.namespacePrefix, structNames_,
                           importAliases_, bindingInfo, restrictType,
-                          parseError)) {
+                          parseError, &sumNames_)) {
       return failScalarPointerMemoryBuiltin(std::move(parseError));
     }
     return true;

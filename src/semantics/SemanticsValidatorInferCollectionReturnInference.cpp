@@ -275,7 +275,8 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
       BindingInfo binding;
       std::optional<std::string> restrictType;
       std::string parseError;
-      if (parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, parseError)) {
+      if (parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, parseError,
+                           &sumNames_)) {
         const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);
         const bool explicitAutoType = hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
         if (stmt.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
@@ -535,6 +536,11 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     }
     if (candidate.kind != Expr::Kind::Call) {
       return false;
+    }
+    BindingInfo sumConstructorBinding;
+    if (inferExplicitSumConstructorBinding(candidate, sumConstructorBinding)) {
+      currentTypeTextOut = bindingTypeText(sumConstructorBinding);
+      return !currentTypeTextOut.empty();
     }
     if (candidate.isFieldAccess && candidate.args.size() == 1) {
       BindingInfo fieldBinding;

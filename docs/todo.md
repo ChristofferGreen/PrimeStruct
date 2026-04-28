@@ -67,11 +67,10 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4258: Add explicit sum construction
+- TODO-4259: Add inferred sum variant construction
 
 ### Immediate Next 10 (After Ready Now)
 
-- TODO-4259: Add inferred sum variant construction
 - TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
 - TODO-4262: Add public sum-type examples
@@ -84,8 +83,8 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4258 ->
-  TODO-4259 -> TODO-4260 -> TODO-4261 -> TODO-4262
+- Deferred algebraic types and brace-only construction: TODO-4259 ->
+  TODO-4260 -> TODO-4261 -> TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
 - Deferred generic tuple substrate: TODO-4268 -> TODO-4269 -> TODO-4270
@@ -95,7 +94,6 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4258: Add explicit sum construction
 - TODO-4259: Add inferred sum variant construction
 - TODO-4260: Add `pick` semantic validation
 - TODO-4261: Lower and execute `pick` matches
@@ -283,36 +281,6 @@ Task template:
   skipped coverage is not a stable end state.
 
 ### Task Blocks
-
-- [ ] TODO-4258: Add explicit sum construction
-  - owner: ai
-  - created_at: 2026-04-27
-  - phase: Deferred algebraic types and brace-only construction
-  - scope: Add explicit sum value construction through `[variant] payload`
-    entries when the target sum type is known from context.
-  - implementation_notes:
-    - Reuse the brace-construction machinery and sum metadata
-      from TODO-4257; add a narrow sum-construction resolver instead of
-      special-casing it inside unrelated collection or struct paths.
-    - Cover typed local bindings, return values, fields, and `auto`/omitted
-      envelope rejection or inference behavior explicitly.
-    - Add positive and negative tests in the dedicated sum semantics shard
-      before adding backend execution tests.
-  - acceptance:
-    - Explicit sum construction accepts `[Shape] s{[circle] Circle{...}}`.
-    - Explicit construction also accepts positional payload construction such
-      as `[Shape] s{[circle] Circle{3.4}}`.
-    - Unknown variant labels, duplicate variant entries, missing payloads, and
-      payload type mismatches produce stable diagnostics.
-    - Payload ownership and move/copy behavior is checked consistently with
-      ordinary brace construction.
-    - Construction without a target sum context is rejected unless the source
-      names the sum type explicitly through a documented form.
-    - Empty sum initializers such as `[Shape] s{}` produce a deterministic
-      diagnostic until the unit-variant default rule lands in TODO-4263.
-    - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once explicit variant construction works and has negative
-    diagnostics; leave inferred variant selection to TODO-4259.
 
 - [ ] TODO-4259: Add inferred sum variant construction
   - owner: ai

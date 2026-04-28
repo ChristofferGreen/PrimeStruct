@@ -226,7 +226,8 @@ bool SemanticsValidator::buildParameters() {
       }
       BindingInfo binding;
       std::optional<std::string> restrictType;
-      if (!parseBindingInfo(param, def.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+      if (!parseBindingInfo(param, def.namespacePrefix, structNames_, importAliases_, binding,
+                            restrictType, error_, &sumNames_)) {
         return failExprDiagnostic(param, error_);
       }
       if (binding.typeName == "uninitialized") {

@@ -497,6 +497,7 @@ private:
   std::unique_ptr<GraphLocalAutoBenchmarkShadow> graphLocalAutoBenchmarkShadow_;
   std::unordered_map<GraphLocalAutoKey, GraphLocalAutoFacts, GraphLocalAutoKeyHash> graphLocalAutoFacts_;
   std::unordered_set<std::string> structNames_;
+  std::unordered_set<std::string> sumNames_;
   std::unordered_set<std::string> publicDefinitions_;
   std::unordered_map<std::string, std::vector<ParameterInfo>> paramsByDef_;
   std::unordered_set<std::string> overloadFamilyBasePaths_;

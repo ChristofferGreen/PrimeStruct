@@ -156,7 +156,8 @@ bool SemanticsValidator::isOutsideEffectFreeStatement(const Expr &stmt,
     BindingInfo info;
     std::optional<std::string> restrictType;
     std::string parseError;
-    if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, parseError)) {
+    if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, parseError,
+                          &sumNames_)) {
       return false;
     }
     if (!stmt.args.empty()) {

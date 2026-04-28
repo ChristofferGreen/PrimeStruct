@@ -128,7 +128,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         BindingInfo info;
         std::optional<std::string> restrictType;
         std::string error;
-        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
+        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info,
+                              restrictType, error, &sumNames_)) {
           return false;
         }
         const std::string normalizedType = normalizeBindingTypeName(info.typeName);
@@ -347,7 +348,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
         BindingInfo info;
         std::optional<std::string> restrictType;
         std::string error;
-        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
+        if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info,
+                              restrictType, error, &sumNames_)) {
           return error;
         }
         const std::string normalizedType = normalizeBindingTypeName(info.typeName);
@@ -468,7 +470,8 @@ std::optional<std::string> SemanticsValidator::validateUninitializedDefiniteStat
       BindingInfo info;
       std::optional<std::string> restrictType;
       std::string error;
-      if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info, restrictType, error)) {
+      if (!parseBindingInfo(stmt, stmt.namespacePrefix, structNames_, importAliases_, info,
+                            restrictType, error, &sumNames_)) {
         return {error, false};
       }
       const std::string normalizedType = normalizeBindingTypeName(info.typeName);

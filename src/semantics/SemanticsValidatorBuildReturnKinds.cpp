@@ -112,6 +112,10 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
           resolveStructReturnPathForBuild(transform.templateArgs.front(), def.namespacePrefix);
       if (!structPath.empty()) {
         returnStructs_[def.fullPath] = structPath;
+      } else if (const Definition *sumDef =
+                     resolveSumDefinitionForTypeText(transform.templateArgs.front(),
+                                                     def.namespacePrefix)) {
+        returnStructs_[def.fullPath] = sumDef->fullPath;
       }
       break;
     }
@@ -161,31 +165,45 @@ bool SemanticsValidator::buildDefinitionReturnKinds(const std::unordered_set<std
     } else if (explicitStructs.count(def.fullPath) > 0) {
       kind = ReturnKind::Array;
     } else {
-      std::string returnKindError;
+      bool hasExplicitSumReturn = false;
       for (const auto &transform : def.transforms) {
         if (transform.name != "return" || transform.templateArgs.size() != 1) {
           continue;
         }
-        std::string base;
-        std::string arg;
-        if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "soa_vector") {
-          break;
-        }
-        std::vector<std::string> args;
-        if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
-          break;
-        }
-        if (!isSoaVectorStructElementType(args.front(), def.namespacePrefix, structNames_, importAliases_)) {
-          returnKindError = "soa_vector return type requires struct element type on " + def.fullPath;
-          break;
-        }
-        if (!validateSoaVectorElementFieldEnvelopes(args.front(), def.namespacePrefix)) {
-          returnKindError = error_;
-        }
+        hasExplicitSumReturn =
+            resolveSumDefinitionForTypeText(transform.templateArgs.front(),
+                                            def.namespacePrefix) != nullptr;
         break;
       }
+      std::string returnKindError;
+      if (!hasExplicitSumReturn) {
+        for (const auto &transform : def.transforms) {
+          if (transform.name != "return" || transform.templateArgs.size() != 1) {
+            continue;
+          }
+          std::string base;
+          std::string arg;
+          if (!splitTemplateTypeName(transform.templateArgs.front(), base, arg) || base != "soa_vector") {
+            break;
+          }
+          std::vector<std::string> args;
+          if (!splitTopLevelTemplateArgs(arg, args) || args.size() != 1) {
+            break;
+          }
+          if (!isSoaVectorStructElementType(args.front(), def.namespacePrefix, structNames_, importAliases_)) {
+            returnKindError = "soa_vector return type requires struct element type on " + def.fullPath;
+            break;
+          }
+          if (!validateSoaVectorElementFieldEnvelopes(args.front(), def.namespacePrefix)) {
+            returnKindError = error_;
+          }
+          break;
+        }
+      }
       if (returnKindError.empty()) {
-        kind = getReturnKind(def, structNames_, importAliases_, returnKindError);
+        kind = hasExplicitSumReturn
+                   ? ReturnKind::Array
+                   : getReturnKind(def, structNames_, importAliases_, returnKindError);
       }
       if (!returnKindError.empty()) {
         if (!addReturnKindDiagnostic(returnKindError)) {

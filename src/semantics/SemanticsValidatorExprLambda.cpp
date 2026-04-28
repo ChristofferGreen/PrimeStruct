@@ -141,7 +141,8 @@ bool SemanticsValidator::validateLambdaExpr(const std::vector<ParameterInfo> &pa
     }
     BindingInfo binding;
     std::optional<std::string> restrictType;
-    if (!parseBindingInfo(param, expr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+    if (!parseBindingInfo(param, expr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_,
+                          &sumNames_)) {
       return false;
     }
     if (param.args.size() > 1) {

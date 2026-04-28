@@ -894,6 +894,13 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                                                         namespacePrefix,
                                                         structNames_);
                   }
+                  if (actualStruct.empty()) {
+                    if (const Definition *sumDef =
+                            resolveSumDefinitionForTypeText(actualReturnBinding.typeName,
+                                                            namespacePrefix)) {
+                      actualStruct = sumDef->fullPath;
+                    }
+                  }
                   if (actualStruct.empty() && actualReturnBinding.typeName.front() == '/') {
                     actualStruct = actualReturnBinding.typeName;
                   }
@@ -908,6 +915,13 @@ bool SemanticsValidator::validateReturnStatement(const std::vector<ParameterInfo
                     inferredTypeText,
                     namespacePrefix,
                     structNames_);
+                if (actualStruct.empty()) {
+                  if (const Definition *sumDef =
+                          resolveSumDefinitionForTypeText(inferredTypeText,
+                                                          namespacePrefix)) {
+                    actualStruct = sumDef->fullPath;
+                  }
+                }
               }
             }
             const std::string normalizedExpectedStruct = normalizeCollectionStructPath(structIt->second);

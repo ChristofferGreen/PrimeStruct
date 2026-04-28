@@ -77,6 +77,18 @@
                                          const std::string &namespacePrefix);
   bool hasStructZeroArgConstructor(const std::string &structPath) const;
   bool isOutsideEffectFreeStructConstructor(const std::string &structPath);
+  bool isSumDefinition(const Definition &def) const;
+  const Definition *resolveSumDefinitionForTypeText(
+      const std::string &typeText,
+      const std::string &namespacePrefix) const;
+  bool validateExplicitSumConstructorExpr(
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      const Expr &expr,
+      bool &handledOut);
+  bool inferExplicitSumConstructorBinding(
+      const Expr &initializer,
+      BindingInfo &bindingOut) const;
 
   std::string resolveCalleePath(const Expr &expr) const;
   std::string formatUnknownCallTarget(const Expr &expr) const;

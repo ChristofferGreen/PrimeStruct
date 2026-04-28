@@ -1046,6 +1046,9 @@ bool SemanticsValidator::inferBindingTypeFromInitializer(
     bindingOut.typeTemplateArg.clear();
     return preserveBindingQualifiers();
   }
+  if (inferExplicitSumConstructorBinding(initializer, bindingOut)) {
+    return preserveBindingQualifiers();
+  }
   if (initializer.kind == Expr::Kind::Call && initializer.isFieldAccess &&
       initializer.args.size() == 1) {
     BindingInfo fieldBinding;

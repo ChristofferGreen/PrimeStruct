@@ -95,7 +95,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
 
   BindingInfo info;
   std::optional<std::string> restrictType;
-  if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
+  if (!parseBindingInfo(stmt, namespacePrefix, structNames_, importAliases_, info, restrictType, error_,
+                        &sumNames_)) {
     return false;
   }
 
@@ -164,6 +165,10 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
   };
 
   const std::string normalizedBindingType = normalizeBindingTypeName(info.typeName);
+  if (explicitAutoType && initializer.kind == Expr::Kind::Call &&
+      initializer.isBraceConstructor && hasNamedArguments(initializer.argNames)) {
+    return failBindingDiagnostic("sum construction requires target sum type");
+  }
   if ((normalizedBindingType == "vector" || normalizedBindingType == "soa_vector") &&
       isEmptyBuiltinBlockInitializer(initializer)) {
     if (!validateOmittedBindingInitializer(stmt, info, namespacePrefix)) {

@@ -167,4 +167,206 @@ main() {
   CHECK(error.find("unsupported sum payload envelope on /Bad/item: auto") != std::string::npos);
 }
 
+TEST_CASE("explicit sum construction accepts labeled and positional payloads") {
+  const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[struct]
+Rectangle {
+  [f32] width
+  [f32] height
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+main() {
+  [Shape] labeled{[circle] Circle{[radius] 3.4}}
+  [Shape] positional{[rectangle] Rectangle{4.0, 5.0}}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit sum construction works for fields and auto inference") {
+  const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[struct]
+Holder {
+  [Shape] primary
+}
+
+[return<Shape>]
+makeShape() {
+  [Shape] made{[circle] Circle{1.0}}
+  return(made)
+}
+
+[return<i32>]
+main() {
+  [Holder] holder{Holder{[primary] Shape{[circle] Circle{2.0}}}}
+  [auto] direct{Shape{[circle] Circle{3.0}}}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
+TEST_CASE("explicit sum construction rejects invalid variant shapes") {
+  SUBCASE("unknown variant") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[return<i32>]
+main() {
+  [Shape] bad{[triangle] Circle{1.0}}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("unknown sum variant on /Shape: triangle") != std::string::npos);
+  }
+
+  SUBCASE("duplicate variant entries") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[return<i32>]
+main() {
+  [Shape] bad{Shape{[circle] Circle{1.0}, [circle] Circle{2.0}}}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("duplicate sum variant in construction: circle on /Shape") !=
+          std::string::npos);
+  }
+
+  SUBCASE("empty initializer") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[return<i32>]
+main() {
+  [Shape] bad{Shape{}}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("sum construction requires exactly one explicit variant for /Shape") !=
+          std::string::npos);
+  }
+}
+
+TEST_CASE("explicit sum construction rejects payload and target mismatches") {
+  SUBCASE("payload type mismatch") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[struct]
+Rectangle {
+  [f32] width
+  [f32] height
+}
+
+[sum]
+Shape {
+  [Circle] circle
+  [Rectangle] rectangle
+}
+
+[return<i32>]
+main() {
+  [Shape] bad{[circle] Rectangle{1.0, 2.0}}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("argument type mismatch for /Shape parameter circle") !=
+          std::string::npos);
+  }
+
+  SUBCASE("auto context without named sum target") {
+    const std::string source = R"(
+[struct]
+Circle {
+  [f32] radius
+}
+
+[sum]
+Shape {
+  [Circle] circle
+}
+
+[return<i32>]
+main() {
+  [auto] bad{[circle] Circle{1.0}}
+  return(0i32)
+}
+)";
+
+    std::string error;
+    CHECK_FALSE(validateProgramExpectingError(source, error));
+    CHECK(error.find("sum construction requires target sum type") != std::string::npos);
+  }
+}
+
 TEST_SUITE_END();

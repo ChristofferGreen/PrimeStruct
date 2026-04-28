@@ -728,7 +728,7 @@ Shape {
 Each payload variant has a lowerCamelCase variant name and one payload envelope. A sum value has exactly one active
 variant at runtime. Unit/no-payload variants are a planned follow-up needed for stdlib `Maybe<T>` and status-only
 `Result<Error>`; they use bare lowerCamelCase variant names such as `none` rather than an empty struct payload
-workaround. Sum construction uses the same brace-only construction model as structs:
+workaround. Explicit sum construction uses the same brace-only construction model as structs:
 
 ```prime
 [Shape] explicitLabeled{[circle] Circle{[radius] 3.4}}
@@ -736,10 +736,10 @@ workaround. Sum construction uses the same brace-only construction model as stru
 [Shape] inferredVariant{Circle{3.4}}
 ```
 
-The explicit `[variant] payload` form always selects that variant. The inferred form is valid only when the target sum
-type is known from context and exactly one variant payload type accepts the constructed payload. If zero variants match,
-construction is a type error. If more than one variant matches, construction is ambiguous and the source must use the
-explicit `[variant]` form.
+The explicit `[variant] payload` form always selects that variant and is the currently implemented construction form.
+The inferred form is planned and is valid only when the target sum type is known from context and exactly one variant
+payload type accepts the constructed payload. If zero variants match, construction is a type error. If more than one
+variant matches, construction is ambiguous and the source must use the explicit `[variant]` form.
 
 ```prime
 [sum]

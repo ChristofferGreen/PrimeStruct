@@ -235,7 +235,8 @@ bool SemanticsValidator::inferDefinitionStatementReturns(
   if (stmt.isBinding) {
     BindingInfo info;
     std::optional<std::string> restrictType;
-    if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, info, restrictType, error_)) {
+    if (!parseBindingInfo(stmt, def.namespacePrefix, structNames_, importAliases_, info, restrictType, error_,
+                          &sumNames_)) {
       return false;
     }
     const bool hasExplicitType = hasExplicitBindingTypeTransform(stmt);

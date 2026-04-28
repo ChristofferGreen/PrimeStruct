@@ -187,6 +187,7 @@ set(PRIMESTRUCT_FRONTEND_SOURCES
   src/semantics/SemanticsValidatorExprResolvedCallSetup.cpp
   src/semantics/SemanticsValidatorExprResolvedCallArguments.cpp
   src/semantics/SemanticsValidatorExprStructConstructors.cpp
+  src/semantics/SemanticsValidatorExprSumConstructors.cpp
   src/semantics/SemanticsValidatorExprTry.cpp
   src/semantics/SemanticsValidatorExprVectorHelpers.cpp
   src/semantics/SemanticsValidatorExprCallResolution.cpp

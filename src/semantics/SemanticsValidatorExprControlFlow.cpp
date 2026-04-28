@@ -103,7 +103,7 @@ bool SemanticsValidator::validateIfExpr(const std::vector<ParameterInfo> &params
         BindingInfo info;
         std::optional<std::string> restrictType;
         if (!parseBindingInfo(bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, info, restrictType,
-                              error_)) {
+                              error_, &sumNames_)) {
           return false;
         }
         if (bodyExpr.args.empty()) {

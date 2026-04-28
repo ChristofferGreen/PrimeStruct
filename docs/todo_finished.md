@@ -6625,3 +6625,21 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     the live queue, promoted newly unblocked `TODO-4165`, `TODO-4159`, and
     `TODO-4164` to Ready Now, and deferred release reruns to CI per the lite
     workflow.
+
+- [x] TODO-4258: Add explicit sum construction
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Add explicit sum value construction through `[variant] payload`
+    entries when the target sum type is known from context.
+  - finished_at: 2026-04-28
+  - evidence: Added a dedicated explicit sum-construction resolver for
+    brace-constructor calls targeting `[sum]` definitions. Typed sum bindings,
+    explicit `return<Shape>` values, struct fields, and `auto` inference from
+    named `Shape{[variant] payload}` construction now validate without
+    treating sums as structs. Diagnostics now cover unknown variants, duplicate
+    variant entries, empty sum initializers, payload mismatches, and labeled
+    construction without a sum target. Dedicated sum semantics coverage was
+    expanded for positive and negative cases. Removed `TODO-4258` from the live
+    queue, promoted `TODO-4259` to Ready Now, and deferred release reruns to CI
+    per the lite workflow.

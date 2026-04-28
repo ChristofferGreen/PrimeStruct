@@ -191,7 +191,8 @@ bool parseBindingInfo(const Expr &expr,
                       const std::unordered_map<std::string, std::string> &importAliases,
                       BindingInfo &info,
                       std::optional<std::string> &restrictTypeOut,
-                      std::string &error);
+                      std::string &error,
+                      const std::unordered_set<std::string> *additionalNominalTypes = nullptr);
 bool isEffectName(const std::string &text);
 bool validateEffectsTransform(const Transform &transform, const std::string &context, std::string &error);
 bool validateCapabilitiesTransform(const Transform &transform, const std::string &context, std::string &error);

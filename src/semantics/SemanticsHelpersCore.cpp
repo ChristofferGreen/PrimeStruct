@@ -133,7 +133,8 @@ bool parseBindingInfo(const Expr &expr,
                       const std::unordered_map<std::string, std::string> &importAliases,
                       BindingInfo &info,
                       std::optional<std::string> &restrictTypeOut,
-                      std::string &error) {
+                      std::string &error,
+                      const std::unordered_set<std::string> *additionalNominalTypes) {
   std::string typeName;
   bool typeHasTemplate = false;
   std::optional<std::string> restrictType;
@@ -367,6 +368,45 @@ bool parseBindingInfo(const Expr &expr,
   if (typeHasTemplate) {
     fullType += "<" + info.typeTemplateArg + ">";
   }
+  auto resolveAdditionalNominalTypePath = [&](const std::string &candidate) -> std::string {
+    if (additionalNominalTypes == nullptr || candidate.empty()) {
+      return {};
+    }
+    if (candidate.front() == '/') {
+      return additionalNominalTypes->count(candidate) > 0 ? candidate : std::string{};
+    }
+    if (!namespacePrefix.empty()) {
+      const size_t lastSlash = namespacePrefix.find_last_of('/');
+      const std::string_view suffix = lastSlash == std::string::npos
+                                          ? std::string_view(namespacePrefix)
+                                          : std::string_view(namespacePrefix).substr(lastSlash + 1);
+      if (suffix == candidate && additionalNominalTypes->count(namespacePrefix) > 0) {
+        return namespacePrefix;
+      }
+      std::string prefix = namespacePrefix;
+      while (!prefix.empty()) {
+        const std::string scoped = prefix + "/" + candidate;
+        if (additionalNominalTypes->count(scoped) > 0) {
+          return scoped;
+        }
+        const size_t slash = prefix.find_last_of('/');
+        if (slash == std::string::npos) {
+          break;
+        }
+        prefix = prefix.substr(0, slash);
+      }
+    }
+    const std::string root = "/" + candidate;
+    if (additionalNominalTypes->count(root) > 0) {
+      return root;
+    }
+    auto importIt = importAliases.find(candidate);
+    if (importIt != importAliases.end() &&
+        additionalNominalTypes->count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return {};
+  };
   if (!isPrimitiveBindingTypeName(typeName) && !typeHasTemplate) {
     std::string resolved = resolveStructTypePath(typeName, namespacePrefix, structTypes);
     if (resolved.empty()) {
@@ -374,6 +414,9 @@ bool parseBindingInfo(const Expr &expr,
       if (importIt != importAliases.end() && structTypes.count(importIt->second) > 0) {
         resolved = importIt->second;
       }
+    }
+    if (resolved.empty()) {
+      resolved = resolveAdditionalNominalTypePath(typeName);
     }
     if (resolved.empty()) {
       if (typeName != "FileError") {
@@ -394,7 +437,7 @@ bool parseBindingInfo(const Expr &expr,
     if (importIt != importAliases.end()) {
       return structTypes.count(importIt->second) > 0;
     }
-    return false;
+    return !resolveAdditionalNominalTypePath(candidate).empty();
   };
   auto trimTypeText = [](const std::string &value) -> std::string {
     size_t start = 0;

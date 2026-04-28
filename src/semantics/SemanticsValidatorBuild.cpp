@@ -45,6 +45,7 @@ bool SemanticsValidator::buildDefinitionMaps() {
   inferStructReturnMemo_.clear();
   structFieldReturnKindMemo_.clear();
   currentValidationState_ = {};
+  sumNames_.clear();
 
   for (const auto &effect : defaultEffects_) {
     if (!isEffectName(effect)) {
@@ -100,6 +101,9 @@ bool SemanticsValidator::buildDefinitionMaps() {
   for (const auto &declaration : validationPlan_->definitionPrepass.declarationsInStableOrder) {
     const Definition &def = program_.definitions[declaration.stableIndex];
     DefinitionContextScope definitionScope(*this, def);
+    if (isSumDefinition(def)) {
+      sumNames_.insert(def.fullPath);
+    }
     bool isExplicit = false;
     if (isStructDefinition(def, isExplicit)) {
       structNames_.insert(def.fullPath);
