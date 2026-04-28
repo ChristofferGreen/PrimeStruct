@@ -32,9 +32,15 @@ import /std/image/*
 
 [return<int> effects(io_out)]
 main() {
-  print_line(Result.why(/ImageError/status(imageReadUnsupported())))
-  print_line(Result.why(/ImageError/result<i32>(imageWriteUnsupported())))
-  print_line(Result.why(/ImageError/result<i32>(imageInvalidOperation())))
+  [Result<ImageError>] readStatus{/ImageError/status(imageReadUnsupported())}
+  [Result<i32, ImageError>] writeStatus{/ImageError/result<i32>(imageWriteUnsupported())}
+  [Result<i32, ImageError>] invalidStatus{/ImageError/result<i32>(imageInvalidOperation())}
+  [string] readWhy{Result.why(readStatus)}
+  [string] writeWhy{Result.why(writeStatus)}
+  [string] invalidWhy{Result.why(invalidStatus)}
+  print_line(readWhy)
+  print_line(writeWhy)
+  print_line(invalidWhy)
   return(0i32)
 }
 )";
@@ -56,16 +62,20 @@ import /std/image/*
 [return<int> effects(io_out)]
 main() {
   [ImageError] err{imageReadUnsupported()}
+  [Result<ImageError>] compatibilityStatus{imageErrorStatus(err)}
   [Result<ImageError>] methodStatus{/ImageError/status(err)}
   [Result<i32, ImageError>] methodValueStatus{/ImageError/result<i32>(err)}
+  [string] compatibilityWhy{Result.why(compatibilityStatus)}
+  [string] methodWhy{Result.why(methodStatus)}
+  [string] methodValueWhy{Result.why(methodValueStatus)}
   print_line(/ImageError/why(err))
   print_line(/ImageError/why(err))
   print_line(/ImageError/why(err))
-  print_line(Result.why(imageErrorStatus(err)))
-  print_line(Result.why(methodStatus))
-  print_line(Result.why(methodValueStatus))
-  print_line(Result.why(methodStatus))
-  print_line(Result.why(methodValueStatus))
+  print_line(compatibilityWhy)
+  print_line(methodWhy)
+  print_line(methodValueWhy)
+  print_line(methodWhy)
+  print_line(methodValueWhy)
   return(0i32)
 }
 )";
@@ -91,9 +101,18 @@ import /std/image/*
 
 [return<int> effects(io_out)]
 main() {
-  print_line(Result.why(imageErrorStatus(/ImageError/read_unsupported())))
-  print_line(Result.why(imageErrorStatus(/ImageError/write_unsupported())))
-  print_line(Result.why(imageErrorStatus(/ImageError/invalid_operation())))
+  [ImageError] readErr{/ImageError/read_unsupported()}
+  [ImageError] writeErr{/ImageError/write_unsupported()}
+  [ImageError] invalidErr{/ImageError/invalid_operation()}
+  [Result<ImageError>] readStatus{imageErrorStatus(readErr)}
+  [Result<ImageError>] writeStatus{imageErrorStatus(writeErr)}
+  [Result<ImageError>] invalidStatus{imageErrorStatus(invalidErr)}
+  [string] readWhy{Result.why(readStatus)}
+  [string] writeWhy{Result.why(writeStatus)}
+  [string] invalidWhy{Result.why(invalidStatus)}
+  print_line(readWhy)
+  print_line(writeWhy)
+  print_line(invalidWhy)
   return(0i32)
 }
 )";
@@ -116,11 +135,19 @@ import /std/gfx/experimental/*
 main() {
   [GfxError] err{queueSubmitFailed()}
   [GfxError] valueErr{framePresentFailed()}
-  print_line(Result.why(GfxError.status(queueSubmitFailed())))
-  print_line(Result.why(valueErr.result<i32>()))
-  print_line(Result.why(GfxError.status(err)))
-  print_line(Result.why(GfxError.status(err)))
-  print_line(Result.why(err.result<i32>()))
+  [Result<GfxError>] directStatus{GfxError.status(queueSubmitFailed())}
+  [Result<i32, GfxError>] directValueStatus{valueErr.result<i32>()}
+  [Result<GfxError>] methodStatus{GfxError.status(err)}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
+  [string] directWhy{Result.why(directStatus)}
+  [string] directValueWhy{Result.why(directValueStatus)}
+  [string] methodWhy{Result.why(methodStatus)}
+  [string] methodValueWhy{Result.why(methodValueStatus)}
+  print_line(directWhy)
+  print_line(directValueWhy)
+  print_line(methodWhy)
+  print_line(methodWhy)
+  print_line(methodValueWhy)
   return(0i32)
 }
 )";
@@ -145,10 +172,18 @@ import /std/gfx/*
 main() {
   [GfxError] err{queueSubmitFailed()}
   [GfxError] valueErr{framePresentFailed()}
-  print_line(Result.why(GfxError.status(queueSubmitFailed())))
-  print_line(Result.why(valueErr.result<i32>()))
-  print_line(Result.why(GfxError.status(err)))
-  print_line(Result.why(err.result<i32>()))
+  [Result<GfxError>] directStatus{GfxError.status(queueSubmitFailed())}
+  [Result<i32, GfxError>] directValueStatus{valueErr.result<i32>()}
+  [Result<GfxError>] methodStatus{GfxError.status(err)}
+  [Result<i32, GfxError>] methodValueStatus{err.result<i32>()}
+  [string] directWhy{Result.why(directStatus)}
+  [string] directValueWhy{Result.why(directValueStatus)}
+  [string] methodWhy{Result.why(methodStatus)}
+  [string] methodValueWhy{Result.why(methodValueStatus)}
+  print_line(directWhy)
+  print_line(directValueWhy)
+  print_line(methodWhy)
+  print_line(methodValueWhy)
   return(0i32)
 }
 )";
@@ -176,11 +211,15 @@ main() {
   print_line(GfxError.why(err))
   print_line(GfxError.why(err))
   print_line(err.why())
-  print_line(Result.why(GfxError.status(err)))
-  print_line(Result.why(methodStatus))
-  print_line(Result.why(methodValueStatus))
-  print_line(Result.why(methodStatus))
-  print_line(Result.why(methodValueStatus))
+  [Result<GfxError>] directStatus{GfxError.status(err)}
+  [string] directWhy{Result.why(directStatus)}
+  [string] methodWhy{Result.why(methodStatus)}
+  [string] methodValueWhy{Result.why(methodValueStatus)}
+  print_line(directWhy)
+  print_line(methodWhy)
+  print_line(methodValueWhy)
+  print_line(methodWhy)
+  print_line(methodValueWhy)
   return(0i32)
 }
 )";
@@ -209,9 +248,15 @@ main() {
   [GfxError] windowErr{windowCreateFailed()}
   [GfxError] deviceErr{deviceCreateFailed()}
   [GfxError] presentErr{framePresentFailed()}
-  print_line(Result.why(GfxError.status(windowErr)))
-  print_line(Result.why(GfxError.status(deviceErr)))
-  print_line(Result.why(GfxError.status(presentErr)))
+  [Result<GfxError>] windowStatus{GfxError.status(windowErr)}
+  [Result<GfxError>] deviceStatus{GfxError.status(deviceErr)}
+  [Result<GfxError>] presentStatus{GfxError.status(presentErr)}
+  [string] windowWhy{Result.why(windowStatus)}
+  [string] deviceWhy{Result.why(deviceStatus)}
+  [string] presentWhy{Result.why(presentStatus)}
+  print_line(windowWhy)
+  print_line(deviceWhy)
+  print_line(presentWhy)
   return(0i32)
 }
 )";
