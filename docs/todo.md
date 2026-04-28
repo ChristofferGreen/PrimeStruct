@@ -366,8 +366,8 @@ Task template:
     The return-fact stale diagnostic and return metadata diagnostic slices are
     complete. Continue with a different graph-backed consumer. The query
     result-metadata and type-metadata stale diagnostic slices are complete. The
-    collection specialization and direct-call metadata diagnostic slices are
-    complete.
+    collection specialization, direct-call, and method-call metadata
+    diagnostic slices are complete.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -480,6 +480,10 @@ Task template:
       now rejects missing or stale interned scope, call name, resolved target,
       and published lookup metadata before lowerer routing consumers can
       dispatch through inconsistent direct-call target facts.
+    - Completed slice: semantic-product method-call completeness validation
+      now rejects missing or stale interned scope, method name, receiver type,
+      resolved target, and published lookup metadata before lowerer routing
+      consumers can dispatch through inconsistent method-call target facts.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

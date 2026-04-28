@@ -1032,6 +1032,95 @@ TEST_CASE("method-call coverage rejects missing resolved path ids before lookup 
   CHECK(error == "missing semantic-product method-call resolved path id: /main -> count");
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product method-call metadata") {
+  primec::Program program;
+
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 4200;
+  primec::Expr receiverExpr;
+  receiverExpr.kind = primec::Expr::Kind::Name;
+  receiverExpr.name = "values";
+  primec::Expr methodCallExpr;
+  methodCallExpr.kind = primec::Expr::Kind::Call;
+  methodCallExpr.name = "count";
+  methodCallExpr.isMethodCall = true;
+  methodCallExpr.semanticNodeId = 4201;
+  methodCallExpr.args.push_back(receiverExpr);
+  mainDef.statements.push_back(methodCallExpr);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 4200);
+  semanticProgram.methodCallTargets.push_back(primec::SemanticProgramMethodCallTarget{
+      .scopePath = "/main",
+      .methodName = "count",
+      .receiverTypeText = "vector<i32>",
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 4201,
+      .provenanceHandle = 0,
+      .scopePathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .methodNameId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+      .receiverTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>"),
+      .resolvedPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                        "/std/collections/vector/count"),
+      .stdlibSurfaceId = std::nullopt,
+  });
+
+  auto resetMethodCallMetadata = [&]() {
+    auto &methodCallTarget = semanticProgram.methodCallTargets.back();
+    methodCallTarget.scopePathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+    methodCallTarget.methodNameId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "count");
+    methodCallTarget.receiverTypeTextId =
+        primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i32>");
+    methodCallTarget.resolvedPathId =
+        primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                      "/std/collections/vector/count");
+    semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.clear();
+  };
+
+  std::string error;
+
+  resetMethodCallMetadata();
+  semanticProgram.methodCallTargets.back().scopePathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "/other");
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product method-call scope metadata: /main -> count");
+
+  resetMethodCallMetadata();
+  semanticProgram.methodCallTargets.back().methodNameId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "other");
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product method-call name metadata: /main -> count");
+
+  resetMethodCallMetadata();
+  semanticProgram.methodCallTargets.back().receiverTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "vector<i64>");
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product method-call receiver metadata: /main -> count");
+
+  resetMethodCallMetadata();
+  semanticProgram.publishedRoutingLookups.methodCallTargetIdsByExpr.insert_or_assign(
+      4201, primec::semanticProgramInternCallTargetString(semanticProgram, "/stale"));
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductMethodCallCoverage(
+      program, &semanticProgram, error));
+  CHECK(error == "stale semantic-product method-call target metadata: /main -> count");
+}
+
 TEST_CASE("ir lowerer production entry rejects missing semantic-product method-call targets") {
   primec::Program program;
 

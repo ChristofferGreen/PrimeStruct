@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Reject stale method-call metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    method-call completeness validation reject missing or stale interned
+    scope, method name, receiver type, resolved target, and published lookup
+    metadata before lowerer routing consumers dispatch through inconsistent
+    method-call target facts.
+  - implementation_notes:
+    - Preserve existing missing method-call target, missing method-call
+      semantic-id, and missing resolved-path diagnostics.
+    - Apply the new scope/name/receiver consistency checks only when those
+      interned ids are present so string-only manual fixtures keep their
+      existing compatibility path.
+    - Keep broader control-flow, template inference, and stdlib collection
+      migration out of scope.
+  - acceptance:
+    - Missing method-call resolved target ids continue to fail before lowerer
+      routing can consume incomplete method-call target metadata.
+    - Stale method-call scope, method name, receiver type, and published target
+      lookup ids fail before lowerer routing can dispatch through inconsistent
+      method-call metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once method-call semantic-product completeness rejects
+    missing or contradictory routing metadata without changing syntax-only or
+    no-semantic-product behavior.
+  - finished_at: 2026-04-29
+  - evidence: Tightened method-call semantic-product completeness checks,
+    added lowerer handoff regressions for stale scope/name/receiver/published
+    target metadata, and documented the remaining TODO-4298 work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Reject stale direct-call metadata
   - owner: ai
   - created_at: 2026-04-28

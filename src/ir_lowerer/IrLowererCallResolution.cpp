@@ -903,12 +903,72 @@ bool validateSemanticProductMethodCallCoverage(const Program &program,
       if (const auto it = methodCallTargetsByExpr.find(expr.semanticNodeId);
           it != methodCallTargetsByExpr.end()) {
         const auto &entry = *it->second;
+        const std::string siteDescription = describeCallSite(scopePath, expr);
         const std::string_view resolvedPath =
             semanticProgramMethodCallTargetResolvedPath(*semanticProgram, entry);
         if (entry.resolvedPathId == InvalidSymbolId || resolvedPath.empty()) {
           error = "missing semantic-product method-call resolved path id: " +
-                  describeCallSite(scopePath, expr);
+                  siteDescription;
           return false;
+        }
+        if (entry.scopePathId != InvalidSymbolId) {
+          const std::string_view resolvedScope =
+              semanticProgramResolveCallTargetString(*semanticProgram, entry.scopePathId);
+          if (resolvedScope.empty()) {
+            error = "missing semantic-product method-call scope id: " +
+                    siteDescription;
+            return false;
+          }
+          if (resolvedScope != entry.scopePath) {
+            error = "stale semantic-product method-call scope metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
+        if (entry.methodNameId != InvalidSymbolId) {
+          const std::string_view resolvedMethodName =
+              semanticProgramResolveCallTargetString(*semanticProgram, entry.methodNameId);
+          if (resolvedMethodName.empty()) {
+            error = "missing semantic-product method-call name id: " +
+                    siteDescription;
+            return false;
+          }
+          if (resolvedMethodName != entry.methodName) {
+            error = "stale semantic-product method-call name metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
+        if (entry.receiverTypeTextId != InvalidSymbolId) {
+          const std::string_view resolvedReceiver =
+              semanticProgramResolveCallTargetString(*semanticProgram, entry.receiverTypeTextId);
+          if (resolvedReceiver.empty()) {
+            error = "missing semantic-product method-call receiver type id: " +
+                    siteDescription;
+            return false;
+          }
+          if (resolvedReceiver != entry.receiverTypeText) {
+            error = "stale semantic-product method-call receiver metadata: " +
+                    siteDescription;
+            return false;
+          }
+        }
+        if (const auto publishedTargetId =
+                semanticProgramLookupPublishedMethodCallTargetId(*semanticProgram,
+                                                                 expr.semanticNodeId);
+            publishedTargetId.has_value()) {
+          const std::string_view publishedTarget =
+              semanticProgramResolveCallTargetString(*semanticProgram, *publishedTargetId);
+          if (publishedTarget.empty()) {
+            error = "missing semantic-product method-call resolved path id: " +
+                    siteDescription;
+            return false;
+          }
+          if (publishedTarget != resolvedPath) {
+            error = "stale semantic-product method-call target metadata: " +
+                    siteDescription;
+            return false;
+          }
         }
       }
       if (findSemanticProductMethodCallTarget(semanticProgram, expr).empty()) {
