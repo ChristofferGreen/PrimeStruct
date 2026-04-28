@@ -35,6 +35,8 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
       repoRoot / "src" / "ir_lowerer" / "IrLowererSetupTypeMethodTargetHelpers.cpp";
   const std::filesystem::path countAccessClassifiersPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessClassifiers.cpp";
+  const std::filesystem::path countAccessHelpersPath =
+      repoRoot / "src" / "ir_lowerer" / "IrLowererCountAccessHelpers.cpp";
   const std::filesystem::path nativeTailDispatchPath =
       repoRoot / "src" / "ir_lowerer" / "IrLowererNativeTailDispatch.cpp";
   const std::filesystem::path operatorCollectionMutationHelpersPath =
@@ -53,6 +55,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   REQUIRE(std::filesystem::exists(uninitializedStructInferencePath));
   REQUIRE(std::filesystem::exists(setupTypeMethodTargetHelpersPath));
   REQUIRE(std::filesystem::exists(countAccessClassifiersPath));
+  REQUIRE(std::filesystem::exists(countAccessHelpersPath));
   REQUIRE(std::filesystem::exists(nativeTailDispatchPath));
   REQUIRE(std::filesystem::exists(operatorCollectionMutationHelpersPath));
   REQUIRE(std::filesystem::exists(operatorMemoryPointerHelpersPath));
@@ -69,6 +72,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   const std::string setupTypeMethodTargetHelpersSource =
       readText(setupTypeMethodTargetHelpersPath);
   const std::string countAccessClassifiersSource = readText(countAccessClassifiersPath);
+  const std::string countAccessHelpersSource = readText(countAccessHelpersPath);
   const std::string nativeTailDispatchSource = readText(nativeTailDispatchPath);
   const std::string operatorCollectionMutationHelpersSource =
       readText(operatorCollectionMutationHelpersPath);
@@ -530,6 +534,24 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
   CHECK(nativeTailDispatchSource.find("NativeCallTailDispatchResult tryEmitNativeCallTailDispatchWithLocals(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("const auto countAccessResult = tryEmitCountAccessCall(") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("bool isExplicitPublishedVectorCountCall(const Expr &expr)") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("isExplicitPublishedVectorCountCall(expr) &&") !=
+        std::string::npos);
+  CHECK(countAccessHelpersSource.find("isVectorCountTarget(expr.args.front(), localsIn)") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("bool isVectorBuiltinName(const Expr &expr, const char *name)") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("isExplicitRemovedCountLikeAliasCall(expr, name)") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("resolveVectorHelperAliasName(expr, aliasName)") !=
+        std::string::npos);
+  CHECK(countAccessClassifiersSource.find("aliasName == name") !=
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("isExplicitPublishedVectorCountCall(expr)") ==
+        std::string::npos);
+  CHECK(nativeTailDispatchSource.find("resolvePublishedNativeTailHelperName(") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("const auto unsupportedCallResult = emitUnsupportedNativeCallDiagnostic(") !=
         std::string::npos);

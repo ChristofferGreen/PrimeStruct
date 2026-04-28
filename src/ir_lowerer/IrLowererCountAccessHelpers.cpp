@@ -705,6 +705,11 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     error = "count requires array, vector, map, or string target";
     return CountAccessCallEmitResult::Error;
   }
+  if (isExplicitPublishedVectorCountCall(expr) &&
+      expr.args.size() == 1 &&
+      isVectorCountTarget(expr.args.front(), localsIn)) {
+    return CountAccessCallEmitResult::NotHandled;
+  }
   const bool isFieldAccessTarget =
       expr.kind == Expr::Kind::Call && expr.args.size() == 1 &&
       expr.args.front().kind == Expr::Kind::Call && expr.args.front().isFieldAccess;
