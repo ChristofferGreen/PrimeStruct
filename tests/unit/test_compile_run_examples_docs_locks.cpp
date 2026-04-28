@@ -2238,6 +2238,10 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(prelude.find("return \" << FileReadEofCode << \"u;") != std::string::npos);
   CHECK(prelude.find("std::string_view(\\\"EOF\\\")") != std::string::npos);
   CHECK(prelude.find("struct ps_result_status") != std::string::npos);
+  CHECK(prelude.find("static constexpr uint32_t ps_result_ok_tag = 0u;") !=
+        std::string::npos);
+  CHECK(prelude.find("static constexpr uint32_t ps_result_error_tag = 1u;") !=
+        std::string::npos);
   CHECK(prelude.find("static inline ps_result_status ps_result_status_ok()") !=
         std::string::npos);
   CHECK(prelude.find("static inline ps_result_status ps_result_status_error(uint32_t err)") !=
@@ -2254,7 +2258,13 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(prelude.find("struct ps_result_value") != std::string::npos);
   CHECK(prelude.find("uint32_t tag = 0;") != std::string::npos);
   CHECK(prelude.find("uint32_t error = 0;") != std::string::npos);
-  CHECK(prelude.find("uint32_t payload = 0;") != std::string::npos);
+  CHECK(prelude.find("uint32_t ok = 0;") != std::string::npos);
+  CHECK(prelude.find("uint32_t payload = 0;") == std::string::npos);
+  CHECK(prelude.find("result.tag == ps_result_error_tag") !=
+        std::string::npos);
+  CHECK(prelude.find("result.tag != 0u") == std::string::npos);
+  CHECK(prelude.find("return result.ok;") != std::string::npos);
+  CHECK(prelude.find("return result.payload;") == std::string::npos);
   CHECK(prelude.find("operator uint64_t()") == std::string::npos);
   CHECK(prelude.find("ps_legacy_result_value(uint64_t raw)") == std::string::npos);
   CHECK(prelude.find("using ps_legacy_result_value = uint64_t;") == std::string::npos);

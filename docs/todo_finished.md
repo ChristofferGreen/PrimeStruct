@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4326: Name source Result variant storage
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that moves generated
+    Result bridge storage from magic tag literals and a generic success field
+    toward explicit ok/error variant names.
+  - implementation_notes:
+    - Add generated `ps_result_ok_tag` and `ps_result_error_tag` constants for
+      status-only and value-carrying source C++ Result bridges.
+    - Rename the value-carrying bridge success storage field from `payload` to
+      `ok` while keeping the public helper accessor name
+      `ps_result_value_ok_payload(...)`.
+    - Leave broader source C++ bridge retargeting to the next TODO-4266
+      slice.
+  - acceptance:
+    - Generated status-only and value-carrying bridge construction uses named
+      ok/error tag constants instead of raw `0u`/`1u` tag literals.
+    - Generated bridge error checks compare against `ps_result_error_tag`
+      instead of treating any nonzero tag as error.
+    - Value-carrying source C++ Result storage exposes an `ok` success field
+      and no longer emits a generic `payload` field.
+    - Source-lock coverage guards the named tags, `ok` field, and retired
+      magic-tag/generic-field spellings.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once generated source C++ Result bridge storage names its
+    ok/error tags and no generated bridge path references a generic success
+    `payload` field.
+  - finished_at: 2026-04-28
+  - evidence: Added generated ok/error tag constants, retargeted status and
+    value bridge construction plus error checks to those constants, renamed
+    the value-result success field to `ok`, updated source-lock coverage, and
+    documented the remaining broader bridge retargeting work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4325: Qualify source Result value accessors
   - owner: ai
   - created_at: 2026-04-28

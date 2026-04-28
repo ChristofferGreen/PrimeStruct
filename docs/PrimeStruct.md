@@ -2305,11 +2305,13 @@ for(
     operands for `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its source C++ Result storage-width decisions
     and construction/accessor expression emission are quarantined behind named emitter helpers. Value-carrying Result
     storage emits the tagged `ps_result_value` bridge type instead of raw `uint64_t` return/binding types or legacy
-    `ps_legacy_result_*` helper names. That generated type has separate tag, error-payload, and success-payload fields
-    plus explicit ok/error construction helpers and value-qualified accessor helper names, and it does not retain raw
+    `ps_legacy_result_*` helper names. That generated type has separate tag, error-payload, and `ok` success fields
+    plus explicit ok/error construction helpers and value-qualified accessor helper names. The generated bridge uses
+    named ok/error tag constants, and it does not retain raw
     packed-integer construction, conversion, generic `ps_result_*` value accessors, or `ps_result_pack(...)`
     compatibility. Status-only source C++ Result storage emits the tagged `ps_result_status` bridge type instead of
-    raw `uint32_t` return/binding types, with low-level file helper status codes wrapped at the source Result boundary.
+    raw `uint32_t` return/binding types, with the same named ok/error tag constants and low-level file helper status
+    codes wrapped at the source Result boundary.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
@@ -2321,9 +2323,10 @@ for(
     construction/accessor expression emission are quarantined behind named emitter helpers. Value-carrying Result
     storage is named through the tagged `ps_result_value` bridge type, uses tag-based error checks, and no longer
     accepts or converts back to a raw packed integer, generic value accessor helper, or `ps_result_pack(...)` helper.
-    Status-only source C++ Result storage is named through the tagged `ps_result_status` bridge type, uses tag-based
-    error checks, and wraps raw low-level file helper status codes at the source Result boundary. The remaining
-    migration work can focus on
+    Source C++ Result bridge construction and checks now share named ok/error tag constants, and value-carrying
+    storage uses an `ok` field for the success payload. Status-only source C++ Result storage is named through the
+    tagged `ps_result_status` bridge type, uses tag-based error checks, and wraps raw low-level file helper status
+    codes at the source Result boundary. The remaining migration work can focus on
     retargeting broader bridge construction to the stdlib Result sum contract.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
