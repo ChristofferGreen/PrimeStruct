@@ -2280,8 +2280,9 @@ for(
     `/std/result/Result<T, E>` spelling for value-carrying results. IR-backed `try(...)` now consumes local imported
     stdlib value-result sums for `return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag,
     and Result-returning functions can propagate local imported stdlib value-result sum errors by copying the
-    `error` payload into the declared return `Result` sum after running the active `on_error` handler. Typed imported
-    value-carrying sum
+    `error` payload into the declared return `Result` sum after running the active `on_error` handler. Direct calls
+    that return imported stdlib value-result sums can also be consumed through postfix `?` on those same VM/native
+    sum-backed paths. Typed imported value-carrying sum
     locals/returns may use legacy `Result.ok(value)` as an `ok`-variant compatibility initializer on IR-backed
     VM/native paths, and typed imported value-carrying sum locals/returns may use legacy `Result.map(result, fn)` or
     `Result.and_then(result, fn)` when the source is a local imported stdlib Result sum; `Result.map2(left, right, fn)`
@@ -2295,8 +2296,8 @@ for(
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
     value-result type spellings, and the IR-backed VM/native paths already branch on local stdlib Result sums for
-    status-code returns and Result-return error propagation, so the remaining migration work can focus on postfix `?`,
-    broader operand/result shapes, status-only results, and legacy bridge cleanup.
+    status-code returns, Result-return error propagation, and direct-call postfix `?` operands, so the remaining
+    migration work can focus on broader operand/result shapes, status-only results, and legacy bridge cleanup.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).

@@ -558,34 +558,108 @@
 
           auto tryEmitStdlibResultSumTry = [&](bool &emittedOut) -> bool {
             emittedOut = false;
-            if (!resultInfo.hasValue || expr.args.front().kind != Expr::Kind::Name) {
+            if (!resultInfo.hasValue) {
               return true;
             }
-            auto operandIt = localsIn.find(expr.args.front().name);
-            if (operandIt == localsIn.end()) {
-              return true;
-            }
-            const Definition *sumDef = resolveSumDefinitionForLocalInfo(operandIt->second);
-            if (sumDef == nullptr || !isStdlibResultSumDefinition(*sumDef)) {
-              return true;
-            }
-            const SumVariant *okVariant = findSumVariantByName(*sumDef, "ok");
-            const SumVariant *errorVariant = findSumVariantByName(*sumDef, "error");
-            if (okVariant == nullptr || errorVariant == nullptr ||
-                !okVariant->hasPayload || !errorVariant->hasPayload) {
-              error = "native backend requires stdlib Result ok/error payload variants";
-              return false;
-            }
+            const Definition *sumDef = nullptr;
+            const SumVariant *okVariant = nullptr;
+            const SumVariant *errorVariant = nullptr;
             LoweredSumPayloadStorageInfo okPayload;
             LoweredSumPayloadStorageInfo errorPayload;
-            if (!resolveSumPayloadStorageInfo(*sumDef, *okVariant, okPayload)) {
-              error = unsupportedSumPayloadError(*sumDef, *okVariant);
-              return false;
-            }
-            if (!resolveSumPayloadStorageInfo(*sumDef, *errorVariant, errorPayload)) {
-              error = unsupportedSumPayloadError(*sumDef, *errorVariant);
-              return false;
-            }
+
+            auto resultValueMatchesPayload =
+                [&](const LoweredSumPayloadStorageInfo &payload) -> bool {
+              if (resultInfo.valueCollectionKind != LocalInfo::Kind::Value ||
+                  resultInfo.valueMapKeyKind != LocalInfo::ValueKind::Unknown ||
+                  resultInfo.valueIsFileHandle) {
+                return false;
+              }
+              if (payload.isAggregate) {
+                return !resultInfo.valueStructType.empty() &&
+                       payload.structPath == resultInfo.valueStructType;
+              }
+              return resultInfo.valueStructType.empty() &&
+                     payload.valueKind == resultInfo.valueKind;
+            };
+
+            auto resultErrorMatchesPayload =
+                [&](const LoweredSumPayloadStorageInfo &payload) -> bool {
+              const LocalInfo::ValueKind errorKind = valueKindFromTypeName(resultInfo.errorType);
+              if (errorKind != LocalInfo::ValueKind::Unknown) {
+                return !payload.isAggregate && payload.valueKind == errorKind;
+              }
+              std::string errorStructPath;
+              if (!resolveStructTypeName(resultInfo.errorType, expr.namespacePrefix, errorStructPath)) {
+                return false;
+              }
+              return payload.isAggregate && payload.structPath == errorStructPath;
+            };
+
+            auto stdlibResultSumMatchesResultInfo = [&](const Definition &candidateDef) -> bool {
+              if (!isStdlibResultSumDefinition(candidateDef)) {
+                return false;
+              }
+              const SumVariant *candidateOk = findSumVariantByName(candidateDef, "ok");
+              const SumVariant *candidateError = findSumVariantByName(candidateDef, "error");
+              if (candidateOk == nullptr || candidateError == nullptr ||
+                  !candidateOk->hasPayload || !candidateError->hasPayload) {
+                return false;
+              }
+              LoweredSumPayloadStorageInfo candidateOkPayload;
+              LoweredSumPayloadStorageInfo candidateErrorPayload;
+              if (!resolveSumPayloadStorageInfo(candidateDef, *candidateOk, candidateOkPayload) ||
+                  !resolveSumPayloadStorageInfo(candidateDef, *candidateError, candidateErrorPayload)) {
+                return false;
+              }
+              return resultValueMatchesPayload(candidateOkPayload) &&
+                     resultErrorMatchesPayload(candidateErrorPayload);
+            };
+
+            auto resolveStdlibResultSumDefinitionForOperand =
+                [&](const Expr &operandExpr) -> const Definition * {
+              if (operandExpr.kind == Expr::Kind::Name) {
+                auto operandIt = localsIn.find(operandExpr.name);
+                if (operandIt != localsIn.end()) {
+                  const Definition *localSumDef = resolveSumDefinitionForLocalInfo(operandIt->second);
+                  if (localSumDef != nullptr && isStdlibResultSumDefinition(*localSumDef)) {
+                    return localSumDef;
+                  }
+                }
+                return nullptr;
+              }
+
+              std::string operandStructPath = inferStructExprPath(operandExpr, localsIn);
+              if (!operandStructPath.empty()) {
+                const Definition *operandSumDef =
+                    resolveSumDefinitionForTypeText(operandStructPath, operandExpr.namespacePrefix);
+                if (operandSumDef != nullptr && stdlibResultSumMatchesResultInfo(*operandSumDef)) {
+                  return operandSumDef;
+                }
+              }
+              if (operandExpr.kind != Expr::Kind::Call) {
+                return nullptr;
+              }
+
+              std::vector<const Definition *> candidates;
+              for (const auto &entry : defMap) {
+                const Definition *candidateDef = entry.second;
+                if (candidateDef == nullptr || !stdlibResultSumMatchesResultInfo(*candidateDef)) {
+                  continue;
+                }
+                candidates.push_back(candidateDef);
+              }
+              std::sort(candidates.begin(),
+                        candidates.end(),
+                        [](const Definition *left, const Definition *right) {
+                          return left->fullPath < right->fullPath;
+                        });
+              candidates.erase(std::unique(candidates.begin(), candidates.end()), candidates.end());
+              if (candidates.size() > 1) {
+                error = "native backend try found ambiguous stdlib Result sum operand";
+                return nullptr;
+              }
+              return candidates.empty() ? nullptr : candidates.front();
+            };
 
             auto resolveCurrentStdlibResultReturnSumDefinition = [&]() -> const Definition * {
               if (!currentReturnResult.has_value()) {
@@ -610,6 +684,26 @@
               }
               return nullptr;
             };
+
+            sumDef = resolveStdlibResultSumDefinitionForOperand(expr.args.front());
+            if (sumDef == nullptr) {
+              return error.empty();
+            }
+            okVariant = findSumVariantByName(*sumDef, "ok");
+            errorVariant = findSumVariantByName(*sumDef, "error");
+            if (okVariant == nullptr || errorVariant == nullptr ||
+                !okVariant->hasPayload || !errorVariant->hasPayload) {
+              error = "native backend requires stdlib Result ok/error payload variants";
+              return false;
+            }
+            if (!resolveSumPayloadStorageInfo(*sumDef, *okVariant, okPayload)) {
+              error = unsupportedSumPayloadError(*sumDef, *okVariant);
+              return false;
+            }
+            if (!resolveSumPayloadStorageInfo(*sumDef, *errorVariant, errorPayload)) {
+              error = unsupportedSumPayloadError(*sumDef, *errorVariant);
+              return false;
+            }
 
             auto emitLoadIntBackedErrorPayload = [&](int32_t sumPtrLocal) -> bool {
               if (!errorPayload.isAggregate) {

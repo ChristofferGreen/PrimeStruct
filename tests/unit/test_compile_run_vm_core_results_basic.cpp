@@ -834,6 +834,83 @@ main() {
   CHECK(readFile(outPath) == "6\n");
 }
 
+TEST_CASE("vm supports postfix question on direct imported stdlib Result sum ok") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<Result<i32, MyError>>]
+make_ok() {
+  return(Result.ok(9i32))
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<int> on_error<MyError, /swallow>]
+main() {
+  [i32] value{make_ok()?}
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_postfix_direct_ok.prime", source);
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runCmd) == 9);
+}
+
+TEST_CASE("vm supports postfix question on direct imported stdlib Result sum error") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<Result<i32, MyError>>]
+make_error() {
+  return(error<i32, MyError>(MyError{}))
+}
+
+[return<void> effects(io_out)]
+swallow([MyError] err) {
+  print_line(err.code)
+}
+
+[return<Result<i32, MyError>> effects(io_out) on_error<MyError, /swallow>]
+forward_error() {
+  [i32] value{make_error()?}
+  return(Result.ok(value))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, MyError>] status{forward_error()}
+  [i32] observed{pick(status) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  return(observed)
+}
+)";
+  const std::string srcPath = writeTemp("vm_stdlib_result_sum_postfix_direct_error.prime", source);
+  const std::string outPath =
+      (std::filesystem::temp_directory_path() / "primec_vm_stdlib_result_sum_postfix_direct_error_out.txt")
+          .string();
+  const std::string runCmd = "./primec --emit=vm " + srcPath + " --entry /main > " + outPath;
+  CHECK(runCommand(runCmd) == 6);
+  CHECK(readFile(outPath) == "6\n");
+}
+
 TEST_CASE("vm propagates imported stdlib Result sum try ok through Result return") {
   const std::string source = R"(
 import /std/result/*

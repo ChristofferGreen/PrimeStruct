@@ -1057,6 +1057,88 @@ main() {
   CHECK(readFile(outPath) == "6\n");
 }
 
+TEST_CASE("native backend supports postfix question on direct imported stdlib Result sum ok") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<Result<i32, MyError>>]
+make_ok() {
+  return(Result.ok(9i32))
+}
+
+[return<void>]
+swallow([MyError] err) {
+}
+
+[return<int> on_error<MyError, /swallow>]
+main() {
+  [i32] value{make_ok()?}
+  return(value)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_postfix_direct_ok.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_result_sum_postfix_direct_ok_exe").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 9);
+}
+
+TEST_CASE("native backend supports postfix question on direct imported stdlib Result sum error") {
+  const std::string source = R"(
+import /std/result/*
+
+[struct]
+MyError() {
+  [i32] code{6i32}
+}
+
+[return<Result<i32, MyError>>]
+make_error() {
+  return(error<i32, MyError>(MyError{}))
+}
+
+[return<void> effects(io_out)]
+swallow([MyError] err) {
+  print_line(err.code)
+}
+
+[return<Result<i32, MyError>> effects(io_out) on_error<MyError, /swallow>]
+forward_error() {
+  [i32] value{make_error()?}
+  return(Result.ok(value))
+}
+
+[return<int> effects(io_out)]
+main() {
+  [Result<i32, MyError>] status{forward_error()}
+  [i32] observed{pick(status) {
+    ok(value) {
+      value
+    }
+    error(err) {
+      err.code
+    }
+  }}
+  return(observed)
+}
+)";
+  const std::string srcPath = writeTemp("compile_native_stdlib_result_sum_postfix_direct_error.prime", source);
+  const std::string exePath =
+      (testScratchPath("") / "primec_native_stdlib_result_sum_postfix_direct_error_exe").string();
+  const std::string outPath =
+      (testScratchPath("") / "primec_native_stdlib_result_sum_postfix_direct_error_out.txt").string();
+  const std::string compileCmd = "./primec --emit=native " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath + " > " + outPath) == 6);
+  CHECK(readFile(outPath) == "6\n");
+}
+
 TEST_CASE("native backend propagates imported stdlib Result sum try ok through Result return") {
   const std::string source = R"(
 import /std/result/*

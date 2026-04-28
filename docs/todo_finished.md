@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4303: Support postfix question on direct stdlib Result sum calls
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 runtime slice by making postfix `?`
+    on direct calls that return imported stdlib `Result<T, E>` sums use the
+    same IR-backed sum propagation path as local `try(...)` operands.
+  - implementation_notes:
+    - Parser support already lowers postfix `?` to `try(...)`; this slice
+      focuses on the lowerer operand-shape gap.
+    - Keep this slice limited to direct VM/native operands whose semantic
+      `try(...)` metadata resolves a value-carrying imported stdlib Result sum.
+    - Preserve status-only `Result<E>` and broader borrowed/pointer operand
+      shapes for later TODO-4266 slices.
+  - acceptance:
+    - `makeResult()?` unwraps the `ok` payload when the direct call returns an
+      imported stdlib `Result<T, E>` sum.
+    - The direct-call error branch still invokes the active `on_error` handler
+      and propagates either a status code or a declared return `Result` sum.
+    - VM and native compile-run fixtures cover ok and error branches using
+      postfix `?` on direct imported stdlib Result sum calls.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once direct imported stdlib Result sum calls work through
+    postfix `?` without widening into status-only results or borrowed/pointer
+    operand shapes.
+  - finished_at: 2026-04-28
+  - evidence: Extended IR-backed stdlib Result sum `try(...)` lowering to
+    resolve non-local operands from semantic result metadata, added VM and
+    native compile-run fixtures for direct-call postfix `?` ok/error branches,
+    and documented the remaining TODO-4266 migration boundary. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4302: Propagate stdlib Result sums from Result-returning try
   - owner: ai
   - created_at: 2026-04-28
