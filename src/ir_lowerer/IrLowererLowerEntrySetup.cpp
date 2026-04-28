@@ -112,6 +112,13 @@ bool validateOnErrorFactFamily(const SemanticProductCompletenessContext &context
               std::string(callablePath);
       return false;
     }
+    if (std::string(handlerPath) != summary->onErrorHandlerPath ||
+        onErrorFact->errorType != summary->onErrorErrorType ||
+        onErrorFact->boundArgCount != summary->onErrorBoundArgCount) {
+      error = "stale semantic-product on_error fact: " +
+              std::string(callablePath);
+      return false;
+    }
     if (onErrorFact->boundArgTexts.size() != onErrorFact->boundArgCount) {
       error = "semantic-product on_error bound arg mismatch on " +
               std::string(callablePath);

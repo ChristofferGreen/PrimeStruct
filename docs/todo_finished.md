@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Reject stale on_error facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    `on_error` completeness validation reject on-error facts that contradict
+    the published callable summary before lowerer setup can install the stale
+    handler metadata.
+  - implementation_notes:
+    - Apply the stale check only when the callable summary requires an
+      on-error fact and the fact is present by semantic id.
+    - Compare the graph-owned handler path, error type, and bound-arg count
+      against the callable summary.
+    - Preserve missing-fact, missing-handler-path, and bound-arg-text mismatch
+      diagnostics.
+  - acceptance:
+    - Missing on-error facts still fail with the existing missing on-error
+      diagnostic.
+    - Missing handler path ids still fail with the existing handler-path
+      diagnostic.
+    - Stale handler path, error type, or bound-arg count metadata fails before
+      lowerer setup can use the stale on-error fact.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once on-error semantic-product completeness rejects stale
+    fact metadata without changing no-semantic-product behavior.
+  - finished_at: 2026-04-28
+  - evidence: Tightened `validateOnErrorFactFamily` to compare on-error facts
+    with published callable summaries, added a lowerer regression that mutates
+    the fact error type away from the summary, and documented the remaining
+    TODO-4298 work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Reject stale local-auto binding types
   - owner: ai
   - created_at: 2026-04-28

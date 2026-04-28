@@ -246,6 +246,10 @@ Planned non-template inference migration contract:
   validation now checks the local-auto binding type against the published binding fact before
   lowering can synthesize a binding transform from the local-auto entry. Mismatches fail closed with
   a deterministic stale local-auto diagnostic.
+- Completed `on_error` stale-fact diagnostic slice: semantic-product on-error completeness
+  validation now checks the on-error fact against the published callable summary before lowerer
+  setup can install the handler. Handler path, error-type, and bound-arg-count mismatches fail
+  closed with a deterministic stale on-error diagnostic.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
