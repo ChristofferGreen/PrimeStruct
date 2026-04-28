@@ -258,6 +258,10 @@ Planned non-template inference migration contract:
   checks interned `try(...)` context return-kind metadata against the published callable summary
   before lowerer handoff can consume inconsistent try metadata. Contradictory return-context facts
   fail closed with a deterministic try diagnostic.
+- Completed return-fact stale diagnostic slice: semantic-product return completeness validation now
+  checks interned return-kind facts against the published callable summary before lowerer handoff
+  can consume inconsistent control-flow metadata. Contradictory return-kind facts fail closed with
+  a deterministic return diagnostic.
 - Completed `on_error` stale-fact diagnostic slice: semantic-product on-error completeness
   validation now checks the on-error fact against the published callable summary before lowerer
   setup can install the handler. Handler path, error-type, and bound-arg-count mismatches fail

@@ -159,6 +159,24 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
               std::string(definitionPath);
       return false;
     }
+    if (returnFact->returnKindId != InvalidSymbolId) {
+      const auto *summary =
+          semanticProgramLookupPublishedCallableSummary(*semanticProgram, definitionPath);
+      if (summary != nullptr) {
+        const std::string_view returnKind =
+            semanticProgramResolveCallTargetString(*semanticProgram, returnFact->returnKindId);
+        const std::string_view expectedReturnKind =
+            summary->returnKindId != InvalidSymbolId
+                ? semanticProgramResolveCallTargetString(*semanticProgram, summary->returnKindId)
+                : std::string_view(summary->returnKind);
+        if (!returnKind.empty() && !expectedReturnKind.empty() &&
+            returnKind != expectedReturnKind) {
+          error = "stale semantic-product return fact: " +
+                  std::string(definitionPath);
+          return false;
+        }
+      }
+    }
   }
 
   const auto queryFacts = semanticProgramQueryFactView(*semanticProgram);
