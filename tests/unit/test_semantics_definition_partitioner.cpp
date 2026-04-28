@@ -72,7 +72,9 @@ std::string readRepoText(std::filesystem::path relativePath) {
     buffer << file.rdbuf();
     return buffer.str();
   }
-  ADD_FAIL("failed to read repo file: " << relativePath.string());
+  const std::string message =
+      "failed to read repo file: " + relativePath.string();
+  FAIL(message);
   return {};
 }
 

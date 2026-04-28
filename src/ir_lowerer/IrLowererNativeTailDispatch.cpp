@@ -1,10 +1,13 @@
 #include "IrLowererCallHelpers.h"
 
+#include "IrLowererCountAccessClassifiers.h"
 #include "IrLowererCountAccessHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererSetupTypeCollectionHelpers.h"
 
 namespace primec::ir_lowerer {
+using count_access_detail::isVectorBuiltinName;
+using count_access_detail::isVectorCountTarget;
 
 namespace {
 
@@ -46,6 +49,32 @@ bool isExplicitDirectMapCountContainsTryAtCall(const SemanticProgram *semanticPr
              StdlibSurfaceId::CollectionsMapHelpers,
              helperName) &&
          (helperName == "count" || helperName == "contains" || helperName == "tryAt");
+}
+
+bool isExplicitDirectVectorCountCall(const SemanticProgram *semanticProgram,
+                                     const Expr &expr) {
+  if (expr.isMethodCall || expr.kind != Expr::Kind::Call) {
+    return false;
+  }
+  std::string helperName;
+  if (!resolvePublishedNativeTailHelperName(
+          semanticProgram,
+          expr,
+          StdlibSurfaceId::CollectionsVectorHelpers,
+          helperName) ||
+      helperName != "count") {
+    return false;
+  }
+  return true;
+}
+
+bool isNamedArgumentVectorTemporary(const Expr &expr) {
+  if (expr.kind != Expr::Kind::Call || !hasNamedArguments(expr.argNames)) {
+    return false;
+  }
+  std::string collectionName;
+  return getBuiltinCollectionName(expr, collectionName) &&
+         collectionName == "vector";
 }
 
 bool isExplicitDirectSoaAccessCall(const Expr &expr) {
@@ -192,6 +221,14 @@ NativeCallTailDispatchResult tryEmitNativeCallTailDispatch(
   if (tryGetMathBuiltinName(expr, mathName) && !isSupportedMathBuiltinName(mathName)) {
     error = "native backend does not support math builtin: " + mathName;
     return NativeCallTailDispatchResult::Error;
+  }
+  if ((isExplicitDirectVectorCountCall(semanticProgram, expr) ||
+       (!expr.isMethodCall && isVectorBuiltinName(expr, "count"))) &&
+      expr.args.size() == 1 &&
+      !isNamedArgumentVectorTemporary(expr.args.front())) {
+    if (isVectorCountTarget(expr.args.front(), localsIn)) {
+      return NativeCallTailDispatchResult::NotHandled;
+    }
   }
   const auto countAccessResult = tryEmitCountAccessCall(
       expr,

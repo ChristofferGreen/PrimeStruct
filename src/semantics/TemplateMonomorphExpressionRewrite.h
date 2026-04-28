@@ -128,6 +128,10 @@ bool rewriteExpr(Expr &expr,
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos") ||
            isLegacyOrCanonicalSoaHelperPath(canonicalSoaToAosPath, "to_aos_ref");
   };
+  auto isTemplatedAutoCompatVectorHelperPath = [](std::string_view path) {
+    return path == "/std/collections/vectorAt" ||
+           path == "/std/collections/vectorAtUnsafe";
+  };
   auto isSyntheticSamePathSoaHelperTemplateCarryPath = [&](const std::string &path) {
     auto isSyntheticSamePathSoaCarryNonRefHelperPath = [](const std::string &candidate) {
       if (isLegacyOrCanonicalSoaHelperPath(candidate, "count") ||
@@ -859,18 +863,18 @@ bool rewriteExpr(Expr &expr,
         return preferred;
       }
     }
-    if (!resolvesVectorFamilyPath &&
-        (receiverFamily == "vector" || receiverFamily == "array" ||
-         (helperName == "count" && receiverFamily == "string"))) {
-      const std::string preferred = "/std/collections/vector/" + helperName;
+    if (!resolvesVectorFamilyPath && receiverFamily == "map" &&
+        (helperName == "count" || helperName == "count_ref")) {
+      const std::string preferred = "/std/collections/map/" + helperName;
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
       }
     }
-    if (!resolvesVectorFamilyPath && receiverFamily == "map" &&
-        (helperName == "count" || helperName == "count_ref")) {
-      const std::string preferred = "/std/collections/map/" + helperName;
+    if (!resolvesVectorFamilyPath &&
+        (receiverFamily == "vector" || receiverFamily == "array" ||
+         (helperName == "count" && receiverFamily == "string"))) {
+      const std::string preferred = "/std/collections/vector/" + helperName;
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {
         return preferred;
@@ -884,6 +888,9 @@ bool rewriteExpr(Expr &expr,
     }
     if (path == "/std/collections/experimental_map/mapNew" &&
         ctx.templateDefs.count(path) > 0) {
+      return true;
+    }
+    if (isTemplatedAutoCompatVectorHelperPath(path)) {
       return true;
     }
     if (!isCanonicalStdlibCollectionHelperPath(path)) {

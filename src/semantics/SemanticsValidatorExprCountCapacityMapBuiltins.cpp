@@ -29,6 +29,18 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     return failExprDiagnostic(expr, std::move(message));
   };
 
+  if (!expr.isMethodCall && expr.name == "count" && expr.namespacePrefix.empty() &&
+      expr.args.size() == 1 && context.resolveMapTarget(expr.args.front())) {
+    handledOut = true;
+    if (!expr.templateArgs.empty()) {
+      return failCountCapacityMapBuiltin("count does not accept template arguments");
+    }
+    if (expr.hasBodyArguments || !expr.bodyArguments.empty()) {
+      return failCountCapacityMapBuiltin("count does not accept block arguments");
+    }
+    return validateExpr(params, locals, expr.args.front());
+  }
+
   const bool isDirectExperimentalVectorCountCall =
       !expr.isMethodCall && !resolvedMethod &&
       resolved.rfind("/std/collections/experimental_vector/vectorCount", 0) == 0;
@@ -218,6 +230,11 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
     }
   }
   auto hasDeclaredCallableArity = [&](const std::string &path) {
+    if ((path == "/std/collections/map/count" ||
+         path == "/std/collections/map/count_ref") &&
+        expr.args.size() == 1) {
+      return true;
+    }
     std::string canonicalPath = path;
     const size_t generatedSuffix = canonicalPath.find("__");
     if (generatedSuffix != std::string::npos) {
@@ -234,6 +251,10 @@ bool SemanticsValidator::validateExprCountCapacityMapBuiltins(
       auto paramsIt = paramsByDef_.find(def.fullPath);
       if (paramsIt != paramsByDef_.end() &&
           paramsIt->second.size() == expr.args.size()) {
+        return true;
+      }
+      if (paramsIt == paramsByDef_.end() &&
+          def.parameters.size() == expr.args.size()) {
         return true;
       }
     }

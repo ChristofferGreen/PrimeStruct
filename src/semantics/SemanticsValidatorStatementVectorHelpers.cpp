@@ -438,6 +438,44 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
     }
     return "/std/collections/vector/" + std::string(helperName);
   }();
+  auto explicitRootVectorMutatorCallPath = [&]() -> std::string {
+    if (stmt.isMethodCall) {
+      return "";
+    }
+    if (normalizedStatementNamespacePrefix == "vector" &&
+        isVectorMutatorName(normalizedStatementName)) {
+      return "/vector/" + normalizedStatementName;
+    }
+    constexpr std::string_view kRootPrefix = "vector/";
+    if (normalizedStatementName.rfind(kRootPrefix, 0) != 0) {
+      return "";
+    }
+    const std::string_view helperName =
+        std::string_view(normalizedStatementName).substr(kRootPrefix.size());
+    if (!isVectorMutatorName(helperName)) {
+      return "";
+    }
+    return "/vector/" + std::string(helperName);
+  }();
+  auto explicitRootVectorMutatorMethodPath = [&]() -> std::string {
+    if (!stmt.isMethodCall) {
+      return "";
+    }
+    if (normalizedStatementNamespacePrefix == "vector" &&
+        isVectorMutatorName(normalizedStatementName)) {
+      return "/vector/" + normalizedStatementName;
+    }
+    constexpr std::string_view kRootPrefix = "vector/";
+    if (normalizedStatementName.rfind(kRootPrefix, 0) != 0) {
+      return "";
+    }
+    const std::string_view helperName =
+        std::string_view(normalizedStatementName).substr(kRootPrefix.size());
+    if (!isVectorMutatorName(helperName)) {
+      return "";
+    }
+    return "/vector/" + std::string(helperName);
+  }();
   auto bareBuiltinVectorMutatorPreferredPath = [&]() -> std::string {
     const bool isBareMutatorCall =
         !stmt.isMethodCall && normalizedStatementNamespacePrefix.empty() &&
@@ -578,6 +616,14 @@ bool SemanticsValidator::validateVectorStatementHelper(const std::vector<Paramet
   auto hasDeclaredOrImportedPath = [&](const std::string &path) {
     return hasDeclaredDefinitionPath(path) || hasImportedDefinitionPath(path);
   };
+  if (!explicitRootVectorMutatorCallPath.empty() &&
+      !hasDeclaredOrImportedPath(explicitRootVectorMutatorCallPath)) {
+    return failStatementDiagnostic("unknown call target: " + explicitRootVectorMutatorCallPath);
+  }
+  if (!explicitRootVectorMutatorMethodPath.empty() &&
+      !hasDeclaredOrImportedPath(explicitRootVectorMutatorMethodPath)) {
+    return failStatementDiagnostic("unknown method: " + explicitRootVectorMutatorMethodPath);
+  }
   if (!explicitCanonicalStdVectorMutatorCallPath.empty() &&
       !hasDeclaredOrImportedPath(explicitCanonicalStdVectorMutatorCallPath)) {
     return failStatementDiagnostic("unknown call target: " + explicitCanonicalStdVectorMutatorCallPath);
