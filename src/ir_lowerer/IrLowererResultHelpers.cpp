@@ -76,12 +76,20 @@ bool applySemanticResultValueTypeText(const std::string &valueTypeText, ResultEx
 bool applySemanticQueryFactResultInfo(const Expr &expr,
                                       const SemanticProgram *semanticProgram,
                                       const SemanticProductIndex *semanticIndex,
+                                      std::string *errorOut,
                                       ResultExprInfo &out) {
   if (semanticProgram == nullptr || semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
   const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, expr);
-  if (queryFact == nullptr || !queryFact->hasResultType) {
+  if (queryFact == nullptr) {
+    assignSemanticResultError(
+        errorOut, "missing semantic-product query fact: " + describeSemanticResultCall(expr));
+    return false;
+  }
+  if (!queryFact->hasResultType) {
+    assignSemanticResultError(
+        errorOut, "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
     return false;
   }
   out.isResult = true;
@@ -90,7 +98,24 @@ bool applySemanticQueryFactResultInfo(const Expr &expr,
   if (!out.hasValue) {
     return true;
   }
-  return applySemanticResultValueTypeText(queryFact->resultValueType, out);
+  if (!applySemanticResultValueTypeText(queryFact->resultValueType, out)) {
+    assignSemanticResultError(
+        errorOut, "incomplete semantic-product query fact: " + describeSemanticResultCall(expr));
+    return false;
+  }
+  return true;
+}
+
+bool needsSemanticQueryResultValueMetadata(const Expr &expr,
+                                           const SemanticProgram *semanticProgram,
+                                           const SemanticProductIndex *semanticIndex,
+                                           const ResultExprInfo &out) {
+  return semanticProgram != nullptr && semanticIndex != nullptr && expr.semanticNodeId != 0 &&
+         out.valueKind == LocalInfo::ValueKind::Unknown &&
+         out.valueCollectionKind == LocalInfo::Kind::Value &&
+         out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
+         out.valueStructType.empty() &&
+         !out.valueIsFileHandle;
 }
 
 } // namespace
@@ -634,11 +659,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.hasValue = true;
     applyDirectResultValueMetadata(
         *mappedValueExpr, lambdaLocals, resolveDefinitionCallFn, inferExprKindFn, semanticProgram, semanticIndex, out);
-    if (out.valueCollectionKind == LocalInfo::Kind::Value &&
-        out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
-        out.valueStructType.empty() &&
-        !out.valueIsFileHandle) {
-      applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, out);
+    if (needsSemanticQueryResultValueMetadata(expr, semanticProgram, semanticIndex, out) &&
+        !applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, errorOut, out)) {
+      return false;
     }
     out.errorType = sourceResultInfo.errorType;
     return true;
@@ -697,11 +720,11 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
       chainedResultInfo.errorType = sourceResultInfo.errorType;
     }
     if (chainedResultInfo.hasValue &&
-        chainedResultInfo.valueCollectionKind == LocalInfo::Kind::Value &&
-        chainedResultInfo.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
-        chainedResultInfo.valueStructType.empty() &&
-        !chainedResultInfo.valueIsFileHandle) {
-      applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, chainedResultInfo);
+        needsSemanticQueryResultValueMetadata(expr, semanticProgram, semanticIndex, chainedResultInfo)) {
+      if (!applySemanticQueryFactResultInfo(
+              expr, semanticProgram, semanticIndex, errorOut, chainedResultInfo)) {
+        return false;
+      }
       if (chainedResultInfo.errorType.empty()) {
         chainedResultInfo.errorType = sourceResultInfo.errorType;
       }
@@ -770,11 +793,9 @@ bool resolveResultExprInfoFromLocals(const Expr &expr,
     out.hasValue = true;
     applyDirectResultValueMetadata(
         *mappedValueExpr, lambdaLocals, resolveDefinitionCallFn, inferExprKindFn, semanticProgram, semanticIndex, out);
-    if (out.valueCollectionKind == LocalInfo::Kind::Value &&
-        out.valueMapKeyKind == LocalInfo::ValueKind::Unknown &&
-        out.valueStructType.empty() &&
-        !out.valueIsFileHandle) {
-      applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, out);
+    if (needsSemanticQueryResultValueMetadata(expr, semanticProgram, semanticIndex, out) &&
+        !applySemanticQueryFactResultInfo(expr, semanticProgram, semanticIndex, errorOut, out)) {
+      return false;
     }
     out.errorType = !leftResultInfo.errorType.empty() ? leftResultInfo.errorType : rightResultInfo.errorType;
     return true;

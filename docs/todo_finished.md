@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4298: Require Result combinator query facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes unresolved
+    semantic-product-addressed Result-combinator metadata depend on published
+    query facts instead of carrying partially inferred result shapes forward.
+  - implementation_notes:
+    - Apply the authority boundary only when direct lambda payload analysis
+      cannot infer the Result value metadata.
+    - Cover the shared metadata path used by `Result.map`,
+      `Result.and_then`, and `Result.map2`.
+    - Preserve direct metadata behavior when lambda payload analysis already
+      produces a concrete scalar, collection, struct, or file-handle shape.
+  - acceptance:
+    - Published semantic query facts still recover unresolved Result-combinator
+      value metadata.
+    - Missing query facts fail closed with the semantic-product query
+      diagnostic instead of leaving unresolved metadata.
+    - Incomplete query facts fail closed with the semantic-product query
+      diagnostic instead of leaving unresolved metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once unresolved semantic-product-addressed
+    Result-combinator metadata requires published query facts without changing
+    already concrete direct payload metadata.
+  - finished_at: 2026-04-28
+  - evidence: Tightened `IrLowererResultHelpers.cpp` so unresolved
+    `Result.map`/`Result.and_then`/`Result.map2` payload metadata requires
+    published query facts, added lowerer metadata coverage for success,
+    missing-fact, and incomplete-fact `Result.map` cases, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Require try dispatch semantic facts
   - owner: ai
   - created_at: 2026-04-28

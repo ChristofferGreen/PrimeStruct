@@ -348,7 +348,9 @@ Task template:
     with another adjacent island rather than reopening that fallback. The
     lowerer-side `try(...)` dispatch fallback slice is also complete; continue
     with local-auto, `on_error`, or another uncovered query/control-flow
-    consumer.
+    consumer. The lowerer-side unresolved Result-combinator metadata slice is
+    complete for `Result.map`, `Result.and_then`, and `Result.map2`; continue
+    with local-auto, `on_error`, or a different control-flow/query consumer.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -371,6 +373,10 @@ Task template:
       callable-result, map-helper, or file-helper fallback can infer the value
       kind; missing or incomplete try facts stay unresolved with the existing
       semantic-product try diagnostic.
+    - Completed slice: semantic-product-addressed Result-combinator metadata
+      now requires published query facts when direct lambda payload analysis
+      cannot infer the resulting value kind, covering `Result.map`,
+      `Result.and_then`, and `Result.map2`.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

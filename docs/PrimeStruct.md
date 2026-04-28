@@ -219,6 +219,11 @@ Planned non-template inference migration contract:
   file-helper inference can answer. Missing or incomplete semantic try facts produce the existing
   deterministic semantic-product try diagnostic and keep the inferred value kind unresolved; legacy
   reconstruction remains available only for `try(...)` expressions without semantic-product identity.
+- Completed lowerer-side Result-combinator metadata slice: semantic-product-addressed
+  `Result.map`, `Result.and_then`, and `Result.map2` metadata only require query facts when direct
+  lambda payload analysis leaves the result value unresolved. In that unresolved case, missing or
+  incomplete semantic query facts now fail closed with the existing semantic-product query diagnostic
+  instead of leaving a partially inferred result shape for later lowering.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

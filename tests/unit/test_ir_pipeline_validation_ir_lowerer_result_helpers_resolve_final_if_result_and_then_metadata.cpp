@@ -113,6 +113,145 @@ TEST_CASE("ir lowerer result helpers resolve final-if Result.and_then metadata")
   CHECK(out.errorType == "FileError");
 }
 
+TEST_CASE("ir lowerer result helpers require semantic query facts for unresolved Result.map metadata") {
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::ir_lowerer::LocalMap locals;
+  primec::ir_lowerer::LocalInfo sourceResult;
+  sourceResult.isResult = true;
+  sourceResult.resultHasValue = true;
+  sourceResult.resultValueKind = ValueKind::Int32;
+  sourceResult.resultErrorType = "FileError";
+  locals.emplace("sourceResult", sourceResult);
+
+  primec::Expr resultName;
+  resultName.kind = primec::Expr::Kind::Name;
+  resultName.name = "Result";
+
+  primec::Expr sourceResultExpr;
+  sourceResultExpr.kind = primec::Expr::Kind::Name;
+  sourceResultExpr.name = "sourceResult";
+
+  primec::Expr valueParamExpr;
+  valueParamExpr.kind = primec::Expr::Kind::Name;
+  valueParamExpr.name = "value";
+
+  primec::Expr unresolvedValueExpr;
+  unresolvedValueExpr.kind = primec::Expr::Kind::Call;
+  unresolvedValueExpr.name = "mystery";
+
+  primec::Expr mapLambdaExpr;
+  mapLambdaExpr.isLambda = true;
+  mapLambdaExpr.args.push_back(valueParamExpr);
+  mapLambdaExpr.bodyArguments.push_back(unresolvedValueExpr);
+
+  primec::Expr mapExpr;
+  mapExpr.kind = primec::Expr::Kind::Call;
+  mapExpr.isMethodCall = true;
+  mapExpr.name = "map";
+  mapExpr.args = {resultName, sourceResultExpr, mapLambdaExpr};
+  mapExpr.semanticNodeId = 771;
+
+  const auto resolveMethodCall = [](const primec::Expr &,
+                                    const primec::ir_lowerer::LocalMap &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto resolveDefinitionCall = [](const primec::Expr &) -> const primec::Definition * {
+    return nullptr;
+  };
+  const auto lookupReturnInfo = [](const std::string &, primec::ir_lowerer::ReturnInfo &) {
+    return false;
+  };
+  const auto inferExprKind = [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+    return ValueKind::Unknown;
+  };
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "map",
+      .queryTypeText = "Result<i64, FileError>",
+      .bindingTypeText = "Result<i64, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i64",
+      .resultErrorType = "FileError",
+      .sourceLine = 12,
+      .sourceColumn = 5,
+      .semanticNodeId = 771,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/Result/map"),
+      .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i64, FileError>"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "Result<i64, FileError>"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
+      .resultErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::ir_lowerer::ResultExprInfo out;
+  std::string error;
+  CHECK(primec::ir_lowerer::resolveResultExprInfoFromLocals(mapExpr,
+                                                            locals,
+                                                            resolveMethodCall,
+                                                            resolveDefinitionCall,
+                                                            lookupReturnInfo,
+                                                            inferExprKind,
+                                                            out,
+                                                            &semanticTargets,
+                                                            &error));
+  CHECK(error.empty());
+  CHECK(out.isResult);
+  CHECK(out.hasValue);
+  CHECK(out.valueKind == ValueKind::Int64);
+  CHECK(out.errorType == "FileError");
+
+  primec::SemanticProgram missingSemanticProgram;
+  const auto missingTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
+  out = {};
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(mapExpr,
+                                                                  locals,
+                                                                  resolveMethodCall,
+                                                                  resolveDefinitionCall,
+                                                                  lookupReturnInfo,
+                                                                  inferExprKind,
+                                                                  out,
+                                                                  &missingTargets,
+                                                                  &error));
+  CHECK(error == "missing semantic-product query fact: map");
+
+  primec::SemanticProgram incompleteSemanticProgram;
+  incompleteSemanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "map",
+      .queryTypeText = "Result<i64, FileError>",
+      .bindingTypeText = "Result<i64, FileError>",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "",
+      .resultErrorType = "FileError",
+      .sourceLine = 12,
+      .sourceColumn = 5,
+      .semanticNodeId = 771,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(incompleteSemanticProgram, "/Result/map"),
+  });
+  const auto incompleteTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&incompleteSemanticProgram);
+  out = {};
+  error.clear();
+  CHECK_FALSE(primec::ir_lowerer::resolveResultExprInfoFromLocals(mapExpr,
+                                                                  locals,
+                                                                  resolveMethodCall,
+                                                                  resolveDefinitionCall,
+                                                                  lookupReturnInfo,
+                                                                  inferExprKind,
+                                                                  out,
+                                                                  &incompleteTargets,
+                                                                  &error));
+  CHECK(error == "incomplete semantic-product query fact: map");
+}
+
 TEST_CASE("ir lowerer result helpers resolve packed error struct Result combinator metadata") {
   primec::ir_lowerer::LocalMap locals;
 
