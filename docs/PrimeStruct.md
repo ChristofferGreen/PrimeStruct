@@ -254,6 +254,10 @@ Planned non-template inference migration contract:
   checks `try(...)` on-error handler path, error type, and bound-arg count against the published
   callable summary before lowerer handoff can consume inconsistent try metadata. Missing handler
   path ids or contradictory on-error context fail closed with deterministic try diagnostics.
+- Completed try context-return diagnostic slice: semantic-product try completeness validation now
+  checks interned `try(...)` context return-kind metadata against the published callable summary
+  before lowerer handoff can consume inconsistent try metadata. Contradictory return-context facts
+  fail closed with a deterministic try diagnostic.
 - Completed `on_error` stale-fact diagnostic slice: semantic-product on-error completeness
   validation now checks the on-error fact against the published callable summary before lowerer
   setup can install the handler. Handler path, error-type, and bound-arg-count mismatches fail

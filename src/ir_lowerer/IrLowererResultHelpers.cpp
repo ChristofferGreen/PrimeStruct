@@ -212,6 +212,19 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
             : std::string_view(tryFact->scopePath);
     const auto *scopeSummary =
         semanticProgramLookupPublishedCallableSummary(*semanticProgram, tryScopePath);
+    if (scopeSummary != nullptr && tryFact->contextReturnKindId != InvalidSymbolId) {
+      const std::string_view tryContextReturnKind =
+          semanticProgramResolveCallTargetString(*semanticProgram, tryFact->contextReturnKindId);
+      const std::string_view expectedReturnKind =
+          scopeSummary->returnKindId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, scopeSummary->returnKindId)
+              : std::string_view(scopeSummary->returnKind);
+      if (!tryContextReturnKind.empty() && !expectedReturnKind.empty() &&
+          tryContextReturnKind != expectedReturnKind) {
+        error = "stale semantic-product try context return kind: try";
+        return false;
+      }
+    }
     if (scopeSummary != nullptr && scopeSummary->hasOnError) {
       const std::string_view tryOnErrorHandlerPath =
           semanticProgramResolveCallTargetString(*semanticProgram, tryFact->onErrorHandlerPathId);
