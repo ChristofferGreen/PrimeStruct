@@ -2681,6 +2681,65 @@ TEST_CASE("ir lowerer rejects missing semantic-product try operand resolved path
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer rejects stale semantic-product try result metadata") {
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.entryPath = "/main";
+  semanticProgram.tryFacts.push_back(primec::SemanticProgramTryFact{
+      .scopePath = "/main",
+      .operandBindingTypeText = "Result<i32, FileError>",
+      .operandReceiverBindingTypeText = "",
+      .operandQueryTypeText = "Result<i32, FileError>",
+      .valueType = "i32",
+      .errorType = "FileError",
+      .contextReturnKind = "return",
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .sourceLine = 1,
+      .sourceColumn = 1,
+      .semanticNodeId = 8404,
+      .operandResolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .valueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .errorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+  semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
+      .returnKind = "return",
+      .hasResultType = true,
+      .resultTypeHasValue = true,
+      .resultValueType = "i32",
+      .resultErrorType = "FileError",
+      .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .resultErrorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.tryFacts.back().valueType = "i64";
+  semanticProgram.tryFacts.back().valueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i64");
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product try result metadata: try");
+
+  semanticProgram.tryFacts.back().valueType = "i32";
+  semanticProgram.tryFacts.back().valueTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.tryFacts.back().errorType = "OtherError";
+  semanticProgram.tryFacts.back().errorTypeId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "OtherError");
+  error.clear();
+
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, error));
+  CHECK(error == "stale semantic-product try result metadata: try");
+}
+
 TEST_CASE("ir lowerer rejects stale semantic-product try context return kind") {
   primec::Program program;
 

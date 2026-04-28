@@ -258,6 +258,37 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       error = "incomplete semantic-product try fact: try";
       return false;
     }
+    const auto *tryOperandSummary =
+        semanticProgramLookupPublishedCallableSummaryByPathId(*semanticProgram,
+                                                              tryFact->operandResolvedPathId);
+    const bool hasInternedTryResultMetadata =
+        tryFact->valueTypeId != InvalidSymbolId || tryFact->errorTypeId != InvalidSymbolId;
+    if (tryOperandSummary != nullptr && tryOperandSummary->hasResultType &&
+        tryOperandSummary->resultTypeHasValue && hasInternedTryResultMetadata) {
+      const std::string_view tryValueType =
+          tryFact->valueTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, tryFact->valueTypeId)
+              : std::string_view(tryFact->valueType);
+      const std::string_view expectedValueType =
+          tryOperandSummary->resultValueTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                       tryOperandSummary->resultValueTypeId)
+              : std::string_view(tryOperandSummary->resultValueType);
+      const std::string_view tryErrorType =
+          tryFact->errorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, tryFact->errorTypeId)
+              : std::string_view(tryFact->errorType);
+      const std::string_view expectedErrorType =
+          tryOperandSummary->resultErrorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram,
+                                                       tryOperandSummary->resultErrorTypeId)
+              : std::string_view(tryOperandSummary->resultErrorType);
+      if ((!expectedValueType.empty() && tryValueType != expectedValueType) ||
+          (!expectedErrorType.empty() && tryErrorType != expectedErrorType)) {
+        error = "stale semantic-product try result metadata: try";
+        return false;
+      }
+    }
     const std::string_view tryScopePath =
         tryFact->scopePathId != InvalidSymbolId
             ? semanticProgramResolveCallTargetString(*semanticProgram, tryFact->scopePathId)

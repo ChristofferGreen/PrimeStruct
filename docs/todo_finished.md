@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Reject stale try result metadata
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    try completeness validation reject interned value/error metadata that
+    contradicts the published callable summary for the resolved operand.
+  - implementation_notes:
+    - Preserve existing missing operand path, incomplete try fact,
+      context-return, and on-error diagnostics.
+    - Apply the new consistency check to interned semantic-product try
+      value/error metadata so legacy string-only manual fixtures keep their
+      existing compatibility path.
+    - Keep broader control-flow, template inference, and Result lowering
+      migration out of scope.
+  - acceptance:
+    - Matching interned try value/error metadata validates successfully.
+    - Stale try value or error metadata fails before lowering can consume
+      inconsistent try metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once try semantic-product completeness rejects
+    contradictory operand Result metadata without changing syntax-only or
+    no-semantic-product behavior.
+  - finished_at: 2026-04-29
+  - evidence: Tightened try semantic-product completeness checks, added a
+    lowerer handoff regression for matching and stale try value/error
+    metadata, and documented the remaining TODO-4298 work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Reject stale query result metadata
   - owner: ai
   - created_at: 2026-04-28
