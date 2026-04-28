@@ -206,6 +206,38 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       error = "incomplete semantic-product try fact: try";
       return false;
     }
+    const std::string_view tryScopePath =
+        tryFact->scopePathId != InvalidSymbolId
+            ? semanticProgramResolveCallTargetString(*semanticProgram, tryFact->scopePathId)
+            : std::string_view(tryFact->scopePath);
+    const auto *scopeSummary =
+        semanticProgramLookupPublishedCallableSummary(*semanticProgram, tryScopePath);
+    if (scopeSummary != nullptr && scopeSummary->hasOnError) {
+      const std::string_view tryOnErrorHandlerPath =
+          semanticProgramResolveCallTargetString(*semanticProgram, tryFact->onErrorHandlerPathId);
+      if (tryFact->onErrorHandlerPathId == InvalidSymbolId || tryOnErrorHandlerPath.empty()) {
+        error = "missing semantic-product try on_error handler path id: try";
+        return false;
+      }
+      const std::string_view tryOnErrorErrorType =
+          tryFact->onErrorErrorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, tryFact->onErrorErrorTypeId)
+              : std::string_view(tryFact->onErrorErrorType);
+      const std::string_view expectedOnErrorHandlerPath =
+          scopeSummary->onErrorHandlerPathId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, scopeSummary->onErrorHandlerPathId)
+              : std::string_view(scopeSummary->onErrorHandlerPath);
+      const std::string_view expectedOnErrorErrorType =
+          scopeSummary->onErrorErrorTypeId != InvalidSymbolId
+              ? semanticProgramResolveCallTargetString(*semanticProgram, scopeSummary->onErrorErrorTypeId)
+              : std::string_view(scopeSummary->onErrorErrorType);
+      if (tryOnErrorHandlerPath != expectedOnErrorHandlerPath ||
+          tryOnErrorErrorType != expectedOnErrorErrorType ||
+          tryFact->onErrorBoundArgCount != scopeSummary->onErrorBoundArgCount) {
+        error = "stale semantic-product try on_error fact: try";
+        return false;
+      }
+    }
   }
 
   return true;

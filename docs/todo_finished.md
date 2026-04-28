@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Reject stale try on-error facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    try completeness validation reject missing or stale `try(...)` on-error
+    handler metadata that contradicts the published callable summary.
+  - implementation_notes:
+    - Preserve existing missing operand-path and incomplete try-value
+      diagnostics.
+    - Apply the new on-error consistency checks only when the enclosing
+      callable summary has an on-error contract.
+    - Keep broader control-flow, template inference, and Result lowering
+      migration out of scope.
+  - acceptance:
+    - Missing try on-error handler path ids fail with a deterministic
+      semantic-product diagnostic.
+    - Stale try on-error handler path, error type, or bound-arg count facts
+      fail before lowering can consume inconsistent try metadata.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once try semantic-product completeness rejects
+    inconsistent on-error context facts without changing syntax-only or
+    no-semantic-product behavior.
+  - finished_at: 2026-04-29
+  - evidence: Tightened try semantic-product completeness checks, added
+    lowerer handoff regressions for missing and stale try on-error metadata,
+    and documented the remaining TODO-4298 work. Local test execution was
+    skipped per the lite workflow.
+
 - [x] TODO-4298: Reject stale local-auto initializer paths
   - owner: ai
   - created_at: 2026-04-28
