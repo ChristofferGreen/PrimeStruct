@@ -493,7 +493,7 @@ main() {
   CHECK(result == 0);
 }
 
-TEST_CASE("ir and semantics agree on conflicting auto returns in statements") {
+TEST_CASE("semantics rejects conflicting auto returns before lowerer entry summary lookup") {
   auto makeProgram = []() {
     auto makeLiteral = [](uint64_t value) {
       primec::Expr expr;
@@ -553,11 +553,11 @@ TEST_CASE("ir and semantics agree on conflicting auto returns in statements") {
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("missing semantic-product callable summary: /pick") !=
+  CHECK(lowerError.find("missing semantic-product callable summary: /main") !=
         std::string::npos);
 }
 
-TEST_CASE("semantics and ir lowerer diverge on unresolved auto return in statements") {
+TEST_CASE("semantics rejects unresolved auto return before lowerer entry summary lookup") {
   auto makeProgram = []() {
     auto makeLiteral = [](uint64_t value) {
       primec::Expr expr;
@@ -628,11 +628,11 @@ TEST_CASE("semantics and ir lowerer diverge on unresolved auto return in stateme
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("missing semantic-product callable summary: /pick") !=
+  CHECK(lowerError.find("missing semantic-product callable summary: /main") !=
         std::string::npos);
 }
 
-TEST_CASE("semantics and ir lowerer diverge on unresolved auto return_expr") {
+TEST_CASE("semantics rejects unresolved auto return_expr before lowerer entry summary lookup") {
   auto makeProgram = []() {
     auto makeLiteral = [](uint64_t value) {
       primec::Expr expr;
@@ -703,7 +703,7 @@ TEST_CASE("semantics and ir lowerer diverge on unresolved auto return_expr") {
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("missing semantic-product callable summary: /pick") !=
+  CHECK(lowerError.find("missing semantic-product callable summary: /main") !=
         std::string::npos);
 }
 
