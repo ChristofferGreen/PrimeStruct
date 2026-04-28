@@ -132,11 +132,14 @@ swallow_parse_error([ParseError] err) {}
 
 [return<int> effects(io_out) on_error<ParseError, /swallow_parse_error>]
 main() {
-  print_line(try(Result.map(Result.ok("alpha"utf8), []([string] value) { return(value) })))
-  print_line(try(Result.and_then(Result.ok("beta"utf8), []([string] value) { return(Result.ok(value)) })))
-  print_line(try(Result.map2(Result.ok("gamma"utf8), Result.ok("delta"utf8), []([string] left, [string] right) {
+  [string] mapped{try(Result.map(Result.ok("alpha"utf8), []([string] value) { return(value) }))}
+  [string] chained{try(Result.and_then(Result.ok("beta"utf8), []([string] value) { return(Result.ok(value)) }))}
+  [string] combined{try(Result.map2(Result.ok("gamma"utf8), Result.ok("delta"utf8), []([string] left, [string] right) {
     return(left)
-  })))
+  }))}
+  print_line(mapped)
+  print_line(chained)
+  print_line(combined)
   return(0i32)
 }
 )";
@@ -187,9 +190,12 @@ swallow_parse_error([ParseError] err) {}
 [return<int> effects(io_out) on_error<ParseError, /swallow_parse_error>]
 main() {
   [Reader] reader{Reader{}}
-  print_line(try(Result.map(greeting(), []([string] value) { return(value) })))
-  print_line(try(Result.and_then(reader.read(), []([string] value) { return(Result.ok(value)) })))
-  print_line(try(Result.map2(greeting(), reader.read(), []([string] left, [string] right) { return(left) })))
+  [string] mapped{try(Result.map(greeting(), []([string] value) { return(value) }))}
+  [string] chained{try(Result.and_then(reader.read(), []([string] value) { return(Result.ok(value)) }))}
+  [string] combined{try(Result.map2(greeting(), reader.read(), []([string] left, [string] right) { return(left) }))}
+  print_line(mapped)
+  print_line(chained)
+  print_line(combined)
   return(0i32)
 }
 )";

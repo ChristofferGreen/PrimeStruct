@@ -1742,17 +1742,12 @@ swallow_parse_error([ParseError] err) {}
 
 [return<int> on_error<ParseError, /swallow_parse_error>]
 main() {
-  return(
-    plus(
-      plus(
-        count(try(Result.map(Result.ok("alpha"utf8), []([string] value) { return(value) }))),
-        count(try(Result.and_then(Result.ok("beta"utf8), []([string] value) { return(Result.ok(value)) })))
-      ),
-      count(try(Result.map2(Result.ok("gamma"utf8), Result.ok("delta"utf8), []([string] left, [string] right) {
-        return(left)
-      })))
-    )
-  )
+  [string] mapped{try(Result.map(Result.ok("alpha"utf8), []([string] value) { return(value) }))}
+  [string] chained{try(Result.and_then(Result.ok("beta"utf8), []([string] value) { return(Result.ok(value)) }))}
+  [string] combined{try(Result.map2(Result.ok("gamma"utf8), Result.ok("delta"utf8), []([string] left, [string] right) {
+    return(left)
+  }))}
+  return(plus(plus(count(mapped), count(chained)), count(combined)))
 }
 )";
   primec::Program program;
@@ -1807,15 +1802,10 @@ swallow_parse_error([ParseError] err) {}
 [return<int> on_error<ParseError, /swallow_parse_error>]
 main() {
   [Reader] reader{Reader{}}
-  return(
-    plus(
-      plus(
-        count(try(Result.map(greeting(), []([string] value) { return(value) }))),
-        count(try(Result.and_then(reader.read(), []([string] value) { return(Result.ok(value)) })))
-      ),
-      count(try(Result.map2(greeting(), reader.read(), []([string] left, [string] right) { return(left) })))
-    )
-  )
+  [string] mapped{try(Result.map(greeting(), []([string] value) { return(value) }))}
+  [string] chained{try(Result.and_then(reader.read(), []([string] value) { return(Result.ok(value)) }))}
+  [string] combined{try(Result.map2(greeting(), reader.read(), []([string] left, [string] right) { return(left) }))}
+  return(plus(plus(count(mapped), count(chained)), count(combined)))
 }
 )";
   primec::Program program;
