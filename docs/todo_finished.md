@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4318: Name source C++ Result value storage
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that stops emitting raw
+    `uint64_t` as the value-carrying Result return/binding type while keeping
+    the current packed storage behavior behind a named legacy alias.
+  - implementation_notes:
+    - Preserve generated C++ behavior by keeping the alias backed by
+      `uint64_t` for now.
+    - Make `legacyPackedResultCppType(true)` return
+      `ps_legacy_result_value` so source C++ value-result functions, locals,
+      casts, and combinator lambdas use the named compatibility type.
+    - Update prelude helpers and file-open shims to take or return
+      `ps_legacy_result_value`.
+    - Keep replacing the alias's underlying representation as the next
+      TODO-4266 slice.
+  - acceptance:
+    - Source C++ value-carrying Result type emission uses
+      `ps_legacy_result_value` instead of raw `uint64_t`.
+    - The generated prelude defines the compatibility alias and no longer
+      declares Result pack/file-open helpers with raw `uint64_t` return types.
+    - Focused helper and source-lock coverage pin the named storage type.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once value-carrying source C++ Result type emission is
+    named through `ps_legacy_result_value` without changing runtime behavior.
+  - finished_at: 2026-04-28
+  - evidence: Changed source C++ Result type selection to emit the
+    `ps_legacy_result_value` alias, updated generated prelude helper and
+    file-open signatures to use it, pinned the spelling in focused tests, and
+    updated TODO-4266 docs. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4317: Rename source C++ Result prelude bridge helpers
   - owner: ai
   - created_at: 2026-04-28

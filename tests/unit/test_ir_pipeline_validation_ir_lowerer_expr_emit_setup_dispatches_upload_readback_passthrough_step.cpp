@@ -559,13 +559,13 @@ TEST_CASE("emitter helpers quarantine legacy packed Result cpp types") {
   CHECK_FALSE(primec::emitter::isResultBindingTypeName("ResultLike"));
 
   CHECK(primec::emitter::legacyPackedResultCppType(false) == "uint32_t");
-  CHECK(primec::emitter::legacyPackedResultCppType(true) == "uint64_t");
+  CHECK(primec::emitter::legacyPackedResultCppType(true) == "ps_legacy_result_value");
   CHECK(primec::emitter::legacyPackedResultPackExpr("err", "value") ==
         "ps_legacy_result_pack(err, value)");
   CHECK(primec::emitter::legacyPackedResultErrorExpr("result") ==
         "ps_legacy_result_error(result)");
   CHECK(primec::emitter::legacyPackedResultValueExpr("result") ==
-        "ps_legacy_result_value(result)");
+        "ps_legacy_result_payload(result)");
 
   const auto statusType =
       primec::emitter::tryLegacyPackedResultCppType("Result", "FileError");

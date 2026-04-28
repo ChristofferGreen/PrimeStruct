@@ -201,7 +201,7 @@ bool isResultBindingTypeName(const std::string &name) {
 }
 
 std::string legacyPackedResultCppType(bool hasValue) {
-  return hasValue ? "uint64_t" : "uint32_t";
+  return hasValue ? "ps_legacy_result_value" : "uint32_t";
 }
 
 std::string legacyPackedResultPackExpr(const std::string &errorExpr,
@@ -214,7 +214,7 @@ std::string legacyPackedResultErrorExpr(const std::string &resultExpr) {
 }
 
 std::string legacyPackedResultValueExpr(const std::string &resultExpr) {
-  return "ps_legacy_result_value(" + resultExpr + ")";
+  return "ps_legacy_result_payload(" + resultExpr + ")";
 }
 
 std::optional<std::string> tryLegacyPackedResultCppType(const std::string &base,

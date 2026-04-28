@@ -2304,8 +2304,9 @@ for(
     types under `Reference` / `Pointer` and recognizes dereferenced local/indexed borrowed Result operands for
     `try(...)`, `Result.error(...)`, and `Result.why(...)`. Its packed C++ storage-width decisions and source C++
     pack/unpack expression emission are quarantined behind named emitter helpers. The generated source C++ prelude now
-    uses explicit `ps_legacy_result_*` helper names instead of the older `ps_result_*` names, so remaining migration
-    can target the legacy `uint64_t` storage representation explicitly.
+    uses explicit `ps_legacy_result_*` helper names instead of the older `ps_result_*` names, and value-carrying Result
+    storage emits the named `ps_legacy_result_value` alias instead of raw `uint64_t` return/binding types, so remaining
+    migration can target that alias's underlying packed representation explicitly.
   - `Result<T, Error>` is in transition: explicit imported value construction is stdlib-owned, while `?` propagation
     and the minimum success/error runtime contract stay language-defined until the sum-backed propagation contract is
     implemented. The semantic `try(...)` contract already recognizes the unqualified and qualified stdlib-owned
@@ -2315,8 +2316,9 @@ for(
     `Result.error(...)` / `Result.why(...)` helpers on those same operand families. The source C++ emitter now mirrors
     the borrowed/pointer helper operand inference while still using the packed bridge; storage-width decisions and
     pack/unpack expression emission are quarantined behind named emitter helpers, and generated prelude helper names
-    are explicitly marked `ps_legacy_result_*`, so the remaining migration work can focus on deleting the legacy
-    `uint64_t` storage representation.
+    are explicitly marked `ps_legacy_result_*`. Value-carrying Result storage is named through the
+    `ps_legacy_result_value` alias, so the remaining migration work can focus on replacing that alias's underlying
+    packed representation.
   - `Result.ok()` (or `Result.ok(value)` for value-carrying results) constructs a success value.
   - `Result.error()` returns `true` when the result is an error.
   - `Result.why()` returns an owned `string` describing the error (heap-allocated by default).
