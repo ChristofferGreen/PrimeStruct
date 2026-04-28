@@ -484,9 +484,6 @@
   out << "  ps_legacy_result_value(uint32_t err, uint32_t value) : error(err), payload(value) {}\n";
   out << "  ps_legacy_result_value(uint64_t raw) : error(static_cast<uint32_t>(raw >> 32)),\n";
   out << "      payload(static_cast<uint32_t>(raw & 0xffffffffu)) {}\n";
-  out << "  operator uint64_t() const {\n";
-  out << "    return (static_cast<uint64_t>(error) << 32) | static_cast<uint64_t>(payload);\n";
-  out << "  }\n";
   out << "};\n";
   out << "static inline ps_legacy_result_value ps_legacy_result_pack(uint32_t err, uint32_t value) {\n";
   out << "  return ps_legacy_result_value{err, value};\n";

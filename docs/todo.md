@@ -320,9 +320,10 @@ Task template:
       names, and value-carrying source C++ Result storage now emits the named
       `ps_legacy_result_value` alias instead of raw `uint64_t` return/binding
       types. The alias has been replaced with a fielded generated
-      `ps_legacy_result_value` struct; remaining cleanup should delete its raw
-      packed-integer compatibility conversion and then retarget the source C++
-      bridge to the stdlib Result sum contract.
+      `ps_legacy_result_value` struct, and its raw packed-integer conversion
+      operator has been removed; remaining cleanup should delete raw
+      packed-integer construction compatibility and then retarget the source
+      C++ bridge to the stdlib Result sum contract.
     - Preserve current user-facing `?` behavior first; any broader propagation
       syntax changes should be split into separate TODOs.
     - Add semantic-product and IR tests before broad compile-run tests so the

@@ -6,6 +6,35 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4320: Drop source C++ Result packed conversion
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the TODO-4266 source C++ cleanup slice that removes the
+    generated value-carrying Result bridge's conversion back to raw packed
+    `uint64_t` integers.
+  - implementation_notes:
+    - Keep raw packed-integer construction temporarily so existing source C++
+      compatibility error returns can still materialize fielded bridge values.
+    - Remove only the outbound `operator uint64_t()` conversion from
+      `ps_legacy_result_value`.
+    - Leave retargeting raw error returns to explicit bridge construction as
+      the next TODO-4266 slice.
+  - acceptance:
+    - The generated `ps_legacy_result_value` struct no longer exposes
+      `operator uint64_t()`.
+    - Source-lock coverage rejects the removed conversion operator.
+    - TODO-4266 docs narrow remaining source C++ cleanup to raw construction
+      compatibility and full bridge retargeting.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once source C++ value-result bridge storage cannot convert
+    back to raw packed integers while inbound compatibility remains explicit.
+  - finished_at: 2026-04-28
+  - evidence: Removed the generated `operator uint64_t()` from
+    `ps_legacy_result_value`, added source-lock coverage rejecting it, and
+    updated TODO-4266 docs. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4319: Field source C++ Result value storage
   - owner: ai
   - created_at: 2026-04-28
