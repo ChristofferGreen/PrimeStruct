@@ -789,14 +789,15 @@ returning them. `Result.error(value)` / `Result.why(value)` can inspect the impo
 packed status-only `Result<E>` values without the stdlib import remain a compatibility bridge and report a deterministic
 diagnostic when used as a `pick` target. `try(...)` semantic validation and semantic-product metadata accept both
 `Result<T, E>` and `/std/result/Result<T, E>` value-result spellings. IR-backed `try(...)` can now consume local
-imported stdlib value-result sums for
+imported stdlib value-result sums and local imported status-only `Result<E>` sums for
 `return<int> on_error<...>` status-code flows by branching on the `ok`/`error` tag, and Result-returning functions can
-propagate local imported stdlib value-result sum errors by copying the `error` payload into the declared return
-`Result` sum after running the active `on_error` handler. Direct calls that return imported stdlib value-result sums
-can also be consumed through postfix `?` on those same VM/native sum-backed paths, and dereferenced local
+propagate local imported stdlib value-result or status-only sum errors by copying the `error` payload into the declared
+return `Result` sum after running the active `on_error` handler. Direct calls that return imported stdlib value-result
+sums can also be consumed through postfix `?` on those same VM/native sum-backed paths, and dereferenced local
 `Reference<Result<T, E>>` / `Pointer<Result<T, E>>` values can feed `try(...)`, `Result.error(...)`, and
-`Result.why(...)` when they point at imported stdlib Result sums. Broader result shapes and imported status-only
-`Result<E>` lowering remain compatibility surfaces until their dedicated migration tasks land.
+`Result.why(...)` when they point at imported stdlib Result sums. Broader result shapes, direct-call status-only
+sources, and imported status-only `Result.error(...)` / `Result.why(...)` lowering remain compatibility surfaces until
+their dedicated migration tasks land.
 
 Default sum construction is valid only when the first declared variant is a unit variant. The default active variant is
 therefore tag `0`, following source order. Payload variants are never default-constructed implicitly, so if the first

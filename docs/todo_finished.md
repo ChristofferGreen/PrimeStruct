@@ -6,6 +6,37 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4309: Lower local status-only stdlib Result try
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 runtime slice by making IR-backed
+    `try(...)` consume local imported status-only `/std/result/Result<E>`
+    sums.
+  - implementation_notes:
+    - Keep this slice limited to local status-only sum operands whose `ok`
+      variant is unit and whose `error(E)` payload is int-backed.
+    - Preserve direct-call status-only operands, `Result.error(...)`,
+      `Result.why(...)`, C++ emitter cleanup, and broader bridge deletion for
+      later TODO-4266 slices.
+  - acceptance:
+    - `try(localResultStatus)` on a local imported status-only Result sum
+      branches on the lowered sum tag for status-code returns.
+    - Result-returning functions propagate local imported status-only Result
+      sum errors by copying the source `error` payload into the declared return
+      Result sum.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once local imported status-only Result sum `try(...)`
+    lowering works without widening into direct-call status-only operands or
+    helper-call lowering.
+  - finished_at: 2026-04-28
+  - evidence: Extended the stdlib Result sum `try(...)` branch to accept unit
+    `ok` plus `error(E)` status-only sums, emit `0` on success for status-code
+    flows, reuse the existing int-backed error extraction, and copy error
+    payloads into imported status-only Result returns. Added IR/VM coverage for
+    local status-only ok/error flows and Result-return error propagation. Local
+    test execution was skipped per the lite workflow.
+
 - [x] TODO-4308: Add status-only stdlib Result sum surface
   - owner: ai
   - created_at: 2026-04-28

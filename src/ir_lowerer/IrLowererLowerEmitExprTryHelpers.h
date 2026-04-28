@@ -558,9 +558,6 @@
 
           auto tryEmitStdlibResultSumTry = [&](bool &emittedOut) -> bool {
             emittedOut = false;
-            if (!resultInfo.hasValue) {
-              return true;
-            }
             const Definition *sumDef = nullptr;
             const SumVariant *okVariant = nullptr;
             const SumVariant *errorVariant = nullptr;
@@ -602,16 +599,22 @@
               const SumVariant *candidateOk = findSumVariantByName(candidateDef, "ok");
               const SumVariant *candidateError = findSumVariantByName(candidateDef, "error");
               if (candidateOk == nullptr || candidateError == nullptr ||
-                  !candidateOk->hasPayload || !candidateError->hasPayload) {
+                  !candidateError->hasPayload) {
+                return false;
+              }
+              if (resultInfo.hasValue != candidateOk->hasPayload) {
                 return false;
               }
               LoweredSumPayloadStorageInfo candidateOkPayload;
               LoweredSumPayloadStorageInfo candidateErrorPayload;
-              if (!resolveSumPayloadStorageInfo(candidateDef, *candidateOk, candidateOkPayload) ||
-                  !resolveSumPayloadStorageInfo(candidateDef, *candidateError, candidateErrorPayload)) {
+              if (candidateOk->hasPayload &&
+                  !resolveSumPayloadStorageInfo(candidateDef, *candidateOk, candidateOkPayload)) {
                 return false;
               }
-              return resultValueMatchesPayload(candidateOkPayload) &&
+              if (!resolveSumPayloadStorageInfo(candidateDef, *candidateError, candidateErrorPayload)) {
+                return false;
+              }
+              return (!resultInfo.hasValue || resultValueMatchesPayload(candidateOkPayload)) &&
                      resultErrorMatchesPayload(candidateErrorPayload);
             };
 
@@ -621,7 +624,7 @@
                 auto operandIt = localsIn.find(operandExpr.name);
                 if (operandIt != localsIn.end()) {
                   const Definition *localSumDef = resolveSumDefinitionForLocalInfo(operandIt->second);
-                  if (localSumDef != nullptr && isStdlibResultSumDefinition(*localSumDef)) {
+                  if (localSumDef != nullptr && stdlibResultSumMatchesResultInfo(*localSumDef)) {
                     return localSumDef;
                   }
                 }
@@ -692,11 +695,15 @@
             okVariant = findSumVariantByName(*sumDef, "ok");
             errorVariant = findSumVariantByName(*sumDef, "error");
             if (okVariant == nullptr || errorVariant == nullptr ||
-                !okVariant->hasPayload || !errorVariant->hasPayload) {
-              error = "native backend requires stdlib Result ok/error payload variants";
+                okVariant->hasPayload != resultInfo.hasValue ||
+                !errorVariant->hasPayload) {
+              error = resultInfo.hasValue
+                          ? "native backend requires stdlib Result ok/error payload variants"
+                          : "native backend requires status-only stdlib Result unit ok and error payload variants";
               return false;
             }
-            if (!resolveSumPayloadStorageInfo(*sumDef, *okVariant, okPayload)) {
+            if (okVariant->hasPayload &&
+                !resolveSumPayloadStorageInfo(*sumDef, *okVariant, okPayload)) {
               error = unsupportedSumPayloadError(*sumDef, *okVariant);
               return false;
             }
@@ -729,6 +736,10 @@
             };
 
             auto emitLoadOkPayload = [&](int32_t sumPtrLocal) -> bool {
+              if (!okVariant->hasPayload) {
+                function.instructions.push_back({IrOpcode::PushI32, 0});
+                return true;
+              }
               if (okPayload.isAggregate) {
                 function.instructions.push_back({IrOpcode::LoadLocal, static_cast<uint64_t>(sumPtrLocal)});
                 function.instructions.push_back({IrOpcode::PushI64, static_cast<uint64_t>(2) * IrSlotBytes});
