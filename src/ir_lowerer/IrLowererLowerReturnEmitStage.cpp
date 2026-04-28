@@ -37,8 +37,10 @@
 #include "IrLowererTemplateTypeParseHelpers.h"
 #include "IrLowererUninitializedTypeHelpers.h"
 
+#include <algorithm>
 #include <cstring>
 #include <limits>
+#include <utility>
 
 namespace primec::ir_lowerer {
 
@@ -208,6 +210,7 @@ bool runLowerReturnEmitStage(const LowerReturnEmitStageInput &input,
   emitStatement = {};
 
 #include "IrLowererLowerReturnInfo.h"
+#include "IrLowererLowerSumHelpers.h"
 #include "IrLowererLowerInlineCalls.h"
 #include "IrLowererLowerEmitExpr.h"
 #include "IrLowererLowerOperators.h"

@@ -6685,3 +6685,23 @@ Moved from `docs/todo.md` during unfinished-only cleanup:
     mismatch diagnostics, and incompatible branch values. Removed `TODO-4260`
     from the live queue, promoted `TODO-4261` to Ready Now, and deferred
     release reruns to CI per the lite workflow.
+
+- [x] TODO-4261: Lower scalar sum construction and `pick` matches
+  - owner: ai
+  - created_at: 2026-04-27
+  - phase: Deferred algebraic types and brace-only construction
+  - scope: Lower the scalar-payload slice of sum construction and exhaustive
+    `pick` matching to executable backend behavior, while splitting aggregate
+    payload ownership into a follow-up.
+  - finished_at: 2026-04-28
+  - evidence: Added IR-backed lowering for scalar-payload sums using the
+    aggregate local-slot convention: slot 0 stores the payload-slot header,
+    slot 1 stores the active variant tag, and slot 2 stores the active scalar
+    payload. Value-position and statement-position `pick` now dispatch on the
+    active tag, bind the selected scalar payload in branch-local scope, and
+    execute the selected branch across the shared VM/native/exe IR path.
+    Compile-run coverage now exercises scalar construction plus value-position
+    `pick` across exe, VM, and native, and aggregate payload attempts report a
+    deterministic lowerer diagnostic. Moved aggregate payload move/borrow/drop
+    semantics to `TODO-4283`, promoted that follow-up to Ready Now, and
+    deferred release reruns to CI per the lite workflow.

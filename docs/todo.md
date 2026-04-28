@@ -67,7 +67,7 @@ Task template:
 
 ### Ready Now (Live Leaves; No Unmet TODO Dependencies)
 
-- TODO-4261: Lower and execute `pick` matches
+- TODO-4283: Lower aggregate sum payload ownership
 
 ### Immediate Next 10 (After Ready Now)
 
@@ -83,7 +83,7 @@ Task template:
 
 ### Priority Lanes (Current)
 
-- Deferred algebraic types and brace-only construction: TODO-4261 ->
+- Deferred algebraic types and brace-only construction: TODO-4283 ->
   TODO-4262
 - Deferred stdlib ADT migration: TODO-4263 -> TODO-4264 -> TODO-4265
   -> TODO-4266 -> TODO-4267
@@ -94,7 +94,7 @@ Task template:
 
 ### Execution Queue (Recommended)
 
-- TODO-4261: Lower and execute `pick` matches
+- TODO-4283: Lower aggregate sum payload ownership
 - TODO-4262: Add public sum-type examples
 - TODO-4263: Design generic and unit sum variants
 - TODO-4264: Add stdlib-owned `Maybe<T>` sum
@@ -137,7 +137,7 @@ Task template:
 | Debug trace replay robustness | none |
 | VM/runtime debug stateful opcode parity | none |
 | Test-suite audit follow-up and release-gate stability | none |
-| Algebraic sum types and brace-only construction | TODO-4261, TODO-4262 |
+| Algebraic sum types and brace-only construction | TODO-4283, TODO-4262 |
 | Stdlib ADT migration for `Maybe` and `Result` | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type packs and tuple stdlib surface | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -162,7 +162,7 @@ Task template:
 | Debug trace replay malformed-input coverage | none |
 | Shared VM/debug stateful opcode behavior | none |
 | Release benchmark/example suite stability and doctest governance | none |
-| Sum-type and brace-construction conformance | TODO-4261, TODO-4262 |
+| Sum-type and brace-construction conformance | TODO-4283, TODO-4262 |
 | Maybe/Result sum migration conformance | TODO-4263, TODO-4264, TODO-4265, TODO-4266, TODO-4267 |
 | Generic type-pack and tuple conformance | TODO-4268, TODO-4269, TODO-4270, TODO-4275, TODO-4276, TODO-4271, TODO-4272, TODO-4274, TODO-4273, TODO-4277, TODO-4278 |
 
@@ -280,39 +280,42 @@ Task template:
 
 ### Task Blocks
 
-- [ ] TODO-4261: Lower and execute `pick` matches
+- [ ] TODO-4283: Lower aggregate sum payload ownership
   - owner: ai
-  - created_at: 2026-04-27
+  - created_at: 2026-04-28
   - phase: Deferred algebraic types and brace-only construction
-  - scope: Lower sum construction and `pick` to executable backend behavior for
-    the supported backend set, with deterministic diagnostics elsewhere.
+  - scope: Extend executable sum construction and `pick` beyond the scalar
+    payload slice to aggregate payloads, preserving exactly-one-active-payload
+    ownership.
   - implementation_notes:
-    - Add explicit IR representation or documented lowering conventions in
-      `include/primec/Ir.h`, IR serialization/dump code, and narrow
-      `src/ir_lowerer/` units rather than growing broad include fragments.
-    - Cover C++ emitter, VM/native runtime, and unsupported backend diagnostics
-      separately; do not silently route unsupported sum payloads through struct
-      or integer fallbacks.
-    - Add IR pipeline tests before compile-run tests so tag/payload lowering is
-      easy to diff.
+    - Start from the scalar slot model added by `TODO-4261`: slot 0 stores the
+      aggregate header, slot 1 stores the active tag, and slot 2 starts payload
+      storage.
+    - Add explicit payload-slot metadata or documented lowering conventions for
+      aggregate payload copy/move/drop before accepting struct payloads.
+    - Keep deterministic diagnostics for unsupported recursive or unsized
+      payloads; do not silently route aggregate payloads through integer
+      fallbacks.
   - acceptance:
-    - IR lowering emits an explicit tag dispatch plus payload access model.
-    - Exactly one active payload is moved, borrowed, or dropped according to the
-      selected branch; inactive variants cannot be observed.
-    - C++/VM/native or explicitly supported backend tests execute representative
-      sum construction and `pick` programs.
-    - Unsupported backend/type combinations fail with deterministic diagnostics
-      instead of falling back silently.
-    - Serialized IR changes are documented or versioned where needed.
+    - Aggregate payload sum construction materializes the selected payload into
+      inline sum storage with deterministic layout.
+    - `pick` arms bind aggregate payloads as the selected variant type without
+      exposing inactive payload storage.
+    - Move, borrow, and drop behavior only applies to the active payload and is
+      covered by focused lowerer plus compile-run tests.
+    - Unsupported recursive or dynamically sized payload combinations fail with
+      deterministic diagnostics.
+    - `docs/PrimeStruct.md` records the aggregate payload layout and ownership
+      rule.
     - `./scripts/compile.sh --release` passes.
-  - stop_rule: Stop once representative sum construction and `pick` execution
-    works on supported backends and unsupported paths are deterministic.
+  - stop_rule: Stop once aggregate payload construction and `pick` execution
+    work on supported backends, with deterministic unsupported-path diagnostics.
 
 - [ ] TODO-4262: Add public sum-type examples
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred algebraic types and brace-only construction
-  - depends_on: TODO-4261
+  - depends_on: TODO-4283
   - scope: Add runnable algebraic sum examples to `README.md` and
     `docs/CodeExamples.md` once `[sum]` construction and `pick` matching are
     implemented.
@@ -510,7 +513,7 @@ Task template:
   - owner: ai
   - created_at: 2026-04-27
   - phase: Deferred generic tuple substrate
-  - depends_on: TODO-4282
+  - depends_on: TODO-4267
   - scope: Add parser, AST, semantic-product, and diagnostic support for
     heterogeneous type-parameter packs such as `tuple<Ts...>` without adding
     pack expansion or tuple implementation yet.

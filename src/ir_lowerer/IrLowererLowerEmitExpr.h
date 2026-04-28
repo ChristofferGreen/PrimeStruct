@@ -109,6 +109,20 @@
         return false;
       }
       case Expr::Kind::Call: {
+        const auto pickExprResult = tryEmitPickExpr(expr, localsIn);
+        if (pickExprResult == LoweredSumPickEmitResult::Error) {
+          return false;
+        }
+        if (pickExprResult == LoweredSumPickEmitResult::Emitted) {
+          return true;
+        }
+        if (!expr.isMethodCall && !expr.isFieldAccess) {
+          if (const Definition *sumDef = resolveSumDefinitionForTypeText(expr.name, expr.namespacePrefix);
+              sumDef != nullptr) {
+            (void)sumDef;
+            return tryEmitLoweredSumConstructorExpr(expr, localsIn);
+          }
+        }
         if (expr.isFieldAccess) {
           if (expr.args.size() != 1) {
             error = "field access requires a receiver";

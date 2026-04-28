@@ -390,6 +390,55 @@
       const bool semanticLocalAutoBinding = bindingTypeExpr != &stmt;
       const Expr &bindingTypeExprRef = *bindingTypeExpr;
 #include "IrLowererLowerStatementsBindingLocalInfo.h"
+      auto resolveBindingSumDefinition = [&]() -> const Definition * {
+        if (const Definition *sumDef =
+                resolveSumDefinitionForTypeText(info.structTypeName, stmt.namespacePrefix)) {
+          return sumDef;
+        }
+        for (const auto &transform : bindingTypeExprRef.transforms) {
+          if (transform.name == "effects" || transform.name == "capabilities" ||
+              isBindingQualifierName(transform.name) || !transform.arguments.empty()) {
+            continue;
+          }
+          std::string typeText = trimTemplateTypeText(transform.name);
+          if (!transform.templateArgs.empty()) {
+            typeText += "<" + joinTemplateArgsText(transform.templateArgs) + ">";
+          }
+          if (const Definition *sumDef =
+                  resolveSumDefinitionForTypeText(typeText, stmt.namespacePrefix)) {
+            return sumDef;
+          }
+          break;
+        }
+        return nullptr;
+      };
+      if (const Definition *sumDef = resolveBindingSumDefinition()) {
+        int32_t totalSlots = 0;
+        if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+          LoweredSumVariantSelection selection;
+          if (selectSumVariantForInitializer(init, *sumDef, localsIn, selection) &&
+              selection.variant != nullptr) {
+            error = unsupportedAggregateSumPayloadError(*sumDef, *selection.variant);
+          } else {
+            error = "native backend does not support aggregate sum payloads yet: " + sumDef->fullPath;
+          }
+          return false;
+        }
+        const int32_t baseLocal = nextLocal;
+        nextLocal += totalSlots;
+        info.kind = LocalInfo::Kind::Value;
+        info.valueKind = LocalInfo::ValueKind::Int64;
+        info.structTypeName = sumDef->fullPath;
+        info.index = nextLocal++;
+        emitLoweredSumHeader(baseLocal, totalSlots);
+        function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
+        function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(info.index)});
+        if (!emitLoweredSumConstructionIntoLocal(baseLocal, *sumDef, init, localsIn)) {
+          return false;
+        }
+        localsIn.emplace(stmt.name, info);
+        return true;
+      }
       if (info.kind == LocalInfo::Kind::Value &&
           info.valueKind == LocalInfo::ValueKind::Unknown &&
           info.structTypeName.empty()) {
@@ -760,6 +809,13 @@
       return false;
     }
     if (printPathSpaceResult == ir_lowerer::StatementPrintPathSpaceEmitResult::Emitted) {
+      return true;
+    }
+    const auto pickStatementResult = tryEmitPickStatement(stmt, localsIn);
+    if (pickStatementResult == LoweredSumPickEmitResult::Error) {
+      return false;
+    }
+    if (pickStatementResult == LoweredSumPickEmitResult::Emitted) {
       return true;
     }
     const std::optional<ir_lowerer::ReturnStatementInlineContext> returnInlineContext = [&]()

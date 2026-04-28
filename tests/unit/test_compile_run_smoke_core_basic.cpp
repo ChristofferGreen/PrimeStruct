@@ -106,5 +106,75 @@ main() {
   CHECK(runCommand(nativePath) == 5);
 }
 
+TEST_CASE("scalar sum construction and pick lower across backends") {
+  const std::string source = R"(
+[sum]
+Choice {
+  [i32] left
+  [i32] right
+}
+
+[return<int>]
+main() {
+  [Choice] choice{[right] 41i32}
+  [i32] result{pick(choice) {
+    left(value) {
+      plus(value, 1i32)
+    }
+    right(value) {
+      plus(value, 2i32)
+    }
+  }}
+  return(result)
+}
+)";
+  const std::string srcPath = writeTemp("compile_scalar_sum_pick.prime", source);
+  const std::string exePath = (testScratchPath("") / "primec_scalar_sum_pick_exe").string();
+  const std::string nativePath = (testScratchPath("") / "primec_scalar_sum_pick_native").string();
+
+  const std::string compileCmd = "./primec --emit=exe " + srcPath + " -o " + exePath + " --entry /main";
+  CHECK(runCommand(compileCmd) == 0);
+  CHECK(runCommand(exePath) == 43);
+
+  const std::string runVmCmd = "./primec --emit=vm " + srcPath + " --entry /main";
+  CHECK(runCommand(runVmCmd) == 43);
+
+  const std::string compileNativeCmd = "./primec --emit=native " + srcPath + " -o " + nativePath + " --entry /main";
+  CHECK(runCommand(compileNativeCmd) == 0);
+  CHECK(runCommand(nativePath) == 43);
+}
+
+TEST_CASE("aggregate sum payloads report deterministic lowerer diagnostic") {
+  const std::string source = R"(
+[struct]
+Payload {
+  [i32] value
+}
+
+[sum]
+Choice {
+  [Payload] payload
+}
+
+[return<int>]
+main() {
+  [Choice] choice{[payload] Payload{7i32}}
+  return(0i32)
+}
+)";
+  const std::string srcPath = writeTemp("compile_aggregate_sum_payload_reject.prime", source);
+  const std::string outPath =
+      (testScratchPath("") / "primec_aggregate_sum_payload_reject.txt").string();
+  const std::string errPath =
+      (testScratchPath("") / "primec_aggregate_sum_payload_reject.err.txt").string();
+
+  const std::string compileCmd = "./primec --emit=vm " + srcPath + " --entry /main > " +
+                                 outPath + " 2> " + errPath;
+  CHECK(runCommand(compileCmd) != 0);
+  const std::string diagnostics = readFile(outPath) + readFile(errPath);
+  CHECK(diagnostics.find("native backend does not support aggregate sum payloads yet: /Choice/payload") !=
+        std::string::npos);
+}
+
 
 TEST_SUITE_END();

@@ -1138,7 +1138,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4261: Lower and execute `pick` matches") !=
+                  "- TODO-4283: Lower aggregate sum payload ownership") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4262: Add public sum-type examples") !=
@@ -1153,10 +1153,10 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4261: Lower and execute `pick` matches") !=
+                  "- TODO-4283: Lower aggregate sum payload ownership") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
-      "TODO-4261: Lower and execute `pick` matches",
+      "TODO-4283: Lower aggregate sum payload ownership",
       "TODO-4262: Add public sum-type examples",
       "TODO-4263: Design generic and unit sum variants",
       "TODO-4264: Add stdlib-owned `Maybe<T>` sum",
