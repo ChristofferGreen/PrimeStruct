@@ -41,19 +41,55 @@ bool initializeTemplateMonomorphSourceDefinitions(Context &ctx,
     }
     if (allSumDefinitions) {
       std::unordered_set<size_t> seenTemplateCounts;
-      bool differsOnlyByTemplateArity = true;
+      std::vector<GenericTypeOverloadEntry> overloads;
+      overloads.reserve(family.size());
+      bool allowGenericTypeOverloadFamily = true;
       for (const Definition *def : family) {
         if (!seenTemplateCounts.insert(def->templateArgs.size()).second) {
-          differsOnlyByTemplateArity = false;
+          allowGenericTypeOverloadFamily = false;
           break;
         }
+        const std::string internalPath =
+            genericTypeOverloadInternalPath(publicPath, def->templateArgs.size());
+        if (occupiedPaths.count(internalPath) > 0) {
+          error = "generic type overload internal path conflicts with existing definition: " +
+                  internalPath;
+          return false;
+        }
+        overloads.push_back({internalPath, def->templateArgs.size()});
       }
-      if (differsOnlyByTemplateArity) {
-        error = "sum overloads by template arity are not supported: " + publicPath;
-      } else {
+      if (!allowGenericTypeOverloadFamily) {
         error = "duplicate definition: " + publicPath;
+        return false;
       }
-      return false;
+      std::stable_sort(overloads.begin(),
+                       overloads.end(),
+                       [](const GenericTypeOverloadEntry &left,
+                          const GenericTypeOverloadEntry &right) {
+                         return left.templateParameterCount <
+                                right.templateParameterCount;
+                       });
+      ctx.genericTypeOverloads.emplace(publicPath, overloads);
+      for (const Definition *def : family) {
+        std::string internalPath;
+        std::string internalName;
+        if (!resolveGenericTypeOverloadDefinitionIdentity(
+                *def, ctx, internalPath, internalName)) {
+          error = "duplicate definition: " + publicPath;
+          return false;
+        }
+        Definition clone = *def;
+        clone.fullPath = internalPath;
+        clone.name = internalName;
+        ctx.sourceDefs.emplace(clone.fullPath, clone);
+        ctx.genericTypeOverloadInternalToPublic.emplace(clone.fullPath,
+                                                        publicPath);
+        if (!clone.templateArgs.empty()) {
+          ctx.templateDefs.insert(clone.fullPath);
+          templateRoots.insert(clone.fullPath);
+        }
+      }
+      continue;
     }
 
     bool allowHelperOverloadFamily = true;

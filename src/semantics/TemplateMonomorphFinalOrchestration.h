@@ -167,9 +167,26 @@ void buildImportAliases(Context &ctx) {
         }
         registerAlias(ctx.directImportAliases, remainder, publicPath);
       }
+      for (const auto &[publicPath, overloads] : ctx.genericTypeOverloads) {
+        (void)overloads;
+        if (publicPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = publicPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        if (shouldSkipWildcardAlias(prefix, remainder)) {
+          continue;
+        }
+        registerAlias(ctx.directImportAliases, remainder, publicPath);
+      }
       for (const auto &entry : ctx.sourceDefs) {
         const std::string &path = entry.first;
         if (ctx.helperOverloadInternalToPublic.count(path) > 0) {
+          continue;
+        }
+        if (ctx.genericTypeOverloadInternalToPublic.count(path) > 0) {
           continue;
         }
         if (path.rfind(scopedPrefix, 0) != 0) {
@@ -191,7 +208,8 @@ void buildImportAliases(Context &ctx) {
     }
     auto defIt = ctx.sourceDefs.find(importPath);
     if (defIt == ctx.sourceDefs.end()) {
-      if (ctx.helperOverloads.count(importPath) == 0) {
+      if (ctx.helperOverloads.count(importPath) == 0 &&
+          ctx.genericTypeOverloads.count(importPath) == 0) {
         continue;
       }
     }
@@ -241,9 +259,26 @@ void buildImportAliases(Context &ctx) {
         }
         registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
       }
+      for (const auto &[publicPath, overloads] : ctx.genericTypeOverloads) {
+        (void)overloads;
+        if (publicPath.rfind(scopedPrefix, 0) != 0) {
+          continue;
+        }
+        const std::string remainder = publicPath.substr(scopedPrefix.size());
+        if (remainder.empty() || remainder.find('/') != std::string::npos) {
+          continue;
+        }
+        if (shouldSkipWildcardAlias(prefix, remainder)) {
+          continue;
+        }
+        registerAlias(ctx.transitiveImportAliases, remainder, publicPath);
+      }
       for (const auto &entry : ctx.sourceDefs) {
         const std::string &path = entry.first;
         if (ctx.helperOverloadInternalToPublic.count(path) > 0) {
+          continue;
+        }
+        if (ctx.genericTypeOverloadInternalToPublic.count(path) > 0) {
           continue;
         }
         if (path.rfind(scopedPrefix, 0) != 0) {
@@ -297,6 +332,10 @@ bool rewriteMonomorphizedDefinitions(Context &ctx,
     std::string overloadInternalPath;
     std::string overloadName;
     if (resolveHelperOverloadDefinitionIdentity(def, ctx, overloadInternalPath, overloadName)) {
+      clone.fullPath = std::move(overloadInternalPath);
+      clone.name = std::move(overloadName);
+    } else if (resolveGenericTypeOverloadDefinitionIdentity(
+                   def, ctx, overloadInternalPath, overloadName)) {
       clone.fullPath = std::move(overloadInternalPath);
       clone.name = std::move(overloadName);
     }

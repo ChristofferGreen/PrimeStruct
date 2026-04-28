@@ -310,6 +310,95 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("generic sum overload families resolve by template arity") {
+  const std::string source = R"(
+[sum]
+Choice<T> {
+  none
+  [T] some
+}
+
+[sum]
+Choice<T, E> {
+  [T] ok
+  [E] err
+}
+
+[return<i32>]
+main() {
+  [Choice<i32>] maybe{[some] 42i32}
+  [Choice<i32, string>] result{[ok] 7i32}
+  return(0i32)
+}
+)";
+
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(validateProgramWithSemanticProduct(source, semanticProgram, error));
+  CHECK(error.empty());
+
+  const primec::SemanticProgramSumTypeMetadata *choiceOne = nullptr;
+  const primec::SemanticProgramSumTypeMetadata *choiceTwo = nullptr;
+  for (const auto &entry : semanticProgram.sumTypeMetadata) {
+    if (entry.fullPath.rfind("/Choice__arity1__t", 0) == 0) {
+      choiceOne = &entry;
+    }
+    if (entry.fullPath.rfind("/Choice__arity2__t", 0) == 0) {
+      choiceTwo = &entry;
+    }
+  }
+  REQUIRE(choiceOne != nullptr);
+  REQUIRE(choiceTwo != nullptr);
+  CHECK(choiceOne->variantCount == 2);
+  CHECK(choiceTwo->variantCount == 2);
+
+  bool sawSome = false;
+  bool sawOk = false;
+  bool sawErr = false;
+  for (const auto &entry : semanticProgram.sumVariantMetadata) {
+    if (entry.sumPath == choiceOne->fullPath && entry.variantName == "some") {
+      sawSome = true;
+      CHECK(entry.payloadTypeText == "i32");
+    }
+    if (entry.sumPath == choiceTwo->fullPath && entry.variantName == "ok") {
+      sawOk = true;
+      CHECK(entry.payloadTypeText == "i32");
+    }
+    if (entry.sumPath == choiceTwo->fullPath && entry.variantName == "err") {
+      sawErr = true;
+      CHECK(entry.payloadTypeText == "string");
+    }
+  }
+  CHECK(sawSome);
+  CHECK(sawOk);
+  CHECK(sawErr);
+}
+
+TEST_CASE("generic sum overload families reject duplicate template arity") {
+  const std::string source = R"(
+[sum]
+Choice<T> {
+  none
+  [T] some
+}
+
+[sum]
+Choice<U> {
+  empty
+  [U] value
+}
+
+[return<i32>]
+main() {
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramExpectingError(source, error));
+  CHECK(error.find("duplicate definition: /Choice") != std::string::npos);
+}
+
 TEST_CASE("generic sum declarations reject recursive inline payloads") {
   const std::string source = R"(
 [sum]

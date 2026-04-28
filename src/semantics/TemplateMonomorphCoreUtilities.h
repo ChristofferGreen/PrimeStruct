@@ -64,17 +64,62 @@ std::string helperOverloadInternalPath(const std::string &publicPath, size_t par
   return publicPath + "__ov" + std::to_string(parameterCount);
 }
 
+std::string genericTypeOverloadInternalPath(const std::string &publicPath,
+                                            size_t templateParameterCount) {
+  return publicPath + "__arity" + std::to_string(templateParameterCount);
+}
+
 std::string helperOverloadDisplayPath(const std::string &path, const Context &ctx) {
   auto directIt = ctx.helperOverloadInternalToPublic.find(path);
   if (directIt != ctx.helperOverloadInternalToPublic.end()) {
     return directIt->second;
+  }
+  auto typeDirectIt = ctx.genericTypeOverloadInternalToPublic.find(path);
+  if (typeDirectIt != ctx.genericTypeOverloadInternalToPublic.end()) {
+    return typeDirectIt->second;
   }
   for (const auto &[internalPath, publicPath] : ctx.helperOverloadInternalToPublic) {
     if (path.rfind(internalPath + "__t", 0) == 0) {
       return publicPath;
     }
   }
+  for (const auto &[internalPath, publicPath] : ctx.genericTypeOverloadInternalToPublic) {
+    if (path.rfind(internalPath + "__t", 0) == 0) {
+      return publicPath;
+    }
+  }
   return path;
+}
+
+bool selectGenericTypeOverloadPath(const std::string &resolvedPath,
+                                   size_t templateArgumentCount,
+                                   const Context &ctx,
+                                   std::string &pathOut,
+                                   std::string &error) {
+  pathOut = resolvedPath;
+  auto familyIt = ctx.genericTypeOverloads.find(resolvedPath);
+  if (familyIt == ctx.genericTypeOverloads.end()) {
+    return true;
+  }
+  for (const auto &entry : familyIt->second) {
+    if (entry.templateParameterCount == templateArgumentCount) {
+      pathOut = entry.internalPath;
+      return true;
+    }
+  }
+  std::ostringstream expected;
+  bool firstExpected = true;
+  for (const auto &entry : familyIt->second) {
+    if (!firstExpected) {
+      expected << " or ";
+    }
+    firstExpected = false;
+    expected << entry.templateParameterCount;
+  }
+  error = "template argument count mismatch for " + resolvedPath +
+          ": expected " + expected.str() + ", got " +
+          std::to_string(templateArgumentCount);
+  return false;
 }
 
 std::string selectHelperOverloadPath(const Expr &expr, const std::string &resolvedPath, const Context &ctx) {
@@ -165,6 +210,29 @@ bool resolveHelperOverloadDefinitionIdentity(const Definition &def,
   const size_t parameterCount = def.parameters.size();
   for (const auto &entry : familyIt->second) {
     if (entry.parameterCount != parameterCount) {
+      continue;
+    }
+    internalPathOut = entry.internalPath;
+    const size_t slash = internalPathOut.find_last_of('/');
+    nameOut = slash == std::string::npos ? internalPathOut : internalPathOut.substr(slash + 1);
+    return true;
+  }
+  return false;
+}
+
+bool resolveGenericTypeOverloadDefinitionIdentity(const Definition &def,
+                                                  const Context &ctx,
+                                                  std::string &internalPathOut,
+                                                  std::string &nameOut) {
+  internalPathOut = def.fullPath;
+  nameOut = def.name;
+  auto familyIt = ctx.genericTypeOverloads.find(def.fullPath);
+  if (familyIt == ctx.genericTypeOverloads.end()) {
+    return false;
+  }
+  const size_t templateParameterCount = def.templateArgs.size();
+  for (const auto &entry : familyIt->second) {
+    if (entry.templateParameterCount != templateParameterCount) {
       continue;
     }
     internalPathOut = entry.internalPath;

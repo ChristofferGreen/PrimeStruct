@@ -6,6 +6,39 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 28, 2026)**
+- [x] TODO-4307: Support generic sum overloads by template arity
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Deferred stdlib ADT migration
+  - scope: Land the next TODO-4266 substrate slice by allowing same-path
+    generic sum definitions with different template arities, so a future
+    `Result<E>` sum can share `/std/result/Result` with `Result<T, E>`.
+  - implementation_notes:
+    - Keep this slice in template monomorphization and semantic validation;
+      do not add the stdlib status-only Result sum or change packed
+      status-only lowering yet.
+    - Reuse the existing same-path helper-overload pattern, but select type
+      overloads by template argument count instead of call parameter count.
+  - acceptance:
+    - Same-path generic sum definitions with distinct template arities
+      monomorphize to deterministic internal paths and publish sum metadata for
+      the selected arity.
+    - Explicit qualified `Result<E>` and `Result<T, E>` shapes can be declared
+      together and selected by template arity in semantic validation.
+    - Existing duplicate same-arity sum definitions still reject
+      deterministically.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once the generic sum arity substrate is available and
+    TODO-4266 records that adding the status-only stdlib surface/lowering is
+    the remaining Result work.
+  - finished_at: 2026-04-28
+  - evidence: Added template-monomorph generic type overload tracking for
+    same-path sums, selected overload roots by template arity during type
+    resolution and import aliasing, covered generic `Choice<T>` /
+    `Choice<T, E>` and explicit `/std/result/Result<E>` /
+    `/std/result/Result<T, E>` semantic validation, and documented the updated
+    TODO-4266 boundary. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4306: Diagnose status-only Result sum arity blocker
   - owner: ai
   - created_at: 2026-04-28

@@ -36,6 +36,11 @@ struct HelperOverloadEntry {
   size_t parameterCount = 0;
 };
 
+struct GenericTypeOverloadEntry {
+  std::string internalPath;
+  size_t templateParameterCount = 0;
+};
+
 struct ExplicitTemplateArgInferenceFact {
   std::string resolvedTypeText;
   bool resolvedConcrete = false;
@@ -58,6 +63,8 @@ struct Context {
   std::unordered_map<std::string, std::string> importAliases;
   std::unordered_map<std::string, std::vector<HelperOverloadEntry>> helperOverloads;
   std::unordered_map<std::string, std::string> helperOverloadInternalToPublic;
+  std::unordered_map<std::string, std::vector<GenericTypeOverloadEntry>> genericTypeOverloads;
+  std::unordered_map<std::string, std::string> genericTypeOverloadInternalToPublic;
   std::unordered_map<std::string, std::string> specializationCache;
   std::unordered_set<std::string> outputPaths;
   std::vector<Definition> outputDefs;

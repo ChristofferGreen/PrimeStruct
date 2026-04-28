@@ -115,6 +115,40 @@ ResolvedType resolveTypeStringImpl(std::string input,
             resolvedType.concrete,
         });
   };
+  std::string overloadBasePath =
+      resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  if (ctx.genericTypeOverloads.count(overloadBasePath) > 0) {
+    if (!selectGenericTypeOverloadPath(overloadBasePath,
+                                       resolvedArgs.size(),
+                                       ctx,
+                                       overloadBasePath,
+                                       error)) {
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    if (!allConcrete) {
+      result.text = base + "<" + joinTemplateArgs(resolvedArgs) + ">";
+      result.concrete = false;
+      recordExplicitTemplateArgFact(overloadBasePath, result);
+      return result;
+    }
+    if (consumeExplicitTemplateArgFact(overloadBasePath, result)) {
+      recordExplicitTemplateArgFact(overloadBasePath, result);
+      return result;
+    }
+    std::string specializedPath;
+    if (!instantiateTemplate(overloadBasePath, resolvedArgs, ctx, error, specializedPath)) {
+      result.text.clear();
+      result.concrete = false;
+      return result;
+    }
+    result.text = specializedPath;
+    result.concrete = true;
+    publishExplicitTemplateArgFact(overloadBasePath, result);
+    recordExplicitTemplateArgFact(overloadBasePath, result);
+    return result;
+  }
   if (isBuiltinTemplateContainer(base) || isBuiltinCollectionTemplateBase(base, resolvedArgs.size())) {
     const std::string normalizedBase = isBuiltinTemplateContainer(base)
                                            ? base
@@ -133,6 +167,15 @@ ResolvedType resolveTypeStringImpl(std::string input,
   }
   std::string resolvedBasePath =
       resolveNameToPath(base, namespacePrefix, scopedImportAliasesForNamespace(namespacePrefix, ctx), ctx.sourceDefs);
+  if (!selectGenericTypeOverloadPath(resolvedBasePath,
+                                     resolvedArgs.size(),
+                                     ctx,
+                                     resolvedBasePath,
+                                     error)) {
+    result.text.clear();
+    result.concrete = false;
+    return result;
+  }
   if (ctx.templateDefs.count(resolvedBasePath) == 0) {
     error = "template arguments are only supported on templated definitions: " + resolvedBasePath;
     result.text.clear();
@@ -215,11 +258,18 @@ bool rewriteTransforms(std::vector<Transform> &transforms,
           arg = resolvedArg.text;
         }
 
-        const std::string resolvedPath =
+        std::string resolvedPath =
             resolveNameToPath(transform.name,
                               namespacePrefix,
                               scopedImportAliasesForNamespace(namespacePrefix, ctx),
                               ctx.sourceDefs);
+        if (!selectGenericTypeOverloadPath(resolvedPath,
+                                           transform.templateArgs.size(),
+                                           ctx,
+                                           resolvedPath,
+                                           error)) {
+          return false;
+        }
         const bool isImportedGfxBufferTemplate =
             resolvedPath == "/std/gfx/Buffer" || resolvedPath == "/std/gfx/experimental/Buffer";
         if (isImportedGfxBufferTemplate && allConcreteTemplateArgs) {
