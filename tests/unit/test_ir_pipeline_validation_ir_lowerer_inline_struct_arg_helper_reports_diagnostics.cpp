@@ -61,7 +61,8 @@ TEST_CASE("ir lowerer inline struct arg helper reports diagnostics") {
       []() { return 0; },
       [](primec::IrOpcode, uint64_t) {},
       error));
-  CHECK(error == "struct field type mismatch");
+  CHECK(error.find("struct field type mismatch") != std::string::npos);
+  CHECK(error.find("/pkg/Vec::x") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer inline struct arg helper accepts compatible soa vector storage") {

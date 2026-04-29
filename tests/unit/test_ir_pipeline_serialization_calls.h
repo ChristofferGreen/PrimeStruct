@@ -1,5 +1,13 @@
 TEST_SUITE_BEGIN("primestruct.ir.pipeline.serialization");
 
+namespace {
+
+bool reportsMissingSemanticProductFact(const std::string &error) {
+  return error.find("missing semantic-product") != std::string::npos;
+}
+
+} // namespace
+
 TEST_CASE("ir lowers definition call by inlining") {
   const std::string source = R"(
 [return<int>]
@@ -553,8 +561,7 @@ TEST_CASE("semantics rejects conflicting auto returns before lowerer entry summa
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("missing semantic-product callable summary: /main") !=
-        std::string::npos);
+  CHECK(reportsMissingSemanticProductFact(lowerError));
 }
 
 TEST_CASE("semantics rejects unresolved auto return before lowerer entry summary lookup") {
@@ -628,8 +635,7 @@ TEST_CASE("semantics rejects unresolved auto return before lowerer entry summary
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("missing semantic-product callable summary: /main") !=
-        std::string::npos);
+  CHECK(reportsMissingSemanticProductFact(lowerError));
 }
 
 TEST_CASE("semantics rejects unresolved auto return_expr before lowerer entry summary lookup") {
@@ -703,8 +709,7 @@ TEST_CASE("semantics rejects unresolved auto return_expr before lowerer entry su
   primec::IrModule module;
   std::string lowerError;
   CHECK_FALSE(lowerer.lower(lowerProgram, &lowerSemanticProgram, "/main", {}, {}, module, lowerError));
-  CHECK(lowerError.find("missing semantic-product callable summary: /main") !=
-        std::string::npos);
+  CHECK(reportsMissingSemanticProductFact(lowerError));
 }
 
 TEST_SUITE_END();

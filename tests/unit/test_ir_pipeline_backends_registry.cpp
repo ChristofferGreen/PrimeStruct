@@ -149,9 +149,11 @@ void checkOptionalRssCheckpointSnapshot(const primec::SemanticPhaseCounterSnapsh
   CHECK(snapshot.rssAfterBytes > 0);
 }
 
-void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, uint64_t semanticNodeId) {
-  const auto mainPathId =
-      primec::semanticProgramInternCallTargetString(semanticProgram, "/main");
+void addVoidCallableSummaryForPath(primec::SemanticProgram &semanticProgram,
+                                   std::string_view fullPath,
+                                   uint64_t semanticNodeId) {
+  const auto fullPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, std::string(fullPath));
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .isExecution = false,
       .returnKind = "void",
@@ -169,7 +171,7 @@ void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, uint64_t s
       .onErrorBoundArgCount = 0,
       .semanticNodeId = semanticNodeId,
       .provenanceHandle = 0,
-      .fullPathId = mainPathId,
+      .fullPathId = fullPathId,
   });
   semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
       .returnKind = "void",
@@ -182,8 +184,12 @@ void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, uint64_t s
       .sourceLine = 0,
       .sourceColumn = 0,
       .semanticNodeId = semanticNodeId,
-      .definitionPathId = mainPathId,
+      .definitionPathId = fullPathId,
   });
+}
+
+void addVoidCallableSummary(primec::SemanticProgram &semanticProgram, uint64_t semanticNodeId) {
+  addVoidCallableSummaryForPath(semanticProgram, "/main", semanticNodeId);
 }
 
 const primec::semantics::SemanticValidationPassManifestEntry *findSemanticValidationPass(
@@ -1222,7 +1228,7 @@ TEST_CASE("semantic-product direct-call coverage conformance rejects missing tar
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   addVoidCallableSummary(semanticProgram, 81);
-  addVoidCallableSummary(semanticProgram, 82);
+  addVoidCallableSummaryForPath(semanticProgram, "/callee", 82);
   const auto calleePathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
   semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
@@ -1264,6 +1270,7 @@ TEST_CASE("ir lowerer production entry rejects missing semantic-product direct-c
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   addVoidCallableSummary(semanticProgram, 81);
+  addVoidCallableSummaryForPath(semanticProgram, "/callee", 82);
   const auto calleePathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
   semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
@@ -1686,6 +1693,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 5203;
   primec::Expr valuesExpr;
   valuesExpr.kind = primec::Expr::Kind::Name;
   valuesExpr.name = "values";
@@ -1699,6 +1707,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
 
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
+  addVoidCallableSummary(semanticProgram, 5203);
   semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
       .scopePath = "/main",
       .callName = "count",
@@ -1706,7 +1715,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
       .sourceColumn = 1,
       .semanticNodeId = 52,
       .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/vector/count"),
-      .stdlibSurfaceId = std::nullopt,
+      .stdlibSurfaceId = primec::StdlibSurfaceId::CollectionsVectorHelpers,
   });
 
   primec::IrLowerer lowerer;
@@ -1715,7 +1724,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product bridge-path choices") {
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product callable summary: /main");
+  CHECK(error == "missing semantic-product bridge-path choice: /main -> count");
   CHECK(diagnosticInfo.message == error);
 }
 
