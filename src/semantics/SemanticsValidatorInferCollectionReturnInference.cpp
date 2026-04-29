@@ -260,7 +260,14 @@ bool SemanticsValidator::inferDefinitionReturnBinding(const Definition &def, Bin
     std::optional<std::string> restrictType;
     std::string parseError;
     (void)parseBindingInfo(
-        paramExpr, def.namespacePrefix, structNames_, importAliases_, paramInfo.binding, restrictType, parseError);
+        paramExpr,
+        def.namespacePrefix,
+        structNames_,
+        importAliases_,
+        paramInfo.binding,
+        restrictType,
+        parseError,
+        &sumNames_);
     if (paramExpr.args.size() == 1) {
       paramInfo.defaultExpr = &paramExpr.args.front();
     }

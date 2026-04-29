@@ -707,6 +707,28 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("Result.map lambda body accepts sum typed locals") {
+  const std::string source = R"(
+[return<void>]
+main() {
+  [Result<i32, FileError>] status{ Result.ok(1i32) }
+  [auto] mapped{
+    Result.map(status, []([i32] v) {
+      [Result<i32, FileError>] nested{ Result.ok(v) }
+      [bool] failed{ Result.error(nested) }
+      return(plus(v, 1i32))
+    })
+  }
+  [bool] failed{ Result.error(mapped) }
+  [string] why{ Result.why(mapped) }
+  if(failed, then(){ return() }, else(){ return() })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("Result.and_then and Result.map2 infer nested auto Result bindings") {
   const std::string source = R"(
 [return<Result<i32, FileError>>]

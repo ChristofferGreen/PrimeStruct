@@ -200,7 +200,8 @@ bool SemanticsValidator::isStringStatementExpr(const Expr &arg,
                                   importAliases_,
                                   info,
                                   restrictType,
-                                  error_)) {
+                                  error_,
+                                  &sumNames_)) {
               return false;
             }
             if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {

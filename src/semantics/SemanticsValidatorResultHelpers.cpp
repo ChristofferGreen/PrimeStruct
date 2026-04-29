@@ -318,7 +318,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
       BindingInfo binding;
       std::optional<std::string> restrictType;
       if (!parseBindingInfo(
-              param, lambdaExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+              param, lambdaExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_,
+              &sumNames_)) {
         return false;
       }
       if (!hasExplicitBindingTypeTransform(param) && param.args.size() == 1) {
@@ -343,7 +344,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
         BindingInfo binding;
         std::optional<std::string> restrictType;
         if (!parseBindingInfo(
-                bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+                bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_,
+                &sumNames_)) {
           return false;
         }
         if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
@@ -397,7 +399,8 @@ bool SemanticsValidator::resolveResultTypeForExpr(const Expr &expr,
         BindingInfo binding;
         std::optional<std::string> restrictType;
         if (!parseBindingInfo(
-                bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_)) {
+                bodyExpr, bodyExpr.namespacePrefix, structNames_, importAliases_, binding, restrictType, error_,
+                &sumNames_)) {
           return false;
         }
         if (!hasExplicitBindingTypeTransform(bodyExpr) && bodyExpr.args.size() == 1) {
