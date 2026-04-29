@@ -991,8 +991,82 @@
       return true;
     };
 
+    auto describePickTargetName = [&](const Expr &targetExpr) {
+      if (targetExpr.kind == Expr::Kind::Name && !targetExpr.name.empty()) {
+        return function.name + " -> " + targetExpr.name;
+      }
+      if (!targetExpr.name.empty()) {
+        return function.name + " -> " + targetExpr.name;
+      }
+      return function.name + " -> <expr>";
+    };
+
+    auto resolveSemanticProductPickTargetSumDefinition =
+        [&](const Expr &targetExpr,
+            const LocalMap &valueLocals) -> const Definition * {
+      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+      if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
+        return nullptr;
+      }
+
+      auto requirePublishedSumMetadata =
+          [&](const Definition &sumDef, const Expr &sourceExpr) -> const Definition * {
+        if (findSemanticProductSumTypeMetadata(semanticTargets, sumDef.fullPath) == nullptr) {
+          error = "missing semantic-product sum metadata for pick target: " +
+                  describePickTargetName(sourceExpr);
+          return nullptr;
+        }
+        return &sumDef;
+      };
+
+      if (targetExpr.kind == Expr::Kind::Name) {
+        const SemanticProgramBindingFact *bindingFact =
+            findSemanticProductBindingFactByScopeAndName(
+                semanticTargets, function.name, targetExpr.name);
+        if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+          if (valueLocals.find(targetExpr.name) != valueLocals.end()) {
+            error = "missing semantic-product pick target binding fact: " +
+                    describePickTargetName(targetExpr);
+          }
+          return nullptr;
+        }
+        const Definition *semanticSumDef =
+            resolveSumDefinitionForTypeText(bindingFact->bindingTypeText, function.name);
+        if (semanticSumDef == nullptr) {
+          error = "semantic-product pick target binding type is not a sum: " +
+                  describePickTargetName(targetExpr);
+          return nullptr;
+        }
+        auto localIt = valueLocals.find(targetExpr.name);
+        if (localIt != valueLocals.end()) {
+          const Definition *localSumDef = resolveSumDefinitionForLocalInfo(localIt->second);
+          if (localSumDef != nullptr && localSumDef->fullPath != semanticSumDef->fullPath) {
+            error = "stale semantic-product pick target binding type: " +
+                    describePickTargetName(targetExpr);
+            return nullptr;
+          }
+        }
+        return requirePublishedSumMetadata(*semanticSumDef, targetExpr);
+      }
+
+      if (targetExpr.kind == Expr::Kind::Call && !targetExpr.isMethodCall) {
+        if (const Definition *constructorSum =
+                resolveSumDefinitionForTypeText(targetExpr.name, targetExpr.namespacePrefix);
+            constructorSum != nullptr) {
+          return requirePublishedSumMetadata(*constructorSum, targetExpr);
+        }
+      }
+
+      return nullptr;
+    };
+
     auto resolvePickTargetSumDefinition =
         [&](const Expr &targetExpr, const LocalMap &valueLocals) -> const Definition * {
+      if (const Definition *semanticSumDef =
+              resolveSemanticProductPickTargetSumDefinition(targetExpr, valueLocals);
+          semanticSumDef != nullptr || !error.empty()) {
+        return semanticSumDef;
+      }
       if (targetExpr.kind == Expr::Kind::Name) {
         auto localIt = valueLocals.find(targetExpr.name);
         if (localIt != valueLocals.end()) {
@@ -1415,7 +1489,9 @@
       }
       const Definition *sumDef = resolvePickTargetSumDefinition(expr.args.front(), valueLocals);
       if (sumDef == nullptr) {
-        error = "native backend pick target requires sum value";
+        if (error.empty()) {
+          error = "native backend pick target requires sum value";
+        }
         return LoweredSumPickEmitResult::Error;
       }
       const int32_t sumPtrLocal = allocTempLocal();
@@ -1522,7 +1598,9 @@
       }
       const Definition *sumDef = resolvePickTargetSumDefinition(stmt.args.front(), localsIn);
       if (sumDef == nullptr) {
-        error = "native backend pick target requires sum value";
+        if (error.empty()) {
+          error = "native backend pick target requires sum value";
+        }
         return LoweredSumPickEmitResult::Error;
       }
       const int32_t sumPtrLocal = allocTempLocal();

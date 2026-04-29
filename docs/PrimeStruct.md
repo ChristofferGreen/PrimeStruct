@@ -326,6 +326,12 @@ Planned non-template inference migration contract:
   metadata before lowerer bridge-routing consumers can dispatch through bridge-path choice facts.
   Missing or contradictory present ids fail closed with deterministic bridge-path metadata
   diagnostics.
+- Completed native pick target sum slice: semantic-product-addressed `pick(value)` lowering now
+  resolves named targets from the published binding fact and confirms the sum layout through
+  published sum metadata before local-map shape reconstruction can answer. Missing sum metadata or
+  binding facts, and binding facts that contradict lowerer-local shape, fail closed with
+  deterministic pick-target diagnostics. Syntax-only compatibility keeps the old local-map/type-name
+  reconstruction path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

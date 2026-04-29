@@ -549,6 +549,21 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   CHECK(setupType.find("const SemanticProgram *semanticProgram,") !=
         std::string::npos);
   CHECK(setupType.find("resolveMethodCallDefinitionFromExpr(") != std::string::npos);
+
+  std::filesystem::path semanticTargetsPath =
+      cwd / "include" / "primec" / "testing" / "ir_lowerer_helpers" /
+      "IrLowererSemanticProductTargetAdapters.h";
+  if (!std::filesystem::exists(semanticTargetsPath)) {
+    semanticTargetsPath = cwd.parent_path() / "include" / "primec" /
+                          "testing" / "ir_lowerer_helpers" /
+                          "IrLowererSemanticProductTargetAdapters.h";
+  }
+  REQUIRE(std::filesystem::exists(semanticTargetsPath));
+  const std::string semanticTargets = readTextFile(semanticTargetsPath);
+  CHECK(semanticTargets.find("findSemanticProductBindingFactByScopeAndName") !=
+        std::string::npos);
+  CHECK(semanticTargets.find("findSemanticProductSumTypeMetadata") !=
+        std::string::npos);
 }
 
 TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {

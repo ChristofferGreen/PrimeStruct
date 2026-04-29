@@ -554,6 +554,136 @@ TEST_CASE("compile pipeline semantic handoff gate reaches lowering and rejects s
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
+TEST_CASE("native pick target sum resolution uses semantic-product facts") {
+  const std::string source = R"(
+[sum]
+Choice {
+  [i32] left
+  [i32] right
+}
+
+[sum]
+OtherChoice {
+  [i32] left
+  [i32] right
+}
+
+[return<i32>]
+main() {
+  [Choice] choice{[right] 41i32}
+  return(pick(choice) {
+    left(value) {
+      plus(value, 1i32)
+    }
+    right(value) {
+      plus(value, 2i32)
+    }
+  })
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *choiceFact =
+      primec::ir_lowerer::findSemanticProductBindingFactByScopeAndName(
+          semanticProductTargets, "/main", "choice");
+  REQUIRE(choiceFact != nullptr);
+  CHECK(choiceFact->bindingTypeText == "Choice");
+  REQUIRE(primec::ir_lowerer::findSemanticProductSumTypeMetadata(
+              semanticProductTargets, "/Choice") != nullptr);
+  REQUIRE(primec::ir_lowerer::findSemanticProductSumTypeMetadata(
+              semanticProductTargets, "/OtherChoice") != nullptr);
+  const auto choiceOrder = std::find_if(
+      semanticProgram.sumTypeMetadata.begin(),
+      semanticProgram.sumTypeMetadata.end(),
+      [](const primec::SemanticProgramSumTypeMetadata &entry) {
+        return entry.fullPath == "/Choice";
+      });
+  const auto otherOrder = std::find_if(
+      semanticProgram.sumTypeMetadata.begin(),
+      semanticProgram.sumTypeMetadata.end(),
+      [](const primec::SemanticProgramSumTypeMetadata &entry) {
+        return entry.fullPath == "/OtherChoice";
+      });
+  REQUIRE(choiceOrder != semanticProgram.sumTypeMetadata.end());
+  REQUIRE(otherOrder != semanticProgram.sumTypeMetadata.end());
+  CHECK(choiceOrder < otherOrder);
+
+  primec::Options options;
+  options.entryPath = "/main";
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  primec::Program loweringProgram = program;
+  primec::SemanticProgram loweringSemanticProgram = semanticProgram;
+  REQUIRE(primec::prepareIrModule(loweringProgram,
+                                  &loweringSemanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Native,
+                                  ir,
+                                  failure));
+  CHECK(!ir.functions.empty());
+
+  auto rewriteChoiceBindingType =
+      [](primec::SemanticProgram &semanticProduct, const std::string &typeText) {
+        for (auto &fact : semanticProduct.bindingFacts) {
+          if (fact.scopePath == "/main" && fact.name == "choice") {
+            fact.bindingTypeText = typeText;
+            fact.bindingTypeTextId =
+                primec::semanticProgramInternCallTargetString(semanticProduct, typeText);
+            return true;
+          }
+        }
+        return false;
+      };
+
+  primec::Program staleProgram = program;
+  primec::SemanticProgram staleSemanticProgram = semanticProgram;
+  REQUIRE(rewriteChoiceBindingType(staleSemanticProgram, "OtherChoice"));
+
+  primec::IrModule staleIr;
+  primec::IrPreparationFailure staleFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleProgram,
+                                      &staleSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleIr,
+                                      staleFailure));
+  CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleFailure.message ==
+        "stale semantic-product pick target binding type: /main -> choice");
+  CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
+
+  primec::Program missingMetadataProgram = program;
+  primec::SemanticProgram missingMetadataSemanticProgram = semanticProgram;
+  missingMetadataSemanticProgram.sumTypeMetadata.erase(
+      std::remove_if(missingMetadataSemanticProgram.sumTypeMetadata.begin(),
+                     missingMetadataSemanticProgram.sumTypeMetadata.end(),
+                     [](const primec::SemanticProgramSumTypeMetadata &entry) {
+                       return entry.fullPath == "/Choice";
+                     }),
+      missingMetadataSemanticProgram.sumTypeMetadata.end());
+
+  primec::IrModule missingMetadataIr;
+  primec::IrPreparationFailure missingMetadataFailure;
+  CHECK_FALSE(primec::prepareIrModule(missingMetadataProgram,
+                                      &missingMetadataSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      missingMetadataIr,
+                                      missingMetadataFailure));
+  CHECK(missingMetadataFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(missingMetadataFailure.message ==
+        "missing semantic-product sum metadata for pick target: /main -> choice");
+  CHECK(missingMetadataFailure.diagnosticInfo.message == missingMetadataFailure.message);
+}
+
 TEST_CASE("semantic product callable lookup prefers definition over same-path execution") {
   const std::string source =
       "[return<i32>]\n"

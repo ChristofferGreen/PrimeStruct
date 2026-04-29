@@ -367,7 +367,8 @@ Task template:
     complete. Continue with a different graph-backed consumer. The query
     result-metadata and type-metadata stale diagnostic slices are complete. The
     collection specialization, direct-call, method-call, and bridge-path metadata
-    diagnostic slices are complete.
+    diagnostic slices are complete. The native pick target sum-resolution slice
+    is complete for named `pick(value)` targets.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -488,6 +489,12 @@ Task template:
       now rejects missing or stale interned scope, collection family, chosen
       path, and published lookup metadata before lowerer routing consumers can
       dispatch through inconsistent bridge-path choice facts.
+    - Completed slice: native `pick(value)` lowering now uses the published
+      binding fact plus published sum metadata to resolve named pick targets,
+      instead of letting local-map shape reconstruction own that decision on
+      the semantic-product path. Missing/contradictory graph-owned facts fail
+      closed with deterministic pick-target diagnostics; the old local-map
+      reconstruction remains only for syntax-only compatibility.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

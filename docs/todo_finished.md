@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use graph facts for pick targets
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native
+    `pick(value)` target sum resolution consume published binding facts and
+    published sum metadata before lowerer-local shape reconstruction can own
+    the target sum decision.
+  - implementation_notes:
+    - Preserve the existing local-map/type-name reconstruction path only as a
+      syntax-only compatibility fallback.
+    - Keep broader query-call pick targets, template inference, and collection
+      migration out of scope.
+    - Expose narrow semantic-product adapter lookups for binding facts by
+      scope/name and sum metadata by path.
+  - acceptance:
+    - Named `pick(value)` targets resolve through published binding facts plus
+      published sum metadata on the semantic-product path.
+    - Missing sum metadata and binding facts that contradict lowerer-local
+      target shape fail before native pick lowering dispatches on stale sum
+      variants.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native pick target sum resolution has
+    semantic-product authority for named targets and keeps legacy local-map
+    reconstruction quarantined to syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product adapter lookups for binding facts by
+    scope/name and sum metadata by path, changed native pick lowering to use
+    those facts before local-map reconstruction, added lowerer contract
+    coverage for the successful path plus missing/stale graph facts, and
+    documented the remaining TODO-4298 work. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Reject stale bridge-path metadata
   - owner: ai
   - created_at: 2026-04-28
