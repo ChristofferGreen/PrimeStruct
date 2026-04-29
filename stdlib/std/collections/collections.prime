@@ -1,3 +1,6 @@
+import /std/collections/vector/*
+import /std/collections/map/*
+
 namespace std {
   namespace collections {
   [public return<vector<T>>]

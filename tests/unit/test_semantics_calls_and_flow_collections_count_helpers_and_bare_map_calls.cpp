@@ -723,6 +723,9 @@ TEST_CASE("public stdlib map wrappers route through canonical slash helpers") {
   REQUIRE(std::filesystem::exists(collectionsStdlibPath));
   const std::string source = readText(collectionsStdlibPath);
 
+  CHECK(source.find("import /std/collections/vector/*\n"
+                    "import /std/collections/map/*\n\n"
+                    "namespace std") == 0);
   CHECK(source.find(
             "  mapCount<K, V>([map<K, V>] values) {\n"
             "    return(/std/collections/map/count<K, V>(values))") !=
