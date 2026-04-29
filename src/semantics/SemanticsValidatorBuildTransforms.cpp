@@ -29,6 +29,42 @@ bool isLowerCamelIdentifier(const std::string &name) {
   return !name.empty() && name.front() >= 'a' && name.front() <= 'z';
 }
 
+std::string stripGeneratedHelperSuffix(std::string name) {
+  const size_t overloadSuffix = name.find("__ov");
+  if (overloadSuffix != std::string::npos) {
+    name.erase(overloadSuffix);
+  }
+  const size_t specializationSuffix = name.find("__t");
+  if (specializationSuffix != std::string::npos) {
+    name.erase(specializationSuffix);
+  }
+  return name;
+}
+
+std::string generatedUnitVariantName(const Expr &stmt, const Definition &def) {
+  if (def.fullPath.find("__t") == std::string::npos ||
+      stmt.kind != Expr::Kind::Call || stmt.isBinding || stmt.name.empty() ||
+      !stmt.args.empty() || !stmt.argNames.empty() ||
+      !stmt.bodyArguments.empty() || stmt.hasBodyArguments ||
+      !stmt.transforms.empty() || !stmt.templateArgs.empty()) {
+    return {};
+  }
+  std::string name = stmt.name;
+  if (!name.empty() && name.front() == '/') {
+    name.erase(name.begin());
+  }
+  if (name.find('/') == std::string::npos &&
+      name.find("__ov") == std::string::npos &&
+      name.find("__t") == std::string::npos) {
+    return {};
+  }
+  const size_t slash = name.find_last_of('/');
+  if (slash != std::string::npos) {
+    name = name.substr(slash + 1);
+  }
+  return stripGeneratedHelperSuffix(std::move(name));
+}
+
 std::string sumPayloadTypeTextForBuildTransformValidation(const Transform &payload) {
   if (payload.templateArgs.empty()) {
     return payload.name;
@@ -519,26 +555,29 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
 
     std::unordered_set<std::string> seenVariants;
     for (const auto &stmt : def.statements) {
+      const std::string generatedUnitName = generatedUnitVariantName(stmt, def);
       const bool isUnitVariant =
           stmt.kind == Expr::Kind::Name && !stmt.name.empty() &&
           !stmt.isBinding && stmt.args.empty() && stmt.argNames.empty() &&
           stmt.bodyArguments.empty() && !stmt.hasBodyArguments &&
           stmt.transforms.empty() && stmt.templateArgs.empty();
-      if (!stmt.isBinding && !isUnitVariant) {
+      if (!stmt.isBinding && !isUnitVariant && generatedUnitName.empty()) {
         if (addTransformDiagnostic("sum variants require one payload envelope or bare unit variant on " +
                                    def.fullPath)) {
           return false;
         }
         return true;
       }
-      if (!isLowerCamelIdentifier(stmt.name)) {
-        if (addTransformDiagnostic("sum variant name must be lowerCamelCase: " + def.fullPath + "/" + stmt.name)) {
+      const std::string variantName =
+          generatedUnitName.empty() ? stmt.name : generatedUnitName;
+      if (!isLowerCamelIdentifier(variantName)) {
+        if (addTransformDiagnostic("sum variant name must be lowerCamelCase: " + def.fullPath + "/" + variantName)) {
           return false;
         }
         return true;
       }
-      if (!seenVariants.insert(stmt.name).second) {
-        if (addTransformDiagnostic("duplicate sum variant: " + stmt.name + " on " + def.fullPath)) {
+      if (!seenVariants.insert(variantName).second) {
+        if (addTransformDiagnostic("duplicate sum variant: " + variantName + " on " + def.fullPath)) {
           return false;
         }
         return true;
@@ -549,7 +588,7 @@ bool SemanticsValidator::validateDefinitionBuildTransforms(
         }
         return true;
       }
-      if (isUnitVariant) {
+      if (isUnitVariant || !generatedUnitName.empty()) {
         continue;
       }
       if (stmt.transforms.size() != 1) {

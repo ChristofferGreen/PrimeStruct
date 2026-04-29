@@ -167,6 +167,27 @@ main() {
         std::string::npos);
 }
 
+TEST_CASE("generic sum declarations reject source call-shaped unit variants") {
+  const std::string source = R"(
+[sum]
+Maybe<T> {
+  none()
+  [T] some
+}
+
+[return<i32>]
+main() {
+  [Maybe<i32>] value{}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK_FALSE(validateProgramExpectingError(source, error));
+  CHECK(error.find("sum variants require one payload envelope or bare unit variant") !=
+        std::string::npos);
+}
+
 TEST_CASE("sum declarations reject field-like variant modifiers") {
   const std::string source = R"(
 [struct]

@@ -18,6 +18,42 @@ std::string sumPayloadTypeTextForMonomorphRefresh(const Transform &transform) {
   return transform.name + "<" + joinTemplateArgs(transform.templateArgs) + ">";
 }
 
+std::string stripGeneratedSumUnitVariantSuffix(std::string name) {
+  const size_t overloadSuffix = name.find("__ov");
+  if (overloadSuffix != std::string::npos) {
+    name.erase(overloadSuffix);
+  }
+  const size_t specializationSuffix = name.find("__t");
+  if (specializationSuffix != std::string::npos) {
+    name.erase(specializationSuffix);
+  }
+  return name;
+}
+
+std::string generatedSumUnitVariantName(const Expr &stmt, const Definition &def) {
+  if (def.fullPath.find("__t") == std::string::npos ||
+      stmt.kind != Expr::Kind::Call || stmt.isBinding || stmt.name.empty() ||
+      !stmt.args.empty() || !stmt.argNames.empty() ||
+      !stmt.bodyArguments.empty() || stmt.hasBodyArguments ||
+      !stmt.transforms.empty() || !stmt.templateArgs.empty()) {
+    return {};
+  }
+  std::string name = stmt.name;
+  if (!name.empty() && name.front() == '/') {
+    name.erase(name.begin());
+  }
+  if (name.find('/') == std::string::npos &&
+      name.find("__ov") == std::string::npos &&
+      name.find("__t") == std::string::npos) {
+    return {};
+  }
+  const size_t slash = name.find_last_of('/');
+  if (slash != std::string::npos) {
+    name = name.substr(slash + 1);
+  }
+  return stripGeneratedSumUnitVariantSuffix(std::move(name));
+}
+
 void refreshMonomorphizedSumVariants(Definition &def) {
   if (!isSumDefinitionForMonomorphRefresh(def)) {
     return;
@@ -34,6 +70,21 @@ void refreshMonomorphizedSumVariants(Definition &def) {
           payload.name,
           payload.templateArgs,
           sumPayloadTypeTextForMonomorphRefresh(payload),
+          def.sumVariants.size(),
+          stmt.sourceLine,
+          stmt.sourceColumn,
+          stmt.semanticNodeId,
+      });
+      continue;
+    }
+    const std::string generatedUnitName = generatedSumUnitVariantName(stmt, def);
+    if (!generatedUnitName.empty()) {
+      def.sumVariants.push_back(SumVariant{
+          generatedUnitName,
+          false,
+          {},
+          {},
+          {},
           def.sumVariants.size(),
           stmt.sourceLine,
           stmt.sourceColumn,
