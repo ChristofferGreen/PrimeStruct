@@ -5286,7 +5286,7 @@ main() {
   CHECK(error.empty());
 }
 
-TEST_CASE("builtin soa_vector global helper-return read helpers reject unresolved get method first") {
+TEST_CASE("builtin soa_vector global helper-return read helpers validate") {
   const std::string source = R"(
 Particle() {
   [i32] x{1i32}
@@ -5315,9 +5315,9 @@ main() {
 }
   )";
   std::string error;
-  CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown method: /std/collections/soa_vector/get") !=
-        std::string::npos);
+  INFO(error);
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
 }
 
 TEST_CASE("builtin soa_vector method-like helper-return read helpers reject primitive metadata first") {
