@@ -592,7 +592,7 @@ main() {
   const auto &transforms = program.definitions[0].transforms;
   REQUIRE(transforms.size() == 1);
   REQUIRE(transforms[0].arguments.size() == 1);
-  CHECK(transforms[0].arguments[0] == "value(block() { 1i32, foo(2i32) })");
+  CHECK(transforms[0].arguments[0] == "value(1i32, foo(2i32))");
 }
 
 TEST_SUITE_END();
