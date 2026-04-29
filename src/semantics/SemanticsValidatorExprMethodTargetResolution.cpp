@@ -2,6 +2,9 @@
 #include "MapConstructorHelpers.h"
 #include "primec/StdlibSurfaceRegistry.h"
 
+#include <cctype>
+#include <cstdint>
+#include <sstream>
 #include <string>
 #include <string_view>
 
@@ -394,6 +397,49 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   };
   auto typeMatches = [&](std::string_view candidate, std::string_view expected) {
     return candidate == expected || normalizedTypeLeafName(std::string(candidate)) == expected;
+  };
+  auto bindingTypeTextForResolution = [](const std::string &typeName,
+                                         const std::string &typeTemplateArg) {
+    if (typeName.empty() || typeTemplateArg.empty()) {
+      return typeName;
+    }
+    return typeName + "<" + typeTemplateArg + ">";
+  };
+  auto resolveSumTypePath = [&](const std::string &typeText,
+                                const std::string &namespacePrefix) -> std::string {
+    if (const Definition *sumDef =
+            resolveSumDefinitionForTypeText(typeText, namespacePrefix)) {
+      if (typeText.find('<') != std::string::npos &&
+          sumDef->fullPath.find("__t") == std::string::npos) {
+        std::string typeBase;
+        std::string typeArgs;
+        if (splitTemplateTypeName(normalizeBindingTypeName(typeText),
+                                  typeBase, typeArgs) &&
+            !typeArgs.empty()) {
+          uint64_t hash = 1469598103934665603ULL;
+          for (const char ch : typeArgs) {
+            if (std::isspace(static_cast<unsigned char>(ch))) {
+              continue;
+            }
+            hash ^= static_cast<uint64_t>(static_cast<unsigned char>(ch));
+            hash *= 1099511628211ULL;
+          }
+          std::ostringstream candidate;
+          candidate << sumDef->fullPath << "__t" << std::hex << hash;
+          if (sumNames_.count(candidate.str()) > 0) {
+            return candidate.str();
+          }
+        }
+        if (auto specializedIt =
+                uniqueSpecializationPathByBase_.find(sumDef->fullPath);
+            specializedIt != uniqueSpecializationPathByBase_.end() &&
+            sumNames_.count(specializedIt->second) > 0) {
+          return specializedIt->second;
+        }
+      }
+      return sumDef->fullPath;
+    }
+    return "";
   };
   auto resolveExperimentalVectorValueTarget = [&](const Expr &target, std::string &elemTypeOut) -> bool {
     elemTypeOut.clear();
@@ -3004,6 +3050,10 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
           resolveStructTypePath(normalizedPointeeType, lookupNamespace);
       if (resolvedPointeeType.empty()) {
         resolvedPointeeType =
+            resolveSumTypePath(normalizedPointeeType, lookupNamespace);
+      }
+      if (resolvedPointeeType.empty()) {
+        resolvedPointeeType =
             resolveTypePath(normalizedPointeeType, lookupNamespace);
       }
       if (!resolvedPointeeType.empty()) {
@@ -3019,6 +3069,11 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
     return true;
   }
   std::string resolvedType = resolveStructTypePath(typeName, receiver.namespacePrefix);
+  if (resolvedType.empty()) {
+    resolvedType = resolveSumTypePath(
+        bindingTypeTextForResolution(typeName, typeTemplateArg),
+        receiver.namespacePrefix);
+  }
   if (resolvedType.empty()) {
     resolvedType = resolveTypePath(typeName, receiver.namespacePrefix);
   }
