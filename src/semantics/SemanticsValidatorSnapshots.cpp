@@ -67,6 +67,29 @@ void rebindSemanticNodeIdsBySnapshotKey(std::vector<Entry> &entries,
   }
 }
 
+template <typename Entry, typename KeyForEntry>
+bool appendMissingEntriesBySnapshotKey(std::vector<Entry> &entries,
+                                       const std::vector<Entry> &freshEntries,
+                                       KeyForEntry keyForEntry) {
+  std::unordered_map<std::string, std::size_t> remainingEntriesByKey;
+  remainingEntriesByKey.reserve(entries.size());
+  for (const auto &entry : entries) {
+    ++remainingEntriesByKey[keyForEntry(entry)];
+  }
+
+  bool appended = false;
+  for (const auto &entry : freshEntries) {
+    std::size_t &remainingCount = remainingEntriesByKey[keyForEntry(entry)];
+    if (remainingCount > 0) {
+      --remainingCount;
+      continue;
+    }
+    entries.push_back(entry);
+    appended = true;
+  }
+  return appended;
+}
+
 std::string snapshotKey(std::string_view first,
                         std::string_view second,
                         int sourceLine,
@@ -930,16 +953,43 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
   auto freshOnErrorFacts = onErrorFactSnapshotForSemanticProduct();
 
   mergedWorkerPublicationFactsValid_ = true;
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.directCallTargets,
-      std::move(freshDirectCallTargets),
+  const auto directCallTargetSnapshotKey =
       [](const CollectedDirectCallTargetEntry &entry) {
         return snapshotKey(entry.scopePath,
                            entry.callName,
                            entry.sourceLine,
                            entry.sourceColumn,
                            entry.resolvedPath);
-      });
+      };
+  if (appendMissingEntriesBySnapshotKey(
+          mergedWorkerPublicationFacts_.directCallTargets,
+          freshDirectCallTargets,
+          directCallTargetSnapshotKey)) {
+    std::stable_sort(mergedWorkerPublicationFacts_.directCallTargets.begin(),
+                     mergedWorkerPublicationFacts_.directCallTargets.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.callName != right.callName) {
+                         return left.callName < right.callName;
+                       }
+                       if (left.resolvedPath != right.resolvedPath) {
+                         return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
+                     });
+  }
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.directCallTargets,
+      std::move(freshDirectCallTargets),
+      directCallTargetSnapshotKey);
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.methodCallTargets,
       std::move(freshMethodCallTargets),
@@ -1019,16 +1069,43 @@ void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {
                            entry.sourceLine,
                            entry.sourceColumn);
       });
-  rebindSemanticNodeIdsBySnapshotKey(
-      mergedWorkerPublicationFacts_.queryFacts,
-      std::move(freshQueryFacts),
+  const auto queryFactSnapshotKey =
       [](const QueryFactSnapshotEntry &entry) {
         return snapshotKey(entry.scopePath,
                            entry.callName,
                            entry.sourceLine,
                            entry.sourceColumn,
                            entry.resolvedPath);
-      });
+      };
+  if (appendMissingEntriesBySnapshotKey(
+          mergedWorkerPublicationFacts_.queryFacts,
+          freshQueryFacts,
+          queryFactSnapshotKey)) {
+    std::stable_sort(mergedWorkerPublicationFacts_.queryFacts.begin(),
+                     mergedWorkerPublicationFacts_.queryFacts.end(),
+                     [](const auto &left, const auto &right) {
+                       if (left.scopePath != right.scopePath) {
+                         return left.scopePath < right.scopePath;
+                       }
+                       if (left.sourceLine != right.sourceLine) {
+                         return left.sourceLine < right.sourceLine;
+                       }
+                       if (left.sourceColumn != right.sourceColumn) {
+                         return left.sourceColumn < right.sourceColumn;
+                       }
+                       if (left.callName != right.callName) {
+                         return left.callName < right.callName;
+                       }
+                       if (left.resolvedPath != right.resolvedPath) {
+                         return left.resolvedPath < right.resolvedPath;
+                       }
+                       return left.semanticNodeId < right.semanticNodeId;
+                     });
+  }
+  rebindSemanticNodeIdsBySnapshotKey(
+      mergedWorkerPublicationFacts_.queryFacts,
+      std::move(freshQueryFacts),
+      queryFactSnapshotKey);
   rebindSemanticNodeIdsBySnapshotKey(
       mergedWorkerPublicationFacts_.tryFacts,
       std::move(freshTryFacts),

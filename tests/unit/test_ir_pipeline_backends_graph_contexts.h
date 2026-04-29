@@ -2139,14 +2139,18 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
       semanticsSnapshots.find("SemanticsValidator::typeMetadataSnapshotForSemanticProduct() const {");
   const std::size_t onErrorStart =
       semanticsSnapshots.find("SemanticsValidator::onErrorFactSnapshotForSemanticProduct() {");
+  const std::size_t rebindHelperStart =
+      semanticsSnapshots.find("void SemanticsValidator::rebindMergedWorkerPublicationFactSemanticNodeIds() {");
   REQUIRE(collectHelperStart != std::string::npos);
   REQUIRE(callableSummaryStart != std::string::npos);
   REQUIRE(ensureOnErrorStart != std::string::npos);
   REQUIRE(typeMetadataStart != std::string::npos);
   REQUIRE(onErrorStart != std::string::npos);
+  REQUIRE(rebindHelperStart != std::string::npos);
   REQUIRE(collectHelperStart < callableSummaryStart);
   REQUIRE(callableSummaryStart < typeMetadataStart);
   REQUIRE(ensureOnErrorStart < typeMetadataStart);
+  REQUIRE(rebindHelperStart < onErrorStart);
 
   CHECK(semanticsHeader.find("bool mergedWorkerPublicationFactsValid_ = false;") !=
         std::string::npos);
@@ -2200,6 +2204,20 @@ TEST_CASE("semantic snapshot shared traversal keeps callable summary and on_erro
   CHECK(semanticsSnapshots.find("if (left.fullPath != right.fullPath)") != std::string::npos);
   CHECK(semanticsSnapshots.find("return left.isExecution < right.isExecution;") !=
         std::string::npos);
+  const std::string rebindHelperBody =
+      semanticsSnapshots.substr(rebindHelperStart, onErrorStart - rebindHelperStart);
+  CHECK(semanticsSnapshots.find("bool appendMissingEntriesBySnapshotKey(") !=
+        std::string::npos);
+  CHECK(rebindHelperBody.find("freshDirectCallTargets") != std::string::npos);
+  CHECK(rebindHelperBody.find("freshQueryFacts") != std::string::npos);
+  CHECK(rebindHelperBody.find("appendMissingEntriesBySnapshotKey(\n"
+                              "          mergedWorkerPublicationFacts_.directCallTargets") !=
+        std::string::npos);
+  CHECK(rebindHelperBody.find("appendMissingEntriesBySnapshotKey(\n"
+                              "          mergedWorkerPublicationFacts_.queryFacts") !=
+        std::string::npos);
+  CHECK(rebindHelperBody.find("directCallTargetSnapshotKey") != std::string::npos);
+  CHECK(rebindHelperBody.find("queryFactSnapshotKey") != std::string::npos);
   CHECK(semanticsDefinitionPasses.find("struct WorkerChunkResult") ==
         std::string::npos);
   CHECK(semanticsDefinitionPasses.find("worker.collectDefinitionPublicationFactsForStableRange(") !=
