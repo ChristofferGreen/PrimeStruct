@@ -895,10 +895,7 @@
               if (localIt != localsIn.end() &&
                   isInternalSoaMetadataReceiver(receiver)) {
                 function.instructions.push_back(
-                    {localIt->second.kind == LocalInfo::Kind::Value
-                         ? IrOpcode::AddressOfLocal
-                         : IrOpcode::LoadLocal,
-                     static_cast<uint64_t>(localIt->second.index)});
+                    {IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
                 return true;
               }
             }

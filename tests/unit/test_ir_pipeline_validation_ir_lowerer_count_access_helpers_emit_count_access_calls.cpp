@@ -163,7 +163,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             error) == Result::Emitted);
   CHECK(error.empty());
   REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 3);
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
@@ -197,7 +197,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             error) == Result::Emitted);
   CHECK(fieldCountEmitExprCalls == 0);
   REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 3);
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
@@ -230,7 +230,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             error) == Result::Emitted);
   CHECK(fieldCapacityEmitExprCalls == 0);
   REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 3);
   CHECK(instructions[1].op == primec::IrOpcode::PushI64);
   CHECK(instructions[1].imm == primec::IrSlotBytes);
@@ -300,7 +300,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             error) == Result::Emitted);
   CHECK(soaFieldCountEmitExprCalls == 0);
   REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 4);
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 
@@ -333,7 +333,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             error) == Result::Emitted);
   CHECK(soaFieldCapacityEmitExprCalls == 0);
   REQUIRE(instructions.size() == 4);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 4);
   CHECK(instructions[1].op == primec::IrOpcode::PushI64);
   CHECK(instructions[1].imm == primec::IrSlotBytes);
@@ -376,7 +376,7 @@ TEST_CASE("ir lowerer count access helpers emit count access calls") {
             error) == Result::Emitted);
   CHECK(genericSoaFieldCountEmitExprCalls == 0);
   REQUIRE(instructions.size() == 2);
-  CHECK(instructions[0].op == primec::IrOpcode::AddressOfLocal);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
   CHECK(instructions[0].imm == 5);
   CHECK(instructions[1].op == primec::IrOpcode::LoadIndirect);
 

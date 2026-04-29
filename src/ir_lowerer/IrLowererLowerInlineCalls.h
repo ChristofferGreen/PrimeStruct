@@ -12,10 +12,7 @@
         auto localIt = callerLocals.find(receiver.name);
         if (localIt != callerLocals.end()) {
           function.instructions.push_back(
-              {localIt->second.kind == LocalInfo::Kind::Value
-                   ? IrOpcode::AddressOfLocal
-                   : IrOpcode::LoadLocal,
-               static_cast<uint64_t>(localIt->second.index)});
+              {IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
         } else if (!emitExpr(receiver, callerLocals)) {
           return false;
         }

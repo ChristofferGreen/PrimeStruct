@@ -162,10 +162,7 @@ bool emitInternalSoaStorageMetadataBase(const Expr &target,
     auto it = localsIn.find(target.name);
     if (it != localsIn.end() &&
         !normalizedInternalSoaStorageMetadataLeaf(it->second.structTypeName).empty()) {
-      emitInstruction(it->second.kind == LocalInfo::Kind::Value
-                          ? IrOpcode::AddressOfLocal
-                          : IrOpcode::LoadLocal,
-                      static_cast<uint64_t>(it->second.index));
+      emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
       return true;
     }
   }
@@ -628,7 +625,7 @@ CountAccessCallEmitResult tryEmitCountAccessCall(
     if (target.kind == Expr::Kind::Name) {
       auto it = localsIn.find(target.name);
       if (it != localsIn.end() && isExperimentalVectorStructValueLocal(it->second)) {
-        emitInstruction(IrOpcode::AddressOfLocal, static_cast<uint64_t>(it->second.index));
+        emitInstruction(IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
         return true;
       }
     }
