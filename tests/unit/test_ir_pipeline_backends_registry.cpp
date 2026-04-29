@@ -854,6 +854,81 @@ main() {
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
+TEST_CASE("native sum slot layout uses semantic-product variant metadata") {
+  const std::string source = R"(
+[struct]
+LeftPayload() {
+  [i32] value{0i32}
+}
+
+[struct]
+RightPayload() {
+  [i32] value{0i32}
+}
+
+[sum]
+Choice {
+  [LeftPayload] left
+  [RightPayload] right
+}
+
+[return<i32>]
+main() {
+  [Choice] choice{[left] LeftPayload{7i32}}
+  return(0i32)
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+
+  primec::Options options;
+  options.entryPath = "/main";
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  primec::Program loweringProgram = program;
+  primec::SemanticProgram loweringSemanticProgram = semanticProgram;
+  REQUIRE(primec::prepareIrModule(loweringProgram,
+                                  &loweringSemanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Native,
+                                  ir,
+                                  failure));
+  CHECK(!ir.functions.empty());
+
+  auto rewriteChoiceRightVariantPayload =
+      [](primec::SemanticProgram &semanticProduct, const std::string &payloadTypeText) {
+        for (auto &entry : semanticProduct.sumVariantMetadata) {
+          if (entry.sumPath == "/Choice" && entry.variantName == "right") {
+            entry.payloadTypeText = payloadTypeText;
+            return true;
+          }
+        }
+        return false;
+      };
+
+  primec::Program staleProgram = program;
+  primec::SemanticProgram staleSemanticProgram = semanticProgram;
+  REQUIRE(rewriteChoiceRightVariantPayload(staleSemanticProgram, "i64"));
+
+  primec::IrModule staleIr;
+  primec::IrPreparationFailure staleFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleProgram,
+                                      &staleSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleIr,
+                                      staleFailure));
+  CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleFailure.message ==
+        "stale semantic-product sum variant metadata for sum slot layout: /Choice -> right");
+  CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
+}
+
 TEST_CASE("native Result combinators use semantic-product variant tags") {
   const std::string source = R"(
 import /std/file/*

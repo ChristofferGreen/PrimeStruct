@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for sum slot layout
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native lowered sum slot allocation consume published sum-variant payload
+    metadata for every variant before choosing the maximum payload slot width
+    instead of reconstructing payload storage from AST variant data.
+  - implementation_notes:
+    - Keep sum target resolution, construction tag storage, pick lowering,
+      Result-combinator lowering, template inference, and collection migration
+      out of scope.
+    - Preserve syntax-only compatibility by using the AST payload-storage path
+      only when no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before allocating lowered sum locals.
+  - acceptance:
+    - Lowered sum slot allocation validates published payload metadata for all
+      variants before choosing a payload slot width on semantic-product-backed
+      paths.
+    - Stale unselected variant metadata reports a deterministic lowerer
+      diagnostic before construction can allocate locals from AST layout.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native lowered sum slot allocation has
+    semantic-product authority for variant payload metadata and the old AST
+    payload-storage path is retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product payload-storage validation to lowered
+    sum slot allocation, added stale unselected-variant metadata coverage, and
+    documented the remaining TODO-4298 work. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for active sum payload storage
   - owner: ai
   - created_at: 2026-04-28

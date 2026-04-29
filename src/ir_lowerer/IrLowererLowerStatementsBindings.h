@@ -247,6 +247,9 @@
         if (const Definition *sumDef = resolveSumDefinitionForTypeText(uninitializedType, stmt.namespacePrefix)) {
           int32_t totalSlots = 0;
           if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+            if (!error.empty()) {
+              return false;
+            }
             if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
                 unsupportedVariant != nullptr) {
               error = unsupportedSumPayloadError(*sumDef, *unsupportedVariant);
@@ -458,6 +461,9 @@
       if (const Definition *sumDef = resolveBindingSumDefinition()) {
         int32_t totalSlots = 0;
         if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+          if (!error.empty()) {
+            return false;
+          }
           LoweredSumVariantSelection selection;
           if (selectSumVariantForInitializer(init, *sumDef, localsIn, selection) &&
               selection.variant != nullptr) {
@@ -940,6 +946,9 @@
            isLegacyResultAndThenCall(returnValueExpr) || isLegacyResultMap2Call(returnValueExpr))) {
         int32_t totalSlots = 0;
         if (!loweredSumSlotCount(*returnSumDef, totalSlots)) {
+          if (!error.empty()) {
+            return false;
+          }
           error = "native backend does not support sum payload type on " +
                   returnSumDef->fullPath;
           return false;

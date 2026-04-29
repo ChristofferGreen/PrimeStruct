@@ -350,6 +350,10 @@ Planned non-template inference migration contract:
   binding and aggregate result inference now build branch-local payload shape from the published
   sum-variant metadata after validation, rather than reconstructing that payload shape from the raw
   AST variant. Syntax-only compatibility keeps the old AST payload path.
+- Completed native sum slot-layout slice: semantic-product-addressed lowered sum
+  slot allocation now validates and consumes published sum-variant metadata for
+  every variant before choosing the maximum payload slot width. Syntax-only
+  compatibility keeps the old AST payload-storage path.
 - Completed native active sum payload tag slice: semantic-product-addressed sum payload move and
   destroy helper dispatch now validate published sum-variant metadata and use the published tag
   value for active-payload comparisons instead of reading tag values from AST variant order.

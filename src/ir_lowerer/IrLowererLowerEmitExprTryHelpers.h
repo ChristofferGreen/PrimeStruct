@@ -908,6 +908,9 @@
               }
               int32_t totalSlots = 0;
               if (!loweredSumSlotCount(targetSumDef, totalSlots)) {
+                if (!error.empty()) {
+                  return false;
+                }
                 error = "native backend does not support sum payload type on " +
                         targetSumDef.fullPath;
                 return false;

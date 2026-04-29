@@ -225,11 +225,83 @@
       return resolveSumDefinitionForTypeText(info.structTypeName, function.name);
     };
 
+    auto unsupportedSumPayloadError = [&](const Definition &sumDef, const SumVariant &variant) {
+      return "native backend does not support sum payload type: " +
+             sumDef.fullPath + "/" + variant.name + " (" + sumPayloadTypeText(variant) + ")";
+    };
+
+    auto resolveSemanticProductSumVariantMetadata =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            std::string_view operationLabel,
+            const SemanticProgramSumVariantMetadata *&publishedVariantOut) -> bool {
+      publishedVariantOut = nullptr;
+      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+      if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
+        return true;
+      }
+      const SemanticProgramSumVariantMetadata *publishedVariant =
+          findSemanticProductSumVariantMetadata(semanticTargets, sumDef.fullPath, variant.name);
+      const std::string diagnosticSuffix = sumDef.fullPath + " -> " + variant.name;
+      if (publishedVariant == nullptr) {
+        error = "missing semantic-product sum variant metadata for " +
+                std::string(operationLabel) + ": " + diagnosticSuffix;
+        return false;
+      }
+      const std::string expectedPayloadType =
+          variant.hasPayload ? sumPayloadTypeText(variant) : std::string{};
+      const uint32_t expectedTagValue = static_cast<uint32_t>(variant.variantIndex);
+      if (publishedVariant->variantIndex != variant.variantIndex ||
+          publishedVariant->tagValue != expectedTagValue ||
+          publishedVariant->hasPayload != variant.hasPayload ||
+          trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
+        error = "stale semantic-product sum variant metadata for " +
+                std::string(operationLabel) + ": " + diagnosticSuffix;
+        return false;
+      }
+      publishedVariantOut = publishedVariant;
+      return true;
+    };
+
+    auto resolveSemanticProductSumVariantTag =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            std::string_view operationLabel,
+            int32_t &tagValueOut) -> bool {
+      tagValueOut = static_cast<int32_t>(variant.variantIndex);
+      const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
+      if (!resolveSemanticProductSumVariantMetadata(
+              sumDef, variant, operationLabel, publishedVariant)) {
+        return false;
+      }
+      if (publishedVariant != nullptr) {
+        tagValueOut = static_cast<int32_t>(publishedVariant->tagValue);
+      }
+      return true;
+    };
+
+    auto resolveSemanticProductSumPayloadStorageInfo =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            std::string_view operationLabel,
+            LoweredSumPayloadStorageInfo &infoOut) -> bool {
+      const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
+      if (!resolveSemanticProductSumVariantMetadata(
+              sumDef, variant, operationLabel, publishedVariant)) {
+        return false;
+      }
+      if (publishedVariant == nullptr) {
+        return resolveSumPayloadStorageInfo(sumDef, variant, infoOut);
+      }
+      return resolvePublishedSumPayloadStorageInfo(sumDef, *publishedVariant, infoOut);
+    };
+
     auto loweredSumSlotCount = [&](const Definition &sumDef, int32_t &totalSlotsOut) -> bool {
       int32_t maxPayloadSlots = 0;
       for (const auto &variant : sumDef.sumVariants) {
         LoweredSumPayloadStorageInfo payloadInfo;
-        if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                sumDef, variant, "sum slot layout", payloadInfo)) {
           totalSlotsOut = 0;
           return false;
         }
@@ -422,81 +494,6 @@
       selectionOut.payloadStructPath = std::move(matchedPayloadInfo.structPath);
       selectionOut.payloadSlotCount = matchedPayloadInfo.slotCount;
       selectionOut.payloadIsAggregate = matchedPayloadInfo.isAggregate;
-      return true;
-    };
-
-    auto unsupportedSumPayloadError = [&](const Definition &sumDef, const SumVariant &variant) {
-      return "native backend does not support sum payload type: " +
-             sumDef.fullPath + "/" + variant.name + " (" + sumPayloadTypeText(variant) + ")";
-    };
-
-    auto resolveSemanticProductSumVariantMetadata =
-        [&](const Definition &sumDef,
-            const SumVariant &variant,
-            std::string_view operationLabel,
-            const SemanticProgramSumVariantMetadata *&publishedVariantOut) -> bool {
-      publishedVariantOut = nullptr;
-      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
-      if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
-        return true;
-      }
-      const SemanticProgramSumVariantMetadata *publishedVariant =
-          findSemanticProductSumVariantMetadata(semanticTargets, sumDef.fullPath, variant.name);
-      const std::string diagnosticSuffix = sumDef.fullPath + " -> " + variant.name;
-      if (publishedVariant == nullptr) {
-        error = "missing semantic-product sum variant metadata for " +
-                std::string(operationLabel) + ": " + diagnosticSuffix;
-        return false;
-      }
-      const std::string expectedPayloadType =
-          variant.hasPayload ? sumPayloadTypeText(variant) : std::string{};
-      const uint32_t expectedTagValue = static_cast<uint32_t>(variant.variantIndex);
-      if (publishedVariant->variantIndex != variant.variantIndex ||
-          publishedVariant->tagValue != expectedTagValue ||
-          publishedVariant->hasPayload != variant.hasPayload ||
-          trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
-        error = "stale semantic-product sum variant metadata for " +
-                std::string(operationLabel) + ": " + diagnosticSuffix;
-        return false;
-      }
-      publishedVariantOut = publishedVariant;
-      return true;
-    };
-
-    auto resolveSemanticProductSumVariantTag =
-        [&](const Definition &sumDef,
-            const SumVariant &variant,
-            std::string_view operationLabel,
-            int32_t &tagValueOut) -> bool {
-      tagValueOut = static_cast<int32_t>(variant.variantIndex);
-      const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
-      if (!resolveSemanticProductSumVariantMetadata(
-              sumDef, variant, operationLabel, publishedVariant)) {
-        return false;
-      }
-      if (publishedVariant != nullptr) {
-        tagValueOut = static_cast<int32_t>(publishedVariant->tagValue);
-      }
-      return true;
-    };
-
-    auto resolveSemanticProductSumPayloadStorageInfo =
-        [&](const Definition &sumDef,
-            const SumVariant &variant,
-            std::string_view operationLabel,
-            LoweredSumPayloadStorageInfo &infoOut) -> bool {
-      const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
-      if (!resolveSemanticProductSumVariantMetadata(
-              sumDef, variant, operationLabel, publishedVariant)) {
-        return false;
-      }
-      if (publishedVariant == nullptr) {
-        return resolveSumPayloadStorageInfo(sumDef, variant, infoOut);
-      }
-      if (!resolvePublishedSumPayloadStorageInfo(sumDef, *publishedVariant, infoOut)) {
-        error = unsupportedSumPayloadError(sumDef, variant);
-        return false;
-      }
       return true;
     };
 
@@ -1131,6 +1128,9 @@
       }
       int32_t totalSlots = 0;
       if (!loweredSumSlotCount(*sumDef, totalSlots)) {
+        if (!error.empty()) {
+          return false;
+        }
         LoweredSumVariantSelection selection;
         if (selectExplicitSumVariantForConstructor(expr, *sumDef, selection) && selection.variant != nullptr) {
           error = unsupportedSumPayloadError(*sumDef, *selection.variant);
