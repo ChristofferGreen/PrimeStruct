@@ -361,6 +361,12 @@ bool populateBindingTypeInfoFromTypeText(
 
   const std::string normalizedBase =
       normalizeCollectionBindingTypeName(trimTemplateTypeText(base));
+  if (trimTemplateTypeText(base) == "args") {
+    infoOut.kind = LocalInfo::Kind::Array;
+    infoOut.valueKind = valueKindFromTypeName(trimTemplateTypeText(argText));
+    infoOut.structTypeName.clear();
+    return true;
+  }
   if (normalizedBase == "array" || normalizedBase == "vector" || normalizedBase == "soa_vector") {
     infoOut.kind = normalizedBase == "array" ? LocalInfo::Kind::Array : LocalInfo::Kind::Vector;
     const std::string elementType = trimTemplateTypeText(argText);
@@ -1024,7 +1030,9 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
           (it->second.kind == LocalInfo::Kind::Pointer || it->second.kind == LocalInfo::Kind::Reference)) {
         info.valueKind = it->second.valueKind;
       }
-      info.structTypeName = (it != localsIn.end()) ? it->second.structTypeName : "";
+      if (info.structTypeName.empty()) {
+        info.structTypeName = (it != localsIn.end()) ? it->second.structTypeName : "";
+      }
     } else if (info.kind == LocalInfo::Kind::Pointer && init.kind == Expr::Kind::Call &&
                isPointerMemoryIntrinsicCall(init)) {
       info.valueKind = inferPointerMemoryIntrinsicValueKind(init, localsIn, inferExprKind);
