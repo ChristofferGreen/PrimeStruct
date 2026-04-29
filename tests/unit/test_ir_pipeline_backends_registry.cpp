@@ -941,6 +941,28 @@ TEST_CASE("native sum variant selection uses semantic-product payload metadata")
   REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
 
   const std::string source = readTextFile(lowerSumHelpersPath);
+  const size_t initializerShapePos =
+      source.find("resolveSemanticProductInitializerPayloadShape");
+  const size_t initializerBindingFactPos =
+      source.find("findSemanticProductBindingFact(semanticTargets, initializer)",
+                  initializerShapePos);
+  const size_t initializerQueryFactPos =
+      source.find("findSemanticProductQueryFact(semanticTargets, initializer)",
+                  initializerShapePos);
+  const size_t staleInitializerTypePos =
+      source.find("stale semantic-product sum initializer type metadata",
+                  initializerShapePos);
+  const size_t initializerFallbackKindPos =
+      source.find("initializerKind = inferExprKind(initializer, valueLocals)",
+                  initializerShapePos);
+  REQUIRE(initializerShapePos != std::string::npos);
+  REQUIRE(initializerBindingFactPos != std::string::npos);
+  REQUIRE(initializerQueryFactPos != std::string::npos);
+  REQUIRE(staleInitializerTypePos != std::string::npos);
+  REQUIRE(initializerFallbackKindPos != std::string::npos);
+  CHECK(initializerBindingFactPos < initializerFallbackKindPos);
+  CHECK(initializerQueryFactPos < initializerFallbackKindPos);
+  CHECK(source.find("if (!resolvedInitializerShape.has_value())") != std::string::npos);
   CHECK(source.find("\"sum constructor selection\"") != std::string::npos);
   CHECK(source.find("\"Result.ok selection\"") != std::string::npos);
   CHECK(source.find("\"sum initializer selection\"") != std::string::npos);

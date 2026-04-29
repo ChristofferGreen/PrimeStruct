@@ -382,7 +382,8 @@ Task template:
     payload width allocation across all variants.
     The native sum variant-selection slice is complete for
     semantic-product-backed constructor, `Result.ok`, and inferred initializer
-    payload shape selection.
+    payload shape selection. The native sum initializer-source slice is
+    complete for semantic-product-backed inferred initializer type matching.
     The native active sum payload tag slice is complete for semantic-product
     move/drop helper dispatch. The native active sum payload-storage slice is
     complete for semantic-product-backed move/drop helper selection and
@@ -564,6 +565,13 @@ Task template:
       `Result.ok`, and inferred initializer payload storage shape on the
       semantic-product path. Syntax-only compatibility keeps the old AST
       payload-storage reconstruction path.
+    - Completed slice: semantic-product-addressed inferred sum initializer
+      matching now reads published binding/query type facts for the
+      initializer expression before asking expression-kind or struct-path
+      reconstruction to identify the payload shape. Stale initializer type
+      metadata fails closed with a deterministic sum-initializer diagnostic
+      while syntax-only or no-fact compatibility keeps the old reconstruction
+      path.
     - Completed slice: native active sum payload move/drop helper dispatch now
       validates published sum-variant metadata and uses the published tag
       value for active-payload comparisons on the semantic-product path.

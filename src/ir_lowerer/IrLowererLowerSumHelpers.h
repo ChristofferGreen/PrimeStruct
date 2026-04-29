@@ -459,12 +459,98 @@
       }
       const SumVariant *matchedVariant = nullptr;
       LoweredSumPayloadStorageInfo matchedPayloadInfo;
-      const LocalInfo::ValueKind initializerKind = inferExprKind(initializer, valueLocals);
-      std::string initializerStructPath = inferStructExprPath(initializer, valueLocals);
-      if (initializerStructPath.empty() && initializer.kind == Expr::Kind::Call) {
-        if (const Definition *initCallee = resolveDefinitionCall(initializer);
-            initCallee != nullptr && ir_lowerer::isStructDefinition(*initCallee)) {
-          initializerStructPath = initCallee->fullPath;
+      auto resolveSemanticProductInitializerPayloadShape =
+          [&](LocalInfo::ValueKind &initializerKindOut,
+              std::string &initializerStructPathOut) -> std::optional<bool> {
+        initializerKindOut = LocalInfo::ValueKind::Unknown;
+        initializerStructPathOut.clear();
+        const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+        if (!semanticTargets.hasSemanticProduct || initializer.semanticNodeId == 0) {
+          return std::nullopt;
+        }
+        std::vector<std::string> candidateTypeTexts;
+        if (const SemanticProgramBindingFact *bindingFact =
+                findSemanticProductBindingFact(semanticTargets, initializer);
+            bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
+          candidateTypeTexts.push_back(bindingFact->bindingTypeText);
+        }
+        if (const SemanticProgramQueryFact *queryFact =
+                findSemanticProductQueryFact(semanticTargets, initializer);
+            queryFact != nullptr) {
+          if (!queryFact->bindingTypeText.empty()) {
+            candidateTypeTexts.push_back(queryFact->bindingTypeText);
+          }
+          if (!queryFact->queryTypeText.empty()) {
+            candidateTypeTexts.push_back(queryFact->queryTypeText);
+          }
+        }
+        if (candidateTypeTexts.empty()) {
+          return std::nullopt;
+        }
+        auto resolveTypeText = [&](const std::string &typeText) {
+          const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+          if (normalizedTypeText.empty()) {
+            return false;
+          }
+          const LocalInfo::ValueKind valueKind = valueKindFromTypeName(normalizedTypeText);
+          if (valueKind != LocalInfo::ValueKind::Unknown) {
+            initializerKindOut = valueKind;
+            return true;
+          }
+          Expr syntheticTypeExpr;
+          syntheticTypeExpr.kind = Expr::Kind::Call;
+          syntheticTypeExpr.name = normalizedTypeText;
+          syntheticTypeExpr.namespacePrefix = initializer.namespacePrefix;
+          if (const Definition *typeDef = resolveDefinitionCall(syntheticTypeExpr);
+              typeDef != nullptr && ir_lowerer::isStructDefinition(*typeDef)) {
+            initializerStructPathOut = typeDef->fullPath;
+            return true;
+          }
+          if (!targetSum.namespacePrefix.empty() &&
+              !normalizedTypeText.empty() && normalizedTypeText.front() != '/') {
+            syntheticTypeExpr.name = normalizedTypeText;
+            syntheticTypeExpr.namespacePrefix = targetSum.namespacePrefix;
+            if (const Definition *typeDef = resolveDefinitionCall(syntheticTypeExpr);
+                typeDef != nullptr && ir_lowerer::isStructDefinition(*typeDef)) {
+              initializerStructPathOut = typeDef->fullPath;
+              return true;
+            }
+          }
+          if (!normalizedTypeText.empty() && normalizedTypeText.front() != '/') {
+            syntheticTypeExpr.name = "/" + normalizedTypeText;
+            syntheticTypeExpr.namespacePrefix.clear();
+            if (const Definition *typeDef = resolveDefinitionCall(syntheticTypeExpr);
+                typeDef != nullptr && ir_lowerer::isStructDefinition(*typeDef)) {
+              initializerStructPathOut = typeDef->fullPath;
+              return true;
+            }
+          }
+          return false;
+        };
+        for (const std::string &typeText : candidateTypeTexts) {
+          if (resolveTypeText(typeText)) {
+            return true;
+          }
+        }
+        error = "stale semantic-product sum initializer type metadata: " +
+                targetSum.fullPath;
+        return false;
+      };
+      LocalInfo::ValueKind initializerKind = LocalInfo::ValueKind::Unknown;
+      std::string initializerStructPath;
+      const std::optional<bool> resolvedInitializerShape =
+          resolveSemanticProductInitializerPayloadShape(initializerKind, initializerStructPath);
+      if (resolvedInitializerShape.has_value() && !*resolvedInitializerShape) {
+        return false;
+      }
+      if (!resolvedInitializerShape.has_value()) {
+        initializerKind = inferExprKind(initializer, valueLocals);
+        initializerStructPath = inferStructExprPath(initializer, valueLocals);
+        if (initializerStructPath.empty() && initializer.kind == Expr::Kind::Call) {
+          if (const Definition *initCallee = resolveDefinitionCall(initializer);
+              initCallee != nullptr && ir_lowerer::isStructDefinition(*initCallee)) {
+            initializerStructPath = initCallee->fullPath;
+          }
         }
       }
       for (const auto &variant : targetSum.sumVariants) {

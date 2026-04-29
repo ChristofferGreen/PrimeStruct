@@ -369,6 +369,12 @@ Planned non-template inference migration contract:
   and consumes published sum-variant payload metadata before choosing the
   selected payload storage shape. Syntax-only compatibility keeps the old AST
   payload-storage path.
+- Completed native sum initializer-source slice: semantic-product-addressed
+  inferred sum initializer matching now reads published binding/query type
+  facts for the initializer expression before asking expression-kind or
+  struct-path reconstruction to identify the payload shape. Stale initializer
+  type metadata fails closed with a deterministic sum-initializer diagnostic;
+  syntax-only or no-fact compatibility keeps the old reconstruction path.
 - Completed native active sum payload tag slice: semantic-product-addressed sum payload move and
   destroy helper dispatch now validate published sum-variant metadata and use the published tag
   value for active-payload comparisons instead of reading tag values from AST variant order.

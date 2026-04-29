@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use initializer facts for sums
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes inferred native
+    sum initializer matching read published binding/query type facts for the
+    initializer expression before falling back to expression-kind or
+    struct-path reconstruction.
+  - implementation_notes:
+    - Keep explicit sum constructors, `Result.ok`, active-payload move/drop,
+      pick lowering, Result-combinator lowering, template inference, and
+      collection migration out of scope.
+    - Preserve syntax-only and no-fact compatibility by retaining the old
+      expression-kind and struct-path reconstruction only when no semantic
+      binding/query fact is available for the initializer expression.
+    - Fail closed when published initializer type metadata exists but cannot
+      identify a scalar or struct payload shape.
+  - acceptance:
+    - Inferred sum initializer matching consults published binding/query type
+      facts before calling `inferExprKind` or `inferStructExprPath`.
+    - Stale published initializer type metadata reports a deterministic
+      sum-initializer diagnostic instead of silently falling through to local
+      reconstruction.
+    - Source-contract coverage proves semantic-product initializer shape
+      resolution precedes the compatibility fallback.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once inferred native sum initializer matching consumes
+    published binding/query facts for payload-shape matching, with old local
+    reconstruction retained only as syntax-only or no-fact compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Routed inferred native sum initializer matching through
+    published binding/query type facts before expression/struct fallback,
+    added source-contract coverage, and documented the remaining TODO-4298
+    work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use query facts for Result sources
   - owner: ai
   - created_at: 2026-04-28
