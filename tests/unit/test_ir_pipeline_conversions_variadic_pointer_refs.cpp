@@ -517,7 +517,8 @@ main() {
   primec::IrLowerer lowerer;
   primec::IrModule module;
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error));
-  CHECK(error == "variadic parameter type mismatch");
+  CHECK(error.find("struct field type mismatch") != std::string::npos);
+  CHECK(error.find("/Holder::pair") != std::string::npos);
 }
 
 TEST_CASE("ir lowerer rejects variadic scalar pointer packs from borrowed pack reference fields") {
