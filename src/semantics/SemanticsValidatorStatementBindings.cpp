@@ -319,6 +319,51 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     return false;
   };
 
+  auto validateAndRecordTargetTypedSumInitializer = [&]() -> std::optional<bool> {
+    if (!hasExplicitType || explicitAutoType) {
+      return std::nullopt;
+    }
+    bool handledSumInitializer = false;
+    if (!validateTargetTypedSumInitializer(expectedBindingTypeText(info),
+                                           initializer,
+                                           params,
+                                           locals,
+                                           namespacePrefix,
+                                           handledSumInitializer)) {
+      return false;
+    }
+    if (!handledSumInitializer) {
+      return std::nullopt;
+    }
+    if (restrictType.has_value()) {
+      const bool hasTemplate = !info.typeTemplateArg.empty();
+      if (!restrictMatchesBinding(*restrictType, info.typeName,
+                                  info.typeTemplateArg, hasTemplate,
+                                  namespacePrefix)) {
+        return failBindingDiagnostic("restrict type does not match binding type");
+      }
+    }
+    if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
+      return false;
+    }
+    insertLocalBinding(locals, stmt.name, std::move(info));
+    return true;
+  };
+
+  auto isTargetTypedSumInitializerSyntax = [&]() {
+    if (initializer.kind != Expr::Kind::Call) {
+      return false;
+    }
+    return initializer.isBraceConstructor ||
+           isEmptyBuiltinBlockInitializer(initializer);
+  };
+
+  if (isTargetTypedSumInitializerSyntax()) {
+    if (std::optional<bool> handled = validateAndRecordTargetTypedSumInitializer()) {
+      return *handled;
+    }
+  }
+
   if (!validateExpr(params, locals, initializer)) {
     if (isStandaloneSoaFieldViewInitializer() && !initializer.args.empty()) {
       error_.clear();
@@ -354,31 +399,8 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
           soaUnavailableMethodDiagnostic(*pendingPath));
     }
   }
-  if (hasExplicitType && !explicitAutoType) {
-    bool handledSumInitializer = false;
-    if (!validateTargetTypedSumInitializer(expectedBindingTypeText(info),
-                                           initializer,
-                                           params,
-                                           locals,
-                                           namespacePrefix,
-                                           handledSumInitializer)) {
-      return false;
-    }
-    if (handledSumInitializer) {
-      if (restrictType.has_value()) {
-        const bool hasTemplate = !info.typeTemplateArg.empty();
-        if (!restrictMatchesBinding(*restrictType, info.typeName,
-                                    info.typeTemplateArg, hasTemplate,
-                                    namespacePrefix)) {
-          return failBindingDiagnostic("restrict type does not match binding type");
-        }
-      }
-      if (!validateBuiltinMapKeyType(info, definitionTemplateArgs, error_)) {
-        return false;
-      }
-      insertLocalBinding(locals, stmt.name, std::move(info));
-      return true;
-    }
+  if (std::optional<bool> handled = validateAndRecordTargetTypedSumInitializer()) {
+    return *handled;
   }
 
   ReturnKind initKind = inferExprReturnKind(initializer, params, locals);

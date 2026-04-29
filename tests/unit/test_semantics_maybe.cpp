@@ -326,6 +326,38 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("imported stdlib maybe helpers validate namespaced sum bodies") {
+  const std::string source = R"(
+import /std/maybe/*
+
+[return<int>]
+main() {
+  [Maybe<i32>] present{some<i32>(9i32)}
+  [Maybe<i32>] missing{none<i32>()}
+  [i32] presentValue{pick(present) {
+    none {
+      0i32
+    }
+    some(value) {
+      value
+    }
+  }}
+  [i32] missingValue{pick(missing) {
+    none {
+      1i32
+    }
+    some(value) {
+      value
+    }
+  }}
+  return(presentValue + missingValue)
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("maybe mutable struct helpers are retired on sum values") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]

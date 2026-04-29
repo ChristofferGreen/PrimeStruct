@@ -772,4 +772,23 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("direct Result.ok keeps target payload mismatch diagnostic") {
+  const std::string source = R"(
+[return<Result<i32, FileError>>]
+make_status() {
+  return(Result.ok("bad"utf8))
+}
+
+[return<int>]
+main() {
+  [Result<i32, FileError>] status{make_status()}
+  return(0i32)
+}
+)";
+  std::string error;
+  CHECK_FALSE(validateProgram(source, "/main", error));
+  CHECK(error.find("no inferred sum variant") != std::string::npos);
+  CHECK(error.find("Result") != std::string::npos);
+}
+
 TEST_SUITE_END();

@@ -431,6 +431,50 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
     return actualKind == expectedKind;
   };
 
+  auto isDirectResultOkInitializer = [&]() {
+    const std::string normalizedSumPath = normalizeBindingTypeName(sumDef->fullPath);
+    const size_t sumLeafOffset = normalizedSumPath.find_last_of('/');
+    const std::string sumLeaf = sumLeafOffset == std::string::npos
+                                    ? normalizedSumPath
+                                    : normalizedSumPath.substr(sumLeafOffset + 1);
+    if (sumLeaf.rfind("Result", 0) != 0) {
+      return false;
+    }
+    if (initializer.kind != Expr::Kind::Call || !initializer.isMethodCall ||
+        initializer.name != "ok" || !initializer.templateArgs.empty() ||
+        initializer.hasBodyArguments || !initializer.bodyArguments.empty() ||
+        initializer.args.empty()) {
+      return false;
+    }
+    const Expr &receiver = initializer.args.front();
+    return receiver.kind == Expr::Kind::Name &&
+           normalizeBindingTypeName(receiver.name) == "Result";
+  };
+
+  if (isDirectResultOkInitializer()) {
+    if (initializer.args.size() > 2) {
+      return validateExpr(params, locals, initializer);
+    }
+    const SumVariant *okVariant = findVariantByName(*sumDef, "ok");
+    if (okVariant != nullptr) {
+      if (!okVariant->hasPayload && initializer.args.size() == 1) {
+        return validateExpr(params, locals, initializer);
+      }
+      if (okVariant->hasPayload && initializer.args.size() == 2) {
+        BindingInfo payloadBinding;
+        if (inferBindingTypeFromInitializer(initializer.args[1],
+                                            params,
+                                            locals,
+                                            payloadBinding) &&
+            bindingMatchesExpected(payloadBinding,
+                                   payloadTypeText(*okVariant),
+                                   sumDef->namespacePrefix)) {
+          return validateExpr(params, locals, initializer);
+        }
+      }
+    }
+  }
+
   auto payloadMatchesVariant = [&](const SumVariant &variant) -> bool {
     if (!variant.hasPayload) {
       return false;
