@@ -353,7 +353,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
   CHECK(instructions.empty());
 }
 
-TEST_CASE("ir lowerer call helpers keep explicit vector count out of native tail dispatch") {
+TEST_CASE("ir lowerer call helpers emit explicit vector count while deferring bare count") {
   using Result = primec::ir_lowerer::NativeCallTailDispatchResult;
   using LocalInfo = primec::ir_lowerer::LocalInfo;
   using MapAccessTargetInfo = primec::ir_lowerer::MapAccessTargetInfo;
@@ -454,14 +454,14 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count out of native tail
 
   expectDispatch("/vector/count",
                  {valuesName},
-                 Result::NotHandled,
+                 Result::Emitted,
                  "stale",
-                 false);
+                 true);
   expectDispatch("/std/collections/vector/count",
                  {valuesName},
-                 Result::NotHandled,
+                 Result::Emitted,
                  "stale",
-                 false);
+                 true);
   expectDispatch("/vector/capacity", {valuesName}, Result::NotHandled, "stale", false);
   expectDispatch("/std/collections/vector/capacity",
                  {valuesName},
@@ -546,9 +546,9 @@ TEST_CASE("ir lowerer call helpers keep explicit vector count out of native tail
             instructionCount,
             emitInstruction,
             patchInstructionImm,
-            bareCountError) == Result::Emitted);
+            bareCountError) == Result::NotHandled);
   CHECK(bareCountError == "stale");
-  CHECK_FALSE(instructions.empty());
+  CHECK(instructions.empty());
 
   primec::Expr bareCapacityCall;
   bareCapacityCall.kind = primec::Expr::Kind::Call;
