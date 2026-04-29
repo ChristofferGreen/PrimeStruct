@@ -130,9 +130,9 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
           std::string::npos);
     CHECK(graphicsDoc.find("helpers on both experimental and canonical paths") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)`, `Device()`,") !=
+    CHECK(primeStructDoc.find("legacy constructor-shaped experimental and canonical `Window(...)`,") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
+    CHECK(primeStructDoc.find("`Device()`, and `Buffer<T>(count)` compatibility entry points now rewrite") !=
           std::string::npos);
   }
 
@@ -144,9 +144,9 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
           std::string::npos);
     CHECK(graphicsDoc.find("helpers on both experimental and canonical paths") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)`, `Device()`,") !=
+    CHECK(primeStructDoc.find("legacy constructor-shaped experimental and canonical `Window(...)`,") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
+    CHECK(primeStructDoc.find("`Device()`, and `Buffer<T>(count)` compatibility entry points now rewrite") !=
           std::string::npos);
   }
 
@@ -156,7 +156,7 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
           std::string::npos);
     CHECK(graphicsDoc.find("`Device()`, and `Buffer<T>(count)` now rewrite through dedicated stdlib") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
+    CHECK(primeStructDoc.find("`Device()`, and `Buffer<T>(count)` compatibility entry points now rewrite") !=
           std::string::npos);
   }
 
@@ -286,9 +286,9 @@ TEST_CASE("graphics api contract doc-linked constraints stay locked") {
   {
     CAPTURE("GFX-V1-CANONICAL-STDLIB-STATUS");
     CHECK(graphicsDoc.find("canonical `/std/gfx/*` is now the authoritative public") != std::string::npos);
-    CHECK(primeStructDoc.find("constructor-shaped experimental and canonical `Window(...)`, `Device()`,") !=
+    CHECK(primeStructDoc.find("legacy constructor-shaped experimental and canonical `Window(...)`,") !=
           std::string::npos);
-    CHECK(primeStructDoc.find("and `Buffer<T>(count)` entry points now rewrite onto matching stdlib helpers") !=
+    CHECK(primeStructDoc.find("`Device()`, and `Buffer<T>(count)` compatibility entry points now rewrite") !=
           std::string::npos);
     CHECK(guidelinesDoc.find("The canonical `/std/gfx/*` entry") != std::string::npos);
     CHECK(guidelinesDoc.find("real compile-run conformance across exe/vm/native") != std::string::npos);
