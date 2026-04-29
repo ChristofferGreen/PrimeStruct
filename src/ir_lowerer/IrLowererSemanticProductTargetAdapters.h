@@ -83,6 +83,9 @@ const SemanticProgramOnErrorFact *findSemanticProductOnErrorFact(const SemanticP
 const SemanticProgramReturnFact *findSemanticProductReturnFactBySemanticId(
     const SemanticProductIndex &semanticIndex,
     const Definition &definition);
+const SemanticProgramReturnFact *findSemanticProductReturnFactByPath(
+    const SemanticProductTargetAdapter &adapter,
+    std::string_view definitionPath);
 const SemanticProgramReturnFact *findSemanticProductReturnFact(
     const SemanticProgram *semanticProgram,
     const SemanticProductIndex &semanticIndex,

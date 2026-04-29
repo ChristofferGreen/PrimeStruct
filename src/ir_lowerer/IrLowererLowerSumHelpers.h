@@ -1055,6 +1055,49 @@
             constructorSum != nullptr) {
           return requirePublishedSumMetadata(*constructorSum, targetExpr);
         }
+        if (targetExpr.semanticNodeId != 0) {
+          const SemanticProgramQueryFact *queryFact =
+              findSemanticProductQueryFact(semanticTargets, targetExpr);
+          if (queryFact == nullptr) {
+            error = "missing semantic-product pick target query fact: " +
+                    describePickTargetName(targetExpr);
+            return nullptr;
+          }
+          std::string queryTypeText = trimTemplateTypeText(queryFact->bindingTypeText);
+          if (queryTypeText.empty()) {
+            queryTypeText = trimTemplateTypeText(queryFact->queryTypeText);
+          }
+          if (queryTypeText.empty()) {
+            error = "incomplete semantic-product pick target query fact: " +
+                    describePickTargetName(targetExpr);
+            return nullptr;
+          }
+          const Definition *querySumDef =
+              resolveSumDefinitionForTypeText(queryTypeText, function.name);
+          if (querySumDef == nullptr) {
+            error = "semantic-product pick target query type is not a sum: " +
+                    describePickTargetName(targetExpr);
+            return nullptr;
+          }
+          const std::string queryTargetPath =
+              std::string(semanticProgramQueryFactResolvedPath(
+                  *semanticTargets.semanticProgram, *queryFact));
+          if (!queryTargetPath.empty()) {
+            const SemanticProgramReturnFact *returnFact =
+                findSemanticProductReturnFactByPath(semanticTargets, queryTargetPath);
+            if (returnFact != nullptr && !returnFact->bindingTypeText.empty()) {
+              const Definition *returnSumDef =
+                  resolveSumDefinitionForTypeText(returnFact->bindingTypeText, function.name);
+              if (returnSumDef != nullptr &&
+                  returnSumDef->fullPath != querySumDef->fullPath) {
+                error = "stale semantic-product pick target query type: " +
+                        describePickTargetName(targetExpr);
+                return nullptr;
+              }
+            }
+          }
+          return requirePublishedSumMetadata(*querySumDef, targetExpr);
+        }
       }
 
       return nullptr;

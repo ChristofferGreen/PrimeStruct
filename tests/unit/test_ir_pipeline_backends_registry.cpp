@@ -684,6 +684,133 @@ main() {
   CHECK(missingMetadataFailure.diagnosticInfo.message == missingMetadataFailure.message);
 }
 
+TEST_CASE("native pick call target sum resolution uses query facts") {
+  const std::string source = R"(
+[sum]
+Choice {
+  [i32] left
+  [i32] right
+}
+
+[sum]
+OtherChoice {
+  [i32] left
+  [i32] right
+}
+
+[return<Choice>]
+makeChoice() {
+  [Choice] choice{[right] 41i32}
+  return(choice)
+}
+
+[return<i32>]
+main() {
+  return(pick(makeChoice()) {
+    left(value) {
+      plus(value, 1i32)
+    }
+    right(value) {
+      plus(value, 2i32)
+    }
+  })
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+
+  const auto semanticProductTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+  const auto *makeChoiceQuery = findSemanticEntry(
+      primec::semanticProgramQueryFactView(semanticProgram),
+      [](const primec::SemanticProgramQueryFact &entry) {
+        return entry.scopePath == "/main" && entry.callName == "makeChoice";
+      });
+  REQUIRE(makeChoiceQuery != nullptr);
+  CHECK(makeChoiceQuery->bindingTypeText == "Choice");
+  CHECK(primec::semanticProgramQueryFactResolvedPath(
+            semanticProgram, *makeChoiceQuery) == "/makeChoice");
+  const auto *makeChoiceReturn =
+      primec::ir_lowerer::findSemanticProductReturnFactByPath(
+          semanticProductTargets, "/makeChoice");
+  REQUIRE(makeChoiceReturn != nullptr);
+  CHECK(makeChoiceReturn->bindingTypeText == "Choice");
+
+  primec::Options options;
+  options.entryPath = "/main";
+  primec::Program loweringProgram = program;
+  primec::SemanticProgram loweringSemanticProgram = semanticProgram;
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  REQUIRE(primec::prepareIrModule(loweringProgram,
+                                  &loweringSemanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Native,
+                                  ir,
+                                  failure));
+  CHECK(!ir.functions.empty());
+
+  auto rewriteMakeChoiceQueryType =
+      [](primec::SemanticProgram &semanticProduct, const std::string &typeText) {
+        for (auto &fact : semanticProduct.queryFacts) {
+          if (fact.scopePath == "/main" && fact.callName == "makeChoice") {
+            fact.bindingTypeText = typeText;
+            fact.queryTypeText = typeText;
+            if (typeText.empty()) {
+              fact.bindingTypeTextId = primec::InvalidSymbolId;
+              fact.queryTypeTextId = primec::InvalidSymbolId;
+            } else {
+              fact.bindingTypeTextId =
+                  primec::semanticProgramInternCallTargetString(semanticProduct, typeText);
+              fact.queryTypeTextId =
+                  primec::semanticProgramInternCallTargetString(semanticProduct, typeText);
+            }
+            return true;
+          }
+        }
+        return false;
+      };
+
+  primec::Program staleProgram = program;
+  primec::SemanticProgram staleSemanticProgram = semanticProgram;
+  REQUIRE(rewriteMakeChoiceQueryType(staleSemanticProgram, "OtherChoice"));
+
+  primec::IrModule staleIr;
+  primec::IrPreparationFailure staleFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleProgram,
+                                      &staleSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleIr,
+                                      staleFailure));
+  CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleFailure.message ==
+        "stale semantic-product pick target query type: /main -> makeChoice");
+  CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
+
+  primec::Program incompleteProgram = program;
+  primec::SemanticProgram incompleteSemanticProgram = semanticProgram;
+  REQUIRE(rewriteMakeChoiceQueryType(incompleteSemanticProgram, ""));
+
+  primec::IrModule incompleteIr;
+  primec::IrPreparationFailure incompleteFailure;
+  CHECK_FALSE(primec::prepareIrModule(incompleteProgram,
+                                      &incompleteSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      incompleteIr,
+                                      incompleteFailure));
+  CHECK(incompleteFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(incompleteFailure.message ==
+        "incomplete semantic-product pick target query fact: /main -> makeChoice");
+  CHECK(incompleteFailure.diagnosticInfo.message == incompleteFailure.message);
+}
+
 TEST_CASE("semantic product callable lookup prefers definition over same-path execution") {
   const std::string source =
       "[return<i32>]\n"

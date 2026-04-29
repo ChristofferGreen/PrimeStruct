@@ -332,6 +332,12 @@ Planned non-template inference migration contract:
   binding facts, and binding facts that contradict lowerer-local shape, fail closed with
   deterministic pick-target diagnostics. Syntax-only compatibility keeps the old local-map/type-name
   reconstruction path.
+- Completed native pick query-target slice: semantic-product-addressed `pick(makeValue())`
+  lowering now resolves direct call targets from the published query fact, checks the query type
+  against the callee's published return fact when available, and confirms the sum layout through
+  published sum metadata before type-name reconstruction can answer. Missing or incomplete query
+  facts and query facts that contradict the callee return fact fail closed with deterministic
+  pick-target diagnostics.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

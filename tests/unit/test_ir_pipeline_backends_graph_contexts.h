@@ -560,6 +560,8 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
   }
   REQUIRE(std::filesystem::exists(semanticTargetsPath));
   const std::string semanticTargets = readTextFile(semanticTargetsPath);
+  CHECK(semanticTargets.find("findSemanticProductReturnFactByPath") !=
+        std::string::npos);
   CHECK(semanticTargets.find("findSemanticProductBindingFactByScopeAndName") !=
         std::string::npos);
   CHECK(semanticTargets.find("findSemanticProductSumTypeMetadata") !=

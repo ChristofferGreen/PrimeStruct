@@ -368,7 +368,8 @@ Task template:
     result-metadata and type-metadata stale diagnostic slices are complete. The
     collection specialization, direct-call, method-call, and bridge-path metadata
     diagnostic slices are complete. The native pick target sum-resolution slice
-    is complete for named `pick(value)` targets.
+    is complete for named `pick(value)` targets. The native pick query-target
+    slice is complete for direct `pick(makeValue())` targets.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -495,6 +496,12 @@ Task template:
       the semantic-product path. Missing/contradictory graph-owned facts fail
       closed with deterministic pick-target diagnostics; the old local-map
       reconstruction remains only for syntax-only compatibility.
+    - Completed slice: native `pick(makeValue())` lowering now uses the
+      published query fact plus the callee's published return fact to resolve
+      direct-call pick targets, instead of relying on target-name
+      reconstruction. Missing/incomplete query facts or query facts that
+      contradict the callee return fact fail closed with deterministic
+      pick-target diagnostics.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

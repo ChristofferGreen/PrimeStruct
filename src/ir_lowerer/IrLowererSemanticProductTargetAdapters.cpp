@@ -477,6 +477,25 @@ const SemanticProgramReturnFact *findSemanticProductReturnFactBySemanticId(
   return findDefinitionScopedSemanticFact(semanticIndex.returnFactsByDefinitionId, definition);
 }
 
+const SemanticProgramReturnFact *findSemanticProductReturnFactByPath(
+    const SemanticProductTargetAdapter &adapter,
+    std::string_view definitionPath) {
+  if (adapter.semanticProgram == nullptr || definitionPath.empty()) {
+    return nullptr;
+  }
+  const auto returnFacts = semanticProgramReturnFactView(*adapter.semanticProgram);
+  for (const auto *entry : returnFacts) {
+    if (entry == nullptr) {
+      continue;
+    }
+    if (semanticProgramReturnFactDefinitionPath(*adapter.semanticProgram, *entry) ==
+        definitionPath) {
+      return entry;
+    }
+  }
+  return nullptr;
+}
+
 const SemanticProgramReturnFact *findSemanticProductReturnFact(
     const SemanticProgram *,
     const SemanticProductIndex &semanticIndex,

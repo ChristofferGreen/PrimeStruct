@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use query facts for pick calls
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native
+    `pick(makeValue())` target sum resolution consume published query facts
+    and the callee's published return fact before type-name reconstruction can
+    own the target sum decision.
+  - implementation_notes:
+    - Preserve direct sum-constructor handling before query-fact lookup.
+    - Keep method-call pick targets, template inference, and collection
+      migration out of scope.
+    - Expose a narrow semantic-product adapter lookup for return facts by
+      definition path.
+  - acceptance:
+    - Direct-call `pick(makeValue())` targets resolve through published query
+      facts plus published sum metadata on the semantic-product path.
+    - Query facts that contradict the callee return fact fail before native
+      pick lowering dispatches on stale sum variants.
+    - Incomplete query facts fail with a deterministic pick-target diagnostic.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native direct-call pick target resolution has
+    semantic-product authority for query facts and keeps constructor/name
+    compatibility paths separate.
+  - finished_at: 2026-04-29
+  - evidence: Added a semantic-product adapter lookup for return facts by
+    path, changed native pick lowering to use query facts plus callee return
+    facts for direct-call targets, added lowerer contract coverage for the
+    successful path plus stale/incomplete query facts, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Use graph facts for pick targets
   - owner: ai
   - created_at: 2026-04-28
