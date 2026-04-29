@@ -95,7 +95,7 @@ Shape {
   none
   [Circle] circle
   [Rectangle] rectangle
-  [Result<i32, string>] labeled
+  [Label] labeled
 }
 )";
 
@@ -118,7 +118,7 @@ Shape {
   CHECK(shape.sumVariants[2].payloadTypeText == "Rectangle");
   CHECK(shape.sumVariants[2].variantIndex == 2);
   CHECK(shape.sumVariants[3].name == "labeled");
-  CHECK(shape.sumVariants[3].payloadTypeText == "Result<i32, string>");
+  CHECK(shape.sumVariants[3].payloadTypeText == "Label");
   CHECK(shape.sumVariants[3].variantIndex == 3);
 }
 
