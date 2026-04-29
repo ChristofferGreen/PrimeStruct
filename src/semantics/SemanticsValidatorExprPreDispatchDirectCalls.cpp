@@ -33,6 +33,21 @@ bool isExperimentalMapTypeText(const std::string &typeText) {
   }
 }
 
+bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
+                                       const std::string &helperName) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+      !candidate.namespacePrefix.empty() || candidate.name.empty()) {
+    return false;
+  }
+  std::string normalizedName = std::string(trimLeadingSlash(candidate.name));
+  if (normalizedName.find('/') != std::string::npos) {
+    return false;
+  }
+  std::string resolvedHelperName;
+  return getBuiltinArrayAccessName(candidate, resolvedHelperName) &&
+         resolvedHelperName == helperName;
+}
+
 } // namespace
 
 bool SemanticsValidator::validateExprPreDispatchDirectCalls(
@@ -275,7 +290,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     };
     const bool isBareMapAccessBuiltinSurface =
         getBuiltinArrayAccessName(expr, builtinAccessName) &&
-        isSimpleCallName(expr, builtinAccessName.c_str());
+        isUnqualifiedCollectionAccessCall(expr, builtinAccessName);
     if (!builtinAccessName.empty() &&
         hasVisibleStdlibMapAccessDefinition(builtinAccessName) &&
         (isBareMapAccessBuiltinSurface ||
@@ -336,6 +351,7 @@ bool SemanticsValidator::validateExprPreDispatchDirectCalls(
     std::string receiverTypeText;
     std::string borrowedHelperProbe;
     if (getBuiltinArrayAccessName(expr, builtinAccessName) &&
+        isUnqualifiedCollectionAccessCall(expr, builtinAccessName) &&
         expr.args.size() == 2 &&
         ((dispatchBootstrap.dispatchResolvers.resolveExperimentalMapValueTarget !=
           nullptr &&

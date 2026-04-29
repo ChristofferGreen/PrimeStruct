@@ -640,5 +640,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("explicit canonical map access helpers accept experimental map values") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<int>]
+main() {
+  [Map<string, i32>] values{/std/collections/mapPair("left"raw_utf8, 4i32,
+                                                     "right"raw_utf8, 7i32)}
+  [i32] left{/std/collections/map/at<string, i32>(values, "left"raw_utf8)}
+  [i32] right{/std/collections/map/at_unsafe<string, i32>(values, "right"raw_utf8)}
+  return(plus(left, right))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
 
 TEST_SUITE_END();

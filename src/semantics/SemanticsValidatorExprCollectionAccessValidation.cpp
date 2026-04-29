@@ -21,6 +21,24 @@ bool isCanonicalMapAccessResolvedPath(const std::string &path) {
          path == "/std/collections/map/at_unsafe_ref";
 }
 
+bool isUnqualifiedCollectionAccessCall(const Expr &candidate,
+                                       const std::string &helperName) {
+  if (candidate.kind != Expr::Kind::Call || candidate.isMethodCall ||
+      !candidate.namespacePrefix.empty() || candidate.name.empty()) {
+    return false;
+  }
+  std::string normalizedName = candidate.name;
+  if (!normalizedName.empty() && normalizedName.front() == '/') {
+    normalizedName.erase(normalizedName.begin());
+  }
+  if (normalizedName.find('/') != std::string::npos) {
+    return false;
+  }
+  std::string resolvedHelperName;
+  return getBuiltinArrayAccessName(candidate, resolvedHelperName) &&
+         resolvedHelperName == helperName;
+}
+
 bool getCanonicalCollectionAccessBuiltinName(const Expr &candidate,
                                              std::string &helperOut) {
   helperOut.clear();
@@ -365,7 +383,9 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       }
       return candidate.namespacePrefix + "/" + candidate.name;
     };
-    if (!expr.isMethodCall &&
+    const bool isUnqualifiedAccessCall =
+        isUnqualifiedCollectionAccessCall(expr, builtinName);
+    if (isUnqualifiedAccessCall &&
         context.resolveExperimentalMapTarget != nullptr &&
         ((context.resolveExperimentalMapTarget(
               expr.args.front(), experimentalMapKeyType,
@@ -387,7 +407,7 @@ bool SemanticsValidator::validateExprCollectionAccessFallbacks(
       return inferQueryExprTypeText(candidate, params, locals, receiverTypeText) &&
              isExperimentalMapTypeText(receiverTypeText);
     };
-    if (!expr.isMethodCall &&
+    if (isUnqualifiedAccessCall &&
         (isExperimentalMapTypeReceiver(expr.args.front()) ||
          isExperimentalMapTypeReceiver(expr.args[1]))) {
       handledOut = true;
