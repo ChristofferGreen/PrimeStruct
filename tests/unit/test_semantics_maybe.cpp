@@ -301,6 +301,31 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("maybe pick payload supports implicit helper inference") {
+  const std::string source = kMaybePrelude + R"(
+[return<T>]
+identity<T>([T] value) {
+  return(value)
+}
+
+[return<int>]
+main() {
+  [Maybe<i32>] value{some<i32>(3i32)}
+  return(pick(value) {
+    none {
+      return(0i32)
+    }
+    some(v) {
+      return(identity(v))
+    }
+  })
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("maybe mutable struct helpers are retired on sum values") {
   const std::string source = kMaybePrelude + R"(
 [return<int>]

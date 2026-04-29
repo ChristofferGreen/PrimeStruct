@@ -80,6 +80,158 @@ bool rewriteExpr(Expr &expr,
     }
   }
 
+  auto resolvePickSumDefinition = [&](const Expr &target) -> Definition * {
+    BindingInfo targetInfo;
+    if (!inferBindingTypeForMonomorph(target, params, locals, allowMathBare, ctx,
+                                      targetInfo)) {
+      return nullptr;
+    }
+    std::string targetTypeText = bindingTypeToString(targetInfo);
+    if (targetTypeText.empty()) {
+      return nullptr;
+    }
+    std::string resolveError;
+    ResolvedType resolvedType =
+        resolveTypeString(targetTypeText, mapping, allowedParams, namespacePrefix,
+                          ctx, resolveError);
+    if (!resolveError.empty() || resolvedType.text.empty()) {
+      return nullptr;
+    }
+    targetTypeText = normalizeBindingTypeName(resolvedType.text);
+    std::string base;
+    std::string argText;
+    if (splitTemplateTypeName(targetTypeText, base, argText)) {
+      targetTypeText = normalizeBindingTypeName(base);
+    }
+    std::string sumPath = targetTypeText;
+    if (sumPath.empty()) {
+      return nullptr;
+    }
+    if (sumPath.front() != '/') {
+      sumPath = resolveNameToPath(sumPath,
+                                  namespacePrefix,
+                                  scopedImportAliasesForNamespace(namespacePrefix,
+                                                                  ctx),
+                                  ctx.sourceDefs);
+    }
+    auto sumIt = ctx.sourceDefs.find(sumPath);
+    if (sumIt == ctx.sourceDefs.end() ||
+        !isSumDefinitionForMonomorphRefresh(sumIt->second)) {
+      return nullptr;
+    }
+    return &sumIt->second;
+  };
+
+  auto appendPickPayloadLocal = [](const SumVariant &variant,
+                                   const Expr &arm,
+                                   LocalTypeMap &armLocals) {
+    if (!variant.hasPayload || arm.args.size() != 1) {
+      return;
+    }
+    const Expr &payloadBinder = arm.args.front();
+    if (payloadBinder.kind != Expr::Kind::Name || payloadBinder.name.empty()) {
+      return;
+    }
+    BindingInfo payloadInfo;
+    payloadInfo.typeName = variant.payloadType;
+    if (!variant.payloadTemplateArgs.empty()) {
+      payloadInfo.typeTemplateArg = joinTemplateArgs(variant.payloadTemplateArgs);
+    }
+    armLocals[payloadBinder.name] = std::move(payloadInfo);
+  };
+
+  auto recordBodyBindingLocal = [&](Expr &bodyExpr, LocalTypeMap &bodyLocals) {
+    BindingInfo info;
+    if (extractExplicitBindingType(bodyExpr, info)) {
+      if (info.typeName == "auto" && bodyExpr.args.size() == 1 &&
+          inferBindingTypeForMonomorph(bodyExpr.args.front(),
+                                       params,
+                                       bodyLocals,
+                                       allowMathBare,
+                                       ctx,
+                                       info)) {
+        bodyLocals[bodyExpr.name] = info;
+      } else {
+        bodyLocals[bodyExpr.name] = info;
+      }
+      return;
+    }
+    if (bodyExpr.isBinding && bodyExpr.args.size() == 1 &&
+        inferBindingTypeForMonomorph(bodyExpr.args.front(),
+                                     params,
+                                     bodyLocals,
+                                     allowMathBare,
+                                     ctx,
+                                     info)) {
+      bodyLocals[bodyExpr.name] = info;
+    }
+  };
+
+  if (isPickCall(expr)) {
+    for (auto &arg : expr.args) {
+      if (!rewriteExpr(arg,
+                       mapping,
+                       allowedParams,
+                       namespacePrefix,
+                       ctx,
+                       error,
+                       locals,
+                       params,
+                       allowMathBare)) {
+        return false;
+      }
+    }
+
+    Definition *sumDef =
+        expr.args.empty() ? nullptr : resolvePickSumDefinition(expr.args.front());
+    for (auto &arm : expr.bodyArguments) {
+      arm.namespacePrefix = namespacePrefix;
+      if (!rewriteTransforms(arm.transforms,
+                             mapping,
+                             allowedParams,
+                             namespacePrefix,
+                             ctx,
+                             error)) {
+        return false;
+      }
+      for (auto &armArg : arm.args) {
+        armArg.namespacePrefix = namespacePrefix;
+        if (!rewriteTransforms(armArg.transforms,
+                               mapping,
+                               allowedParams,
+                               namespacePrefix,
+                               ctx,
+                               error)) {
+          return false;
+        }
+      }
+      LocalTypeMap armLocals = locals;
+      if (sumDef != nullptr) {
+        for (const auto &variant : sumDef->sumVariants) {
+          if (variant.name == arm.name) {
+            appendPickPayloadLocal(variant, arm, armLocals);
+            break;
+          }
+        }
+      }
+      for (auto &bodyExpr : arm.bodyArguments) {
+        if (!rewriteExpr(bodyExpr,
+                         mapping,
+                         allowedParams,
+                         namespacePrefix,
+                         ctx,
+                         error,
+                         armLocals,
+                         params,
+                         allowMathBare)) {
+          return false;
+        }
+        recordBodyBindingLocal(bodyExpr, armLocals);
+      }
+    }
+    return true;
+  }
+
   auto isCanonicalBuiltinMapHelperPath = [](const std::string &path) {
     return path == "/std/collections/map/count" || path == "/std/collections/map/contains" ||
            path == "/std/collections/map/tryAt" || path == "/std/collections/map/at" ||
