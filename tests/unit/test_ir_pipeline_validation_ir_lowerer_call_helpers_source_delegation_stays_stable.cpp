@@ -541,7 +541,7 @@ TEST_CASE("ir lowerer call helpers source delegation stays stable") {
         std::string::npos);
   CHECK(nativeTailDispatchSource.find("bool isExplicitDirectVectorCountCall(") !=
         std::string::npos);
-  CHECK(nativeTailDispatchSource.find("isExplicitDirectVectorCountCall(semanticProgram, expr) ||") !=
+  CHECK(nativeTailDispatchSource.find("!isExplicitDirectVectorCountCall(semanticProgram, expr) &&") !=
         std::string::npos);
   CHECK(nativeTailDispatchSource.find(
             "!expr.isMethodCall && count_access_detail::isVectorBuiltinName(expr, \"count\")") !=
