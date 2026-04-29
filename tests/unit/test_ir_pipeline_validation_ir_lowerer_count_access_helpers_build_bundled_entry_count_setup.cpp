@@ -219,11 +219,11 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   primitiveArgsCount.kind = primec::Expr::Kind::Call;
   primitiveArgsCount.name = "count";
   primitiveArgsCount.args = {primitiveArgsName};
-  CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals));
+  CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals, false, "argv"));
   primitiveArgsCount.name = "/std/collections/vector/count";
-  CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals));
+  CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals, false, "argv"));
   primitiveArgsCount.name = "/vector/count";
-  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals));
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals, false, "argv"));
 
   primec::Expr zeroIndex;
   zeroIndex.kind = primec::Expr::Kind::Literal;
