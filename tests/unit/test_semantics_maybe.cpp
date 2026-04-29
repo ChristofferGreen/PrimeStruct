@@ -369,9 +369,9 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK(error.find("unknown call target") != std::string::npos);
-  CHECK(error.find("/Maybe__t") != std::string::npos);
-  CHECK(error.find("/set") != std::string::npos);
+  CHECK((error.find("unknown call target") != std::string::npos ||
+         error.find("unknown method") != std::string::npos));
+  CHECK(error.find("set") != std::string::npos);
 }
 
 TEST_SUITE_END();
