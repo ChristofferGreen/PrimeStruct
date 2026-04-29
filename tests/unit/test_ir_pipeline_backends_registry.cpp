@@ -3191,6 +3191,51 @@ TEST_CASE("ir lowerer rejects stale semantic-product query facts") {
   CHECK(diagnosticInfo.message == error);
 }
 
+TEST_CASE("ir lowerer accepts query-owned builtin count target metadata") {
+  const auto acceptsCountShadow = [](const char *publishedPath) {
+    primec::SemanticProgram semanticProgram;
+    semanticProgram.entryPath = "/main";
+    semanticProgram.directCallTargets.push_back(primec::SemanticProgramDirectCallTarget{
+        .scopePath = "/main",
+        .callName = "count",
+        .sourceLine = 1,
+        .sourceColumn = 1,
+        .semanticNodeId = 8303,
+        .resolvedPathId =
+            primec::semanticProgramInternCallTargetString(semanticProgram, publishedPath),
+        .stdlibSurfaceId = std::nullopt,
+    });
+    semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+        .scopePath = "/main",
+        .callName = "count",
+        .queryTypeText = "i32",
+        .bindingTypeText = "i32",
+        .receiverBindingTypeText = "",
+        .hasResultType = false,
+        .resultTypeHasValue = false,
+        .resultValueType = "",
+        .resultErrorType = "",
+        .sourceLine = 1,
+        .sourceColumn = 1,
+        .semanticNodeId = 8303,
+        .callNameId = primec::semanticProgramInternCallTargetString(semanticProgram, "count"),
+        .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/count"),
+        .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+        .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+        .receiverBindingTypeTextId =
+            primec::semanticProgramInternCallTargetString(semanticProgram, ""),
+    });
+
+    std::string error;
+    CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+        &semanticProgram, error));
+    CHECK(error.empty());
+  };
+
+  acceptsCountShadow("/array/count");
+  acceptsCountShadow("/string/count");
+}
+
 TEST_CASE("ir lowerer rejects stale semantic-product query type metadata") {
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";

@@ -146,6 +146,21 @@ bool validateInternedSemanticTextMetadata(const SemanticProgram &semanticProgram
   return true;
 }
 
+bool isRootBuiltinCountQueryPath(std::string_view path) {
+  return path == "count" || path == "/count";
+}
+
+bool isCoreBuiltinCountTargetPath(std::string_view path) {
+  return path == "/array/count" || path == "/string/count";
+}
+
+bool isQueryOwnedBuiltinCountTargetMatch(std::string_view queryCallName,
+                                         std::string_view queryResolvedPath,
+                                         std::string_view publishedTargetPath) {
+  return queryCallName == "count" && isRootBuiltinCountQueryPath(queryResolvedPath) &&
+         isCoreBuiltinCountTargetPath(publishedTargetPath);
+}
+
 } // namespace
 
 bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *semanticProgram,
@@ -247,7 +262,17 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       publishedTargetId =
           semanticProgramLookupPublishedMethodCallTargetId(*semanticProgram, queryFact->semanticNodeId);
     }
-    if (publishedTargetId.has_value() && *publishedTargetId != queryFact->resolvedPathId) {
+    bool queryTargetMatchesPublishedTarget =
+        !publishedTargetId.has_value() || *publishedTargetId == queryFact->resolvedPathId;
+    if (!queryTargetMatchesPublishedTarget && publishedTargetId.has_value()) {
+      const std::string_view publishedTargetPath =
+          semanticProgramResolveCallTargetString(*semanticProgram, *publishedTargetId);
+      queryTargetMatchesPublishedTarget =
+          isQueryOwnedBuiltinCountTargetMatch(queryCallNameView,
+                                             resolvedPath,
+                                             publishedTargetPath);
+    }
+    if (!queryTargetMatchesPublishedTarget) {
       error = "stale semantic-product query fact: " + queryCallName;
       return false;
     }
