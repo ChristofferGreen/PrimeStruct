@@ -1602,16 +1602,80 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
   auto canonicalVectorHelperTarget = [](std::string_view helperName) {
     return "/std/collections/vector/" + std::string(helperName);
   };
-  auto preferredMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
+  auto bindingTypeText = [](const BindingInfo &binding) {
+    if (binding.typeTemplateArg.empty()) {
+      return binding.typeName;
+    }
+    return binding.typeName + "<" + binding.typeTemplateArg + ">";
+  };
+  auto isWrappedMapTypeText = [&](const std::string &typeText) {
+    std::string pointeeType;
     std::string keyType;
     std::string valueType;
-    const std::string canonical = "/std/collections/map/" + helperName;
-    const std::string alias = "/map/" + helperName;
+    return extractWrappedPointeeType(typeText, pointeeType) &&
+           extractMapKeyValueTypesFromTypeText(pointeeType, keyType, valueType);
+  };
+  auto isWrappedMapReceiver = [&](const Expr &receiverExpr) {
+    auto isWrappedBinding = [&](const BindingInfo &binding) {
+      return isWrappedMapTypeText(bindingTypeText(binding));
+    };
+    if (receiverExpr.kind == Expr::Kind::Name) {
+      if (const BindingInfo *paramBinding = findParamBinding(params, receiverExpr.name)) {
+        return isWrappedBinding(*paramBinding);
+      }
+      auto it = locals.find(receiverExpr.name);
+      return it != locals.end() && isWrappedBinding(it->second);
+    }
+    BindingInfo fieldBinding;
+    if (resolveFieldBindingTarget(receiverExpr, fieldBinding)) {
+      return isWrappedBinding(fieldBinding);
+    }
+    if (receiverExpr.kind == Expr::Kind::Call) {
+      std::string indexedElemType;
+      return resolveIndexedArgsPackElementType(receiverExpr, indexedElemType) &&
+             isWrappedMapTypeText(indexedElemType);
+    }
+    return false;
+  };
+  auto borrowedMapHelperNameForReceiver = [&](const Expr &receiverExpr,
+                                              const std::string &helperName) {
+    if (!isWrappedMapReceiver(receiverExpr)) {
+      return helperName;
+    }
+    if (helperName == "count") {
+      return std::string("count_ref");
+    }
+    if (helperName == "contains") {
+      return std::string("contains_ref");
+    }
+    if (helperName == "tryAt") {
+      return std::string("tryAt_ref");
+    }
+    if (helperName == "at") {
+      return std::string("at_ref");
+    }
+    if (helperName == "at_unsafe") {
+      return std::string("at_unsafe_ref");
+    }
+    if (helperName == "insert") {
+      return std::string("insert_ref");
+    }
+    return helperName;
+  };
+  auto preferredMapMethodTarget = [&](const Expr &receiverExpr, const std::string &helperName) {
+    const std::string resolvedHelperName =
+        explicitMapHelperPath.empty()
+            ? borrowedMapHelperNameForReceiver(receiverExpr, helperName)
+            : helperName;
+    std::string keyType;
+    std::string valueType;
+    const std::string canonical = "/std/collections/map/" + resolvedHelperName;
+    const std::string alias = "/map/" + resolvedHelperName;
     if (resolveExperimentalMapTarget(receiverExpr, keyType, valueType)) {
       if (hasDeclaredDefinitionPath(canonical) || hasImportedDefinitionPath(canonical)) {
         return canonical;
       }
-      return this->preferredCanonicalExperimentalMapHelperTarget(helperName);
+      return this->preferredCanonicalExperimentalMapHelperTarget(resolvedHelperName);
     }
     if (explicitMapHelperPath.rfind("/std/collections/map/", 0) == 0) {
       return canonical;
