@@ -441,7 +441,7 @@ TEST_CASE("semantic-product contract rejects stale local-auto binding types") {
       program, &semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
   CHECK(failure.stage == primec::IrPreparationFailureStage::Lowering);
   CHECK(failure.message ==
-        "stale semantic-product local-auto fact: /main -> local selected");
+        "stale semantic-product local-auto binding type metadata: /main -> local selected");
   CHECK(failure.diagnosticInfo.message == failure.message);
 }
 
@@ -695,6 +695,7 @@ TEST_CASE("semantic-product direct-call coverage conformance rejects missing tar
   primec::SemanticProgram semanticProgram;
   semanticProgram.entryPath = "/main";
   addVoidCallableSummary(semanticProgram, 81);
+  addVoidCallableSummary(semanticProgram, 82);
   const auto calleePathId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "/callee");
   semanticProgram.definitions.push_back(primec::SemanticProgramDefinition{
@@ -1149,7 +1150,7 @@ TEST_CASE("ir lowerer production entry rejects missing semantic-product method-c
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product method-call target: /main -> count");
+  CHECK(error == "missing semantic-product method-call target: count");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -1640,6 +1641,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
         primec::semanticProgramInternCallTargetString(semanticProgram, "map");
     collectionFact.bindingTypeTextId =
         primec::semanticProgramInternCallTargetString(semanticProgram, "map<i32, i64>");
+    collectionFact.elementTypeTextId = primec::InvalidSymbolId;
     collectionFact.keyTypeTextId =
         primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
     collectionFact.valueTypeTextId =
