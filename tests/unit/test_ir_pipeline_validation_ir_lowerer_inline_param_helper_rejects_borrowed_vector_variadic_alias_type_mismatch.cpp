@@ -135,6 +135,86 @@ TEST_CASE("ir lowerer inline param helper rejects borrowed soa_vector variadic a
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer inline param helper preserves borrowed soa_vector spread struct metadata") {
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+
+  primec::Expr spreadArg;
+  spreadArg.kind = primec::Expr::Kind::Name;
+  spreadArg.name = "source";
+  spreadArg.isSpread = true;
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.index = 18;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  sourceInfo.structTypeName =
+      "/std/collections/experimental_soa_vector/SoaVector__Particle";
+  sourceInfo.isArgsPack = true;
+  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  sourceInfo.referenceToVector = true;
+  sourceInfo.isSoaVector = true;
+  sourceInfo.argsPackElementCount = 2;
+  callerLocals.emplace("source", sourceInfo);
+
+  int32_t nextLocal = 2;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {valuesParam},
+      {nullptr},
+      {&spreadArg},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        infoOut.isArgsPack = true;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+        infoOut.referenceToVector = true;
+        infoOut.isSoaVector = true;
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return true; },
+      [](int32_t, int32_t, int32_t) { return true; },
+      []() { return 0; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error));
+
+  CHECK(error.empty());
+  REQUIRE(calleeLocals.count("values") == 1u);
+  const auto &valuesInfo = calleeLocals.at("values");
+  CHECK(valuesInfo.structTypeName ==
+        "/std/collections/experimental_soa_vector/SoaVector__Particle");
+  CHECK(valuesInfo.isSoaVector);
+  CHECK(valuesInfo.referenceToVector);
+  CHECK(valuesInfo.argsPackElementCount == 2);
+  REQUIRE(instructions.size() == 2u);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 18u);
+  CHECK(instructions[1].op == primec::IrOpcode::StoreLocal);
+  CHECK(instructions[1].imm == 2u);
+}
+
 TEST_CASE("ir lowerer inline param helper materializes struct pointer variadic args packs") {
   primec::Expr valuesParam;
   valuesParam.kind = primec::Expr::Kind::Name;

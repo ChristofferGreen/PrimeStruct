@@ -621,6 +621,10 @@ bool emitInlinePackedCallParameter(
     }
     paramInfo.argsPackElementCount = callerIt->second.argsPackElementCount;
     paramInfo.argsPackElementKind = callerIt->second.argsPackElementKind;
+    paramInfo.valueKind = callerIt->second.valueKind;
+    if (!callerIt->second.structTypeName.empty()) {
+      paramInfo.structTypeName = callerIt->second.structTypeName;
+    }
     paramInfo.structSlotCount = callerIt->second.structSlotCount;
     paramInfo.mapKeyKind = callerIt->second.mapKeyKind;
     paramInfo.mapValueKind = callerIt->second.mapValueKind;
