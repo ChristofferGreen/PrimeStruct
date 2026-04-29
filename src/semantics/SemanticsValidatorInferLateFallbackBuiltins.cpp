@@ -95,7 +95,9 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
               resolveSoaVectorTarget(candidate, elemType)) ||
              (resolveStringTarget != nullptr && resolveStringTarget(candidate)) ||
              (resolveMapTarget != nullptr &&
-              resolveMapTarget(candidate, keyType, valueType));
+              resolveMapTarget(candidate, keyType, valueType)) ||
+             (resolveExperimentalMapTarget != nullptr &&
+              resolveExperimentalMapTarget(candidate, keyType, valueType));
     };
     auto tryResolveReceiverIndex = [&](size_t index,
                                        bool skipResolvedResult,
@@ -128,6 +130,9 @@ ReturnKind SemanticsValidator::inferLateFallbackReturnKind(
       } else if (resolveMapTarget != nullptr &&
                  resolveMapTarget(receiverCandidate, keyType, valueType)) {
         methodResolved = "/map/" + helperName;
+      } else if (resolveExperimentalMapTarget != nullptr &&
+                 resolveExperimentalMapTarget(receiverCandidate, keyType, valueType)) {
+        methodResolved = "/std/collections/map/" + helperName;
       } else {
         return false;
       }

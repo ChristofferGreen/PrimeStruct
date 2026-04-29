@@ -156,6 +156,25 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("canonical namespaced map access helpers accept experimental map values") {
+  const std::string source = R"(
+import /std/collections/*
+import /std/collections/map/*
+import /std/collections/experimental_map/*
+
+[effects(heap_alloc), return<i32>]
+main() {
+  [Map<string, i32>] values{mapPair<string, i32>("left"raw_utf8, 4i32, "right"raw_utf8, 7i32)}
+  return(plus(/std/collections/map/at<string, i32>(values, "left"raw_utf8),
+              /std/collections/map/at_unsafe<string, i32>(values, "right"raw_utf8)))
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  INFO(error);
+  CHECK(error.empty());
+}
+
 TEST_CASE("canonical namespaced map helpers keep unknown-call diagnostics for borrowed experimental map receivers") {
   const std::string source = R"(
 import /std/collections/*
