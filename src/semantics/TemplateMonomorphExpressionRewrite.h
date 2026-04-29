@@ -1332,6 +1332,35 @@ bool rewriteExpr(Expr &expr,
       expr.name = preferredCollectionHelperPath;
       expr.namespacePrefix.clear();
     }
+    if (!expr.isMethodCall && expr.templateArgs.empty() &&
+        expr.name.find('/') == std::string::npos &&
+        (resolvedPath == "/count" || resolvedPath == "/capacity")) {
+      const std::string samePathVectorHelper = "/vector/" + expr.name;
+      auto samePathVectorHelperIt = ctx.sourceDefs.find(samePathVectorHelper);
+      if (samePathVectorHelperIt != ctx.sourceDefs.end() &&
+          ctx.templateDefs.count(samePathVectorHelper) > 0 &&
+          ctx.helperOverloads.count(samePathVectorHelper) == 0) {
+        std::vector<std::string> inferredArgs;
+        std::string inferenceError;
+        if (inferImplicitTemplateArgs(samePathVectorHelperIt->second,
+                                      expr,
+                                      locals,
+                                      params,
+                                      mapping,
+                                      allowedParams,
+                                      namespacePrefix,
+                                      ctx,
+                                      allowMathBare,
+                                      inferredArgs,
+                                      inferenceError)) {
+          resolvedPath = samePathVectorHelper;
+          expr.name = samePathVectorHelper;
+          expr.namespacePrefix.clear();
+          expr.templateArgs = std::move(inferredArgs);
+          allConcrete = true;
+        }
+      }
+    }
     if (!expr.isMethodCall &&
         expr.name.find('/') == std::string::npos &&
         isLegacyOrCanonicalSoaHelperPath(resolvedPath, "count") &&
