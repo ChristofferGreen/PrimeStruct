@@ -1727,7 +1727,8 @@ SemanticsValidator::bindingFactSnapshotForSemanticProduct() {
     std::optional<std::string> restrictType;
     if (!withPreservedError([&]() {
           return parseBindingInfo(
-              bindingExpr, namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_);
+              bindingExpr, namespacePrefix, structNames_, importAliases_, bindingOut, restrictType, error_,
+              &sumNames_);
         })) {
       return false;
     }

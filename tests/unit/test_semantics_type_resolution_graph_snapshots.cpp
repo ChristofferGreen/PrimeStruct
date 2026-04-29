@@ -2903,6 +2903,52 @@ TEST_CASE("semantic product binding facts carry interned text ids") {
   CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, aEntry->bindingTypeTextId) == "i32");
 }
 
+TEST_CASE("semantic product binding facts include sum typed locals") {
+  const std::string source = R"(
+[sum]
+Choice {
+  [i32] left
+  [i32] right
+}
+
+[return<i32>]
+main() {
+  [Choice] choice{[right] 41i32}
+  return(pick(choice) {
+    left(value) {
+      plus(value, 1i32)
+    }
+    right(value) {
+      plus(value, 2i32)
+    }
+  })
+}
+)";
+
+  auto program = parseProgram(source);
+  primec::Semantics semantics;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  const std::vector<std::string> defaults = {"io_out", "io_err"};
+  REQUIRE(semantics.validate(program, "/main", error, defaults, defaults, {}, nullptr, false, &semanticProgram));
+  CHECK(error.empty());
+
+  const auto *choiceEntry = findSemanticEntry(
+      primec::semanticProgramBindingFactView(semanticProgram),
+      [](const primec::SemanticProgramBindingFact &entry) {
+        return entry.scopePath == "/main" && entry.siteKind == "local" && entry.name == "choice";
+      });
+  REQUIRE(choiceEntry != nullptr);
+  CHECK(choiceEntry->bindingTypeText == "Choice");
+  CHECK(choiceEntry->semanticNodeId != 0);
+  REQUIRE(choiceEntry->bindingTypeTextId != primec::InvalidSymbolId);
+  REQUIRE(choiceEntry->resolvedPathId != primec::InvalidSymbolId);
+  CHECK(primec::semanticProgramResolveCallTargetString(semanticProgram, choiceEntry->bindingTypeTextId) ==
+        "Choice");
+  CHECK(primec::semanticProgramBindingFactResolvedPath(semanticProgram, *choiceEntry) ==
+        "/main/choice");
+}
+
 TEST_CASE("semantic product return facts carry interned text ids") {
   const std::string source =
       "[return<i32>]\n"

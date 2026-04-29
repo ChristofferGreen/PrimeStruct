@@ -55,6 +55,9 @@ bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const 
     if (!resolveStructTypePath(normalizedTypeBase, scopeNamespace, structNames_).empty()) {
       return true;
     }
+    if (resolveSumDefinitionForTypeText(normalizedTypeBase, scopeNamespace) != nullptr) {
+      return true;
+    }
     const auto importIt = importAliases_.find(normalizedTypeBase);
     return importIt != importAliases_.end() && structNames_.count(importIt->second) > 0;
   }
@@ -68,6 +71,9 @@ bool SemanticsValidator::graphBindingIsUsable(const BindingInfo &binding) const 
     return true;
   }
   if (!resolveStructTypePath(normalizedType, scopeNamespace, structNames_).empty()) {
+    return true;
+  }
+  if (resolveSumDefinitionForTypeText(normalizedType, scopeNamespace) != nullptr) {
     return true;
   }
   auto importIt = importAliases_.find(normalizedType);
