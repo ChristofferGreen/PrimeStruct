@@ -214,7 +214,25 @@ main() {
 }
 )";
   std::string error;
-  CHECK(validateProgram(source, "/main", error));
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
+  CHECK(error.empty());
+}
+
+TEST_CASE("capacity call keeps templated user-defined vector helper precedence") {
+  const std::string source = R"(
+[effects(heap_alloc), return<int>]
+/vector/capacity<T>([vector<T>] values) {
+  return(23i32)
+}
+
+[effects(heap_alloc), return<int>]
+main() {
+  [vector<i32>] values{vector<i32>(1i32, 2i32)}
+  return(capacity(values))
+}
+)";
+  std::string error;
+  CHECK_MESSAGE(validateProgram(source, "/main", error), error);
   CHECK(error.empty());
 }
 

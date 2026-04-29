@@ -804,6 +804,14 @@ bool rewriteExpr(Expr &expr,
         helperName = "to_aos_ref";
       }
     }
+    if (receiverFamily == "vector" &&
+        (helperName == "count" || helperName == "count_ref" ||
+         helperName == "capacity")) {
+      const std::string samePathVectorHelper = "/vector/" + helperName;
+      if (hasDefinitionFamilyPath(samePathVectorHelper)) {
+        return samePathVectorHelper;
+      }
+    }
     const auto vectorReceiverHasVisibleCanonicalHelper =
         [&](std::string_view candidateHelperName) {
           const std::string preferred =
