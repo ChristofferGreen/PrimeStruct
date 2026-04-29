@@ -1175,7 +1175,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)") !=
         std::string::npos);
   CHECK(todo.find("### Ready Now (Live Leaves; No Unmet TODO Dependencies)\n\n"
-                  "- TODO-4266: Rewire `?` to the `Result` sum contract") !=
+                  "- TODO-4298: Promote graph-backed non-template inference authority") !=
         std::string::npos);
   CHECK(todo.find("### Immediate Next 10 (After Ready Now)\n\n"
                   "- TODO-4267: Retire legacy Maybe/Result representations") !=
@@ -1190,7 +1190,7 @@ TEST_CASE("todo queue and skipped doctest debt stay source locked") {
   CHECK(todo.find("- Deferred SoA finish: TODO-4252") ==
         std::string::npos);
   CHECK(todo.find("### Execution Queue (Recommended)\n\n"
-                  "- TODO-4266: Rewire `?` to the `Result` sum contract") !=
+                  "- TODO-4298: Promote graph-backed non-template inference authority") !=
         std::string::npos);
   const std::vector<std::string> semanticPhaseQueue = {
       "TODO-4266: Rewire `?` to the `Result` sum contract",
@@ -2297,7 +2297,7 @@ TEST_CASE("file readByte docs and helpers stay source locked") {
   CHECK(resultCalls.find("sourceResultPackExpr") == std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusOkExpr()") != std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusIsErrorExpr(argText)") != std::string::npos);
-  CHECK(resultCalls.find("sourceResultStatusErrorPayloadExpr(argText)") !=
+  CHECK(resultCalls.find("sourceResultStatusErrorPayloadExpr(guardedResultName)") !=
         std::string::npos);
   CHECK(resultCalls.find("sourceResultStatusCppType") == std::string::npos);
   CHECK(fileAccessCalls.find("ps_result_status_from_error(ps_file_read_byte") !=

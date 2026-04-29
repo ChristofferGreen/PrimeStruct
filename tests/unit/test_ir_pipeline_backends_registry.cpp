@@ -1277,7 +1277,7 @@ TEST_CASE("bridge-path coverage rejects helper name ids before direct-call targe
   CHECK(error == "missing semantic-product bridge helper name id: /main -> count");
 }
 
-TEST_CASE("ir lowerer production entry rejects missing semantic-product bridge-path choices") {
+TEST_CASE("ir lowerer production entry reports native diagnostic without bridge-path choice") {
   primec::Program program;
 
   primec::Definition mainDef;
@@ -1318,7 +1318,10 @@ TEST_CASE("ir lowerer production entry rejects missing semantic-product bridge-p
   std::string error;
 
   CHECK_FALSE(lowerer.lower(program, &semanticProgram, "/main", {}, {}, module, error, &diagnosticInfo));
-  CHECK(error == "missing semantic-product bridge-path choice: /main -> contains");
+  CHECK(error ==
+        "native backend only supports arithmetic/comparison/clamp/min/max/abs/sign/saturate/"
+        "convert/pointer/assign/increment/decrement calls in expressions "
+        "(call=/contains, name=contains, args=1, method=false)");
   CHECK(diagnosticInfo.message == error);
 }
 
@@ -3240,6 +3243,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product try facts") {
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 8401;
   primec::Expr sourceExpr;
   sourceExpr.kind = primec::Expr::Kind::Name;
   sourceExpr.name = "value";
@@ -3581,6 +3585,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
 
   primec::Definition mainDef;
   mainDef.fullPath = "/main";
+  mainDef.semanticNodeId = 8401;
   primec::Expr sourceExpr;
   sourceExpr.kind = primec::Expr::Kind::Name;
   sourceExpr.name = "value";
@@ -3634,7 +3639,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
       .onErrorHandlerPath = "/handler",
       .onErrorErrorType = "FileError",
       .onErrorBoundArgCount = 1,
-      .semanticNodeId = 0,
+      .semanticNodeId = 8401,
       .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .returnKindId = primec::InvalidSymbolId,
@@ -3644,6 +3649,31 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
       .resultErrorTypeId = primec::InvalidSymbolId,
       .onErrorHandlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
       .onErrorErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+  });
+  semanticProgram.onErrorFacts.push_back(primec::SemanticProgramOnErrorFact{
+      .definitionPath = "/main",
+      .returnKind = "i32",
+      .errorType = "FileError",
+      .boundArgCount = 1,
+      .boundArgTexts = {"error"},
+      .returnResultHasValue = false,
+      .returnResultValueType = "",
+      .returnResultErrorType = "",
+      .semanticNodeId = 8401,
+      .provenanceHandle = 0,
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .handlerPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
+      .errorTypeId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .boundArgTextIds = {
+          primec::semanticProgramInternCallTargetString(semanticProgram, "error"),
+      },
+      .returnResultValueTypeId = primec::InvalidSymbolId,
+      .returnResultErrorTypeId = primec::InvalidSymbolId,
   });
 
   primec::IrLowerer lowerer;
