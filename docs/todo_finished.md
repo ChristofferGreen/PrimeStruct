@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for pick arms
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native `pick(...)` arm dispatch consume published sum-variant metadata for
+    tag comparisons instead of treating AST variant order as the authority on
+    the semantic-product path.
+  - implementation_notes:
+    - Keep target sum resolution, constructor handling, template inference,
+      and collection migration out of scope.
+    - Expose a narrow semantic-product adapter lookup for sum variant
+      metadata by sum path and variant name.
+    - Preserve syntax-only compatibility by falling back to AST variant order
+      only when no semantic product is present.
+  - acceptance:
+    - Native `pick(...)` arm dispatch validates published sum-variant
+      metadata before comparing tags on the semantic-product path.
+    - Tag comparisons consume the published semantic-product tag value for
+      semantic-product-backed lowering.
+    - Missing or stale sum-variant metadata fails with deterministic pick-arm
+      diagnostics.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native pick-arm dispatch has semantic-product
+    authority for variant tag metadata and the old AST-order path is retained
+    only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added a semantic-product adapter lookup for sum variant
+    metadata, changed native pick expression and statement lowering to
+    validate/use published variant tags, added lowerer contract coverage for
+    the successful path plus missing/stale variant facts, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Use query facts for pick methods
   - owner: ai
   - created_at: 2026-04-28

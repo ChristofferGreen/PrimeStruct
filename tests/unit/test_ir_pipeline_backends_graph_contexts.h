@@ -566,6 +566,8 @@ TEST_CASE("public lowerer testing headers stay in sync with semantic-product hel
         std::string::npos);
   CHECK(semanticTargets.find("findSemanticProductSumTypeMetadata") !=
         std::string::npos);
+  CHECK(semanticTargets.find("findSemanticProductSumVariantMetadata") !=
+        std::string::npos);
 }
 
 TEST_CASE("public lowerer testing umbrellas keep alias owners ahead of users") {

@@ -648,6 +648,21 @@ const SemanticProgramSumTypeMetadata *findSemanticProductSumTypeMetadata(
   return nullptr;
 }
 
+const SemanticProgramSumVariantMetadata *findSemanticProductSumVariantMetadata(
+    const SemanticProductTargetAdapter &adapter,
+    std::string_view sumPath,
+    std::string_view variantName) {
+  if (adapter.semanticProgram == nullptr || sumPath.empty() || variantName.empty()) {
+    return nullptr;
+  }
+  for (const auto &entry : adapter.semanticProgram->sumVariantMetadata) {
+    if (entry.sumPath == sumPath && entry.variantName == variantName) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
 const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
     const SemanticProductIndex &semanticIndex,
     const Expr &expr) {

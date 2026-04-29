@@ -371,6 +371,8 @@ Task template:
     is complete for named `pick(value)` targets. The native pick query-target
     slice is complete for direct `pick(makeValue())` targets. The native pick
     method-target slice is complete for `pick(receiver.makeValue())` targets.
+    The native pick variant-metadata slice is complete for semantic-product
+    arm tag dispatch.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -508,6 +510,10 @@ Task template:
       method-call pick targets; direct sum constructors stay on the constructor
       path, and method-call targets no longer depend on target-name
       reconstruction.
+    - Completed slice: native `pick(...)` arm dispatch now validates published
+      sum-variant metadata and emits tag comparisons from the published tag
+      value on the semantic-product path. Missing or stale arm metadata fails
+      closed before lowering can dispatch from AST variant order.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

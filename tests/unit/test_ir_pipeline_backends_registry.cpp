@@ -600,6 +600,29 @@ main() {
               semanticProductTargets, "/Choice") != nullptr);
   REQUIRE(primec::ir_lowerer::findSemanticProductSumTypeMetadata(
               semanticProductTargets, "/OtherChoice") != nullptr);
+  const auto *rightVariantMetadata =
+      primec::ir_lowerer::findSemanticProductSumVariantMetadata(
+          semanticProductTargets, "/Choice", "right");
+  REQUIRE(rightVariantMetadata != nullptr);
+  CHECK(rightVariantMetadata->variantIndex == 1);
+  CHECK(rightVariantMetadata->tagValue == 1);
+  CHECK(rightVariantMetadata->hasPayload);
+  CHECK(rightVariantMetadata->payloadTypeText == "i32");
+  const auto choiceLeftVariantOrder = std::find_if(
+      semanticProgram.sumVariantMetadata.begin(),
+      semanticProgram.sumVariantMetadata.end(),
+      [](const primec::SemanticProgramSumVariantMetadata &entry) {
+        return entry.sumPath == "/Choice" && entry.variantName == "left";
+      });
+  const auto choiceRightVariantOrder = std::find_if(
+      semanticProgram.sumVariantMetadata.begin(),
+      semanticProgram.sumVariantMetadata.end(),
+      [](const primec::SemanticProgramSumVariantMetadata &entry) {
+        return entry.sumPath == "/Choice" && entry.variantName == "right";
+      });
+  REQUIRE(choiceLeftVariantOrder != semanticProgram.sumVariantMetadata.end());
+  REQUIRE(choiceRightVariantOrder != semanticProgram.sumVariantMetadata.end());
+  CHECK(choiceLeftVariantOrder < choiceRightVariantOrder);
   const auto choiceOrder = std::find_if(
       semanticProgram.sumTypeMetadata.begin(),
       semanticProgram.sumTypeMetadata.end(),
@@ -682,6 +705,58 @@ main() {
   CHECK(missingMetadataFailure.message ==
         "missing semantic-product sum metadata for pick target: /main -> choice");
   CHECK(missingMetadataFailure.diagnosticInfo.message == missingMetadataFailure.message);
+
+  auto rewriteChoiceRightVariantTag =
+      [](primec::SemanticProgram &semanticProduct, uint32_t tagValue) {
+        for (auto &entry : semanticProduct.sumVariantMetadata) {
+          if (entry.sumPath == "/Choice" && entry.variantName == "right") {
+            entry.tagValue = tagValue;
+            return true;
+          }
+        }
+        return false;
+      };
+
+  primec::Program staleVariantProgram = program;
+  primec::SemanticProgram staleVariantSemanticProgram = semanticProgram;
+  REQUIRE(rewriteChoiceRightVariantTag(staleVariantSemanticProgram, 42));
+
+  primec::IrModule staleVariantIr;
+  primec::IrPreparationFailure staleVariantFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleVariantProgram,
+                                      &staleVariantSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleVariantIr,
+                                      staleVariantFailure));
+  CHECK(staleVariantFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleVariantFailure.message ==
+        "stale semantic-product sum variant metadata for pick arm: /Choice -> right");
+  CHECK(staleVariantFailure.diagnosticInfo.message == staleVariantFailure.message);
+
+  primec::Program missingVariantProgram = program;
+  primec::SemanticProgram missingVariantSemanticProgram = semanticProgram;
+  missingVariantSemanticProgram.sumVariantMetadata.erase(
+      std::remove_if(missingVariantSemanticProgram.sumVariantMetadata.begin(),
+                     missingVariantSemanticProgram.sumVariantMetadata.end(),
+                     [](const primec::SemanticProgramSumVariantMetadata &entry) {
+                       return entry.sumPath == "/Choice" &&
+                              entry.variantName == "right";
+                     }),
+      missingVariantSemanticProgram.sumVariantMetadata.end());
+
+  primec::IrModule missingVariantIr;
+  primec::IrPreparationFailure missingVariantFailure;
+  CHECK_FALSE(primec::prepareIrModule(missingVariantProgram,
+                                      &missingVariantSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      missingVariantIr,
+                                      missingVariantFailure));
+  CHECK(missingVariantFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(missingVariantFailure.message ==
+        "missing semantic-product sum variant metadata for pick arm: /Choice -> right");
+  CHECK(missingVariantFailure.diagnosticInfo.message == missingVariantFailure.message);
 }
 
 TEST_CASE("native pick call target sum resolution uses query facts") {

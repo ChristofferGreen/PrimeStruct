@@ -342,6 +342,10 @@ Planned non-template inference migration contract:
   lowering now routes method-call targets through the same published query fact and callee return
   fact authority as direct-call targets. Direct sum constructors remain on the constructor path;
   method-call pick targets no longer depend on target-name reconstruction to identify the sum.
+- Completed native pick variant-metadata slice: semantic-product-addressed native `pick(...)`
+  arms now validate published sum-variant metadata before dispatch and use the published tag value
+  for tag comparisons. Missing or stale arm metadata fails closed with deterministic pick-arm
+  diagnostics, while syntax-only compatibility keeps the old AST variant-order path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

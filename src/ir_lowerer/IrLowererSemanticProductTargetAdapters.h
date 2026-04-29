@@ -139,6 +139,10 @@ const SemanticProgramBindingFact *findSemanticProductBindingFactByScopeAndName(
 const SemanticProgramSumTypeMetadata *findSemanticProductSumTypeMetadata(
     const SemanticProductTargetAdapter &adapter,
     std::string_view fullPath);
+const SemanticProgramSumVariantMetadata *findSemanticProductSumVariantMetadata(
+    const SemanticProductTargetAdapter &adapter,
+    std::string_view sumPath,
+    std::string_view variantName);
 const SemanticProgramCollectionSpecialization *findSemanticProductCollectionSpecialization(
     const SemanticProductIndex &semanticIndex,
     const Expr &expr);
