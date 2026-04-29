@@ -374,6 +374,8 @@ Task template:
     The native pick variant-metadata slice is complete for semantic-product
     arm tag dispatch. The native pick payload-local slice is complete for
     semantic-product branch payload binding and aggregate-result inference.
+    The native active sum payload tag slice is complete for semantic-product
+    move/drop helper dispatch.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -519,6 +521,10 @@ Task template:
       sum-variant metadata to build branch-local payload shape for payload
       arms and aggregate-result inference on the semantic-product path.
       Syntax-only compatibility keeps the old AST payload reconstruction path.
+    - Completed slice: native active sum payload move/drop helper dispatch now
+      validates published sum-variant metadata and uses the published tag
+      value for active-payload comparisons on the semantic-product path.
+      Syntax-only compatibility keeps the old AST tag reconstruction path.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

@@ -6,6 +6,40 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for active sum payload tags
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native sum payload move/drop helper dispatch consume published
+    sum-variant tag metadata for active-payload comparisons instead of
+    reading tag values from AST variant order.
+  - implementation_notes:
+    - Keep target sum resolution, pick arm lowering, template inference, and
+      collection migration out of scope.
+    - Preserve syntax-only compatibility by using the AST tag path only when
+      no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before emitting active-payload helper calls.
+  - acceptance:
+    - Active payload move helper dispatch validates published sum-variant
+      metadata before comparing the active tag on the semantic-product path.
+    - Active payload destroy helper dispatch validates the same published
+      metadata before comparing the active tag on the semantic-product path.
+    - Missing or stale metadata reports deterministic lowerer diagnostics.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native active sum payload move/drop dispatch has
+    semantic-product authority for variant tag metadata and the old AST-order
+    path is retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product variant-tag validation for active sum
+    payload move/drop lowering, added positive and stale-metadata lowerer
+    coverage for move and destroy helper dispatch, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Use variant facts for pick payload locals
   - owner: ai
   - created_at: 2026-04-28

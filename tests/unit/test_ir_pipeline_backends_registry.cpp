@@ -789,6 +789,163 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
         std::string::npos);
 }
 
+TEST_CASE("native sum active payload helpers use semantic-product variant tags") {
+  const auto rewriteChoiceLeftVariantTag =
+      [](primec::SemanticProgram &semanticProduct, uint32_t tagValue) {
+        for (auto &entry : semanticProduct.sumVariantMetadata) {
+          if (entry.sumPath == "/Choice" && entry.variantName == "left") {
+            entry.tagValue = tagValue;
+            return true;
+          }
+        }
+        return false;
+      };
+
+  const std::string moveSource = R"(
+[struct]
+LeftPayload() {
+  [i32] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, plus(other.value, 100i32))
+  }
+}
+
+[struct]
+RightPayload() {
+  [i32] value{0i32}
+
+  [mut]
+  Move([Reference<Self>] other) {
+    assign(this.value, plus(other.value, 1000i32))
+  }
+}
+
+[sum]
+Choice {
+  [LeftPayload] left
+  [RightPayload] right
+}
+
+[return<i32>]
+main() {
+  [Choice] original{[left] LeftPayload{7i32}}
+  [Choice] moved{move(original)}
+  return(0i32)
+}
+)";
+
+  primec::Program moveProgram;
+  primec::SemanticProgram moveSemanticProgram;
+  std::string moveError;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      moveSource, moveProgram, &moveSemanticProgram, moveError, {}, {}));
+  CHECK(moveError.empty());
+
+  primec::Options options;
+  options.entryPath = "/main";
+  primec::IrModule moveIr;
+  primec::IrPreparationFailure moveFailure;
+  primec::Program moveLoweringProgram = moveProgram;
+  primec::SemanticProgram moveLoweringSemanticProgram = moveSemanticProgram;
+  REQUIRE(primec::prepareIrModule(moveLoweringProgram,
+                                  &moveLoweringSemanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Native,
+                                  moveIr,
+                                  moveFailure));
+  CHECK(!moveIr.functions.empty());
+
+  primec::Program staleMoveProgram = moveProgram;
+  primec::SemanticProgram staleMoveSemanticProgram = moveSemanticProgram;
+  REQUIRE(rewriteChoiceLeftVariantTag(staleMoveSemanticProgram, 42));
+
+  primec::IrModule staleMoveIr;
+  primec::IrPreparationFailure staleMoveFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleMoveProgram,
+                                      &staleMoveSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleMoveIr,
+                                      staleMoveFailure));
+  CHECK(staleMoveFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleMoveFailure.message ==
+        "stale semantic-product sum variant metadata for sum payload move: /Choice -> left");
+  CHECK(staleMoveFailure.diagnosticInfo.message == staleMoveFailure.message);
+
+  const std::string dropSource = R"(
+[struct]
+LeftPayload() {
+  [Reference<i32>] counter
+
+  Destroy() {
+    assign(dereference(this.counter), 100i32)
+  }
+}
+
+[struct]
+RightPayload() {
+  [Reference<i32>] counter
+
+  Destroy() {
+    assign(dereference(this.counter), 1000i32)
+  }
+}
+
+[sum]
+Choice {
+  [LeftPayload] left
+  [RightPayload] right
+}
+
+[return<i32>]
+main() {
+  [i32 mut] counter{0i32}
+  [uninitialized<Choice> mut] storage{uninitialized<Choice>()}
+  init(storage, Choice{[left] LeftPayload{location(counter)}})
+  drop(storage)
+  return(counter)
+}
+)";
+
+  primec::Program dropProgram;
+  primec::SemanticProgram dropSemanticProgram;
+  std::string dropError;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      dropSource, dropProgram, &dropSemanticProgram, dropError, {}, {}));
+  CHECK(dropError.empty());
+
+  primec::IrModule dropIr;
+  primec::IrPreparationFailure dropFailure;
+  primec::Program dropLoweringProgram = dropProgram;
+  primec::SemanticProgram dropLoweringSemanticProgram = dropSemanticProgram;
+  REQUIRE(primec::prepareIrModule(dropLoweringProgram,
+                                  &dropLoweringSemanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Native,
+                                  dropIr,
+                                  dropFailure));
+  CHECK(!dropIr.functions.empty());
+
+  primec::Program staleDropProgram = dropProgram;
+  primec::SemanticProgram staleDropSemanticProgram = dropSemanticProgram;
+  REQUIRE(rewriteChoiceLeftVariantTag(staleDropSemanticProgram, 42));
+
+  primec::IrModule staleDropIr;
+  primec::IrPreparationFailure staleDropFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleDropProgram,
+                                      &staleDropSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleDropIr,
+                                      staleDropFailure));
+  CHECK(staleDropFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleDropFailure.message ==
+        "stale semantic-product sum variant metadata for sum payload destroy: /Choice -> left");
+  CHECK(staleDropFailure.diagnosticInfo.message == staleDropFailure.message);
+}
+
 TEST_CASE("native pick call target sum resolution uses query facts") {
   const std::string source = R"(
 [sum]

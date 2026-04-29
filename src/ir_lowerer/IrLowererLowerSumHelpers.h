@@ -1171,6 +1171,39 @@
       function.instructions.push_back({IrOpcode::CmpEqI32, 0});
     };
 
+    auto resolveSemanticProductSumVariantTag =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            std::string_view operationLabel,
+            int32_t &tagValueOut) -> bool {
+      tagValueOut = static_cast<int32_t>(variant.variantIndex);
+      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+      if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
+        return true;
+      }
+      const SemanticProgramSumVariantMetadata *publishedVariant =
+          findSemanticProductSumVariantMetadata(semanticTargets, sumDef.fullPath, variant.name);
+      const std::string diagnosticSuffix = sumDef.fullPath + " -> " + variant.name;
+      if (publishedVariant == nullptr) {
+        error = "missing semantic-product sum variant metadata for " +
+                std::string(operationLabel) + ": " + diagnosticSuffix;
+        return false;
+      }
+      const std::string expectedPayloadType =
+          variant.hasPayload ? sumPayloadTypeText(variant) : std::string{};
+      const uint32_t expectedTagValue = static_cast<uint32_t>(variant.variantIndex);
+      if (publishedVariant->variantIndex != variant.variantIndex ||
+          publishedVariant->tagValue != expectedTagValue ||
+          publishedVariant->hasPayload != variant.hasPayload ||
+          trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
+        error = "stale semantic-product sum variant metadata for " +
+                std::string(operationLabel) + ": " + diagnosticSuffix;
+        return false;
+      }
+      tagValueOut = static_cast<int32_t>(publishedVariant->tagValue);
+      return true;
+    };
+
     auto findSumPayloadMoveHelper = [&](const std::string &structPath) -> const Definition * {
       auto moveIt = defMap.find(structPath + "/Move");
       if (moveIt != defMap.end()) {
@@ -1211,7 +1244,12 @@
         if (destroyHelper == nullptr) {
           continue;
         }
-        emitSumTagComparison(sourceSumPtrLocal, variant.variantIndex);
+        int32_t tagValue = 0;
+        if (!resolveSemanticProductSumVariantTag(
+                sumDef, variant, "sum payload destroy", tagValue)) {
+          return false;
+        }
+        emitSumTagComparison(sourceSumPtrLocal, tagValue);
         const size_t nextVariantJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         const int32_t payloadPtrLocal = allocTempLocal();
@@ -1255,7 +1293,12 @@
           error = unsupportedSumPayloadError(sumDef, variant);
           return false;
         }
-        emitSumTagComparison(sourceSumPtrLocal, variant.variantIndex);
+        int32_t tagValue = 0;
+        if (!resolveSemanticProductSumVariantTag(
+                sumDef, variant, "sum payload move", tagValue)) {
+          return false;
+        }
+        emitSumTagComparison(sourceSumPtrLocal, tagValue);
         const size_t nextVariantJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         if (!variant.hasPayload) {
