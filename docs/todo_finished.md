@@ -6,6 +6,41 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for pick payload locals
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native `pick(...)` payload binding and aggregate-result inference consume
+    published sum-variant payload metadata instead of reconstructing branch
+    payload shape from raw AST variants.
+  - implementation_notes:
+    - Keep target sum resolution, arm tag dispatch, template inference, and
+      collection migration out of scope.
+    - Preserve syntax-only compatibility by using the AST payload path only
+      when no semantic-product variant metadata is present.
+    - Reuse the existing pick-arm metadata validation before building
+      payload locals from published payload type text.
+  - acceptance:
+    - Native `pick(...)` payload arms build branch-local payload shape from
+      published sum-variant metadata on the semantic-product path.
+    - Aggregate-result inference sees the same graph-owned payload local
+      shape before it infers arm result struct paths.
+    - The old AST payload reconstruction path remains only as no-semantic
+      compatibility.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native pick payload-local setup has
+    semantic-product authority for variant payload type metadata and the old
+    AST-payload path is retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added published sum-variant payload storage resolution, changed
+    pick payload binding and aggregate-result inference to pass published
+    variant metadata into branch-local payload setup, added lowerer source
+    contract coverage, and documented the remaining TODO-4298 work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for pick arms
   - owner: ai
   - created_at: 2026-04-28

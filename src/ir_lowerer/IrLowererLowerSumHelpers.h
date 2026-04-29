@@ -121,6 +121,38 @@
       return true;
     };
 
+    auto resolvePublishedSumPayloadStorageInfo =
+        [&](const Definition &sumDef,
+            const SemanticProgramSumVariantMetadata &publishedVariant,
+            LoweredSumPayloadStorageInfo &infoOut) -> bool {
+      infoOut = {};
+      if (!publishedVariant.hasPayload) {
+        infoOut.slotCount = 0;
+        return true;
+      }
+      const std::string payloadTypeText =
+          trimTemplateTypeText(publishedVariant.payloadTypeText);
+      infoOut.valueKind = valueKindFromTypeName(payloadTypeText);
+      if (infoOut.valueKind != LocalInfo::ValueKind::Unknown) {
+        infoOut.slotCount = 1;
+        return true;
+      }
+      std::string payloadStructPath;
+      if (!resolveStructTypeName(payloadTypeText,
+                                 sumDef.namespacePrefix,
+                                 payloadStructPath)) {
+        return false;
+      }
+      StructSlotLayout payloadLayout;
+      if (!resolveStructSlotLayout(payloadStructPath, payloadLayout)) {
+        return false;
+      }
+      infoOut.structPath = std::move(payloadStructPath);
+      infoOut.slotCount = payloadLayout.totalSlots;
+      infoOut.isAggregate = true;
+      return true;
+    };
+
     auto resolveSumDefinitionByPath = [&](const std::string &path) -> const Definition * {
       if (path.empty()) {
         return nullptr;
@@ -1314,16 +1346,23 @@
     auto makePickPayloadLocalInfo =
         [&](const Definition &sumDef,
             const SumVariant &variant,
+            const SemanticProgramSumVariantMetadata *publishedVariant,
             LocalInfo &payloadInfoOut) -> bool {
-      const LocalInfo::ValueKind payloadKind = sumPayloadKind(variant);
       LoweredSumPayloadStorageInfo payloadStorage;
-      if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadStorage)) {
+      const bool resolvedPayloadStorage =
+          publishedVariant != nullptr
+              ? resolvePublishedSumPayloadStorageInfo(sumDef,
+                                                      *publishedVariant,
+                                                      payloadStorage)
+              : resolveSumPayloadStorageInfo(sumDef, variant, payloadStorage);
+      if (!resolvedPayloadStorage) {
         error = unsupportedSumPayloadError(sumDef, variant);
         return false;
       }
       payloadInfoOut = {};
       payloadInfoOut.kind = LocalInfo::Kind::Value;
-      payloadInfoOut.valueKind = payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadKind;
+      payloadInfoOut.valueKind =
+          payloadStorage.isAggregate ? LocalInfo::ValueKind::Int64 : payloadStorage.valueKind;
       payloadInfoOut.structTypeName = payloadStorage.structPath;
       payloadInfoOut.structSlotCount = payloadStorage.slotCount;
       return true;
@@ -1332,11 +1371,12 @@
     auto bindPickPayload =
         [&](const Definition &sumDef,
             const SumVariant &variant,
+            const SemanticProgramSumVariantMetadata *publishedVariant,
             const Expr &binderExpr,
             int32_t sumPtrLocal,
             LocalMap &branchLocals) -> bool {
       LocalInfo payloadInfo;
-      if (!makePickPayloadLocalInfo(sumDef, variant, payloadInfo)) {
+      if (!makePickPayloadLocalInfo(sumDef, variant, publishedVariant, payloadInfo)) {
         return false;
       }
       payloadInfo.index = nextLocal++;
@@ -1521,7 +1561,8 @@
           error = "native backend requires pick arms as variant blocks";
           return false;
         }
-        const SumVariant *variant = resolvePickArmVariant(sumDef, arm, nullptr);
+        const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
+        const SumVariant *variant = resolvePickArmVariant(sumDef, arm, &publishedVariant);
         if (variant == nullptr) {
           return false;
         }
@@ -1536,7 +1577,7 @@
         LocalMap branchLocals = valueLocals;
         if (payloadArm) {
           LocalInfo payloadInfo;
-          if (!makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)) {
+          if (!makePickPayloadLocalInfo(sumDef, *variant, publishedVariant, payloadInfo)) {
             return false;
           }
           branchLocals.emplace(arm.args.front().name, payloadInfo);
@@ -1644,7 +1685,8 @@
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = valueLocals;
         if (payloadArm &&
-            !bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
+            !bindPickPayload(
+                *sumDef, *variant, publishedVariant, arm.args.front(), sumPtrLocal, branchLocals)) {
           return LoweredSumPickEmitResult::Error;
         }
         const Expr *valueExpr = findPickArmValueExpr(arm);
@@ -1735,7 +1777,8 @@
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = localsIn;
         if (payloadArm &&
-            !bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
+            !bindPickPayload(
+                *sumDef, *variant, publishedVariant, arm.args.front(), sumPtrLocal, branchLocals)) {
           return LoweredSumPickEmitResult::Error;
         }
         for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {

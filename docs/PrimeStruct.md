@@ -346,6 +346,10 @@ Planned non-template inference migration contract:
   arms now validate published sum-variant metadata before dispatch and use the published tag value
   for tag comparisons. Missing or stale arm metadata fails closed with deterministic pick-arm
   diagnostics, while syntax-only compatibility keeps the old AST variant-order path.
+- Completed native pick payload-local slice: semantic-product-addressed `pick(...)` payload
+  binding and aggregate result inference now build branch-local payload shape from the published
+  sum-variant metadata after validation, rather than reconstructing that payload shape from the raw
+  AST variant. Syntax-only compatibility keeps the old AST payload path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

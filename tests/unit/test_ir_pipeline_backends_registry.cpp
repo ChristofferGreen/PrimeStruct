@@ -765,6 +765,30 @@ main() {
   CHECK(missingVariantFailure.diagnosticInfo.message == missingVariantFailure.message);
 }
 
+TEST_CASE("native pick payload locals use semantic-product variant metadata") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path lowerSumHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  if (!std::filesystem::exists(lowerSumHelpersPath)) {
+    lowerSumHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
+
+  const std::string source = readTextFile(lowerSumHelpersPath);
+  CHECK(source.find("resolvePublishedSumPayloadStorageInfo") != std::string::npos);
+  CHECK(source.find("const SemanticProgramSumVariantMetadata *publishedVariant") !=
+        std::string::npos);
+  CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, publishedVariant, payloadInfo)") !=
+        std::string::npos);
+  CHECK(source.find("*sumDef, *variant, publishedVariant, arm.args.front(), sumPtrLocal, branchLocals") !=
+        std::string::npos);
+  CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)") ==
+        std::string::npos);
+  CHECK(source.find("bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)") ==
+        std::string::npos);
+}
+
 TEST_CASE("native pick call target sum resolution uses query facts") {
   const std::string source = R"(
 [sum]
