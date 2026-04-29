@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use binding facts for for conditions
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes
+    semantic-product-backed omitted/`auto` `for(...)` condition bindings
+    declare their branch-local storage from the published binding fact instead
+    of reconstructing value kind or struct path from expression/local maps.
+  - implementation_notes:
+    - Keep broader loop lowering, template inference, `try(...)`,
+      `on_error`, sum lowering, and collection migration out of scope.
+    - Preserve syntax-only compatibility by using the old expression/local-map
+      reconstruction only when no semantic-product identity is available.
+    - Fail closed when a semantic-product-backed omitted/`auto` condition
+      binding has no published binding type fact.
+  - acceptance:
+    - `for(...)` condition binding declaration rewrites omitted/`auto`
+      binding transforms from the published semantic binding fact before
+      calling the branch-local declaration helper.
+    - Missing semantic-product binding facts produce a deterministic
+      lowerer diagnostic instead of falling back to expression-kind or
+      struct-path reconstruction.
+    - Source-contract coverage proves the lowerer path consumes
+      `findSemanticProductBindingFact` and no longer declares directly from
+      the raw condition expression.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once semantic-product-backed omitted/`auto` `for(...)`
+    condition bindings consume published binding facts, with the old
+    reconstruction path retained only for syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Routed native lowerer `for(...)` condition binding declaration
+    through published binding facts, added source-contract coverage, and
+    documented the remaining TODO-4298 work. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Use shared variant facts for pick arms
   - owner: ai
   - created_at: 2026-04-28

@@ -355,6 +355,7 @@ Task template:
     metadata slice and statement initializer binding-type slice are also
     complete. The statement name-initializer final LocalInfo metadata slice is
     complete for scalar, pointer/reference, and array/vector fallbacks. The
+    for-condition local-auto binding declaration slice is complete. The
     local-auto stale binding-type and binding metadata diagnostic slices are
     complete. The local-auto initializer path and return-kind diagnostic
     slices are complete. The
@@ -440,6 +441,12 @@ Task template:
       through the final scalar, pointer/reference, and array/vector LocalInfo
       fallback branches instead of letting stale local-map metadata overwrite
       the graph-owned fact.
+    - Completed slice: semantic-product-addressed omitted/`auto`
+      `for(...)` condition bindings now declare branch-local storage from the
+      published binding fact instead of asking expression-kind or struct-path
+      reconstruction to own that decision. Missing binding facts fail closed
+      on the semantic-product path while syntax-only compatibility keeps the
+      legacy local reconstruction behavior.
     - Completed slice: semantic-product local-auto completeness validation now
       rejects stale local-auto binding type facts that contradict the
       published binding fact before lowering can use the stale graph entry.

@@ -125,8 +125,58 @@
         return false;
       }
       if (cond.isBinding) {
+        auto isSemanticForConditionBindingCandidate = [&](const Expr &bindingExpr) {
+          std::string explicitTypeName;
+          std::vector<std::string> explicitTemplateArgs;
+          if (!extractFirstBindingTypeTransform(
+                  bindingExpr, explicitTypeName, explicitTemplateArgs)) {
+            return true;
+          }
+          return trimTemplateTypeText(explicitTypeName) == "auto";
+        };
+        auto makeSemanticBindingTypeTransform = [&](const std::string &bindingTypeText) {
+          Transform semanticTypeTransform;
+          std::string semanticTypeBase;
+          std::string semanticTypeArgList;
+          if (splitTemplateTypeName(bindingTypeText, semanticTypeBase, semanticTypeArgList)) {
+            semanticTypeTransform.name = trimTemplateTypeText(semanticTypeBase);
+            if (!semanticTypeArgList.empty()) {
+              if (!splitTemplateArgs(semanticTypeArgList, semanticTypeTransform.templateArgs)) {
+                semanticTypeTransform.templateArgs.push_back(trimTemplateTypeText(semanticTypeArgList));
+              }
+            }
+          } else {
+            semanticTypeTransform.name = trimTemplateTypeText(bindingTypeText);
+          }
+          return semanticTypeTransform;
+        };
+        Expr semanticForConditionBindingExpr;
+        const Expr *conditionBindingForDeclaration = &cond;
+        if (callResolutionAdapters.semanticProgram != nullptr &&
+            cond.semanticNodeId != 0 &&
+            isSemanticForConditionBindingCandidate(cond)) {
+          const SemanticProgramBindingFact *bindingFact =
+              findSemanticProductBindingFact(
+                  callResolutionAdapters.semanticProductTargets, cond);
+          const std::string bindingTypeText =
+              bindingFact != nullptr ? trimTemplateTypeText(bindingFact->bindingTypeText)
+                                     : std::string{};
+          if (bindingTypeText.empty()) {
+            const std::string scopePath =
+                activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;
+            error = "missing semantic-product for-condition binding fact: " + scopePath +
+                    " -> local " + (cond.name.empty() ? std::string("<unnamed>") : cond.name);
+            return false;
+          }
+          semanticForConditionBindingExpr = cond;
+          semanticForConditionBindingExpr.semanticNodeId = 0;
+          semanticForConditionBindingExpr.transforms.clear();
+          semanticForConditionBindingExpr.transforms.push_back(
+              makeSemanticBindingTypeTransform(bindingTypeText));
+          conditionBindingForDeclaration = &semanticForConditionBindingExpr;
+        }
         if (!ir_lowerer::declareForConditionBinding(
-                cond,
+                *conditionBindingForDeclaration,
                 loopLocals,
                 nextLocal,
                 [&](const Expr &bindingExpr) { return isBindingMutable(bindingExpr); },

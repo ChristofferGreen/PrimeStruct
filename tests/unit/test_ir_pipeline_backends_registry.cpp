@@ -1164,6 +1164,25 @@ TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   CHECK(source.find("targetErrorVariant->variantIndex") == std::string::npos);
 }
 
+TEST_CASE("for-condition auto bindings use semantic-product binding facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path loopsPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerStatementsLoops.h";
+  if (!std::filesystem::exists(loopsPath)) {
+    loopsPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerStatementsLoops.h";
+  }
+  REQUIRE(std::filesystem::exists(loopsPath));
+
+  const std::string source = readTextFile(loopsPath);
+  CHECK(source.find("isSemanticForConditionBindingCandidate") != std::string::npos);
+  CHECK(source.find("findSemanticProductBindingFact(") != std::string::npos);
+  CHECK(source.find("missing semantic-product for-condition binding fact") != std::string::npos);
+  CHECK(source.find("semanticForConditionBindingExpr.semanticNodeId = 0;") != std::string::npos);
+  CHECK(source.find("*conditionBindingForDeclaration") != std::string::npos);
+  CHECK(source.find("declareForConditionBinding(\n                cond,") == std::string::npos);
+}
+
 TEST_CASE("native sum active payload helpers use semantic-product variant tags") {
   const auto rewriteChoiceLeftVariantTag =
       [](primec::SemanticProgram &semanticProduct, uint32_t tagValue) {

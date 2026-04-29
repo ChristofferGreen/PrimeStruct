@@ -246,6 +246,11 @@ Planned non-template inference migration contract:
   branches preserve the published fact instead of letting stale local-map metadata overwrite value
   kinds or struct paths. Syntax-only or no-semantic-product contexts keep the legacy locals-based
   compatibility path.
+- Completed lowerer-side for-condition binding slice: semantic-product-addressed omitted/`auto`
+  `for(...)` condition bindings now declare their branch-local storage from the published binding
+  fact before expression-kind or struct-path reconstruction can answer. Missing binding facts fail
+  closed on the semantic-product path; syntax-only compatibility keeps the legacy local
+  reconstruction behavior.
 - Completed local-auto stale-fact diagnostic slice: semantic-product local-auto completeness
   validation now checks the local-auto binding type against the published binding fact before
   lowering can synthesize a binding transform from the local-auto entry. Mismatches fail closed with
