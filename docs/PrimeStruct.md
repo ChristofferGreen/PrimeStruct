@@ -354,6 +354,11 @@ Planned non-template inference migration contract:
   slot allocation now validates and consumes published sum-variant metadata for
   every variant before choosing the maximum payload slot width. Syntax-only
   compatibility keeps the old AST payload-storage path.
+- Completed native sum variant-selection slice: semantic-product-addressed
+  constructor, `Result.ok`, and initializer-matching selection now validates
+  and consumes published sum-variant payload metadata before choosing the
+  selected payload storage shape. Syntax-only compatibility keeps the old AST
+  payload-storage path.
 - Completed native active sum payload tag slice: semantic-product-addressed sum payload move and
   destroy helper dispatch now validate published sum-variant metadata and use the published tag
   value for active-payload comparisons instead of reading tag values from AST variant order.
@@ -715,6 +720,9 @@ Planned lowerer type/binding handoff:
   helper-family classification. The
   remaining lowerer-generated synthetic locals and raw IR temporaries stay outside the
   semantic-product surface because they have no stable source-owned semantic identity.
+  Native sum constructor, `Result.ok`, and initializer-matching selection now use
+  published sum-variant payload metadata for selected payload storage shape on
+  the semantic-product path.
 - After entry setup is cut over, lowering should consume binding metadata from the semantic product instead of
   re-running helper-family checks, fallback type inference, or binding-shape recovery against the AST.
 - The semantic product should publish, per lowered binding/expression site:
@@ -3585,7 +3593,10 @@ bad_set() {
   payloads occupy their ordinary struct slot layout inline and `pick` arms bind a
   branch-local view of the selected payload only. Aggregate-valued `pick(...)` expressions copy the selected active
   payload into stable result storage before the value can be bound, returned, or passed to a helper, so inactive payload
-  storage stays unobserved by the escape path. Sum-to-sum `move(...)` construction copies the active tag and routes only
+  storage stays unobserved by the escape path. Native constructor and
+  initializer selection consumes published sum-variant metadata before choosing
+  payload storage on semantic-product-backed paths. Sum-to-sum `move(...)`
+  construction copies the active tag and routes only
   the selected aggregate payload through its `Move`/`Copy` helper when one exists, falling back to slot copy for
   helper-free payloads. Explicit `drop(storage)` for `uninitialized<Sum>` storage routes only the active aggregate
   payload through `DestroyStack`/`Destroy` when a payload helper exists; inactive payload storage is never observed or

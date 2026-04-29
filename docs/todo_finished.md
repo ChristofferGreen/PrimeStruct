@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for sum selection
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native sum variant selection consume published sum-variant payload
+    metadata before choosing constructor, `Result.ok`, and inferred
+    initializer payload storage shape instead of reconstructing payload
+    storage from AST variant data.
+  - implementation_notes:
+    - Keep sum target resolution, construction tag storage, pick lowering,
+      Result-combinator lowering, active-payload move/drop dispatch, template
+      inference, and collection migration out of scope.
+    - Preserve syntax-only compatibility by using the AST payload-storage path
+      only when no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before variant selection can choose payload
+      storage.
+  - acceptance:
+    - Explicit sum constructors validate published payload metadata before
+      recording selected payload storage on semantic-product-backed paths.
+    - Legacy `Result.ok` construction validates published payload metadata
+      before recording selected payload storage on semantic-product-backed
+      paths.
+    - Inferred initializer selection validates published payload metadata
+      before matching initializer shape on semantic-product-backed paths.
+    - Generic sum-construction and `Result.and_then` selection preserve
+      semantic-product metadata diagnostics instead of replacing them with
+      generic selection failures.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native sum variant selection has semantic-product
+    authority for selected variant payload metadata and the old AST
+    payload-storage path is retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product payload-storage validation to native sum
+    constructor, `Result.ok`, and inferred initializer selection, added
+    lowerer source-contract coverage, and documented the remaining TODO-4298
+    work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for sum slot layout
   - owner: ai
   - created_at: 2026-04-28

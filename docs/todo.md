@@ -376,6 +376,9 @@ Task template:
     semantic-product branch payload binding and aggregate-result inference.
     The native sum slot-layout slice is complete for semantic-product-backed
     payload width allocation across all variants.
+    The native sum variant-selection slice is complete for
+    semantic-product-backed constructor, `Result.ok`, and inferred initializer
+    payload shape selection.
     The native active sum payload tag slice is complete for semantic-product
     move/drop helper dispatch. The native active sum payload-storage slice is
     complete for semantic-product-backed move/drop helper selection and
@@ -536,6 +539,11 @@ Task template:
       payload slot width across variants on the semantic-product path.
       Syntax-only compatibility keeps the old AST payload-storage
       reconstruction path.
+    - Completed slice: native sum variant selection now validates and
+      consumes published sum-variant metadata before choosing constructor,
+      `Result.ok`, and inferred initializer payload storage shape on the
+      semantic-product path. Syntax-only compatibility keeps the old AST
+      payload-storage reconstruction path.
     - Completed slice: native active sum payload move/drop helper dispatch now
       validates published sum-variant metadata and uses the published tag
       value for active-payload comparisons on the semantic-product path.

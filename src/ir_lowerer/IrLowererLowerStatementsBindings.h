@@ -465,8 +465,12 @@
             return false;
           }
           LoweredSumVariantSelection selection;
-          if (selectSumVariantForInitializer(init, *sumDef, localsIn, selection) &&
-              selection.variant != nullptr) {
+          const bool selectedForDiagnostic =
+              selectSumVariantForInitializer(init, *sumDef, localsIn, selection);
+          if (!selectedForDiagnostic && !error.empty()) {
+            return false;
+          }
+          if (selectedForDiagnostic && selection.variant != nullptr) {
             error = unsupportedSumPayloadError(*sumDef, *selection.variant);
           } else if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
                      unsupportedVariant != nullptr) {

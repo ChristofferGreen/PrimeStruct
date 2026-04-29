@@ -929,6 +929,32 @@ main() {
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
+TEST_CASE("native sum variant selection uses semantic-product payload metadata") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path lowerSumHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  if (!std::filesystem::exists(lowerSumHelpersPath)) {
+    lowerSumHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
+
+  const std::string source = readTextFile(lowerSumHelpersPath);
+  CHECK(source.find("\"sum constructor selection\"") != std::string::npos);
+  CHECK(source.find("\"Result.ok selection\"") != std::string::npos);
+  CHECK(source.find("\"sum initializer selection\"") != std::string::npos);
+  CHECK(source.find("targetSum, *variant, \"sum constructor selection\", payloadInfo") !=
+        std::string::npos);
+  CHECK(source.find("targetSum, *variant, \"Result.ok selection\", payloadInfo") !=
+        std::string::npos);
+  CHECK(source.find("targetSum, variant, \"sum initializer selection\", payloadInfo") !=
+        std::string::npos);
+  CHECK(source.find("resolveSumPayloadStorageInfo(targetSum, *variant, payloadInfo)") ==
+        std::string::npos);
+  CHECK(source.find("resolveSumPayloadStorageInfo(targetSum, variant, payloadInfo)") ==
+        std::string::npos);
+}
+
 TEST_CASE("native Result combinators use semantic-product variant tags") {
   const std::string source = R"(
 import /std/file/*

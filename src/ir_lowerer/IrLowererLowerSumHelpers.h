@@ -393,7 +393,8 @@
         return false;
       }
       LoweredSumPayloadStorageInfo payloadInfo;
-      if (!resolveSumPayloadStorageInfo(targetSum, *variant, payloadInfo)) {
+      if (!resolveSemanticProductSumPayloadStorageInfo(
+              targetSum, *variant, "sum constructor selection", payloadInfo)) {
         return false;
       }
       selectionOut.sumDef = &targetSum;
@@ -423,7 +424,8 @@
           return false;
         }
         LoweredSumPayloadStorageInfo payloadInfo;
-        if (!resolveSumPayloadStorageInfo(targetSum, *variant, payloadInfo)) {
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                targetSum, *variant, "Result.ok selection", payloadInfo)) {
           return false;
         }
         selectionOut.sumDef = &targetSum;
@@ -437,6 +439,9 @@
       }
       if (selectExplicitSumVariantForConstructor(initializer, targetSum, selectionOut)) {
         return true;
+      }
+      if (!error.empty()) {
+        return false;
       }
       if (const SumVariant *variant = unitVariantForNameExpr(targetSum, initializer)) {
         selectionOut.sumDef = &targetSum;
@@ -467,7 +472,11 @@
           continue;
         }
         LoweredSumPayloadStorageInfo payloadInfo;
-        if (!resolveSumPayloadStorageInfo(targetSum, variant, payloadInfo)) {
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                targetSum, variant, "sum initializer selection", payloadInfo)) {
+          if (!error.empty()) {
+            return false;
+          }
           continue;
         }
         const bool matchesPayload =
@@ -737,8 +746,13 @@
               const LocalMap &resultLocals,
               int32_t targetBaseLocal) -> bool {
         LoweredSumVariantSelection selection;
-        if (!selectSumVariantForInitializer(resultExpr, sumDef, resultLocals, selection) ||
-            selection.variant == nullptr) {
+        if (!selectSumVariantForInitializer(resultExpr, sumDef, resultLocals, selection)) {
+          if (error.empty()) {
+            error = "IR backends require Result.and_then lambdas to produce stdlib Result sums";
+          }
+          return false;
+        }
+        if (selection.variant == nullptr) {
           error = "IR backends require Result.and_then lambdas to produce stdlib Result sums";
           return false;
         }
@@ -1113,8 +1127,13 @@
         return *resultMap2EmitResult;
       }
       LoweredSumVariantSelection selection;
-      if (!selectSumVariantForInitializer(initializer, sumDef, valueLocals, selection) ||
-          selection.variant == nullptr) {
+      if (!selectSumVariantForInitializer(initializer, sumDef, valueLocals, selection)) {
+        if (error.empty()) {
+          error = "native backend could not select sum variant for " + sumDef.fullPath;
+        }
+        return false;
+      }
+      if (selection.variant == nullptr) {
         error = "native backend could not select sum variant for " + sumDef.fullPath;
         return false;
       }
@@ -1132,7 +1151,12 @@
           return false;
         }
         LoweredSumVariantSelection selection;
-        if (selectExplicitSumVariantForConstructor(expr, *sumDef, selection) && selection.variant != nullptr) {
+        const bool selectedForDiagnostic =
+            selectExplicitSumVariantForConstructor(expr, *sumDef, selection);
+        if (!selectedForDiagnostic && !error.empty()) {
+          return false;
+        }
+        if (selectedForDiagnostic && selection.variant != nullptr) {
           error = unsupportedSumPayloadError(*sumDef, *selection.variant);
         } else if (const SumVariant *unsupportedVariant = firstUnsupportedSumPayloadVariant(*sumDef);
                    unsupportedVariant != nullptr) {
