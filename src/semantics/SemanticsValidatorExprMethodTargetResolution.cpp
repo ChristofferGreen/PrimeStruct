@@ -2228,7 +2228,13 @@ bool SemanticsValidator::resolveMethodTarget(const std::vector<ParameterInfo> &p
       explicitVectorHelperPath == "/vector/count" ||
       explicitVectorHelperPath == "/vector/capacity" ||
       explicitVectorHelperPath == "/vector/at" ||
-      explicitVectorHelperPath == "/vector/at_unsafe";
+      explicitVectorHelperPath == "/vector/at_unsafe" ||
+      explicitVectorHelperPath == "/vector/push" ||
+      explicitVectorHelperPath == "/vector/pop" ||
+      explicitVectorHelperPath == "/vector/reserve" ||
+      explicitVectorHelperPath == "/vector/clear" ||
+      explicitVectorHelperPath == "/vector/remove_at" ||
+      explicitVectorHelperPath == "/vector/remove_swap";
   if (isExplicitRootedVectorMethod && isExplicitVectorFamilyReceiver) {
     if (hasReceiverCompatibleExplicitVectorHelperPath(explicitVectorHelperPath, receiver)) {
       resolvedOut = explicitVectorHelperPath;

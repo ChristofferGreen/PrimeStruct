@@ -312,7 +312,7 @@ main() {
 )";
   std::string error;
   CHECK_FALSE(validateProgram(source, "/main", error));
-  CHECK_FALSE(error.empty());
+  CHECK(error.find("unknown method: /vector/push") != std::string::npos);
 }
 
 TEST_CASE("vector namespaced mutator slash method on builtin vector receiver accepts same-path helper") {

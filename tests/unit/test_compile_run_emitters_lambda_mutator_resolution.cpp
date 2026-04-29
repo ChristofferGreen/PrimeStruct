@@ -599,11 +599,14 @@ main() {
       (testScratchPath("") / "primec_cpp_vector_mutator_positional_call_shadow_err.txt")
           .string();
 
-  const std::string compileCmd =
-      "./primec --emit=exe " + srcPath + " -o /dev/null --entry /main 2> " + errPath;
+  const std::string compileCmd = "./primec --emit=exe " + quoteShellArg(srcPath) +
+                                 " -o /dev/null --entry /main --emit-diagnostics > " +
+                                 quoteShellArg(errPath) + " 2>&1";
   CHECK(runCommand(compileCmd) == 2);
-  CHECK(readFile(errPath).find("push requires mutable vector binding") !=
-        std::string::npos);
+  const std::string diagnostics = readFile(errPath);
+  CHECK((diagnostics.find("\"message\":\"push requires mutable vector binding\"") !=
+             std::string::npos ||
+         diagnostics.find("push requires mutable vector binding") != std::string::npos));
 }
 
 TEST_SUITE_END();
