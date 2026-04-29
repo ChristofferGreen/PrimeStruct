@@ -101,6 +101,26 @@ bool semanticTypeTextsMatchForLocalAuto(const std::string &localAutoTypeText,
          localAutoKind == bindingKind;
 }
 
+std::string_view stripResolvedPathSpecializationSuffix(std::string_view path) {
+  const std::size_t lastSlash = path.rfind('/');
+  const std::size_t specializationMarker = path.rfind("__t");
+  const std::size_t overloadMarker = path.rfind("__ov");
+  std::size_t marker = std::string_view::npos;
+  if (specializationMarker != std::string_view::npos &&
+      (overloadMarker == std::string_view::npos ||
+       specializationMarker > overloadMarker)) {
+    marker = specializationMarker;
+  } else if (overloadMarker != std::string_view::npos) {
+    marker = overloadMarker;
+  }
+  if (marker == std::string_view::npos ||
+      lastSlash == std::string_view::npos ||
+      marker <= lastSlash) {
+    return path;
+  }
+  return path.substr(0, marker);
+}
+
 struct ExpectedCollectionSpecialization {
   std::string family;
   std::vector<std::string> templateArgs;
@@ -628,9 +648,19 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                   " path id: " + siteDescription;
           return false;
         }
+        const std::string_view callPath =
+            semanticProgramResolveCallTargetString(*semanticProgram, pathId);
+        const std::string_view initializerPath =
+            localAutoFact->initializerResolvedPathId != InvalidSymbolId
+                ? semanticProgramResolveCallTargetString(
+                      *semanticProgram, localAutoFact->initializerResolvedPathId)
+                : std::string_view{};
         const bool sameInitializerPath =
             localAutoFact->initializerResolvedPathId == InvalidSymbolId ||
-            pathId == localAutoFact->initializerResolvedPathId;
+            pathId == localAutoFact->initializerResolvedPathId ||
+            (!initializerPath.empty() &&
+             stripResolvedPathSpecializationSuffix(callPath) ==
+                 stripResolvedPathSpecializationSuffix(initializerPath));
         const bool samePublishedStdlibSurface =
             localAutoFact->initializerStdlibSurfaceId.has_value() &&
             callSurfaceId.has_value() &&
