@@ -1161,7 +1161,7 @@ TEST_CASE("soa_vector builtin field view call argument escapes report escape dia
         "  return(consume(" + expr + "))\n"
         "}\n";
     std::string error;
-    CHECK_FALSE(validateProgram(source, "/main", error));
+    CHECK_MESSAGE(!validateProgram(source, "/main", error), error);
     CHECK(error.find("field-view escapes via argument") != std::string::npos);
   };
 
@@ -1186,7 +1186,7 @@ TEST_CASE("soa_vector builtin field view return escapes report escape diagnostic
         "  return(0i32)\n"
         "}\n";
     std::string error;
-    CHECK_FALSE(validateProgram(source, "/pick", error));
+    CHECK_MESSAGE(!validateProgram(source, "/pick", error), error);
     CHECK(error.find("field-view escapes via return") != std::string::npos);
   };
 

@@ -588,8 +588,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
   }
   auto fieldViewPathFromExperimentalHelper = [&]() -> std::optional<std::string> {
     if (candidate.kind != Expr::Kind::Call || candidate.args.size() < 2 ||
-        candidate.args[1].kind != Expr::Kind::Literal ||
-        candidate.templateArgs.empty()) {
+        candidate.args[1].kind != Expr::Kind::Literal) {
       return std::nullopt;
     }
     std::string resolvedPath = preferredCollectionHelperResolvedPath(candidate);
@@ -603,6 +602,79 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
         static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {
       return std::nullopt;
     }
+    auto inferStructTypeText = [&]() -> std::optional<std::string> {
+      if (!candidate.templateArgs.empty()) {
+        return candidate.templateArgs.front();
+      }
+      auto withPreservedError = [&](const std::function<bool()> &fn) {
+        const std::string previousError =
+            const_cast<SemanticsValidator *>(this)->error_;
+        const_cast<SemanticsValidator *>(this)->error_.clear();
+        const bool ok = fn();
+        const_cast<SemanticsValidator *>(this)->error_.clear();
+        const_cast<SemanticsValidator *>(this)->error_ = previousError;
+        return ok;
+      };
+      const Expr &receiverExpr = candidate.args.front();
+      auto extractReceiverStructType = [&](const BindingInfo &binding)
+          -> std::optional<std::string> {
+        if (normalizeBindingTypeName(binding.typeName) == "soa_vector" &&
+            !binding.typeTemplateArg.empty()) {
+          return binding.typeTemplateArg;
+        }
+        std::string elemType;
+        if (extractExperimentalSoaVectorElementType(binding, elemType)) {
+          return elemType;
+        }
+        return std::nullopt;
+      };
+      if (receiverExpr.kind == Expr::Kind::Name) {
+        if (const BindingInfo *paramBinding =
+                findParamBinding(params, receiverExpr.name)) {
+          return extractReceiverStructType(*paramBinding);
+        }
+        auto localIt = locals.find(receiverExpr.name);
+        if (localIt != locals.end()) {
+          return extractReceiverStructType(localIt->second);
+        }
+      }
+      BindingInfo receiverBinding;
+      if (withPreservedError([&]() {
+            return const_cast<SemanticsValidator *>(this)
+                ->inferBindingTypeFromInitializer(receiverExpr,
+                                                  params,
+                                                  locals,
+                                                  receiverBinding);
+          })) {
+        if (const auto elemType = extractReceiverStructType(receiverBinding)) {
+          return elemType;
+        }
+      }
+      std::string inferredTypeText;
+      if (withPreservedError([&]() {
+            return const_cast<SemanticsValidator *>(this)->inferQueryExprTypeText(
+                receiverExpr, params, locals, inferredTypeText);
+          })) {
+        BindingInfo inferredBinding;
+        std::string base;
+        std::string argText;
+        const std::string normalizedType =
+            normalizeBindingTypeName(inferredTypeText);
+        if (splitTemplateTypeName(normalizedType, base, argText)) {
+          inferredBinding.typeName = normalizeBindingTypeName(base);
+          inferredBinding.typeTemplateArg = argText;
+        } else {
+          inferredBinding.typeName = normalizedType;
+          inferredBinding.typeTemplateArg.clear();
+        }
+        return extractReceiverStructType(inferredBinding);
+      }
+      return std::nullopt;
+    };
+    const auto structTypeText = inferStructTypeText();
+    if (!structTypeText.has_value()) {
+      return std::nullopt;
+    }
     std::string currentNamespace;
     if (!currentValidationState_.context.definitionPath.empty()) {
       const size_t slash =
@@ -613,7 +685,7 @@ std::optional<std::string> SemanticsValidator::builtinSoaDirectPendingHelperPath
       }
     }
     const std::string structPath = resolveStructTypePath(
-        normalizeBindingTypeName(candidate.templateArgs.front()),
+        normalizeBindingTypeName(*structTypeText),
         currentNamespace,
         structNames_);
     auto defIt = defMap_.find(structPath);
