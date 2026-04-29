@@ -6,6 +6,42 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use field receiver facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native field
+    access resolve receiver struct shape from published binding/query type
+    facts before falling back to receiver struct-path reconstruction.
+  - implementation_notes:
+    - Keep field-slot layout, static-field handling, pick lowering,
+      Result-combinator lowering, template inference, and collection migration
+      out of scope.
+    - Preserve syntax-only and no-fact compatibility by retaining receiver
+      struct-path reconstruction only when no semantic binding/query fact is
+      available for the receiver expression.
+    - Fail closed when published receiver type metadata exists but cannot
+      identify a scalar or struct receiver shape.
+  - acceptance:
+    - Field access receiver resolution consults published binding/query type
+      facts before calling `inferStructExprPath` on local receiver state.
+    - Stale published receiver type metadata reports a deterministic
+      field-receiver diagnostic instead of silently falling through to local
+      reconstruction.
+    - Source-contract coverage proves semantic-product receiver shape
+      resolution precedes the compatibility fallback.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native field access receiver resolution consumes
+    published binding/query facts for receiver shape matching, with old local
+    reconstruction retained only as syntax-only or no-fact compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Routed native field access receiver struct resolution through
+    published binding/query type facts before receiver struct-path fallback,
+    added source-contract coverage, and documented the remaining TODO-4298
+    work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use pick result facts
   - owner: ai
   - created_at: 2026-04-28

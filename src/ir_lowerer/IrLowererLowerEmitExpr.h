@@ -159,7 +159,88 @@
               return false;
             }
           }
-          std::string structPath = inferStructExprPath(receiver, localsIn);
+          auto describeFieldReceiver = [&](const Expr &receiverExpr) {
+            if (receiverExpr.kind == Expr::Kind::Name && !receiverExpr.name.empty()) {
+              return function.name + " -> " + receiverExpr.name + "." + expr.name;
+            }
+            if (!receiverExpr.name.empty()) {
+              return function.name + " -> " + receiverExpr.name + "." + expr.name;
+            }
+            return function.name + " -> <expr>." + expr.name;
+          };
+          auto resolveSemanticProductFieldReceiverStructPath =
+              [&](const Expr &receiverExpr,
+                  std::string &structPathOut) -> std::optional<bool> {
+            structPathOut.clear();
+            const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+            if (!semanticTargets.hasSemanticProduct || receiverExpr.semanticNodeId == 0) {
+              return std::nullopt;
+            }
+            std::vector<std::string> candidateTypeTexts;
+            if (const SemanticProgramBindingFact *bindingFact =
+                    findSemanticProductBindingFact(semanticTargets, receiverExpr);
+                bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
+              candidateTypeTexts.push_back(bindingFact->bindingTypeText);
+            }
+            if (const SemanticProgramQueryFact *queryFact =
+                    findSemanticProductQueryFact(semanticTargets, receiverExpr);
+                queryFact != nullptr) {
+              if (!queryFact->bindingTypeText.empty()) {
+                candidateTypeTexts.push_back(queryFact->bindingTypeText);
+              }
+              if (!queryFact->queryTypeText.empty()) {
+                candidateTypeTexts.push_back(queryFact->queryTypeText);
+              }
+            }
+            if (candidateTypeTexts.empty()) {
+              return std::nullopt;
+            }
+            for (const std::string &typeText : candidateTypeTexts) {
+              std::string normalizedTypeText = trimTemplateTypeText(typeText);
+              if (normalizedTypeText.empty()) {
+                continue;
+              }
+              std::string wrapperBase;
+              std::string wrapperArgs;
+              if (splitTemplateTypeName(normalizedTypeText, wrapperBase, wrapperArgs) &&
+                  (normalizeCollectionBindingTypeName(trimTemplateTypeText(wrapperBase)) ==
+                       "Reference" ||
+                   normalizeCollectionBindingTypeName(trimTemplateTypeText(wrapperBase)) ==
+                       "Pointer")) {
+                std::vector<std::string> wrappedArgs;
+                if (splitTemplateArgs(wrapperArgs, wrappedArgs) && wrappedArgs.size() == 1) {
+                  normalizedTypeText = trimTemplateTypeText(wrappedArgs.front());
+                }
+              }
+              if (valueKindFromTypeName(normalizedTypeText) !=
+                  LocalInfo::ValueKind::Unknown) {
+                return true;
+              }
+              std::string candidateStructPath;
+              if (resolveStructTypeName(normalizedTypeText,
+                                        receiverExpr.namespacePrefix,
+                                        candidateStructPath) ||
+                  resolveStructTypeName(normalizedTypeText,
+                                        function.name,
+                                        candidateStructPath)) {
+                structPathOut = std::move(candidateStructPath);
+                return true;
+              }
+            }
+            error = "stale semantic-product field receiver metadata: " +
+                    describeFieldReceiver(receiverExpr);
+            return false;
+          };
+          std::string structPath;
+          const std::optional<bool> resolvedFieldReceiverBySemanticProduct =
+              resolveSemanticProductFieldReceiverStructPath(receiver, structPath);
+          if (resolvedFieldReceiverBySemanticProduct.has_value() &&
+              !*resolvedFieldReceiverBySemanticProduct) {
+            return false;
+          }
+          if (!resolvedFieldReceiverBySemanticProduct.has_value()) {
+            structPath = inferStructExprPath(receiver, localsIn);
+          }
           if (structPath.empty()) {
             error = "field access requires struct receiver";
             return false;

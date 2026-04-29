@@ -1212,6 +1212,44 @@ TEST_CASE("native Result combinator sources use semantic-product query facts") {
   CHECK(source.find("if (!resolvedBySemanticProductQuery.has_value())") != std::string::npos);
 }
 
+TEST_CASE("native field receivers use semantic-product type facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path lowerEmitExprPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  if (!std::filesystem::exists(lowerEmitExprPath)) {
+    lowerEmitExprPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  }
+  REQUIRE(std::filesystem::exists(lowerEmitExprPath));
+
+  const std::string source = readTextFile(lowerEmitExprPath);
+  const size_t semanticResolverPos =
+      source.find("resolveSemanticProductFieldReceiverStructPath");
+  REQUIRE(semanticResolverPos != std::string::npos);
+  const size_t bindingFactPos =
+      source.find("findSemanticProductBindingFact(semanticTargets, receiverExpr)",
+                  semanticResolverPos);
+  const size_t queryFactPos =
+      source.find("findSemanticProductQueryFact(semanticTargets, receiverExpr)",
+                  semanticResolverPos);
+  const size_t staleDiagnosticPos =
+      source.find("stale semantic-product field receiver metadata",
+                  semanticResolverPos);
+  const size_t fallbackStructPathPos =
+      source.find("structPath = inferStructExprPath(receiver, localsIn)",
+                  semanticResolverPos);
+  REQUIRE(bindingFactPos != std::string::npos);
+  REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(staleDiagnosticPos != std::string::npos);
+  REQUIRE(fallbackStructPathPos != std::string::npos);
+  CHECK(source.find("splitTemplateTypeName(normalizedTypeText, wrapperBase, wrapperArgs)",
+                    semanticResolverPos) != std::string::npos);
+  CHECK(bindingFactPos < fallbackStructPathPos);
+  CHECK(queryFactPos < fallbackStructPathPos);
+  CHECK(source.find("if (!resolvedFieldReceiverBySemanticProduct.has_value())",
+                    semanticResolverPos) != std::string::npos);
+}
+
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =

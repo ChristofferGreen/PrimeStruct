@@ -367,6 +367,12 @@ Planned non-template inference migration contract:
   Stale published arm value metadata fails closed with a deterministic pick
   aggregate-result diagnostic; syntax-only or no-fact compatibility keeps the
   old branch-local reconstruction path.
+- Completed native field receiver slice: semantic-product-addressed field
+  access now reads published binding/query type facts for the receiver
+  expression before struct-path reconstruction can identify the receiver
+  layout. Stale receiver type metadata fails closed with a deterministic
+  field-receiver diagnostic; syntax-only or no-fact compatibility keeps the
+  old receiver struct-path reconstruction path.
 - Completed native sum slot-layout slice: semantic-product-addressed lowered sum
   slot allocation now validates and consumes published sum-variant metadata for
   every variant before choosing the maximum payload slot width. Syntax-only
