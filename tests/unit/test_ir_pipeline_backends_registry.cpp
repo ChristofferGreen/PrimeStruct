@@ -945,6 +945,97 @@ main() {
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
+TEST_CASE("native Result combinator payload storage uses semantic-product variant metadata") {
+  const std::string source = R"(
+import /std/file/*
+
+[effects(io_err)]
+log_file_error([FileError] err) {
+  print_line_error(err.why())
+}
+
+[return<i32> effects(io_err) on_error<FileError, /log_file_error>]
+main() {
+  [Result<i32, FileError>] source{Result.ok(2i32)}
+  [Result<bool, FileError>] mapped{
+    Result.map(source, []([i32] value) { return(true) })
+  }
+  [Result<i32, FileError>] chained{
+    Result.and_then(mapped, []([bool] flag) { return(Result.ok(3i32)) })
+  }
+  [Result<i32, FileError>] combined{
+    Result.map2(chained, Result.ok(5i32), []([i32] left, [i32] right) {
+      return(plus(left, right))
+    })
+  }
+  return(try(combined))
+}
+)";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+
+  primec::Options options;
+  options.entryPath = "/main";
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  primec::Program loweringProgram = program;
+  primec::SemanticProgram loweringSemanticProgram = semanticProgram;
+  REQUIRE(primec::prepareIrModule(loweringProgram,
+                                  &loweringSemanticProgram,
+                                  options,
+                                  primec::IrValidationTarget::Native,
+                                  ir,
+                                  failure));
+  CHECK(!ir.functions.empty());
+
+  auto rewriteSourceResultErrorPayload =
+      [](primec::SemanticProgram &semanticProduct, std::string payloadTypeText) {
+        std::vector<std::string> sourceResultPaths;
+        for (const auto &entry : semanticProduct.sumVariantMetadata) {
+          const bool isResultSum = entry.sumPath == "/std/result/Result" ||
+                                   entry.sumPath.rfind("/std/result/Result__", 0) == 0;
+          if (isResultSum && entry.variantName == "ok" &&
+              entry.payloadTypeText.find("i32") != std::string::npos) {
+            sourceResultPaths.push_back(entry.sumPath);
+          }
+        }
+        bool rewritten = false;
+        for (auto &entry : semanticProduct.sumVariantMetadata) {
+          if (std::find(sourceResultPaths.begin(), sourceResultPaths.end(), entry.sumPath) !=
+                  sourceResultPaths.end() &&
+              entry.variantName == "error" &&
+              entry.payloadTypeText.find("FileError") != std::string::npos) {
+            entry.payloadTypeText = payloadTypeText;
+            rewritten = true;
+          }
+        }
+        return rewritten;
+      };
+
+  primec::Program staleProgram = program;
+  primec::SemanticProgram staleSemanticProgram = semanticProgram;
+  REQUIRE(rewriteSourceResultErrorPayload(staleSemanticProgram, "i64"));
+
+  primec::IrModule staleIr;
+  primec::IrPreparationFailure staleFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleProgram,
+                                      &staleSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleIr,
+                                      staleFailure));
+  CHECK(staleFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleFailure.message.find(
+            "stale semantic-product sum variant metadata for Result.map source error payload: ") !=
+        std::string::npos);
+  CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
+}
+
 TEST_CASE("native sum active payload helpers use semantic-product variant tags") {
   const auto rewriteChoiceLeftVariantTag =
       [](primec::SemanticProgram &semanticProduct, uint32_t tagValue) {

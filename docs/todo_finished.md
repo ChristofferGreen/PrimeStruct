@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for Result payload storage
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native `Result.map`, `Result.and_then`, and `Result.map2` consume
+    published sum-variant metadata for source `ok` payload locals, mapped
+    target payload storage, and propagated `error` payload copies instead of
+    reconstructing payload storage from AST variant data.
+  - implementation_notes:
+    - Keep target sum resolution, tag dispatch, broader Result propagation
+      cleanup, template inference, and collection migration out of scope.
+    - Preserve syntax-only compatibility by using the AST payload-storage path
+      only when no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before binding or copying Result-combinator
+      payload storage.
+  - acceptance:
+    - Native `Result.map` validates published payload metadata before binding
+      source payload locals, storing mapped payloads, or copying propagated
+      error payloads on semantic-product-backed paths.
+    - Native `Result.and_then` validates published payload metadata before
+      binding source payload locals or copying propagated error payloads on
+      semantic-product-backed paths.
+    - Native `Result.map2` validates published payload metadata before binding
+      source payload locals, storing mapped payloads, or copying propagated
+      error payloads on semantic-product-backed paths.
+    - Stale metadata reports a deterministic lowerer diagnostic.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native Result-combinator payload locals, mapped
+    payload stores, and propagated error copies have semantic-product
+    authority for variant payload metadata and the old AST payload-storage
+    path is retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product payload-storage validation for native
+    `Result.map`, `Result.and_then`, and `Result.map2` lowering, added
+    positive and stale-metadata lowerer coverage, and documented the remaining
+    TODO-4298 work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for Result combinator tags
   - owner: ai
   - created_at: 2026-04-28

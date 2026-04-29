@@ -430,12 +430,12 @@
              sumDef.fullPath + "/" + variant.name + " (" + sumPayloadTypeText(variant) + ")";
     };
 
-    auto resolveSemanticProductSumVariantTag =
+    auto resolveSemanticProductSumVariantMetadata =
         [&](const Definition &sumDef,
             const SumVariant &variant,
             std::string_view operationLabel,
-            int32_t &tagValueOut) -> bool {
-      tagValueOut = static_cast<int32_t>(variant.variantIndex);
+            const SemanticProgramSumVariantMetadata *&publishedVariantOut) -> bool {
+      publishedVariantOut = nullptr;
       const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
       if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
         return true;
@@ -459,7 +459,44 @@
                 std::string(operationLabel) + ": " + diagnosticSuffix;
         return false;
       }
-      tagValueOut = static_cast<int32_t>(publishedVariant->tagValue);
+      publishedVariantOut = publishedVariant;
+      return true;
+    };
+
+    auto resolveSemanticProductSumVariantTag =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            std::string_view operationLabel,
+            int32_t &tagValueOut) -> bool {
+      tagValueOut = static_cast<int32_t>(variant.variantIndex);
+      const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
+      if (!resolveSemanticProductSumVariantMetadata(
+              sumDef, variant, operationLabel, publishedVariant)) {
+        return false;
+      }
+      if (publishedVariant != nullptr) {
+        tagValueOut = static_cast<int32_t>(publishedVariant->tagValue);
+      }
+      return true;
+    };
+
+    auto resolveSemanticProductSumPayloadStorageInfo =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            std::string_view operationLabel,
+            LoweredSumPayloadStorageInfo &infoOut) -> bool {
+      const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
+      if (!resolveSemanticProductSumVariantMetadata(
+              sumDef, variant, operationLabel, publishedVariant)) {
+        return false;
+      }
+      if (publishedVariant == nullptr) {
+        return resolveSumPayloadStorageInfo(sumDef, variant, infoOut);
+      }
+      if (!resolvePublishedSumPayloadStorageInfo(sumDef, *publishedVariant, infoOut)) {
+        error = unsupportedSumPayloadError(sumDef, variant);
+        return false;
+      }
       return true;
     };
 
@@ -527,10 +564,14 @@
               const SumVariant &payloadVariant,
               int32_t sumPtrLocal,
               const std::string &payloadName,
+              std::string_view operationLabel,
               LocalMap &payloadLocals) -> bool {
         LoweredSumPayloadStorageInfo payloadStorage;
-        if (!resolveSumPayloadStorageInfo(payloadSumDef, payloadVariant, payloadStorage)) {
-          error = unsupportedSumPayloadError(payloadSumDef, payloadVariant);
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                payloadSumDef, payloadVariant, operationLabel, payloadStorage)) {
+          if (error.empty()) {
+            error = unsupportedSumPayloadError(payloadSumDef, payloadVariant);
+          }
           return false;
         }
         LocalInfo payloadInfo;
@@ -563,12 +604,22 @@
               const std::string &payloadDescription) -> bool {
         LoweredSumPayloadStorageInfo sourcePayload;
         LoweredSumPayloadStorageInfo targetPayload;
-        if (!resolveSumPayloadStorageInfo(sourceSumDef, sourceVariant, sourcePayload)) {
-          error = unsupportedSumPayloadError(sourceSumDef, sourceVariant);
+        const std::string sourceOperationLabel =
+            builtinName + " source " + payloadDescription + " payload";
+        const std::string targetOperationLabel =
+            builtinName + " target " + payloadDescription + " payload";
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                sourceSumDef, sourceVariant, sourceOperationLabel, sourcePayload)) {
+          if (error.empty()) {
+            error = unsupportedSumPayloadError(sourceSumDef, sourceVariant);
+          }
           return false;
         }
-        if (!resolveSumPayloadStorageInfo(sumDef, targetVariant, targetPayload)) {
-          error = unsupportedSumPayloadError(sumDef, targetVariant);
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                sumDef, targetVariant, targetOperationLabel, targetPayload)) {
+          if (error.empty()) {
+            error = unsupportedSumPayloadError(sumDef, targetVariant);
+          }
           return false;
         }
         if (sourcePayload.isAggregate != targetPayload.isAggregate ||
@@ -648,10 +699,14 @@
           [&](const Expr &mappedExpr,
               const LocalMap &mappedLocals,
               const SumVariant &targetVariant,
+              std::string_view operationLabel,
               int32_t targetBaseLocal) -> bool {
         LoweredSumPayloadStorageInfo targetPayload;
-        if (!resolveSumPayloadStorageInfo(sumDef, targetVariant, targetPayload)) {
-          error = unsupportedSumPayloadError(sumDef, targetVariant);
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                sumDef, targetVariant, operationLabel, targetPayload)) {
+          if (error.empty()) {
+            error = unsupportedSumPayloadError(sumDef, targetVariant);
+          }
           return false;
         }
         if (!targetPayload.isAggregate) {
@@ -803,13 +858,15 @@
                                  *sourceOkVariant,
                                  source.sumPtrLocal,
                                  lambdaExpr.args.front().name,
+                                 "Result.map source ok payload",
                                  lambdaLocals)) {
           return false;
         }
         if (!emitResultLambdaPrefixStatements(lambdaExpr, mappedValueExpr, lambdaLocals)) {
           return false;
         }
-        if (!emitMappedValueIntoSum(*mappedValueExpr, lambdaLocals, *targetOkVariant, baseLocal)) {
+        if (!emitMappedValueIntoSum(
+                *mappedValueExpr, lambdaLocals, *targetOkVariant, "Result.map target ok payload", baseLocal)) {
           return false;
         }
         const size_t jumpEndIndex = function.instructions.size();
@@ -888,6 +945,7 @@
                                  *sourceOkVariant,
                                  source.sumPtrLocal,
                                  lambdaExpr.args.front().name,
+                                 "Result.and_then source ok payload",
                                  lambdaLocals)) {
           return false;
         }
@@ -996,6 +1054,7 @@
                                  *leftOkVariant,
                                  left.sumPtrLocal,
                                  lambdaExpr.args[0].name,
+                                 "Result.map2 left ok payload",
                                  lambdaLocals)) {
           return false;
         }
@@ -1003,13 +1062,15 @@
                                  *rightOkVariant,
                                  right.sumPtrLocal,
                                  lambdaExpr.args[1].name,
+                                 "Result.map2 right ok payload",
                                  lambdaLocals)) {
           return false;
         }
         if (!emitResultLambdaPrefixStatements(lambdaExpr, mappedValueExpr, lambdaLocals)) {
           return false;
         }
-        if (!emitMappedValueIntoSum(*mappedValueExpr, lambdaLocals, *targetOkVariant, baseLocal)) {
+        if (!emitMappedValueIntoSum(
+                *mappedValueExpr, lambdaLocals, *targetOkVariant, "Result.map2 target ok payload", baseLocal)) {
           return false;
         }
         const size_t jumpEndIndex = function.instructions.size();

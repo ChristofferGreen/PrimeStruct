@@ -362,6 +362,12 @@ Planned non-template inference migration contract:
   `Result.map`, `Result.and_then`, and `Result.map2` lowering now validates published
   sum-variant metadata before comparing source `ok` tags or storing target `ok`/`error`
   tags. Syntax-only compatibility keeps the old AST tag path.
+- Completed native Result-combinator payload-storage slice:
+  semantic-product-addressed `Result.map`, `Result.and_then`, and
+  `Result.map2` lowering now validates and consumes published sum-variant
+  metadata before binding source `ok` payload locals, storing mapped target
+  payloads, or copying propagated `error` payloads. Syntax-only compatibility
+  keeps the old AST payload-storage path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
