@@ -374,6 +374,9 @@ Task template:
     The native pick variant-metadata slice is complete for semantic-product
     arm tag dispatch. The native pick payload-local slice is complete for
     semantic-product branch payload binding and aggregate-result inference.
+    The native pick shared-variant-metadata slice is complete for shared
+    semantic-product tag/payload helper use across arm dispatch,
+    aggregate-result inference, and payload binding.
     The native sum slot-layout slice is complete for semantic-product-backed
     payload width allocation across all variants.
     The native sum variant-selection slice is complete for
@@ -536,6 +539,12 @@ Task template:
       sum-variant metadata to build branch-local payload shape for payload
       arms and aggregate-result inference on the semantic-product path.
       Syntax-only compatibility keeps the old AST payload reconstruction path.
+    - Completed slice: native `pick(...)` arm dispatch, aggregate-result
+      inference, and payload binding now use the shared sum-variant metadata
+      helpers for tag and payload storage decisions on the semantic-product
+      path instead of carrying a pick-local duplicate validator and
+      published-variant pointer. Syntax-only compatibility keeps the old AST
+      tag and payload-storage reconstruction path.
     - Completed slice: native lowered sum slot allocation now validates and
       consumes published sum-variant metadata before choosing the maximum
       payload slot width across variants on the semantic-product path.

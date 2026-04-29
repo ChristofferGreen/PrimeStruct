@@ -1515,17 +1515,13 @@
     auto makePickPayloadLocalInfo =
         [&](const Definition &sumDef,
             const SumVariant &variant,
-            const SemanticProgramSumVariantMetadata *publishedVariant,
             LocalInfo &payloadInfoOut) -> bool {
       LoweredSumPayloadStorageInfo payloadStorage;
-      const bool resolvedPayloadStorage =
-          publishedVariant != nullptr
-              ? resolvePublishedSumPayloadStorageInfo(sumDef,
-                                                      *publishedVariant,
-                                                      payloadStorage)
-              : resolveSumPayloadStorageInfo(sumDef, variant, payloadStorage);
-      if (!resolvedPayloadStorage) {
-        error = unsupportedSumPayloadError(sumDef, variant);
+      if (!resolveSemanticProductSumPayloadStorageInfo(
+              sumDef, variant, "pick payload local", payloadStorage)) {
+        if (error.empty()) {
+          error = unsupportedSumPayloadError(sumDef, variant);
+        }
         return false;
       }
       payloadInfoOut = {};
@@ -1540,12 +1536,11 @@
     auto bindPickPayload =
         [&](const Definition &sumDef,
             const SumVariant &variant,
-            const SemanticProgramSumVariantMetadata *publishedVariant,
             const Expr &binderExpr,
             int32_t sumPtrLocal,
             LocalMap &branchLocals) -> bool {
       LocalInfo payloadInfo;
-      if (!makePickPayloadLocalInfo(sumDef, variant, publishedVariant, payloadInfo)) {
+      if (!makePickPayloadLocalInfo(sumDef, variant, payloadInfo)) {
         return false;
       }
       payloadInfo.index = nextLocal++;
@@ -1647,54 +1642,12 @@
       return valueExpr;
     };
 
-    auto validateSemanticProductPickArmVariant =
-        [&](const Definition &sumDef,
-            const SumVariant &variant) -> const SemanticProgramSumVariantMetadata * {
-      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
-      if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
-        return nullptr;
-      }
-      const SemanticProgramSumVariantMetadata *publishedVariant =
-          findSemanticProductSumVariantMetadata(semanticTargets, sumDef.fullPath, variant.name);
-      const std::string diagnosticSuffix = sumDef.fullPath + " -> " + variant.name;
-      if (publishedVariant == nullptr) {
-        error = "missing semantic-product sum variant metadata for pick arm: " +
-                diagnosticSuffix;
-        return nullptr;
-      }
-      const std::string expectedPayloadType =
-          variant.hasPayload ? sumPayloadTypeText(variant) : std::string{};
-      const uint32_t expectedTagValue = static_cast<uint32_t>(variant.variantIndex);
-      if (publishedVariant->variantIndex != variant.variantIndex ||
-          publishedVariant->tagValue != expectedTagValue ||
-          publishedVariant->hasPayload != variant.hasPayload ||
-          trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
-        error = "stale semantic-product sum variant metadata for pick arm: " +
-                diagnosticSuffix;
-        return nullptr;
-      }
-      return publishedVariant;
-    };
-
     auto resolvePickArmVariant =
-        [&](const Definition &sumDef,
-            const Expr &arm,
-            const SemanticProgramSumVariantMetadata **publishedVariantOut) -> const SumVariant * {
-      if (publishedVariantOut != nullptr) {
-        *publishedVariantOut = nullptr;
-      }
+        [&](const Definition &sumDef, const Expr &arm) -> const SumVariant * {
       const SumVariant *variant = findSumVariantByName(sumDef, arm.name);
       if (variant == nullptr) {
         error = "native backend unknown pick variant on " + sumDef.fullPath + ": " + arm.name;
         return nullptr;
-      }
-      const SemanticProgramSumVariantMetadata *publishedVariant =
-          validateSemanticProductPickArmVariant(sumDef, *variant);
-      if (!error.empty()) {
-        return nullptr;
-      }
-      if (publishedVariantOut != nullptr) {
-        *publishedVariantOut = publishedVariant;
       }
       return variant;
     };
@@ -1730,8 +1683,7 @@
           error = "native backend requires pick arms as variant blocks";
           return false;
         }
-        const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
-        const SumVariant *variant = resolvePickArmVariant(sumDef, arm, &publishedVariant);
+        const SumVariant *variant = resolvePickArmVariant(sumDef, arm);
         if (variant == nullptr) {
           return false;
         }
@@ -1743,10 +1695,14 @@
                             sumDef.fullPath + "/" + variant->name;
           return false;
         }
+        int32_t tagValue = 0;
+        if (!resolveSemanticProductSumVariantTag(sumDef, *variant, "pick arm", tagValue)) {
+          return false;
+        }
         LocalMap branchLocals = valueLocals;
         if (payloadArm) {
           LocalInfo payloadInfo;
-          if (!makePickPayloadLocalInfo(sumDef, *variant, publishedVariant, payloadInfo)) {
+          if (!makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)) {
             return false;
           }
           branchLocals.emplace(arm.args.front().name, payloadInfo);
@@ -1833,8 +1789,7 @@
           error = "native backend requires pick arms as variant blocks";
           return LoweredSumPickEmitResult::Error;
         }
-        const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
-        const SumVariant *variant = resolvePickArmVariant(*sumDef, arm, &publishedVariant);
+        const SumVariant *variant = resolvePickArmVariant(*sumDef, arm);
         if (variant == nullptr) {
           return LoweredSumPickEmitResult::Error;
         }
@@ -1846,16 +1801,17 @@
                             sumDef->fullPath + "/" + variant->name;
           return LoweredSumPickEmitResult::Error;
         }
-        const int32_t tagValue = publishedVariant != nullptr
-                                     ? static_cast<int32_t>(publishedVariant->tagValue)
-                                     : static_cast<int32_t>(variant->variantIndex);
+        int32_t tagValue = 0;
+        if (!resolveSemanticProductSumVariantTag(*sumDef, *variant, "pick arm", tagValue)) {
+          return LoweredSumPickEmitResult::Error;
+        }
         emitSumTagComparison(sumPtrLocal, tagValue);
         const size_t nextArmJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = valueLocals;
         if (payloadArm &&
             !bindPickPayload(
-                *sumDef, *variant, publishedVariant, arm.args.front(), sumPtrLocal, branchLocals)) {
+                *sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
           return LoweredSumPickEmitResult::Error;
         }
         const Expr *valueExpr = findPickArmValueExpr(arm);
@@ -1925,8 +1881,7 @@
           error = "native backend requires pick arms as variant blocks";
           return LoweredSumPickEmitResult::Error;
         }
-        const SemanticProgramSumVariantMetadata *publishedVariant = nullptr;
-        const SumVariant *variant = resolvePickArmVariant(*sumDef, arm, &publishedVariant);
+        const SumVariant *variant = resolvePickArmVariant(*sumDef, arm);
         if (variant == nullptr) {
           return LoweredSumPickEmitResult::Error;
         }
@@ -1938,16 +1893,17 @@
                             sumDef->fullPath + "/" + variant->name;
           return LoweredSumPickEmitResult::Error;
         }
-        const int32_t tagValue = publishedVariant != nullptr
-                                     ? static_cast<int32_t>(publishedVariant->tagValue)
-                                     : static_cast<int32_t>(variant->variantIndex);
+        int32_t tagValue = 0;
+        if (!resolveSemanticProductSumVariantTag(*sumDef, *variant, "pick arm", tagValue)) {
+          return LoweredSumPickEmitResult::Error;
+        }
         emitSumTagComparison(sumPtrLocal, tagValue);
         const size_t nextArmJump = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
         LocalMap branchLocals = localsIn;
         if (payloadArm &&
             !bindPickPayload(
-                *sumDef, *variant, publishedVariant, arm.args.front(), sumPtrLocal, branchLocals)) {
+                *sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)) {
           return LoweredSumPickEmitResult::Error;
         }
         for (const Expr *bodyExprPtr : pickArmBodyExprs(arm)) {

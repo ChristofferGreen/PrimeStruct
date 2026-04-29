@@ -350,6 +350,11 @@ Planned non-template inference migration contract:
   binding and aggregate result inference now build branch-local payload shape from the published
   sum-variant metadata after validation, rather than reconstructing that payload shape from the raw
   AST variant. Syntax-only compatibility keeps the old AST payload path.
+- Completed native pick shared-variant-metadata slice:
+  semantic-product-addressed `pick(...)` arm dispatch, aggregate-result
+  inference, and payload binding now use the shared sum-variant metadata
+  helpers for tag and payload storage decisions instead of carrying a
+  pick-local duplicate validator and published-variant pointer.
 - Completed native sum slot-layout slice: semantic-product-addressed lowered sum
   slot allocation now validates and consumes published sum-variant metadata for
   every variant before choosing the maximum payload slot width. Syntax-only
@@ -725,6 +730,8 @@ Planned lowerer type/binding handoff:
   helper-family classification. The
   remaining lowerer-generated synthetic locals and raw IR temporaries stay outside the
   semantic-product surface because they have no stable source-owned semantic identity.
+  Native `pick(...)` arm dispatch, aggregate-result inference, and payload
+  binding now route through the shared sum-variant semantic-product helpers.
   Native sum constructor, `Result.ok`, and initializer-matching selection now use
   published sum-variant payload metadata for selected payload storage shape on
   the semantic-product path. Native `try(...)` lowering for stdlib Result sums

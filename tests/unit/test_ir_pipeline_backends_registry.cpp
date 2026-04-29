@@ -777,15 +777,16 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
 
   const std::string source = readTextFile(lowerSumHelpersPath);
   CHECK(source.find("resolvePublishedSumPayloadStorageInfo") != std::string::npos);
-  CHECK(source.find("const SemanticProgramSumVariantMetadata *publishedVariant") !=
+  CHECK(source.find("\"pick payload local\"") != std::string::npos);
+  CHECK(source.find("\"pick arm\"") != std::string::npos);
+  CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)") !=
         std::string::npos);
-  CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, publishedVariant, payloadInfo)") !=
+  CHECK(source.find("*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals") !=
         std::string::npos);
-  CHECK(source.find("*sumDef, *variant, publishedVariant, arm.args.front(), sumPtrLocal, branchLocals") !=
+  CHECK(source.find("validateSemanticProductPickArmVariant") == std::string::npos);
+  CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, publishedVariant, payloadInfo)") ==
         std::string::npos);
-  CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, payloadInfo)") ==
-        std::string::npos);
-  CHECK(source.find("bindPickPayload(*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals)") ==
+  CHECK(source.find("publishedVariant, arm.args.front(), sumPtrLocal, branchLocals") ==
         std::string::npos);
 }
 

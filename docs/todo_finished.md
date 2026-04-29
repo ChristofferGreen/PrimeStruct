@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use shared variant facts for pick arms
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native `pick(...)` arm dispatch, aggregate-result inference, and payload
+    binding use the shared sum-variant metadata helpers for tag and payload
+    storage decisions instead of carrying a pick-local duplicate validator and
+    published-variant pointer.
+  - implementation_notes:
+    - Keep pick target resolution, Result-combinator lowering, sum
+      construction, `try(...)` lowering, template inference, and collection
+      migration out of scope.
+    - Preserve syntax-only compatibility by using the AST payload/tag path
+      only when no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before native pick arms can dispatch or bind
+      payload locals.
+  - acceptance:
+    - Native `pick(...)` arm dispatch uses the shared semantic-product
+      sum-variant tag helper rather than a pick-local metadata validator.
+    - Native `pick(...)` aggregate-result inference and payload binding use
+      the shared semantic-product sum-variant payload helper.
+    - The old published-variant pointer threading through pick payload binding
+      is removed.
+    - Existing missing/stale pick-arm diagnostics keep the deterministic
+      `pick arm` label.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native `pick(...)` arm dispatch, aggregate-result
+    inference, and payload binding consume shared semantic-product
+    sum-variant helpers, with the old AST payload/tag path retained only as
+    syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Removed the pick-local semantic-product variant validator and
+    published-variant pointer threading, routed pick arm tags and payload
+    locals through shared sum-variant helpers, updated source-contract
+    coverage, and documented the remaining TODO-4298 work. Local test
+    execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for try Result paths
   - owner: ai
   - created_at: 2026-04-28
