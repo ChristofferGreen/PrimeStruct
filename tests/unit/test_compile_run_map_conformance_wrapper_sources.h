@@ -3,6 +3,7 @@
 inline std::string makeWrapperMapConstructorExperimentalBindingConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedWrapperExperimentalMapConstructorError([ContainerError] err) {\n";
@@ -47,6 +48,7 @@ inline std::string makeWrapperMapConstructorExperimentalBindingConformanceSource
 inline std::string makeWrapperMapConstructorExperimentalReturnConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedWrapperExperimentalMapReturnError([ContainerError] err) {\n";
@@ -88,6 +90,7 @@ inline std::string makeWrapperMapConstructorExperimentalReturnConformanceSource(
 inline std::string makeWrapperMapConstructorExperimentalParameterConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedWrapperExperimentalMapParameterError([ContainerError] err) {\n";
@@ -128,6 +131,7 @@ inline std::string makeWrapperMapConstructorExperimentalParameterConformanceSour
 inline std::string makeWrappedExperimentalMapParameterConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "Holder() {}\n\n";
   source += "[return<Map<string, i32>> effects(heap_alloc)]\n";
@@ -173,6 +177,7 @@ inline std::string makeWrappedExperimentalMapParameterConformanceSource() {
 inline std::string makeWrappedExperimentalMapBindingConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
@@ -202,6 +207,7 @@ inline std::string makeWrappedExperimentalMapBindingConformanceSource() {
 inline std::string makeWrappedExperimentalMapAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
@@ -232,6 +238,7 @@ inline std::string makeWrappedExperimentalMapAssignConformanceSource() {
 inline std::string makeWrappedExperimentalMapResultFieldAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapStatus<T>([T] status) {\n";
@@ -262,6 +269,7 @@ inline std::string makeWrappedExperimentalMapResultFieldAssignConformanceSource(
 inline std::string makeWrappedExperimentalMapResultDerefFieldAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapStatus<T>([T] status) {\n";
@@ -298,6 +306,7 @@ inline std::string makeWrappedExperimentalMapResultDerefFieldAssignConformanceSo
 inline std::string makeWrappedExperimentalMapStorageFieldConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
@@ -323,6 +332,7 @@ inline std::string makeWrappedExperimentalMapStorageFieldConformanceSource() {
 inline std::string makeWrappedExperimentalMapStorageDerefFieldConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
@@ -354,6 +364,7 @@ inline std::string makeWrappedExperimentalMapStorageDerefFieldConformanceSource(
 inline std::string makeWrapperMapHelperExperimentalValueConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedWrapperMapHelperExperimentalValueError([ContainerError] err) {\n";
@@ -391,6 +402,7 @@ inline std::string makeWrapperMapHelperExperimentalValueConformanceSource() {
 inline std::string makeExperimentalMapAssignConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[effects(io_err)]\n";
   source += "unexpectedExperimentalMapAssignError([ContainerError] err) {\n";
@@ -442,6 +454,7 @@ inline std::string makeExperimentalMapAssignConformanceSource() {
 inline std::string makeImplicitMapAutoInferenceConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
@@ -473,6 +486,7 @@ inline std::string makeImplicitMapAutoInferenceConformanceSource() {
 inline std::string makeInferredExperimentalMapReturnConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues() {\n";
@@ -504,6 +518,7 @@ inline std::string makeInferredExperimentalMapReturnConformanceSource() {
 inline std::string makeBlockInferredExperimentalMapReturnConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues([bool] useCanonical) {\n";
@@ -541,6 +556,7 @@ inline std::string makeBlockInferredExperimentalMapReturnConformanceSource() {
 inline std::string makeAutoBlockInferredExperimentalMapReturnConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues([bool] useCanonical) {\n";
@@ -578,6 +594,7 @@ inline std::string makeAutoBlockInferredExperimentalMapReturnConformanceSource()
 inline std::string makeWrappedInferredExperimentalMapReturnConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<T> effects(heap_alloc)]\n";
   source += "wrapValues<T>([T] values) {\n";
@@ -613,6 +630,7 @@ inline std::string makeWrappedInferredExperimentalMapReturnConformanceSource() {
 inline std::string makeInferredExperimentalMapCallReceiverConformanceSource() {
   std::string source;
   source += "import /std/collections/*\n";
+  source += "import /std/collections/map/*\n";
   source += "import /std/collections/experimental_map/*\n\n";
   source += "[return<auto> effects(heap_alloc)]\n";
   source += "buildValues([bool] useCanonical) {\n";
