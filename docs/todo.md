@@ -392,9 +392,11 @@ Task template:
     source `ok` dispatch and target `ok`/`error` tag storage. The native
     Result-combinator payload-storage slice is complete for
     semantic-product-backed source payload locals, mapped target payloads, and
-    propagated error payload copies. The native `try(...)` Result-variant
-    slice is complete for semantic-product-backed stdlib Result sum matching,
-    payload loads, propagated error copies, and source/target tags.
+    propagated error payload copies. The native Result-combinator source-query
+    slice is complete for semantic-product-backed direct-call source sum
+    resolution. The native `try(...)` Result-variant slice is complete for
+    semantic-product-backed stdlib Result sum matching, payload loads,
+    propagated error copies, and source/target tags.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -586,6 +588,12 @@ Task template:
       target payloads, or copying propagated `error` payloads on the
       semantic-product path. Syntax-only compatibility keeps the old AST
       payload-storage reconstruction path.
+    - Completed slice: semantic-product-addressed direct-call sources for
+      native `Result.map`, `Result.and_then`, and `Result.map2` now resolve
+      their stdlib Result sum type from the published query fact before
+      falling back to struct-path reconstruction. Stale query metadata fails
+      closed with a deterministic Result-combinator source diagnostic while
+      syntax-only or no-query compatibility keeps the old struct-path path.
     - Completed slice: native `try(...)` lowering now validates and consumes
       published stdlib Result sum-variant metadata before matching candidate
       payload shape, loading source `ok`/`error` payloads, copying propagated

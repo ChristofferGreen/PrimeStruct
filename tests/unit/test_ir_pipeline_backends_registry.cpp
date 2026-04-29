@@ -1138,6 +1138,35 @@ main() {
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
+TEST_CASE("native Result combinator sources use semantic-product query facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path lowerSumHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  if (!std::filesystem::exists(lowerSumHelpersPath)) {
+    lowerSumHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
+
+  const std::string source = readTextFile(lowerSumHelpersPath);
+  const size_t semanticResolverPos =
+      source.find("resolveSemanticProductResultSumSourceDefinition");
+  REQUIRE(semanticResolverPos != std::string::npos);
+  const size_t queryFactPos =
+      source.find("findSemanticProductQueryFact(", semanticResolverPos);
+  const size_t staleDiagnosticPos =
+      source.find("stale semantic-product Result-combinator source query metadata",
+                  semanticResolverPos);
+  const size_t fallbackStructPathPos =
+      source.find("const std::string sourceStructPath = inferStructExprPath(sourceExpr, sourceLocals)",
+                  semanticResolverPos);
+  REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(staleDiagnosticPos != std::string::npos);
+  REQUIRE(fallbackStructPathPos != std::string::npos);
+  CHECK(queryFactPos < fallbackStructPathPos);
+  CHECK(source.find("if (!resolvedBySemanticProductQuery.has_value())") != std::string::npos);
+}
+
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =

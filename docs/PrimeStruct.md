@@ -392,6 +392,13 @@ Planned non-template inference migration contract:
   metadata before binding source `ok` payload locals, storing mapped target
   payloads, or copying propagated `error` payloads. Syntax-only compatibility
   keeps the old AST payload-storage path.
+- Completed native Result-combinator source-query slice:
+  semantic-product-addressed direct-call sources for `Result.map`,
+  `Result.and_then`, and `Result.map2` now resolve their stdlib Result sum
+  type from the published query fact before falling back to struct-path
+  reconstruction. Stale query metadata fails closed with a deterministic
+  Result-combinator source diagnostic; syntax-only or no-query compatibility
+  keeps the old struct-path path.
 - Completed native `try(...)` Result-variant slice: semantic-product-addressed
   stdlib Result sum matching, source `ok`/`error` payload loads, propagated
   return-error copies, and source/target tag writes now validate and consume

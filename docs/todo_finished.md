@@ -6,6 +6,44 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use query facts for Result sources
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native
+    `Result.map`, `Result.and_then`, and `Result.map2` direct-call sources
+    resolve their stdlib Result sum type from the published semantic query
+    fact before falling back to struct-path reconstruction.
+  - implementation_notes:
+    - Keep broader `?`/Result migration, sum variant payload/tag lowering,
+      `try(...)`, `on_error`, template inference, and collection migration out
+      of scope.
+    - Preserve syntax-only and no-query compatibility by retaining the old
+      struct-path reconstruction only when no semantic query fact is
+      published for the direct-call source.
+    - Fail closed when published query metadata exists but does not identify a
+      stdlib Result sum source.
+  - acceptance:
+    - Direct-call Result-combinator sources consult the published query fact
+      before `inferStructExprPath`.
+    - Stale published source query metadata reports a deterministic
+      Result-combinator source diagnostic instead of silently falling through
+      to struct-path reconstruction.
+    - Source-contract coverage proves query-fact resolution precedes the
+      compatibility fallback.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once direct-call native Result-combinator sources consume
+    published query facts for stdlib Result sum resolution, with old
+    struct-path reconstruction retained only as syntax-only or no-query
+    compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Routed direct-call native `Result.map`, `Result.and_then`, and
+    `Result.map2` sources through published query facts before struct-path
+    fallback, added source-contract coverage, and documented the remaining
+    TODO-4298 work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use binding facts for for conditions
   - owner: ai
   - created_at: 2026-04-28

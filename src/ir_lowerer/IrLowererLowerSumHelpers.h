@@ -762,6 +762,46 @@
         const Definition *sumDef = nullptr;
         int32_t sumPtrLocal = -1;
       };
+      auto resolveSemanticProductResultSumSourceDefinition =
+          [&](const Expr &sourceExpr,
+              const std::string &builtinName,
+              const std::string &sourceLabel,
+              const Definition *&sourceSumDefOut) -> std::optional<bool> {
+        sourceSumDefOut = nullptr;
+        const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+        if (!semanticTargets.hasSemanticProduct || sourceExpr.semanticNodeId == 0) {
+          return std::nullopt;
+        }
+        const SemanticProgramQueryFact *queryFact =
+            findSemanticProductQueryFact(semanticTargets, sourceExpr);
+        if (queryFact == nullptr) {
+          return std::nullopt;
+        }
+        auto resolveQueryTypeText = [&](const std::string &typeText) -> const Definition * {
+          const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+          if (normalizedTypeText.empty()) {
+            return nullptr;
+          }
+          const Definition *candidate =
+              resolveSumDefinitionForTypeText(normalizedTypeText, sourceExpr.namespacePrefix);
+          return candidate != nullptr && isStdlibResultSumDefinition(*candidate)
+                     ? candidate
+                     : nullptr;
+        };
+        if (const Definition *candidate = resolveQueryTypeText(queryFact->bindingTypeText);
+            candidate != nullptr) {
+          sourceSumDefOut = candidate;
+          return true;
+        }
+        if (const Definition *candidate = resolveQueryTypeText(queryFact->queryTypeText);
+            candidate != nullptr) {
+          sourceSumDefOut = candidate;
+          return true;
+        }
+        error = "stale semantic-product Result-combinator source query metadata for " +
+                builtinName + " " + sourceLabel;
+        return false;
+      };
       auto materializeStdlibResultSumSource =
           [&](const Expr &sourceExpr,
               const LocalMap &sourceLocals,
@@ -796,8 +836,16 @@
                   sourceLabel + " requires local or direct stdlib Result sum";
           return false;
         }
-        const std::string sourceStructPath = inferStructExprPath(sourceExpr, sourceLocals);
-        sourceSumDef = resolveSumDefinitionForTypeText(sourceStructPath, sourceExpr.namespacePrefix);
+        const std::optional<bool> resolvedBySemanticProductQuery =
+            resolveSemanticProductResultSumSourceDefinition(
+                sourceExpr, builtinName, sourceLabel, sourceSumDef);
+        if (resolvedBySemanticProductQuery.has_value() && !*resolvedBySemanticProductQuery) {
+          return false;
+        }
+        if (!resolvedBySemanticProductQuery.has_value()) {
+          const std::string sourceStructPath = inferStructExprPath(sourceExpr, sourceLocals);
+          sourceSumDef = resolveSumDefinitionForTypeText(sourceStructPath, sourceExpr.namespacePrefix);
+        }
         if (sourceSumDef == nullptr || !isStdlibResultSumDefinition(*sourceSumDef)) {
           error = "native backend " + builtinName + " " +
                   sourceLabel + " requires local or direct stdlib Result sum";
