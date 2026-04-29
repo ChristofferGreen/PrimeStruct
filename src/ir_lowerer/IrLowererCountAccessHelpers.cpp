@@ -379,20 +379,7 @@ bool isArrayCountCall(const Expr &expr, const LocalMap &localsIn, bool hasEntryA
       return false;
     }
     if (it->second.isArgsPack) {
-      const LocalInfo &info = it->second;
-      if (info.argsPackElementKind == LocalInfo::Kind::Array ||
-          info.argsPackElementKind == LocalInfo::Kind::Vector ||
-          info.argsPackElementKind == LocalInfo::Kind::Buffer ||
-          info.argsPackElementKind == LocalInfo::Kind::Map ||
-          (info.argsPackElementKind == LocalInfo::Kind::Reference &&
-           (info.referenceToArray || info.referenceToVector || info.referenceToBuffer || info.referenceToMap ||
-            hasInferredTypedWrappedMap(info, info.argsPackElementKind))) ||
-          (info.argsPackElementKind == LocalInfo::Kind::Pointer &&
-           (info.pointerToArray || info.pointerToVector || info.pointerToBuffer || info.pointerToMap ||
-            hasInferredTypedWrappedMap(info, info.argsPackElementKind))) ||
-          info.isSoaVector) {
-        return true;
-      }
+      return true;
     }
     if (it->second.kind == LocalInfo::Kind::Reference) {
       return it->second.referenceToArray || it->second.referenceToVector ||

@@ -149,6 +149,14 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   vectorArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Vector;
   locals.emplace("vectorArgs", vectorArgsInfo);
 
+  primec::ir_lowerer::LocalInfo primitiveArgsInfo;
+  primitiveArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  primitiveArgsInfo.isArgsPack = true;
+  primitiveArgsInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Value;
+  primitiveArgsInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Int32;
+  primitiveArgsInfo.argsPackElementCount = 3;
+  locals.emplace("primitiveArgs", primitiveArgsInfo);
+
   primec::ir_lowerer::LocalInfo refVectorArgsInfo;
   refVectorArgsInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
   refVectorArgsInfo.isArgsPack = true;
@@ -204,6 +212,19 @@ TEST_CASE("ir lowerer count access helpers classify capacity and string count") 
   primec::Expr vectorArgsName;
   vectorArgsName.kind = primec::Expr::Kind::Name;
   vectorArgsName.name = "vectorArgs";
+  primec::Expr primitiveArgsName;
+  primitiveArgsName.kind = primec::Expr::Kind::Name;
+  primitiveArgsName.name = "primitiveArgs";
+  primec::Expr primitiveArgsCount;
+  primitiveArgsCount.kind = primec::Expr::Kind::Call;
+  primitiveArgsCount.name = "count";
+  primitiveArgsCount.args = {primitiveArgsName};
+  CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals));
+  primitiveArgsCount.name = "/std/collections/vector/count";
+  CHECK(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals));
+  primitiveArgsCount.name = "/vector/count";
+  CHECK_FALSE(primec::ir_lowerer::isArrayCountCall(primitiveArgsCount, locals));
+
   primec::Expr zeroIndex;
   zeroIndex.kind = primec::Expr::Kind::Literal;
   zeroIndex.literalValue = 0;
