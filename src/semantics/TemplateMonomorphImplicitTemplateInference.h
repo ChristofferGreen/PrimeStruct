@@ -421,8 +421,7 @@ bool inferImplicitTemplateArgs(const Definition &def,
         ctx.helperOverloads.count(canonicalPath) > 0) {
       return {};
     }
-    return soaUnavailableMethodDiagnostic(
-        soaFieldViewHelperPath(normalizedName));
+    return "field-view escapes via argument";
   };
   const bool hasLeadingReceiverParam = [&]() {
     if (callParams.empty()) {

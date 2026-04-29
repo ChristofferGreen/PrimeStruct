@@ -165,6 +165,10 @@ bool SemanticsValidator::recordDefinitionInferredReturn(
       if (const auto pendingPath =
               builtinSoaDirectPendingHelperPath(*valueExpr, defParams,
                                                 activeLocals)) {
+        std::string pendingFieldName;
+        if (splitSoaFieldViewHelperPath(*pendingPath, &pendingFieldName)) {
+          return failInferDefinitionDiagnostic("field-view escapes via return");
+        }
         return failInferDefinitionDiagnostic(
             soaUnavailableMethodDiagnostic(*pendingPath));
       }
