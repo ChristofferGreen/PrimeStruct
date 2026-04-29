@@ -557,14 +557,105 @@
                                                                               : declaredCollectionArgs.front()));
             return collectionValueKindOut != LocalInfo::ValueKind::Unknown;
           };
-          LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
-          LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
-          if (resolveCollectionPayload(collectionKind, collectionValueKind) &&
-              ir_lowerer::isSupportedPackedResultCollectionKind(collectionKind)) {
-            packedKindOut = collectionValueKind;
+          auto describePackedResultPayload = [&](const Expr &payloadExpr) {
+            if (!payloadExpr.name.empty()) {
+              return function.name + " -> " + payloadExpr.name;
+            }
+            return function.name + " -> <expr>";
+          };
+          auto resolveSemanticProductPackedResultPayload =
+              [&](LocalInfo::ValueKind &payloadKindOut,
+                  std::string &payloadStructTypeOut) -> std::optional<bool> {
+            payloadKindOut = LocalInfo::ValueKind::Unknown;
+            payloadStructTypeOut.clear();
+            const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+            if (!semanticTargets.hasSemanticProduct || valueExpr.semanticNodeId == 0) {
+              return std::nullopt;
+            }
+            std::vector<std::string> candidateTypeTexts;
+            if (const SemanticProgramBindingFact *bindingFact =
+                    findSemanticProductBindingFact(semanticTargets, valueExpr);
+                bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
+              candidateTypeTexts.push_back(bindingFact->bindingTypeText);
+            }
+            if (const SemanticProgramQueryFact *queryFact =
+                    findSemanticProductQueryFact(semanticTargets, valueExpr);
+                queryFact != nullptr) {
+              if (!queryFact->bindingTypeText.empty()) {
+                candidateTypeTexts.push_back(queryFact->bindingTypeText);
+              }
+              if (!queryFact->queryTypeText.empty()) {
+                candidateTypeTexts.push_back(queryFact->queryTypeText);
+              }
+            }
+            if (candidateTypeTexts.empty()) {
+              return std::nullopt;
+            }
+            for (const std::string &typeText : candidateTypeTexts) {
+              const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+              if (normalizedTypeText.empty()) {
+                continue;
+              }
+              LocalInfo::Kind semanticCollectionKind = LocalInfo::Kind::Value;
+              LocalInfo::ValueKind semanticMapKeyKind = LocalInfo::ValueKind::Unknown;
+              if (ir_lowerer::resolveSupportedResultCollectionType(normalizedTypeText,
+                                                                    semanticCollectionKind,
+                                                                    payloadKindOut,
+                                                                    &semanticMapKeyKind) &&
+                  ir_lowerer::isSupportedPackedResultCollectionKind(semanticCollectionKind)) {
+                (void)semanticMapKeyKind;
+                return true;
+              }
+              std::string semanticTypeBase;
+              std::string semanticTypeArgs;
+              if (splitTemplateTypeName(normalizedTypeText, semanticTypeBase, semanticTypeArgs) &&
+                  normalizeCollectionBindingTypeName(trimTemplateTypeText(semanticTypeBase)) ==
+                      "File") {
+                payloadKindOut = LocalInfo::ValueKind::Int64;
+                return true;
+              }
+              payloadKindOut = valueKindFromTypeName(normalizedTypeText);
+              if (payloadKindOut != LocalInfo::ValueKind::Unknown) {
+                return true;
+              }
+              if (resolveStructTypeName(normalizedTypeText,
+                                        valueExpr.namespacePrefix,
+                                        payloadStructTypeOut) ||
+                  resolveStructTypeName(normalizedTypeText,
+                                        function.name,
+                                        payloadStructTypeOut)) {
+                return true;
+              }
+            }
+            error = "stale semantic-product packed Result payload metadata: " +
+                    describePackedResultPayload(valueExpr);
+            return false;
+          };
+          std::string inferredStructType;
+          LocalInfo::ValueKind inferredValueKind = LocalInfo::ValueKind::Unknown;
+          const std::optional<bool> resolvedPackedResultPayloadBySemanticProduct =
+              resolveSemanticProductPackedResultPayload(inferredValueKind, inferredStructType);
+          if (resolvedPackedResultPayloadBySemanticProduct.has_value() &&
+              !*resolvedPackedResultPayloadBySemanticProduct) {
+            return false;
+          }
+          if (resolvedPackedResultPayloadBySemanticProduct.has_value() &&
+              inferredValueKind != LocalInfo::ValueKind::Unknown && inferredStructType.empty()) {
+            packedKindOut = inferredValueKind;
             return true;
           }
-          LocalInfo::ValueKind inferredValueKind = inferExprKind(valueExpr, valueLocals);
+          if (!resolvedPackedResultPayloadBySemanticProduct.has_value()) {
+            LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
+            LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
+            if (resolveCollectionPayload(collectionKind, collectionValueKind) &&
+                ir_lowerer::isSupportedPackedResultCollectionKind(collectionKind)) {
+              packedKindOut = collectionValueKind;
+              return true;
+            }
+          }
+          if (!resolvedPackedResultPayloadBySemanticProduct.has_value()) {
+            inferredValueKind = inferExprKind(valueExpr, valueLocals);
+          }
           if (inferredValueKind == LocalInfo::ValueKind::Unknown) {
             std::string builtinComparison;
             if (getBuiltinComparisonName(valueExpr, builtinComparison)) {
@@ -575,15 +666,16 @@
             packedKindOut = inferredValueKind;
             return true;
           }
-          std::string inferredStructType;
-          ir_lowerer::inferPackedResultStructType(
-              valueExpr,
-              valueLocals,
-              [&](const Expr &candidateExpr) { return resolveDefinitionCall(candidateExpr); },
-              [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
-                return inferStructExprPath(candidateExpr, candidateLocals);
-              },
-              inferredStructType);
+          if (!resolvedPackedResultPayloadBySemanticProduct.has_value()) {
+            ir_lowerer::inferPackedResultStructType(
+                valueExpr,
+                valueLocals,
+                [&](const Expr &candidateExpr) { return resolveDefinitionCall(candidateExpr); },
+                [&](const Expr &candidateExpr, const LocalMap &candidateLocals) {
+                  return inferStructExprPath(candidateExpr, candidateLocals);
+                },
+                inferredStructType);
+          }
           bool isPackedSingleSlot = false;
           LocalInfo::ValueKind packedStructKind = LocalInfo::ValueKind::Unknown;
           int32_t slotCount = 0;

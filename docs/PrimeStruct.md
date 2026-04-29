@@ -373,6 +373,13 @@ Planned non-template inference migration contract:
   layout. Stale receiver type metadata fails closed with a deterministic
   field-receiver diagnostic; syntax-only or no-fact compatibility keeps the
   old receiver struct-path reconstruction path.
+- Completed native packed Result payload slice:
+  semantic-product-addressed native packed Result payload inference now reads
+  published binding/query type facts for the payload expression before
+  expression-kind or packed struct-path reconstruction can identify payload
+  shape. Stale payload type metadata fails closed with a deterministic packed
+  Result diagnostic; syntax-only or no-fact compatibility keeps the old
+  payload reconstruction path.
 - Completed native sum slot-layout slice: semantic-product-addressed lowered sum
   slot allocation now validates and consumes published sum-variant metadata for
   every variant before choosing the maximum payload slot width. Syntax-only

@@ -1250,6 +1250,56 @@ TEST_CASE("native field receivers use semantic-product type facts") {
                     semanticResolverPos) != std::string::npos);
 }
 
+TEST_CASE("native packed Result payloads use semantic-product type facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path lowerEmitExprPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  if (!std::filesystem::exists(lowerEmitExprPath)) {
+    lowerEmitExprPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExpr.h";
+  }
+  REQUIRE(std::filesystem::exists(lowerEmitExprPath));
+
+  const std::string source = readTextFile(lowerEmitExprPath);
+  const size_t semanticResolverPos =
+      source.find("resolveSemanticProductPackedResultPayload");
+  REQUIRE(semanticResolverPos != std::string::npos);
+  const size_t bindingFactPos =
+      source.find("findSemanticProductBindingFact(semanticTargets, valueExpr)",
+                  semanticResolverPos);
+  const size_t queryFactPos =
+      source.find("findSemanticProductQueryFact(semanticTargets, valueExpr)",
+                  semanticResolverPos);
+  const size_t collectionTypePos =
+      source.find("resolveSupportedResultCollectionType(normalizedTypeText",
+                  semanticResolverPos);
+  const size_t staleDiagnosticPos =
+      source.find("stale semantic-product packed Result payload metadata",
+                  semanticResolverPos);
+  const size_t fallbackKindPos =
+      source.find("inferredValueKind = inferExprKind(valueExpr, valueLocals)",
+                  semanticResolverPos);
+  const size_t fallbackStructPos =
+      source.find("inferPackedResultStructType(",
+                  semanticResolverPos);
+  const size_t collectionFallbackPos =
+      source.find("resolveCollectionPayload(collectionKind, collectionValueKind)",
+                  semanticResolverPos);
+  REQUIRE(bindingFactPos != std::string::npos);
+  REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(collectionTypePos != std::string::npos);
+  REQUIRE(staleDiagnosticPos != std::string::npos);
+  REQUIRE(fallbackKindPos != std::string::npos);
+  REQUIRE(fallbackStructPos != std::string::npos);
+  REQUIRE(collectionFallbackPos != std::string::npos);
+  CHECK(bindingFactPos < collectionFallbackPos);
+  CHECK(queryFactPos < collectionFallbackPos);
+  CHECK(bindingFactPos < fallbackKindPos);
+  CHECK(queryFactPos < fallbackKindPos);
+  CHECK(source.find("if (!resolvedPackedResultPayloadBySemanticProduct.has_value())",
+                    semanticResolverPos) != std::string::npos);
+}
+
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =

@@ -6,6 +6,45 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use packed Result facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native packed
+    Result payload inference read published binding/query type facts before
+    falling back to expression-kind and packed struct-path
+    reconstruction.
+  - implementation_notes:
+    - Keep stdlib Result sum lowering, Result-combinator lowering,
+      field-slot layout, template inference, and collection migration out of
+      scope.
+    - Preserve syntax-only and no-fact compatibility by retaining packed
+      payload reconstruction only when no semantic binding/query fact is
+      available for the payload expression.
+    - Fail closed when published payload type metadata exists but cannot
+      identify a scalar, collection, file-handle, or struct payload shape.
+  - acceptance:
+    - Packed Result payload inference consults published
+      binding/query type facts before calling `inferExprKind` or
+      `inferPackedResultStructType` on local payload state.
+    - Stale published payload type metadata reports a deterministic packed
+      Result diagnostic instead of silently falling through to local
+      reconstruction.
+    - Source-contract coverage proves semantic-product payload shape
+      resolution precedes the compatibility fallback.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native packed Result payload inference consumes
+    published binding/query facts for payload shape matching, with old local
+    reconstruction retained only as syntax-only or no-fact compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Routed native packed Result payload inference through
+    published binding/query type facts before expression-kind and packed
+    struct-path fallback, added source-contract coverage, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Use field receiver facts
   - owner: ai
   - created_at: 2026-04-28

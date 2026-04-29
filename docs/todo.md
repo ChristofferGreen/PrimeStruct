@@ -382,6 +382,9 @@ Task template:
     semantic-product-backed binding/query type facts on arm value expressions.
     The native field receiver slice is complete for semantic-product-backed
     binding/query type facts before field access struct resolution.
+    The native packed Result payload slice is complete for
+    semantic-product-backed binding/query type facts before packed payload
+    kind and struct resolution.
     The native sum slot-layout slice is complete for semantic-product-backed
     payload width allocation across all variants.
     The native sum variant-selection slice is complete for
@@ -572,6 +575,13 @@ Task template:
       layout. Stale receiver type metadata fails closed with a deterministic
       field-receiver diagnostic; syntax-only or no-fact compatibility keeps
       the old receiver struct-path reconstruction path.
+    - Completed slice: semantic-product-addressed native packed Result
+      payload inference now reads published binding/query type facts for the
+      payload expression before asking expression-kind or packed struct-path
+      reconstruction to identify payload shape. Stale payload type metadata
+      fails closed with a deterministic packed Result diagnostic;
+      syntax-only or no-fact compatibility keeps the old payload
+      reconstruction path.
     - Completed slice: native lowered sum slot allocation now validates and
       consumes published sum-variant metadata before choosing the maximum
       payload slot width across variants on the semantic-product path.
