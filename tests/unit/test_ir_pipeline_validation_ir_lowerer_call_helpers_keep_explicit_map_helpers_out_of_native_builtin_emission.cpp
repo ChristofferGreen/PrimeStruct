@@ -87,6 +87,13 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
     emitInstruction(primec::IrOpcode::LoadLocal, static_cast<uint64_t>(it->second.index));
     return true;
   };
+  auto inferExprKind = [](const primec::Expr &expr, const primec::ir_lowerer::LocalMap &inferLocals) {
+    if (expr.kind != primec::Expr::Kind::Name) {
+      return LocalInfo::ValueKind::Unknown;
+    }
+    auto it = inferLocals.find(expr.name);
+    return it == inferLocals.end() ? LocalInfo::ValueKind::Unknown : it->second.valueKind;
+  };
   auto resolveMapAccessTargetInfo =
       [&](const primec::Expr &targetExpr, MapAccessTargetInfo &out) {
         if (targetExpr.kind != primec::Expr::Kind::Name || targetExpr.name != "items") {
@@ -127,9 +134,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
               resolveMapAccessTargetInfo,
               resolveArrayVectorAccessTargetInfo,
               [](const primec::Expr &, std::string &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-                return LocalInfo::ValueKind::Unknown;
-              },
+              inferExprKind,
               []() { return 0; },
               []() {},
               []() {},
@@ -174,9 +179,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
               resolveMapAccessTargetInfo,
               resolveArrayVectorAccessTargetInfo,
               [](const primec::Expr &, std::string &) { return false; },
-              [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-                return LocalInfo::ValueKind::Unknown;
-              },
+              inferExprKind,
               []() { return 0; },
               []() {},
               []() {},
@@ -280,9 +283,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
                   resolveMapAccessTargetInfo,
                   resolveArrayVectorAccessTargetInfo,
                   [](const primec::Expr &, std::string &) { return false; },
-                  [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-                    return LocalInfo::ValueKind::Unknown;
-                  },
+                  inferExprKind,
                   []() { return 0; },
                   []() {},
                   []() {},
@@ -337,9 +338,7 @@ TEST_CASE("ir lowerer call helpers keep explicit map helpers out of native built
             resolveMapAccessTargetInfo,
             resolveArrayVectorAccessTargetInfo,
             [](const primec::Expr &, std::string &) { return false; },
-            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
-              return LocalInfo::ValueKind::Unknown;
-            },
+            inferExprKind,
             []() { return 0; },
             []() {},
             []() {},
