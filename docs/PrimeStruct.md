@@ -354,6 +354,10 @@ Planned non-template inference migration contract:
   destroy helper dispatch now validate published sum-variant metadata and use the published tag
   value for active-payload comparisons instead of reading tag values from AST variant order.
   Syntax-only compatibility keeps the old AST tag path.
+- Completed native sum construction tag slice: semantic-product-addressed sum construction now
+  validates published sum-variant metadata and stores the published tag value into the active tag
+  slot instead of reading the tag from AST variant order. Syntax-only compatibility keeps the old
+  AST tag path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

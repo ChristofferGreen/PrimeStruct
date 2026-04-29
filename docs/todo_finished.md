@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for sum construction tags
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native sum construction consume published sum-variant tag metadata for
+    active tag storage instead of reading tag values from AST variant order.
+  - implementation_notes:
+    - Keep target sum resolution, pick lowering, active payload move/drop
+      helper dispatch, template inference, and collection migration out of
+      scope.
+    - Preserve syntax-only compatibility by using the AST tag path only when
+      no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before writing the active tag slot.
+  - acceptance:
+    - Native sum construction validates published sum-variant metadata before
+      writing the active tag slot on the semantic-product path.
+    - Stale metadata reports a deterministic lowerer diagnostic.
+    - Syntax-only compatibility keeps the old AST tag value path.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native sum construction has semantic-product
+    authority for active variant tag metadata and the old AST-order path is
+    retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product variant-tag validation for native sum
+    construction, added positive and stale-metadata lowerer coverage, and
+    documented the remaining TODO-4298 work. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for active sum payload tags
   - owner: ai
   - created_at: 2026-04-28

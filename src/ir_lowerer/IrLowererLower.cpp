@@ -52,6 +52,7 @@
 #include <cstring>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>

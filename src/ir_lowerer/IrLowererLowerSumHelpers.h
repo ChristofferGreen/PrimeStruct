@@ -569,8 +569,42 @@
           error = "native backend sum variant was not selected for " + sumDef.fullPath;
           return false;
         }
+        auto resolveConstructionVariantTag = [&]() -> std::optional<int32_t> {
+          const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+          if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
+            return static_cast<int32_t>(selection.variant->variantIndex);
+          }
+          const SemanticProgramSumVariantMetadata *publishedVariant =
+              findSemanticProductSumVariantMetadata(
+                  semanticTargets, sumDef.fullPath, selection.variant->name);
+          const std::string diagnosticSuffix =
+              sumDef.fullPath + " -> " + selection.variant->name;
+          if (publishedVariant == nullptr) {
+            error = "missing semantic-product sum variant metadata for sum construction: " +
+                    diagnosticSuffix;
+            return std::nullopt;
+          }
+          const std::string expectedPayloadType =
+              selection.variant->hasPayload ? sumPayloadTypeText(*selection.variant)
+                                            : std::string{};
+          const uint32_t expectedTagValue =
+              static_cast<uint32_t>(selection.variant->variantIndex);
+          if (publishedVariant->variantIndex != selection.variant->variantIndex ||
+              publishedVariant->tagValue != expectedTagValue ||
+              publishedVariant->hasPayload != selection.variant->hasPayload ||
+              trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
+            error = "stale semantic-product sum variant metadata for sum construction: " +
+                    diagnosticSuffix;
+            return std::nullopt;
+          }
+          return static_cast<int32_t>(publishedVariant->tagValue);
+        };
+        const std::optional<int32_t> activeTag = resolveConstructionVariantTag();
+        if (!activeTag.has_value()) {
+          return false;
+        }
         function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(selection.variant->variantIndex))});
+            {IrOpcode::PushI32, static_cast<uint64_t>(*activeTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 1)});
         if (!selection.variant->hasPayload) {
           return true;
