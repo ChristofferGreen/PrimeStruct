@@ -1623,6 +1623,15 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
           .siteKindId =
               primec::semanticProgramInternCallTargetString(semanticProgram, "local"),
           .nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "pairs"),
+          .collectionFamilyId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "map"),
+          .bindingTypeTextId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "map<i32, i64>"),
+          .elementTypeTextId = primec::InvalidSymbolId,
+          .keyTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+          .valueTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
+          .helperSurfaceId = std::nullopt,
+          .constructorSurfaceId = std::nullopt,
       });
 
   auto refreshCollectionIds = [&]() {
@@ -2217,6 +2226,59 @@ TEST_CASE("ir lowerer completeness checks keep deterministic first-failure order
   CHECK(error ==
         "stale semantic-product local-auto method-call return-kind fact: /main -> local selected");
   CHECK(diagnosticInfo.message == error);
+}
+
+TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivalents") {
+  primec::Program program;
+  primec::Definition mainDef;
+  mainDef.fullPath = "/main";
+  primec::Expr selected;
+  selected.isBinding = true;
+  selected.name = "selected";
+  selected.semanticNodeId = 47;
+  primec::Expr initializer;
+  initializer.kind = primec::Expr::Kind::Call;
+  initializer.name = "/std/collections/vectorAt__t25a78a513414c3bf";
+  selected.args.push_back(initializer);
+  mainDef.statements.push_back(selected);
+  program.definitions.push_back(mainDef);
+
+  primec::SemanticProgram semanticProgram;
+  primec::SemanticProgramLocalAutoFact localAutoFact;
+  localAutoFact.scopePath = "/main";
+  localAutoFact.bindingName = "selected";
+  localAutoFact.bindingTypeText = "i32";
+  localAutoFact.initializerDirectCallResolvedPath =
+      "/std/collections/vectorAt__t25a78a513414c3bf";
+  localAutoFact.initializerDirectCallReturnKind = "i32";
+  localAutoFact.initializerStdlibSurfaceId =
+      primec::StdlibSurfaceId::CollectionsVectorHelpers;
+  localAutoFact.initializerDirectCallStdlibSurfaceId =
+      primec::StdlibSurfaceId::CollectionsVectorHelpers;
+  localAutoFact.semanticNodeId = 47;
+  localAutoFact.bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  localAutoFact.initializerResolvedPathId =
+      primec::semanticProgramInternCallTargetString(semanticProgram,
+                                                    "/std/collections/vectorAt");
+  localAutoFact.initializerDirectCallResolvedPathId =
+      primec::semanticProgramInternCallTargetString(
+          semanticProgram, "/std/collections/vectorAt__t25a78a513414c3bf");
+  localAutoFact.initializerDirectCallReturnKindId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  semanticProgram.localAutoFacts.push_back(localAutoFact);
+
+  std::string error;
+  CHECK(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
+      program, &semanticProgram, error));
+  CHECK(error.empty());
+
+  semanticProgram.localAutoFacts.back().initializerDirectCallStdlibSurfaceId =
+      primec::StdlibSurfaceId::CollectionsMapHelpers;
+  CHECK_FALSE(primec::ir_lowerer::validateSemanticProductLocalAutoCoverage(
+      program, &semanticProgram, error));
+  CHECK(error ==
+        "stale semantic-product local-auto direct-call fact: /main -> local selected");
 }
 
 TEST_CASE("ir preparation rejects semantic-product local-auto path fallback in production mode") {
@@ -2881,6 +2943,7 @@ TEST_CASE("ir lowerer rejects incomplete semantic-product query facts") {
       .callName = "lookup",
       .queryTypeText = "Result<i32, FileError>",
       .bindingTypeText = "Result<i32, FileError>",
+      .receiverBindingTypeText = "",
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "",
@@ -2934,6 +2997,7 @@ TEST_CASE("ir lowerer rejects missing semantic-product query resolved path id") 
       .callName = "lookup",
       .queryTypeText = "Result<i32, FileError>",
       .bindingTypeText = "Result<i32, FileError>",
+      .receiverBindingTypeText = "",
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "i32",
@@ -2987,6 +3051,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query facts") {
       .callName = "lookup",
       .queryTypeText = "Result<i32, FileError>",
       .bindingTypeText = "Result<i32, FileError>",
+      .receiverBindingTypeText = "",
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "i32",
@@ -3031,6 +3096,9 @@ TEST_CASE("ir lowerer rejects stale semantic-product query type metadata") {
       .bindingTypeText = "i32",
       .receiverBindingTypeText = "Map<string, i32>",
       .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
       .sourceLine = 1,
       .sourceColumn = 1,
       .semanticNodeId = 8304,
@@ -3100,6 +3168,7 @@ TEST_CASE("ir lowerer rejects stale semantic-product query result metadata") {
       .callName = "lookup",
       .queryTypeText = "Result<i32, FileError>",
       .bindingTypeText = "Result<i32, FileError>",
+      .receiverBindingTypeText = "",
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "i32",
@@ -3115,14 +3184,29 @@ TEST_CASE("ir lowerer rejects stale semantic-product query result metadata") {
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "i32",
       .resultErrorType = "FileError",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .returnKindId = primec::InvalidSymbolId,
+      .activeEffectIds = {},
+      .activeCapabilityIds = {},
       .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
       .resultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .onErrorHandlerPathId = primec::InvalidSymbolId,
+      .onErrorErrorTypeId = primec::InvalidSymbolId,
   });
 
   std::string error;
@@ -3358,14 +3442,29 @@ TEST_CASE("ir lowerer rejects stale semantic-product try result metadata") {
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "return",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "i32",
       .resultErrorType = "FileError",
+      .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .returnKindId = primec::InvalidSymbolId,
+      .activeEffectIds = {},
+      .activeCapabilityIds = {},
       .resultValueTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
       .resultErrorTypeId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
+      .onErrorHandlerPathId = primec::InvalidSymbolId,
+      .onErrorErrorTypeId = primec::InvalidSymbolId,
   });
 
   std::string error;
@@ -3441,9 +3540,28 @@ TEST_CASE("ir lowerer rejects stale semantic-product try context return kind") {
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
       .hasOnError = false,
+      .onErrorHandlerPath = "",
+      .onErrorErrorType = "",
+      .onErrorBoundArgCount = 0,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
       .returnKindId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .activeEffectIds = {},
+      .activeCapabilityIds = {},
+      .resultValueTypeId = primec::InvalidSymbolId,
+      .resultErrorTypeId = primec::InvalidSymbolId,
+      .onErrorHandlerPathId = primec::InvalidSymbolId,
+      .onErrorErrorTypeId = primec::InvalidSymbolId,
   });
 
   primec::IrLowerer lowerer;
@@ -3502,11 +3620,26 @@ TEST_CASE("ir lowerer rejects stale semantic-product try on_error facts") {
   });
   semanticProgram.callableSummaries.push_back(primec::SemanticProgramCallableSummary{
       .returnKind = "i32",
+      .isCompute = false,
+      .isUnsafe = false,
+      .activeEffects = {},
+      .activeCapabilities = {},
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
       .hasOnError = true,
       .onErrorHandlerPath = "/handler",
       .onErrorErrorType = "FileError",
       .onErrorBoundArgCount = 1,
+      .semanticNodeId = 0,
+      .provenanceHandle = 0,
       .fullPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+      .returnKindId = primec::InvalidSymbolId,
+      .activeEffectIds = {},
+      .activeCapabilityIds = {},
+      .resultValueTypeId = primec::InvalidSymbolId,
+      .resultErrorTypeId = primec::InvalidSymbolId,
       .onErrorHandlerPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/handler"),
       .onErrorErrorTypeId = primec::semanticProgramInternCallTargetString(semanticProgram, "FileError"),
   });

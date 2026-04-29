@@ -1306,13 +1306,12 @@ void publishQueryFacts(SemanticPublicationBuilderState &state,
       queryFacts.size());
   state.semanticProgram.queryFacts.reserve(queryFacts.size());
   for (auto &snapshotEntry : queryFacts) {
-    const std::string receiverBindingTypeText =
-        bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
     SemanticProgramQueryFact entry;
     entry.scopePath = std::move(snapshotEntry.scopePath);
     entry.callName = std::move(snapshotEntry.callName);
     entry.queryTypeText = std::move(snapshotEntry.typeText);
     entry.bindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.binding);
+    entry.receiverBindingTypeText = bindingTypeTextForSemanticProduct(snapshotEntry.receiverBinding);
     entry.hasResultType = snapshotEntry.hasResultType;
     entry.resultTypeHasValue = snapshotEntry.resultTypeHasValue;
     entry.resultValueType = std::move(snapshotEntry.resultValueType);
@@ -1330,7 +1329,7 @@ void publishQueryFacts(SemanticPublicationBuilderState &state,
     entry.bindingTypeTextId =
         semanticProgramInternCallTargetString(state.semanticProgram, entry.bindingTypeText);
     entry.receiverBindingTypeTextId =
-        semanticProgramInternCallTargetString(state.semanticProgram, receiverBindingTypeText);
+        semanticProgramInternCallTargetString(state.semanticProgram, entry.receiverBindingTypeText);
     entry.resultValueTypeId =
         semanticProgramInternCallTargetString(state.semanticProgram, entry.resultValueType);
     entry.resultErrorTypeId =

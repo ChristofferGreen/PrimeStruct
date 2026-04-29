@@ -86,6 +86,7 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
       .callName = "greater_than",
       .queryTypeText = "bool",
       .bindingTypeText = "bool",
+      .receiverBindingTypeText = "",
       .hasResultType = false,
       .resultTypeHasValue = false,
       .resultValueType = "",

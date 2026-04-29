@@ -8,6 +8,7 @@
 #include "primec/SoaPathHelpers.h"
 
 #include <cctype>
+#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -616,6 +617,7 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
       }
       auto validateInitializerCallPath = [&](SymbolId pathId,
                                              SymbolId returnKindId,
+                                             std::optional<StdlibSurfaceId> callSurfaceId,
                                              const char *missingLabel,
                                              const char *staleLabel) {
         if (pathId == InvalidSymbolId) {
@@ -626,8 +628,14 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
                   " path id: " + siteDescription;
           return false;
         }
-        if (localAutoFact->initializerResolvedPathId != InvalidSymbolId &&
-            pathId != localAutoFact->initializerResolvedPathId) {
+        const bool sameInitializerPath =
+            localAutoFact->initializerResolvedPathId == InvalidSymbolId ||
+            pathId == localAutoFact->initializerResolvedPathId;
+        const bool samePublishedStdlibSurface =
+            localAutoFact->initializerStdlibSurfaceId.has_value() &&
+            callSurfaceId.has_value() &&
+            *localAutoFact->initializerStdlibSurfaceId == *callSurfaceId;
+        if (!sameInitializerPath && !samePublishedStdlibSurface) {
           error = std::string("stale semantic-product local-auto ") + staleLabel +
                   " fact: " + siteDescription;
           return false;
@@ -659,12 +667,14 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
       };
       if (!validateInitializerCallPath(localAutoFact->initializerDirectCallResolvedPathId,
                                        localAutoFact->initializerDirectCallReturnKindId,
+                                       localAutoFact->initializerDirectCallStdlibSurfaceId,
                                        "direct-call",
                                        "direct-call")) {
         return false;
       }
       if (!validateInitializerCallPath(localAutoFact->initializerMethodCallResolvedPathId,
                                        localAutoFact->initializerMethodCallReturnKindId,
+                                       localAutoFact->initializerMethodCallStdlibSurfaceId,
                                        "method-call",
                                        "method-call")) {
         return false;

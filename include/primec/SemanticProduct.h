@@ -298,6 +298,7 @@ struct SemanticProgramQueryFact {
   std::string callName;
   std::string queryTypeText;
   std::string bindingTypeText;
+  std::string receiverBindingTypeText;
   bool hasResultType = false;
   bool resultTypeHasValue = false;
   std::string resultValueType;

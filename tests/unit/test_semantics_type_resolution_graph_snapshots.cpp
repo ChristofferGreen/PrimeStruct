@@ -6349,6 +6349,7 @@ TEST_CASE("semantic product formatter exact golden is stable") {
       .callName = "lookup",
       .queryTypeText = "Result<i32, MyError>",
       .bindingTypeText = "Result<i32, MyError>",
+      .receiverBindingTypeText = "",
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "i32",

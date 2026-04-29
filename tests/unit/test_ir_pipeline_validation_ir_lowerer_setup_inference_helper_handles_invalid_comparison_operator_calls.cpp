@@ -894,6 +894,7 @@ TEST_CASE("ir lowerer statement binding helper uses semantic query facts for def
       .callName = "loadValue",
       .queryTypeText = "Result<i64, ParseError>",
       .bindingTypeText = "Result<i64, ParseError>",
+      .receiverBindingTypeText = "",
       .hasResultType = true,
       .resultTypeHasValue = true,
       .resultValueType = "i64",
