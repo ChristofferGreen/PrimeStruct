@@ -554,6 +554,66 @@ TEST_CASE("compile pipeline semantic handoff gate reaches lowering and rejects s
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
+TEST_CASE("semantic product callable lookup prefers definition over same-path execution") {
+  const std::string source =
+      "[return<i32>]\n"
+      "main() {\n"
+      "  return(0i32)\n"
+      "}\n"
+      "\n"
+      "[return<void>]\n"
+      "log([i32] value) {\n"
+      "  return()\n"
+      "}\n"
+      "\n"
+      "log(1i32)\n";
+
+  primec::Program program;
+  primec::SemanticProgram semanticProgram;
+  std::string error;
+  REQUIRE(parseAndValidateThroughCompilePipeline(
+      source, program, &semanticProgram, error, {}, {}));
+  CHECK(error.empty());
+
+  std::size_t logDefinitionSummaries = 0;
+  std::size_t logExecutionSummaries = 0;
+  for (const auto *summary :
+       primec::semanticProgramCallableSummaryView(semanticProgram)) {
+    REQUIRE(summary != nullptr);
+    if (primec::semanticProgramCallableSummaryFullPath(
+            semanticProgram, *summary) != "/log") {
+      continue;
+    }
+    if (summary->isExecution) {
+      ++logExecutionSummaries;
+    } else {
+      ++logDefinitionSummaries;
+      CHECK(summary->returnKind == "void");
+    }
+  }
+  CHECK(logDefinitionSummaries == 1);
+  CHECK(logExecutionSummaries == 1);
+
+  const auto *publishedLogSummary =
+      primec::semanticProgramLookupPublishedCallableSummary(
+          semanticProgram, "/log");
+  REQUIRE(publishedLogSummary != nullptr);
+  CHECK_FALSE(publishedLogSummary->isExecution);
+  CHECK(publishedLogSummary->returnKind == "void");
+
+  std::string resultMetadataError;
+  CHECK(primec::ir_lowerer::validateSemanticProductResultMetadataCompleteness(
+      &semanticProgram, resultMetadataError));
+  CHECK(resultMetadataError.empty());
+
+  primec::Options options;
+  options.entryPath = "/main";
+  primec::IrModule ir;
+  primec::IrPreparationFailure failure;
+  CHECK(primec::prepareIrModule(
+      program, &semanticProgram, options, primec::IrValidationTarget::Vm, ir, failure));
+}
+
 TEST_CASE("compile pipeline freezes published semantic-product string scratch storage") {
   const std::filesystem::path tempPath = makeTempIrPipelineSourcePath();
   {

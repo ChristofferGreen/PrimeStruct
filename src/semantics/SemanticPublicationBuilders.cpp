@@ -965,9 +965,17 @@ void publishCallableSummaryFacts(
     state.ensureModuleResolvedArtifacts(snapshotEntry.fullPath)
         .callableSummaryIndices.push_back(entryIndex);
     if (state.semanticProgram.callableSummaries.back().fullPathId != InvalidSymbolId) {
-      state.semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(
-          state.semanticProgram.callableSummaries.back().fullPathId,
-          entryIndex);
+      auto &callableSummaryIndicesByPathId =
+          state.semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId;
+      if (snapshotEntry.isExecution) {
+        callableSummaryIndicesByPathId.try_emplace(
+            state.semanticProgram.callableSummaries.back().fullPathId,
+            entryIndex);
+      } else {
+        callableSummaryIndicesByPathId.insert_or_assign(
+            state.semanticProgram.callableSummaries.back().fullPathId,
+            entryIndex);
+      }
     }
   }
 }

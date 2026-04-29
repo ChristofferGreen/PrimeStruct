@@ -1208,7 +1208,9 @@ TEST_CASE("compile pipeline publishes an initial semantic product shell") {
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("routingLookups.importAliasTargetPathIdsByNameId.try_emplace(") !=
         std::string::npos);
-  CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.callableSummaryIndicesByPathId.insert_or_assign(") !=
+  CHECK(semanticPublicationBuildersSource.find("callableSummaryIndicesByPathId.try_emplace(") !=
+        std::string::npos);
+  CHECK(semanticPublicationBuildersSource.find("callableSummaryIndicesByPathId.insert_or_assign(") !=
         std::string::npos);
   CHECK(semanticPublicationBuildersSource.find("state.semanticProgram.publishedRoutingLookups.localAutoFactIndicesByExpr.insert_or_assign(") !=
         std::string::npos);
