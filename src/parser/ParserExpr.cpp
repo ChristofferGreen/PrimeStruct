@@ -654,6 +654,9 @@ bool Parser::parseExpr(Expr &expr, const std::string &namespacePrefix) {
       continue;
     }
     if (match(TokenKind::LBracket)) {
+      if (tokens_[pos_].line > startLine) {
+        break;
+      }
       if (looksLikeBindingAfterExpr()) {
         break;
       }

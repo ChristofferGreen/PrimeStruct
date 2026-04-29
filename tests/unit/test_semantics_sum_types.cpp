@@ -531,6 +531,32 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("target-typed generic sum construction accepts explicit payload variants") {
+  const std::string source = R"(
+[sum]
+Result<T, E> {
+  [T] ok
+  [E] err
+}
+
+[return<Result<T, E>>]
+makeOk<T, E>([T] value) {
+  [Result<T, E>] result{[ok] value}
+  return(result)
+}
+
+[return<i32>]
+main() {
+  [Result<i32, string>] result{makeOk<i32, string>(7i32)}
+  return(0i32)
+}
+)";
+
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("inferred sum construction accepts unique target-typed payloads") {
   const std::string source = R"(
 [struct]

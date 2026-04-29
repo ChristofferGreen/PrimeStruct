@@ -321,16 +321,6 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
         "sum construction target mismatch for " + sumDef->fullPath +
         ": got " + explicitSumBinding.typeName);
   }
-  if (initializer.argNames.size() == 1 && initializer.argNames.front().has_value()) {
-    const std::string &variantName = *initializer.argNames.front();
-    for (const auto &variant : sumDef->sumVariants) {
-      if (variant.name == variantName && !variant.hasPayload) {
-        return failInferredSumDiagnostic(
-            "unit sum variant does not accept payload: " +
-            sumDef->fullPath + "/" + variant.name);
-      }
-    }
-  }
   if (isEmptyBraceBlockArgument(initializer)) {
     if (defaultUnitVariant(*sumDef) != nullptr) {
       return true;
@@ -430,6 +420,66 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
         normalizeBindingTypeName(actualBinding.typeName));
     return actualKind == expectedKind;
   };
+
+  auto validatePayloadAgainstVariant =
+      [&](const Expr &payloadExpr, const SumVariant &selectedVariant) -> bool {
+    if (!validateExpr(params, locals, payloadExpr)) {
+      return false;
+    }
+
+    ParameterInfo payloadParam;
+    payloadParam.name = selectedVariant.name;
+    payloadParam.binding.typeName = selectedVariant.payloadType;
+    if (!selectedVariant.payloadTemplateArgs.empty()) {
+      payloadParam.binding.typeTemplateArg =
+          joinTemplateArgs(selectedVariant.payloadTemplateArgs);
+    }
+
+    const BuiltinCollectionDispatchResolverAdapters dispatchResolverAdapters;
+    const BuiltinCollectionDispatchResolvers dispatchResolvers =
+        makeBuiltinCollectionDispatchResolvers(params,
+                                               locals,
+                                               dispatchResolverAdapters);
+    const std::string resolved = sumDef->fullPath;
+    const std::string diagnosticResolved = sumDef->fullPath;
+    Expr contextExpr = initializer;
+    contextExpr.namespacePrefix = sumDef->namespacePrefix;
+    ExprArgumentValidationContext argumentContext;
+    argumentContext.callExpr = &contextExpr;
+    argumentContext.resolved = &resolved;
+    argumentContext.diagnosticResolved = &diagnosticResolved;
+    argumentContext.params = &params;
+    argumentContext.locals = &locals;
+    argumentContext.dispatchResolvers = &dispatchResolvers;
+    return validateArgumentTypeAgainstParam(
+        payloadExpr,
+        payloadParam,
+        payloadParam.binding.typeName,
+        bindingTypeText(payloadParam.binding),
+        argumentContext);
+  };
+
+  if (hasNamedArguments(initializer.argNames)) {
+    if (initializer.args.size() != 1 || initializer.argNames.size() != 1 ||
+        !initializer.argNames.front().has_value()) {
+      return failInferredSumDiagnostic(
+          "sum construction requires exactly one explicit variant for " +
+          sumDef->fullPath);
+    }
+    const std::string &variantName = *initializer.argNames.front();
+    const SumVariant *selectedVariant = findVariantByName(*sumDef, variantName);
+    if (selectedVariant == nullptr) {
+      return failInferredSumDiagnostic(
+          "unknown sum variant on " + sumDef->fullPath + ": " + variantName);
+    }
+    if (!selectedVariant->hasPayload) {
+      return failInferredSumDiagnostic(
+          "unit sum variant does not accept payload: " +
+          sumDef->fullPath + "/" + selectedVariant->name);
+    }
+    return validatePayloadAgainstVariant(initializer.args.front(),
+                                         *selectedVariant);
+  }
 
   auto isDirectResultOkInitializer = [&]() {
     const std::string normalizedSumPath = normalizeBindingTypeName(sumDef->fullPath);
@@ -555,41 +605,8 @@ bool SemanticsValidator::validateTargetTypedSumInitializer(
         ": " + variantNamesList(matches));
   }
 
-  if (!validateExpr(params, locals, initializer)) {
-    return false;
-  }
-
   const SumVariant &selectedVariant = *matches.front();
-  ParameterInfo payloadParam;
-  payloadParam.name = selectedVariant.name;
-  payloadParam.binding.typeName = selectedVariant.payloadType;
-  if (!selectedVariant.payloadTemplateArgs.empty()) {
-    payloadParam.binding.typeTemplateArg =
-        joinTemplateArgs(selectedVariant.payloadTemplateArgs);
-  }
-
-  const BuiltinCollectionDispatchResolverAdapters dispatchResolverAdapters;
-  const BuiltinCollectionDispatchResolvers dispatchResolvers =
-      makeBuiltinCollectionDispatchResolvers(params,
-                                             locals,
-                                             dispatchResolverAdapters);
-  const std::string resolved = sumDef->fullPath;
-  const std::string diagnosticResolved = sumDef->fullPath;
-  Expr contextExpr = initializer;
-  contextExpr.namespacePrefix = sumDef->namespacePrefix;
-  ExprArgumentValidationContext argumentContext;
-  argumentContext.callExpr = &contextExpr;
-  argumentContext.resolved = &resolved;
-  argumentContext.diagnosticResolved = &diagnosticResolved;
-  argumentContext.params = &params;
-  argumentContext.locals = &locals;
-  argumentContext.dispatchResolvers = &dispatchResolvers;
-  return validateArgumentTypeAgainstParam(
-      initializer,
-      payloadParam,
-      payloadParam.binding.typeName,
-      bindingTypeText(payloadParam.binding),
-      argumentContext);
+  return validatePayloadAgainstVariant(initializer, selectedVariant);
 }
 
 bool SemanticsValidator::validateExplicitSumConstructorExpr(

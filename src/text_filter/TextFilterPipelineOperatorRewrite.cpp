@@ -196,7 +196,12 @@ bool parsePrimaryExpression(const std::string &input, size_t &pos, std::string &
     while (scan < input.size() && std::isspace(static_cast<unsigned char>(input[scan]))) {
       ++scan;
     }
+    const size_t lineBreak = input.find_first_of("\r\n", pos);
+    const bool sawLineBreak = lineBreak != std::string::npos && lineBreak < scan;
     if (scan < input.size() && isCommentStart(input, scan)) {
+      break;
+    }
+    if (sawLineBreak && scan < input.size() && input[scan] == '[') {
       break;
     }
     if (scan < input.size() && input[scan] == '<' && looksLikeTemplateList(input, scan)) {

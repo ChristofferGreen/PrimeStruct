@@ -94,6 +94,12 @@ This file stores durable session-derived facts that are useful in later work. Ke
 - Fact: `docs/source_lock_inventory.md` is the canonical inventory for source-lock tests that read private `src/` files, private headers, public headers as architecture proxies, or checked-in docs/examples, including the existing private semantics fragment locks.
 - Evidence: `tests/unit/test_ir_pipeline_validation_fragments/test_ir_pipeline_validation_semantics_expr_source_delegation_01.h` explicitly loads `SemanticsValidatorPrivateExprValidation.h` and many sibling fragments with `readText(...)`; `docs/source_lock_inventory.md` classifies the wider source-lock surface and records intended replacement contracts.
 
+### sum-variant-envelopes-are-line-sensitive
+- Updated: 2026-04-29
+- Tags: parser, text-filter, sums
+- Fact: A bracketed sum payload envelope on the line after a bare unit variant must stay a separate variant declaration instead of being rewritten or parsed as postfix indexing on the previous name.
+- Evidence: Release triage showed `Maybe<T> { none\n  [T] some }` becoming `at(none, T)` before `TextFilterPipelineOperatorRewrite` and `ParserExpr` learned to stop cross-line bracket chaining.
+
 ### text-filter-collect-diagnostics-locks-stdlib-fallback-messages
 - Updated: 2026-04-20
 - Tags: tests, diagnostics, text-filter

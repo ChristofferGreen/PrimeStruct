@@ -143,6 +143,22 @@ TEST_CASE("rewrites chained assignment right associative") {
   CHECK(output.find("assign(a, assign(b, c))") != std::string::npos);
 }
 
+TEST_CASE("operator rewrite keeps sum unit variant before payload envelope") {
+  const std::string source =
+      "[sum]\n"
+      "Maybe<T> {\n"
+      "  none\n"
+      "  [T] some\n"
+      "}\n";
+  primec::TextFilterPipeline pipeline;
+  std::string output;
+  std::string error;
+  CHECK(pipeline.apply(source, output, error));
+  CHECK(error.empty());
+  CHECK(output.find("at(none, T)") == std::string::npos);
+  CHECK(output.find("none\n  [T] some") != std::string::npos);
+}
+
 TEST_CASE("rewrites plus operator with float literals") {
   const std::string source = "main(){ return(1.5f+2.5f) }\n";
   primec::TextFilterPipeline pipeline;
