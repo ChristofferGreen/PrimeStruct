@@ -6,6 +6,38 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use query facts for pick methods
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native
+    `pick(receiver.makeValue())` target sum resolution consume published query
+    facts and the callee's published return fact instead of excluding method
+    calls from the graph-backed pick target path.
+  - implementation_notes:
+    - Preserve direct sum-constructor handling before query-fact lookup.
+    - Keep broader template inference and collection migration out of scope.
+    - Reuse the direct-call query fact authority and return-fact path lookup
+      from the prior pick query-target slice.
+  - acceptance:
+    - Method-call `pick(receiver.makeValue())` targets resolve through
+      published query facts plus published sum metadata.
+    - Query facts that contradict the callee return fact fail before native
+      pick lowering dispatches on stale sum variants.
+    - Incomplete query facts fail with a deterministic pick-target diagnostic.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native method-call pick target resolution has
+    semantic-product authority and direct sum constructors remain on the
+    constructor path.
+  - finished_at: 2026-04-29
+  - evidence: Routed semantic-product-addressed method-call pick targets
+    through published query facts, added lowerer contract coverage for the
+    successful method-call path plus stale/incomplete query facts, and
+    documented the remaining TODO-4298 work. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Use query facts for pick calls
   - owner: ai
   - created_at: 2026-04-28

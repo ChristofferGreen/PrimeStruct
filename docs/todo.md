@@ -369,7 +369,8 @@ Task template:
     collection specialization, direct-call, method-call, and bridge-path metadata
     diagnostic slices are complete. The native pick target sum-resolution slice
     is complete for named `pick(value)` targets. The native pick query-target
-    slice is complete for direct `pick(makeValue())` targets.
+    slice is complete for direct `pick(makeValue())` targets. The native pick
+    method-target slice is complete for `pick(receiver.makeValue())` targets.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -502,6 +503,11 @@ Task template:
       reconstruction. Missing/incomplete query facts or query facts that
       contradict the callee return fact fail closed with deterministic
       pick-target diagnostics.
+    - Completed slice: native `pick(receiver.makeValue())` lowering now uses
+      the same published query fact plus callee return fact authority for
+      method-call pick targets; direct sum constructors stay on the constructor
+      path, and method-call targets no longer depend on target-name
+      reconstruction.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

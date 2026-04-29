@@ -338,6 +338,10 @@ Planned non-template inference migration contract:
   published sum metadata before type-name reconstruction can answer. Missing or incomplete query
   facts and query facts that contradict the callee return fact fail closed with deterministic
   pick-target diagnostics.
+- Completed native pick method-target slice: semantic-product-addressed `pick(receiver.makeValue())`
+  lowering now routes method-call targets through the same published query fact and callee return
+  fact authority as direct-call targets. Direct sum constructors remain on the constructor path;
+  method-call pick targets no longer depend on target-name reconstruction to identify the sum.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

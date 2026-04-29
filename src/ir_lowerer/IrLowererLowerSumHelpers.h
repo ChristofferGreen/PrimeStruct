@@ -1049,11 +1049,13 @@
         return requirePublishedSumMetadata(*semanticSumDef, targetExpr);
       }
 
-      if (targetExpr.kind == Expr::Kind::Call && !targetExpr.isMethodCall) {
-        if (const Definition *constructorSum =
-                resolveSumDefinitionForTypeText(targetExpr.name, targetExpr.namespacePrefix);
-            constructorSum != nullptr) {
-          return requirePublishedSumMetadata(*constructorSum, targetExpr);
+      if (targetExpr.kind == Expr::Kind::Call) {
+        if (!targetExpr.isMethodCall) {
+          if (const Definition *constructorSum =
+                  resolveSumDefinitionForTypeText(targetExpr.name, targetExpr.namespacePrefix);
+              constructorSum != nullptr) {
+            return requirePublishedSumMetadata(*constructorSum, targetExpr);
+          }
         }
         if (targetExpr.semanticNodeId != 0) {
           const SemanticProgramQueryFact *queryFact =
