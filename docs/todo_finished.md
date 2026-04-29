@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use pick result facts
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes native
+    `pick(...)` aggregate-result inference read published binding/query type
+    facts for each arm value expression before falling back to branch-local
+    struct-path reconstruction.
+  - implementation_notes:
+    - Keep pick target resolution, arm tag dispatch, payload binding,
+      Result-combinator lowering, template inference, and collection migration
+      out of scope.
+    - Preserve syntax-only and no-fact compatibility by retaining branch-local
+      struct-path reconstruction only when no semantic binding/query fact is
+      available for the arm value expression.
+    - Fail closed when published arm value type metadata exists but cannot
+      identify a scalar or struct result shape.
+  - acceptance:
+    - Pick aggregate-result inference consults published binding/query type
+      facts before calling `inferStructExprPath` on branch-local state.
+    - Stale published arm value type metadata reports a deterministic pick
+      aggregate-result diagnostic instead of silently falling through to local
+      reconstruction.
+    - Source-contract coverage proves semantic-product arm value shape
+      resolution precedes the compatibility fallback.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native pick aggregate-result inference consumes
+    published binding/query facts for arm value shape matching, with old local
+    reconstruction retained only as syntax-only or no-fact compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Routed native pick aggregate-result inference through published
+    binding/query type facts before branch-local struct-path fallback, added
+    source-contract coverage, and documented the remaining TODO-4298 work.
+    Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use initializer facts for sums
   - owner: ai
   - created_at: 2026-04-28

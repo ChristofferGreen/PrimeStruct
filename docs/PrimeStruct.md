@@ -360,6 +360,13 @@ Planned non-template inference migration contract:
   inference, and payload binding now use the shared sum-variant metadata
   helpers for tag and payload storage decisions instead of carrying a
   pick-local duplicate validator and published-variant pointer.
+- Completed native pick aggregate-result source slice:
+  semantic-product-addressed `pick(...)` aggregate-result inference now reads
+  published binding/query type facts for arm value expressions before
+  branch-local struct-path reconstruction can identify aggregate result shape.
+  Stale published arm value metadata fails closed with a deterministic pick
+  aggregate-result diagnostic; syntax-only or no-fact compatibility keeps the
+  old branch-local reconstruction path.
 - Completed native sum slot-layout slice: semantic-product-addressed lowered sum
   slot allocation now validates and consumes published sum-variant metadata for
   every variant before choosing the maximum payload slot width. Syntax-only

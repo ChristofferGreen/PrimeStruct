@@ -783,6 +783,29 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
         std::string::npos);
   CHECK(source.find("*sumDef, *variant, arm.args.front(), sumPtrLocal, branchLocals") !=
         std::string::npos);
+  const size_t aggregateResolverPos =
+      source.find("resolveSemanticProductPickAggregateResultStructPath");
+  REQUIRE(aggregateResolverPos != std::string::npos);
+  const size_t aggregateBindingFactPos =
+      source.find("findSemanticProductBindingFact(semanticTargets, valueExpr)",
+                  aggregateResolverPos);
+  const size_t aggregateQueryFactPos =
+      source.find("findSemanticProductQueryFact(semanticTargets, valueExpr)",
+                  aggregateResolverPos);
+  const size_t staleAggregatePos =
+      source.find("stale semantic-product pick aggregate result metadata",
+                  aggregateResolverPos);
+  const size_t aggregateFallbackPos =
+      source.find("branchStructPath = inferStructExprPath(*valueExpr, branchLocals)",
+                  aggregateResolverPos);
+  REQUIRE(aggregateBindingFactPos != std::string::npos);
+  REQUIRE(aggregateQueryFactPos != std::string::npos);
+  REQUIRE(staleAggregatePos != std::string::npos);
+  REQUIRE(aggregateFallbackPos != std::string::npos);
+  CHECK(aggregateBindingFactPos < aggregateFallbackPos);
+  CHECK(aggregateQueryFactPos < aggregateFallbackPos);
+  CHECK(source.find("if (!resolvedBySemanticProduct.has_value())", aggregateResolverPos) !=
+        std::string::npos);
   CHECK(source.find("validateSemanticProductPickArmVariant") == std::string::npos);
   CHECK(source.find("makePickPayloadLocalInfo(sumDef, *variant, publishedVariant, payloadInfo)") ==
         std::string::npos);

@@ -1803,6 +1803,74 @@
       return true;
     };
 
+    auto resolveSemanticProductPickAggregateResultStructPath =
+        [&](const Expr &valueExpr,
+            const Definition &sumDef,
+            const SumVariant &variant,
+            std::string &structPathOut) -> std::optional<bool> {
+      structPathOut.clear();
+      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+      if (!semanticTargets.hasSemanticProduct || valueExpr.semanticNodeId == 0) {
+        return std::nullopt;
+      }
+
+      std::vector<std::string> candidateTypeTexts;
+      if (const SemanticProgramBindingFact *bindingFact =
+              findSemanticProductBindingFact(semanticTargets, valueExpr);
+          bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
+        candidateTypeTexts.push_back(bindingFact->bindingTypeText);
+      }
+      if (const SemanticProgramQueryFact *queryFact =
+              findSemanticProductQueryFact(semanticTargets, valueExpr);
+          queryFact != nullptr) {
+        if (!queryFact->bindingTypeText.empty()) {
+          candidateTypeTexts.push_back(queryFact->bindingTypeText);
+        }
+        if (!queryFact->queryTypeText.empty()) {
+          candidateTypeTexts.push_back(queryFact->queryTypeText);
+        }
+      }
+      if (candidateTypeTexts.empty()) {
+        return std::nullopt;
+      }
+
+      auto resolveTypeText = [&](const std::string &typeText) {
+        const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+        if (normalizedTypeText.empty()) {
+          return false;
+        }
+        if (valueKindFromTypeName(normalizedTypeText) != LocalInfo::ValueKind::Unknown) {
+          return true;
+        }
+
+        auto tryResolveStruct = [&](const std::string &namespacePrefix) {
+          std::string candidateStructPath;
+          if (resolveStructTypeName(normalizedTypeText,
+                                    namespacePrefix,
+                                    candidateStructPath)) {
+            structPathOut = std::move(candidateStructPath);
+            return true;
+          }
+          return false;
+        };
+        if (tryResolveStruct(valueExpr.namespacePrefix) ||
+            tryResolveStruct(function.name) ||
+            tryResolveStruct(sumDef.namespacePrefix)) {
+          return true;
+        }
+        return false;
+      };
+
+      for (const std::string &typeText : candidateTypeTexts) {
+        if (resolveTypeText(typeText)) {
+          return true;
+        }
+      }
+      error = "stale semantic-product pick aggregate result metadata: " +
+              sumDef.fullPath + "/" + variant.name;
+      return false;
+    };
+
     auto inferPickAggregateResult =
         [&](const Expr &expr,
             const Definition &sumDef,
@@ -1846,7 +1914,16 @@
           error = "native backend requires pick arms to produce a value";
           return false;
         }
-        const std::string branchStructPath = inferStructExprPath(*valueExpr, branchLocals);
+        std::string branchStructPath;
+        const std::optional<bool> resolvedBySemanticProduct =
+            resolveSemanticProductPickAggregateResultStructPath(
+                *valueExpr, sumDef, *variant, branchStructPath);
+        if (resolvedBySemanticProduct.has_value() && !*resolvedBySemanticProduct) {
+          return false;
+        }
+        if (!resolvedBySemanticProduct.has_value()) {
+          branchStructPath = inferStructExprPath(*valueExpr, branchLocals);
+        }
         if (branchStructPath.empty()) {
           structPathOut.clear();
           return true;
