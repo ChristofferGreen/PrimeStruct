@@ -504,7 +504,7 @@ TEST_CASE("ir lowerer inline call context helper prepares scoped setup") {
         infoOut = returnInfo;
         return true;
       },
-      [](const primec::Definition &) { return false; },
+      [](const primec::Definition &) { return true; },
       inlineStack,
       loweredCallTargets,
       onErrorByDef,
@@ -598,27 +598,53 @@ TEST_CASE("ir lowerer inline call context helper reports setup diagnostics") {
   CHECK(inlineStack.count(generatedVectorStruct.fullPath) == 1u);
   CHECK(loweredCallTargets.count(generatedVectorStruct.fullPath) == 1u);
 
-  primec::Definition generatedVectorHelper;
-  generatedVectorHelper.fullPath = "/std/collections/experimental_vector/Vector__ti32/Move";
+  primec::Definition generatedVectorCtorHelper;
+  generatedVectorCtorHelper.fullPath = "/std/collections/experimental_vector/vector__ti32";
   error.clear();
   inlineStack.clear();
   loweredCallTargets.clear();
-  inlineStack.insert(generatedVectorHelper.fullPath);
-  CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
-      generatedVectorHelper,
+  inlineStack.insert(generatedVectorCtorHelper.fullPath);
+  CHECK(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      generatedVectorCtorHelper,
       false,
       [](const std::string &, primec::ir_lowerer::ReturnInfo &infoOut) {
         infoOut = primec::ir_lowerer::ReturnInfo{};
         infoOut.returnsVoid = false;
         return true;
       },
-      [](const primec::Definition &) { return true; },
+      [](const primec::Definition &) { return false; },
       inlineStack,
       loweredCallTargets,
       onErrorByDef,
       out,
       error));
-  CHECK(error == "native backend does not support recursive calls: " + generatedVectorHelper.fullPath);
+  CHECK(error.empty());
+  CHECK_FALSE(out.structDefinition);
+  CHECK_FALSE(out.insertedInlineStackEntry);
+  CHECK(inlineStack.count(generatedVectorCtorHelper.fullPath) == 1u);
+  CHECK(loweredCallTargets.count(generatedVectorCtorHelper.fullPath) == 1u);
+
+  primec::Definition generatedVectorMoveHelper;
+  generatedVectorMoveHelper.fullPath = "/std/collections/experimental_vector/Vector__ti32/Move";
+  error.clear();
+  inlineStack.clear();
+  loweredCallTargets.clear();
+  inlineStack.insert(generatedVectorMoveHelper.fullPath);
+  CHECK_FALSE(primec::ir_lowerer::prepareInlineDefinitionCallContext(
+      generatedVectorMoveHelper,
+      false,
+      [](const std::string &, primec::ir_lowerer::ReturnInfo &infoOut) {
+        infoOut = primec::ir_lowerer::ReturnInfo{};
+        infoOut.returnsVoid = false;
+        return true;
+      },
+      [](const primec::Definition &) { return false; },
+      inlineStack,
+      loweredCallTargets,
+      onErrorByDef,
+      out,
+      error));
+  CHECK(error == "native backend does not support recursive calls: " + generatedVectorMoveHelper.fullPath);
   CHECK(loweredCallTargets.empty());
 
   error.clear();
