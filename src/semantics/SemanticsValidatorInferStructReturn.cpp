@@ -165,6 +165,9 @@ std::string SemanticsValidator::inferStructReturnPathImpl(
     if (isAssignCall(expr) && expr.args.size() == 2) {
       return inferStructReturnPath(expr.args[1], params, locals);
     }
+    if (isPickCall(expr)) {
+      return inferPickExprStructReturnPath(expr, params, locals);
+    }
     std::string builtinName;
     if (getBuiltinOperatorName(expr, builtinName) && (builtinName == "plus" || builtinName == "minus") &&
         expr.args.size() == 2) {

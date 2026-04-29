@@ -11,6 +11,15 @@
       const Expr &expr,
       const std::vector<ParameterInfo> &params,
       const std::unordered_map<std::string, BindingInfo> &locals);
+  bool inferPickExprTypeText(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals,
+      std::string &typeTextOut);
+  std::string inferPickExprStructReturnPath(
+      const Expr &expr,
+      const std::vector<ParameterInfo> &params,
+      const std::unordered_map<std::string, BindingInfo> &locals);
   bool ensureDefinitionReturnKindReady(const Definition &def);
   bool inferDefinitionReturnKind(const Definition &def);
   struct DefinitionReturnInferenceState {

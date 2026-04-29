@@ -1136,6 +1136,52 @@ main() {
 }
 
 TEST_CASE("pick validates branch payload types and value compatibility") {
+  SUBCASE("struct-valued pick results flow to struct parameters") {
+    const std::string source = R"(
+[struct]
+Payload {
+  [i32] value
+  [i32] bonus
+}
+
+[sum]
+Choice {
+  [Payload] left
+  [Payload] right
+}
+
+[return<i32>]
+score([Payload] payload) {
+  return(plus(payload.value, payload.bonus))
+}
+
+[return<i32>]
+main() {
+  [Choice] choice{[right] Payload{40i32 3i32}}
+  [Payload] picked{pick(choice) {
+    left(payload) {
+      Payload{1i32 2i32}
+    }
+    right(payload) {
+      payload
+    }
+  }}
+  return(plus(score(picked), score(pick(choice) {
+    left(payload) {
+      Payload{10i32 20i32}
+    }
+    right(payload) {
+      payload
+    }
+  })))
+}
+)";
+
+    std::string error;
+    CHECK(validateProgram(source, "/main", error));
+    CHECK(error.empty());
+  }
+
   SUBCASE("payload binder has the selected variant type") {
     const std::string source = R"(
 [struct]

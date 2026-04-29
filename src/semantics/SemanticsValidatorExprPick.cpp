@@ -516,6 +516,201 @@ ReturnKind SemanticsValidator::inferPickExprReturnKind(
   return combinedKind.value_or(ReturnKind::Unknown);
 }
 
+bool SemanticsValidator::inferPickExprTypeText(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals,
+    std::string &typeTextOut) {
+  typeTextOut.clear();
+  if (!isPickCall(expr) || expr.args.size() != 1 || expr.bodyArguments.empty()) {
+    return false;
+  }
+  const Definition *sumDef = resolvePickSumDefinitionForExpr(
+      expr.args.front(), params, locals, expr.namespacePrefix);
+  if (sumDef == nullptr) {
+    return false;
+  }
+
+  auto resolveStructPathForTypeText = [&](const std::string &typeText) {
+    const std::string normalizedType = normalizeBindingTypeName(typeText);
+    if (normalizedType.empty()) {
+      return std::string{};
+    }
+    if (normalizedType.front() == '/') {
+      return structNames_.count(normalizedType) > 0 ? normalizedType : std::string{};
+    }
+    std::string resolved =
+        resolveStructTypePath(normalizedType, expr.namespacePrefix, structNames_);
+    if (!resolved.empty()) {
+      return resolved;
+    }
+    auto importIt = importAliases_.find(normalizedType);
+    if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+      return importIt->second;
+    }
+    return std::string{};
+  };
+
+  auto typeTextsMatch = [&](const std::string &left, const std::string &right) {
+    if (normalizeBindingTypeName(left) == normalizeBindingTypeName(right)) {
+      return true;
+    }
+    const std::string leftStruct = resolveStructPathForTypeText(left);
+    const std::string rightStruct = resolveStructPathForTypeText(right);
+    return !leftStruct.empty() && leftStruct == rightStruct;
+  };
+
+  auto inferValueTypeText =
+      [&](const Expr &valueExpr,
+          const std::unordered_map<std::string, BindingInfo> &branchLocals,
+          std::string &valueTypeTextOut) {
+        valueTypeTextOut.clear();
+        if (inferQueryExprTypeText(valueExpr, params, branchLocals, valueTypeTextOut) &&
+            !valueTypeTextOut.empty()) {
+          return true;
+        }
+        const std::string structPath =
+            inferStructReturnPath(valueExpr, params, branchLocals);
+        if (!structPath.empty()) {
+          valueTypeTextOut = structPath;
+          return true;
+        }
+        const ReturnKind kind = inferExprReturnKind(valueExpr, params, branchLocals);
+        if (kind == ReturnKind::Unknown || kind == ReturnKind::Void ||
+            kind == ReturnKind::Array) {
+          return false;
+        }
+        valueTypeTextOut = typeNameForReturnKind(kind);
+        return !valueTypeTextOut.empty();
+      };
+
+  std::optional<std::string> combinedTypeText;
+  for (const Expr &arm : expr.bodyArguments) {
+    const bool payloadArm = isPayloadPickArmEnvelope(arm);
+    const bool unitArm = isUnitCallPickArmEnvelope(arm) ||
+                         isUnitBindingPickArmEnvelope(arm);
+    if (!payloadArm && !unitArm) {
+      return false;
+    }
+    const SumVariant *variant = findVariantByName(*sumDef, arm.name);
+    if (variant == nullptr || variant->hasPayload != payloadArm) {
+      return false;
+    }
+
+    std::unordered_map<std::string, BindingInfo> branchLocals = locals;
+    if (payloadArm) {
+      insertLocalBinding(branchLocals,
+                         arm.args.front().name,
+                         payloadBindingForVariant(*variant));
+    }
+
+    const Expr *valueExpr = nullptr;
+    bool sawReturn = false;
+    const std::vector<const Expr *> bodyExprs = pickArmBodyExprs(arm);
+    for (const Expr *bodyExprPtr : bodyExprs) {
+      const Expr &bodyExpr = *bodyExprPtr;
+      if (isSyntheticBlockValueBinding(bodyExpr)) {
+        if (!sawReturn) {
+          valueExpr = &bodyExpr.args.front();
+        }
+        continue;
+      }
+      if (bodyExpr.isBinding) {
+        BindingInfo binding;
+        std::optional<std::string> restrictType;
+        if (!parseBindingInfo(bodyExpr,
+                              bodyExpr.namespacePrefix,
+                              structNames_,
+                              importAliases_,
+                              binding,
+                              restrictType,
+                              error_,
+                              &sumNames_)) {
+          return false;
+        }
+        const bool hasExplicitType = hasExplicitBindingTypeTransform(bodyExpr);
+        const bool explicitAutoType =
+            hasExplicitType && normalizeBindingTypeName(binding.typeName) == "auto";
+        if (bodyExpr.args.size() == 1 && (!hasExplicitType || explicitAutoType)) {
+          (void)inferBindingTypeFromInitializer(bodyExpr.args.front(),
+                                                params,
+                                                branchLocals,
+                                                binding,
+                                                &bodyExpr);
+        }
+        insertLocalBinding(branchLocals, bodyExpr.name, std::move(binding));
+        continue;
+      }
+      if (isReturnCall(bodyExpr)) {
+        if (bodyExpr.args.size() != 1) {
+          return false;
+        }
+        valueExpr = &bodyExpr.args.front();
+        sawReturn = true;
+        continue;
+      }
+      if (!sawReturn) {
+        valueExpr = &bodyExpr;
+      }
+    }
+    if (valueExpr == nullptr) {
+      return false;
+    }
+
+    std::string armTypeText;
+    if (!inferValueTypeText(*valueExpr, branchLocals, armTypeText)) {
+      return false;
+    }
+    if (!combinedTypeText.has_value()) {
+      combinedTypeText = armTypeText;
+      continue;
+    }
+    if (typeTextsMatch(*combinedTypeText, armTypeText)) {
+      continue;
+    }
+    const ReturnKind combinedKind =
+        combinePickNumericReturnKinds(returnKindForTypeName(*combinedTypeText),
+                                      returnKindForTypeName(armTypeText));
+    if (combinedKind == ReturnKind::Unknown || combinedKind == ReturnKind::Array ||
+        combinedKind == ReturnKind::Void) {
+      return false;
+    }
+    combinedTypeText = typeNameForReturnKind(combinedKind);
+  }
+  if (!combinedTypeText.has_value() || combinedTypeText->empty()) {
+    return false;
+  }
+  typeTextOut = *combinedTypeText;
+  return true;
+}
+
+std::string SemanticsValidator::inferPickExprStructReturnPath(
+    const Expr &expr,
+    const std::vector<ParameterInfo> &params,
+    const std::unordered_map<std::string, BindingInfo> &locals) {
+  std::string typeText;
+  if (!inferPickExprTypeText(expr, params, locals, typeText) || typeText.empty()) {
+    return {};
+  }
+  const std::string normalizedType = normalizeBindingTypeName(typeText);
+  if (normalizedType.empty()) {
+    return {};
+  }
+  if (normalizedType.front() == '/') {
+    return structNames_.count(normalizedType) > 0 ? normalizedType : std::string{};
+  }
+  std::string resolved =
+      resolveStructTypePath(normalizedType, expr.namespacePrefix, structNames_);
+  if (!resolved.empty()) {
+    return resolved;
+  }
+  auto importIt = importAliases_.find(normalizedType);
+  if (importIt != importAliases_.end() && structNames_.count(importIt->second) > 0) {
+    return importIt->second;
+  }
+  return {};
+}
+
 bool SemanticsValidator::validatePickStatement(
     const std::vector<ParameterInfo> &params,
     std::unordered_map<std::string, BindingInfo> &locals,

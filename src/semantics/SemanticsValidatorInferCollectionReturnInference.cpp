@@ -475,7 +475,8 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
                                   importAliases_,
                                   binding,
                                   restrictType,
-                                  error_)) {
+                                  error_,
+                                  &sumNames_)) {
               return false;
             }
             const bool hasExplicitType = hasExplicitBindingTypeTransform(bodyExpr);
@@ -536,6 +537,9 @@ bool SemanticsValidator::inferQueryExprTypeText(const Expr &expr,
     }
     if (candidate.kind != Expr::Kind::Call) {
       return false;
+    }
+    if (isPickCall(candidate)) {
+      return inferPickExprTypeText(candidate, params, locals, currentTypeTextOut);
     }
     BindingInfo sumConstructorBinding;
     if (inferExplicitSumConstructorBinding(candidate, sumConstructorBinding)) {
