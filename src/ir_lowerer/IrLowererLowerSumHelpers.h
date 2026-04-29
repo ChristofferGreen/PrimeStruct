@@ -430,6 +430,39 @@
              sumDef.fullPath + "/" + variant.name + " (" + sumPayloadTypeText(variant) + ")";
     };
 
+    auto resolveSemanticProductSumVariantTag =
+        [&](const Definition &sumDef,
+            const SumVariant &variant,
+            std::string_view operationLabel,
+            int32_t &tagValueOut) -> bool {
+      tagValueOut = static_cast<int32_t>(variant.variantIndex);
+      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
+      if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
+        return true;
+      }
+      const SemanticProgramSumVariantMetadata *publishedVariant =
+          findSemanticProductSumVariantMetadata(semanticTargets, sumDef.fullPath, variant.name);
+      const std::string diagnosticSuffix = sumDef.fullPath + " -> " + variant.name;
+      if (publishedVariant == nullptr) {
+        error = "missing semantic-product sum variant metadata for " +
+                std::string(operationLabel) + ": " + diagnosticSuffix;
+        return false;
+      }
+      const std::string expectedPayloadType =
+          variant.hasPayload ? sumPayloadTypeText(variant) : std::string{};
+      const uint32_t expectedTagValue = static_cast<uint32_t>(variant.variantIndex);
+      if (publishedVariant->variantIndex != variant.variantIndex ||
+          publishedVariant->tagValue != expectedTagValue ||
+          publishedVariant->hasPayload != variant.hasPayload ||
+          trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
+        error = "stale semantic-product sum variant metadata for " +
+                std::string(operationLabel) + ": " + diagnosticSuffix;
+        return false;
+      }
+      tagValueOut = static_cast<int32_t>(publishedVariant->tagValue);
+      return true;
+    };
+
     auto emitLoweredSumHeader = [&](int32_t baseLocal, int32_t totalSlots) {
       function.instructions.push_back(
           {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(totalSlots - 1))});
@@ -569,42 +602,13 @@
           error = "native backend sum variant was not selected for " + sumDef.fullPath;
           return false;
         }
-        auto resolveConstructionVariantTag = [&]() -> std::optional<int32_t> {
-          const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
-          if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
-            return static_cast<int32_t>(selection.variant->variantIndex);
-          }
-          const SemanticProgramSumVariantMetadata *publishedVariant =
-              findSemanticProductSumVariantMetadata(
-                  semanticTargets, sumDef.fullPath, selection.variant->name);
-          const std::string diagnosticSuffix =
-              sumDef.fullPath + " -> " + selection.variant->name;
-          if (publishedVariant == nullptr) {
-            error = "missing semantic-product sum variant metadata for sum construction: " +
-                    diagnosticSuffix;
-            return std::nullopt;
-          }
-          const std::string expectedPayloadType =
-              selection.variant->hasPayload ? sumPayloadTypeText(*selection.variant)
-                                            : std::string{};
-          const uint32_t expectedTagValue =
-              static_cast<uint32_t>(selection.variant->variantIndex);
-          if (publishedVariant->variantIndex != selection.variant->variantIndex ||
-              publishedVariant->tagValue != expectedTagValue ||
-              publishedVariant->hasPayload != selection.variant->hasPayload ||
-              trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
-            error = "stale semantic-product sum variant metadata for sum construction: " +
-                    diagnosticSuffix;
-            return std::nullopt;
-          }
-          return static_cast<int32_t>(publishedVariant->tagValue);
-        };
-        const std::optional<int32_t> activeTag = resolveConstructionVariantTag();
-        if (!activeTag.has_value()) {
+        int32_t activeTag = 0;
+        if (!resolveSemanticProductSumVariantTag(
+                sumDef, *selection.variant, "sum construction", activeTag)) {
           return false;
         }
         function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(*activeTag)});
+            {IrOpcode::PushI32, static_cast<uint64_t>(activeTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(targetBaseLocal + 1)});
         if (!selection.variant->hasPayload) {
           return true;
@@ -776,12 +780,23 @@
           return false;
         }
 
-        emitSumTagComparisonForConstruction(source.sumPtrLocal, sourceOkVariant->variantIndex);
+        int32_t sourceOkTag = 0;
+        int32_t targetOkTag = 0;
+        int32_t targetErrorTag = 0;
+        if (!resolveSemanticProductSumVariantTag(
+                *source.sumDef, *sourceOkVariant, "Result.map source ok", sourceOkTag) ||
+            !resolveSemanticProductSumVariantTag(
+                sumDef, *targetOkVariant, "Result.map target ok", targetOkTag) ||
+            !resolveSemanticProductSumVariantTag(
+                sumDef, *targetErrorVariant, "Result.map target error", targetErrorTag)) {
+          return false;
+        }
+
+        emitSumTagComparisonForConstruction(source.sumPtrLocal, sourceOkTag);
         const size_t jumpErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetOkVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(targetOkTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         LocalMap lambdaLocals = valueLocals;
         if (!bindSumPayloadLocal(*source.sumDef,
@@ -802,8 +817,7 @@
 
         const size_t errorIndex = function.instructions.size();
         function.instructions[jumpErrorIndex].imm = static_cast<uint64_t>(errorIndex);
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(targetErrorTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         if (!emitCopySumPayload(*source.sumDef,
                                 *sourceErrorVariant,
@@ -856,7 +870,16 @@
           return false;
         }
 
-        emitSumTagComparisonForConstruction(source.sumPtrLocal, sourceOkVariant->variantIndex);
+        int32_t sourceOkTag = 0;
+        int32_t targetErrorTag = 0;
+        if (!resolveSemanticProductSumVariantTag(
+                *source.sumDef, *sourceOkVariant, "Result.and_then source ok", sourceOkTag) ||
+            !resolveSemanticProductSumVariantTag(
+                sumDef, *targetErrorVariant, "Result.and_then target error", targetErrorTag)) {
+          return false;
+        }
+
+        emitSumTagComparisonForConstruction(source.sumPtrLocal, sourceOkTag);
         const size_t jumpErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
@@ -879,8 +902,7 @@
 
         const size_t errorIndex = function.instructions.size();
         function.instructions[jumpErrorIndex].imm = static_cast<uint64_t>(errorIndex);
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(targetErrorTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         if (!emitCopySumPayload(*source.sumDef,
                                 *sourceErrorVariant,
@@ -944,16 +966,30 @@
           return false;
         }
 
-        emitSumTagComparisonForConstruction(left.sumPtrLocal, leftOkVariant->variantIndex);
+        int32_t leftOkTag = 0;
+        int32_t rightOkTag = 0;
+        int32_t targetOkTag = 0;
+        int32_t targetErrorTag = 0;
+        if (!resolveSemanticProductSumVariantTag(
+                *left.sumDef, *leftOkVariant, "Result.map2 left ok", leftOkTag) ||
+            !resolveSemanticProductSumVariantTag(
+                *right.sumDef, *rightOkVariant, "Result.map2 right ok", rightOkTag) ||
+            !resolveSemanticProductSumVariantTag(
+                sumDef, *targetOkVariant, "Result.map2 target ok", targetOkTag) ||
+            !resolveSemanticProductSumVariantTag(
+                sumDef, *targetErrorVariant, "Result.map2 target error", targetErrorTag)) {
+          return false;
+        }
+
+        emitSumTagComparisonForConstruction(left.sumPtrLocal, leftOkTag);
         const size_t jumpLeftErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-        emitSumTagComparisonForConstruction(right.sumPtrLocal, rightOkVariant->variantIndex);
+        emitSumTagComparisonForConstruction(right.sumPtrLocal, rightOkTag);
         const size_t jumpRightErrorIndex = function.instructions.size();
         function.instructions.push_back({IrOpcode::JumpIfZero, 0});
 
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetOkVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(targetOkTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         LocalMap lambdaLocals = valueLocals;
         if (!bindSumPayloadLocal(*left.sumDef,
@@ -981,8 +1017,7 @@
 
         const size_t leftErrorIndex = function.instructions.size();
         function.instructions[jumpLeftErrorIndex].imm = static_cast<uint64_t>(leftErrorIndex);
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(targetErrorTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         if (!emitCopySumPayload(*left.sumDef,
                                 *leftErrorVariant,
@@ -998,8 +1033,7 @@
 
         const size_t rightErrorIndex = function.instructions.size();
         function.instructions[jumpRightErrorIndex].imm = static_cast<uint64_t>(rightErrorIndex);
-        function.instructions.push_back(
-            {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(targetErrorVariant->variantIndex))});
+        function.instructions.push_back({IrOpcode::PushI32, static_cast<uint64_t>(targetErrorTag)});
         function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
         if (!emitCopySumPayload(*right.sumDef,
                                 *rightErrorVariant,
@@ -1203,39 +1237,6 @@
       function.instructions.push_back(
           {IrOpcode::PushI32, static_cast<uint64_t>(static_cast<int32_t>(tagValue))});
       function.instructions.push_back({IrOpcode::CmpEqI32, 0});
-    };
-
-    auto resolveSemanticProductSumVariantTag =
-        [&](const Definition &sumDef,
-            const SumVariant &variant,
-            std::string_view operationLabel,
-            int32_t &tagValueOut) -> bool {
-      tagValueOut = static_cast<int32_t>(variant.variantIndex);
-      const auto &semanticTargets = callResolutionAdapters.semanticProductTargets;
-      if (!semanticTargets.hasSemanticProduct || semanticTargets.semanticProgram == nullptr) {
-        return true;
-      }
-      const SemanticProgramSumVariantMetadata *publishedVariant =
-          findSemanticProductSumVariantMetadata(semanticTargets, sumDef.fullPath, variant.name);
-      const std::string diagnosticSuffix = sumDef.fullPath + " -> " + variant.name;
-      if (publishedVariant == nullptr) {
-        error = "missing semantic-product sum variant metadata for " +
-                std::string(operationLabel) + ": " + diagnosticSuffix;
-        return false;
-      }
-      const std::string expectedPayloadType =
-          variant.hasPayload ? sumPayloadTypeText(variant) : std::string{};
-      const uint32_t expectedTagValue = static_cast<uint32_t>(variant.variantIndex);
-      if (publishedVariant->variantIndex != variant.variantIndex ||
-          publishedVariant->tagValue != expectedTagValue ||
-          publishedVariant->hasPayload != variant.hasPayload ||
-          trimTemplateTypeText(publishedVariant->payloadTypeText) != expectedPayloadType) {
-        error = "stale semantic-product sum variant metadata for " +
-                std::string(operationLabel) + ": " + diagnosticSuffix;
-        return false;
-      }
-      tagValueOut = static_cast<int32_t>(publishedVariant->tagValue);
-      return true;
     };
 
     auto findSumPayloadMoveHelper = [&](const std::string &structPath) -> const Definition * {

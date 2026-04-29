@@ -358,6 +358,10 @@ Planned non-template inference migration contract:
   validates published sum-variant metadata and stores the published tag value into the active tag
   slot instead of reading the tag from AST variant order. Syntax-only compatibility keeps the old
   AST tag path.
+- Completed native Result-combinator tag slice: semantic-product-addressed
+  `Result.map`, `Result.and_then`, and `Result.map2` lowering now validates published
+  sum-variant metadata before comparing source `ok` tags or storing target `ok`/`error`
+  tags. Syntax-only compatibility keeps the old AST tag path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

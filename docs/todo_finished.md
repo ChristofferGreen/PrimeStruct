@@ -6,6 +6,43 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for Result combinator tags
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native `Result.map`, `Result.and_then`, and `Result.map2` consume
+    published sum-variant tag metadata for source `ok` comparisons and target
+    `ok`/`error` tag stores instead of reading tag values from AST variant
+    order.
+  - implementation_notes:
+    - Keep target sum resolution, lambda payload binding, broader Result
+      propagation cleanup, template inference, and collection migration out of
+      scope.
+    - Preserve syntax-only compatibility by using the AST tag path only when
+      no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before emitting Result-combinator tag branches.
+  - acceptance:
+    - Native `Result.map` validates published source and target variant tags
+      before lowering semantic-product-backed tag branches.
+    - Native `Result.and_then` validates published source and target variant
+      tags before lowering semantic-product-backed tag branches.
+    - Native `Result.map2` validates published source and target variant tags
+      before lowering semantic-product-backed tag branches.
+    - Stale metadata reports a deterministic lowerer diagnostic.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native Result-combinator tag comparisons and stores
+    have semantic-product authority for variant tag metadata and the old
+    AST-order path is retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product variant-tag validation for native
+    `Result.map`, `Result.and_then`, and `Result.map2` lowering, added
+    positive and stale-metadata lowerer coverage, and documented the remaining
+    TODO-4298 work. Local test execution was skipped per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for sum construction tags
   - owner: ai
   - created_at: 2026-04-28

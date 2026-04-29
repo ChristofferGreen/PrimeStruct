@@ -376,7 +376,9 @@ Task template:
     semantic-product branch payload binding and aggregate-result inference.
     The native active sum payload tag slice is complete for semantic-product
     move/drop helper dispatch. The native sum construction tag slice is
-    complete for semantic-product-backed active tag storage.
+    complete for semantic-product-backed active tag storage. The native
+    Result-combinator tag slice is complete for semantic-product-backed
+    source `ok` dispatch and target `ok`/`error` tag storage.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -530,6 +532,11 @@ Task template:
       sum-variant metadata and stores the published tag value into the active
       tag slot on the semantic-product path. Syntax-only compatibility keeps
       the old AST tag reconstruction path.
+    - Completed slice: native `Result.map`, `Result.and_then`, and
+      `Result.map2` lowering now validates published sum-variant metadata and
+      uses published tag values for source `ok` comparisons plus target
+      `ok`/`error` stores on the semantic-product path. Syntax-only
+      compatibility keeps the old AST tag reconstruction path.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.
