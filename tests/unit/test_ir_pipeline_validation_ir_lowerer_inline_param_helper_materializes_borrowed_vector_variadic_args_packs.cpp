@@ -261,6 +261,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed soa_vector varia
   sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   sourceInfo.referenceToVector = true;
   sourceInfo.isSoaVector = true;
+  sourceInfo.usesBuiltinCollectionLayout = true;
   sourceInfo.argsPackElementCount = 2;
   callerLocals.emplace("source", sourceInfo);
 
@@ -310,6 +311,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure borrowed soa_vector varia
   CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Reference);
   CHECK(calleeLocals.at("values").referenceToVector);
   CHECK(calleeLocals.at("values").isSoaVector);
+  CHECK(calleeLocals.at("values").usesBuiltinCollectionLayout);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
   REQUIRE(instructions.size() == 2u);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
@@ -337,6 +339,7 @@ TEST_CASE("ir lowerer inline param helper materializes direct borrowed imported 
   leftInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
   leftInfo.referenceToVector = true;
   leftInfo.isSoaVector = true;
+  leftInfo.usesBuiltinCollectionLayout = true;
   leftInfo.structTypeName =
       "/std/collections/experimental_soa_vector/SoaVector__Particle";
   callerLocals.emplace("left", leftInfo);
@@ -399,6 +402,7 @@ TEST_CASE("ir lowerer inline param helper materializes direct borrowed imported 
         primec::ir_lowerer::LocalInfo::Kind::Reference);
   CHECK(calleeLocals.at("values").referenceToVector);
   CHECK(calleeLocals.at("values").isSoaVector);
+  CHECK(calleeLocals.at("values").usesBuiltinCollectionLayout);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
   CHECK(calleeLocals.at("values").structTypeName ==
         "/std/collections/experimental_soa_vector/SoaVector__Particle");
@@ -419,6 +423,98 @@ TEST_CASE("ir lowerer inline param helper materializes direct borrowed imported 
   CHECK(instructions[6].imm == 4u);
   CHECK(instructions[7].op == primec::IrOpcode::StoreLocal);
   CHECK(instructions[7].imm == 3u);
+}
+
+TEST_CASE("ir lowerer inline param helper materializes mixed borrowed soa_vector variadic forwarding") {
+  primec::Expr valuesParam;
+  valuesParam.kind = primec::Expr::Kind::Name;
+  valuesParam.isBinding = true;
+  valuesParam.name = "values";
+
+  primec::Expr firstArg;
+  firstArg.kind = primec::Expr::Kind::Name;
+  firstArg.name = "head";
+  primec::Expr spreadArg;
+  spreadArg.kind = primec::Expr::Kind::Name;
+  spreadArg.name = "source";
+  spreadArg.isSpread = true;
+
+  primec::ir_lowerer::LocalMap callerLocals;
+  primec::ir_lowerer::LocalInfo headInfo;
+  headInfo.index = 21;
+  headInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  headInfo.referenceToVector = true;
+  headInfo.isSoaVector = true;
+  headInfo.usesBuiltinCollectionLayout = true;
+  callerLocals.emplace("head", headInfo);
+
+  primec::ir_lowerer::LocalInfo sourceInfo;
+  sourceInfo.index = 33;
+  sourceInfo.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+  sourceInfo.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+  sourceInfo.isArgsPack = true;
+  sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+  sourceInfo.referenceToVector = true;
+  sourceInfo.isSoaVector = true;
+  sourceInfo.usesBuiltinCollectionLayout = true;
+  sourceInfo.argsPackElementCount = 2;
+  callerLocals.emplace("source", sourceInfo);
+
+  int32_t nextLocal = 3;
+  primec::ir_lowerer::LocalMap calleeLocals;
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+
+  REQUIRE(primec::ir_lowerer::emitInlineDefinitionCallParameters(
+      {valuesParam},
+      {nullptr},
+      {&firstArg, &spreadArg},
+      0,
+      callerLocals,
+      nextLocal,
+      calleeLocals,
+      [](const primec::Expr &, primec::ir_lowerer::LocalInfo &infoOut, std::string &) {
+        infoOut.kind = primec::ir_lowerer::LocalInfo::Kind::Array;
+        infoOut.valueKind = primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+        infoOut.isArgsPack = true;
+        infoOut.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Reference;
+        infoOut.referenceToVector = true;
+        infoOut.isSoaVector = true;
+        return true;
+      },
+      [](const primec::Expr &) { return false; },
+      [](const primec::Expr &,
+         const primec::ir_lowerer::LocalMap &,
+         primec::ir_lowerer::LocalInfo::StringSource &,
+         int32_t &,
+         bool &) { return true; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) { return true; },
+      [&](const primec::Expr &arg, const primec::ir_lowerer::LocalMap &) {
+        if (arg.name != "head") {
+          return false;
+        }
+        instructions.push_back({primec::IrOpcode::LoadLocal, 21u});
+        return true;
+      },
+      [](int32_t, int32_t, int32_t) { return true; },
+      [&]() { return nextLocal++; },
+      [&](primec::IrOpcode op, uint64_t imm) { instructions.push_back({op, imm}); },
+      [](int32_t) {},
+      error));
+
+  CHECK(error.empty());
+  REQUIRE(calleeLocals.count("values") == 1u);
+  CHECK(calleeLocals.at("values").argsPackElementKind ==
+        primec::ir_lowerer::LocalInfo::Kind::Reference);
+  CHECK(calleeLocals.at("values").referenceToVector);
+  CHECK(calleeLocals.at("values").isSoaVector);
+  CHECK(calleeLocals.at("values").usesBuiltinCollectionLayout);
+  CHECK(calleeLocals.at("values").argsPackElementCount == 3);
+  CHECK_FALSE(instructions.empty());
 }
 
 TEST_CASE("ir lowerer inline param helper materializes soa_vector variadic args packs") {
@@ -522,6 +618,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure soa_vector variadic forwa
   sourceInfo.isArgsPack = true;
   sourceInfo.argsPackElementKind = primec::ir_lowerer::LocalInfo::Kind::Vector;
   sourceInfo.isSoaVector = true;
+  sourceInfo.usesBuiltinCollectionLayout = true;
   sourceInfo.argsPackElementCount = 2;
   callerLocals.emplace("source", sourceInfo);
 
@@ -569,6 +666,7 @@ TEST_CASE("ir lowerer inline param helper aliases pure soa_vector variadic forwa
   REQUIRE(calleeLocals.count("values") == 1u);
   CHECK(calleeLocals.at("values").argsPackElementKind == primec::ir_lowerer::LocalInfo::Kind::Vector);
   CHECK(calleeLocals.at("values").isSoaVector);
+  CHECK(calleeLocals.at("values").usesBuiltinCollectionLayout);
   CHECK(calleeLocals.at("values").argsPackElementCount == 2);
   REQUIRE(instructions.size() == 2u);
   CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);

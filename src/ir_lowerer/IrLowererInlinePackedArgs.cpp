@@ -312,6 +312,12 @@ bool emitInlinePackedCallParameter(
     return "variadic args<Pointer<T>> requires pointer values or location(...) forwarding";
   };
 
+  auto preserveBuiltinCollectionLayout = [&](const LocalInfo &sourceInfo) {
+    if (sourceInfo.isSoaVector && sourceInfo.usesBuiltinCollectionLayout) {
+      paramInfo.usesBuiltinCollectionLayout = true;
+    }
+  };
+
   auto emitPackedValueToLocal = [&](const Expr &argExpr, int32_t destLocal) -> bool {
     Expr rewrittenMapArgExpr;
     const Expr *emittedArgExpr = &argExpr;
@@ -637,6 +643,7 @@ bool emitInlinePackedCallParameter(
     paramInfo.referenceToMap = callerIt->second.referenceToMap;
     paramInfo.pointerToMap = callerIt->second.pointerToMap;
     paramInfo.isSoaVector = callerIt->second.isSoaVector;
+    paramInfo.usesBuiltinCollectionLayout = callerIt->second.usesBuiltinCollectionLayout;
     paramInfo.isFileHandle = callerIt->second.isFileHandle;
     paramInfo.isFileError = callerIt->second.isFileError;
     paramInfo.isResult = callerIt->second.isResult;
@@ -761,6 +768,12 @@ bool emitInlinePackedCallParameter(
       } else if (!validatePackedValueExpr(*packedArg)) {
         return false;
       }
+      if (packedArg->kind == Expr::Kind::Name) {
+        auto callerIt = callerLocals.find(packedArg->name);
+        if (callerIt != callerLocals.end()) {
+          preserveBuiltinCollectionLayout(callerIt->second);
+        }
+      }
       ++totalPackedCount;
       continue;
     }
@@ -777,6 +790,7 @@ bool emitInlinePackedCallParameter(
       return false;
     }
     totalPackedCount += spreadSourceInfo.argsPackElementCount;
+    preserveBuiltinCollectionLayout(spreadSourceInfo);
     spreadSourceInfos.push_back(spreadSourceInfo);
   }
   const int32_t elementSlotCount = isStructPack ? structLayout.totalSlots : 1;
