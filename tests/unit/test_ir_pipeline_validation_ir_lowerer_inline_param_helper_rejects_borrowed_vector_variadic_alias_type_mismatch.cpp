@@ -790,7 +790,7 @@ TEST_CASE("ir lowerer inline param helper accepts bare std ui mutable struct par
       error));
 
   CHECK(error.empty());
-  CHECK(nextLocal == 5);
+  CHECK(nextLocal == 4);
   REQUIRE(calleeLocals.count("commands") == 1u);
   CHECK(calleeLocals.at("commands").kind == primec::ir_lowerer::LocalInfo::Kind::Reference);
   CHECK(calleeLocals.at("commands").structTypeName == "CommandList");
