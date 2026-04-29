@@ -6,6 +6,46 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for active sum payload storage
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native active sum payload move/drop dispatch consume published
+    sum-variant payload metadata before choosing aggregate payload helpers or
+    copying payload slots instead of reconstructing payload storage from AST
+    variant data.
+  - implementation_notes:
+    - Keep target sum resolution, Result-combinator lowering, broader Result
+      propagation cleanup, template inference, and collection migration out of
+      scope.
+    - Preserve syntax-only compatibility by using the AST payload-storage path
+      only when no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before active payload move/drop helper
+      selection.
+  - acceptance:
+    - Active payload move helper dispatch validates published payload metadata
+      before choosing a move helper or copying payload slots on
+      semantic-product-backed paths.
+    - Active payload destroy helper dispatch validates published payload
+      metadata before choosing a destroy helper on semantic-product-backed
+      paths.
+    - Stale metadata reports deterministic lowerer diagnostics for both move
+      and destroy dispatch.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native active sum payload move/drop dispatch has
+    semantic-product authority for variant payload metadata and the old AST
+    payload-storage path is retained only as syntax-only compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product payload-storage validation for native
+    active sum payload move/drop lowering, expanded stale-metadata lowerer
+    coverage for move and destroy helper dispatch, and documented the
+    remaining TODO-4298 work. Local test execution was skipped per the lite
+    workflow.
+
 - [x] TODO-4298: Use variant facts for Result payload storage
   - owner: ai
   - created_at: 2026-04-28

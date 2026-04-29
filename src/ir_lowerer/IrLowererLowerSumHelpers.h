@@ -1329,8 +1329,11 @@
       std::vector<size_t> endJumps;
       for (const auto &variant : sumDef.sumVariants) {
         LoweredSumPayloadStorageInfo payloadInfo;
-        if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
-          error = unsupportedSumPayloadError(sumDef, variant);
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                sumDef, variant, "sum payload destroy", payloadInfo)) {
+          if (error.empty()) {
+            error = unsupportedSumPayloadError(sumDef, variant);
+          }
           return false;
         }
         if (!payloadInfo.isAggregate) {
@@ -1385,8 +1388,11 @@
       std::vector<size_t> endJumps;
       for (const auto &variant : sumDef.sumVariants) {
         LoweredSumPayloadStorageInfo payloadInfo;
-        if (!resolveSumPayloadStorageInfo(sumDef, variant, payloadInfo)) {
-          error = unsupportedSumPayloadError(sumDef, variant);
+        if (!resolveSemanticProductSumPayloadStorageInfo(
+                sumDef, variant, "sum payload move", payloadInfo)) {
+          if (error.empty()) {
+            error = unsupportedSumPayloadError(sumDef, variant);
+          }
           return false;
         }
         int32_t tagValue = 0;

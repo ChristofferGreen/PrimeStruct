@@ -1048,6 +1048,17 @@ TEST_CASE("native sum active payload helpers use semantic-product variant tags")
         return false;
       };
 
+  const auto rewriteChoiceRightVariantPayload =
+      [](primec::SemanticProgram &semanticProduct, const std::string &payloadTypeText) {
+        for (auto &entry : semanticProduct.sumVariantMetadata) {
+          if (entry.sumPath == "/Choice" && entry.variantName == "right") {
+            entry.payloadTypeText = payloadTypeText;
+            return true;
+          }
+        }
+        return false;
+      };
+
   const std::string moveSource = R"(
 [struct]
 LeftPayload() {
@@ -1121,6 +1132,23 @@ main() {
         "stale semantic-product sum variant metadata for sum payload move: /Choice -> left");
   CHECK(staleMoveFailure.diagnosticInfo.message == staleMoveFailure.message);
 
+  primec::Program staleMovePayloadProgram = moveProgram;
+  primec::SemanticProgram staleMovePayloadSemanticProgram = moveSemanticProgram;
+  REQUIRE(rewriteChoiceRightVariantPayload(staleMovePayloadSemanticProgram, "i64"));
+
+  primec::IrModule staleMovePayloadIr;
+  primec::IrPreparationFailure staleMovePayloadFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleMovePayloadProgram,
+                                      &staleMovePayloadSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleMovePayloadIr,
+                                      staleMovePayloadFailure));
+  CHECK(staleMovePayloadFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleMovePayloadFailure.message ==
+        "stale semantic-product sum variant metadata for sum payload move: /Choice -> right");
+  CHECK(staleMovePayloadFailure.diagnosticInfo.message == staleMovePayloadFailure.message);
+
   const std::string dropSource = R"(
 [struct]
 LeftPayload() {
@@ -1191,6 +1219,23 @@ main() {
   CHECK(staleDropFailure.message ==
         "stale semantic-product sum variant metadata for sum payload destroy: /Choice -> left");
   CHECK(staleDropFailure.diagnosticInfo.message == staleDropFailure.message);
+
+  primec::Program staleDropPayloadProgram = dropProgram;
+  primec::SemanticProgram staleDropPayloadSemanticProgram = dropSemanticProgram;
+  REQUIRE(rewriteChoiceRightVariantPayload(staleDropPayloadSemanticProgram, "i64"));
+
+  primec::IrModule staleDropPayloadIr;
+  primec::IrPreparationFailure staleDropPayloadFailure;
+  CHECK_FALSE(primec::prepareIrModule(staleDropPayloadProgram,
+                                      &staleDropPayloadSemanticProgram,
+                                      options,
+                                      primec::IrValidationTarget::Native,
+                                      staleDropPayloadIr,
+                                      staleDropPayloadFailure));
+  CHECK(staleDropPayloadFailure.stage == primec::IrPreparationFailureStage::Lowering);
+  CHECK(staleDropPayloadFailure.message ==
+        "stale semantic-product sum variant metadata for sum payload destroy: /Choice -> right");
+  CHECK(staleDropPayloadFailure.diagnosticInfo.message == staleDropPayloadFailure.message);
 }
 
 TEST_CASE("native pick call target sum resolution uses query facts") {

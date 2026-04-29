@@ -375,7 +375,9 @@ Task template:
     arm tag dispatch. The native pick payload-local slice is complete for
     semantic-product branch payload binding and aggregate-result inference.
     The native active sum payload tag slice is complete for semantic-product
-    move/drop helper dispatch. The native sum construction tag slice is
+    move/drop helper dispatch. The native active sum payload-storage slice is
+    complete for semantic-product-backed move/drop helper selection and
+    payload copying. The native sum construction tag slice is
     complete for semantic-product-backed active tag storage. The native
     Result-combinator tag slice is complete for semantic-product-backed
     source `ok` dispatch and target `ok`/`error` tag storage. The native
@@ -531,6 +533,11 @@ Task template:
       validates published sum-variant metadata and uses the published tag
       value for active-payload comparisons on the semantic-product path.
       Syntax-only compatibility keeps the old AST tag reconstruction path.
+    - Completed slice: native active sum payload move/drop helper dispatch now
+      validates and consumes published sum-variant metadata before choosing
+      aggregate payload helpers or copying payload slots on the
+      semantic-product path. Syntax-only compatibility keeps the old AST
+      payload-storage reconstruction path.
     - Completed slice: native sum construction now validates published
       sum-variant metadata and stores the published tag value into the active
       tag slot on the semantic-product path. Syntax-only compatibility keeps
