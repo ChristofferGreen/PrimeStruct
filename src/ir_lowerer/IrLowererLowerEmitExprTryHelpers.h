@@ -461,10 +461,12 @@
             LoweredSumPayloadStorageInfo candidateOkPayload;
             LoweredSumPayloadStorageInfo candidateErrorPayload;
             if (candidateOk->hasPayload &&
-                !resolveSumPayloadStorageInfo(candidateDef, *candidateOk, candidateOkPayload)) {
+                !resolveSemanticProductSumPayloadStorageInfo(
+                    candidateDef, *candidateOk, "try candidate ok payload", candidateOkPayload)) {
               return false;
             }
-            if (!resolveSumPayloadStorageInfo(candidateDef, *candidateError, candidateErrorPayload)) {
+            if (!resolveSemanticProductSumPayloadStorageInfo(
+                    candidateDef, *candidateError, "try candidate error payload", candidateErrorPayload)) {
               return false;
             }
             auto payloadMatchesValue = [&](const LoweredSumPayloadStorageInfo &payload) {
@@ -499,6 +501,9 @@
             for (const auto &entry : defMap) {
               const Definition *candidateDef = entry.second;
               if (candidateDef == nullptr || !stdlibResultSumMatchesTryInfo(*candidateDef)) {
+                if (!error.empty()) {
+                  return false;
+                }
                 continue;
               }
               candidates.push_back(candidateDef);
@@ -534,9 +539,15 @@
                 {IrOpcode::LoadLocal, static_cast<uint64_t>(localIt->second.index)});
             return true;
           };
-          if (!tryEmitDereferencedStdlibResultPointerOperand() &&
-              !emitExpr(expr.args.front(), localsIn)) {
-            return false;
+          const bool emittedDereferencedStdlibResultPointerOperand =
+              tryEmitDereferencedStdlibResultPointerOperand();
+          if (!emittedDereferencedStdlibResultPointerOperand) {
+            if (!error.empty()) {
+              return false;
+            }
+            if (!emitExpr(expr.args.front(), localsIn)) {
+              return false;
+            }
           }
           const int32_t resultLocal = allocTempLocal();
           function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(resultLocal)});
@@ -696,10 +707,15 @@
               LoweredSumPayloadStorageInfo candidateOkPayload;
               LoweredSumPayloadStorageInfo candidateErrorPayload;
               if (candidateOk->hasPayload &&
-                  !resolveSumPayloadStorageInfo(candidateDef, *candidateOk, candidateOkPayload)) {
+                  !resolveSemanticProductSumPayloadStorageInfo(
+                      candidateDef, *candidateOk, "try operand candidate ok payload", candidateOkPayload)) {
                 return false;
               }
-              if (!resolveSumPayloadStorageInfo(candidateDef, *candidateError, candidateErrorPayload)) {
+              if (!resolveSemanticProductSumPayloadStorageInfo(
+                      candidateDef,
+                      *candidateError,
+                      "try operand candidate error payload",
+                      candidateErrorPayload)) {
                 return false;
               }
               return (!resultInfo.hasValue || resultValueMatchesPayload(candidateOkPayload)) &&
@@ -715,6 +731,9 @@
                   if (localSumDef != nullptr && stdlibResultSumMatchesResultInfo(*localSumDef)) {
                     return localSumDef;
                   }
+                  if (!error.empty()) {
+                    return nullptr;
+                  }
                 }
                 return nullptr;
               }
@@ -725,6 +744,9 @@
                     resolveSumDefinitionForTypeText(operandStructPath, operandExpr.namespacePrefix);
                 if (operandSumDef != nullptr && stdlibResultSumMatchesResultInfo(*operandSumDef)) {
                   return operandSumDef;
+                }
+                if (!error.empty()) {
+                  return nullptr;
                 }
               }
               if (operandExpr.kind != Expr::Kind::Call) {
@@ -746,6 +768,9 @@
                       stdlibResultSumMatchesResultInfo(*returnSumDef)) {
                     return returnSumDef;
                   }
+                  if (!error.empty()) {
+                    return nullptr;
+                  }
                 }
               }
 
@@ -753,6 +778,9 @@
               for (const auto &entry : defMap) {
                 const Definition *candidateDef = entry.second;
                 if (candidateDef == nullptr || !stdlibResultSumMatchesResultInfo(*candidateDef)) {
+                  if (!error.empty()) {
+                    return nullptr;
+                  }
                   continue;
                 }
                 candidates.push_back(candidateDef);
@@ -809,12 +837,18 @@
               return false;
             }
             if (okVariant->hasPayload &&
-                !resolveSumPayloadStorageInfo(*sumDef, *okVariant, okPayload)) {
-              error = unsupportedSumPayloadError(*sumDef, *okVariant);
+                !resolveSemanticProductSumPayloadStorageInfo(
+                    *sumDef, *okVariant, "try source ok payload", okPayload)) {
+              if (error.empty()) {
+                error = unsupportedSumPayloadError(*sumDef, *okVariant);
+              }
               return false;
             }
-            if (!resolveSumPayloadStorageInfo(*sumDef, *errorVariant, errorPayload)) {
-              error = unsupportedSumPayloadError(*sumDef, *errorVariant);
+            if (!resolveSemanticProductSumPayloadStorageInfo(
+                    *sumDef, *errorVariant, "try source error payload", errorPayload)) {
+              if (error.empty()) {
+                error = unsupportedSumPayloadError(*sumDef, *errorVariant);
+              }
               return false;
             }
 
@@ -865,12 +899,24 @@
                     int32_t targetBaseLocal) -> bool {
               LoweredSumPayloadStorageInfo sourcePayload;
               LoweredSumPayloadStorageInfo targetPayload;
-              if (!resolveSumPayloadStorageInfo(sourceSumDef, sourceErrorVariant, sourcePayload)) {
-                error = unsupportedSumPayloadError(sourceSumDef, sourceErrorVariant);
+              if (!resolveSemanticProductSumPayloadStorageInfo(
+                      sourceSumDef,
+                      sourceErrorVariant,
+                      "try source error payload copy",
+                      sourcePayload)) {
+                if (error.empty()) {
+                  error = unsupportedSumPayloadError(sourceSumDef, sourceErrorVariant);
+                }
                 return false;
               }
-              if (!resolveSumPayloadStorageInfo(targetSumDef, targetErrorVariant, targetPayload)) {
-                error = unsupportedSumPayloadError(targetSumDef, targetErrorVariant);
+              if (!resolveSemanticProductSumPayloadStorageInfo(
+                      targetSumDef,
+                      targetErrorVariant,
+                      "try target error payload copy",
+                      targetPayload)) {
+                if (error.empty()) {
+                  error = unsupportedSumPayloadError(targetSumDef, targetErrorVariant);
+                }
                 return false;
               }
               if (sourcePayload.isAggregate != targetPayload.isAggregate ||
@@ -921,8 +967,13 @@
               emitLoweredSumHeader(baseLocal, totalSlots);
               function.instructions.push_back({IrOpcode::AddressOfLocal, static_cast<uint64_t>(baseLocal)});
               function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(ptrLocal)});
+              int32_t targetErrorTag = 0;
+              if (!resolveSemanticProductSumVariantTag(
+                      targetSumDef, *targetErrorVariant, "try target error", targetErrorTag)) {
+                return false;
+              }
               function.instructions.push_back(
-                  {IrOpcode::PushI32, static_cast<uint64_t>(targetErrorVariant->variantIndex)});
+                  {IrOpcode::PushI32, static_cast<uint64_t>(targetErrorTag)});
               function.instructions.push_back({IrOpcode::StoreLocal, static_cast<uint64_t>(baseLocal + 1)});
               if (!emitCopyTryResultErrorPayload(sourceSumDef,
                                                  sourceErrorVariant,
@@ -957,7 +1008,11 @@
             }
 
             const int32_t sumPtrLocal = resultLocal;
-            emitSumTagComparison(sumPtrLocal, okVariant->variantIndex);
+            int32_t sourceOkTag = 0;
+            if (!resolveSemanticProductSumVariantTag(*sumDef, *okVariant, "try source ok", sourceOkTag)) {
+              return false;
+            }
+            emitSumTagComparison(sumPtrLocal, sourceOkTag);
             size_t jumpError = function.instructions.size();
             function.instructions.push_back({IrOpcode::JumpIfZero, 0});
             if (!emitLoadOkPayload(sumPtrLocal)) {

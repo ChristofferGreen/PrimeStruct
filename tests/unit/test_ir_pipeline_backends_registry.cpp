@@ -1137,6 +1137,32 @@ main() {
   CHECK(staleFailure.diagnosticInfo.message == staleFailure.message);
 }
 
+TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path tryHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+  if (!std::filesystem::exists(tryHelpersPath)) {
+    tryHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerEmitExprTryHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(tryHelpersPath));
+
+  const std::string source = readTextFile(tryHelpersPath);
+  CHECK(source.find("\"try candidate ok payload\"") != std::string::npos);
+  CHECK(source.find("\"try candidate error payload\"") != std::string::npos);
+  CHECK(source.find("\"try operand candidate ok payload\"") != std::string::npos);
+  CHECK(source.find("\"try operand candidate error payload\"") != std::string::npos);
+  CHECK(source.find("\"try source ok payload\"") != std::string::npos);
+  CHECK(source.find("\"try source error payload\"") != std::string::npos);
+  CHECK(source.find("\"try source error payload copy\"") != std::string::npos);
+  CHECK(source.find("\"try target error payload copy\"") != std::string::npos);
+  CHECK(source.find("\"try source ok\"") != std::string::npos);
+  CHECK(source.find("\"try target error\"") != std::string::npos);
+  CHECK(source.find("resolveSumPayloadStorageInfo(") == std::string::npos);
+  CHECK(source.find("okVariant->variantIndex") == std::string::npos);
+  CHECK(source.find("targetErrorVariant->variantIndex") == std::string::npos);
+}
+
 TEST_CASE("native sum active payload helpers use semantic-product variant tags") {
   const auto rewriteChoiceLeftVariantTag =
       [](primec::SemanticProgram &semanticProduct, uint32_t tagValue) {

@@ -382,6 +382,11 @@ Planned non-template inference migration contract:
   metadata before binding source `ok` payload locals, storing mapped target
   payloads, or copying propagated `error` payloads. Syntax-only compatibility
   keeps the old AST payload-storage path.
+- Completed native `try(...)` Result-variant slice: semantic-product-addressed
+  stdlib Result sum matching, source `ok`/`error` payload loads, propagated
+  return-error copies, and source/target tag writes now validate and consume
+  published sum-variant metadata instead of reading AST payload shape or
+  variant order. Syntax-only compatibility keeps the old AST payload/tag path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
@@ -722,7 +727,9 @@ Planned lowerer type/binding handoff:
   semantic-product surface because they have no stable source-owned semantic identity.
   Native sum constructor, `Result.ok`, and initializer-matching selection now use
   published sum-variant payload metadata for selected payload storage shape on
-  the semantic-product path.
+  the semantic-product path. Native `try(...)` lowering for stdlib Result sums
+  now uses published sum-variant metadata for Result payload storage and tag
+  decisions on the semantic-product path.
 - After entry setup is cut over, lowering should consume binding metadata from the semantic product instead of
   re-running helper-family checks, fallback type inference, or binding-shape recovery against the AST.
 - The semantic product should publish, per lowered binding/expression site:
@@ -3595,8 +3602,10 @@ bad_set() {
   payload into stable result storage before the value can be bound, returned, or passed to a helper, so inactive payload
   storage stays unobserved by the escape path. Native constructor and
   initializer selection consumes published sum-variant metadata before choosing
-  payload storage on semantic-product-backed paths. Sum-to-sum `move(...)`
-  construction copies the active tag and routes only
+  payload storage on semantic-product-backed paths. Native `try(...)` lowering
+  consumes published Result sum-variant metadata before matching payload shape,
+  loading payload slots, copying propagated errors, or branching on tags.
+  Sum-to-sum `move(...)` construction copies the active tag and routes only
   the selected aggregate payload through its `Move`/`Copy` helper when one exists, falling back to slot copy for
   helper-free payloads. Explicit `drop(storage)` for `uninitialized<Sum>` storage routes only the active aggregate
   payload through `DestroyStack`/`Destroy` when a payload helper exists; inactive payload storage is never observed or

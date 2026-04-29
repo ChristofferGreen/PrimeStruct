@@ -6,6 +6,47 @@ Legend:
 Finished items are periodically archived here from `docs/todo.md`; section headers record the archive date.
 
 **Todo Completion (April 29, 2026)**
+- [x] TODO-4298: Use variant facts for try Result paths
+  - owner: ai
+  - created_at: 2026-04-28
+  - phase: Semantic ownership authority
+  - scope: Land the lowerer-side TODO-4298 slice that makes semantic-product
+    native `try(...)` lowering for stdlib Result sums consume published
+    sum-variant metadata before matching candidate payload shape, loading
+    source `ok`/`error` payloads, copying propagated return-error payloads,
+    or branching/storing source and target tags.
+  - implementation_notes:
+    - Keep broader `?`/Result migration, Result-combinator lowering,
+      sum construction, pick lowering, template inference, and collection
+      migration out of scope.
+    - Preserve syntax-only compatibility by using the AST payload/tag path
+      only when no semantic-product variant metadata is present.
+    - Reuse the existing sum-variant metadata fact family and fail closed on
+      missing or stale metadata before native `try(...)` can consume Result
+      payload storage or tag values.
+  - acceptance:
+    - Native `try(...)` candidate matching validates published `ok` and
+      `error` payload metadata on semantic-product-backed paths.
+    - Native `try(...)` source payload loads validate published `ok` and
+      `error` payload metadata on semantic-product-backed paths.
+    - Native Result-return error propagation validates source and target
+      `error` payload metadata before copying payload storage.
+    - Native `try(...)` source `ok` comparisons and target `error` stores use
+      published tag values on semantic-product-backed paths.
+    - `docs/PrimeStruct.md` and the remaining TODO-4298 block record the
+      completed slice and remaining adjacent islands.
+    - Release validation is deferred to CI per the lite workflow.
+  - stop_rule: Stop once native `try(...)` Result lowering has
+    semantic-product authority for Result sum-variant payload metadata and tag
+    values, with the old AST payload/tag path retained only as syntax-only
+    compatibility.
+  - finished_at: 2026-04-29
+  - evidence: Added semantic-product payload and tag validation to native
+    `try(...)` stdlib Result matching, payload loads, propagated error copies,
+    and tag branches/stores; added lowerer source-contract coverage; and
+    documented the remaining TODO-4298 work. Local test execution was skipped
+    per the lite workflow.
+
 - [x] TODO-4298: Use variant facts for sum selection
   - owner: ai
   - created_at: 2026-04-28
