@@ -469,20 +469,36 @@
           return std::nullopt;
         }
         std::vector<std::string> candidateTypeTexts;
+        auto addSemanticProductCandidateTypeText =
+            [&](const std::string &typeText, auto typeTextId) {
+          std::string resolvedTypeText;
+          if (semanticTargets.semanticProgram != nullptr &&
+              typeTextId != InvalidSymbolId) {
+            resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+                *semanticTargets.semanticProgram,
+                typeTextId));
+          }
+          if (resolvedTypeText.empty()) {
+            resolvedTypeText = typeText;
+          }
+          resolvedTypeText = trimTemplateTypeText(resolvedTypeText);
+          if (!resolvedTypeText.empty()) {
+            candidateTypeTexts.push_back(std::move(resolvedTypeText));
+          }
+        };
         if (const SemanticProgramBindingFact *bindingFact =
                 findSemanticProductBindingFact(semanticTargets, initializer);
-            bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-          candidateTypeTexts.push_back(bindingFact->bindingTypeText);
+            bindingFact != nullptr) {
+          addSemanticProductCandidateTypeText(bindingFact->bindingTypeText,
+                                              bindingFact->bindingTypeTextId);
         }
         if (const SemanticProgramQueryFact *queryFact =
                 findSemanticProductQueryFact(semanticTargets, initializer);
             queryFact != nullptr) {
-          if (!queryFact->bindingTypeText.empty()) {
-            candidateTypeTexts.push_back(queryFact->bindingTypeText);
-          }
-          if (!queryFact->queryTypeText.empty()) {
-            candidateTypeTexts.push_back(queryFact->queryTypeText);
-          }
+          addSemanticProductCandidateTypeText(queryFact->bindingTypeText,
+                                              queryFact->bindingTypeTextId);
+          addSemanticProductCandidateTypeText(queryFact->queryTypeText,
+                                              queryFact->queryTypeTextId);
         }
         if (candidateTypeTexts.empty()) {
           return std::nullopt;
@@ -1843,20 +1859,36 @@
       }
 
       std::vector<std::string> candidateTypeTexts;
+      auto addSemanticProductCandidateTypeText =
+          [&](const std::string &typeText, auto typeTextId) {
+        std::string resolvedTypeText;
+        if (semanticTargets.semanticProgram != nullptr &&
+            typeTextId != InvalidSymbolId) {
+          resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+              *semanticTargets.semanticProgram,
+              typeTextId));
+        }
+        if (resolvedTypeText.empty()) {
+          resolvedTypeText = typeText;
+        }
+        resolvedTypeText = trimTemplateTypeText(resolvedTypeText);
+        if (!resolvedTypeText.empty()) {
+          candidateTypeTexts.push_back(std::move(resolvedTypeText));
+        }
+      };
       if (const SemanticProgramBindingFact *bindingFact =
               findSemanticProductBindingFact(semanticTargets, valueExpr);
-          bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-        candidateTypeTexts.push_back(bindingFact->bindingTypeText);
+          bindingFact != nullptr) {
+        addSemanticProductCandidateTypeText(bindingFact->bindingTypeText,
+                                            bindingFact->bindingTypeTextId);
       }
       if (const SemanticProgramQueryFact *queryFact =
               findSemanticProductQueryFact(semanticTargets, valueExpr);
           queryFact != nullptr) {
-        if (!queryFact->bindingTypeText.empty()) {
-          candidateTypeTexts.push_back(queryFact->bindingTypeText);
-        }
-        if (!queryFact->queryTypeText.empty()) {
-          candidateTypeTexts.push_back(queryFact->queryTypeText);
-        }
+        addSemanticProductCandidateTypeText(queryFact->bindingTypeText,
+                                            queryFact->bindingTypeTextId);
+        addSemanticProductCandidateTypeText(queryFact->queryTypeText,
+                                            queryFact->queryTypeTextId);
       }
       if (candidateTypeTexts.empty()) {
         return std::nullopt;

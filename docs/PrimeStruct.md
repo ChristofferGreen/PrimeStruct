@@ -349,6 +349,10 @@ Planned non-template inference migration contract:
   resolves binding, query, and return binding type ids before copied semantic-product text, so
   named and direct-call pick target classification consumes graph-owned metadata before
   compatibility text.
+- Completed lowerer-side sum source ID slice: native sum initializer payload-shape and
+  `pick(...)` aggregate-result source classification now resolve binding/query type ids before
+  copied semantic-product text, so source payload classification consumes graph-owned metadata
+  before compatibility text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.

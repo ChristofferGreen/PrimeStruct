@@ -792,6 +792,17 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
   const size_t aggregateQueryFactPos =
       source.find("findSemanticProductQueryFact(semanticTargets, valueExpr)",
                   aggregateResolverPos);
+  const size_t aggregateTypeResolverPos =
+      source.find("addSemanticProductCandidateTypeText", aggregateResolverPos);
+  const size_t aggregateSemanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(",
+                  aggregateTypeResolverPos);
+  const size_t aggregateBindingIdPos =
+      source.find("bindingFact->bindingTypeTextId", aggregateTypeResolverPos);
+  const size_t aggregateQueryBindingIdPos =
+      source.find("queryFact->bindingTypeTextId", aggregateBindingIdPos);
+  const size_t aggregateQueryTypeIdPos =
+      source.find("queryFact->queryTypeTextId", aggregateQueryBindingIdPos);
   const size_t staleAggregatePos =
       source.find("stale semantic-product pick aggregate result metadata",
                   aggregateResolverPos);
@@ -800,10 +811,20 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
                   aggregateResolverPos);
   REQUIRE(aggregateBindingFactPos != std::string::npos);
   REQUIRE(aggregateQueryFactPos != std::string::npos);
+  REQUIRE(aggregateTypeResolverPos != std::string::npos);
+  REQUIRE(aggregateSemanticResolvePos != std::string::npos);
+  REQUIRE(aggregateBindingIdPos != std::string::npos);
+  REQUIRE(aggregateQueryBindingIdPos != std::string::npos);
+  REQUIRE(aggregateQueryTypeIdPos != std::string::npos);
   REQUIRE(staleAggregatePos != std::string::npos);
   REQUIRE(aggregateFallbackPos != std::string::npos);
+  CHECK(aggregateTypeResolverPos < aggregateBindingFactPos);
+  CHECK(aggregateSemanticResolvePos < aggregateBindingIdPos);
+  CHECK(aggregateBindingIdPos < aggregateQueryBindingIdPos);
+  CHECK(aggregateQueryBindingIdPos < aggregateQueryTypeIdPos);
   CHECK(aggregateBindingFactPos < aggregateFallbackPos);
   CHECK(aggregateQueryFactPos < aggregateFallbackPos);
+  CHECK(aggregateQueryTypeIdPos < aggregateFallbackPos);
   CHECK(source.find("if (!resolvedBySemanticProduct.has_value())", aggregateResolverPos) !=
         std::string::npos);
   CHECK(source.find("validateSemanticProductPickArmVariant") == std::string::npos);
@@ -1016,6 +1037,17 @@ TEST_CASE("native sum variant selection uses semantic-product payload metadata")
   const size_t initializerQueryFactPos =
       source.find("findSemanticProductQueryFact(semanticTargets, initializer)",
                   initializerShapePos);
+  const size_t initializerTypeResolverPos =
+      source.find("addSemanticProductCandidateTypeText", initializerShapePos);
+  const size_t initializerSemanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(",
+                  initializerTypeResolverPos);
+  const size_t initializerBindingIdPos =
+      source.find("bindingFact->bindingTypeTextId", initializerTypeResolverPos);
+  const size_t initializerQueryBindingIdPos =
+      source.find("queryFact->bindingTypeTextId", initializerBindingIdPos);
+  const size_t initializerQueryTypeIdPos =
+      source.find("queryFact->queryTypeTextId", initializerQueryBindingIdPos);
   const size_t staleInitializerTypePos =
       source.find("stale semantic-product sum initializer type metadata",
                   initializerShapePos);
@@ -1025,10 +1057,20 @@ TEST_CASE("native sum variant selection uses semantic-product payload metadata")
   REQUIRE(initializerShapePos != std::string::npos);
   REQUIRE(initializerBindingFactPos != std::string::npos);
   REQUIRE(initializerQueryFactPos != std::string::npos);
+  REQUIRE(initializerTypeResolverPos != std::string::npos);
+  REQUIRE(initializerSemanticResolvePos != std::string::npos);
+  REQUIRE(initializerBindingIdPos != std::string::npos);
+  REQUIRE(initializerQueryBindingIdPos != std::string::npos);
+  REQUIRE(initializerQueryTypeIdPos != std::string::npos);
   REQUIRE(staleInitializerTypePos != std::string::npos);
   REQUIRE(initializerFallbackKindPos != std::string::npos);
+  CHECK(initializerTypeResolverPos < initializerBindingFactPos);
+  CHECK(initializerSemanticResolvePos < initializerBindingIdPos);
+  CHECK(initializerBindingIdPos < initializerQueryBindingIdPos);
+  CHECK(initializerQueryBindingIdPos < initializerQueryTypeIdPos);
   CHECK(initializerBindingFactPos < initializerFallbackKindPos);
   CHECK(initializerQueryFactPos < initializerFallbackKindPos);
+  CHECK(initializerQueryTypeIdPos < initializerFallbackKindPos);
   CHECK(source.find("if (!resolvedInitializerShape.has_value())") != std::string::npos);
   CHECK(source.find("\"sum constructor selection\"") != std::string::npos);
   CHECK(source.find("\"Result.ok selection\"") != std::string::npos);

@@ -433,9 +433,10 @@ Task template:
     local-auto declarations, for-condition declarations, and final LocalInfo
     fallback setup. The native pick target ID consumer slice is complete for
     semantic-product-backed named and direct-call target sum classification.
-    The
-    direct `Result.ok(...)` payload metadata slice is
-    complete for semantic-product-backed direct-call payload type facts and
+    The native sum source ID consumer slice is complete for
+    semantic-product-backed sum initializer and pick aggregate-result source
+    payload classification. The direct `Result.ok(...)` payload metadata slice
+    is complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
     slice is complete for
     semantic-product-backed direct-call payload type facts.
@@ -587,6 +588,10 @@ Task template:
       sum resolution now resolves interned binding, query, and return binding
       type IDs before consulting copied semantic-product text fields for
       named and direct-call target classification.
+    - Completed slice: semantic-product-addressed native sum initializer and
+      `pick(...)` aggregate-result source classification now resolve interned
+      binding/query type IDs before consulting copied semantic-product text
+      fields for payload shape classification.
     - Completed slice: semantic-product collection specialization
       completeness validation now rejects missing or stale interned collection
       family, binding type, element type, and key/value type metadata before
