@@ -424,7 +424,9 @@ Task template:
     complete for semantic-product-backed field receiver and packed Result
     payload classification. The lowerer try operand Result ID consumer slice
     is complete for semantic-product-backed `try(...)` value/error
-    propagation. The
+    propagation. The lowerer status Result source ID consumer slice is
+    complete for semantic-product-backed `Result.why(...)` and
+    `Result.error(...)` source error-domain matching. The
     direct `Result.ok(...)` payload metadata slice is
     complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
@@ -563,6 +565,10 @@ Task template:
     - Completed slice: semantic-product-addressed `try(...)` operand result
       metadata now resolves interned result value/error IDs before consulting
       copied query text fields for value/error propagation.
+    - Completed slice: semantic-product-addressed direct-call status-only
+      sources for native `Result.why(...)` and `Result.error(...)` now resolve
+      interned query result error IDs before consulting copied query text
+      fields for error-domain matching.
     - Completed slice: semantic-product collection specialization
       completeness validation now rejects missing or stale interned collection
       family, binding type, element type, and key/value type metadata before

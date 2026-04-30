@@ -634,6 +634,22 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
     return defMap.find("/std/result/Result") != defMap.end();
   };
 
+  auto resolveSemanticQueryResultErrorTypeText =
+      [&](const SemanticProgramQueryFact &queryFact) {
+    if (semanticProductTargets != nullptr &&
+        semanticProductTargets->semanticProgram != nullptr &&
+        queryFact.resultErrorTypeId != InvalidSymbolId) {
+      std::string resolvedErrorType = std::string(
+          semanticProgramResolveCallTargetString(
+              *semanticProductTargets->semanticProgram,
+              queryFact.resultErrorTypeId));
+      if (!resolvedErrorType.empty()) {
+        return trimTemplateTypeText(resolvedErrorType);
+      }
+    }
+    return trimTemplateTypeText(queryFact.resultErrorType);
+  };
+
   auto directCallReturnsImportedStdlibResultSum =
       [&](const Expr &valueExpr, bool &returnsResultOut) {
     returnsResultOut = false;
@@ -652,7 +668,7 @@ ResultErrorMethodCallEmitResult tryEmitResultErrorCall(
         return false;
       }
       if (!queryFact->hasResultType || queryFact->resultTypeHasValue ||
-          trimTemplateTypeText(queryFact->resultErrorType) !=
+          resolveSemanticQueryResultErrorTypeText(*queryFact) !=
               trimTemplateTypeText(resultInfo.errorType)) {
         error = "stale semantic-product Result.error source query metadata: " +
                 valueExpr.name;

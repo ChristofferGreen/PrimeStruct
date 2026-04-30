@@ -334,6 +334,10 @@ Planned non-template inference migration contract:
 - Completed lowerer-side try operand Result ID slice: `try(...)` operand result metadata now
   resolves `resultValueTypeId` and `resultErrorTypeId` before copied query-fact text, so
   value/error propagation consumes graph-owned Result metadata before compatibility text.
+- Completed lowerer-side status Result source ID slice: native `Result.why(...)` and
+  `Result.error(...)` direct-call status-only source checks now resolve `resultErrorTypeId`
+  before copied query-fact text, so error-domain matching consumes graph-owned metadata before
+  compatibility text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.
