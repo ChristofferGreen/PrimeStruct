@@ -52,12 +52,26 @@ bool inferBaseSetupSemanticQueryFactValueKind(const Expr &expr,
   if (queryFact == nullptr) {
     return false;
   }
-  const LocalInfo::ValueKind queryKind = valueKindFromTypeName(trimTemplateTypeText(queryFact->queryTypeText));
+  auto resolveFactTypeText = [semanticProgram](const std::string &typeText, SymbolId typeTextId) {
+    if (typeTextId != InvalidSymbolId) {
+      std::string resolvedTypeText = std::string(
+          semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+      if (!resolvedTypeText.empty()) {
+        return trimTemplateTypeText(resolvedTypeText);
+      }
+    }
+    return trimTemplateTypeText(typeText);
+  };
+  const LocalInfo::ValueKind queryKind =
+      valueKindFromTypeName(
+          resolveFactTypeText(queryFact->queryTypeText, queryFact->queryTypeTextId));
   if (queryKind != LocalInfo::ValueKind::Unknown) {
     kindOut = queryKind;
     return true;
   }
-  const LocalInfo::ValueKind bindingKind = valueKindFromTypeName(trimTemplateTypeText(queryFact->bindingTypeText));
+  const LocalInfo::ValueKind bindingKind =
+      valueKindFromTypeName(
+          resolveFactTypeText(queryFact->bindingTypeText, queryFact->bindingTypeTextId));
   if (bindingKind != LocalInfo::ValueKind::Unknown) {
     kindOut = bindingKind;
     return true;

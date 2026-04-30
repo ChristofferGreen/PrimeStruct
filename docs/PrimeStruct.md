@@ -316,6 +316,10 @@ Planned non-template inference migration contract:
   checks interned query type, binding type, and receiver binding type metadata before lowerer
   consumers can read query fact text fields. Missing or contradictory type ids fail closed with
   deterministic query metadata diagnostics.
+- Completed lowerer-side call-base scalar query ID slice: semantic-product-addressed call-base
+  scalar inference now resolves `queryTypeTextId` and `bindingTypeTextId` before copied query-fact
+  text fields, so scalar call kind inference consumes the graph-owned intern table rather than
+  stale duplicated text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.

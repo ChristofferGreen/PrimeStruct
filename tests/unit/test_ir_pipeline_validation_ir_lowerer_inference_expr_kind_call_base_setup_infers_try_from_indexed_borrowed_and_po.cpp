@@ -84,8 +84,8 @@ TEST_CASE("ir lowerer inference expr-kind call-base setup uses semantic query fa
   semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
       .scopePath = "/Holder/check",
       .callName = "greater_than",
-      .queryTypeText = "bool",
-      .bindingTypeText = "bool",
+      .queryTypeText = "i64",
+      .bindingTypeText = "i64",
       .receiverBindingTypeText = "",
       .hasResultType = false,
       .resultTypeHasValue = false,

@@ -414,6 +414,8 @@ Task template:
     return slice is complete for semantic-product-backed direct-call operands
     to `location(...)`. The query Result-metadata ID consumer slice is
     complete for semantic-product-backed generic call result facts. The
+    call-base scalar query ID consumer slice is complete for
+    semantic-product-backed scalar call kind facts. The
     direct `Result.ok(...)` payload metadata slice is
     complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
@@ -533,6 +535,10 @@ Task template:
       rejects missing or stale interned query type, binding type, and receiver
       binding type metadata before lowerer consumers can read inconsistent
       query fact text fields.
+    - Completed slice: semantic-product-addressed call-base scalar inference
+      now resolves interned query/binding type IDs before consulting copied
+      query text fields, so scalar call kind inference consumes graph-owned
+      interned facts.
     - Completed slice: semantic-product collection specialization
       completeness validation now rejects missing or stale interned collection
       family, binding type, element type, and key/value type metadata before
