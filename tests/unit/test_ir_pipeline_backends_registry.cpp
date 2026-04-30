@@ -1627,8 +1627,14 @@ TEST_CASE("direct Result ok payload metadata uses semantic-product type facts fi
       "valueExpr, semanticProgram, semanticIndex, out)";
   const size_t semanticFactPos =
       source.find(semanticFactNeedle, metadataPos);
+  const size_t resolverPos =
+      source.find("std::string resolveSemanticDirectValueTypeText");
+  const size_t idCheckPos =
+      source.find("typeTextId != InvalidSymbolId", resolverPos);
   const size_t internedTypeTextPos =
-      source.find("semanticProgramResolveCallTargetString");
+      source.find("semanticProgramResolveCallTargetString", idCheckPos);
+  const size_t copiedTextFallbackPos =
+      source.find("return trimTemplateTypeText(typeText);", internedTypeTextPos);
   const size_t collectionFallbackPos =
       source.find("inferDirectResultValueCollectionInfo(",
                   metadataPos);
@@ -1639,16 +1645,23 @@ TEST_CASE("direct Result ok payload metadata uses semantic-product type facts fi
       source.find("suppressSemanticCallDefinitionFallback",
                   metadataPos);
   REQUIRE(semanticFactPos != std::string::npos);
+  REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(idCheckPos != std::string::npos);
   REQUIRE(internedTypeTextPos != std::string::npos);
+  REQUIRE(copiedTextFallbackPos != std::string::npos);
   REQUIRE(collectionFallbackPos != std::string::npos);
   REQUIRE(structFallbackPos != std::string::npos);
   REQUIRE(suppressFallbackPos != std::string::npos);
+  CHECK(idCheckPos < internedTypeTextPos);
+  CHECK(internedTypeTextPos < copiedTextFallbackPos);
   CHECK(semanticFactPos < collectionFallbackPos);
   CHECK(semanticFactPos < structFallbackPos);
   CHECK(internedTypeTextPos < collectionFallbackPos);
   CHECK(internedTypeTextPos < structFallbackPos);
   CHECK(suppressFallbackPos < collectionFallbackPos);
   CHECK(suppressFallbackPos < structFallbackPos);
+  CHECK(source.find("std::string resolvedTypeText = typeText;", resolverPos) ==
+        std::string::npos);
 }
 
 TEST_CASE("native Result ok emission uses semantic-product payload facts") {

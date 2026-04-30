@@ -523,15 +523,14 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
 std::string resolveSemanticDirectValueTypeText(const SemanticProgram *semanticProgram,
                                                const std::string &typeText,
                                                SymbolId typeTextId) {
-  std::string resolvedTypeText = typeText;
-  if (resolvedTypeText.empty() &&
-      typeTextId != InvalidSymbolId &&
-      semanticProgram != nullptr) {
-    resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
-        *semanticProgram,
-        typeTextId));
+  if (semanticProgram != nullptr && typeTextId != InvalidSymbolId) {
+    const std::string resolvedTypeText = std::string(
+        semanticProgramResolveCallTargetString(*semanticProgram, typeTextId));
+    if (!resolvedTypeText.empty()) {
+      return trimTemplateTypeText(resolvedTypeText);
+    }
   }
-  return trimTemplateTypeText(resolvedTypeText);
+  return trimTemplateTypeText(typeText);
 }
 
 bool applySemanticDirectValueMetadataFact(const Expr &valueExpr,

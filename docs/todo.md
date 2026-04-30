@@ -454,8 +454,9 @@ Task template:
     slice is complete for semantic-product-backed collection binding-type
     adapter setup. The direct `Result.ok(...)` payload metadata slice is
     complete for semantic-product-backed direct-call payload type facts and
-    interned payload type IDs. The native `Result.ok(...)` payload-emission
-    slice is complete for
+    interned payload type IDs. The lowerer direct `Result.ok(...)` payload
+    ID-order correction is complete for stale copied payload type text. The
+    native `Result.ok(...)` payload-emission slice is complete for
     semantic-product-backed direct-call payload type facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
@@ -792,6 +793,11 @@ Task template:
       interned semantic-product binding/query type IDs before treating
       payload metadata as absent, so downstream metadata consumers do not
       require duplicated text fields.
+    - Completed slice: semantic-product-addressed direct `Result.ok(...)`
+      payload metadata now lets interned binding/query type IDs override
+      stale copied payload type text before collection, struct, or local
+      metadata fallbacks can classify the payload. Copied text remains only
+      the compatibility fallback when the interned ID is absent or unresolved.
     - Completed slice: native packed `Result.ok(...)` emission now consumes
       semantic-product binding/query payload facts before invoking scalar
       inference, direct map rewrite reconstruction, collection fallback, or

@@ -529,6 +529,11 @@ Planned non-template inference migration contract:
   syntax-only compatibility keeps the legacy reconstruction path. The metadata
   path also resolves interned binding/query payload type IDs before treating
   semantic-product payload metadata as absent.
+- Completed lowerer-side direct `Result.ok(...)` payload ID-order slice:
+  semantic-product-addressed direct payload metadata now lets interned
+  binding/query type IDs override stale copied payload text before collection,
+  struct, or local fallbacks classify the payload. Copied payload text remains
+  only the compatibility fallback when no usable interned ID is present.
 - Completed native `Result.ok(...)` payload-emission slice:
   packed native `Result.ok(...)` emission now consumes semantic-product
   binding/query payload facts before invoking scalar inference, direct map
