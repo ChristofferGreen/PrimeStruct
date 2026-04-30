@@ -146,6 +146,15 @@ bool isAggregatePointerLikeReturnType(
   return resolveStructTypeName(targetType, namespacePrefix, resolvedStruct);
 }
 
+bool isReferenceReturnType(const std::string &returnType) {
+  std::string base;
+  std::string argList;
+  if (!splitTemplateTypeName(trimTemplateTypeText(returnType), base, argList)) {
+    return false;
+  }
+  return normalizeCollectionBindingTypeName(base) == "Reference";
+}
+
 bool resolveAggregatePointerLikeCallExpr(
     const Expr &expr,
     const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
@@ -197,6 +206,60 @@ bool resolveAggregatePointerLikeCallExpr(
     if (isAggregatePointerLikeReturnType(
             transform.templateArgs.front(), callee->namespacePrefix, resolveStructTypeName)) {
       aggregatePointerLikeOut = true;
+      return true;
+    }
+  }
+
+  return true;
+}
+
+bool resolveReferenceReturnCallExpr(
+    const Expr &expr,
+    const ResolveConversionsAndCallsDefinitionCallFn &resolveDefinitionCall,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    bool &referenceReturnOut,
+    std::string &error) {
+  referenceReturnOut = false;
+  if (expr.kind != Expr::Kind::Call || expr.isMethodCall || !resolveDefinitionCall) {
+    return true;
+  }
+
+  const Definition *callee = resolveDefinitionCall(expr);
+  if (callee == nullptr) {
+    return true;
+  }
+
+  if (semanticProductTargets != nullptr &&
+      semanticProductTargets->hasSemanticProduct &&
+      expr.semanticNodeId != 0) {
+    const SemanticProgramReturnFact *returnFact =
+        findSemanticProductReturnFactByPath(*semanticProductTargets, callee->fullPath);
+    std::string returnBindingType;
+    if (returnFact != nullptr) {
+      returnBindingType = returnFact->bindingTypeText;
+      if (returnBindingType.empty() &&
+          returnFact->bindingTypeTextId != InvalidSymbolId &&
+          semanticProductTargets->semanticProgram != nullptr) {
+        returnBindingType = std::string(semanticProgramResolveCallTargetString(
+            *semanticProductTargets->semanticProgram,
+            returnFact->bindingTypeTextId));
+      }
+    }
+    if (returnFact == nullptr || returnBindingType.empty()) {
+      error = "missing semantic-product location reference return metadata: " +
+              callee->fullPath;
+      return false;
+    }
+    referenceReturnOut = isReferenceReturnType(returnBindingType);
+    return true;
+  }
+
+  for (const auto &transform : callee->transforms) {
+    if (transform.name != "return" || transform.templateArgs.size() != 1) {
+      continue;
+    }
+    if (isReferenceReturnType(transform.templateArgs.front())) {
+      referenceReturnOut = true;
       return true;
     }
   }
@@ -590,19 +653,13 @@ bool emitConversionsAndCallsMemoryAndPointerExpr(
         return true;
       }
       if (target.kind == Expr::Kind::Call && !target.isMethodCall && resolveDefinitionCall != nullptr) {
-        const Definition *callee = resolveDefinitionCall(target);
-        if (callee != nullptr) {
-          for (const auto &transform : callee->transforms) {
-            if (transform.name != "return" || transform.templateArgs.size() != 1) {
-              continue;
-            }
-            std::string base;
-            std::string arg;
-            if (splitTemplateTypeName(trimTemplateTypeText(transform.templateArgs.front()), base, arg) &&
-                normalizeCollectionBindingTypeName(base) == "Reference") {
-              return emitExpr(target, localsIn);
-            }
-          }
+        bool referenceReturn = false;
+        if (!resolveReferenceReturnCallExpr(
+                target, resolveDefinitionCall, semanticProductTargets, referenceReturn, error)) {
+          return false;
+        }
+        if (referenceReturn) {
+          return emitExpr(target, localsIn);
         }
       }
       error = "location requires a local binding";

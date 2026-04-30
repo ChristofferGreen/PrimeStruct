@@ -1307,5 +1307,144 @@ TEST_CASE("ir lowerer conversions helper dereferences direct aggregate pointer c
   CHECK(instructions.empty());
 }
 
+TEST_CASE("ir lowerer conversions helper locations direct reference calls from semantic-product return facts") {
+  primec::Expr callExpr;
+  callExpr.kind = primec::Expr::Kind::Call;
+  callExpr.name = "makePairRef";
+  callExpr.semanticNodeId = 111;
+
+  primec::Expr expr;
+  expr.kind = primec::Expr::Kind::Call;
+  expr.name = "location";
+  expr.args = {callExpr};
+
+  primec::Definition callee;
+  callee.fullPath = "/makePairRef";
+  callee.namespacePrefix = "/";
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.returnFacts.push_back(primec::SemanticProgramReturnFact{
+      .returnKind = "Int64",
+      .structPath = "/Pair",
+      .bindingTypeText = "Reference<Pair>",
+      .definitionPathId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "/makePairRef"),
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  std::vector<primec::IrInstruction> instructions;
+  std::string error;
+  bool handled = false;
+  int32_t nextLocal = 0;
+  int emitCalls = 0;
+  int resolveCalls = 0;
+  const bool ok = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      {},
+      nextLocal,
+      [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+        ++emitCalls;
+        CHECK(valueExpr.semanticNodeId == 111);
+        instructions.push_back({primec::IrOpcode::LoadLocal, 23});
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) {
+        return false;
+      },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) {
+        return false;
+      },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error,
+      [&](const primec::Expr &valueExpr) -> const primec::Definition * {
+        ++resolveCalls;
+        CHECK(valueExpr.semanticNodeId == 111);
+        return &callee;
+      },
+      &semanticTargets);
+
+  CHECK(ok);
+  CHECK(handled);
+  CHECK(error.empty());
+  CHECK(resolveCalls == 1);
+  CHECK(emitCalls == 1);
+  REQUIRE(instructions.size() == 1);
+  CHECK(instructions[0].op == primec::IrOpcode::LoadLocal);
+  CHECK(instructions[0].imm == 23);
+
+  primec::SemanticProgram missingSemanticProgram;
+  const auto missingSemanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&missingSemanticProgram);
+  instructions.clear();
+  error.clear();
+  handled = false;
+  emitCalls = 0;
+  resolveCalls = 0;
+  const bool missingOk = primec::ir_lowerer::emitConversionsAndCallsOperatorExpr(
+      expr,
+      {},
+      nextLocal,
+      [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        ++emitCalls;
+        return true;
+      },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+        return primec::ir_lowerer::LocalInfo::ValueKind::Unknown;
+      },
+      [](primec::ir_lowerer::LocalInfo::ValueKind, bool) { return true; },
+      [&]() { return nextLocal++; },
+      []() {},
+      []() {},
+      []() {},
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &, int32_t &, size_t &) {
+        return false;
+      },
+      [](const std::string &) { return primec::ir_lowerer::LocalInfo::ValueKind::Unknown; },
+      [](const std::string &, std::string &) { return false; },
+      [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return std::string(); },
+      [](const std::string &, const std::string &, std::string &) { return false; },
+      [](const std::string &, int32_t &) { return false; },
+      [](const std::string &, const std::string &, int32_t &, int32_t &, std::string &) {
+        return false;
+      },
+      [](const std::string &, const std::string &, primec::ir_lowerer::LayoutFieldBinding &) {
+        return false;
+      },
+      [](int32_t, int32_t, int32_t) { return false; },
+      instructions,
+      handled,
+      error,
+      [&](const primec::Expr &) -> const primec::Definition * {
+        ++resolveCalls;
+        return &callee;
+      },
+      &missingSemanticTargets);
+
+  CHECK_FALSE(missingOk);
+  CHECK(handled);
+  CHECK(error == "missing semantic-product location reference return metadata: /makePairRef");
+  CHECK(resolveCalls == 1);
+  CHECK(emitCalls == 0);
+  CHECK(instructions.empty());
+}
 
 TEST_SUITE_END();

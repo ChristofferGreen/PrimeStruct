@@ -449,6 +449,12 @@ Planned non-template inference migration contract:
   return metadata fails closed with a deterministic aggregate-pointer return
   diagnostic; syntax-only or no-semantic-product compatibility keeps the old
   transform-scan path.
+- Completed native location-reference return slice:
+  semantic-product-addressed direct-call operands for `location(...)` now
+  resolve reference return shape from the published return fact before scanning
+  callee return transforms. Missing return metadata fails closed with a
+  deterministic location-reference return diagnostic; syntax-only or
+  no-semantic-product compatibility keeps the old transform-scan path.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph
