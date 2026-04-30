@@ -68,33 +68,31 @@ bool requiresSemanticBindingFact(const SemanticProgram *semanticProgram,
   return semanticProgram != nullptr && expr.semanticNodeId != 0;
 }
 
-std::string resolveSemanticBindingFactTypeText(
-    const SemanticProgram *semanticProgram,
-    const SemanticProgramBindingFact &bindingFact) {
-  if (semanticProgram != nullptr &&
-      bindingFact.bindingTypeTextId != InvalidSymbolId) {
+std::string resolveSemanticProductTypeText(const SemanticProgram *semanticProgram,
+                                           const std::string &text,
+                                           SymbolId textId) {
+  if (semanticProgram != nullptr && textId != InvalidSymbolId) {
     std::string resolvedTypeText = std::string(
-        semanticProgramResolveCallTargetString(*semanticProgram,
-                                               bindingFact.bindingTypeTextId));
+        semanticProgramResolveCallTargetString(*semanticProgram, textId));
     if (!resolvedTypeText.empty()) {
       return trimTemplateTypeText(resolvedTypeText);
     }
   }
-  return trimTemplateTypeText(bindingFact.bindingTypeText);
+  return trimTemplateTypeText(text);
+}
+
+std::string resolveSemanticBindingFactTypeText(
+    const SemanticProgram *semanticProgram,
+    const SemanticProgramBindingFact &bindingFact) {
+  return resolveSemanticProductTypeText(
+      semanticProgram, bindingFact.bindingTypeText, bindingFact.bindingTypeTextId);
 }
 
 std::string resolveSemanticCollectionSpecializationText(
     const SemanticProgram *semanticProgram,
     const std::string &text,
     SymbolId textId) {
-  if (semanticProgram != nullptr && textId != InvalidSymbolId) {
-    std::string resolvedText =
-        std::string(semanticProgramResolveCallTargetString(*semanticProgram, textId));
-    if (!resolvedText.empty()) {
-      return trimTemplateTypeText(resolvedText);
-    }
-  }
-  return trimTemplateTypeText(text);
+  return resolveSemanticProductTypeText(semanticProgram, text, textId);
 }
 
 bool isLocalAutoBindingCandidate(const Expr &expr) {
@@ -566,7 +564,11 @@ bool validateSemanticProductBindingCoverage(const Program &program,
     }
     const SemanticProgramBindingFact *bindingFact =
         findSemanticProductBindingFact(semanticIndex, expr);
-    if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+    const std::string bindingTypeText =
+        bindingFact != nullptr
+            ? resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact)
+            : std::string{};
+    if (bindingFact == nullptr || bindingTypeText.empty()) {
       error = "missing semantic-product binding fact: " +
               describeBindingSite(scopePath, siteKind, expr);
       return false;
@@ -654,7 +656,13 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
         isLocalAutoBindingCandidate(expr)) {
       const SemanticProgramLocalAutoFact *localAutoFact =
           findSemanticProductLocalAutoFactBySemanticId(semanticIndex, expr);
-      if (localAutoFact == nullptr || localAutoFact->bindingTypeText.empty()) {
+      const std::string localAutoBindingTypeText =
+          localAutoFact != nullptr
+              ? resolveSemanticProductTypeText(semanticProgram,
+                                               localAutoFact->bindingTypeText,
+                                               localAutoFact->bindingTypeTextId)
+              : std::string{};
+      if (localAutoFact == nullptr || localAutoBindingTypeText.empty()) {
         error = "missing semantic-product local-auto fact: " +
                 describeBindingSite(scopePath, "local", expr);
         return false;
@@ -752,10 +760,14 @@ bool validateSemanticProductLocalAutoCoverage(const Program &program,
       }
       const SemanticProgramBindingFact *bindingFact =
           findSemanticProductBindingFact(semanticIndex, expr);
+      const std::string bindingTypeText =
+          bindingFact != nullptr
+              ? resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact)
+              : std::string{};
       if (bindingFact != nullptr &&
-          !bindingFact->bindingTypeText.empty() &&
-          !semanticTypeTextsMatchForLocalAuto(localAutoFact->bindingTypeText,
-                                              bindingFact->bindingTypeText)) {
+          !bindingTypeText.empty() &&
+          !semanticTypeTextsMatchForLocalAuto(localAutoBindingTypeText,
+                                              bindingTypeText)) {
         error = "stale semantic-product local-auto fact: " +
                 siteDescription;
         return false;
@@ -792,13 +804,17 @@ bool validateSemanticProductCollectionSpecializationCoverage(
     }
     const SemanticProgramBindingFact *bindingFact =
         findSemanticProductBindingFact(semanticIndex, expr);
-    if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+    const std::string bindingTypeText =
+        bindingFact != nullptr
+            ? resolveSemanticBindingFactTypeText(semanticProgram, *bindingFact)
+            : std::string{};
+    if (bindingFact == nullptr || bindingTypeText.empty()) {
       return true;
     }
 
     ExpectedCollectionSpecialization expected;
     if (!extractExpectedCollectionSpecialization(
-            bindingFact->bindingTypeText, expected)) {
+            bindingTypeText, expected)) {
       return true;
     }
 

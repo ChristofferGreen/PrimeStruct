@@ -328,6 +328,9 @@ Planned non-template inference migration contract:
   and reference-array adapter decisions now resolve `bindingTypeTextId` before copied binding-fact
   text fields, so local setup consumes graph-owned binding metadata instead of stale duplicated
   text.
+- Completed lowerer-side binding coverage ID slice: binding, local-auto, and collection
+  specialization completeness checks now resolve interned binding type ids before copied fact text,
+  so coverage validation consumes graph-owned binding metadata before compatibility text.
 - Completed lowerer-side field/packed payload ID slice: native field receiver and packed Result
   payload classifiers now resolve binding/query type ids before copied semantic-product text, so
   struct and packed-payload classification consume graph-owned metadata before compatibility text.

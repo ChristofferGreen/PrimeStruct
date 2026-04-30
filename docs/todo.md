@@ -437,7 +437,9 @@ Task template:
     binding ID consumer slice is
     complete for semantic-product-backed local-auto
     declarations, for-condition declarations, and final LocalInfo fallback
-    setup. The native pick target ID consumer slice is complete for
+    setup. The lowerer binding coverage ID consumer slice is complete for
+    binding, local-auto, and collection specialization completeness
+    validation. The native pick target ID consumer slice is complete for
     semantic-product-backed named and direct-call target sum classification.
     The native sum source ID consumer slice is complete for
     semantic-product-backed sum initializer and pick aggregate-result source
@@ -574,6 +576,10 @@ Task template:
       now resolve interned binding type IDs before consulting copied binding
       text fields for binding-kind, value-kind, string/file-error, and
       reference-array local setup decisions.
+    - Completed slice: semantic-product binding coverage validation now
+      resolves interned binding type IDs before consulting copied binding and
+      local-auto fact text fields for binding, local-auto, and collection
+      specialization coverage checks.
     - Completed slice: semantic-product-addressed native field receiver and
       packed Result payload classifiers now resolve interned binding/query
       type IDs before consulting copied semantic-product text fields for

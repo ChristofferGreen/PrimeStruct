@@ -3458,7 +3458,17 @@ TEST_CASE("ir lowerer rejects stale semantic-product collection metadata") {
   std::string error;
   primec::DiagnosticSinkReport diagnosticInfo;
 
+  semanticProgram.bindingFacts.back().bindingTypeTextId =
+      primec::semanticProgramInternCallTargetString(semanticProgram, "map<i32, i64>");
+  semanticProgram.bindingFacts.back().bindingTypeText = "";
   refreshCollectionIds();
+  CHECK(lowerWithSemanticProduct(error, diagnosticInfo));
+  CHECK(error.empty());
+  CHECK(diagnosticInfo.message.empty());
+
+  refreshCollectionIds();
+  error.clear();
+  diagnosticInfo = {};
   semanticProgram.collectionSpecializations.back().collectionFamilyId =
       static_cast<primec::SymbolId>(semanticProgram.callTargetStringTable.size() + 1u);
   CHECK_FALSE(lowerWithSemanticProduct(error, diagnosticInfo));
@@ -4053,6 +4063,7 @@ TEST_CASE("semantic-product local-auto call paths accept stdlib surface equivale
   localAutoFact.semanticNodeId = 47;
   localAutoFact.bindingTypeTextId =
       primec::semanticProgramInternCallTargetString(semanticProgram, "i32");
+  localAutoFact.bindingTypeText = "";
   localAutoFact.initializerResolvedPathId =
       primec::semanticProgramInternCallTargetString(semanticProgram,
                                                     "/std/collections/vectorAt");
