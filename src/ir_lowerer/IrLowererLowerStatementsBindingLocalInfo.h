@@ -168,8 +168,17 @@
           callResolutionAdapters.semanticProgram != nullptr && stmt.semanticNodeId != 0) {
         if (const SemanticProgramBindingFact *bindingFact =
                 findSemanticProductBindingFact(callResolutionAdapters.semanticProductTargets.semanticIndex, stmt);
-            bindingFact != nullptr && !bindingFact->bindingTypeText.empty()) {
-          std::string semanticTypeText = trimTemplateTypeText(bindingFact->bindingTypeText);
+            bindingFact != nullptr) {
+          std::string semanticTypeText;
+          if (bindingFact->bindingTypeTextId != InvalidSymbolId) {
+            semanticTypeText = std::string(semanticProgramResolveCallTargetString(
+                *callResolutionAdapters.semanticProgram,
+                bindingFact->bindingTypeTextId));
+          }
+          if (semanticTypeText.empty()) {
+            semanticTypeText = bindingFact->bindingTypeText;
+          }
+          semanticTypeText = trimTemplateTypeText(semanticTypeText);
           if (!semanticTypeText.empty() &&
               valueKindFromTypeName(semanticTypeText) == LocalInfo::ValueKind::Unknown) {
             std::string base;

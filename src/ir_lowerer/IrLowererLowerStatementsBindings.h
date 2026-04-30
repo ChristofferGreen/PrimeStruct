@@ -333,9 +333,18 @@
             findSemanticProductLocalAutoFactBySemanticId(
                 callResolutionAdapters.semanticProductTargets.semanticIndex,
                 stmt);
-        const std::string bindingTypeText =
-            localAutoFact != nullptr ? trimTemplateTypeText(localAutoFact->bindingTypeText)
-                                     : std::string{};
+        std::string bindingTypeText;
+        if (localAutoFact != nullptr) {
+          if (localAutoFact->bindingTypeTextId != InvalidSymbolId) {
+            bindingTypeText = std::string(semanticProgramResolveCallTargetString(
+                *callResolutionAdapters.semanticProgram,
+                localAutoFact->bindingTypeTextId));
+          }
+          if (bindingTypeText.empty()) {
+            bindingTypeText = localAutoFact->bindingTypeText;
+          }
+          bindingTypeText = trimTemplateTypeText(bindingTypeText);
+        }
         if (bindingTypeText.empty()) {
           const std::string scopePath =
               activeInlineContext != nullptr ? activeInlineContext->defPath : function.name;

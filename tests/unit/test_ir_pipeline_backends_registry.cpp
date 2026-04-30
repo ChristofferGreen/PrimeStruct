@@ -1649,10 +1649,86 @@ TEST_CASE("for-condition auto bindings use semantic-product binding facts") {
   const std::string source = readTextFile(loopsPath);
   CHECK(source.find("isSemanticForConditionBindingCandidate") != std::string::npos);
   CHECK(source.find("findSemanticProductBindingFact(") != std::string::npos);
+  CHECK(source.find("bindingFact->bindingTypeTextId") != std::string::npos);
+  CHECK(source.find("semanticProgramResolveCallTargetString(") != std::string::npos);
   CHECK(source.find("missing semantic-product for-condition binding fact") != std::string::npos);
   CHECK(source.find("semanticForConditionBindingExpr.semanticNodeId = 0;") != std::string::npos);
   CHECK(source.find("*conditionBindingForDeclaration") != std::string::npos);
+  CHECK(source.find(
+            "bindingFact != nullptr ? trimTemplateTypeText(bindingFact->bindingTypeText)") ==
+        std::string::npos);
   CHECK(source.find("declareForConditionBinding(\n                cond,") == std::string::npos);
+}
+
+TEST_CASE("local-auto statement bindings resolve interned binding ids") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path bindingsPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h";
+  if (!std::filesystem::exists(bindingsPath)) {
+    bindingsPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindings.h";
+  }
+  REQUIRE(std::filesystem::exists(bindingsPath));
+
+  const std::string source = readTextFile(bindingsPath);
+  const size_t candidatePos = source.find("isLocalAutoBindingCandidate(stmt)");
+  REQUIRE(candidatePos != std::string::npos);
+  const size_t factPos =
+      source.find("findSemanticProductLocalAutoFactBySemanticId", candidatePos);
+  const size_t idPos = source.find("localAutoFact->bindingTypeTextId", factPos);
+  const size_t resolverPos =
+      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t fallbackTextPos =
+      source.find("bindingTypeText = localAutoFact->bindingTypeText", resolverPos);
+  const size_t transformPos =
+      source.find("semanticLocalAutoBindingExpr.transforms.push_back", fallbackTextPos);
+  REQUIRE(factPos != std::string::npos);
+  REQUIRE(idPos != std::string::npos);
+  REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(fallbackTextPos != std::string::npos);
+  REQUIRE(transformPos != std::string::npos);
+  CHECK(factPos < idPos);
+  CHECK(idPos < resolverPos);
+  CHECK(resolverPos < fallbackTextPos);
+  CHECK(fallbackTextPos < transformPos);
+  CHECK(source.find(
+            "localAutoFact != nullptr ? trimTemplateTypeText(localAutoFact->bindingTypeText)") ==
+        std::string::npos);
+}
+
+TEST_CASE("statement binding local info resolves interned binding ids") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path localInfoPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerStatementsBindingLocalInfo.h";
+  if (!std::filesystem::exists(localInfoPath)) {
+    localInfoPath =
+        cwd.parent_path() / "src" / "ir_lowerer" /
+        "IrLowererLowerStatementsBindingLocalInfo.h";
+  }
+  REQUIRE(std::filesystem::exists(localInfoPath));
+
+  const std::string source = readTextFile(localInfoPath);
+  const size_t fallbackPos =
+      source.find("info.kind == LocalInfo::Kind::Value && info.structTypeName.empty()");
+  REQUIRE(fallbackPos != std::string::npos);
+  const size_t factPos = source.find("findSemanticProductBindingFact(", fallbackPos);
+  const size_t idPos = source.find("bindingFact->bindingTypeTextId", factPos);
+  const size_t resolverPos =
+      source.find("semanticProgramResolveCallTargetString(", idPos);
+  const size_t fallbackTextPos =
+      source.find("semanticTypeText = bindingFact->bindingTypeText", resolverPos);
+  const size_t valueKindPos = source.find("valueKindFromTypeName(semanticTypeText)", fallbackTextPos);
+  REQUIRE(factPos != std::string::npos);
+  REQUIRE(idPos != std::string::npos);
+  REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(fallbackTextPos != std::string::npos);
+  REQUIRE(valueKindPos != std::string::npos);
+  CHECK(factPos < idPos);
+  CHECK(idPos < resolverPos);
+  CHECK(resolverPos < fallbackTextPos);
+  CHECK(fallbackTextPos < valueKindPos);
+  CHECK(source.find("bindingFact != nullptr && !bindingFact->bindingTypeText.empty()") ==
+        std::string::npos);
 }
 
 TEST_CASE("native sum active payload helpers use semantic-product variant tags") {

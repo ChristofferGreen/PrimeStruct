@@ -341,6 +341,10 @@ Planned non-template inference migration contract:
 - Completed lowerer-side query Result completeness ID slice: query Result value-shape
   completeness validation now resolves `resultValueTypeId` before copied query-fact text, so
   valid interned value metadata no longer depends on duplicated compatibility text.
+- Completed lowerer-side statement binding ID slice: local-auto statement bindings,
+  for-condition bindings, and statement binding LocalInfo fallback now resolve
+  `bindingTypeTextId` before copied binding-fact text, so declaration and final local setup
+  consume graph-owned binding metadata before compatibility text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.
