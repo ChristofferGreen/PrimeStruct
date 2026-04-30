@@ -86,6 +86,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
               fileErrorCalled = true;
               return true;
             },
+            nullptr,
             &instructions,
             error) ==
         EmitResult::Emitted);
@@ -117,6 +118,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
             },
             [&](int32_t) { return false; },
             nullptr,
+            nullptr,
             error) ==
         EmitResult::NotHandled);
 
@@ -145,6 +147,7 @@ TEST_CASE("ir lowerer result helpers try emit Result.why method calls") {
               return false;
             },
             [&](int32_t) { return false; },
+            nullptr,
             nullptr,
             error) ==
         EmitResult::Error);
@@ -228,6 +231,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               fileErrorCalled = true;
               return true;
             },
+            nullptr,
             &instructions,
             error) ==
         EmitResult::Emitted);
@@ -287,6 +291,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               fileErrorCalled = true;
               return true;
             },
+            nullptr,
             &instructions,
             error) ==
         EmitResult::Emitted);
@@ -326,6 +331,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               fileErrorCalled = true;
               return true;
             },
+            nullptr,
             &instructions,
             error) ==
         EmitResult::Emitted);
@@ -374,6 +380,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               return true;
             },
             nullptr,
+            nullptr,
             error) ==
         EmitResult::Emitted);
   CHECK(emittedFileErrorLocal == 33);
@@ -407,6 +414,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
             },
             [](int32_t) { return false; },
             nullptr,
+            nullptr,
             error) ==
         EmitResult::NotHandled);
 
@@ -435,6 +443,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               return false;
             },
             [](int32_t) { return false; },
+            nullptr,
             nullptr,
             error) ==
         EmitResult::Error);
@@ -471,6 +480,7 @@ TEST_CASE("ir lowerer result helpers dispatch Result.why and FileError.why") {
               return false;
             },
             [](int32_t) { return false; },
+            nullptr,
             nullptr,
             error) ==
         EmitResult::Error);

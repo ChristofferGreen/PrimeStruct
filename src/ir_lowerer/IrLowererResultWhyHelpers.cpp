@@ -4,6 +4,7 @@
 #include "IrLowererBindingTypeHelpers.h"
 #include "IrLowererHelpers.h"
 #include "IrLowererRuntimeErrorHelpers.h"
+#include "IrLowererSemanticProductTargetAdapters.h"
 #include "IrLowererTemplateTypeParseHelpers.h"
 
 namespace primec::ir_lowerer {
@@ -26,6 +27,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::vector<IrInstruction> *instructionsOut,
     std::string &error) {
   if (!(expr.isMethodCall && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
@@ -43,14 +45,36 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     return defMap.find("/std/result/Result") != defMap.end();
   };
 
-  auto directCallReturnsImportedStdlibResultSum = [&](const Expr &valueExpr) {
+  auto directCallReturnsImportedStdlibResultSum =
+      [&](const Expr &valueExpr, bool &returnsResultOut) {
+    returnsResultOut = false;
     if (valueExpr.kind != Expr::Kind::Call || valueExpr.isMethodCall ||
         resultInfo.hasValue || !resolveDefinitionCall || !hasImportedStdlibResultSum()) {
-      return false;
+      return true;
+    }
+    if (semanticProductTargets != nullptr &&
+        semanticProductTargets->hasSemanticProduct &&
+        valueExpr.semanticNodeId != 0) {
+      const SemanticProgramQueryFact *queryFact =
+          findSemanticProductQueryFact(*semanticProductTargets, valueExpr);
+      if (queryFact == nullptr) {
+        error = "missing semantic-product Result.why source query fact: " +
+                valueExpr.name;
+        return false;
+      }
+      if (!queryFact->hasResultType || queryFact->resultTypeHasValue ||
+          trimTemplateTypeText(queryFact->resultErrorType) !=
+              trimTemplateTypeText(resultInfo.errorType)) {
+        error = "stale semantic-product Result.why source query metadata: " +
+                valueExpr.name;
+        return false;
+      }
+      returnsResultOut = true;
+      return true;
     }
     const Definition *calleeDef = resolveDefinitionCall(valueExpr);
     if (calleeDef == nullptr) {
-      return false;
+      return true;
     }
     for (const auto &transform : calleeDef->transforms) {
       if (transform.name != "return" || transform.templateArgs.size() != 1) {
@@ -62,10 +86,11 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
         continue;
       }
       if (normalizeCollectionBindingTypeName(base) == "Result") {
+        returnsResultOut = true;
         return true;
       }
     }
-    return false;
+    return true;
   };
 
   auto tryEmitStdlibResultSumValue = [&](bool &emittedOut) -> bool {
@@ -82,7 +107,12 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
         }
       }
     }
-    if (directCallReturnsImportedStdlibResultSum(valueExpr)) {
+    bool directCallReturnsStdlibResult = false;
+    if (!directCallReturnsImportedStdlibResultSum(
+            valueExpr, directCallReturnsStdlibResult)) {
+      return false;
+    }
+    if (directCallReturnsStdlibResult) {
       emittedOut = true;
       return emitExpr(valueExpr, localsIn);
     }
@@ -326,6 +356,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::vector<IrInstruction> *instructionsOut,
     std::string &error) {
   const ResultWhyMethodCallEmitResult resultWhyCallResult = tryEmitResultWhyCall(
@@ -346,6 +377,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
       valueKindFromTypeName,
       emitInlineDefinitionCall,
       emitFileErrorWhy,
+      semanticProductTargets,
       instructionsOut,
       error);
   if (resultWhyCallResult == ResultWhyMethodCallEmitResult::Emitted) {

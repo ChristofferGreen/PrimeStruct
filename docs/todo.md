@@ -402,7 +402,9 @@ Task template:
     semantic-product-backed source payload locals, mapped target payloads, and
     propagated error payload copies. The native Result-combinator source-query
     slice is complete for semantic-product-backed direct-call source sum
-    resolution. The native `try(...)` Result-variant slice is complete for
+    resolution. The native `Result.why(...)` source-query slice is complete
+    for semantic-product-backed direct-call status-only Result sources. The
+    native `try(...)` Result-variant slice is complete for
     semantic-product-backed stdlib Result sum matching, payload loads,
     propagated error copies, and source/target tags.
   - implementation_notes:
@@ -629,6 +631,12 @@ Task template:
       falling back to struct-path reconstruction. Stale query metadata fails
       closed with a deterministic Result-combinator source diagnostic while
       syntax-only or no-query compatibility keeps the old struct-path path.
+    - Completed slice: semantic-product-addressed direct-call operands for
+      native `Result.why(...)` now resolve status-only stdlib Result sources
+      from the published query fact before scanning callee return transforms.
+      Missing or stale query metadata fails closed with deterministic
+      Result.why source diagnostics while syntax-only or no-query
+      compatibility keeps the old transform-scan path.
     - Completed slice: native `try(...)` lowering now validates and consumes
       published stdlib Result sum-variant metadata before matching candidate
       payload shape, loading source `ok`/`error` payloads, copying propagated

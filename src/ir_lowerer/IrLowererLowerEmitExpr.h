@@ -804,6 +804,7 @@
               return emitInlineDefinitionCall(callExpr, callee, callLocals, true);
             },
             emitFileErrorWhy,
+            &callResolutionAdapters.semanticProductTargets,
             &function.instructions,
             error);
         if (resultWhyDispatchResult == ir_lowerer::ResultWhyDispatchEmitResult::Emitted) {

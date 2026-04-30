@@ -1212,6 +1212,39 @@ TEST_CASE("native Result combinator sources use semantic-product query facts") {
   CHECK(source.find("if (!resolvedBySemanticProductQuery.has_value())") != std::string::npos);
 }
 
+TEST_CASE("native Result why direct-call sources use semantic-product query facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path resultWhyHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererResultWhyHelpers.cpp";
+  if (!std::filesystem::exists(resultWhyHelpersPath)) {
+    resultWhyHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererResultWhyHelpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(resultWhyHelpersPath));
+
+  const std::string source = readTextFile(resultWhyHelpersPath);
+  const size_t directCallResolverPos =
+      source.find("directCallReturnsImportedStdlibResultSum");
+  REQUIRE(directCallResolverPos != std::string::npos);
+  const size_t queryFactPos =
+      source.find("findSemanticProductQueryFact(", directCallResolverPos);
+  const size_t missingDiagnosticPos =
+      source.find("missing semantic-product Result.why source query fact",
+                  directCallResolverPos);
+  const size_t staleDiagnosticPos =
+      source.find("stale semantic-product Result.why source query metadata",
+                  directCallResolverPos);
+  const size_t fallbackTransformScanPos =
+      source.find("for (const auto &transform : calleeDef->transforms)",
+                  directCallResolverPos);
+  REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(missingDiagnosticPos != std::string::npos);
+  REQUIRE(staleDiagnosticPos != std::string::npos);
+  REQUIRE(fallbackTransformScanPos != std::string::npos);
+  CHECK(queryFactPos < fallbackTransformScanPos);
+  CHECK(staleDiagnosticPos < fallbackTransformScanPos);
+}
+
 TEST_CASE("native field receivers use semantic-product type facts") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path lowerEmitExprPath =

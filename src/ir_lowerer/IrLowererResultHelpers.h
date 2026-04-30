@@ -192,6 +192,7 @@ ResultWhyMethodCallEmitResult tryEmitResultWhyCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
@@ -212,6 +213,7 @@ ResultWhyDispatchEmitResult tryEmitResultWhyDispatchCall(
     const std::function<LocalInfo::ValueKind(const std::string &)> &valueKindFromTypeName,
     const std::function<bool(const Expr &, const Definition &, const LocalMap &)> &emitInlineDefinitionCall,
     const std::function<bool(int32_t)> &emitFileErrorWhy,
+    const SemanticProductTargetAdapter *semanticProductTargets,
     std::vector<IrInstruction> *instructionsOut,
     std::string &error);
 ResultWhyExprOps makeResultWhyExprOps(
