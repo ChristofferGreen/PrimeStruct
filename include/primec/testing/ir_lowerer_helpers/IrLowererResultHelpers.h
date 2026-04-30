@@ -142,7 +142,8 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error);
+    std::string &error,
+    const SemanticProductTargetAdapter *semanticProductTargets = nullptr);
 bool inferPackedResultStructType(
     const Expr &expr,
     const LocalMap &localsIn,

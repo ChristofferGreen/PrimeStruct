@@ -1259,6 +1259,87 @@ TEST_CASE("ir lowerer result helpers emit direct Result.ok comparison payloads")
   CHECK(emitCalled);
 }
 
+TEST_CASE("ir lowerer result helpers emit Result.ok payloads from semantic query facts") {
+  using EmitResult = primec::ir_lowerer::ResultOkMethodCallEmitResult;
+  using ValueKind = primec::ir_lowerer::LocalInfo::ValueKind;
+
+  primec::Expr resultType;
+  resultType.kind = primec::Expr::Kind::Name;
+  resultType.name = "Result";
+
+  primec::Expr payloadExpr;
+  payloadExpr.kind = primec::Expr::Kind::Call;
+  payloadExpr.name = "lookup";
+  payloadExpr.semanticNodeId = 913;
+
+  primec::Expr okExpr;
+  okExpr.kind = primec::Expr::Kind::Call;
+  okExpr.isMethodCall = true;
+  okExpr.name = "ok";
+  okExpr.args = {resultType, payloadExpr};
+
+  primec::SemanticProgram semanticProgram;
+  semanticProgram.queryFacts.push_back(primec::SemanticProgramQueryFact{
+      .scopePath = "/main",
+      .callName = "lookup",
+      .queryTypeText = "i32",
+      .bindingTypeText = "i32",
+      .receiverBindingTypeText = "",
+      .hasResultType = false,
+      .resultTypeHasValue = false,
+      .resultValueType = "",
+      .resultErrorType = "",
+      .sourceLine = 9,
+      .sourceColumn = 11,
+      .semanticNodeId = 913,
+      .resolvedPathId = primec::semanticProgramInternCallTargetString(semanticProgram, "/lookup"),
+      .queryTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+      .bindingTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+  });
+  const auto semanticTargets =
+      primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);
+
+  primec::Definition staleCallee;
+  staleCallee.fullPath = "/StalePayload";
+  int resolveDefinitionCalls = 0;
+  bool inferCalled = false;
+  bool emitCalled = false;
+  std::string error;
+  CHECK(primec::ir_lowerer::tryEmitResultOkCall(
+            okExpr,
+            {},
+            [&](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              inferCalled = true;
+              return ValueKind::Unknown;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) {
+              return std::string{};
+            },
+            [&](const primec::Expr &valueExpr) -> const primec::Definition * {
+              ++resolveDefinitionCalls;
+              CHECK(valueExpr.semanticNodeId == 913);
+              return &staleCallee;
+            },
+            [](const primec::Expr &, const primec::ir_lowerer::LocalMap &) { return false; },
+            [&](const primec::Expr &valueExpr, const primec::ir_lowerer::LocalMap &) {
+              emitCalled = true;
+              CHECK(valueExpr.semanticNodeId == 913);
+              return true;
+            },
+            []() { return 17; },
+            [](const std::string &, primec::ir_lowerer::StructSlotLayoutInfo &) {
+              return false;
+            },
+            [&](primec::IrOpcode, uint64_t) {},
+            error,
+            &semanticTargets) ==
+        EmitResult::Emitted);
+  CHECK(error.empty());
+  CHECK(emitCalled);
+  CHECK_FALSE(inferCalled);
+  CHECK(resolveDefinitionCalls == 0);
+}
+
 TEST_CASE("ir lowerer result helpers resolve Result.map struct payload metadata") {
   primec::ir_lowerer::LocalMap locals;
   primec::ir_lowerer::LocalInfo localResult;

@@ -461,6 +461,11 @@ Planned non-template inference migration contract:
   or struct reconstruction can classify the payload. Missing direct-call
   payload facts keep the value unresolved on the semantic-product path, while
   syntax-only compatibility keeps the legacy reconstruction path.
+- Completed native `Result.ok(...)` payload-emission slice:
+  packed native `Result.ok(...)` emission now consumes semantic-product
+  binding/query payload facts before invoking scalar inference, direct map
+  rewrite reconstruction, collection fallback, or struct fallback. Syntax-only
+  compatibility keeps the legacy inference and direct-callee paths.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

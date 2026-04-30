@@ -751,7 +751,8 @@
               return resolveStructSlotLayout(structPath, layoutOut);
             },
             [&](IrOpcode op, uint64_t imm) { function.instructions.push_back({op, imm}); },
-            error);
+            error,
+            &callResolutionAdapters.semanticProductTargets);
         if (resultOkCallResult == ir_lowerer::ResultOkMethodCallEmitResult::Emitted) {
           return true;
         }

@@ -413,7 +413,9 @@ Task template:
     operands to aggregate `dereference(...)`. The native location reference
     return slice is complete for semantic-product-backed direct-call operands
     to `location(...)`. The direct `Result.ok(...)` payload metadata slice is
-    complete for semantic-product-backed direct-call payload type facts.
+    complete for semantic-product-backed direct-call payload type facts. The
+    native `Result.ok(...)` payload-emission slice is complete for
+    semantic-product-backed direct-call payload type facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -674,6 +676,11 @@ Task template:
       reconstruction can classify the payload. Missing direct-call payload
       facts keep the value unresolved on the semantic-product path while
       syntax-only compatibility keeps the legacy reconstruction path.
+    - Completed slice: native packed `Result.ok(...)` emission now consumes
+      semantic-product binding/query payload facts before invoking scalar
+      inference, direct map rewrite reconstruction, collection fallback, or
+      struct fallback. Syntax-only compatibility keeps the legacy inference
+      and direct-callee paths.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

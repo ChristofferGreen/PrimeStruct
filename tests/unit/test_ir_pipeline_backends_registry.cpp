@@ -1457,6 +1457,39 @@ TEST_CASE("direct Result ok payload metadata uses semantic-product type facts fi
   CHECK(suppressFallbackPos < structFallbackPos);
 }
 
+TEST_CASE("native Result ok emission uses semantic-product payload facts") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path packedResultHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererPackedResultHelpers.cpp";
+  if (!std::filesystem::exists(packedResultHelpersPath)) {
+    packedResultHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererPackedResultHelpers.cpp";
+  }
+  REQUIRE(std::filesystem::exists(packedResultHelpersPath));
+
+  const std::string source = readTextFile(packedResultHelpersPath);
+  const size_t emitPos = source.find("ResultOkMethodCallEmitResult tryEmitResultOkCall");
+  REQUIRE(emitPos != std::string::npos);
+  const size_t semanticPayloadPos =
+      source.find("resolveSemanticProductResultOkPayloadInfo", emitPos);
+  const size_t rewriteFallbackPos =
+      source.find("!hasSemanticPayloadInfo", emitPos);
+  const size_t inferKindPos = source.find("inferExprKind(expr.args[1], localsIn)", emitPos);
+  const size_t collectionFallbackPos =
+      source.find("inferDirectResultValueCollectionInfo", emitPos);
+  const size_t structFallbackPos =
+      source.find("inferPackedResultStructType", emitPos);
+  REQUIRE(semanticPayloadPos != std::string::npos);
+  REQUIRE(rewriteFallbackPos != std::string::npos);
+  REQUIRE(inferKindPos != std::string::npos);
+  REQUIRE(collectionFallbackPos != std::string::npos);
+  REQUIRE(structFallbackPos != std::string::npos);
+  CHECK(semanticPayloadPos < rewriteFallbackPos);
+  CHECK(semanticPayloadPos < inferKindPos);
+  CHECK(semanticPayloadPos < collectionFallbackPos);
+  CHECK(semanticPayloadPos < structFallbackPos);
+}
+
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
   const std::filesystem::path cwd = std::filesystem::current_path();
   std::filesystem::path tryHelpersPath =

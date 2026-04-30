@@ -11,6 +11,76 @@ namespace primec::ir_lowerer {
 
 namespace {
 
+struct ResultOkPayloadSemanticInfo {
+  bool found = false;
+  LocalInfo::ValueKind valueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
+  LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind collectionMapKeyKind = LocalInfo::ValueKind::Unknown;
+  bool isFileHandle = false;
+  std::string structType;
+};
+
+bool isSemanticFileHandleTypeText(const std::string &typeText) {
+  std::string base;
+  std::string arg;
+  return splitTemplateTypeName(trimTemplateTypeText(typeText), base, arg) &&
+         normalizeCollectionBindingTypeName(base) == "File";
+}
+
+bool resolveSemanticProductResultOkPayloadInfo(
+    const Expr &payloadExpr,
+    const SemanticProductTargetAdapter *semanticProductTargets,
+    ResultOkPayloadSemanticInfo &out) {
+  out = ResultOkPayloadSemanticInfo{};
+  if (semanticProductTargets == nullptr ||
+      !semanticProductTargets->hasSemanticProduct ||
+      payloadExpr.semanticNodeId == 0) {
+    return false;
+  }
+
+  std::string bindingTypeText;
+  if (const auto *bindingFact = findSemanticProductBindingFact(
+          *semanticProductTargets, payloadExpr);
+      bindingFact != nullptr) {
+    bindingTypeText = bindingFact->bindingTypeText;
+  }
+  if (bindingTypeText.empty()) {
+    if (const auto *queryFact = findSemanticProductQueryFact(
+            *semanticProductTargets, payloadExpr);
+        queryFact != nullptr) {
+      bindingTypeText = queryFact->bindingTypeText;
+    }
+  }
+  bindingTypeText = trimTemplateTypeText(bindingTypeText);
+  if (bindingTypeText.empty()) {
+    return false;
+  }
+
+  out.found = true;
+  if (resolveSupportedResultCollectionType(bindingTypeText,
+                                           out.collectionKind,
+                                           out.collectionValueKind,
+                                           &out.collectionMapKeyKind)) {
+    return true;
+  }
+  if (isSemanticFileHandleTypeText(bindingTypeText)) {
+    out.valueKind = LocalInfo::ValueKind::Int64;
+    out.isFileHandle = true;
+    return true;
+  }
+  out.valueKind = valueKindFromTypeName(bindingTypeText);
+  if (out.valueKind != LocalInfo::ValueKind::Unknown) {
+    return true;
+  }
+
+  out.structType = bindingTypeText;
+  if (!out.structType.empty() && out.structType.front() != '/') {
+    out.structType.insert(out.structType.begin(), '/');
+  }
+  return true;
+}
+
 bool rewritePackedResultMapConstructorExpr(const Expr &callExpr,
                                            LocalInfo::ValueKind fallbackKeyKind,
                                            LocalInfo::ValueKind fallbackValueKind,
@@ -324,7 +394,8 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     const std::function<int32_t()> &allocTempLocal,
     const std::function<bool(const std::string &, StructSlotLayoutInfo &)> &resolveStructSlotLayout,
     const std::function<void(IrOpcode, uint64_t)> &emitInstruction,
-    std::string &error) {
+    std::string &error,
+    const SemanticProductTargetAdapter *semanticProductTargets) {
   if (!(expr.kind == Expr::Kind::Call && !expr.args.empty() && expr.args.front().kind == Expr::Kind::Name &&
         expr.args.front().name == "Result" && expr.name == "ok")) {
     return ResultOkMethodCallEmitResult::NotHandled;
@@ -337,37 +408,53 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
     error = "Result.ok accepts at most one argument";
     return ResultOkMethodCallEmitResult::Error;
   }
+  ResultOkPayloadSemanticInfo semanticPayload;
+  const bool hasSemanticPayloadInfo =
+      resolveSemanticProductResultOkPayloadInfo(expr.args[1], semanticProductTargets, semanticPayload);
   Expr rewrittenDirectMapExpr;
-  if (rewritePackedResultMapConstructorExpr(
-          expr.args[1],
-          LocalInfo::ValueKind::Unknown,
-          LocalInfo::ValueKind::Unknown,
-          resolveDefinitionCall,
-          rewrittenDirectMapExpr)) {
+  if (!hasSemanticPayloadInfo &&
+      rewritePackedResultMapConstructorExpr(expr.args[1],
+                                           LocalInfo::ValueKind::Unknown,
+                                           LocalInfo::ValueKind::Unknown,
+                                           resolveDefinitionCall,
+                                           rewrittenDirectMapExpr)) {
     if (!emitExpr(rewrittenDirectMapExpr, localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  LocalInfo::ValueKind argKind = inferExprKind(expr.args[1], localsIn);
+  LocalInfo::ValueKind argKind = hasSemanticPayloadInfo
+                                     ? semanticPayload.valueKind
+                                     : inferExprKind(expr.args[1], localsIn);
   if (argKind == LocalInfo::ValueKind::Unknown) {
     std::string builtinComparison;
     if (getBuiltinComparisonName(expr.args[1], builtinComparison)) {
       argKind = LocalInfo::ValueKind::Bool;
     }
   }
-  if (isFileHandleExpr && argKind == LocalInfo::ValueKind::Int64 &&
-      isFileHandleExpr(expr.args[1], localsIn)) {
+  if ((hasSemanticPayloadInfo && semanticPayload.isFileHandle) ||
+      (isFileHandleExpr && argKind == LocalInfo::ValueKind::Int64 &&
+       isFileHandleExpr(expr.args[1], localsIn))) {
     if (!emitExpr(expr.args[1], localsIn)) {
       return ResultOkMethodCallEmitResult::Error;
     }
     return ResultOkMethodCallEmitResult::Emitted;
   }
-  LocalInfo::Kind collectionKind = LocalInfo::Kind::Value;
-  LocalInfo::ValueKind collectionValueKind = LocalInfo::ValueKind::Unknown;
-  LocalInfo::ValueKind collectionMapKeyKind = LocalInfo::ValueKind::Unknown;
-  if (inferDirectResultValueCollectionInfo(
-          expr.args[1], localsIn, resolveDefinitionCall, collectionKind, collectionValueKind, collectionMapKeyKind) &&
+  LocalInfo::Kind collectionKind =
+      hasSemanticPayloadInfo ? semanticPayload.collectionKind : LocalInfo::Kind::Value;
+  LocalInfo::ValueKind collectionValueKind =
+      hasSemanticPayloadInfo ? semanticPayload.collectionValueKind : LocalInfo::ValueKind::Unknown;
+  LocalInfo::ValueKind collectionMapKeyKind =
+      hasSemanticPayloadInfo ? semanticPayload.collectionMapKeyKind : LocalInfo::ValueKind::Unknown;
+  const bool hasCollectionPayload =
+      hasSemanticPayloadInfo ? isSupportedPackedResultCollectionKind(collectionKind)
+                             : inferDirectResultValueCollectionInfo(expr.args[1],
+                                                                    localsIn,
+                                                                    resolveDefinitionCall,
+                                                                    collectionKind,
+                                                                    collectionValueKind,
+                                                                    collectionMapKeyKind);
+  if (hasCollectionPayload &&
       isSupportedPackedResultCollectionKind(collectionKind)) {
     const Expr *payloadExpr = &expr.args[1];
     Expr rewrittenMapExpr;
@@ -387,7 +474,10 @@ ResultOkMethodCallEmitResult tryEmitResultOkCall(
   }
 
   std::string structType;
-  if (!inferPackedResultStructType(expr.args[1], localsIn, resolveDefinitionCall, inferStructExprPath, structType)) {
+  if (hasSemanticPayloadInfo) {
+    structType = semanticPayload.structType;
+  } else if (!inferPackedResultStructType(
+                 expr.args[1], localsIn, resolveDefinitionCall, inferStructExprPath, structType)) {
     structType.clear();
   }
   PackedResultStructPayloadInfo payloadInfo;
