@@ -1,5 +1,8 @@
 #include "SemanticsValidator.h"
 
+#include <cctype>
+#include <cstdint>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -88,6 +91,77 @@ const SumVariant *unitVariantForConstructorArgument(const Definition &sumDef,
   return unitVariantForNameInitializer(sumDef, arg.bodyArguments.front());
 }
 
+std::string stripTemplateHashWhitespace(const std::string &text) {
+  std::string out;
+  out.reserve(text.size());
+  for (char c : text) {
+    if (!std::isspace(static_cast<unsigned char>(c))) {
+      out.push_back(c);
+    }
+  }
+  return out;
+}
+
+uint64_t fnv1a64ForSumTemplate(const std::string &text) {
+  uint64_t hash = 1469598103934665603ULL;
+  for (unsigned char c : text) {
+    hash ^= static_cast<uint64_t>(c);
+    hash *= 1099511628211ULL;
+  }
+  return hash;
+}
+
+std::string templateSpecializationSuffixForSum(
+    const std::vector<std::string> &templateArgs) {
+  std::ostringstream out;
+  out << "__t" << std::hex
+      << fnv1a64ForSumTemplate(
+             stripTemplateHashWhitespace(joinTemplateArgs(templateArgs)));
+  return out.str();
+}
+
+bool splitGenericSumInternalPath(const std::string &path,
+                                 std::string &familyPathOut,
+                                 size_t &arityOut,
+                                 bool &hasSpecializationOut) {
+  familyPathOut.clear();
+  arityOut = 0;
+  hasSpecializationOut = false;
+  const size_t arityMarker = path.rfind("__arity");
+  if (arityMarker == std::string::npos || arityMarker == 0) {
+    return false;
+  }
+  size_t cursor = arityMarker + std::string("__arity").size();
+  const size_t firstDigit = cursor;
+  while (cursor < path.size() &&
+         std::isdigit(static_cast<unsigned char>(path[cursor]))) {
+    arityOut = (arityOut * 10) + static_cast<size_t>(path[cursor] - '0');
+    ++cursor;
+  }
+  if (cursor == firstDigit) {
+    return false;
+  }
+  if (cursor == path.size()) {
+    familyPathOut = path.substr(0, arityMarker);
+    return true;
+  }
+  if (cursor + 3 >= path.size() || path.compare(cursor, 3, "__t") != 0) {
+    return false;
+  }
+  cursor += 3;
+  const size_t firstHexDigit = cursor;
+  while (cursor < path.size() &&
+         std::isxdigit(static_cast<unsigned char>(path[cursor]))) {
+    ++cursor;
+  }
+  if (cursor != path.size() || cursor == firstHexDigit) {
+    return false;
+  }
+  familyPathOut = path.substr(0, arityMarker);
+  hasSpecializationOut = true;
+  return true;
+}
+
 } // namespace
 
 bool SemanticsValidator::isSumDefinition(const Definition &def) const {
@@ -108,7 +182,11 @@ const Definition *SemanticsValidator::resolveSumDefinitionForTypeText(
   std::string normalized = normalizeBindingTypeName(typeText);
   std::string base;
   std::string argText;
+  std::vector<std::string> templateArgs;
   if (splitTemplateTypeName(normalized, base, argText)) {
+    if (!splitTopLevelTemplateArgs(argText, templateArgs)) {
+      return nullptr;
+    }
     normalized = normalizeBindingTypeName(base);
   }
 
@@ -124,13 +202,60 @@ const Definition *SemanticsValidator::resolveSumDefinitionForTypeText(
     return it->second;
   };
 
+  auto definitionForGenericFamilyPath =
+      [&](const std::string &path) -> const Definition * {
+    if (path.empty()) {
+      return nullptr;
+    }
+    if (templateArgs.empty()) {
+      return definitionForPath(path);
+    }
+
+    std::string familyPath = path;
+    size_t existingArity = 0;
+    bool hasExistingSpecialization = false;
+    if (splitGenericSumInternalPath(path, familyPath, existingArity,
+                                    hasExistingSpecialization)) {
+      if (hasExistingSpecialization) {
+        return existingArity == templateArgs.size() ? definitionForPath(path)
+                                                    : nullptr;
+      }
+      if (existingArity != templateArgs.size()) {
+        return nullptr;
+      }
+      const std::string specializedPath =
+          path + templateSpecializationSuffixForSum(templateArgs);
+      if (const Definition *specialized = definitionForPath(specializedPath)) {
+        return specialized;
+      }
+      return definitionForPath(path);
+    }
+
+    const std::string arityPath =
+        path + "__arity" + std::to_string(templateArgs.size());
+    const std::string specializedPath =
+        arityPath + templateSpecializationSuffixForSum(templateArgs);
+    if (const Definition *specialized = definitionForPath(specializedPath)) {
+      return specialized;
+    }
+    if (const Definition *arityDef = definitionForPath(arityPath)) {
+      return arityDef;
+    }
+    if (const Definition *directSpecialized = definitionForPath(
+            path + templateSpecializationSuffixForSum(templateArgs))) {
+      return directSpecialized;
+    }
+    return definitionForPath(path);
+  };
+
   if (!normalized.empty() && normalized.front() == '/') {
-    return definitionForPath(normalized);
+    return definitionForGenericFamilyPath(normalized);
   }
 
   auto importIt = importAliases_.find(normalized);
   if (importIt != importAliases_.end()) {
-    if (const Definition *imported = definitionForPath(importIt->second)) {
+    if (const Definition *imported =
+            definitionForGenericFamilyPath(importIt->second)) {
       return imported;
     }
   }
@@ -139,20 +264,23 @@ const Definition *SemanticsValidator::resolveSumDefinitionForTypeText(
   while (true) {
     if (!current.empty()) {
       const std::string direct = current + "/" + normalized;
-      if (const Definition *directDef = definitionForPath(direct)) {
+      if (const Definition *directDef =
+              definitionForGenericFamilyPath(direct)) {
         return directDef;
       }
       if (current.size() > normalized.size()) {
         const size_t start = current.size() - normalized.size();
         if (start > 0 && current[start - 1] == '/' &&
             current.compare(start, normalized.size(), normalized) == 0) {
-          if (const Definition *currentDef = definitionForPath(current)) {
+          if (const Definition *currentDef =
+                  definitionForGenericFamilyPath(current)) {
             return currentDef;
           }
         }
       }
     } else {
-      if (const Definition *rootDef = definitionForPath("/" + normalized)) {
+      if (const Definition *rootDef =
+              definitionForGenericFamilyPath("/" + normalized)) {
         return rootDef;
       }
     }

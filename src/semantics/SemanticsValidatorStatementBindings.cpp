@@ -354,8 +354,16 @@ bool SemanticsValidator::validateBindingStatement(const std::vector<ParameterInf
     if (initializer.kind != Expr::Kind::Call) {
       return false;
     }
-    return initializer.isBraceConstructor ||
-           isEmptyBuiltinBlockInitializer(initializer);
+    if (initializer.isBraceConstructor ||
+        isEmptyBuiltinBlockInitializer(initializer)) {
+      return true;
+    }
+    return hasExplicitType && !explicitAutoType &&
+           !initializer.isMethodCall && !initializer.isFieldAccess &&
+           initializer.name == "block" &&
+           hasNamedArguments(initializer.argNames) &&
+           resolveSumDefinitionForTypeText(expectedBindingTypeText(info),
+                                           namespacePrefix) != nullptr;
   };
 
   if (isTargetTypedSumInitializerSyntax()) {

@@ -61,6 +61,39 @@ bool isCanonicalSoaVectorHelperAliasName(std::string_view aliasName) {
          aliasName == "to_aos_ref";
 }
 
+std::string genericTypeFamilyNameForInternalName(std::string_view name) {
+  const size_t arityMarker = name.find("__arity");
+  if (arityMarker == std::string_view::npos || arityMarker == 0) {
+    return {};
+  }
+  size_t cursor = arityMarker + std::string_view("__arity").size();
+  const size_t firstDigit = cursor;
+  while (cursor < name.size() &&
+         std::isdigit(static_cast<unsigned char>(name[cursor]))) {
+    ++cursor;
+  }
+  if (cursor == firstDigit) {
+    return {};
+  }
+  if (cursor == name.size()) {
+    return std::string(name.substr(0, arityMarker));
+  }
+  if (cursor + 3 >= name.size() ||
+      name.compare(cursor, 3, "__t") != 0) {
+    return {};
+  }
+  cursor += 3;
+  const size_t firstHexDigit = cursor;
+  while (cursor < name.size() &&
+         std::isxdigit(static_cast<unsigned char>(name[cursor]))) {
+    ++cursor;
+  }
+  if (cursor != name.size() || cursor == firstHexDigit) {
+    return {};
+  }
+  return std::string(name.substr(0, arityMarker));
+}
+
 const StdlibSurfaceMetadata *findStdlibSurfaceWildcardAliasMetadata(const std::string_view importRoot,
                                                                     const std::string_view aliasName) {
   const StdlibSurfaceMetadata *bestMatch = nullptr;
@@ -270,6 +303,17 @@ bool SemanticsValidator::buildImportAliases() {
         }
         sawImmediateDefinition = true;
         if (isGeneratedTemplateSpecializationName(remainder)) {
+          const std::string familyName =
+              genericTypeFamilyNameForInternalName(remainder);
+          if (!familyName.empty()) {
+            importAliases_.emplace(familyName, scopedPrefix + familyName);
+          }
+          continue;
+        }
+        if (const std::string familyName =
+                genericTypeFamilyNameForInternalName(remainder);
+            !familyName.empty()) {
+          importAliases_.emplace(familyName, scopedPrefix + familyName);
           continue;
         }
         if (isRootBuiltinName(remainder)) {
@@ -432,8 +476,22 @@ bool SemanticsValidator::buildImportAliases() {
           }
           const std::string remainder = path.substr(scopedPrefix.size());
           if (remainder.empty() || remainder.find('/') != std::string::npos ||
-              isGeneratedTemplateSpecializationName(remainder) || isRootBuiltinName(remainder) ||
+              isRootBuiltinName(remainder) ||
               (allowMathBareName(remainder) && isMathBuiltinName(remainder))) {
+            continue;
+          }
+          if (isGeneratedTemplateSpecializationName(remainder)) {
+            const std::string familyName =
+                genericTypeFamilyNameForInternalName(remainder);
+            if (!familyName.empty()) {
+              importAliases_.emplace(familyName, scopedPrefix + familyName);
+            }
+            continue;
+          }
+          if (const std::string familyName =
+                  genericTypeFamilyNameForInternalName(remainder);
+              !familyName.empty()) {
+            importAliases_.emplace(familyName, scopedPrefix + familyName);
             continue;
           }
           const std::string rootPath = "/" + remainder;

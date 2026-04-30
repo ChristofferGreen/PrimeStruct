@@ -70,6 +70,22 @@ main() {
   CHECK(error.empty());
 }
 
+TEST_CASE("stdlib result overloads accept target-typed variants") {
+  const std::string source = R"(
+import /std/result/*
+
+[return<void>]
+main() {
+  [Result<i32>] failure{[error] 5i32}
+  [Result<i32, i32>] value{[ok] 7i32}
+  return()
+}
+)";
+  std::string error;
+  CHECK(validateProgram(source, "/main", error));
+  CHECK(error.empty());
+}
+
 TEST_CASE("status-only stdlib Result sum overloads by template arity") {
   const std::string source = R"(
 import /std/result/*
