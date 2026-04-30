@@ -491,6 +491,12 @@ Planned non-template inference migration contract:
   reconstruction. Stale query metadata fails closed with a deterministic
   Result-combinator source diagnostic; syntax-only or no-query compatibility
   keeps the old struct-path path.
+- Completed lowerer-side Result-combinator source-query ID slice:
+  semantic-product-addressed direct-call sources for `Result.map`,
+  `Result.and_then`, and `Result.map2` now resolve interned query
+  binding/query type IDs before copied query text when classifying the source
+  stdlib Result sum. Stale duplicated query text can no longer override
+  graph-owned interned metadata.
 - Completed native `Result.why(...)` source-query slice:
   semantic-product-addressed direct-call operands for `Result.why(...)` now
   resolve status-only stdlib Result sources from the published query fact

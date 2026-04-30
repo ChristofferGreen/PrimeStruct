@@ -1285,6 +1285,16 @@ TEST_CASE("native Result combinator sources use semantic-product query facts") {
   REQUIRE(semanticResolverPos != std::string::npos);
   const size_t queryFactPos =
       source.find("findSemanticProductQueryFact(", semanticResolverPos);
+  const size_t typeResolverPos =
+      source.find("auto resolveQueryTypeText", queryFactPos);
+  const size_t internedTypeTextPos =
+      source.find("semanticProgramResolveCallTargetString(", typeResolverPos);
+  const size_t bindingTextIdPos =
+      source.find("queryFact->bindingTypeTextId", typeResolverPos);
+  const size_t queryTextIdPos =
+      source.find("queryFact->queryTypeTextId", bindingTextIdPos);
+  const size_t sumDefinitionPos =
+      source.find("resolveSumDefinitionForTypeText", typeResolverPos);
   const size_t staleDiagnosticPos =
       source.find("stale semantic-product Result-combinator source query metadata",
                   semanticResolverPos);
@@ -1292,10 +1302,22 @@ TEST_CASE("native Result combinator sources use semantic-product query facts") {
       source.find("const std::string sourceStructPath = inferStructExprPath(sourceExpr, sourceLocals)",
                   semanticResolverPos);
   REQUIRE(queryFactPos != std::string::npos);
+  REQUIRE(typeResolverPos != std::string::npos);
+  REQUIRE(internedTypeTextPos != std::string::npos);
+  REQUIRE(bindingTextIdPos != std::string::npos);
+  REQUIRE(queryTextIdPos != std::string::npos);
+  REQUIRE(sumDefinitionPos != std::string::npos);
   REQUIRE(staleDiagnosticPos != std::string::npos);
   REQUIRE(fallbackStructPathPos != std::string::npos);
+  CHECK(queryFactPos < typeResolverPos);
+  CHECK(typeResolverPos < internedTypeTextPos);
+  CHECK(internedTypeTextPos < sumDefinitionPos);
+  CHECK(typeResolverPos < bindingTextIdPos);
+  CHECK(bindingTextIdPos < queryTextIdPos);
   CHECK(queryFactPos < fallbackStructPathPos);
   CHECK(source.find("if (!resolvedBySemanticProductQuery.has_value())") != std::string::npos);
+  CHECK(source.find("resolveQueryTypeText(queryFact->bindingTypeText);",
+                    semanticResolverPos) == std::string::npos);
 }
 
 TEST_CASE("native Result why direct-call sources use semantic-product query facts") {

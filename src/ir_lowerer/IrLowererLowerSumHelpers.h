@@ -879,8 +879,19 @@
         if (queryFact == nullptr) {
           return std::nullopt;
         }
-        auto resolveQueryTypeText = [&](const std::string &typeText) -> const Definition * {
-          const std::string normalizedTypeText = trimTemplateTypeText(typeText);
+        auto resolveQueryTypeText = [&](const std::string &typeText,
+                                        SymbolId typeTextId) -> const Definition * {
+          std::string resolvedTypeText;
+          if (semanticTargets.semanticProgram != nullptr &&
+              typeTextId != InvalidSymbolId) {
+            resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+                *semanticTargets.semanticProgram,
+                typeTextId));
+          }
+          if (resolvedTypeText.empty()) {
+            resolvedTypeText = typeText;
+          }
+          const std::string normalizedTypeText = trimTemplateTypeText(resolvedTypeText);
           if (normalizedTypeText.empty()) {
             return nullptr;
           }
@@ -890,12 +901,16 @@
                      ? candidate
                      : nullptr;
         };
-        if (const Definition *candidate = resolveQueryTypeText(queryFact->bindingTypeText);
+        if (const Definition *candidate =
+                resolveQueryTypeText(queryFact->bindingTypeText,
+                                     queryFact->bindingTypeTextId);
             candidate != nullptr) {
           sourceSumDefOut = candidate;
           return true;
         }
-        if (const Definition *candidate = resolveQueryTypeText(queryFact->queryTypeText);
+        if (const Definition *candidate =
+                resolveQueryTypeText(queryFact->queryTypeText,
+                                     queryFact->queryTypeTextId);
             candidate != nullptr) {
           sourceSumDefOut = candidate;
           return true;
