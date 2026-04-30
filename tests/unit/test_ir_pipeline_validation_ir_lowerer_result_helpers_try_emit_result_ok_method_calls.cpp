@@ -644,7 +644,7 @@ TEST_CASE("ir lowerer result helpers use semantic query facts for direct Result 
       .scopePath = "/main",
       .callName = "lookup",
       .queryTypeText = "i32",
-      .bindingTypeText = "i32",
+      .bindingTypeText = "",
       .receiverBindingTypeText = "",
       .hasResultType = false,
       .resultTypeHasValue = false,
@@ -739,7 +739,7 @@ TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Resul
       .scopePath = "/main",
       .siteKind = "local",
       .name = "payload",
-      .bindingTypeText = "i32",
+      .bindingTypeText = "",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -748,6 +748,8 @@ TEST_CASE("ir lowerer result helpers use semantic binding facts for direct Resul
       .sourceColumn = 5,
       .semanticNodeId = 364,
       .resolvedPathId = primec::InvalidSymbolId,
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
   });
   const auto semanticTargets =
       primec::ir_lowerer::buildSemanticProductTargetAdapter(&semanticProgram);

@@ -520,21 +520,46 @@ bool applySemanticDirectValueTypeText(const std::string &typeText, ResultExprInf
   return true;
 }
 
+std::string resolveSemanticDirectValueTypeText(const SemanticProgram *semanticProgram,
+                                               const std::string &typeText,
+                                               SymbolId typeTextId) {
+  std::string resolvedTypeText = typeText;
+  if (resolvedTypeText.empty() &&
+      typeTextId != InvalidSymbolId &&
+      semanticProgram != nullptr) {
+    resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+        *semanticProgram,
+        typeTextId));
+  }
+  return trimTemplateTypeText(resolvedTypeText);
+}
+
 bool applySemanticDirectValueMetadataFact(const Expr &valueExpr,
+                                          const SemanticProgram *semanticProgram,
                                           const SemanticProductIndex *semanticIndex,
                                           ResultExprInfo &out) {
   if (semanticIndex == nullptr || valueExpr.semanticNodeId == 0) {
     return false;
   }
   if (const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, valueExpr);
-      bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
-      applySemanticDirectValueTypeText(bindingFact->bindingTypeText, out)) {
-    return true;
+      bindingFact != nullptr) {
+    const std::string bindingTypeText =
+        resolveSemanticDirectValueTypeText(semanticProgram,
+                                           bindingFact->bindingTypeText,
+                                           bindingFact->bindingTypeTextId);
+    if (!bindingTypeText.empty() && applySemanticDirectValueTypeText(bindingTypeText, out)) {
+      return true;
+    }
   }
   if (const auto *queryFact = findSemanticProductQueryFactBySemanticId(*semanticIndex, valueExpr);
-      queryFact != nullptr && !queryFact->bindingTypeText.empty() &&
-      applySemanticDirectValueTypeText(queryFact->bindingTypeText, out)) {
-    return true;
+      queryFact != nullptr) {
+    const std::string bindingTypeText =
+        resolveSemanticDirectValueTypeText(semanticProgram,
+                                           queryFact->bindingTypeText,
+                                           queryFact->bindingTypeTextId);
+    if (!bindingTypeText.empty() && applySemanticDirectValueTypeText(bindingTypeText, out)) {
+      return true;
+    }
   }
   return false;
 }
@@ -877,7 +902,7 @@ void applyDirectResultValueMetadata(const Expr &valueExpr,
       semanticProgram != nullptr && semanticIndex != nullptr &&
       valueExpr.semanticNodeId != 0;
   if (hasSemanticProductValueFactContext) {
-    if (applySemanticDirectValueMetadataFact(valueExpr, semanticIndex, out)) {
+    if (applySemanticDirectValueMetadataFact(valueExpr, semanticProgram, semanticIndex, out)) {
       return;
     }
   }

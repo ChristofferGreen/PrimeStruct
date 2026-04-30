@@ -1435,9 +1435,13 @@ TEST_CASE("direct Result ok payload metadata uses semantic-product type facts fi
   const std::string source = readTextFile(resultMetadataHelpersPath);
   const size_t metadataPos = source.find("void applyDirectResultValueMetadata");
   REQUIRE(metadataPos != std::string::npos);
+  const std::string semanticFactNeedle =
+      "applySemanticDirectValueMetadataFact("
+      "valueExpr, semanticProgram, semanticIndex, out)";
   const size_t semanticFactPos =
-      source.find("applySemanticDirectValueMetadataFact(valueExpr, semanticIndex, out)",
-                  metadataPos);
+      source.find(semanticFactNeedle, metadataPos);
+  const size_t internedTypeTextPos =
+      source.find("semanticProgramResolveCallTargetString");
   const size_t collectionFallbackPos =
       source.find("inferDirectResultValueCollectionInfo(",
                   metadataPos);
@@ -1448,11 +1452,14 @@ TEST_CASE("direct Result ok payload metadata uses semantic-product type facts fi
       source.find("suppressSemanticCallDefinitionFallback",
                   metadataPos);
   REQUIRE(semanticFactPos != std::string::npos);
+  REQUIRE(internedTypeTextPos != std::string::npos);
   REQUIRE(collectionFallbackPos != std::string::npos);
   REQUIRE(structFallbackPos != std::string::npos);
   REQUIRE(suppressFallbackPos != std::string::npos);
   CHECK(semanticFactPos < collectionFallbackPos);
   CHECK(semanticFactPos < structFallbackPos);
+  CHECK(internedTypeTextPos < collectionFallbackPos);
+  CHECK(internedTypeTextPos < structFallbackPos);
   CHECK(suppressFallbackPos < collectionFallbackPos);
   CHECK(suppressFallbackPos < structFallbackPos);
 }

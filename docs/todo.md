@@ -413,8 +413,9 @@ Task template:
     operands to aggregate `dereference(...)`. The native location reference
     return slice is complete for semantic-product-backed direct-call operands
     to `location(...)`. The direct `Result.ok(...)` payload metadata slice is
-    complete for semantic-product-backed direct-call payload type facts. The
-    native `Result.ok(...)` payload-emission slice is complete for
+    complete for semantic-product-backed direct-call payload type facts and
+    interned payload type IDs. The native `Result.ok(...)` payload-emission
+    slice is complete for
     semantic-product-backed direct-call payload type facts.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
@@ -676,6 +677,10 @@ Task template:
       reconstruction can classify the payload. Missing direct-call payload
       facts keep the value unresolved on the semantic-product path while
       syntax-only compatibility keeps the legacy reconstruction path.
+    - Completed slice: direct `Result.ok(...)` payload metadata now resolves
+      interned semantic-product binding/query type IDs before treating
+      payload metadata as absent, so downstream metadata consumers do not
+      require duplicated text fields.
     - Completed slice: native packed `Result.ok(...)` emission now consumes
       semantic-product binding/query payload facts before invoking scalar
       inference, direct map rewrite reconstruction, collection fallback, or

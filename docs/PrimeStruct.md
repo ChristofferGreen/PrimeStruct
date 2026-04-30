@@ -460,7 +460,9 @@ Planned non-template inference migration contract:
   metadata from published binding/query facts before direct callee collection
   or struct reconstruction can classify the payload. Missing direct-call
   payload facts keep the value unresolved on the semantic-product path, while
-  syntax-only compatibility keeps the legacy reconstruction path.
+  syntax-only compatibility keeps the legacy reconstruction path. The metadata
+  path also resolves interned binding/query payload type IDs before treating
+  semantic-product payload metadata as absent.
 - Completed native `Result.ok(...)` payload-emission slice:
   packed native `Result.ok(...)` emission now consumes semantic-product
   binding/query payload facts before invoking scalar inference, direct map
