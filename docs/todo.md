@@ -457,7 +457,9 @@ Task template:
     interned payload type IDs. The lowerer direct `Result.ok(...)` payload
     ID-order correction is complete for stale copied payload type text. The
     native `Result.ok(...)` payload-emission slice is complete for
-    semantic-product-backed direct-call payload type facts.
+    semantic-product-backed direct-call payload type facts. The lowerer native
+    `Result.ok(...)` payload-emission ID-order correction is complete for
+    stale copied payload type text.
   - implementation_notes:
     - Start from the semantic ownership boundary and graph migration plan in
       `docs/PrimeStruct.md`, especially the sections that call for
@@ -805,6 +807,11 @@ Task template:
       with a deterministic `Result.ok(...)` payload diagnostic;
       syntax-only compatibility keeps the legacy inference and direct-callee
       paths.
+    - Completed slice: native packed `Result.ok(...)` payload emission now
+      lets interned semantic-product binding/query type IDs override stale
+      copied payload type text before scalar, collection, or struct payload
+      classification. Copied text remains only the compatibility fallback
+      when the interned ID is absent or unresolved.
     - Add semantic-product and lowerer contract coverage proving consumers read
       the published graph-owned fact instead of reconstructing equivalent state
       from AST or validator-local caches.

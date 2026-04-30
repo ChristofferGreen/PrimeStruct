@@ -32,15 +32,17 @@ std::string resolveSemanticProductPayloadTypeText(
     const SemanticProductTargetAdapter &semanticProductTargets,
     const std::string &text,
     SymbolId textId) {
-  std::string resolvedText = text;
-  if (resolvedText.empty() &&
-      textId != InvalidSymbolId &&
-      semanticProductTargets.semanticProgram != nullptr) {
-    resolvedText = std::string(semanticProgramResolveCallTargetString(
-        *semanticProductTargets.semanticProgram,
-        textId));
+  if (semanticProductTargets.semanticProgram != nullptr &&
+      textId != InvalidSymbolId) {
+    const std::string resolvedText = std::string(
+        semanticProgramResolveCallTargetString(
+            *semanticProductTargets.semanticProgram,
+            textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
   }
-  return trimTemplateTypeText(resolvedText);
+  return trimTemplateTypeText(text);
 }
 
 bool resolveSemanticProductResultOkPayloadInfo(

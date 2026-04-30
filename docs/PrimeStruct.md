@@ -541,6 +541,11 @@ Planned non-template inference migration contract:
   semantic-product payload facts now fail closed with a deterministic
   `Result.ok(...)` payload diagnostic; syntax-only compatibility keeps the
   legacy inference and direct-callee paths.
+- Completed lowerer-side native `Result.ok(...)` payload-emission ID-order
+  slice: packed native payload emission now lets interned semantic-product
+  binding/query type IDs override stale copied payload text before scalar,
+  collection, or struct payload classification. Copied text remains only the
+  compatibility fallback when no usable interned ID is present.
 - Preferred migration order:
   - direct local/binding inference islands that still bypass graph-backed local/query facts
   - control-flow and initializer-shape inference paths that currently reconstruct state outside the graph

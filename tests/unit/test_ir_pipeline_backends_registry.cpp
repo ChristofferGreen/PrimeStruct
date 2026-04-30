@@ -1677,6 +1677,14 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
   const std::string source = readTextFile(packedResultHelpersPath);
   const size_t emitPos = source.find("ResultOkMethodCallEmitResult tryEmitResultOkCall");
   REQUIRE(emitPos != std::string::npos);
+  const size_t resolverPos =
+      source.find("std::string resolveSemanticProductPayloadTypeText");
+  const size_t idCheckPos =
+      source.find("textId != InvalidSymbolId", resolverPos);
+  const size_t internedTypeTextPos =
+      source.find("semanticProgramResolveCallTargetString", idCheckPos);
+  const size_t copiedTextFallbackPos =
+      source.find("return trimTemplateTypeText(text);", internedTypeTextPos);
   const size_t semanticPayloadPos =
       source.find("resolveSemanticProductResultOkPayloadInfo", emitPos);
   const size_t rewriteFallbackPos =
@@ -1689,12 +1697,18 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
       source.find("inferDirectResultValueCollectionInfo", emitPos);
   const size_t structFallbackPos =
       source.find("inferPackedResultStructType", emitPos);
+  REQUIRE(resolverPos != std::string::npos);
+  REQUIRE(idCheckPos != std::string::npos);
+  REQUIRE(internedTypeTextPos != std::string::npos);
+  REQUIRE(copiedTextFallbackPos != std::string::npos);
   REQUIRE(semanticPayloadPos != std::string::npos);
   REQUIRE(rewriteFallbackPos != std::string::npos);
   REQUIRE(missingDiagnosticPos != std::string::npos);
   REQUIRE(inferKindPos != std::string::npos);
   REQUIRE(collectionFallbackPos != std::string::npos);
   REQUIRE(structFallbackPos != std::string::npos);
+  CHECK(idCheckPos < internedTypeTextPos);
+  CHECK(internedTypeTextPos < copiedTextFallbackPos);
   CHECK(semanticPayloadPos < rewriteFallbackPos);
   CHECK(missingDiagnosticPos < rewriteFallbackPos);
   CHECK(semanticPayloadPos < inferKindPos);
@@ -1703,6 +1717,8 @@ TEST_CASE("native Result ok emission uses semantic-product payload facts") {
   CHECK(missingDiagnosticPos < collectionFallbackPos);
   CHECK(semanticPayloadPos < structFallbackPos);
   CHECK(missingDiagnosticPos < structFallbackPos);
+  CHECK(source.find("std::string resolvedText = text;", resolverPos) ==
+        std::string::npos);
 }
 
 TEST_CASE("native try Result lowering uses semantic-product variant metadata") {
