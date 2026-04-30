@@ -230,7 +230,9 @@ bool validateSemanticProductResultMetadataCompleteness(const SemanticProgram *se
       error = "missing semantic-product return definition path id";
       return false;
     }
-    if (returnFact->bindingTypeText.empty()) {
+    const std::string returnBindingType = resolveSemanticResultFactText(
+        *semanticProgram, returnFact->bindingTypeText, returnFact->bindingTypeTextId);
+    if (returnBindingType.empty()) {
       error = "missing semantic-product return binding type: " + returnDefinitionPath;
       return false;
     }

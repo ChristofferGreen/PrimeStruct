@@ -432,7 +432,9 @@ Task template:
     Result completeness ID consumer slice is complete for callable-summary
     value-shape validation. The lowerer return-info ID consumer slice is
     complete for semantic-product-backed entry return transforms and
-    return-info setup. The lowerer statement binding ID consumer slice is
+    return-info setup. The lowerer return binding completeness ID consumer
+    slice is complete for return metadata validation. The lowerer statement
+    binding ID consumer slice is
     complete for semantic-product-backed local-auto
     declarations, for-condition declarations, and final LocalInfo fallback
     setup. The native pick target ID consumer slice is complete for
@@ -593,6 +595,9 @@ Task template:
       resolves interned callable return/result IDs plus return binding type
       IDs before consulting copied semantic-product text fields for entry
       return-transform analysis and return-info setup.
+    - Completed slice: semantic-product return binding completeness
+      validation now resolves interned return binding type IDs before
+      consulting copied return fact text fields.
     - Completed slice: semantic-product-addressed statement binding setup now
       resolves interned binding type IDs before consulting copied binding text
       fields for local-auto declarations, for-condition declarations, and

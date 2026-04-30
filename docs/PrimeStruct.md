@@ -347,6 +347,9 @@ Planned non-template inference migration contract:
 - Completed lowerer-side return-info ID slice: entry return transform analysis and return-info
   setup now resolve interned callable return/result ids plus return binding ids before copied
   semantic-product text, so return metadata consumes graph-owned facts before compatibility text.
+- Completed lowerer-side return binding completeness ID slice: return metadata completeness
+  validation now resolves interned return binding type ids before copied return-fact text, so valid
+  binding metadata no longer depends on duplicated compatibility text.
 - Completed lowerer-side statement binding ID slice: local-auto statement bindings,
   for-condition bindings, and statement binding LocalInfo fallback now resolve
   `bindingTypeTextId` before copied binding-fact text, so declaration and final local setup
