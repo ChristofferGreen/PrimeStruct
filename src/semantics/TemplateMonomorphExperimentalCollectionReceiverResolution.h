@@ -526,6 +526,9 @@ bool hasVisibleStdCollectionsImportForPath(const Context &ctx, const std::string
   if (path.rfind("/std/collections/", 0) != 0) {
     return true;
   }
+  if (usesStdlibScopedImportAliases("", ctx)) {
+    return true;
+  }
   const auto &importPaths = ctx.program.sourceImports.empty() ? ctx.program.imports : ctx.program.sourceImports;
   for (const auto &importPath : importPaths) {
     if (importPathCoversTarget(importPath, path)) {

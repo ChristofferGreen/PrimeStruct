@@ -1032,8 +1032,7 @@ bool rewriteExpr(Expr &expr,
       }
     }
     if (!resolvesVectorFamilyPath &&
-        (receiverFamily == "vector" || receiverFamily == "array" ||
-         (helperName == "count" && receiverFamily == "string"))) {
+        (receiverFamily == "vector" || receiverFamily == "array")) {
       const std::string preferred = "/std/collections/vector/" + helperName;
       if (hasVisibleStdCollectionsImportForPath(ctx, preferred) &&
           ctx.sourceDefs.count(preferred) > 0) {

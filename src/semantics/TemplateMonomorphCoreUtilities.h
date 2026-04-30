@@ -50,7 +50,10 @@ bool importPathCoversTarget(const std::string &importPath, const std::string &ta
   if (importPath == targetPath) {
     return true;
   }
-  if (importPath == "/std/collections/vector") {
+  if (importPath == "/std/collections/vector" ||
+      importPath == "/std/collections/map" ||
+      importPath == "/std/collections/soa_vector" ||
+      importPath == "/std/collections/soa_vector_conversions") {
     return targetPath.rfind(importPath + "/", 0) == 0;
   }
   if (importPath.size() >= 2 && importPath.compare(importPath.size() - 2, 2, "/*") == 0) {
