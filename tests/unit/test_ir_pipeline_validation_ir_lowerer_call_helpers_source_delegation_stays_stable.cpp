@@ -2607,7 +2607,7 @@ TEST_CASE("ir lowerer statement binding helper consumes semantic-product index d
       .scopePath = "/main",
       .siteKind = "local",
       .name = "selected",
-      .bindingTypeText = "map<i32, string>",
+      .bindingTypeText = "",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -2617,6 +2617,9 @@ TEST_CASE("ir lowerer statement binding helper consumes semantic-product index d
       .semanticNodeId = 7501,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/selected"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(
+              semanticProgram, "map<i32, string>"),
   });
 
   primec::Expr bindingExpr;
@@ -2659,7 +2662,7 @@ TEST_CASE("ir lowerer statement binding helper prefers semantic initializer bind
       .scopePath = "/main",
       .siteKind = "local",
       .name = "source",
-      .bindingTypeText = "map<i32, string>",
+      .bindingTypeText = "",
       .isMutable = false,
       .isEntryArgString = false,
       .isUnsafeReference = false,
@@ -2669,6 +2672,9 @@ TEST_CASE("ir lowerer statement binding helper prefers semantic initializer bind
       .semanticNodeId = 7601,
       .resolvedPathId =
           primec::semanticProgramInternCallTargetString(semanticProgram, "/source"),
+      .bindingTypeTextId =
+          primec::semanticProgramInternCallTargetString(
+              semanticProgram, "map<i32, string>"),
   });
 
   primec::Expr bindingExpr;

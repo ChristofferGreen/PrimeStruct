@@ -437,7 +437,9 @@ Task template:
     binding ID consumer slice is
     complete for semantic-product-backed local-auto
     declarations, for-condition declarations, and final LocalInfo fallback
-    setup. The lowerer binding coverage ID consumer slice is complete for
+    setup. The lowerer statement binding type-info ID consumer slice is
+    complete for semantic-product-backed binding and initializer type
+    inference. The lowerer binding coverage ID consumer slice is complete for
     binding, local-auto, and collection specialization completeness
     validation. The lowerer args-pack binding ID consumer slice is complete
     for semantic-product-backed variadic parameter metadata. The native pick
@@ -613,6 +615,9 @@ Task template:
       resolves interned binding type IDs before consulting copied binding text
       fields for local-auto declarations, for-condition declarations, and
       final LocalInfo fallback setup.
+    - Completed slice: semantic-product-addressed statement binding type-info
+      inference now resolves interned binding type IDs before consulting
+      copied binding fact text fields for binding and initializer metadata.
     - Completed slice: semantic-product-addressed native `pick(...)` target
       sum resolution now resolves interned binding, query, and return binding
       type IDs before consulting copied semantic-product text fields for

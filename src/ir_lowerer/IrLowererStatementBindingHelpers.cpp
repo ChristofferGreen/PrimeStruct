@@ -587,15 +587,20 @@ bool populateBindingTypeInfoFromTypeText(
 bool populateBindingTypeInfoFromSemanticBindingFact(
     const Expr &expr,
     const ResolveDefinitionCallForStatementFn &resolveDefinitionCall,
+    const SemanticProgram *semanticProgram,
     const SemanticProductIndex *semanticIndex,
     StatementBindingTypeInfo &infoOut) {
   if (semanticIndex == nullptr || expr.semanticNodeId == 0) {
     return false;
   }
   const auto *bindingFact = findSemanticProductBindingFact(*semanticIndex, expr);
-  return bindingFact != nullptr && !bindingFact->bindingTypeText.empty() &&
+  const std::string bindingTypeText =
+      bindingFact != nullptr
+          ? resolveSemanticBindingTypeText(semanticProgram, *bindingFact)
+          : std::string{};
+  return bindingFact != nullptr && !bindingTypeText.empty() &&
          populateBindingTypeInfoFromTypeText(
-             bindingFact->bindingTypeText, resolveDefinitionCall, infoOut);
+             bindingTypeText, resolveDefinitionCall, infoOut);
 }
 
 bool inferExprBindingTypeInfo(const Expr &expr,
@@ -607,7 +612,7 @@ bool inferExprBindingTypeInfo(const Expr &expr,
                               StatementBindingTypeInfo &infoOut) {
   infoOut = {};
   if (populateBindingTypeInfoFromSemanticBindingFact(
-          expr, resolveDefinitionCall, semanticIndex, infoOut)) {
+          expr, resolveDefinitionCall, semanticProgram, semanticIndex, infoOut)) {
     return true;
   }
   if (expr.kind == Expr::Kind::Name) {
@@ -818,12 +823,12 @@ StatementBindingTypeInfo inferStatementBindingTypeInfo(const Expr &stmt,
   }
   StatementBindingTypeInfo semanticInfo;
   const bool hasSemanticBindingInfo = populateBindingTypeInfoFromSemanticBindingFact(
-      stmt, safeResolveDefinitionCall, semanticIndex, semanticInfo);
+      stmt, safeResolveDefinitionCall, semanticProgram, semanticIndex, semanticInfo);
   deferSurfaceStructTypeName(semanticInfo);
   StatementBindingTypeInfo semanticInitInfo;
   const bool hasSemanticInitBindingInfo = !hasExplicitType &&
       populateBindingTypeInfoFromSemanticBindingFact(
-          init, safeResolveDefinitionCall, semanticIndex, semanticInitInfo);
+          init, safeResolveDefinitionCall, semanticProgram, semanticIndex, semanticInitInfo);
   deferSurfaceStructTypeName(semanticInitInfo);
   if (!hasExplicitType && hasSemanticBindingInfo) {
     return semanticInfo;
@@ -1217,7 +1222,7 @@ bool inferCallParameterLocalInfo(const Expr &param,
 
   StatementBindingTypeInfo semanticBindingTypeInfo;
   if (populateBindingTypeInfoFromSemanticBindingFact(
-          param, resolveDefinitionCallFn, semanticIndex, semanticBindingTypeInfo)) {
+          param, resolveDefinitionCallFn, semanticProgram, semanticIndex, semanticBindingTypeInfo)) {
     infoOut.kind = semanticBindingTypeInfo.kind;
     infoOut.valueKind = semanticBindingTypeInfo.valueKind;
     infoOut.mapKeyKind = semanticBindingTypeInfo.mapKeyKind;
