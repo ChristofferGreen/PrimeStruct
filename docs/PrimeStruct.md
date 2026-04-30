@@ -356,6 +356,10 @@ Planned non-template inference migration contract:
   `pick(...)` aggregate-result source classification now resolve binding/query type ids before
   copied semantic-product text, so source payload classification consumes graph-owned metadata
   before compatibility text.
+- Completed lowerer-side collection specialization ID slice: binding-type adapters now resolve
+  interned collection family, element, key, and value metadata before copied collection
+  specialization text, so collection local setup consumes graph-owned facts before compatibility
+  text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.

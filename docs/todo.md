@@ -437,8 +437,10 @@ Task template:
     semantic-product-backed named and direct-call target sum classification.
     The native sum source ID consumer slice is complete for
     semantic-product-backed sum initializer and pick aggregate-result source
-    payload classification. The direct `Result.ok(...)` payload metadata slice
-    is complete for semantic-product-backed direct-call payload type facts and
+    payload classification. The lowerer collection specialization ID consumer
+    slice is complete for semantic-product-backed collection binding-type
+    adapter setup. The direct `Result.ok(...)` payload metadata slice is
+    complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
     slice is complete for
     semantic-product-backed direct-call payload type facts.
@@ -598,6 +600,10 @@ Task template:
       `pick(...)` aggregate-result source classification now resolve interned
       binding/query type IDs before consulting copied semantic-product text
       fields for payload shape classification.
+    - Completed slice: semantic-product-addressed collection binding-type
+      adapters now resolve interned collection family, element, key, and value
+      metadata before consulting copied collection specialization text fields
+      for binding kind, value kind, and reference collection setup decisions.
     - Completed slice: semantic-product collection specialization
       completeness validation now rejects missing or stale interned collection
       family, binding type, element type, and key/value type metadata before

@@ -747,17 +747,30 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
           .scopePath = "/main",
           .siteKind = "temporary",
           .name = "makePairs",
-          .collectionFamily = "map",
-          .bindingTypeText = "Reference<map<i32, i64>>",
+          .collectionFamily = "vector",
+          .bindingTypeText = "Reference<map<bool, i32>>",
           .elementTypeText = "",
-          .keyTypeText = "i32",
-          .valueTypeText = "i64",
+          .keyTypeText = "bool",
+          .valueTypeText = "i32",
           .isReference = true,
           .isPointer = false,
           .sourceLine = 18,
           .sourceColumn = 11,
           .semanticNodeId = 119,
           .provenanceHandle = 0,
+          .scopePathId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+          .siteKindId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "temporary"),
+          .nameId = primec::semanticProgramInternCallTargetString(semanticProgram, "makePairs"),
+          .collectionFamilyId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "map"),
+          .bindingTypeTextId =
+              primec::semanticProgramInternCallTargetString(
+                  semanticProgram, "Reference<map<i32, i64>>"),
+          .elementTypeTextId = primec::InvalidSymbolId,
+          .keyTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i32"),
+          .valueTypeTextId = primec::semanticProgramInternCallTargetString(semanticProgram, "i64"),
           .helperSurfaceId = primec::StdlibSurfaceId::CollectionsMapHelpers,
           .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsMapConstructors,
       });
@@ -790,17 +803,33 @@ TEST_CASE("ir lowerer binding type helpers prefer semantic collection specializa
           .scopePath = "/main",
           .siteKind = "temporary",
           .name = "borrowParticles",
-          .collectionFamily = "soa_vector",
-          .bindingTypeText = "Reference<soa_vector<Particle>>",
-          .elementTypeText = "Particle",
-          .keyTypeText = "",
-          .valueTypeText = "Particle",
+          .collectionFamily = "map",
+          .bindingTypeText = "Reference<soa_vector<i32>>",
+          .elementTypeText = "i32",
+          .keyTypeText = "i32",
+          .valueTypeText = "i32",
           .isReference = true,
           .isPointer = false,
           .sourceLine = 24,
           .sourceColumn = 11,
           .semanticNodeId = 120,
           .provenanceHandle = 0,
+          .scopePathId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "/main"),
+          .siteKindId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "temporary"),
+          .nameId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "borrowParticles"),
+          .collectionFamilyId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "soa_vector"),
+          .bindingTypeTextId =
+              primec::semanticProgramInternCallTargetString(
+                  semanticProgram, "Reference<soa_vector<Particle>>"),
+          .elementTypeTextId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "Particle"),
+          .keyTypeTextId = primec::InvalidSymbolId,
+          .valueTypeTextId =
+              primec::semanticProgramInternCallTargetString(semanticProgram, "Particle"),
           .helperSurfaceId = primec::StdlibSurfaceId::CollectionsSoaVectorHelpers,
           .constructorSurfaceId = primec::StdlibSurfaceId::CollectionsSoaVectorConstructors,
       });

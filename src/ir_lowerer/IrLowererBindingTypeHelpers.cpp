@@ -83,6 +83,20 @@ std::string resolveSemanticBindingFactTypeText(
   return trimTemplateTypeText(bindingFact.bindingTypeText);
 }
 
+std::string resolveSemanticCollectionSpecializationText(
+    const SemanticProgram *semanticProgram,
+    const std::string &text,
+    SymbolId textId) {
+  if (semanticProgram != nullptr && textId != InvalidSymbolId) {
+    std::string resolvedText =
+        std::string(semanticProgramResolveCallTargetString(*semanticProgram, textId));
+    if (!resolvedText.empty()) {
+      return trimTemplateTypeText(resolvedText);
+    }
+  }
+  return trimTemplateTypeText(text);
+}
+
 bool isLocalAutoBindingCandidate(const Expr &expr) {
   std::string typeName;
   std::vector<std::string> templateArgs;
@@ -201,36 +215,43 @@ bool collectionSpecializationMatchesExpected(
 }
 
 LocalInfo::Kind bindingKindFromCollectionSpecialization(
+    const SemanticProgram *semanticProgram,
     const SemanticProgramCollectionSpecialization &collectionFact) {
+  const std::string collectionFamily = resolveSemanticCollectionSpecializationText(
+      semanticProgram, collectionFact.collectionFamily, collectionFact.collectionFamilyId);
   if (collectionFact.isReference) {
     return LocalInfo::Kind::Reference;
   }
   if (collectionFact.isPointer) {
     return LocalInfo::Kind::Pointer;
   }
-  if (collectionFact.collectionFamily == "vector" ||
-      collectionFact.collectionFamily == "soa_vector") {
+  if (collectionFamily == "vector" || collectionFamily == "soa_vector") {
     return LocalInfo::Kind::Vector;
   }
-  if (collectionFact.collectionFamily == "map") {
+  if (collectionFamily == "map") {
     return LocalInfo::Kind::Map;
   }
   return LocalInfo::Kind::Value;
 }
 
 LocalInfo::ValueKind bindingValueKindFromCollectionSpecialization(
+    const SemanticProgram *semanticProgram,
     const SemanticProgramCollectionSpecialization &collectionFact) {
-  if (collectionFact.collectionFamily == "vector" ||
-      collectionFact.collectionFamily == "soa_vector") {
-    return valueKindFromTypeName(collectionFact.elementTypeText);
+  const std::string collectionFamily = resolveSemanticCollectionSpecializationText(
+      semanticProgram, collectionFact.collectionFamily, collectionFact.collectionFamilyId);
+  if (collectionFamily == "vector" || collectionFamily == "soa_vector") {
+    return valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
+        semanticProgram, collectionFact.elementTypeText, collectionFact.elementTypeTextId));
   }
-  if (collectionFact.collectionFamily == "map") {
-    return valueKindFromTypeName(collectionFact.valueTypeText);
+  if (collectionFamily == "map") {
+    return valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
+        semanticProgram, collectionFact.valueTypeText, collectionFact.valueTypeTextId));
   }
   return LocalInfo::ValueKind::Unknown;
 }
 
 void setReferenceCollectionInfoFromSpecialization(
+    const SemanticProgram *semanticProgram,
     const SemanticProgramCollectionSpecialization &collectionFact,
     LocalInfo &info) {
   if (info.kind != LocalInfo::Kind::Reference && info.kind != LocalInfo::Kind::Pointer) {
@@ -240,37 +261,42 @@ void setReferenceCollectionInfoFromSpecialization(
       (info.kind == LocalInfo::Kind::Pointer && !collectionFact.isPointer)) {
     return;
   }
-  if (collectionFact.collectionFamily == "vector" ||
-      collectionFact.collectionFamily == "soa_vector") {
+  const std::string collectionFamily = resolveSemanticCollectionSpecializationText(
+      semanticProgram, collectionFact.collectionFamily, collectionFact.collectionFamilyId);
+  const std::string elementTypeText = resolveSemanticCollectionSpecializationText(
+      semanticProgram, collectionFact.elementTypeText, collectionFact.elementTypeTextId);
+  if (collectionFamily == "vector" || collectionFamily == "soa_vector") {
     if (info.kind == LocalInfo::Kind::Reference) {
       info.referenceToVector = true;
     } else {
       info.pointerToVector = true;
     }
-    info.isSoaVector = collectionFact.collectionFamily == "soa_vector";
+    info.isSoaVector = collectionFamily == "soa_vector";
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
-      info.valueKind = valueKindFromTypeName(collectionFact.elementTypeText);
+      info.valueKind = valueKindFromTypeName(elementTypeText);
     }
     if (info.structTypeName.empty() &&
-        valueKindFromTypeName(collectionFact.elementTypeText) == LocalInfo::ValueKind::Unknown) {
+        valueKindFromTypeName(elementTypeText) == LocalInfo::ValueKind::Unknown) {
       if (info.isSoaVector) {
         info.structTypeName = specializedExperimentalSoaVectorStructPathForElementType(
-            collectionFact.elementTypeText);
+            elementTypeText);
       } else {
         info.structTypeName =
-            specializedExperimentalVectorStructPathForElementType(collectionFact.elementTypeText);
+            specializedExperimentalVectorStructPathForElementType(elementTypeText);
       }
     }
     return;
   }
-  if (collectionFact.collectionFamily == "map") {
+  if (collectionFamily == "map") {
     if (info.kind == LocalInfo::Kind::Reference) {
       info.referenceToMap = true;
     } else {
       info.pointerToMap = true;
     }
-    info.mapKeyKind = valueKindFromTypeName(collectionFact.keyTypeText);
-    info.mapValueKind = valueKindFromTypeName(collectionFact.valueTypeText);
+    info.mapKeyKind = valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
+        semanticProgram, collectionFact.keyTypeText, collectionFact.keyTypeTextId));
+    info.mapValueKind = valueKindFromTypeName(resolveSemanticCollectionSpecializationText(
+        semanticProgram, collectionFact.valueTypeText, collectionFact.valueTypeTextId));
     if (info.valueKind == LocalInfo::ValueKind::Unknown) {
       info.valueKind = info.mapValueKind;
     }
@@ -959,7 +985,7 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     if (const SemanticProgramCollectionSpecialization *collectionFact =
             findSemanticProductCollectionSpecialization(semanticIndex, expr);
         collectionFact != nullptr) {
-      return bindingKindFromCollectionSpecialization(*collectionFact);
+      return bindingKindFromCollectionSpecialization(semanticProgram, *collectionFact);
     }
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);
@@ -1026,7 +1052,7 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     if (const SemanticProgramCollectionSpecialization *collectionFact =
             findSemanticProductCollectionSpecialization(semanticIndex, expr);
         collectionFact != nullptr) {
-      return bindingValueKindFromCollectionSpecialization(*collectionFact);
+      return bindingValueKindFromCollectionSpecialization(semanticProgram, *collectionFact);
     }
     if (const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFact(semanticIndex, expr);
@@ -1046,7 +1072,7 @@ BindingTypeAdapters makeBindingTypeAdapters(const SemanticProgram *semanticProgr
     if (const SemanticProgramCollectionSpecialization *collectionFact =
             findSemanticProductCollectionSpecialization(semanticIndex, expr);
         collectionFact != nullptr) {
-      setReferenceCollectionInfoFromSpecialization(*collectionFact, info);
+      setReferenceCollectionInfoFromSpecialization(semanticProgram, *collectionFact, info);
       return;
     }
     if (const SemanticProgramBindingFact *bindingFact =
