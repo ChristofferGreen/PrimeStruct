@@ -345,6 +345,10 @@ Planned non-template inference migration contract:
   for-condition bindings, and statement binding LocalInfo fallback now resolve
   `bindingTypeTextId` before copied binding-fact text, so declaration and final local setup
   consume graph-owned binding metadata before compatibility text.
+- Completed lowerer-side pick target ID slice: native `pick(...)` target sum resolution now
+  resolves binding, query, and return binding type ids before copied semantic-product text, so
+  named and direct-call pick target classification consumes graph-owned metadata before
+  compatibility text.
 - Completed collection specialization metadata diagnostic slice: semantic-product collection
   specialization completeness validation now checks interned family, binding type, element type, and
   key/value type metadata before lowerer collection consumers can read collection fact text fields.

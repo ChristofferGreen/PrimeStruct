@@ -813,6 +813,50 @@ TEST_CASE("native pick payload locals use semantic-product variant metadata") {
         std::string::npos);
 }
 
+TEST_CASE("native pick target sum resolution resolves interned type ids") {
+  const std::filesystem::path cwd = std::filesystem::current_path();
+  std::filesystem::path lowerSumHelpersPath =
+      cwd / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  if (!std::filesystem::exists(lowerSumHelpersPath)) {
+    lowerSumHelpersPath =
+        cwd.parent_path() / "src" / "ir_lowerer" / "IrLowererLowerSumHelpers.h";
+  }
+  REQUIRE(std::filesystem::exists(lowerSumHelpersPath));
+
+  const std::string source = readTextFile(lowerSumHelpersPath);
+  const size_t resolverPos =
+      source.find("resolveSemanticProductPickTargetSumDefinition");
+  REQUIRE(resolverPos != std::string::npos);
+  const size_t typeResolverPos =
+      source.find("resolveSemanticProductTypeText", resolverPos);
+  const size_t semanticResolvePos =
+      source.find("semanticProgramResolveCallTargetString(", typeResolverPos);
+  const size_t bindingIdPos =
+      source.find("bindingFact->bindingTypeTextId", typeResolverPos);
+  const size_t queryBindingIdPos =
+      source.find("queryFact->bindingTypeTextId", bindingIdPos);
+  const size_t queryTypeIdPos =
+      source.find("queryFact->queryTypeTextId", queryBindingIdPos);
+  const size_t returnIdPos =
+      source.find("returnFact->bindingTypeTextId", queryTypeIdPos);
+  const size_t metadataPos =
+      source.find("return requirePublishedSumMetadata(*querySumDef, targetExpr)",
+                  returnIdPos);
+  REQUIRE(typeResolverPos != std::string::npos);
+  REQUIRE(semanticResolvePos != std::string::npos);
+  REQUIRE(bindingIdPos != std::string::npos);
+  REQUIRE(queryBindingIdPos != std::string::npos);
+  REQUIRE(queryTypeIdPos != std::string::npos);
+  REQUIRE(returnIdPos != std::string::npos);
+  REQUIRE(metadataPos != std::string::npos);
+  CHECK(typeResolverPos < semanticResolvePos);
+  CHECK(semanticResolvePos < bindingIdPos);
+  CHECK(bindingIdPos < queryBindingIdPos);
+  CHECK(queryBindingIdPos < queryTypeIdPos);
+  CHECK(queryTypeIdPos < returnIdPos);
+  CHECK(returnIdPos < metadataPos);
+}
+
 TEST_CASE("native sum construction uses semantic-product variant tags") {
   const std::string source = R"(
 [sum]

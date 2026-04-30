@@ -431,7 +431,9 @@ Task template:
     semantic-product-backed value-shape validation. The lowerer statement
     binding ID consumer slice is complete for semantic-product-backed
     local-auto declarations, for-condition declarations, and final LocalInfo
-    fallback setup. The
+    fallback setup. The native pick target ID consumer slice is complete for
+    semantic-product-backed named and direct-call target sum classification.
+    The
     direct `Result.ok(...)` payload metadata slice is
     complete for semantic-product-backed direct-call payload type facts and
     interned payload type IDs. The native `Result.ok(...)` payload-emission
@@ -581,6 +583,10 @@ Task template:
       resolves interned binding type IDs before consulting copied binding text
       fields for local-auto declarations, for-condition declarations, and
       final LocalInfo fallback setup.
+    - Completed slice: semantic-product-addressed native `pick(...)` target
+      sum resolution now resolves interned binding, query, and return binding
+      type IDs before consulting copied semantic-product text fields for
+      named and direct-call target classification.
     - Completed slice: semantic-product collection specialization
       completeness validation now rejects missing or stale interned collection
       family, binding type, element type, and key/value type metadata before

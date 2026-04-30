@@ -1338,11 +1338,30 @@
         return &sumDef;
       };
 
+      auto resolveSemanticProductTypeText =
+          [&](const std::string &typeText, auto typeTextId) {
+        std::string resolvedTypeText;
+        if (typeTextId != InvalidSymbolId) {
+          resolvedTypeText = std::string(semanticProgramResolveCallTargetString(
+              *semanticTargets.semanticProgram,
+              typeTextId));
+        }
+        if (resolvedTypeText.empty()) {
+          resolvedTypeText = typeText;
+        }
+        return trimTemplateTypeText(resolvedTypeText);
+      };
+
       if (targetExpr.kind == Expr::Kind::Name) {
         const SemanticProgramBindingFact *bindingFact =
             findSemanticProductBindingFactByScopeAndName(
                 semanticTargets, function.name, targetExpr.name);
-        if (bindingFact == nullptr || bindingFact->bindingTypeText.empty()) {
+        const std::string bindingTypeText =
+            bindingFact != nullptr
+                ? resolveSemanticProductTypeText(bindingFact->bindingTypeText,
+                                                 bindingFact->bindingTypeTextId)
+                : std::string{};
+        if (bindingTypeText.empty()) {
           if (valueLocals.find(targetExpr.name) != valueLocals.end()) {
             error = "missing semantic-product pick target binding fact: " +
                     describePickTargetName(targetExpr);
@@ -1350,7 +1369,7 @@
           return nullptr;
         }
         const Definition *semanticSumDef =
-            resolveSumDefinitionForTypeText(bindingFact->bindingTypeText, function.name);
+            resolveSumDefinitionForTypeText(bindingTypeText, function.name);
         if (semanticSumDef == nullptr) {
           error = "semantic-product pick target binding type is not a sum: " +
                   describePickTargetName(targetExpr);
@@ -1384,9 +1403,13 @@
                     describePickTargetName(targetExpr);
             return nullptr;
           }
-          std::string queryTypeText = trimTemplateTypeText(queryFact->bindingTypeText);
+          std::string queryTypeText =
+              resolveSemanticProductTypeText(queryFact->bindingTypeText,
+                                             queryFact->bindingTypeTextId);
           if (queryTypeText.empty()) {
-            queryTypeText = trimTemplateTypeText(queryFact->queryTypeText);
+            queryTypeText =
+                resolveSemanticProductTypeText(queryFact->queryTypeText,
+                                               queryFact->queryTypeTextId);
           }
           if (queryTypeText.empty()) {
             error = "incomplete semantic-product pick target query fact: " +
@@ -1406,9 +1429,14 @@
           if (!queryTargetPath.empty()) {
             const SemanticProgramReturnFact *returnFact =
                 findSemanticProductReturnFactByPath(semanticTargets, queryTargetPath);
-            if (returnFact != nullptr && !returnFact->bindingTypeText.empty()) {
+            const std::string returnTypeText =
+                returnFact != nullptr
+                    ? resolveSemanticProductTypeText(returnFact->bindingTypeText,
+                                                     returnFact->bindingTypeTextId)
+                    : std::string{};
+            if (!returnTypeText.empty()) {
               const Definition *returnSumDef =
-                  resolveSumDefinitionForTypeText(returnFact->bindingTypeText, function.name);
+                  resolveSumDefinitionForTypeText(returnTypeText, function.name);
               if (returnSumDef != nullptr &&
                   returnSumDef->fullPath != querySumDef->fullPath) {
                 error = "stale semantic-product pick target query type: " +
